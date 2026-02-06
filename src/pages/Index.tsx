@@ -11,7 +11,19 @@ import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
   const [mode, setMode] = useState<GrokMode>("text-to-image");
-  const [settings, setSettings] = useState<GenerationSettings>(DEFAULT_SETTINGS);
+  const [settings, setSettings] = useState<GenerationSettings>(() => {
+    try {
+      const saved = localStorage.getItem("grok-settings");
+      return saved ? { ...DEFAULT_SETTINGS, ...JSON.parse(saved) } : DEFAULT_SETTINGS;
+    } catch {
+      return DEFAULT_SETTINGS;
+    }
+  });
+
+  const handleSettingsChange = (next: GenerationSettings) => {
+    setSettings(next);
+    localStorage.setItem("grok-settings", JSON.stringify(next));
+  };
   const { toast } = useToast();
   const {
     isLoading,
@@ -119,7 +131,7 @@ const Index = () => {
               INPUT_TERMINAL
             </span>
           </div>
-          <SettingsPanel settings={settings} onChange={setSettings} mode={mode} />
+          <SettingsPanel settings={settings} onChange={handleSettingsChange} mode={mode} />
           <PromptForm mode={mode} isLoading={isLoading} onSubmit={handleSubmit} settings={settings} />
         </section>
 
