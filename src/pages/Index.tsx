@@ -33,8 +33,8 @@ const Index = () => {
     isLoading,
     error,
     results,
-    setApiKey,
-    clearApiKey,
+    setApiKey: setApiKeyRaw,
+    clearApiKey: clearApiKeyRaw,
     hasApiKey,
     generateImage,
     editImage,
@@ -44,13 +44,24 @@ const Index = () => {
   } = useGrokApi();
   const { history, addEntry, removeEntry, clearHistory } = usePromptHistory();
   const [activePrompt, setActivePrompt] = useState("");
+  const [apiKeySet, setApiKeySet] = useState(() => hasApiKey());
+
+  const handleSaveApiKey = useCallback((key: string) => {
+    setApiKeyRaw(key);
+    setApiKeySet(true);
+  }, [setApiKeyRaw]);
+
+  const handleClearApiKey = useCallback(() => {
+    clearApiKeyRaw();
+    setApiKeySet(false);
+  }, [clearApiKeyRaw]);
 
   const handleSelectPrompt = useCallback((prompt: string) => {
     setActivePrompt(prompt);
   }, []);
 
   const handleSubmit = async (data: { prompt: string; imageUrl?: string }) => {
-    if (!hasApiKey()) {
+    if (!apiKeySet) {
       toast({
         title: "ACCESS DENIED",
         description: "Configure your xAI API key first.",
@@ -123,9 +134,9 @@ const Index = () => {
               }`}
             />
             <ApiKeyDialog
-              hasKey={hasApiKey()}
-              onSave={setApiKey}
-              onClear={clearApiKey}
+              hasKey={apiKeySet}
+              onSave={handleSaveApiKey}
+              onClear={handleClearApiKey}
             />
           </div>
         </header>
