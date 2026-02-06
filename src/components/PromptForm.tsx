@@ -43,9 +43,10 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
     <form onSubmit={handleSubmit} className="space-y-4">
       {needsImage && (
         <div className="space-y-2">
-          <label className="font-orbitron text-xs tracking-wider text-muted-foreground flex items-center gap-2">
+          <label className="font-mono-share text-[10px] tracking-wider text-muted-foreground flex items-center gap-2">
+            <span className="text-primary/50">$</span>
             <Upload className="w-3 h-3" />
-            SOURCE IMAGE URL
+            source_image_url
           </label>
           <Input
             value={imageUrl}
@@ -57,8 +58,10 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
       )}
 
       <div className="space-y-2">
-        <label className="font-orbitron text-xs tracking-wider text-muted-foreground">
-          PROMPT_INPUT
+        <label className="font-mono-share text-[10px] tracking-wider text-muted-foreground flex items-center gap-1.5">
+          <span className="text-primary/50">❯</span>
+          prompt
+          <span className="inline-block w-1.5 h-3 bg-primary/40 animate-pulse align-middle" />
         </label>
         <div className="relative">
           <Textarea
@@ -84,13 +87,13 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
       </div>
 
       {/* Status bar */}
-      <div className="flex items-center justify-between text-[10px] font-mono-share text-muted-foreground">
-        <span>MODE: {mode.toUpperCase().replace(/-/g, "_")}</span>
+      <div className="flex items-center justify-between text-[10px] font-mono-share text-muted-foreground/40 border-t border-border/30 pt-2">
+        <span><span className="text-primary/30">mode</span>={mode.toUpperCase().replace(/-/g, "_")}</span>
         {!isVideoMode && (
           <span>{settings.size} • ×{settings.count} • {settings.responseFormat.toUpperCase()}</span>
         )}
-        <span>{isLoading ? "PROCESSING..." : "READY"}</span>
-        <span>{prompt.length} CHARS</span>
+        <span>{isLoading ? "⟳ PROCESSING..." : "● READY"}</span>
+        <span>{prompt.length} chars</span>
       </div>
     </form>
   );

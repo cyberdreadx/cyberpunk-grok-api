@@ -34,13 +34,14 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onChange, mode 
   return (
     <Collapsible>
       <CollapsibleTrigger className="flex items-center gap-2 w-full group">
+        <span className="font-mono-share text-primary/40 text-xs group-data-[state=open]:text-primary/60">❯</span>
         <Settings className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors group-data-[state=open]:text-primary" />
-        <span className="font-orbitron text-[10px] tracking-widest text-muted-foreground group-hover:text-primary transition-colors group-data-[state=open]:text-primary">
-          RENDER_CONFIG
+        <span className="font-mono-share text-[10px] tracking-widest text-muted-foreground group-hover:text-primary transition-colors group-data-[state=open]:text-primary">
+          render_config
         </span>
-        <div className="h-px flex-1 bg-border" />
-        <span className="font-mono-share text-[9px] text-muted-foreground/50">
-          {settings.size} • ×{settings.count} • {settings.responseFormat.toUpperCase()}
+        <div className="h-px flex-1 bg-border/50" />
+        <span className="font-mono-share text-[9px] text-muted-foreground/30">
+          {settings.size} • ×{settings.count} • {settings.responseFormat}
         </span>
       </CollapsibleTrigger>
 

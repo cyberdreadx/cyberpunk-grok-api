@@ -92,7 +92,7 @@ const Index = () => {
 
   return (
     <CyberLayout>
-      <div className="max-w-5xl mx-auto px-4 py-8 space-y-8">
+      <div className="max-w-5xl mx-auto px-4 py-8 space-y-6">
         {/* Header with Orb */}
         <header className="text-center space-y-2 animate-slide-up">
           {/* Grok Orb */}
@@ -107,7 +107,8 @@ const Index = () => {
             glitchIntensity="medium"
           />
           <p className="font-mono-share text-sm text-muted-foreground animate-flicker">
-            xAI Neural Rendering Interface // v2.0
+            <span className="text-primary/50">$</span> xAI Neural Rendering Interface // v2.0
+            <span className="inline-block w-2 h-4 bg-primary/70 ml-1 animate-pulse align-middle" />
           </p>
 
           {/* Status bar */}
@@ -132,73 +133,91 @@ const Index = () => {
         {/* Mode selector */}
         <section className="animate-slide-up" style={{ animationDelay: "100ms" }}>
           <div className="flex items-center gap-2 mb-3">
-            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border to-transparent" />
+            <span className="font-mono-share text-primary/40 text-xs">❯</span>
             <GlitchText
               text="SELECT_MODE"
               className="font-orbitron text-[10px] tracking-widest text-muted-foreground"
               glitchIntensity="low"
             />
-            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border to-transparent" />
+            <div className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
           </div>
           <ModeSelector activeMode={mode} onModeChange={setMode} />
         </section>
 
-        {/* Prompt form */}
+        {/* Prompt form — Terminal block */}
         <section
-          className="relative border border-border rounded p-5 bg-card/30 backdrop-blur-sm animate-slide-up space-y-4 overflow-hidden"
+          className="relative border border-border rounded bg-card/40 backdrop-blur-sm animate-slide-up overflow-hidden"
           style={{ animationDelay: "200ms" }}
         >
-          {/* Animated top border */}
-          <div
-            className="absolute top-0 left-0 right-0 h-[1px]"
-            style={{
-              background: "linear-gradient(90deg, transparent, hsl(180 100% 50%), hsl(300 100% 60%), hsl(270 100% 65%), transparent)",
-              backgroundSize: "200% 100%",
-              animation: "border-flow 3s linear infinite",
-            }}
-          />
-
-          <div className="flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full transition-colors duration-500 ${
-              isLoading ? "bg-secondary animate-pulse" : "bg-primary animate-pulse-glow"
-            }`} />
-            <GlitchText
-              text="INPUT_TERMINAL"
-              className="font-orbitron text-xs tracking-wider text-foreground"
-              glitchIntensity="low"
-            />
+          {/* Terminal title bar */}
+          <div className="flex items-center gap-2 px-4 py-2 border-b border-border/50 bg-card/60">
+            <div className="flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-full bg-neon-red/60" />
+              <div className="w-2 h-2 rounded-full bg-neon-yellow/60" />
+              <div className="w-2 h-2 rounded-full bg-primary/60" />
+            </div>
+            <div className="flex-1 flex items-center gap-2">
+              <div className={`w-2 h-2 rounded-full transition-colors duration-500 ${
+                isLoading ? "bg-secondary animate-pulse" : "bg-primary animate-pulse-glow"
+              }`} />
+              <GlitchText
+                text="INPUT_TERMINAL"
+                className="font-orbitron text-[10px] tracking-wider text-muted-foreground"
+                glitchIntensity="low"
+              />
+            </div>
+            <span className="font-mono-share text-[9px] text-muted-foreground/30">
+              pid:4207
+            </span>
           </div>
-          <SettingsPanel settings={settings} onChange={handleSettingsChange} mode={mode} />
-          <PromptHistory history={history} onSelect={handleSelectPrompt} onRemove={removeEntry} onClear={clearHistory} />
-          <PromptForm mode={mode} isLoading={isLoading} onSubmit={handleSubmit} settings={settings} initialPrompt={activePrompt} />
+
+          {/* Terminal body */}
+          <div className="p-5 space-y-4">
+            {/* Boot messages */}
+            <div className="font-mono-share text-[10px] text-muted-foreground/30 space-y-0.5">
+              <div><span className="text-primary/40">[ok]</span> neural_link initialized</div>
+              <div><span className="text-primary/40">[ok]</span> grok-2-image-gen loaded</div>
+              <div><span className="text-primary/40">[ok]</span> awaiting input<span className="inline-block w-1.5 h-3 bg-muted-foreground/20 ml-1 animate-pulse align-middle" /></div>
+            </div>
+
+            <div className="h-px bg-border/30" />
+
+            <SettingsPanel settings={settings} onChange={handleSettingsChange} mode={mode} />
+            <PromptHistory history={history} onSelect={handleSelectPrompt} onRemove={removeEntry} onClear={clearHistory} />
+            <PromptForm mode={mode} isLoading={isLoading} onSubmit={handleSubmit} settings={settings} initialPrompt={activePrompt} />
+          </div>
         </section>
 
         {/* Error display */}
         {error && (
-          <div className="border border-destructive/50 rounded p-4 bg-destructive/5 animate-slide-up">
-            <div className="font-orbitron text-xs text-destructive tracking-wider mb-1">
-              ERROR_LOG
+          <div className="border border-destructive/50 rounded overflow-hidden animate-slide-up">
+            <div className="flex items-center gap-2 px-4 py-1.5 bg-destructive/10 border-b border-destructive/20">
+              <span className="font-mono-share text-[10px] text-destructive">stderr</span>
             </div>
-            <p className="font-mono-share text-sm text-destructive/80">{error}</p>
-            <button
-              onClick={clearError}
-              className="font-mono-share text-xs text-muted-foreground hover:text-foreground mt-2 underline"
-            >
-              DISMISS
-            </button>
+            <div className="p-4">
+              <p className="font-mono-share text-sm text-destructive/80">
+                <span className="text-destructive/50">error: </span>{error}
+              </p>
+              <button
+                onClick={clearError}
+                className="font-mono-share text-xs text-muted-foreground hover:text-foreground mt-2 underline"
+              >
+                $ clear
+              </button>
+            </div>
           </div>
         )}
 
         {/* Results */}
         <section className="animate-slide-up" style={{ animationDelay: "300ms" }}>
           <div className="flex items-center gap-2 mb-4">
-            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border to-transparent" />
+            <span className="font-mono-share text-secondary/40 text-xs">❯</span>
             <GlitchText
               text="OUTPUT_STREAM"
               className="font-orbitron text-[10px] tracking-widest text-muted-foreground"
               glitchIntensity="low"
             />
-            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border to-transparent" />
+            <div className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
           </div>
           <ResultsGrid results={results} isLoading={isLoading} onClear={clearResults} />
         </section>
@@ -206,7 +225,7 @@ const Index = () => {
         {/* Footer */}
         <footer className="text-center py-6 border-t border-border/30">
           <p className="font-mono-share text-[10px] text-muted-foreground/40 animate-flicker">
-            GROK_IMAGINE // POWERED BY xAI // CLIENT-SIDE RENDERING // ZERO TELEMETRY
+            <span className="text-primary/30">$</span> echo "POWERED BY xAI // CLIENT-SIDE RENDERING // ZERO TELEMETRY"
           </p>
         </footer>
       </div>

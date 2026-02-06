@@ -27,18 +27,19 @@ const CyberLayout: React.FC<CyberLayoutProps> = ({ children }) => {
       {/* Data rain */}
       <DataRain intensity={25} />
 
-      {/* Corner accents with animated borders */}
-      <div className="fixed top-0 left-0 w-40 h-40 border-l-2 border-t-2 border-primary/30 z-20">
-        <div className="absolute top-0 left-0 w-3 h-3 bg-primary/50 animate-pulse-glow" />
-      </div>
-      <div className="fixed top-0 right-0 w-40 h-40 border-r-2 border-t-2 border-secondary/30 z-20">
-        <div className="absolute top-0 right-0 w-3 h-3 bg-secondary/50 animate-pulse-glow" />
-      </div>
-      <div className="fixed bottom-0 left-0 w-40 h-40 border-l-2 border-b-2 border-secondary/30 z-20">
-        <div className="absolute bottom-0 left-0 w-3 h-3 bg-secondary/50 animate-pulse-glow" />
-      </div>
-      <div className="fixed bottom-0 right-0 w-40 h-40 border-r-2 border-b-2 border-primary/30 z-20">
-        <div className="absolute bottom-0 right-0 w-3 h-3 bg-primary/50 animate-pulse-glow" />
+      {/* Terminal top bar */}
+      <div className="fixed top-0 left-0 right-0 z-30 h-7 bg-card/80 backdrop-blur-sm border-b border-border flex items-center px-4 gap-3">
+        <div className="flex items-center gap-1.5">
+          <div className="w-2.5 h-2.5 rounded-full bg-neon-red/70" />
+          <div className="w-2.5 h-2.5 rounded-full bg-neon-yellow/70" />
+          <div className="w-2.5 h-2.5 rounded-full bg-primary/70" />
+        </div>
+        <div className="font-mono-share text-[10px] text-muted-foreground/50 flex-1 text-center">
+          grok@xai:~/neural-render — bash
+        </div>
+        <div className="font-mono-share text-[10px] text-muted-foreground/30">
+          ⌘
+        </div>
       </div>
 
       {/* Horizontal scan line */}
@@ -54,7 +55,7 @@ const CyberLayout: React.FC<CyberLayoutProps> = ({ children }) => {
       <HudOverlay />
 
       {/* Main content */}
-      <div className="relative z-20">{children}</div>
+      <div className="relative z-20 pt-7">{children}</div>
     </div>
   );
 };

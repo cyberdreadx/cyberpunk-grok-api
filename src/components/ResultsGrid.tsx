@@ -17,11 +17,11 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, onClear }
   if (results.length === 0 && !isLoading) {
     return (
       <div className="border border-dashed border-border rounded p-12 text-center">
-        <div className="font-orbitron text-sm text-muted-foreground tracking-wider mb-2">
-          NO_OUTPUT_DATA
+        <div className="font-mono-share text-sm text-muted-foreground tracking-wider mb-2">
+          <span className="text-primary/40">$</span> ls ./output/
         </div>
-        <div className="font-mono-share text-xs text-muted-foreground/60">
-          Submit a prompt to generate results
+        <div className="font-mono-share text-xs text-muted-foreground/40">
+          (empty) — submit a prompt to generate results
         </div>
       </div>
     );
