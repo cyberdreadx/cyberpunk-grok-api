@@ -1,73 +1,70 @@
-# Welcome to your Lovable project
+# ⚡ GROK_IMAGINE
 
-## Project info
+> Cyberpunk neural rendering interface for xAI's Grok Imagine API.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+![GROK_IMAGINE Banner](public/og-image.png)
 
-## How can I edit this code?
+## What is this?
 
-There are several ways of editing your application.
+A **fully client-side** web app that lets you interact with every feature of the [xAI Grok Imagine API](https://docs.x.ai/docs/guides/image-generation) through a cyberpunk-themed interface. Your API key stays in your browser — nothing is ever sent to a third-party server.
 
-**Use Lovable**
+### Features
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+| Mode | Description |
+|------|-------------|
+| 🖼️ **GENERATE** | Text → Image generation |
+| ✏️ **MODIFY** | Edit existing images with prompts |
+| 🎬 **RENDER** | Text → Video generation |
+| 🎞️ **ANIMATE** | Image → Video animation |
 
-Changes made via Lovable will be committed automatically to this repo.
+### Additional Features
 
-**Use your preferred IDE**
+- **Settings Panel** — Resolution (512² to 1792×1024), batch count (×1–×4), output format (URL / BASE64)
+- **Prompt History** — Auto-saved, searchable, reusable prompts with localStorage persistence
+- **PWA Support** — Install on any phone as a native-feeling app
+- **Results Gallery** — Expand, download, open in new tab
+- **API Key Management** — Stored locally, never transmitted
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## 🔒 Privacy
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+| Concern | Status |
+|---------|--------|
+| API key storage | Browser localStorage only |
+| API calls | Direct to `api.x.ai`, no middleman |
+| Server-side code | None — pure static files |
+| Telemetry | None |
+| Data persistence | All local |
 
-Follow these steps:
+## 🚀 Quick Start
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+```bash
+# Install dependencies
+npm install
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Start dev server
 npm run dev
+
+# Build for production
+npm run build
 ```
 
-**Edit a file directly in GitHub**
+## 🏠 Self-Hosting
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+See [SELF-HOSTING.md](SELF-HOSTING.md) for complete instructions on running privately via:
 
-**Use GitHub Codespaces**
+- 📱 **iPhone (iSH terminal)**
+- 🐳 **Docker** (Synology, QNAP, Unraid, TrueNAS)
+- 💻 **Any static server** (npx serve, Python, PHP)
+- 🔐 **Tailscale / ZeroTier** for secure remote access
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## 🛠️ Tech Stack
 
-## What technologies are used for this project?
+- **React** + **TypeScript** + **Vite**
+- **Tailwind CSS** with custom cyberpunk design system
+- **shadcn/ui** components
+- **PWA** via vite-plugin-pwa
+- Fonts: Orbitron, Share Tech Mono, Rajdhani
 
-This project is built with:
+## 📝 License
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Private project. All rights reserved.
