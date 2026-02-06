@@ -1,12 +1,14 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { Zap, Terminal } from "lucide-react";
 import CyberLayout from "@/components/CyberLayout";
 import ModeSelector from "@/components/ModeSelector";
 import PromptForm from "@/components/PromptForm";
 import SettingsPanel from "@/components/SettingsPanel";
+import PromptHistory from "@/components/PromptHistory";
 import ResultsGrid from "@/components/ResultsGrid";
 import ApiKeyDialog from "@/components/ApiKeyDialog";
 import { useGrokApi, type GrokMode, type GenerationSettings, DEFAULT_SETTINGS } from "@/hooks/useGrokApi";
+import { usePromptHistory } from "@/hooks/usePromptHistory";
 import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
@@ -38,6 +40,12 @@ const Index = () => {
     clearResults,
     clearError,
   } = useGrokApi();
+  const { history, addEntry, removeEntry, clearHistory } = usePromptHistory();
+  const [activePrompt, setActivePrompt] = useState("");
+
+  const handleSelectPrompt = useCallback((prompt: string) => {
+    setActivePrompt(prompt);
+  }, []);
 
   const handleSubmit = async (data: { prompt: string; imageUrl?: string }) => {
     if (!hasApiKey()) {
@@ -48,6 +56,9 @@ const Index = () => {
       });
       return;
     }
+
+    addEntry(data.prompt, mode);
+    setActivePrompt("");
 
     try {
       switch (mode) {
@@ -132,7 +143,8 @@ const Index = () => {
             </span>
           </div>
           <SettingsPanel settings={settings} onChange={handleSettingsChange} mode={mode} />
-          <PromptForm mode={mode} isLoading={isLoading} onSubmit={handleSubmit} settings={settings} />
+          <PromptHistory history={history} onSelect={handleSelectPrompt} onRemove={removeEntry} onClear={clearHistory} />
+          <PromptForm mode={mode} isLoading={isLoading} onSubmit={handleSubmit} settings={settings} initialPrompt={activePrompt} />
         </section>
 
         {/* Error display */}
