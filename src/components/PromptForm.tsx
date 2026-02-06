@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Send, Upload, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,11 +10,16 @@ interface PromptFormProps {
   isLoading: boolean;
   onSubmit: (data: { prompt: string; imageUrl?: string }) => void;
   settings: GenerationSettings;
+  initialPrompt?: string;
 }
 
-const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, settings }) => {
-  const [prompt, setPrompt] = useState("");
+const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, settings, initialPrompt }) => {
+  const [prompt, setPrompt] = useState(initialPrompt || "");
   const [imageUrl, setImageUrl] = useState("");
+
+  useEffect(() => {
+    if (initialPrompt) setPrompt(initialPrompt);
+  }, [initialPrompt]);
 
   const needsImage = mode === "edit-image" || mode === "image-to-video";
 
