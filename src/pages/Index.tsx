@@ -103,27 +103,27 @@ const Index = () => {
 
   return (
     <CyberLayout>
-      <div className="max-w-5xl mx-auto px-4 py-8 space-y-6">
+      <div className="max-w-5xl mx-auto px-3 sm:px-4 py-4 sm:py-8 space-y-4 sm:space-y-6">
         {/* Header with Orb */}
         <header className="text-center space-y-2 animate-slide-up">
           {/* Grok Orb */}
-          <div className="w-48 h-48 md:w-64 md:h-64 mx-auto">
+          <div className="w-32 h-32 sm:w-48 sm:h-48 md:w-64 md:h-64 mx-auto">
             <GrokOrb isGenerating={isLoading} />
           </div>
 
           <GlitchText
             text="GROK_IMAGINE"
             as="h1"
-            className="font-orbitron text-3xl md:text-5xl font-black tracking-wider neon-text-cyan"
+            className="font-orbitron text-2xl sm:text-3xl md:text-5xl font-black tracking-wider neon-text-cyan"
             glitchIntensity="medium"
           />
-          <p className="font-mono-share text-sm text-muted-foreground animate-flicker">
+          <p className="font-mono-share text-xs sm:text-sm text-muted-foreground animate-flicker">
             <span className="text-primary/50">$</span> xAI Neural Rendering Interface // v2.0
             <span className="inline-block w-2 h-4 bg-primary/70 ml-1 animate-pulse align-middle" />
           </p>
 
           {/* Status bar */}
-          <div className="flex items-center justify-center gap-6 font-mono-share text-[10px] text-muted-foreground/50 pt-2">
+          <div className="flex items-center justify-center gap-3 sm:gap-6 font-mono-share text-[9px] sm:text-[10px] text-muted-foreground/50 pt-2 flex-wrap">
             <span className="flex items-center gap-1">
               <Terminal className="w-3 h-3" />
               SYS_ONLINE
@@ -183,7 +183,7 @@ const Index = () => {
           </div>
 
           {/* Terminal body */}
-          <div className="p-5 space-y-4">
+          <div className="p-3 sm:p-5 space-y-3 sm:space-y-4">
             {/* Boot messages */}
             <div className="font-mono-share text-[10px] text-muted-foreground/30 space-y-0.5">
               <div><span className="text-primary/40">[ok]</span> neural_link initialized</div>
