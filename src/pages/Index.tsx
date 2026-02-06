@@ -1,6 +1,8 @@
 import React, { useState, useCallback } from "react";
-import { Zap, Terminal } from "lucide-react";
+import { Terminal } from "lucide-react";
 import CyberLayout from "@/components/CyberLayout";
+import GrokOrb from "@/components/GrokOrb";
+import GlitchText from "@/components/GlitchText";
 import ModeSelector from "@/components/ModeSelector";
 import PromptForm from "@/components/PromptForm";
 import SettingsPanel from "@/components/SettingsPanel";
@@ -91,26 +93,34 @@ const Index = () => {
   return (
     <CyberLayout>
       <div className="max-w-5xl mx-auto px-4 py-8 space-y-8">
-        {/* Header */}
-        <header className="text-center space-y-4 animate-slide-up">
-          <div className="flex items-center justify-center gap-3">
-            <Zap className="w-8 h-8 text-primary animate-pulse-glow" />
-            <h1 className="font-orbitron text-3xl md:text-4xl font-black tracking-wider neon-text-cyan">
-              GROK_IMAGINE
-            </h1>
-            <Zap className="w-8 h-8 text-secondary animate-pulse-glow" />
+        {/* Header with Orb */}
+        <header className="text-center space-y-2 animate-slide-up">
+          {/* Grok Orb */}
+          <div className="w-48 h-48 md:w-64 md:h-64 mx-auto">
+            <GrokOrb isGenerating={isLoading} />
           </div>
-          <p className="font-mono-share text-sm text-muted-foreground">
+
+          <GlitchText
+            text="GROK_IMAGINE"
+            as="h1"
+            className="font-orbitron text-3xl md:text-5xl font-black tracking-wider neon-text-cyan"
+            glitchIntensity="medium"
+          />
+          <p className="font-mono-share text-sm text-muted-foreground animate-flicker">
             xAI Neural Rendering Interface // v2.0
           </p>
 
           {/* Status bar */}
-          <div className="flex items-center justify-center gap-6 font-mono-share text-[10px] text-muted-foreground/50">
+          <div className="flex items-center justify-center gap-6 font-mono-share text-[10px] text-muted-foreground/50 pt-2">
             <span className="flex items-center gap-1">
               <Terminal className="w-3 h-3" />
               SYS_ONLINE
             </span>
-            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse-glow" />
+            <span
+              className={`w-1.5 h-1.5 rounded-full transition-colors duration-500 ${
+                isLoading ? "bg-secondary animate-pulse" : "bg-primary animate-pulse-glow"
+              }`}
+            />
             <ApiKeyDialog
               hasKey={hasApiKey()}
               onSave={setApiKey}
@@ -123,9 +133,11 @@ const Index = () => {
         <section className="animate-slide-up" style={{ animationDelay: "100ms" }}>
           <div className="flex items-center gap-2 mb-3">
             <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border to-transparent" />
-            <span className="font-orbitron text-[10px] tracking-widest text-muted-foreground">
-              SELECT_MODE
-            </span>
+            <GlitchText
+              text="SELECT_MODE"
+              className="font-orbitron text-[10px] tracking-widest text-muted-foreground"
+              glitchIntensity="low"
+            />
             <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border to-transparent" />
           </div>
           <ModeSelector activeMode={mode} onModeChange={setMode} />
@@ -133,14 +145,28 @@ const Index = () => {
 
         {/* Prompt form */}
         <section
-          className="border border-border rounded p-5 bg-card/30 backdrop-blur-sm animate-slide-up space-y-4"
+          className="relative border border-border rounded p-5 bg-card/30 backdrop-blur-sm animate-slide-up space-y-4 overflow-hidden"
           style={{ animationDelay: "200ms" }}
         >
+          {/* Animated top border */}
+          <div
+            className="absolute top-0 left-0 right-0 h-[1px]"
+            style={{
+              background: "linear-gradient(90deg, transparent, hsl(180 100% 50%), hsl(300 100% 60%), hsl(270 100% 65%), transparent)",
+              backgroundSize: "200% 100%",
+              animation: "border-flow 3s linear infinite",
+            }}
+          />
+
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-primary animate-pulse-glow" />
-            <span className="font-orbitron text-xs tracking-wider text-foreground">
-              INPUT_TERMINAL
-            </span>
+            <div className={`w-2 h-2 rounded-full transition-colors duration-500 ${
+              isLoading ? "bg-secondary animate-pulse" : "bg-primary animate-pulse-glow"
+            }`} />
+            <GlitchText
+              text="INPUT_TERMINAL"
+              className="font-orbitron text-xs tracking-wider text-foreground"
+              glitchIntensity="low"
+            />
           </div>
           <SettingsPanel settings={settings} onChange={handleSettingsChange} mode={mode} />
           <PromptHistory history={history} onSelect={handleSelectPrompt} onRemove={removeEntry} onClear={clearHistory} />
@@ -149,7 +175,7 @@ const Index = () => {
 
         {/* Error display */}
         {error && (
-          <div className="border border-destructive/50 rounded p-4 bg-destructive/5">
+          <div className="border border-destructive/50 rounded p-4 bg-destructive/5 animate-slide-up">
             <div className="font-orbitron text-xs text-destructive tracking-wider mb-1">
               ERROR_LOG
             </div>
@@ -167,9 +193,11 @@ const Index = () => {
         <section className="animate-slide-up" style={{ animationDelay: "300ms" }}>
           <div className="flex items-center gap-2 mb-4">
             <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border to-transparent" />
-            <span className="font-orbitron text-[10px] tracking-widest text-muted-foreground">
-              OUTPUT_STREAM
-            </span>
+            <GlitchText
+              text="OUTPUT_STREAM"
+              className="font-orbitron text-[10px] tracking-widest text-muted-foreground"
+              glitchIntensity="low"
+            />
             <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border to-transparent" />
           </div>
           <ResultsGrid results={results} isLoading={isLoading} onClear={clearResults} />
@@ -177,8 +205,8 @@ const Index = () => {
 
         {/* Footer */}
         <footer className="text-center py-6 border-t border-border/30">
-          <p className="font-mono-share text-[10px] text-muted-foreground/40">
-            GROK_IMAGINE // POWERED BY xAI // CLIENT-SIDE RENDERING
+          <p className="font-mono-share text-[10px] text-muted-foreground/40 animate-flicker">
+            GROK_IMAGINE // POWERED BY xAI // CLIENT-SIDE RENDERING // ZERO TELEMETRY
           </p>
         </footer>
       </div>
