@@ -3,15 +3,16 @@ import { Send, Upload, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import type { GrokMode } from "@/hooks/useGrokApi";
+import type { GrokMode, GenerationSettings } from "@/hooks/useGrokApi";
 
 interface PromptFormProps {
   mode: GrokMode;
   isLoading: boolean;
   onSubmit: (data: { prompt: string; imageUrl?: string }) => void;
+  settings: GenerationSettings;
 }
 
-const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit }) => {
+const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, settings }) => {
   const [prompt, setPrompt] = useState("");
   const [imageUrl, setImageUrl] = useState("");
 
@@ -30,6 +31,8 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit }) =>
     "text-to-video": "Describe the video scene to render...",
     "image-to-video": "Describe the animation / motion to apply...",
   };
+
+  const isVideoMode = mode === "text-to-video" || mode === "image-to-video";
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -78,6 +81,9 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit }) =>
       {/* Status bar */}
       <div className="flex items-center justify-between text-[10px] font-mono-share text-muted-foreground">
         <span>MODE: {mode.toUpperCase().replace(/-/g, "_")}</span>
+        {!isVideoMode && (
+          <span>{settings.size} • ×{settings.count} • {settings.responseFormat.toUpperCase()}</span>
+        )}
         <span>{isLoading ? "PROCESSING..." : "READY"}</span>
         <span>{prompt.length} CHARS</span>
       </div>
