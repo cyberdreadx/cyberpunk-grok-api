@@ -1,0 +1,9 @@
+services:
+  grok-imagine:
+    build: .
+    container_name: grok-imagine
+    ports:
+      - "3000:80"
+    restart: unless-stopped
+    # Optional: override with pre-built image
+    # image: grok-imagine:latest
