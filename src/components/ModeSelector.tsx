@@ -32,16 +32,21 @@ const ModeSelector: React.FC<ModeSelectorProps> = ({ activeMode, onModeChange })
               }
             `}
           >
-            {/* Active indicator line */}
+            {/* Active indicator — terminal cursor style */}
             {isActive && (
-              <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-primary via-secondary to-accent animate-pulse-glow" />
+              <div className="absolute top-0 left-0 right-0 h-[2px] bg-primary animate-pulse-glow" />
             )}
 
-            <Icon
-              className={`w-5 h-5 mb-2 transition-colors ${
-                isActive ? "text-primary" : "text-muted-foreground group-hover:text-primary/70"
-              }`}
-            />
+            <div className="flex items-center gap-2 mb-2">
+              <span className={`font-mono-share text-[10px] ${isActive ? "text-primary/60" : "text-muted-foreground/30"}`}>
+                {isActive ? "❯" : "$"}
+              </span>
+              <Icon
+                className={`w-4 h-4 transition-colors ${
+                  isActive ? "text-primary" : "text-muted-foreground group-hover:text-primary/70"
+                }`}
+              />
+            </div>
             <div
               className={`font-orbitron text-xs font-bold tracking-wider ${
                 isActive ? "neon-text-cyan" : "text-foreground"

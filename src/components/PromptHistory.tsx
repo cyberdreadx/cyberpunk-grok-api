@@ -38,12 +38,13 @@ const PromptHistory: React.FC<PromptHistoryProps> = ({ history, onSelect, onRemo
   return (
     <Collapsible>
       <CollapsibleTrigger className="flex items-center gap-2 w-full group">
+        <span className="font-mono-share text-secondary/40 text-xs group-data-[state=open]:text-secondary/60">❯</span>
         <History className="w-3.5 h-3.5 text-muted-foreground group-hover:text-secondary transition-colors group-data-[state=open]:text-secondary" />
-        <span className="font-orbitron text-[10px] tracking-widest text-muted-foreground group-hover:text-secondary transition-colors group-data-[state=open]:text-secondary">
-          PROMPT_HISTORY
+        <span className="font-mono-share text-[10px] tracking-widest text-muted-foreground group-hover:text-secondary transition-colors group-data-[state=open]:text-secondary">
+          history --list
         </span>
-        <div className="h-px flex-1 bg-border" />
-        <span className="font-mono-share text-[9px] text-muted-foreground/50">
+        <div className="h-px flex-1 bg-border/50" />
+        <span className="font-mono-share text-[9px] text-muted-foreground/30">
           {history.length} entries
         </span>
       </CollapsibleTrigger>
