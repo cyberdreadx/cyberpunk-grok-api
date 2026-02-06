@@ -95,7 +95,6 @@ export function useGrokApi() {
         prompt: params.prompt,
         n: params.settings.count,
         response_format: params.settings.responseFormat,
-        size: params.settings.size,
       });
 
       const newResults: GrokResult[] = data.data.map((item: any, i: number) => ({
