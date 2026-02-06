@@ -3,13 +3,15 @@ import { Zap, Terminal } from "lucide-react";
 import CyberLayout from "@/components/CyberLayout";
 import ModeSelector from "@/components/ModeSelector";
 import PromptForm from "@/components/PromptForm";
+import SettingsPanel from "@/components/SettingsPanel";
 import ResultsGrid from "@/components/ResultsGrid";
 import ApiKeyDialog from "@/components/ApiKeyDialog";
-import { useGrokApi, type GrokMode } from "@/hooks/useGrokApi";
+import { useGrokApi, type GrokMode, type GenerationSettings, DEFAULT_SETTINGS } from "@/hooks/useGrokApi";
 import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
   const [mode, setMode] = useState<GrokMode>("text-to-image");
+  const [settings, setSettings] = useState<GenerationSettings>(DEFAULT_SETTINGS);
   const { toast } = useToast();
   const {
     isLoading,
@@ -38,10 +40,10 @@ const Index = () => {
     try {
       switch (mode) {
         case "text-to-image":
-          await generateImage({ prompt: data.prompt });
+          await generateImage({ prompt: data.prompt, settings });
           break;
         case "edit-image":
-          await editImage({ prompt: data.prompt, image_url: data.imageUrl! });
+          await editImage({ prompt: data.prompt, image_url: data.imageUrl!, settings });
           break;
         case "text-to-video":
           await generateVideo({ prompt: data.prompt });
@@ -108,16 +110,17 @@ const Index = () => {
 
         {/* Prompt form */}
         <section
-          className="border border-border rounded p-5 bg-card/30 backdrop-blur-sm animate-slide-up"
+          className="border border-border rounded p-5 bg-card/30 backdrop-blur-sm animate-slide-up space-y-4"
           style={{ animationDelay: "200ms" }}
         >
-          <div className="flex items-center gap-2 mb-4">
+          <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-primary animate-pulse-glow" />
             <span className="font-orbitron text-xs tracking-wider text-foreground">
               INPUT_TERMINAL
             </span>
           </div>
-          <PromptForm mode={mode} isLoading={isLoading} onSubmit={handleSubmit} />
+          <SettingsPanel settings={settings} onChange={setSettings} mode={mode} />
+          <PromptForm mode={mode} isLoading={isLoading} onSubmit={handleSubmit} settings={settings} />
         </section>
 
         {/* Error display */}

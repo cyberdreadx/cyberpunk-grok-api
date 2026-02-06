@@ -2,6 +2,22 @@ import { useState, useCallback } from "react";
 
 export type GrokMode = "text-to-image" | "edit-image" | "text-to-video" | "image-to-video";
 
+export type ImageSize = "1024x1024" | "1024x1792" | "1792x1024" | "512x512";
+export type ResponseFormat = "url" | "b64_json";
+export type ImageCount = 1 | 2 | 3 | 4;
+
+export interface GenerationSettings {
+  size: ImageSize;
+  responseFormat: ResponseFormat;
+  count: ImageCount;
+}
+
+export const DEFAULT_SETTINGS: GenerationSettings = {
+  size: "1024x1024",
+  responseFormat: "url",
+  count: 1,
+};
+
 export interface GrokResult {
   id: string;
   url: string;
@@ -12,16 +28,13 @@ export interface GrokResult {
 
 interface GenerateImageParams {
   prompt: string;
-  n?: number;
-  response_format?: "url" | "b64_json";
-  size?: string;
+  settings: GenerationSettings;
 }
 
 interface EditImageParams {
   prompt: string;
   image_url: string;
-  n?: number;
-  response_format?: "url" | "b64_json";
+  settings: GenerationSettings;
 }
 
 interface GenerateVideoParams {
@@ -80,9 +93,9 @@ export function useGrokApi() {
       const data = await makeRequest("/images/generations", {
         model: "grok-2-image",
         prompt: params.prompt,
-        n: params.n || 1,
-        response_format: params.response_format || "url",
-        size: params.size || "1024x1024",
+        n: params.settings.count,
+        response_format: params.settings.responseFormat,
+        size: params.settings.size,
       });
 
       const newResults: GrokResult[] = data.data.map((item: any, i: number) => ({
@@ -111,8 +124,8 @@ export function useGrokApi() {
         model: "grok-2-image",
         prompt: params.prompt,
         image_url: params.image_url,
-        n: params.n || 1,
-        response_format: params.response_format || "url",
+        n: params.settings.count,
+        response_format: params.settings.responseFormat,
       });
 
       const newResults: GrokResult[] = data.data.map((item: any, i: number) => ({
@@ -138,7 +151,7 @@ export function useGrokApi() {
     setError(null);
     try {
       const body: Record<string, unknown> = {
-        model: "grok-2-image", 
+        model: "grok-2-image",
         prompt: params.prompt,
       };
       if (params.image_url) {
