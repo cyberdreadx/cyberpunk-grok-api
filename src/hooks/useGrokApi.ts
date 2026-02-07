@@ -219,8 +219,7 @@ export function useGrokApi() {
     }
   }, [makeRequest]);
 
-  // Edit Image: same endpoint with image_url param
-  // n and response_format are not supported when image_url is provided
+  // Edit Image: POST /v1/images/edits (dedicated edit endpoint, NOT /generations)
   const editImage = useCallback(async (params: EditImageParams) => {
     setIsLoading(true);
     setError(null);
@@ -236,7 +235,7 @@ export function useGrokApi() {
         image_url: safeImageUrl,
       };
 
-      const data = await makeRequest("/images/generations", body);
+      const data = await makeRequest("/images/edits", body);
 
       const newResults: GrokResult[] = data.data.map((item: any, i: number) => ({
         id: `edit-${Date.now()}-${i}`,
