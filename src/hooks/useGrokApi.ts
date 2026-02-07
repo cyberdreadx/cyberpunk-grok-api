@@ -237,13 +237,18 @@ export function useGrokApi() {
         model: "grok-imagine-image",
         prompt: params.prompt,
         image_url: safeImageUrl,
+        response_format: "b64_json",
       };
 
+      console.log("[editImage] Sending request body keys:", Object.keys(body));
+
       const data = await makeRequest("/images/generations", body);
+      console.log("[editImage] Response data keys:", Object.keys(data));
+      console.log("[editImage] Response data.data length:", data.data?.length);
 
       const newResults: GrokResult[] = data.data.map((item: any, i: number) => ({
         id: `edit-${Date.now()}-${i}`,
-        url: item.url || `data:image/png;base64,${item.b64_json}`,
+        url: `data:image/png;base64,${item.b64_json}`,
         revised_prompt: item.revised_prompt,
         type: "image" as const,
         timestamp: Date.now(),
