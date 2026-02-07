@@ -3,6 +3,8 @@ import { useState, useCallback, useEffect } from "react";
 export type GrokMode = "text-to-image" | "edit-image" | "text-to-video" | "image-to-video";
 
 export type AspectRatio = "1:1" | "16:9" | "9:16" | "4:3" | "3:4" | "3:2" | "2:3" | "2:1" | "1:2";
+export type VideoAspectRatio = "16:9" | "4:3" | "1:1" | "9:16" | "3:4" | "3:2" | "2:3";
+export type VideoResolution = "720p" | "480p";
 export type ImageFormat = "url" | "base64";
 export type ImageCount = 1 | 2 | 3 | 4;
 
@@ -12,10 +14,22 @@ export interface GenerationSettings {
   count: ImageCount;
 }
 
+export interface VideoSettings {
+  aspectRatio: VideoAspectRatio;
+  resolution: VideoResolution;
+  duration: number; // 1–15 seconds
+}
+
 export const DEFAULT_SETTINGS: GenerationSettings = {
   aspectRatio: "1:1",
   imageFormat: "url",
   count: 1,
+};
+
+export const DEFAULT_VIDEO_SETTINGS: VideoSettings = {
+  aspectRatio: "16:9",
+  resolution: "720p",
+  duration: 5,
 };
 
 export interface GrokResult {
@@ -40,6 +54,7 @@ interface EditImageParams {
 interface GenerateVideoParams {
   prompt: string;
   image_url?: string;
+  videoSettings: VideoSettings;
 }
 
 const API_BASE = "https://api.x.ai/v1";
@@ -228,6 +243,9 @@ export function useGrokApi() {
       const body: Record<string, unknown> = {
         model: "grok-imagine-video",
         prompt: params.prompt,
+        aspect_ratio: params.videoSettings.aspectRatio,
+        resolution: params.videoSettings.resolution,
+        duration: params.videoSettings.duration,
       };
       if (params.image_url) {
         body.image_url = params.image_url;

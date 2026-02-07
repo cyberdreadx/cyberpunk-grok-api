@@ -9,7 +9,7 @@ import SettingsPanel from "@/components/SettingsPanel";
 import PromptHistory from "@/components/PromptHistory";
 import ResultsGrid from "@/components/ResultsGrid";
 import ApiKeyDialog from "@/components/ApiKeyDialog";
-import { useGrokApi, type GrokMode, type GenerationSettings, DEFAULT_SETTINGS } from "@/hooks/useGrokApi";
+import { useGrokApi, type GrokMode, type GenerationSettings, type VideoSettings, DEFAULT_SETTINGS, DEFAULT_VIDEO_SETTINGS } from "@/hooks/useGrokApi";
 import { usePromptHistory } from "@/hooks/usePromptHistory";
 import { useToast } from "@/hooks/use-toast";
 
@@ -23,10 +23,22 @@ const Index = () => {
       return DEFAULT_SETTINGS;
     }
   });
+  const [videoSettings, setVideoSettings] = useState<VideoSettings>(() => {
+    try {
+      const saved = localStorage.getItem("grok-video-settings");
+      return saved ? { ...DEFAULT_VIDEO_SETTINGS, ...JSON.parse(saved) } : DEFAULT_VIDEO_SETTINGS;
+    } catch {
+      return DEFAULT_VIDEO_SETTINGS;
+    }
+  });
 
   const handleSettingsChange = (next: GenerationSettings) => {
     setSettings(next);
     localStorage.setItem("grok-settings", JSON.stringify(next));
+  };
+  const handleVideoSettingsChange = (next: VideoSettings) => {
+    setVideoSettings(next);
+    localStorage.setItem("grok-video-settings", JSON.stringify(next));
   };
   const { toast } = useToast();
   const {
@@ -82,10 +94,10 @@ const Index = () => {
           await editImage({ prompt: data.prompt, image_url: data.imageUrl!, settings });
           break;
         case "text-to-video":
-          await generateVideo({ prompt: data.prompt });
+          await generateVideo({ prompt: data.prompt, videoSettings });
           break;
         case "image-to-video":
-          await generateVideo({ prompt: data.prompt, image_url: data.imageUrl });
+          await generateVideo({ prompt: data.prompt, image_url: data.imageUrl, videoSettings });
           break;
       }
       toast({
@@ -193,7 +205,7 @@ const Index = () => {
 
             <div className="h-px bg-border/30" />
 
-            <SettingsPanel settings={settings} onChange={handleSettingsChange} mode={mode} />
+            <SettingsPanel settings={settings} videoSettings={videoSettings} onChange={handleSettingsChange} onVideoChange={handleVideoSettingsChange} mode={mode} />
             <PromptHistory history={history} onSelect={handleSelectPrompt} onRemove={removeEntry} onClear={clearHistory} />
             <PromptForm mode={mode} isLoading={isLoading} onSubmit={handleSubmit} settings={settings} initialPrompt={activePrompt} />
           </div>
