@@ -1,7 +1,8 @@
 import React, { useState } from "react";
-import { Download, Maximize2, X, Trash2, ExternalLink } from "lucide-react";
+import { Download, Maximize2, X, Trash2, ExternalLink, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { GrokResult } from "@/hooks/useGrokApi";
+import { useSwipe } from "@/hooks/useSwipe";
 
 interface ResultsGridProps {
   results: GrokResult[];
@@ -11,8 +12,26 @@ interface ResultsGridProps {
 
 const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, onClear }) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [mobileIndex, setMobileIndex] = useState(0);
 
   const expandedResult = results.find((r) => r.id === expandedId);
+
+  const clampedIndex = Math.min(mobileIndex, Math.max(results.length - 1, 0));
+
+  const swipeHandlers = useSwipe({
+    onSwipeLeft: () => {
+      if (clampedIndex < results.length - 1) setMobileIndex(clampedIndex + 1);
+    },
+    onSwipeRight: () => {
+      if (clampedIndex > 0) setMobileIndex(clampedIndex - 1);
+    },
+    threshold: 40,
+  });
+
+  // Reset index when results change
+  React.useEffect(() => {
+    setMobileIndex(0);
+  }, [results.length]);
 
   if (results.length === 0 && !isLoading) {
     return (
@@ -26,6 +45,8 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, onClear }
       </div>
     );
   }
+
+  const currentResult = results[clampedIndex];
 
   return (
     <div className="space-y-4">
@@ -58,8 +79,120 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, onClear }
         </div>
       )}
 
-      {/* Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+      {/* Mobile swipeable carousel */}
+      {results.length > 0 && (
+        <div className="sm:hidden">
+          <div
+            className="relative border border-border rounded overflow-hidden bg-card"
+            {...swipeHandlers}
+          >
+            {currentResult?.type === "image" ? (
+              <img
+                src={currentResult.url}
+                alt={currentResult.revised_prompt || "Generated image"}
+                className="w-full aspect-square object-cover"
+                loading="lazy"
+              />
+            ) : currentResult ? (
+              <video
+                src={currentResult.url}
+                className="w-full aspect-video object-cover"
+                controls
+                muted
+              />
+            ) : null}
+
+            {/* Nav arrows */}
+            {results.length > 1 && (
+              <>
+                <button
+                  onClick={() => clampedIndex > 0 && setMobileIndex(clampedIndex - 1)}
+                  disabled={clampedIndex === 0}
+                  className="absolute left-1 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-background/70 text-foreground disabled:opacity-20 transition-opacity"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => clampedIndex < results.length - 1 && setMobileIndex(clampedIndex + 1)}
+                  disabled={clampedIndex === results.length - 1}
+                  className="absolute right-1 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-background/70 text-foreground disabled:opacity-20 transition-opacity"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </>
+            )}
+
+            {/* Type badge */}
+            <div className="absolute top-2 left-2 font-mono-share text-[9px] bg-background/80 text-primary px-1.5 py-0.5 rounded">
+              {currentResult?.type.toUpperCase()}
+            </div>
+
+            {/* Counter badge */}
+            {results.length > 1 && (
+              <div className="absolute top-2 right-2 font-mono-share text-[9px] bg-background/80 text-muted-foreground px-1.5 py-0.5 rounded">
+                {clampedIndex + 1}/{results.length}
+              </div>
+            )}
+          </div>
+
+          {/* Revised prompt */}
+          {currentResult?.revised_prompt && (
+            <div className="p-2.5 border border-t-0 border-border/50 rounded-b">
+              <div className="font-orbitron text-[9px] text-muted-foreground/60 tracking-wider mb-1">
+                PROMPT
+              </div>
+              <p className="font-rajdhani text-xs text-foreground/70 leading-relaxed line-clamp-3">
+                {currentResult.revised_prompt}
+              </p>
+            </div>
+          )}
+
+          {/* Mobile action bar */}
+          <div className="flex items-center justify-between px-2 py-1.5 border border-t-0 border-border/30 rounded-b">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-primary text-xs gap-1 h-7 px-2"
+              onClick={() => currentResult && setExpandedId(currentResult.id)}
+            >
+              <Maximize2 className="w-3 h-3" />
+              View
+            </Button>
+            <div className="flex gap-1">
+              <Button size="icon" variant="ghost" className="text-primary h-7 w-7" asChild>
+                <a href={currentResult?.url} target="_blank" rel="noopener noreferrer" download>
+                  <Download className="w-3 h-3" />
+                </a>
+              </Button>
+              <Button size="icon" variant="ghost" className="text-primary h-7 w-7" asChild>
+                <a href={currentResult?.url} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </Button>
+            </div>
+          </div>
+
+          {/* Dot indicators */}
+          {results.length > 1 && (
+            <div className="flex justify-center gap-1.5 pt-2">
+              {results.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setMobileIndex(i)}
+                  className={`w-1.5 h-1.5 rounded-full transition-all ${
+                    i === clampedIndex
+                      ? "bg-primary w-4"
+                      : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
+                  }`}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Desktop grid */}
+      <div className="hidden sm:grid sm:grid-cols-2 md:grid-cols-3 gap-3">
         {results.map((result, idx) => (
           <div
             key={result.id}
@@ -82,20 +215,8 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, onClear }
               />
             )}
 
-            {/* Revised prompt below image on mobile */}
-            {result.revised_prompt && (
-              <div className="p-2.5 border-t border-border/50 sm:hidden">
-                <div className="font-orbitron text-[9px] text-muted-foreground/60 tracking-wider mb-1">
-                  PROMPT
-                </div>
-                <p className="font-rajdhani text-xs text-foreground/70 leading-relaxed line-clamp-3">
-                  {result.revised_prompt}
-                </p>
-              </div>
-            )}
-
             {/* Overlay — desktop hover */}
-            <div className="absolute inset-0 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity hidden sm:flex items-center justify-center gap-2">
+            <div className="absolute inset-0 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
               <Button
                 size="icon"
                 variant="ghost"
@@ -124,31 +245,6 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, onClear }
                   <ExternalLink className="w-4 h-4" />
                 </a>
               </Button>
-            </div>
-
-            {/* Mobile action bar */}
-            <div className="flex items-center justify-between px-2 py-1.5 border-t border-border/30 sm:hidden">
-              <Button
-                size="sm"
-                variant="ghost"
-                className="text-primary text-xs gap-1 h-7 px-2"
-                onClick={() => setExpandedId(result.id)}
-              >
-                <Maximize2 className="w-3 h-3" />
-                View
-              </Button>
-              <div className="flex gap-1">
-                <Button size="icon" variant="ghost" className="text-primary h-7 w-7" asChild>
-                  <a href={result.url} target="_blank" rel="noopener noreferrer" download>
-                    <Download className="w-3 h-3" />
-                  </a>
-                </Button>
-                <Button size="icon" variant="ghost" className="text-primary h-7 w-7" asChild>
-                  <a href={result.url} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
-                </Button>
-              </div>
             </div>
 
             {/* Type badge */}
