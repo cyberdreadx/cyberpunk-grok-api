@@ -280,13 +280,16 @@ export function useGrokApi() {
         body.image_url = await urlToBase64(params.image_url);
       }
 
+      console.log("[generateVideo] Request body:", JSON.stringify({ ...body, image_url: body.image_url ? `[base64 ${String(body.image_url).length} chars]` : undefined }));
       const submitData = await makeRequest("/videos/generations", body);
+      console.log("[generateVideo] Submit response:", JSON.stringify(submitData));
       const requestId = submitData.request_id || submitData.id;
 
       if (!requestId) {
-        throw new Error("No request ID returned from video generation");
+        throw new Error("No request ID returned from video generation. Response: " + JSON.stringify(submitData));
       }
 
+      console.log("[generateVideo] Polling with requestId:", requestId);
       const data = await pollVideoResult(requestId);
 
       const videoUrl = data.video_url || data.data?.[0]?.url || data.url;
