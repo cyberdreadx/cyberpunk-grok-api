@@ -1,5 +1,5 @@
 import React from "react";
-import { Settings, Maximize, Hash, FileImage, Clock, Monitor } from "lucide-react";
+import { Settings, Maximize, Hash, Clock, Monitor } from "lucide-react";
 import {
   Collapsible,
   CollapsibleContent,
@@ -11,7 +11,6 @@ import type {
   AspectRatio,
   VideoAspectRatio,
   VideoResolution,
-  ImageFormat,
   ImageCount,
   GrokMode,
 } from "@/hooks/useGrokApi";
@@ -52,17 +51,12 @@ const videoResolutions: { value: VideoResolution; label: string; desc: string }[
 
 const counts: ImageCount[] = [1, 2, 3, 4];
 
-const formats: { value: ImageFormat; label: string; desc: string }[] = [
-  { value: "url", label: "URL", desc: "Hosted link" },
-  { value: "base64", label: "BASE64", desc: "Embedded data" },
-];
-
 const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, videoSettings, onChange, onVideoChange, mode }) => {
   const isVideoMode = mode === "text-to-video" || mode === "image-to-video";
 
   const summaryText = isVideoMode
     ? `${videoSettings.aspectRatio} • ${videoSettings.resolution} • ${videoSettings.duration}s`
-    : `${settings.aspectRatio} • ×${settings.count} • ${settings.imageFormat.toUpperCase()}`;
+    : `${settings.aspectRatio} • ×${settings.count}`;
 
   return (
     <Collapsible>
@@ -226,36 +220,6 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, videoSettings, 
               </div>
             </div>
 
-            {/* Output Format */}
-            <div className="space-y-2">
-              <label className="font-orbitron text-[10px] tracking-wider text-muted-foreground flex items-center gap-1.5">
-                <FileImage className="w-3 h-3" />
-                OUTPUT_FORMAT
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                {formats.map((f) => (
-                  <button
-                    key={f.value}
-                    type="button"
-                    onClick={() => onChange({ ...settings, imageFormat: f.value })}
-                    className={`
-                      p-2.5 border rounded text-left transition-all duration-200
-                      ${settings.imageFormat === f.value
-                        ? "border-primary neon-border bg-primary/5"
-                        : "border-border bg-card/30 hover:border-primary/40"
-                      }
-                    `}
-                  >
-                    <div className={`font-orbitron text-xs ${settings.imageFormat === f.value ? "text-primary" : "text-foreground"}`}>
-                      {f.label}
-                    </div>
-                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5">
-                      {f.desc}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
           </>
         )}
       </CollapsibleContent>

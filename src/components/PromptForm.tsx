@@ -194,7 +194,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
           </span>
         )}
         {mode !== "text-to-video" && mode !== "image-to-video" && (
-          <span className="hidden sm:inline">×{settings.count} • {settings.imageFormat.toUpperCase()}</span>
+          <span className="hidden sm:inline">×{settings.count}</span>
         )}
         <span>{isLoading ? "⟳ PROCESSING..." : "● READY"}</span>
         <span className="hidden sm:inline">{prompt.length} chars</span>
