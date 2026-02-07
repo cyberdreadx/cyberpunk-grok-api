@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 
 export type GrokMode = "text-to-image" | "edit-image" | "text-to-video" | "image-to-video";
 
@@ -43,11 +43,29 @@ interface GenerateVideoParams {
 }
 
 const API_BASE = "https://api.x.ai/v1";
+const RESULTS_STORAGE_KEY = "grok-results";
+
+function loadPersistedResults(): GrokResult[] {
+  try {
+    const stored = localStorage.getItem(RESULTS_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistResults(results: GrokResult[]) {
+  try {
+    localStorage.setItem(RESULTS_STORAGE_KEY, JSON.stringify(results));
+  } catch {
+    // localStorage full — silently fail, results still live in state
+  }
+}
 
 export function useGrokApi() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [results, setResults] = useState<GrokResult[]>([]);
+  const [results, setResults] = useState<GrokResult[]>(loadPersistedResults);
 
   const getApiKey = useCallback((): string | null => {
     return localStorage.getItem("xai-api-key");
@@ -64,6 +82,11 @@ export function useGrokApi() {
   const hasApiKey = useCallback((): boolean => {
     return !!localStorage.getItem("xai-api-key");
   }, []);
+
+  // Persist results to localStorage whenever they change
+  useEffect(() => {
+    persistResults(results);
+  }, [results]);
 
   const makeRequest = useCallback(async (endpoint: string, body: Record<string, unknown>) => {
     const apiKey = getApiKey();
