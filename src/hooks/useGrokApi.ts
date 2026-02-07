@@ -35,6 +35,9 @@ export const DEFAULT_VIDEO_SETTINGS: VideoSettings = {
 export interface GrokResult {
   id: string;
   url: string;
+  /** Base64 data-URL copy of the image, used for editing/animating
+   *  since xAI-generated URLs are temporary. */
+  dataUrl?: string;
   revised_prompt?: string;
   type: "image" | "video";
   timestamp: number;
@@ -199,13 +202,21 @@ export function useGrokApi() {
 
       const data = await makeRequest("/images/generations", body);
 
-      const newResults: GrokResult[] = data.data.map((item: any, i: number) => ({
-        id: `img-${Date.now()}-${i}`,
-        url: item.url || `data:image/png;base64,${item.b64_json}`,
-        revised_prompt: item.revised_prompt,
-        type: "image" as const,
-        timestamp: Date.now(),
-      }));
+      const newResults: GrokResult[] = await Promise.all(
+        data.data.map(async (item: any, i: number) => {
+          const url = item.url || `data:image/png;base64,${item.b64_json}`;
+          // Eagerly convert to base64 while URL is still fresh
+          const dataUrl = url.startsWith("data:") ? url : await urlToBase64(url);
+          return {
+            id: `img-${Date.now()}-${i}`,
+            url,
+            dataUrl,
+            revised_prompt: item.revised_prompt,
+            type: "image" as const,
+            timestamp: Date.now(),
+          };
+        })
+      );
 
       setResults(prev => [...newResults, ...prev]);
       return newResults;
@@ -223,9 +234,10 @@ export function useGrokApi() {
     setIsLoading(true);
     setError(null);
     try {
-      // Convert to base64 so the API can always access the image
-      // (xAI-generated URLs are temporary and may expire)
-      const safeImageUrl = await urlToBase64(params.image_url);
+      // Use the pre-stored base64 dataUrl if available, otherwise convert now
+      const safeImageUrl = params.image_url.startsWith("data:")
+        ? params.image_url
+        : await urlToBase64(params.image_url);
 
       const body: Record<string, unknown> = {
         model: "grok-imagine-image",
@@ -235,13 +247,20 @@ export function useGrokApi() {
 
       const data = await makeRequest("/images/generations", body);
 
-      const newResults: GrokResult[] = data.data.map((item: any, i: number) => ({
-        id: `edit-${Date.now()}-${i}`,
-        url: item.url || `data:image/png;base64,${item.b64_json}`,
-        revised_prompt: item.revised_prompt,
-        type: "image" as const,
-        timestamp: Date.now(),
-      }));
+      const newResults: GrokResult[] = await Promise.all(
+        data.data.map(async (item: any, i: number) => {
+          const url = item.url || `data:image/png;base64,${item.b64_json}`;
+          const dataUrl = url.startsWith("data:") ? url : await urlToBase64(url);
+          return {
+            id: `edit-${Date.now()}-${i}`,
+            url,
+            dataUrl,
+            revised_prompt: item.revised_prompt,
+            type: "image" as const,
+            timestamp: Date.now(),
+          };
+        })
+      );
 
       setResults(prev => [...newResults, ...prev]);
       return newResults;
