@@ -5,12 +5,10 @@ export type GrokMode = "text-to-image" | "edit-image" | "text-to-video" | "image
 export type AspectRatio = "1:1" | "16:9" | "9:16" | "4:3" | "3:4" | "3:2" | "2:3" | "2:1" | "1:2";
 export type VideoAspectRatio = "16:9" | "4:3" | "1:1" | "9:16" | "3:4" | "3:2" | "2:3";
 export type VideoResolution = "720p" | "480p";
-export type ImageFormat = "url" | "base64";
 export type ImageCount = 1 | 2 | 3 | 4;
 
 export interface GenerationSettings {
   aspectRatio: AspectRatio;
-  imageFormat: ImageFormat;
   count: ImageCount;
 }
 
@@ -22,7 +20,6 @@ export interface VideoSettings {
 
 export const DEFAULT_SETTINGS: GenerationSettings = {
   aspectRatio: "1:1",
-  imageFormat: "url",
   count: 1,
 };
 
@@ -35,9 +32,6 @@ export const DEFAULT_VIDEO_SETTINGS: VideoSettings = {
 export interface GrokResult {
   id: string;
   url: string;
-  /** Base64 data-URL copy of the image, used for editing/animating
-   *  since xAI-generated URLs are temporary. */
-  dataUrl?: string;
   revised_prompt?: string;
   type: "image" | "video";
   timestamp: number;
@@ -63,8 +57,7 @@ interface GenerateVideoParams {
 const API_BASE = "https://api.x.ai/v1";
 const RESULTS_STORAGE_KEY = "grok-results";
 
-/** Convert an image URL to a base64 data-URL so the xAI API can always access it
- *  (their generated URLs are temporary and may expire before editing). */
+/** Convert an external URL to a base64 data-URL (used for user-provided URLs). */
 async function urlToBase64(url: string): Promise<string> {
   if (!url || url.startsWith("data:")) return url;
   try {
@@ -77,7 +70,6 @@ async function urlToBase64(url: string): Promise<string> {
       reader.readAsDataURL(blob);
     });
   } catch {
-    // CORS or network error — return original URL as fallback
     return url;
   }
 }
@@ -93,9 +85,18 @@ function loadPersistedResults(): GrokResult[] {
 
 function persistResults(results: GrokResult[]) {
   try {
-    localStorage.setItem(RESULTS_STORAGE_KEY, JSON.stringify(results));
+    // Limit stored results to avoid localStorage overflow with large base64 images
+    const toStore = results.slice(0, 20);
+    localStorage.setItem(RESULTS_STORAGE_KEY, JSON.stringify(toStore));
   } catch {
-    // localStorage full — silently fail
+    // localStorage full — try storing fewer results
+    try {
+      const minimal = results.slice(0, 5);
+      localStorage.setItem(RESULTS_STORAGE_KEY, JSON.stringify(minimal));
+    } catch {
+      // Still too large — clear storage
+      localStorage.removeItem(RESULTS_STORAGE_KEY);
+    }
   }
 }
 
@@ -185,6 +186,7 @@ export function useGrokApi() {
   }, [getApiKey]);
 
   // Text-to-Image: POST /v1/images/generations
+  // Always request b64_json so we get embedded data that never expires
   const generateImage = useCallback(async (params: GenerateImageParams) => {
     setIsLoading(true);
     setError(null);
@@ -194,29 +196,18 @@ export function useGrokApi() {
         prompt: params.prompt,
         n: params.settings.count,
         aspect_ratio: params.settings.aspectRatio,
+        response_format: "b64_json",
       };
-
-      if (params.settings.imageFormat === "base64") {
-        body.response_format = "b64_json";
-      }
 
       const data = await makeRequest("/images/generations", body);
 
-      const newResults: GrokResult[] = await Promise.all(
-        data.data.map(async (item: any, i: number) => {
-          const url = item.url || `data:image/png;base64,${item.b64_json}`;
-          // Eagerly convert to base64 while URL is still fresh
-          const dataUrl = url.startsWith("data:") ? url : await urlToBase64(url);
-          return {
-            id: `img-${Date.now()}-${i}`,
-            url,
-            dataUrl,
-            revised_prompt: item.revised_prompt,
-            type: "image" as const,
-            timestamp: Date.now(),
-          };
-        })
-      );
+      const newResults: GrokResult[] = data.data.map((item: any, i: number) => ({
+        id: `img-${Date.now()}-${i}`,
+        url: `data:image/png;base64,${item.b64_json}`,
+        revised_prompt: item.revised_prompt,
+        type: "image" as const,
+        timestamp: Date.now(),
+      }));
 
       setResults(prev => [...newResults, ...prev]);
       return newResults;
@@ -228,13 +219,13 @@ export function useGrokApi() {
     }
   }, [makeRequest]);
 
-  // Edit Image: same endpoint /v1/images/generations with image_url param
-  // Note: n and response_format are not supported when image_url is provided
+  // Edit Image: same endpoint with image_url param
+  // n and response_format are not supported when image_url is provided
   const editImage = useCallback(async (params: EditImageParams) => {
     setIsLoading(true);
     setError(null);
     try {
-      // Use the pre-stored base64 dataUrl if available, otherwise convert now
+      // Ensure image_url is a data URL (not an expired temporary URL)
       const safeImageUrl = params.image_url.startsWith("data:")
         ? params.image_url
         : await urlToBase64(params.image_url);
@@ -247,20 +238,13 @@ export function useGrokApi() {
 
       const data = await makeRequest("/images/generations", body);
 
-      const newResults: GrokResult[] = await Promise.all(
-        data.data.map(async (item: any, i: number) => {
-          const url = item.url || `data:image/png;base64,${item.b64_json}`;
-          const dataUrl = url.startsWith("data:") ? url : await urlToBase64(url);
-          return {
-            id: `edit-${Date.now()}-${i}`,
-            url,
-            dataUrl,
-            revised_prompt: item.revised_prompt,
-            type: "image" as const,
-            timestamp: Date.now(),
-          };
-        })
-      );
+      const newResults: GrokResult[] = data.data.map((item: any, i: number) => ({
+        id: `edit-${Date.now()}-${i}`,
+        url: item.url || `data:image/png;base64,${item.b64_json}`,
+        revised_prompt: item.revised_prompt,
+        type: "image" as const,
+        timestamp: Date.now(),
+      }));
 
       setResults(prev => [...newResults, ...prev]);
       return newResults;
