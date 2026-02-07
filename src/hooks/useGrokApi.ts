@@ -60,6 +60,25 @@ interface GenerateVideoParams {
 const API_BASE = "https://api.x.ai/v1";
 const RESULTS_STORAGE_KEY = "grok-results";
 
+/** Convert an image URL to a base64 data-URL so the xAI API can always access it
+ *  (their generated URLs are temporary and may expire before editing). */
+async function urlToBase64(url: string): Promise<string> {
+  if (!url || url.startsWith("data:")) return url;
+  try {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    // CORS or network error — return original URL as fallback
+    return url;
+  }
+}
+
 function loadPersistedResults(): GrokResult[] {
   try {
     const stored = localStorage.getItem(RESULTS_STORAGE_KEY);
@@ -204,10 +223,14 @@ export function useGrokApi() {
     setIsLoading(true);
     setError(null);
     try {
+      // Convert to base64 so the API can always access the image
+      // (xAI-generated URLs are temporary and may expire)
+      const safeImageUrl = await urlToBase64(params.image_url);
+
       const body: Record<string, unknown> = {
         model: "grok-imagine-image",
         prompt: params.prompt,
-        image_url: params.image_url,
+        image_url: safeImageUrl,
       };
 
       const data = await makeRequest("/images/generations", body);
@@ -243,7 +266,7 @@ export function useGrokApi() {
         duration: params.videoSettings.duration,
       };
       if (params.image_url) {
-        body.image_url = params.image_url;
+        body.image_url = await urlToBase64(params.image_url);
       }
 
       const submitData = await makeRequest("/videos/generations", body);
