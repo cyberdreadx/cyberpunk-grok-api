@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Download, Maximize2, X, Trash2, ExternalLink, ChevronLeft, ChevronRight } from "lucide-react";
+import { Download, Maximize2, X, Trash2, ExternalLink, ChevronLeft, ChevronRight, Pencil, Film } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { GrokResult } from "@/hooks/useGrokApi";
 import { useSwipe } from "@/hooks/useSwipe";
@@ -8,9 +8,11 @@ interface ResultsGridProps {
   results: GrokResult[];
   isLoading: boolean;
   onClear: () => void;
+  onEditImage?: (imageUrl: string) => void;
+  onAnimateImage?: (imageUrl: string) => void;
 }
 
-const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, onClear }) => {
+const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, onClear, onEditImage, onAnimateImage }) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [mobileIndex, setMobileIndex] = useState(0);
 
@@ -47,6 +49,39 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, onClear }
   }
 
   const currentResult = results[clampedIndex];
+
+  const ImageActions = ({ result, size = "sm" }: { result: GrokResult; size?: "sm" | "icon" }) => {
+    if (result.type !== "image") return null;
+    const iconSize = size === "icon" ? "w-4 h-4" : "w-3 h-3";
+    return (
+      <>
+        {onEditImage && (
+          <Button
+            size={size}
+            variant="ghost"
+            className="text-primary hover:bg-primary/20 text-xs gap-1"
+            onClick={(e) => { e.stopPropagation(); onEditImage(result.url); }}
+            title="Edit this image"
+          >
+            <Pencil className={iconSize} />
+            {size === "sm" && <span>Edit</span>}
+          </Button>
+        )}
+        {onAnimateImage && (
+          <Button
+            size={size}
+            variant="ghost"
+            className="text-secondary hover:bg-secondary/20 text-xs gap-1"
+            onClick={(e) => { e.stopPropagation(); onAnimateImage(result.url); }}
+            title="Animate this image"
+          >
+            <Film className={iconSize} />
+            {size === "sm" && <span>Animate</span>}
+          </Button>
+        )}
+      </>
+    );
+  };
 
   return (
     <div className="space-y-4">
@@ -151,16 +186,19 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, onClear }
           )}
 
           {/* Mobile action bar */}
-          <div className="flex items-center justify-between px-2 py-1.5 border border-t-0 border-border/30 rounded-b">
-            <Button
-              size="sm"
-              variant="ghost"
-              className="text-primary text-xs gap-1 h-7 px-2"
-              onClick={() => currentResult && setExpandedId(currentResult.id)}
-            >
-              <Maximize2 className="w-3 h-3" />
-              View
-            </Button>
+          <div className="flex items-center justify-between px-2 py-1.5 border border-t-0 border-border/30 rounded-b flex-wrap gap-1">
+            <div className="flex gap-1">
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-primary text-xs gap-1 h-7 px-2"
+                onClick={() => currentResult && setExpandedId(currentResult.id)}
+              >
+                <Maximize2 className="w-3 h-3" />
+                View
+              </Button>
+              {currentResult && <ImageActions result={currentResult} size="sm" />}
+            </div>
             <div className="flex gap-1">
               <Button size="icon" variant="ghost" className="text-primary h-7 w-7" asChild>
                 <a href={currentResult?.url} target="_blank" rel="noopener noreferrer" download>
@@ -231,6 +269,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, onClear }
               >
                 <Maximize2 className="w-4 h-4" />
               </Button>
+              <ImageActions result={result} size="icon" />
               <Button
                 size="icon"
                 variant="ghost"
@@ -271,14 +310,44 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, onClear }
             className="relative max-w-4xl max-h-[90vh] w-full flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            <Button
-              size="icon"
-              variant="ghost"
-              className="absolute -top-10 right-0 sm:-top-12 text-foreground hover:text-primary z-10"
-              onClick={() => setExpandedId(null)}
-            >
-              <X className="w-5 h-5" />
-            </Button>
+            <div className="flex items-center justify-between mb-2">
+              {/* Action buttons in expanded view */}
+              {expandedResult.type === "image" && (
+                <div className="flex gap-2">
+                  {onEditImage && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-primary border-primary/30 hover:bg-primary/10 text-xs gap-1.5"
+                      onClick={() => { onEditImage(expandedResult.url); setExpandedId(null); }}
+                    >
+                      <Pencil className="w-3 h-3" />
+                      Edit Image
+                    </Button>
+                  )}
+                  {onAnimateImage && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-secondary border-secondary/30 hover:bg-secondary/10 text-xs gap-1.5"
+                      onClick={() => { onAnimateImage(expandedResult.url); setExpandedId(null); }}
+                    >
+                      <Film className="w-3 h-3" />
+                      Animate
+                    </Button>
+                  )}
+                </div>
+              )}
+              <div className="flex-1" />
+              <Button
+                size="icon"
+                variant="ghost"
+                className="text-foreground hover:text-primary"
+                onClick={() => setExpandedId(null)}
+              >
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
 
             {expandedResult.type === "image" ? (
               <img
