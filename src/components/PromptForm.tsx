@@ -11,18 +11,27 @@ interface PromptFormProps {
   onSubmit: (data: { prompt: string; imageUrl?: string }) => void;
   settings: GenerationSettings;
   initialPrompt?: string;
+  initialImageUrl?: string;
 }
 
-const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, settings, initialPrompt }) => {
+const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, settings, initialPrompt, initialImageUrl }) => {
   const [prompt, setPrompt] = useState(initialPrompt || "");
-  const [imageUrl, setImageUrl] = useState("");
-  const [imageSource, setImageSource] = useState<"url" | "upload">("upload");
+  const [imageUrl, setImageUrl] = useState(initialImageUrl || "");
+  const [imageSource, setImageSource] = useState<"url" | "upload">(initialImageUrl ? "url" : "upload");
   const [uploadPreview, setUploadPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (initialPrompt) setPrompt(initialPrompt);
   }, [initialPrompt]);
+
+  useEffect(() => {
+    if (initialImageUrl) {
+      setImageUrl(initialImageUrl);
+      setImageSource("url");
+      setUploadPreview(null);
+    }
+  }, [initialImageUrl]);
 
   const needsImage = mode === "edit-image" || mode === "image-to-video";
 

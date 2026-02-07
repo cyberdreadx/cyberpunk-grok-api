@@ -56,6 +56,7 @@ const Index = () => {
   } = useGrokApi();
   const { history, addEntry, removeEntry, clearHistory } = usePromptHistory();
   const [activePrompt, setActivePrompt] = useState("");
+  const [activeImageUrl, setActiveImageUrl] = useState("");
   const [apiKeySet, setApiKeySet] = useState(() => hasApiKey());
 
   const handleSaveApiKey = useCallback((key: string) => {
@@ -70,6 +71,20 @@ const Index = () => {
 
   const handleSelectPrompt = useCallback((prompt: string) => {
     setActivePrompt(prompt);
+  }, []);
+
+  const handleEditImage = useCallback((imageUrl: string) => {
+    setMode("edit-image");
+    setActiveImageUrl(imageUrl);
+    setActivePrompt("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
+
+  const handleAnimateImage = useCallback((imageUrl: string) => {
+    setMode("image-to-video");
+    setActiveImageUrl(imageUrl);
+    setActivePrompt("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
 
   const handleSubmit = async (data: { prompt: string; imageUrl?: string }) => {
@@ -207,7 +222,7 @@ const Index = () => {
 
             <SettingsPanel settings={settings} videoSettings={videoSettings} onChange={handleSettingsChange} onVideoChange={handleVideoSettingsChange} mode={mode} />
             <PromptHistory history={history} onSelect={handleSelectPrompt} onRemove={removeEntry} onClear={clearHistory} />
-            <PromptForm mode={mode} isLoading={isLoading} onSubmit={handleSubmit} settings={settings} initialPrompt={activePrompt} />
+            <PromptForm mode={mode} isLoading={isLoading} onSubmit={handleSubmit} settings={settings} initialPrompt={activePrompt} initialImageUrl={activeImageUrl} />
           </div>
         </section>
 
@@ -242,7 +257,7 @@ const Index = () => {
             />
             <div className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
           </div>
-          <ResultsGrid results={results} isLoading={isLoading} onClear={clearResults} />
+          <ResultsGrid results={results} isLoading={isLoading} onClear={clearResults} onEditImage={handleEditImage} onAnimateImage={handleAnimateImage} />
         </section>
 
         {/* Footer */}
