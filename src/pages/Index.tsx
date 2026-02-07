@@ -78,14 +78,16 @@ const Index = () => {
     setActiveImageUrl(imageUrl);
     setActivePrompt("");
     window.scrollTo({ top: 0, behavior: "smooth" });
-  }, []);
+    toast({ title: "EDIT MODE", description: "Image loaded — enter your modification prompt." });
+  }, [toast]);
 
   const handleAnimateImage = useCallback((imageUrl: string) => {
     setMode("image-to-video");
     setActiveImageUrl(imageUrl);
     setActivePrompt("");
     window.scrollTo({ top: 0, behavior: "smooth" });
-  }, []);
+    toast({ title: "ANIMATE MODE", description: "Image loaded — describe the motion to apply." });
+  }, [toast]);
 
   const handleSubmit = async (data: { prompt: string; imageUrl?: string }) => {
     if (!apiKeySet) {
