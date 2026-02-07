@@ -272,15 +272,23 @@ export function useGrokApi() {
       const body: Record<string, unknown> = {
         model: "grok-imagine-video",
         prompt: params.prompt,
-        aspect_ratio: params.videoSettings.aspectRatio,
         resolution: params.videoSettings.resolution,
         duration: params.videoSettings.duration,
       };
+
       if (params.image_url) {
-        body.image_url = await urlToBase64(params.image_url);
+        // For image-to-video: pass the image URL directly (xAI requires a URL, not base64)
+        // If it's a data URL from file upload, send it as-is — the API may accept it
+        body.image_url = params.image_url;
+        // Don't send aspect_ratio when an image is provided — let the API auto-detect
+        console.log("[generateVideo] image-to-video, image_url type:", params.image_url.startsWith("data:") ? "data-url" : "url");
+        console.log("[generateVideo] image_url length:", params.image_url.length);
+      } else {
+        // Text-to-video: include aspect_ratio
+        body.aspect_ratio = params.videoSettings.aspectRatio;
       }
 
-      console.log("[generateVideo] Request body:", JSON.stringify({ ...body, image_url: body.image_url ? `[base64 ${String(body.image_url).length} chars]` : undefined }));
+      console.log("[generateVideo] Request body keys:", Object.keys(body));
       const submitData = await makeRequest("/videos/generations", body);
       console.log("[generateVideo] Submit response:", JSON.stringify(submitData));
       const requestId = submitData.request_id || submitData.id;
