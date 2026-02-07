@@ -180,7 +180,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
       <div className="flex items-center justify-between text-[8px] sm:text-[10px] font-mono-share text-muted-foreground/40 border-t border-border/30 pt-2 gap-2 flex-wrap">
         <span><span className="text-primary/30">mode</span>={mode.toUpperCase().replace(/-/g, "_")}</span>
         {mode !== "text-to-video" && mode !== "image-to-video" && (
-          <span className="hidden sm:inline">×{settings.count} • {settings.responseFormat.toUpperCase()}</span>
+          <span className="hidden sm:inline">×{settings.count} • {settings.imageFormat.toUpperCase()}</span>
         )}
         <span>{isLoading ? "⟳ PROCESSING..." : "● READY"}</span>
         <span className="hidden sm:inline">{prompt.length} chars</span>

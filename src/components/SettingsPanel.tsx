@@ -5,8 +5,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import type { GenerationSettings, ImageSize, ResponseFormat, ImageCount } from "@/hooks/useGrokApi";
-import type { GrokMode } from "@/hooks/useGrokApi";
+import type { GenerationSettings, AspectRatio, ImageFormat, ImageCount, GrokMode } from "@/hooks/useGrokApi";
 
 interface SettingsPanelProps {
   settings: GenerationSettings;
@@ -14,18 +13,22 @@ interface SettingsPanelProps {
   mode: GrokMode;
 }
 
-const sizes: { value: ImageSize; label: string; tag: string }[] = [
-  { value: "512x512", label: "512²", tag: "SMALL" },
-  { value: "1024x1024", label: "1024²", tag: "STD" },
-  { value: "1024x1792", label: "1024×1792", tag: "PORTRAIT" },
-  { value: "1792x1024", label: "1792×1024", tag: "LANDSCAPE" },
+const aspectRatios: { value: AspectRatio; label: string; tag: string }[] = [
+  { value: "1:1", label: "1:1", tag: "SQUARE" },
+  { value: "16:9", label: "16:9", tag: "WIDE" },
+  { value: "9:16", label: "9:16", tag: "TALL" },
+  { value: "4:3", label: "4:3", tag: "CLASSIC" },
+  { value: "3:4", label: "3:4", tag: "PORTRAIT" },
+  { value: "3:2", label: "3:2", tag: "PHOTO" },
+  { value: "2:3", label: "2:3", tag: "PHOTO-V" },
+  { value: "2:1", label: "2:1", tag: "BANNER" },
 ];
 
 const counts: ImageCount[] = [1, 2, 3, 4];
 
-const formats: { value: ResponseFormat; label: string; desc: string }[] = [
+const formats: { value: ImageFormat; label: string; desc: string }[] = [
   { value: "url", label: "URL", desc: "Hosted link" },
-  { value: "b64_json", label: "BASE64", desc: "Embedded data" },
+  { value: "base64", label: "BASE64", desc: "Embedded data" },
 ];
 
 const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onChange, mode }) => {
@@ -41,37 +44,37 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onChange, mode 
         </span>
         <div className="h-px flex-1 bg-border/50" />
         <span className="font-mono-share text-[9px] text-muted-foreground/30">
-          {settings.size} • ×{settings.count} • {settings.responseFormat}
+          {settings.aspectRatio} • ×{settings.count} • {settings.imageFormat.toUpperCase()}
         </span>
       </CollapsibleTrigger>
 
       <CollapsibleContent className="mt-4 space-y-5 animate-slide-up">
-        {/* Image Size */}
+        {/* Aspect Ratio */}
         {!isVideoMode && (
           <div className="space-y-2">
             <label className="font-orbitron text-[10px] tracking-wider text-muted-foreground flex items-center gap-1.5">
               <Maximize className="w-3 h-3" />
-              RESOLUTION
+              ASPECT_RATIO
             </label>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-              {sizes.map((s) => (
+              {aspectRatios.map((ar) => (
                 <button
-                  key={s.value}
+                  key={ar.value}
                   type="button"
-                  onClick={() => onChange({ ...settings, size: s.value })}
+                  onClick={() => onChange({ ...settings, aspectRatio: ar.value })}
                   className={`
                     p-2.5 border rounded text-center transition-all duration-200
-                    ${settings.size === s.value
+                    ${settings.aspectRatio === ar.value
                       ? "border-primary neon-border bg-primary/5"
                       : "border-border bg-card/30 hover:border-primary/40"
                     }
                   `}
                 >
-                  <div className={`font-mono-share text-xs ${settings.size === s.value ? "text-primary" : "text-foreground"}`}>
-                    {s.label}
+                  <div className={`font-mono-share text-xs ${settings.aspectRatio === ar.value ? "text-primary" : "text-foreground"}`}>
+                    {ar.label}
                   </div>
                   <div className="font-orbitron text-[8px] text-muted-foreground mt-0.5">
-                    {s.tag}
+                    {ar.tag}
                   </div>
                 </button>
               ))}
@@ -107,7 +110,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onChange, mode 
           </div>
         )}
 
-        {/* Response Format */}
+        {/* Output Format */}
         {!isVideoMode && (
           <div className="space-y-2">
             <label className="font-orbitron text-[10px] tracking-wider text-muted-foreground flex items-center gap-1.5">
@@ -119,16 +122,16 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onChange, mode 
                 <button
                   key={f.value}
                   type="button"
-                  onClick={() => onChange({ ...settings, responseFormat: f.value })}
+                  onClick={() => onChange({ ...settings, imageFormat: f.value })}
                   className={`
                     p-2.5 border rounded text-left transition-all duration-200
-                    ${settings.responseFormat === f.value
+                    ${settings.imageFormat === f.value
                       ? "border-primary neon-border bg-primary/5"
                       : "border-border bg-card/30 hover:border-primary/40"
                     }
                   `}
                 >
-                  <div className={`font-orbitron text-xs ${settings.responseFormat === f.value ? "text-primary" : "text-foreground"}`}>
+                  <div className={`font-orbitron text-xs ${settings.imageFormat === f.value ? "text-primary" : "text-foreground"}`}>
                     {f.label}
                   </div>
                   <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5">
@@ -143,7 +146,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onChange, mode 
         {isVideoMode && (
           <div className="border border-border/50 rounded p-3 bg-muted/20">
             <p className="font-mono-share text-[10px] text-muted-foreground">
-              ⚡ Video mode uses default API settings. Size, count, and format options are available for image modes only.
+              ⚡ Video mode uses default API settings. Aspect ratio, count, and format options are available for image modes only.
             </p>
           </div>
         )}
