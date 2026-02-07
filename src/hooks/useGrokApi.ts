@@ -219,7 +219,8 @@ export function useGrokApi() {
     }
   }, [makeRequest]);
 
-  // Edit Image: POST /v1/images/edits (dedicated edit endpoint, NOT /generations)
+  // Edit Image: POST /v1/images/generations with image_url param
+  // (xAI SDK uses same endpoint for generation and editing)
   const editImage = useCallback(async (params: EditImageParams) => {
     setIsLoading(true);
     setError(null);
@@ -229,13 +230,16 @@ export function useGrokApi() {
         ? params.image_url
         : await urlToBase64(params.image_url);
 
+      console.log("[editImage] image_url type:", safeImageUrl.startsWith("data:") ? "data-url" : "url");
+      console.log("[editImage] image_url length:", safeImageUrl.length);
+
       const body: Record<string, unknown> = {
         model: "grok-imagine-image",
         prompt: params.prompt,
         image_url: safeImageUrl,
       };
 
-      const data = await makeRequest("/images/edits", body);
+      const data = await makeRequest("/images/generations", body);
 
       const newResults: GrokResult[] = data.data.map((item: any, i: number) => ({
         id: `edit-${Date.now()}-${i}`,
