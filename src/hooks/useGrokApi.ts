@@ -157,7 +157,9 @@ export function useGrokApi() {
 
     const maxAttempts = 120;
     for (let i = 0; i < maxAttempts; i++) {
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+
+      console.log(`[pollVideo] Attempt ${i + 1}/${maxAttempts} for requestId: ${requestId}`);
 
       const response = await fetch(`${API_BASE}/videos/${requestId}`, {
         method: "GET",
@@ -167,22 +169,44 @@ export function useGrokApi() {
       });
 
       if (!response.ok) {
+        // 202 Accepted means still processing — continue polling
+        if (response.status === 202) {
+          console.log("[pollVideo] Got 202 Accepted — still processing");
+          continue;
+        }
         const errorData = await response.json().catch(() => ({}));
+        console.error("[pollVideo] Error response:", response.status, JSON.stringify(errorData));
         throw new Error(errorData.error?.message || `Polling error: ${response.status}`);
       }
 
       const data = await response.json();
+      const currentState = data.state || data.status || "unknown";
+      console.log(`[pollVideo] Response state: "${currentState}", keys: ${JSON.stringify(Object.keys(data))}`);
 
-      if (data.state === "completed" || data.status === "completed") {
+      // Check for completion — handle multiple possible field names
+      if (currentState === "completed" || currentState === "succeeded" || currentState === "done") {
+        console.log("[pollVideo] Video completed!", JSON.stringify(Object.keys(data)));
         return data;
       }
 
-      if (data.state === "failed" || data.status === "failed") {
-        throw new Error(data.error?.message || "Video generation failed");
+      // Check for failure
+      if (currentState === "failed" || currentState === "error") {
+        console.error("[pollVideo] Video failed:", JSON.stringify(data));
+        throw new Error(data.error?.message || data.message || "Video generation failed");
       }
+
+      // If the response already contains a video URL, treat it as completed
+      const earlyUrl = data.video_url || data.url || data.data?.[0]?.url;
+      if (earlyUrl) {
+        console.log("[pollVideo] Found video URL in response, treating as completed");
+        return data;
+      }
+
+      // Log ongoing states for debugging
+      console.log(`[pollVideo] Still processing (state: "${currentState}"), waiting...`);
     }
 
-    throw new Error("Video generation timed out");
+    throw new Error("Video generation timed out after 6 minutes");
   }, [getApiKey]);
 
   // Text-to-Image: POST /v1/images/generations
@@ -299,11 +323,19 @@ export function useGrokApi() {
 
       console.log("[generateVideo] Polling with requestId:", requestId);
       const data = await pollVideoResult(requestId);
+      console.log("[generateVideo] Poll completed. Full response keys:", JSON.stringify(Object.keys(data)));
+      console.log("[generateVideo] Response snippet:", JSON.stringify(data, (key, val) => {
+        if (typeof val === "string" && val.length > 200) return val.substring(0, 200) + "...[truncated]";
+        return val;
+      }));
 
-      const videoUrl = data.video_url || data.data?.[0]?.url || data.url;
+      // Try multiple possible locations for the video URL
+      const videoUrl = data.video_url || data.url || data.data?.[0]?.url || data.output?.video_url || data.result?.url;
       if (!videoUrl) {
-        throw new Error("No video URL in completed result");
+        throw new Error("No video URL found in result. Keys: " + JSON.stringify(Object.keys(data)));
       }
+
+      console.log("[generateVideo] Video URL found:", videoUrl.substring(0, 100));
 
       const newResults: GrokResult[] = [{
         id: `vid-${Date.now()}`,
