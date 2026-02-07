@@ -2,19 +2,19 @@ import { useState, useCallback, useEffect } from "react";
 
 export type GrokMode = "text-to-image" | "edit-image" | "text-to-video" | "image-to-video";
 
-export type ImageSize = "1024x1024" | "1024x1792" | "1792x1024" | "512x512";
-export type ResponseFormat = "url" | "b64_json";
+export type AspectRatio = "1:1" | "16:9" | "9:16" | "4:3" | "3:4" | "3:2" | "2:3" | "2:1" | "1:2";
+export type ImageFormat = "url" | "base64";
 export type ImageCount = 1 | 2 | 3 | 4;
 
 export interface GenerationSettings {
-  size: ImageSize;
-  responseFormat: ResponseFormat;
+  aspectRatio: AspectRatio;
+  imageFormat: ImageFormat;
   count: ImageCount;
 }
 
 export const DEFAULT_SETTINGS: GenerationSettings = {
-  size: "1024x1024",
-  responseFormat: "url",
+  aspectRatio: "1:1",
+  imageFormat: "url",
   count: 1,
 };
 
@@ -58,7 +58,7 @@ function persistResults(results: GrokResult[]) {
   try {
     localStorage.setItem(RESULTS_STORAGE_KEY, JSON.stringify(results));
   } catch {
-    // localStorage full — silently fail, results still live in state
+    // localStorage full — silently fail
   }
 }
 
@@ -83,7 +83,6 @@ export function useGrokApi() {
     return !!localStorage.getItem("xai-api-key");
   }, []);
 
-  // Persist results to localStorage whenever they change
   useEffect(() => {
     persistResults(results);
   }, [results]);
@@ -118,7 +117,7 @@ export function useGrokApi() {
     const apiKey = getApiKey();
     if (!apiKey) throw new Error("API key not configured");
 
-    const maxAttempts = 120; // 2 minutes at 1s intervals
+    const maxAttempts = 120;
     for (let i = 0; i < maxAttempts; i++) {
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
@@ -143,23 +142,28 @@ export function useGrokApi() {
       if (data.state === "failed" || data.status === "failed") {
         throw new Error(data.error?.message || "Video generation failed");
       }
-      // Otherwise still processing — continue polling
     }
 
     throw new Error("Video generation timed out");
   }, [getApiKey]);
 
-  // Text-to-Image: POST /v1/images/generations with model grok-imagine-image
+  // Text-to-Image: POST /v1/images/generations
   const generateImage = useCallback(async (params: GenerateImageParams) => {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await makeRequest("/images/generations", {
+      const body: Record<string, unknown> = {
         model: "grok-imagine-image",
         prompt: params.prompt,
         n: params.settings.count,
-        response_format: params.settings.responseFormat,
-      });
+        aspect_ratio: params.settings.aspectRatio,
+      };
+
+      if (params.settings.imageFormat === "base64") {
+        body.response_format = "b64_json";
+      }
+
+      const data = await makeRequest("/images/generations", body);
 
       const newResults: GrokResult[] = data.data.map((item: any, i: number) => ({
         id: `img-${Date.now()}-${i}`,
@@ -179,18 +183,24 @@ export function useGrokApi() {
     }
   }, [makeRequest]);
 
-  // Edit Image: POST /v1/images/edits with model grok-imagine-image
+  // Edit Image: same endpoint /v1/images/generations with image_url param
   const editImage = useCallback(async (params: EditImageParams) => {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await makeRequest("/images/edits", {
+      const body: Record<string, unknown> = {
         model: "grok-imagine-image",
         prompt: params.prompt,
         image_url: params.image_url,
         n: params.settings.count,
-        response_format: params.settings.responseFormat,
-      });
+        aspect_ratio: params.settings.aspectRatio,
+      };
+
+      if (params.settings.imageFormat === "base64") {
+        body.response_format = "b64_json";
+      }
+
+      const data = await makeRequest("/images/generations", body);
 
       const newResults: GrokResult[] = data.data.map((item: any, i: number) => ({
         id: `edit-${Date.now()}-${i}`,
@@ -210,7 +220,7 @@ export function useGrokApi() {
     }
   }, [makeRequest]);
 
-  // Video Generation: POST /v1/videos/generations (deferred) → poll GET /v1/videos/{request_id}
+  // Video: POST /v1/videos/generations → poll GET /v1/videos/{request_id}
   const generateVideo = useCallback(async (params: GenerateVideoParams) => {
     setIsLoading(true);
     setError(null);
@@ -223,7 +233,6 @@ export function useGrokApi() {
         body.image_url = params.image_url;
       }
 
-      // Submit async video request
       const submitData = await makeRequest("/videos/generations", body);
       const requestId = submitData.request_id || submitData.id;
 
@@ -231,7 +240,6 @@ export function useGrokApi() {
         throw new Error("No request ID returned from video generation");
       }
 
-      // Poll for result
       const data = await pollVideoResult(requestId);
 
       const videoUrl = data.video_url || data.data?.[0]?.url || data.url;

@@ -99,6 +99,9 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, onClear }
                 className="w-full aspect-video object-cover"
                 controls
                 muted
+                playsInline
+                crossOrigin="anonymous"
+                preload="auto"
               />
             ) : null}
 
@@ -212,6 +215,9 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, onClear }
                 className="w-full aspect-video object-cover"
                 controls
                 muted
+                playsInline
+                crossOrigin="anonymous"
+                preload="auto"
               />
             )}
 
@@ -286,6 +292,9 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, onClear }
                 className="w-full max-h-[60vh] sm:max-h-[75vh] rounded border border-border"
                 controls
                 autoPlay
+                playsInline
+                crossOrigin="anonymous"
+                preload="auto"
               />
             )}
 
