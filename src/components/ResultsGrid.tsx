@@ -60,7 +60,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, onClear, 
             size={size}
             variant="ghost"
             className="text-primary hover:bg-primary/20 text-xs gap-1"
-            onClick={(e) => { e.stopPropagation(); onEditImage(result.url); }}
+            onClick={(e) => { e.stopPropagation(); onEditImage(result.dataUrl || result.url); }}
             title="Edit this image"
           >
             <Pencil className={iconSize} />
@@ -72,7 +72,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, onClear, 
             size={size}
             variant="ghost"
             className="text-secondary hover:bg-secondary/20 text-xs gap-1"
-            onClick={(e) => { e.stopPropagation(); onAnimateImage(result.url); }}
+            onClick={(e) => { e.stopPropagation(); onAnimateImage(result.dataUrl || result.url); }}
             title="Animate this image"
           >
             <Film className={iconSize} />
@@ -319,7 +319,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, onClear, 
                       size="sm"
                       variant="outline"
                       className="text-primary border-primary/30 hover:bg-primary/10 text-xs gap-1.5"
-                      onClick={() => { onEditImage(expandedResult.url); setExpandedId(null); }}
+                      onClick={() => { onEditImage(expandedResult.dataUrl || expandedResult.url); setExpandedId(null); }}
                     >
                       <Pencil className="w-3 h-3" />
                       Edit Image
@@ -330,7 +330,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, onClear, 
                       size="sm"
                       variant="outline"
                       className="text-secondary border-secondary/30 hover:bg-secondary/10 text-xs gap-1.5"
-                      onClick={() => { onAnimateImage(expandedResult.url); setExpandedId(null); }}
+                      onClick={() => { onAnimateImage(expandedResult.dataUrl || expandedResult.url); setExpandedId(null); }}
                     >
                       <Film className="w-3 h-3" />
                       Animate
