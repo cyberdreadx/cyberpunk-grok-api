@@ -199,6 +199,7 @@ export function useGrokApi() {
   }, [makeRequest]);
 
   // Edit Image: same endpoint /v1/images/generations with image_url param
+  // Note: n and response_format are not supported when image_url is provided
   const editImage = useCallback(async (params: EditImageParams) => {
     setIsLoading(true);
     setError(null);
@@ -207,13 +208,7 @@ export function useGrokApi() {
         model: "grok-imagine-image",
         prompt: params.prompt,
         image_url: params.image_url,
-        n: params.settings.count,
-        aspect_ratio: params.settings.aspectRatio,
       };
-
-      if (params.settings.imageFormat === "base64") {
-        body.response_format = "b64_json";
-      }
 
       const data = await makeRequest("/images/generations", body);
 
