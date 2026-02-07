@@ -188,6 +188,11 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
       {/* Status bar */}
       <div className="flex items-center justify-between text-[8px] sm:text-[10px] font-mono-share text-muted-foreground/40 border-t border-border/30 pt-2 gap-2 flex-wrap">
         <span><span className="text-primary/30">mode</span>={mode.toUpperCase().replace(/-/g, "_")}</span>
+        {needsImage && (
+          <span className={hasImage ? "text-primary/50" : "text-destructive/50"}>
+            {hasImage ? "◆ IMG_LOADED" : "○ IMG_REQUIRED"}
+          </span>
+        )}
         {mode !== "text-to-video" && mode !== "image-to-video" && (
           <span className="hidden sm:inline">×{settings.count} • {settings.imageFormat.toUpperCase()}</span>
         )}
