@@ -88,18 +88,23 @@ export function useGrokApi() {
     persistResults(results);
   }, [results]);
 
-  const makeRequest = useCallback(async (endpoint: string, body: Record<string, unknown>) => {
+  const makeRequest = useCallback(async (endpoint: string, body: Record<string, unknown>, method: "POST" | "GET" = "POST") => {
     const apiKey = getApiKey();
     if (!apiKey) throw new Error("API key not configured");
 
-    const response = await fetch(`${API_BASE}${endpoint}`, {
-      method: "POST",
+    const options: RequestInit = {
+      method,
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`,
       },
-      body: JSON.stringify(body),
-    });
+    };
+
+    if (method === "POST") {
+      options.body = JSON.stringify(body);
+    }
+
+    const response = await fetch(`${API_BASE}${endpoint}`, options);
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -109,12 +114,48 @@ export function useGrokApi() {
     return response.json();
   }, [getApiKey]);
 
+  const pollVideoResult = useCallback(async (requestId: string): Promise<any> => {
+    const apiKey = getApiKey();
+    if (!apiKey) throw new Error("API key not configured");
+
+    const maxAttempts = 120; // 2 minutes at 1s intervals
+    for (let i = 0; i < maxAttempts; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      const response = await fetch(`${API_BASE}/videos/${requestId}`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error?.message || `Polling error: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data.state === "completed" || data.status === "completed") {
+        return data;
+      }
+
+      if (data.state === "failed" || data.status === "failed") {
+        throw new Error(data.error?.message || "Video generation failed");
+      }
+      // Otherwise still processing — continue polling
+    }
+
+    throw new Error("Video generation timed out");
+  }, [getApiKey]);
+
+  // Text-to-Image: POST /v1/images/generations with model grok-imagine-image
   const generateImage = useCallback(async (params: GenerateImageParams) => {
     setIsLoading(true);
     setError(null);
     try {
       const data = await makeRequest("/images/generations", {
-        model: "grok-2-image",
+        model: "grok-imagine-image",
         prompt: params.prompt,
         n: params.settings.count,
         response_format: params.settings.responseFormat,
@@ -138,12 +179,13 @@ export function useGrokApi() {
     }
   }, [makeRequest]);
 
+  // Edit Image: POST /v1/images/edits with model grok-imagine-image
   const editImage = useCallback(async (params: EditImageParams) => {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await makeRequest("/images/generations", {
-        model: "grok-2-image",
+      const data = await makeRequest("/images/edits", {
+        model: "grok-imagine-image",
         prompt: params.prompt,
         image_url: params.image_url,
         n: params.settings.count,
@@ -168,27 +210,42 @@ export function useGrokApi() {
     }
   }, [makeRequest]);
 
+  // Video Generation: POST /v1/videos/generations (deferred) → poll GET /v1/videos/{request_id}
   const generateVideo = useCallback(async (params: GenerateVideoParams) => {
     setIsLoading(true);
     setError(null);
     try {
       const body: Record<string, unknown> = {
-        model: "grok-2-image",
+        model: "grok-imagine-video",
         prompt: params.prompt,
       };
       if (params.image_url) {
         body.image_url = params.image_url;
       }
 
-      const data = await makeRequest("/images/generations", body);
+      // Submit async video request
+      const submitData = await makeRequest("/videos/generations", body);
+      const requestId = submitData.request_id || submitData.id;
 
-      const newResults: GrokResult[] = data.data.map((item: any, i: number) => ({
-        id: `vid-${Date.now()}-${i}`,
-        url: item.url,
-        revised_prompt: item.revised_prompt,
+      if (!requestId) {
+        throw new Error("No request ID returned from video generation");
+      }
+
+      // Poll for result
+      const data = await pollVideoResult(requestId);
+
+      const videoUrl = data.video_url || data.data?.[0]?.url || data.url;
+      if (!videoUrl) {
+        throw new Error("No video URL in completed result");
+      }
+
+      const newResults: GrokResult[] = [{
+        id: `vid-${Date.now()}`,
+        url: videoUrl,
+        revised_prompt: data.revised_prompt || data.data?.[0]?.revised_prompt,
         type: "video" as const,
         timestamp: Date.now(),
-      }));
+      }];
 
       setResults(prev => [...newResults, ...prev]);
       return newResults;
@@ -198,7 +255,7 @@ export function useGrokApi() {
     } finally {
       setIsLoading(false);
     }
-  }, [makeRequest]);
+  }, [makeRequest, pollVideoResult]);
 
   const clearResults = useCallback(() => {
     setResults([]);
