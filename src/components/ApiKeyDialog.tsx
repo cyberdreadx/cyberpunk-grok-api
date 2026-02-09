@@ -23,7 +23,7 @@ const ApiKeyDialog: React.FC<ApiKeyDialogProps> = ({ hasKey, onSave, onClear }) 
   const [showStored, setShowStored] = useState(false);
   const [open, setOpen] = useState(false);
 
-  const storedKey = hasKey ? (localStorage.getItem("grok-api-key") || "") : "";
+  const storedKey = hasKey ? (localStorage.getItem("xai-api-key") || "") : "";
 
   const handleSave = () => {
     if (key.trim()) {
