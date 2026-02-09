@@ -168,42 +168,44 @@ export function useGrokApi() {
         },
       });
 
+      // 202 Accepted means still processing — continue polling
+      // NOTE: 202 is a 2xx status so response.ok is true; must check before parsing body
+      if (response.status === 202) {
+        console.log("[pollVideo] Got 202 Accepted — still processing");
+        continue;
+      }
+
       if (!response.ok) {
-        // 202 Accepted means still processing — continue polling
-        if (response.status === 202) {
-          console.log("[pollVideo] Got 202 Accepted — still processing");
-          continue;
-        }
         const errorData = await response.json().catch(() => ({}));
         console.error("[pollVideo] Error response:", response.status, JSON.stringify(errorData));
         throw new Error(errorData.error?.message || `Polling error: ${response.status}`);
       }
 
       const data = await response.json();
-      const currentState = data.state || data.status || "unknown";
-      console.log(`[pollVideo] Response state: "${currentState}", keys: ${JSON.stringify(Object.keys(data))}`);
+      const currentStatus = data.status || data.state || "unknown";
+      console.log(`[pollVideo] Response status: "${currentStatus}", keys: ${JSON.stringify(Object.keys(data))}`);
 
-      // Check for completion — handle multiple possible field names
-      if (currentState === "completed" || currentState === "succeeded" || currentState === "done") {
+      // xAI uses status: "done" for completion, "pending" for in-progress
+      if (currentStatus === "done" || currentStatus === "completed" || currentStatus === "succeeded") {
         console.log("[pollVideo] Video completed!", JSON.stringify(Object.keys(data)));
         return data;
       }
 
       // Check for failure
-      if (currentState === "failed" || currentState === "error") {
+      if (currentStatus === "failed" || currentStatus === "error") {
         console.error("[pollVideo] Video failed:", JSON.stringify(data));
         throw new Error(data.error?.message || data.message || "Video generation failed");
       }
 
-      // If the response already contains a video URL, treat it as completed
-      const earlyUrl = data.video_url || data.url || data.data?.[0]?.url;
+      // If the response already contains a video URL (e.g. video.url), treat as completed
+      const earlyUrl = data.video?.url || data.video_url || data.url;
       if (earlyUrl) {
         console.log("[pollVideo] Found video URL in response, treating as completed");
         return data;
       }
 
       // Log ongoing states for debugging
-      console.log(`[pollVideo] Still processing (state: "${currentState}"), waiting...`);
+      console.log(`[pollVideo] Still processing (status: "${currentStatus}"), waiting...`);
     }
 
     throw new Error("Video generation timed out after 6 minutes");
@@ -243,36 +245,39 @@ export function useGrokApi() {
     }
   }, [makeRequest]);
 
-  // Edit Image: POST /v1/images/generations with image_url param
-  // (xAI SDK uses same endpoint for generation and editing)
+  // Edit Image: POST /v1/images/edits
+  // xAI REST API requires JSON with: image: { url: "..." } (nested object)
   const editImage = useCallback(async (params: EditImageParams) => {
     setIsLoading(true);
     setError(null);
     try {
-      // Ensure image_url is a data URL (not an expired temporary URL)
+      // Ensure image is a data URL (not an expired temporary URL)
       const safeImageUrl = params.image_url.startsWith("data:")
         ? params.image_url
         : await urlToBase64(params.image_url);
 
-      console.log("[editImage] image_url type:", safeImageUrl.startsWith("data:") ? "data-url" : "url");
-      console.log("[editImage] image_url length:", safeImageUrl.length);
+      console.log("[editImage] image url type:", safeImageUrl.startsWith("data:") ? "data-url" : "url");
+      console.log("[editImage] image url length:", safeImageUrl.length);
 
       const body: Record<string, unknown> = {
         model: "grok-imagine-image",
         prompt: params.prompt,
-        image_url: safeImageUrl,
+        image: { url: safeImageUrl },
+        n: params.settings.count,
         response_format: "b64_json",
       };
 
       console.log("[editImage] Sending request body keys:", Object.keys(body));
 
-      const data = await makeRequest("/images/generations", body);
+      const data = await makeRequest("/images/edits", body);
       console.log("[editImage] Response data keys:", Object.keys(data));
       console.log("[editImage] Response data.data length:", data.data?.length);
 
       const newResults: GrokResult[] = data.data.map((item: any, i: number) => ({
         id: `edit-${Date.now()}-${i}`,
-        url: `data:image/png;base64,${item.b64_json}`,
+        url: item.b64_json
+          ? `data:image/png;base64,${item.b64_json}`
+          : item.url,
         revised_prompt: item.revised_prompt,
         type: "image" as const,
         timestamp: Date.now(),
@@ -289,6 +294,7 @@ export function useGrokApi() {
   }, [makeRequest]);
 
   // Video: POST /v1/videos/generations → poll GET /v1/videos/{request_id}
+  // Response format: { video: { url, duration }, model, status }
   const generateVideo = useCallback(async (params: GenerateVideoParams) => {
     setIsLoading(true);
     setError(null);
@@ -296,17 +302,15 @@ export function useGrokApi() {
       const body: Record<string, unknown> = {
         model: "grok-imagine-video",
         prompt: params.prompt,
-        resolution: params.videoSettings.resolution,
         duration: params.videoSettings.duration,
       };
 
       if (params.image_url) {
-        // For image-to-video: pass the image URL directly (xAI requires a URL, not base64)
-        // If it's a data URL from file upload, send it as-is — the API may accept it
-        body.image_url = params.image_url;
-        // Don't send aspect_ratio when an image is provided — let the API auto-detect
-        console.log("[generateVideo] image-to-video, image_url type:", params.image_url.startsWith("data:") ? "data-url" : "url");
-        console.log("[generateVideo] image_url length:", params.image_url.length);
+        // For image-to-video: use image: { url: "..." } nested object (xAI REST spec)
+        body.image = { url: params.image_url };
+        // Don't send aspect_ratio when an image is provided — auto-detected from input
+        console.log("[generateVideo] image-to-video, image type:", params.image_url.startsWith("data:") ? "data-url" : "url");
+        console.log("[generateVideo] image url length:", params.image_url.length);
       } else {
         // Text-to-video: include aspect_ratio
         body.aspect_ratio = params.videoSettings.aspectRatio;
@@ -329,8 +333,8 @@ export function useGrokApi() {
         return val;
       }));
 
-      // Try multiple possible locations for the video URL
-      const videoUrl = data.video_url || data.url || data.data?.[0]?.url || data.output?.video_url || data.result?.url;
+      // xAI response: { video: { url, duration }, model, status }
+      const videoUrl = data.video?.url || data.video_url || data.url || data.data?.[0]?.url;
       if (!videoUrl) {
         throw new Error("No video URL found in result. Keys: " + JSON.stringify(Object.keys(data)));
       }
