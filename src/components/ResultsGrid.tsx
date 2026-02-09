@@ -8,11 +8,12 @@ interface ResultsGridProps {
   results: GrokResult[];
   isLoading: boolean;
   onClear: () => void;
+  onDelete: (id: string) => void;
   onEditImage?: (imageUrl: string) => void;
   onAnimateImage?: (imageUrl: string) => void;
 }
 
-const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, onClear, onEditImage, onAnimateImage }) => {
+const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, onClear, onDelete, onEditImage, onAnimateImage }) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [mobileIndex, setMobileIndex] = useState(0);
 
@@ -135,7 +136,6 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, onClear, 
                 controls
                 muted
                 playsInline
-                crossOrigin="anonymous"
                 preload="auto"
               />
             ) : null}
@@ -210,6 +210,15 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, onClear, 
                   <ExternalLink className="w-3 h-3" />
                 </a>
               </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="text-destructive hover:bg-destructive/20 h-7 w-7"
+                onClick={() => currentResult && onDelete(currentResult.id)}
+                title="Delete this item"
+              >
+                <Trash2 className="w-3 h-3" />
+              </Button>
             </div>
           </div>
 
@@ -254,7 +263,6 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, onClear, 
                 controls
                 muted
                 playsInline
-                crossOrigin="anonymous"
                 preload="auto"
               />
             )}
@@ -290,6 +298,15 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, onClear, 
                   <ExternalLink className="w-4 h-4" />
                 </a>
               </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="text-destructive hover:bg-destructive/20"
+                onClick={() => onDelete(result.id)}
+                title="Delete this item"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
             </div>
 
             {/* Type badge */}
@@ -312,32 +329,39 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, onClear, 
           >
             <div className="flex items-center justify-between mb-2">
               {/* Action buttons in expanded view */}
-              {expandedResult.type === "image" && (
-                <div className="flex gap-2">
-                  {onEditImage && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-primary border-primary/30 hover:bg-primary/10 text-xs gap-1.5"
-                      onClick={() => { onEditImage(expandedResult.url); setExpandedId(null); }}
-                    >
-                      <Pencil className="w-3 h-3" />
-                      Edit Image
-                    </Button>
-                  )}
-                  {onAnimateImage && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-secondary border-secondary/30 hover:bg-secondary/10 text-xs gap-1.5"
-                      onClick={() => { onAnimateImage(expandedResult.url); setExpandedId(null); }}
-                    >
-                      <Film className="w-3 h-3" />
-                      Animate
-                    </Button>
-                  )}
-                </div>
-              )}
+              <div className="flex gap-2">
+                {expandedResult.type === "image" && onEditImage && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-primary border-primary/30 hover:bg-primary/10 text-xs gap-1.5"
+                    onClick={() => { onEditImage(expandedResult.url); setExpandedId(null); }}
+                  >
+                    <Pencil className="w-3 h-3" />
+                    Edit Image
+                  </Button>
+                )}
+                {expandedResult.type === "image" && onAnimateImage && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-secondary border-secondary/30 hover:bg-secondary/10 text-xs gap-1.5"
+                    onClick={() => { onAnimateImage(expandedResult.url); setExpandedId(null); }}
+                  >
+                    <Film className="w-3 h-3" />
+                    Animate
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-destructive border-destructive/30 hover:bg-destructive/10 text-xs gap-1.5"
+                  onClick={() => { onDelete(expandedResult.id); setExpandedId(null); }}
+                >
+                  <Trash2 className="w-3 h-3" />
+                  Delete
+                </Button>
+              </div>
               <div className="flex-1" />
               <Button
                 size="icon"
@@ -362,7 +386,6 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, onClear, 
                 controls
                 autoPlay
                 playsInline
-                crossOrigin="anonymous"
                 preload="auto"
               />
             )}

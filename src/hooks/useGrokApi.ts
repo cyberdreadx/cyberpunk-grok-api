@@ -363,6 +363,10 @@ export function useGrokApi() {
     setResults([]);
   }, []);
 
+  const deleteResult = useCallback((id: string) => {
+    setResults(prev => prev.filter(r => r.id !== id));
+  }, []);
+
   const clearError = useCallback(() => {
     setError(null);
   }, []);
@@ -379,6 +383,7 @@ export function useGrokApi() {
     editImage,
     generateVideo,
     clearResults,
+    deleteResult,
     clearError,
   };
 }

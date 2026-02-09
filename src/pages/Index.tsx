@@ -52,6 +52,7 @@ const Index = () => {
     editImage,
     generateVideo,
     clearResults,
+    deleteResult,
     clearError,
   } = useGrokApi();
   const { history, addEntry, removeEntry, clearHistory } = usePromptHistory();
@@ -259,7 +260,7 @@ const Index = () => {
             />
             <div className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
           </div>
-          <ResultsGrid results={results} isLoading={isLoading} onClear={clearResults} onEditImage={handleEditImage} onAnimateImage={handleAnimateImage} />
+          <ResultsGrid results={results} isLoading={isLoading} onClear={clearResults} onDelete={deleteResult} onEditImage={handleEditImage} onAnimateImage={handleAnimateImage} />
         </section>
 
         {/* Footer */}
