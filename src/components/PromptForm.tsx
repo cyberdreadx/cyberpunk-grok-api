@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Send, Upload, Loader2, ImagePlus, Link, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,6 +20,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
   const [imageSource, setImageSource] = useState<"url" | "upload">(initialImageUrl ? "url" : "upload");
   const [uploadPreview, setUploadPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     if (initialPrompt) setPrompt(initialPrompt);
@@ -62,6 +63,38 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
     onSubmit({ prompt: prompt.trim(), imageUrl: imageUrl.trim() || undefined });
   };
 
+  // ── Ctrl+Enter / Cmd+Enter to submit ──
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+      e.preventDefault();
+      formRef.current?.requestSubmit();
+    }
+  }, []);
+
+  // ── Paste image from clipboard ──
+  const handlePaste = useCallback((e: React.ClipboardEvent) => {
+    if (!needsImage) return;
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (const item of Array.from(items)) {
+      if (item.type.startsWith("image/")) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          const dataUrl = reader.result as string;
+          setImageUrl(dataUrl);
+          setUploadPreview(dataUrl);
+          setImageSource("upload");
+        };
+        reader.readAsDataURL(file);
+        return;
+      }
+    }
+  }, [needsImage]);
+
   const placeholders: Record<GrokMode, string> = {
     "text-to-image": "Describe the image you want to generate...",
     "edit-image": "Describe the modifications to apply...",
@@ -72,7 +105,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
   const hasImage = imageSource === "upload" ? !!uploadPreview : !!imageUrl.trim();
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form ref={formRef} onSubmit={handleSubmit} onPaste={handlePaste} className="space-y-4">
       {needsImage && (
         <div className="space-y-2">
           <div className="flex items-center justify-between">
@@ -134,7 +167,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
                 >
                   <ImagePlus className="w-5 h-5 text-muted-foreground" />
                   <span className="font-mono-share text-[10px] text-muted-foreground">
-                    Click to upload image
+                    Click to upload or paste (Ctrl+V)
                   </span>
                 </button>
               )}
@@ -166,6 +199,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
           <Textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
+            onKeyDown={handleKeyDown}
             placeholder={placeholders[mode]}
             rows={4}
             className="bg-input border-border font-rajdhani text-base text-foreground placeholder:text-muted-foreground focus:neon-border resize-none pr-14"
@@ -175,6 +209,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
             disabled={isLoading || !prompt.trim() || (needsImage && !imageUrl.trim())}
             size="icon"
             className="absolute bottom-3 right-3 bg-primary text-primary-foreground hover:bg-primary/80 disabled:opacity-30 transition-all"
+            title="Submit (Ctrl+Enter)"
           >
             {isLoading ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -198,6 +233,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
         )}
         <span>{isLoading ? "⟳ PROCESSING..." : "● READY"}</span>
         <span className="hidden sm:inline">{prompt.length} chars</span>
+        <span className="hidden sm:inline text-muted-foreground/20">Ctrl+Enter</span>
       </div>
     </form>
   );

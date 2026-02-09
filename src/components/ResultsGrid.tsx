@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Download, Maximize2, X, Trash2, ExternalLink, ChevronLeft, ChevronRight, Pencil, Film } from "lucide-react";
+import React, { useState, useCallback } from "react";
+import { Download, Maximize2, X, Trash2, ExternalLink, ChevronLeft, ChevronRight, Pencil, Film, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { GrokResult } from "@/hooks/useGrokApi";
 import { useSwipe } from "@/hooks/useSwipe";
@@ -7,15 +7,71 @@ import { useSwipe } from "@/hooks/useSwipe";
 interface ResultsGridProps {
   results: GrokResult[];
   isLoading: boolean;
+  elapsedSeconds?: number;
   onClear: () => void;
   onDelete: (id: string) => void;
   onEditImage?: (imageUrl: string) => void;
   onAnimateImage?: (imageUrl: string) => void;
 }
 
-const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, onClear, onDelete, onEditImage, onAnimateImage }) => {
+/** Download a file by fetching as blob — works on iOS Safari where <a download> does not. */
+async function downloadMedia(url: string, type: "image" | "video") {
+  const ext = type === "image" ? "png" : "mp4";
+  const filename = `grok-${type}-${Date.now()}.${ext}`;
+
+  try {
+    // Try native share (iOS share sheet, Android share)
+    if (navigator.share && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+      let blob: Blob;
+      if (url.startsWith("data:")) {
+        const res = await fetch(url);
+        blob = await res.blob();
+      } else if (url.startsWith("blob:")) {
+        const res = await fetch(url);
+        blob = await res.blob();
+      } else {
+        const res = await fetch(url);
+        blob = await res.blob();
+      }
+      const file = new File([blob], filename, { type: blob.type || (type === "image" ? "image/png" : "video/mp4") });
+      await navigator.share({ files: [file] });
+      return;
+    }
+  } catch {
+    // Share cancelled or unsupported — fall through to download
+  }
+
+  try {
+    // Standard download: fetch as blob and trigger via object URL
+    let blob: Blob;
+    if (url.startsWith("data:")) {
+      const res = await fetch(url);
+      blob = await res.blob();
+    } else if (url.startsWith("blob:")) {
+      const res = await fetch(url);
+      blob = await res.blob();
+    } else {
+      const res = await fetch(url);
+      blob = await res.blob();
+    }
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = blobUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
+  } catch {
+    // Last resort: open in new tab
+    window.open(url, "_blank");
+  }
+}
+
+const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, elapsedSeconds = 0, onClear, onDelete, onEditImage, onAnimateImage }) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [mobileIndex, setMobileIndex] = useState(0);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const expandedResult = results.find((r) => r.id === expandedId);
 
@@ -35,6 +91,14 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, onClear, 
   React.useEffect(() => {
     setMobileIndex(0);
   }, [results.length]);
+
+  const handleCopyPrompt = useCallback(async (id: string, text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch { /* clipboard blocked */ }
+  }, []);
 
   if (results.length === 0 && !isLoading) {
     return (
@@ -84,6 +148,35 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, onClear, 
     );
   };
 
+  /** Prompt display with copy button */
+  const PromptDisplay = ({ result, className = "" }: { result: GrokResult; className?: string }) => {
+    if (!result.revised_prompt) return null;
+    const isCopied = copiedId === result.id;
+    return (
+      <div className={className}>
+        <div className="flex items-center gap-1.5 mb-1">
+          <div className="font-orbitron text-[9px] text-muted-foreground/60 tracking-wider">
+            PROMPT
+          </div>
+          <button
+            onClick={() => handleCopyPrompt(result.id, result.revised_prompt!)}
+            className="p-0.5 rounded hover:bg-primary/10 transition-colors"
+            title="Copy prompt"
+          >
+            {isCopied ? (
+              <Check className="w-3 h-3 text-primary" />
+            ) : (
+              <Copy className="w-3 h-3 text-muted-foreground/40 hover:text-primary" />
+            )}
+          </button>
+        </div>
+        <p className="font-rajdhani text-xs text-foreground/70 leading-relaxed line-clamp-3">
+          {result.revised_prompt}
+        </p>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -104,13 +197,23 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, onClear, 
         )}
       </div>
 
-      {/* Loading skeleton */}
+      {/* Loading skeleton with elapsed timer */}
       {isLoading && (
         <div className="border border-primary/30 rounded p-1 animate-pulse-glow">
-          <div className="aspect-square bg-muted rounded flex items-center justify-center">
+          <div className="aspect-square bg-muted rounded flex flex-col items-center justify-center gap-2">
             <div className="font-mono-share text-xs text-primary animate-flicker">
               RENDERING...
             </div>
+            {elapsedSeconds > 0 && (
+              <div className="font-mono-share text-[10px] text-muted-foreground tabular-nums">
+                {Math.floor(elapsedSeconds / 60).toString().padStart(2, "0")}:{(elapsedSeconds % 60).toString().padStart(2, "0")}
+              </div>
+            )}
+            {elapsedSeconds > 0 && (
+              <div className="w-32 h-0.5 bg-border rounded-full overflow-hidden">
+                <div className="h-full bg-primary/60 rounded-full animate-pulse" style={{ width: "100%" }} />
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -174,15 +277,8 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, onClear, 
           </div>
 
           {/* Revised prompt */}
-          {currentResult?.revised_prompt && (
-            <div className="p-2.5 border border-t-0 border-border/50 rounded-b">
-              <div className="font-orbitron text-[9px] text-muted-foreground/60 tracking-wider mb-1">
-                PROMPT
-              </div>
-              <p className="font-rajdhani text-xs text-foreground/70 leading-relaxed line-clamp-3">
-                {currentResult.revised_prompt}
-              </p>
-            </div>
+          {currentResult && (
+            <PromptDisplay result={currentResult} className="p-2.5 border border-t-0 border-border/50 rounded-b" />
           )}
 
           {/* Mobile action bar */}
@@ -200,10 +296,14 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, onClear, 
               {currentResult && <ImageActions result={currentResult} size="sm" />}
             </div>
             <div className="flex gap-1">
-              <Button size="icon" variant="ghost" className="text-primary h-7 w-7" asChild>
-                <a href={currentResult?.url} target="_blank" rel="noopener noreferrer" download>
-                  <Download className="w-3 h-3" />
-                </a>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="text-primary h-7 w-7"
+                onClick={() => currentResult && downloadMedia(currentResult.url, currentResult.type)}
+                title="Download / Save"
+              >
+                <Download className="w-3 h-3" />
               </Button>
               <Button size="icon" variant="ghost" className="text-primary h-7 w-7" asChild>
                 <a href={currentResult?.url} target="_blank" rel="noopener noreferrer">
@@ -282,11 +382,10 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, onClear, 
                 size="icon"
                 variant="ghost"
                 className="text-primary hover:bg-primary/20"
-                asChild
+                onClick={() => downloadMedia(result.url, result.type)}
+                title="Download / Save"
               >
-                <a href={result.url} target="_blank" rel="noopener noreferrer" download>
-                  <Download className="w-4 h-4" />
-                </a>
+                <Download className="w-4 h-4" />
               </Button>
               <Button
                 size="icon"
@@ -329,7 +428,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, onClear, 
           >
             <div className="flex items-center justify-between mb-2">
               {/* Action buttons in expanded view */}
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 {expandedResult.type === "image" && onEditImage && (
                   <Button
                     size="sm"
@@ -352,6 +451,15 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, onClear, 
                     Animate
                   </Button>
                 )}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-primary border-primary/30 hover:bg-primary/10 text-xs gap-1.5"
+                  onClick={() => downloadMedia(expandedResult.url, expandedResult.type)}
+                >
+                  <Download className="w-3 h-3" />
+                  Save
+                </Button>
                 <Button
                   size="sm"
                   variant="outline"
@@ -392,8 +500,21 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, onClear, 
 
             {expandedResult.revised_prompt && (
               <div className="mt-2 sm:mt-3 p-3 bg-card border border-border rounded overflow-y-auto max-h-[25vh]">
-                <div className="font-orbitron text-[10px] text-muted-foreground tracking-wider mb-1">
-                  REVISED_PROMPT
+                <div className="flex items-center gap-1.5 mb-1">
+                  <div className="font-orbitron text-[10px] text-muted-foreground tracking-wider">
+                    REVISED_PROMPT
+                  </div>
+                  <button
+                    onClick={() => handleCopyPrompt(expandedResult.id, expandedResult.revised_prompt!)}
+                    className="p-0.5 rounded hover:bg-primary/10 transition-colors"
+                    title="Copy prompt"
+                  >
+                    {copiedId === expandedResult.id ? (
+                      <Check className="w-3.5 h-3.5 text-primary" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5 text-muted-foreground/40 hover:text-primary" />
+                    )}
+                  </button>
                 </div>
                 <p className="font-rajdhani text-sm text-foreground/80 leading-relaxed">
                   {expandedResult.revised_prompt}

@@ -45,6 +45,7 @@ const Index = () => {
     isLoading,
     error,
     results,
+    elapsedSeconds,
     setApiKey: setApiKeyRaw,
     clearApiKey: clearApiKeyRaw,
     hasApiKey,
@@ -182,7 +183,7 @@ const Index = () => {
             />
             <div className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
           </div>
-          <ModeSelector activeMode={mode} onModeChange={setMode} />
+          <ModeSelector activeMode={mode} onModeChange={(m) => { setMode(m); setActiveImageUrl(""); }} />
         </section>
 
         {/* Prompt form — Terminal block */}
@@ -260,7 +261,7 @@ const Index = () => {
             />
             <div className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
           </div>
-          <ResultsGrid results={results} isLoading={isLoading} onClear={clearResults} onDelete={deleteResult} onEditImage={handleEditImage} onAnimateImage={handleAnimateImage} />
+          <ResultsGrid results={results} isLoading={isLoading} elapsedSeconds={elapsedSeconds} onClear={clearResults} onDelete={deleteResult} onEditImage={handleEditImage} onAnimateImage={handleAnimateImage} />
         </section>
 
         {/* Footer */}
