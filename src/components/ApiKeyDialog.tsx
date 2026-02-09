@@ -20,12 +20,16 @@ interface ApiKeyDialogProps {
 const ApiKeyDialog: React.FC<ApiKeyDialogProps> = ({ hasKey, onSave, onClear }) => {
   const [key, setKey] = useState("");
   const [showKey, setShowKey] = useState(false);
+  const [showStored, setShowStored] = useState(false);
   const [open, setOpen] = useState(false);
+
+  const storedKey = hasKey ? (localStorage.getItem("grok-api-key") || "") : "";
 
   const handleSave = () => {
     if (key.trim()) {
       onSave(key.trim());
       setKey("");
+      setShowStored(false);
       setOpen(false);
     }
   };
@@ -57,24 +61,49 @@ const ApiKeyDialog: React.FC<ApiKeyDialogProps> = ({ hasKey, onSave, onClear }) 
         </DialogHeader>
 
         <div className="space-y-4 mt-2">
-          <div className="relative">
-            <Input
-              type={showKey ? "text" : "password"}
-              value={key}
-              onChange={(e) => setKey(e.target.value)}
-              placeholder="xai-xxxxxxxxxxxxxxxxxxxx"
-              className="bg-input border-border font-mono-share text-sm pr-10"
-              onKeyDown={(e) => e.key === "Enter" && handleSave()}
-            />
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground"
-              onClick={() => setShowKey(!showKey)}
-            >
-              {showKey ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-            </Button>
+          {hasKey && storedKey && (
+            <div className="space-y-1.5">
+              <label className="font-mono-share text-[10px] text-muted-foreground/60 uppercase tracking-wider">Current Key</label>
+              <div className="flex items-center gap-2 bg-input border border-border rounded px-3 py-2">
+                <span className="font-mono-share text-sm text-foreground/80 flex-1 break-all">
+                  {showStored ? storedKey : storedKey.slice(0, 6) + "•".repeat(Math.min(storedKey.length - 6, 20))}
+                </span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-muted-foreground shrink-0"
+                  onClick={() => setShowStored(!showStored)}
+                >
+                  {showStored ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-1.5">
+            <label className="font-mono-share text-[10px] text-muted-foreground/60 uppercase tracking-wider">
+              {hasKey ? "Replace Key" : "Enter Key"}
+            </label>
+            <div className="relative">
+              <Input
+                type={showKey ? "text" : "password"}
+                value={key}
+                onChange={(e) => setKey(e.target.value)}
+                placeholder="xai-xxxxxxxxxxxxxxxxxxxx"
+                className="bg-input border-border font-mono-share text-sm pr-10"
+                onKeyDown={(e) => e.key === "Enter" && handleSave()}
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground"
+                onClick={() => setShowKey(!showKey)}
+              >
+                {showKey ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+              </Button>
+            </div>
           </div>
 
           <div className="flex items-center gap-2">
