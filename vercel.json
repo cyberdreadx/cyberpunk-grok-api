@@ -1,4 +1,8 @@
 {
+  "framework": null,
+  "buildCommand": "echo 'API only - frontend is on Netlify'",
+  "outputDirectory": ".",
+  "installCommand": "npm install",
   "headers": [
     {
       "source": "/api/(.*)",
