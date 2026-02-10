@@ -1,8 +1,7 @@
 {
   "framework": null,
-  "buildCommand": "echo 'API only - frontend is on Netlify'",
-  "outputDirectory": ".",
-  "installCommand": "npm install",
+  "buildCommand": "",
+  "outputDirectory": ".vercel_output_empty",
   "headers": [
     {
       "source": "/api/(.*)",
