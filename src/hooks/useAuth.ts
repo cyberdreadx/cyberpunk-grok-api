@@ -1,85 +1,76 @@
 /**
- * Authentication hook powered by Supabase Auth.
- * Provides login, signup, logout, and session state.
- * If Supabase is not configured, all auth features are disabled
- * and the app runs in BYOK-only mode.
+ * Authentication hook — JWT-based, calls /api/auth/* routes.
+ * No Supabase dependency. Token stored in localStorage.
  */
 
 import { useState, useEffect, useCallback } from "react";
-import { supabase, supabaseEnabled } from "@/lib/supabase";
-import type { User, Session } from "@supabase/supabase-js";
+import {
+  apiFetch,
+  getAuthToken,
+  setAuthToken,
+  clearAuthToken,
+  hasAuthToken,
+  backendEnabled,
+} from "@/lib/api";
 
-export interface AuthState {
-  user: User | null;
-  session: Session | null;
-  loading: boolean;
-  enabled: boolean; // false if Supabase isn't configured
+export interface AuthUser {
+  id: string;
+  email: string;
 }
 
 export function useAuth() {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(supabaseEnabled);
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [loading, setLoading] = useState(true);
 
+  // Hydrate user from stored token on mount
   useEffect(() => {
-    if (!supabase) return;
-
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session: s } }) => {
-      setSession(s);
-      setUser(s?.user ?? null);
+    if (!hasAuthToken()) {
       setLoading(false);
-    });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, s) => {
-        setSession(s);
-        setUser(s?.user ?? null);
-      },
-    );
-
-    return () => subscription.unsubscribe();
+      return;
+    }
+    apiFetch<AuthUser>("/auth/me")
+      .then((data) => setUser({ id: data.id, email: data.email }))
+      .catch(() => {
+        // Token expired or invalid — clear it
+        clearAuthToken();
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   const signUp = useCallback(async (email: string, password: string) => {
-    if (!supabase) throw new Error("Auth not available");
-    const { data, error } = await supabase.auth.signUp({ email, password });
-    if (error) throw error;
+    const data = await apiFetch<{ token: string; user: AuthUser }>("/auth/signup", {
+      method: "POST",
+      body: { email, password },
+      auth: false,
+    });
+    setAuthToken(data.token);
+    setUser(data.user);
     return data;
   }, []);
 
   const signIn = useCallback(async (email: string, password: string) => {
-    if (!supabase) throw new Error("Auth not available");
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
-    return data;
-  }, []);
-
-  const signInWithOAuth = useCallback(async (provider: "google" | "github") => {
-    if (!supabase) throw new Error("Auth not available");
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: { redirectTo: window.location.origin },
+    const data = await apiFetch<{ token: string; user: AuthUser }>("/auth/login", {
+      method: "POST",
+      body: { email, password },
+      auth: false,
     });
-    if (error) throw error;
+    setAuthToken(data.token);
+    setUser(data.user);
     return data;
   }, []);
 
   const signOut = useCallback(async () => {
-    if (!supabase) return;
-    await supabase.auth.signOut();
+    clearAuthToken();
+    setUser(null);
   }, []);
 
   return {
     user,
-    session,
     loading,
-    enabled: supabaseEnabled,
+    enabled: backendEnabled,
     isAuthenticated: !!user,
     signUp,
     signIn,
-    signInWithOAuth,
     signOut,
   };
 }

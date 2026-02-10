@@ -17,6 +17,9 @@ interface ResultsGridProps {
 const isMobile = () => /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 const isIOS = () => /iPhone|iPad|iPod/i.test(navigator.userAgent);
 
+/** True if the URL is a local data: or blob: URL that can be fetched without CORS. */
+const isLocalUrl = (url: string) => url.startsWith("data:") || url.startsWith("blob:");
+
 /** Safely fetch a URL as a Blob; returns null on CORS / network errors. */
 async function fetchBlob(url: string): Promise<Blob | null> {
   try {
@@ -29,74 +32,100 @@ async function fetchBlob(url: string): Promise<Blob | null> {
 }
 
 /**
+ * For external URLs (like vidgen.x.ai) that block CORS, route through
+ * our server-side proxy which fetches and returns the file with proper headers.
+ * Works with both Netlify Functions and Vercel API routes.
+ */
+function getProxyDownloadUrl(url: string, filename: string): string {
+  const apiUrl = import.meta.env.VITE_API_URL as string;
+  // If a custom API URL is set (e.g. Vercel backend), use /api/download
+  // Otherwise default to Netlify function path
+  const base = apiUrl
+    ? `${apiUrl}/download`
+    : "/.netlify/functions/download";
+  return `${base}?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(filename)}`;
+}
+
+/**
  * Download / save media.
  *
- * Strategy by platform:
- *  - iOS + video:  share-as-file → share-as-URL → long-press hint
- *  - iOS + image:  share-as-file (images are always local data: or blob:)
- *  - Android:      share-as-file → blob download → new tab
- *  - Desktop:      blob download → new tab
- *
- * Returns true if the user saw a "long press" alert (so callers can skip toasts).
+ * Strategy:
+ *  - Local URLs (data:/blob:): fetch blob directly, share or download
+ *  - External video URLs: use server proxy to bypass CORS
+ *  - Mobile: prefer navigator.share, fallback to proxy link
+ *  - Desktop: trigger <a download> via proxy URL or blob
  */
 async function downloadMedia(url: string, type: "image" | "video"): Promise<boolean> {
   const ext = type === "image" ? "png" : "mp4";
   const mime = type === "image" ? "image/png" : "video/mp4";
   const filename = `grok-${type}-${Date.now()}.${ext}`;
 
-  // ── 1. Try navigator.share with a File (works for local blobs & some CDNs) ──
-  if (navigator.share && isMobile()) {
+  // ── Local URLs (images are stored as data: URLs) — fetch blob directly ──
+  if (isLocalUrl(url)) {
     const blob = await fetchBlob(url);
     if (blob && blob.size > 0) {
-      try {
-        const file = new File([blob], filename, { type: blob.type || mime });
+      // Mobile: try share sheet
+      if (navigator.share && isMobile()) {
+        try {
+          const file = new File([blob], filename, { type: blob.type || mime });
+          if (navigator.canShare?.({ files: [file] })) {
+            await navigator.share({ files: [file] });
+            return false;
+          }
+        } catch (err: any) {
+          if (err?.name === "AbortError") return false;
+        }
+      }
+      // Desktop / fallback: blob download
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 10_000);
+      return false;
+    }
+  }
+
+  // ── External URLs (videos from vidgen.x.ai etc.) — use proxy to bypass CORS ──
+  const proxyUrl = getProxyDownloadUrl(url, filename);
+
+  // Mobile: try sharing the proxy URL as a file
+  if (navigator.share && isMobile()) {
+    try {
+      const proxyBlob = await fetchBlob(proxyUrl);
+      if (proxyBlob && proxyBlob.size > 0) {
+        const file = new File([proxyBlob], filename, { type: proxyBlob.type || mime });
         if (navigator.canShare?.({ files: [file] })) {
           await navigator.share({ files: [file] });
           return false;
         }
-      } catch (err: any) {
-        // AbortError = user cancelled share sheet — that's fine
-        if (err?.name === "AbortError") return false;
-        // Otherwise fall through
       }
+    } catch (err: any) {
+      if (err?.name === "AbortError") return false;
     }
 
-    // ── 2. iOS video fallback: share the URL (opens share sheet with "Save Video") ──
-    if (type === "video" && isIOS()) {
+    // iOS fallback: share the proxy URL (triggers share sheet)
+    if (isIOS()) {
       try {
-        await navigator.share({ url, title: filename });
+        await navigator.share({ url: proxyUrl, title: filename });
         return false;
       } catch (err: any) {
         if (err?.name === "AbortError") return false;
       }
-
-      // ── 3. iOS last resort: tell user to long-press ──
-      alert("To save this video on iPhone:\n\n1. Long-press (hold) on the video\n2. Tap \"Save Video\" or \"Download\"");
-      return true;
     }
   }
 
-  // ── 4. Desktop / Android fallback: blob download via <a> tag ──
-  const blob = await fetchBlob(url);
-  if (blob && blob.size > 0) {
-    const blobUrl = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = blobUrl;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(blobUrl), 10_000);
-    return false;
-  }
-
-  // ── 5. True last resort (desktop only): open in new tab ──
-  if (!isIOS()) {
-    window.open(url, "_blank");
-  } else {
-    alert("To save this video on iPhone:\n\n1. Long-press (hold) on the video\n2. Tap \"Save Video\" or \"Download\"");
-    return true;
-  }
+  // Desktop / final fallback: navigate to the proxy URL (triggers download via Content-Disposition)
+  const a = document.createElement("a");
+  a.href = proxyUrl;
+  a.download = filename;
+  a.target = "_blank";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
   return false;
 }
 

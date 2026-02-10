@@ -1,7 +1,7 @@
 import React from "react";
 import { Loader2, Zap, Crown, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { CreditPackage, SubscriptionTier } from "@/lib/supabase";
+import type { CreditPackage, SubscriptionTier } from "@/lib/api";
 
 interface PricingCardsProps {
   packages: CreditPackage[];

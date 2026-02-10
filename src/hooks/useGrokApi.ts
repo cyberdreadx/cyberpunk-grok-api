@@ -6,7 +6,7 @@ import {
   clearStoredResults,
   migrateFromLocalStorage,
 } from "@/lib/storage";
-import { supabase, supabaseEnabled, calculateCreditCost } from "@/lib/supabase";
+import { apiFetch, calculateCreditCost } from "@/lib/api";
 
 export type GrokMode = "text-to-image" | "edit-image" | "text-to-video" | "image-to-video";
 
@@ -173,17 +173,19 @@ export function useGrokApi() {
     return response.json();
   }, [getApiKey]);
 
-  /** Call the Supabase edge-function proxy instead of xAI directly. */
+  /** Call our Vercel API proxy instead of xAI directly. */
   const makeProxyRequest = useCallback(async (
     action: "generate-image" | "edit-image" | "generate-video",
     params: Record<string, unknown>,
   ) => {
-    if (!supabase) throw new Error("Credit system not available");
-    const { data, error: fnError } = await supabase.functions.invoke("proxy-generate", {
+    const data = await apiFetch("/generate", {
+      method: "POST",
       body: { action, ...params },
     });
-    if (fnError) throw new Error(fnError.message || "Proxy request failed");
-    if (data?.error) throw new Error(data.error.message || data.error);
+    if (data?.error) {
+      const msg = typeof data.error === "string" ? data.error : data.error.message || "Proxy request failed";
+      throw new Error(msg);
+    }
     return data;
   }, []);
 

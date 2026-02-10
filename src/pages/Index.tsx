@@ -16,7 +16,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCredits } from "@/hooks/useCredits";
 import { usePromptHistory } from "@/hooks/usePromptHistory";
 import { useToast } from "@/hooks/use-toast";
-import { calculateCreditCost } from "@/lib/supabase";
+import { calculateCreditCost } from "@/lib/api";
 
 const Index = () => {
   const [mode, setMode] = useState<GrokMode>("text-to-image");

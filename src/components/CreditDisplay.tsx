@@ -10,7 +10,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import PricingCards from "@/components/PricingCards";
-import type { CreditPackage, SubscriptionTier } from "@/lib/supabase";
+import type { CreditPackage, SubscriptionTier } from "@/lib/api";
 
 interface CreditDisplayProps {
   totalCredits: number;
