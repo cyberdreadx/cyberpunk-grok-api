@@ -4,36 +4,51 @@
 
 ![GROK_IMAGINE Banner](public/og-image.png)
 
+**Live:** [grokrunner.gltch.app](https://grokrunner.gltch.app)
+
 ## What is this?
 
-A **fully client-side** web app that lets you interact with every feature of the [xAI Grok Imagine API](https://docs.x.ai/docs/guides/image-generation) through a cyberpunk-themed interface. Your API key stays in your browser — nothing is ever sent to a third-party server.
+A cyberpunk-themed web app for the [xAI Grok Imagine API](https://docs.x.ai/docs/guides/image-generation) — generate images, edit them, create videos, and animate stills. Works in two modes:
 
-### Features
+- **BYOK (Bring Your Own Key)** — 100% client-side, your API key never leaves the browser
+- **Credits** — Sign up, buy credits or subscribe, and use xAI features without managing an API key
+
+### Modes
 
 | Mode | Description |
 |------|-------------|
 | 🖼️ **GENERATE** | Text → Image generation |
 | ✏️ **MODIFY** | Edit existing images with prompts |
-| 🎬 **RENDER** | Text → Video generation |
+| 🎬 **RENDER** | Text → Video generation (up to 15s) |
 | 🎞️ **ANIMATE** | Image → Video animation |
 
-### Additional Features
+### Features
 
-- **Settings Panel** — Resolution (512² to 1792×1024), batch count (×1–×4), output format (URL / BASE64)
-- **Prompt History** — Auto-saved, searchable, reusable prompts with localStorage persistence
-- **PWA Support** — Install on any phone as a native-feeling app
-- **Results Gallery** — Expand, download, open in new tab
-- **API Key Management** — Stored locally, never transmitted
+- **Dual API Mode** — BYOK (free, client-side) or Credits (paid, server-proxied)
+- **Settings Panel** — Resolution (512² to 1792×1024), batch count (×1–×4), video duration (5–15s)
+- **Prompt History** — Auto-saved, searchable, reusable prompts
+- **Results Gallery** — Expand, download, delete individual items, carousel view
+- **IndexedDB Storage** — Persistent local storage for generated media (survives cache clears)
+- **Download Proxy** — Server-side proxy for video downloads (bypasses xAI CDN CORS restrictions)
+- **PWA Support** — Install on any device as a native-feeling app
+- **Mobile Optimized** — Share sheet integration, swipe gestures, responsive layout
+
+### SaaS Features
+
+- **User Authentication** — Custom JWT-based signup/login
+- **Credit System** — Pay-per-use credits with sub-credits (subscription) and pack-credits (one-time)
+- **Stripe Integration** — One-time credit packs, monthly subscriptions, customer portal
+- **Monthly Plans** — Basic and Premium tiers with auto-renewing credits (no rollover)
+- **API Proxy** — Server-side xAI API calls for credit users (key stays on server)
 
 ## 🔒 Privacy
 
-| Concern | Status |
-|---------|--------|
-| API key storage | Browser localStorage only |
-| API calls | Direct to `api.x.ai`, no middleman |
-| Server-side code | None — pure static files |
-| Telemetry | None |
-| Data persistence | All local |
+| Concern | BYOK Mode | Credits Mode |
+|---------|-----------|--------------|
+| API key | Browser localStorage only | Stored on server (encrypted) |
+| API calls | Direct to `api.x.ai` | Proxied through backend |
+| Data persistence | All local (IndexedDB) | All local (IndexedDB) |
+| Telemetry | None | Usage logging for credit billing |
 
 ## 🚀 Quick Start
 
@@ -48,6 +63,52 @@ npm run dev
 npm run build
 ```
 
+## 🏗️ Architecture
+
+```
+┌──────────────────────────────────────────────────┐
+│  Frontend (Netlify / any static host)            │
+│  React + Vite + Tailwind + shadcn/ui             │
+│                                                  │
+│  BYOK mode: calls xAI API directly              │
+│  Credits mode: calls /api/* backend              │
+└────────────────────┬─────────────────────────────┘
+                     │
+          ┌──────────▼──────────┐
+          │  Backend (Vercel)   │
+          │  Serverless Funcs   │
+          │                     │
+          │  /api/auth/*        │  ← JWT auth
+          │  /api/credits       │  ← credit balance
+          │  /api/checkout      │  ← Stripe sessions
+          │  /api/webhook       │  ← Stripe webhooks
+          │  /api/generate      │  ← xAI proxy
+          │  /api/download      │  ← media proxy
+          └──────┬──────┬───────┘
+                 │      │
+        ┌────────▼┐  ┌──▼────────┐
+        │  Neon   │  │  Stripe   │
+        │ Postgres│  │ Payments  │
+        └─────────┘  └───────────┘
+```
+
+A **Netlify Function** (`/.netlify/functions/download`) also provides the download proxy directly from the frontend host, so video downloads work without the Vercel backend.
+
+## 🔧 Environment Variables
+
+Copy `.env.example` and fill in your values:
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DATABASE_URL` | Backend | Neon Postgres connection string |
+| `JWT_SECRET` | Backend | Random 64-char string for signing tokens |
+| `XAI_API_KEY` | Backend | xAI API key for credit-mode proxy |
+| `STRIPE_SECRET_KEY` | Backend | Stripe secret key |
+| `STRIPE_WEBHOOK_SECRET` | Backend | Stripe webhook signing secret |
+| `STRIPE_PRICE_*` | Backend | Stripe Price IDs for packs and subscriptions |
+| `SITE_URL` | Backend | Frontend URL for Stripe redirects |
+| `VITE_API_URL` | Frontend | Backend API URL (only if on a different domain) |
+
 ## 🏠 Self-Hosting
 
 See [SELF-HOSTING.md](SELF-HOSTING.md) for complete instructions on running privately via:
@@ -57,13 +118,37 @@ See [SELF-HOSTING.md](SELF-HOSTING.md) for complete instructions on running priv
 - 💻 **Any static server** (npx serve, Python, PHP)
 - 🔐 **Tailscale / ZeroTier** for secure remote access
 
+> **Note:** Self-hosting the frontend gives you BYOK mode. For the credit/SaaS features, you'll also need to deploy the Vercel backend and set up Neon + Stripe.
+
+## 💳 SaaS Setup
+
+To enable the credit-based SaaS features:
+
+1. **Database** — Create a [Neon](https://neon.tech) Postgres project and run `supabase/migrations/20260209_saas_credits.sql`
+2. **Stripe** — Create products using `scripts/setup-stripe-products.ps1` (Windows) or `scripts/setup-stripe-products.sh` (Mac/Linux)
+3. **Backend** — Deploy the `api/` folder to [Vercel](https://vercel.com) and configure environment variables
+4. **Frontend** — Set `VITE_API_URL` to your Vercel deployment URL if hosted separately
+
 ## 🛠️ Tech Stack
 
-- **React** + **TypeScript** + **Vite**
-- **Tailwind CSS** with custom cyberpunk design system
-- **shadcn/ui** components
-- **PWA** via vite-plugin-pwa
+**Frontend:**
+- React 18 + TypeScript + Vite
+- Tailwind CSS with custom cyberpunk design system
+- shadcn/ui components
+- IndexedDB for persistent media storage
+- PWA via vite-plugin-pwa
 - Fonts: Orbitron, Share Tech Mono, Rajdhani
+
+**Backend:**
+- Vercel Serverless Functions (Node.js)
+- Neon Postgres (serverless driver)
+- Custom JWT authentication (bcryptjs + jsonwebtoken)
+- Stripe for payments
+
+**Hosting:**
+- Frontend: Netlify (with Netlify Functions for download proxy)
+- Backend: Vercel
+- Database: Neon Postgres
 
 ## 📝 License
 
