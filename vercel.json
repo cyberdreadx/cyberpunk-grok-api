@@ -1,7 +1,5 @@
 {
   "framework": null,
-  "buildCommand": "",
-  "outputDirectory": ".vercel_output_empty",
   "headers": [
     {
       "source": "/api/(.*)",
