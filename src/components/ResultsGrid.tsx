@@ -290,13 +290,15 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, elapsedSe
               <img
                 src={currentResult.url}
                 alt={currentResult.revised_prompt || "Generated image"}
-                className="w-full aspect-square object-cover"
+                className="w-full object-contain bg-black/40"
+                style={{ maxHeight: "70vh" }}
                 loading="lazy"
               />
             ) : currentResult ? (
               <video
                 src={currentResult.url}
-                className="w-full aspect-video object-cover"
+                className="w-full object-contain bg-black/40"
+                style={{ maxHeight: "70vh" }}
                 controls
                 muted
                 playsInline
@@ -414,13 +416,15 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, elapsedSe
               <img
                 src={result.url}
                 alt={result.revised_prompt || "Generated image"}
-                className="w-full aspect-square object-cover"
+                className="w-full object-contain bg-black/40"
+                style={{ minHeight: "200px", maxHeight: "400px" }}
                 loading="lazy"
               />
             ) : (
               <video
                 src={result.url}
-                className="w-full aspect-video object-cover"
+                className="w-full object-contain bg-black/40"
+                style={{ minHeight: "150px", maxHeight: "400px" }}
                 controls
                 muted
                 playsInline
