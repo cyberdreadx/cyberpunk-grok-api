@@ -1,6 +1,4 @@
 {
-  "buildCommand": "",
-  "outputDirectory": "",
   "headers": [
     {
       "source": "/api/(.*)",
@@ -11,15 +9,5 @@
         { "key": "Access-Control-Max-Age", "value": "86400" }
       ]
     }
-  ],
-  "rewrites": [
-    { "source": "/api/auth/signup", "destination": "/api/auth/signup" },
-    { "source": "/api/auth/login", "destination": "/api/auth/login" },
-    { "source": "/api/auth/me", "destination": "/api/auth/me" },
-    { "source": "/api/credits", "destination": "/api/credits" },
-    { "source": "/api/checkout", "destination": "/api/checkout" },
-    { "source": "/api/webhook", "destination": "/api/webhook" },
-    { "source": "/api/generate", "destination": "/api/generate" },
-    { "source": "/api/download", "destination": "/api/download" }
   ]
 }
