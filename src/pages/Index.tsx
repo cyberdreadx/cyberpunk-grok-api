@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from "react";
-import { Terminal } from "lucide-react";
+import { Terminal, Key, Coins } from "lucide-react";
 import CyberLayout from "@/components/CyberLayout";
 import GrokOrb from "@/components/GrokOrb";
 import GlitchText from "@/components/GlitchText";
@@ -9,9 +9,14 @@ import SettingsPanel from "@/components/SettingsPanel";
 import PromptHistory from "@/components/PromptHistory";
 import ResultsGrid from "@/components/ResultsGrid";
 import ApiKeyDialog from "@/components/ApiKeyDialog";
-import { useGrokApi, type GrokMode, type GenerationSettings, type VideoSettings, DEFAULT_SETTINGS, DEFAULT_VIDEO_SETTINGS } from "@/hooks/useGrokApi";
+import AuthDialog from "@/components/AuthDialog";
+import CreditDisplay from "@/components/CreditDisplay";
+import { useGrokApi, type GrokMode, type GenerationSettings, type VideoSettings, type ApiMode, DEFAULT_SETTINGS, DEFAULT_VIDEO_SETTINGS } from "@/hooks/useGrokApi";
+import { useAuth } from "@/hooks/useAuth";
+import { useCredits } from "@/hooks/useCredits";
 import { usePromptHistory } from "@/hooks/usePromptHistory";
 import { useToast } from "@/hooks/use-toast";
+import { calculateCreditCost } from "@/lib/supabase";
 
 const Index = () => {
   const [mode, setMode] = useState<GrokMode>("text-to-image");
@@ -46,6 +51,8 @@ const Index = () => {
     error,
     results,
     elapsedSeconds,
+    apiMode,
+    setApiMode,
     setApiKey: setApiKeyRaw,
     clearApiKey: clearApiKeyRaw,
     hasApiKey,
@@ -56,10 +63,20 @@ const Index = () => {
     deleteResult,
     clearError,
   } = useGrokApi();
+
+  // Auth & Credits
+  const auth = useAuth();
+  const creditsHook = useCredits(auth.user);
+
   const { history, addEntry, removeEntry, clearHistory } = usePromptHistory();
   const [activePrompt, setActivePrompt] = useState("");
   const [activeImageUrl, setActiveImageUrl] = useState("");
   const [apiKeySet, setApiKeySet] = useState(() => hasApiKey());
+
+  // Automatically switch to credits mode when user is logged in and doesn't have a BYOK key
+  // and back to byok when they have a key set
+  const effectiveApiMode = apiMode;
+  const canUseCredits = auth.isAuthenticated && creditsHook.enabled;
 
   const handleSaveApiKey = useCallback((key: string) => {
     setApiKeyRaw(key);
@@ -92,13 +109,36 @@ const Index = () => {
   }, [toast]);
 
   const handleSubmit = async (data: { prompt: string; imageUrl?: string }) => {
-    if (!apiKeySet) {
+    // Check access: need either API key (BYOK) or credits
+    if (effectiveApiMode === "byok" && !apiKeySet) {
       toast({
         title: "ACCESS DENIED",
-        description: "Configure your xAI API key first.",
+        description: "Configure your xAI API key first, or switch to Credits mode.",
         variant: "destructive",
       });
       return;
+    }
+
+    if (effectiveApiMode === "credits") {
+      if (!auth.isAuthenticated) {
+        toast({
+          title: "ACCESS DENIED",
+          description: "Sign in to use credits.",
+          variant: "destructive",
+        });
+        return;
+      }
+      const imageCount = (mode === "text-to-image" || mode === "edit-image") ? settings.count : 1;
+      const videoDuration = (mode === "text-to-video" || mode === "image-to-video") ? videoSettings.duration : 0;
+      const cost = calculateCreditCost(mode, imageCount, videoDuration);
+      if (!creditsHook.hasEnoughCredits(cost)) {
+        toast({
+          title: "INSUFFICIENT CREDITS",
+          description: `This requires ${cost} credit${cost !== 1 ? "s" : ""}. Purchase more to continue.`,
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     addEntry(data.prompt, mode);
@@ -119,6 +159,17 @@ const Index = () => {
           await generateVideo({ prompt: data.prompt, image_url: data.imageUrl, videoSettings });
           break;
       }
+
+      // Optimistically deduct credits on success
+      if (effectiveApiMode === "credits") {
+        const imageCount = (mode === "text-to-image" || mode === "edit-image") ? settings.count : 1;
+        const videoDuration = (mode === "text-to-video" || mode === "image-to-video") ? videoSettings.duration : 0;
+        const cost = calculateCreditCost(mode, imageCount, videoDuration);
+        creditsHook.deductCreditsLocally(cost);
+        // Refresh from server to get actual balance
+        setTimeout(() => creditsHook.refreshCredits(), 2000);
+      }
+
       toast({
         title: "RENDER COMPLETE",
         description: "Output generated successfully.",
@@ -143,7 +194,7 @@ const Index = () => {
           </div>
 
           <GlitchText
-            text="GROK_IMAGINE"
+            text="GROK_RUNNER"
             as="h1"
             className="font-orbitron text-2xl sm:text-3xl md:text-5xl font-black tracking-wider neon-text-cyan"
             glitchIntensity="medium"
@@ -154,7 +205,7 @@ const Index = () => {
           </p>
 
           {/* Status bar */}
-          <div className="flex items-center justify-center gap-3 sm:gap-6 font-mono-share text-[9px] sm:text-[10px] text-muted-foreground/50 pt-2 flex-wrap">
+          <div className="flex items-center justify-center gap-2 sm:gap-4 font-mono-share text-[9px] sm:text-[10px] text-muted-foreground/50 pt-2 flex-wrap">
             <span className="flex items-center gap-1">
               <Terminal className="w-3 h-3" />
               SYS_ONLINE
@@ -164,11 +215,74 @@ const Index = () => {
                 isLoading ? "bg-secondary animate-pulse" : "bg-primary animate-pulse-glow"
               }`}
             />
-            <ApiKeyDialog
-              hasKey={apiKeySet}
-              onSave={handleSaveApiKey}
-              onClear={handleClearApiKey}
-            />
+
+            {/* API Mode toggle: BYOK vs Credits */}
+            {(canUseCredits || apiKeySet) && (
+              <div className="flex items-center bg-card/60 border border-border/50 rounded overflow-hidden">
+                <button
+                  onClick={() => setApiMode("byok")}
+                  className={`flex items-center gap-1 px-2 py-1 text-[9px] sm:text-[10px] font-mono-share transition-colors ${
+                    effectiveApiMode === "byok"
+                      ? "bg-primary/20 text-primary"
+                      : "text-muted-foreground/50 hover:text-muted-foreground"
+                  }`}
+                >
+                  <Key className="w-2.5 h-2.5" />
+                  BYOK
+                </button>
+                {canUseCredits && (
+                  <button
+                    onClick={() => setApiMode("credits")}
+                    className={`flex items-center gap-1 px-2 py-1 text-[9px] sm:text-[10px] font-mono-share transition-colors ${
+                      effectiveApiMode === "credits"
+                        ? "bg-secondary/20 text-secondary"
+                        : "text-muted-foreground/50 hover:text-muted-foreground"
+                    }`}
+                  >
+                    <Coins className="w-2.5 h-2.5" />
+                    CREDITS
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* BYOK: API key dialog */}
+            {effectiveApiMode === "byok" && (
+              <ApiKeyDialog
+                hasKey={apiKeySet}
+                onSave={handleSaveApiKey}
+                onClear={handleClearApiKey}
+              />
+            )}
+
+            {/* Credits: balance display */}
+            {effectiveApiMode === "credits" && canUseCredits && (
+              <CreditDisplay
+                totalCredits={creditsHook.totalCredits}
+                subCredits={creditsHook.subCredits}
+                packCredits={creditsHook.packCredits}
+                subscriptionTier={creditsHook.subscriptionTier}
+                subscriptionRenewsAt={creditsHook.subscriptionRenewsAt}
+                loading={creditsHook.loading}
+                purchasing={creditsHook.purchasing}
+                packages={creditsHook.packages}
+                subscriptionTiers={creditsHook.subscriptionTiers}
+                onPurchase={creditsHook.purchaseCredits}
+                onSubscribe={creditsHook.subscribeToPlan}
+                onManageSubscription={creditsHook.manageSubscription}
+              />
+            )}
+
+            {/* Auth: login/logout */}
+            {auth.enabled && (
+              <AuthDialog
+                isAuthenticated={auth.isAuthenticated}
+                userEmail={auth.user?.email}
+                onSignIn={auth.signIn}
+                onSignUp={auth.signUp}
+                onSignOut={auth.signOut}
+              />
+            )}
           </div>
         </header>
 
@@ -267,7 +381,8 @@ const Index = () => {
         {/* Footer */}
         <footer className="text-center py-6 border-t border-border/30">
           <p className="font-mono-share text-[10px] text-muted-foreground/40 animate-flicker">
-            <span className="text-primary/30">$</span> echo "POWERED BY xAI // CLIENT-SIDE RENDERING // ZERO TELEMETRY"
+            <span className="text-primary/30">$</span>{" "}
+            echo "POWERED BY xAI // {effectiveApiMode === "credits" ? "CREDIT-BASED" : "CLIENT-SIDE"} RENDERING"
           </p>
         </footer>
       </div>

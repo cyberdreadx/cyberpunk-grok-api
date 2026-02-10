@@ -6,6 +6,7 @@ import {
   clearStoredResults,
   migrateFromLocalStorage,
 } from "@/lib/storage";
+import { supabase, supabaseEnabled, calculateCreditCost } from "@/lib/supabase";
 
 export type GrokMode = "text-to-image" | "edit-image" | "text-to-video" | "image-to-video";
 
@@ -61,6 +62,9 @@ interface GenerateVideoParams {
   videoSettings: VideoSettings;
 }
 
+/** Generation mode: "byok" = user's own API key, "credits" = server proxy w/ credits */
+export type ApiMode = "byok" | "credits";
+
 const API_BASE = "https://api.x.ai/v1";
 
 /** Convert an external URL to a base64 data-URL (used for user-provided URLs). */
@@ -86,6 +90,7 @@ export function useGrokApi() {
   const [results, setResults] = useState<GrokResult[]>([]);
   const [storageReady, setStorageReady] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [apiMode, setApiMode] = useState<ApiMode>("byok");
   const revokeAllRef = useRef<(() => void) | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -167,6 +172,20 @@ export function useGrokApi() {
 
     return response.json();
   }, [getApiKey]);
+
+  /** Call the Supabase edge-function proxy instead of xAI directly. */
+  const makeProxyRequest = useCallback(async (
+    action: "generate-image" | "edit-image" | "generate-video",
+    params: Record<string, unknown>,
+  ) => {
+    if (!supabase) throw new Error("Credit system not available");
+    const { data, error: fnError } = await supabase.functions.invoke("proxy-generate", {
+      body: { action, ...params },
+    });
+    if (fnError) throw new Error(fnError.message || "Proxy request failed");
+    if (data?.error) throw new Error(data.error.message || data.error);
+    return data;
+  }, []);
 
   const pollVideoResult = useCallback(async (requestId: string): Promise<any> => {
     const apiKey = getApiKey();
@@ -250,11 +269,16 @@ export function useGrokApi() {
         response_format: "b64_json",
       };
 
-      const data = await makeRequest("/images/generations", body);
+      let data: any;
+      if (apiMode === "credits") {
+        data = await makeProxyRequest("generate-image", body);
+      } else {
+        data = await makeRequest("/images/generations", body);
+      }
 
       const newResults: GrokResult[] = data.data.map((item: any, i: number) => ({
         id: `img-${Date.now()}-${i}`,
-        url: `data:image/png;base64,${item.b64_json}`,
+        url: item.b64_json ? `data:image/png;base64,${item.b64_json}` : item.url,
         revised_prompt: item.revised_prompt,
         type: "image" as const,
         timestamp: Date.now(),
@@ -269,7 +293,7 @@ export function useGrokApi() {
     } finally {
       setIsLoading(false);
     }
-  }, [makeRequest, persistNewResults]);
+  }, [apiMode, makeRequest, makeProxyRequest, persistNewResults]);
 
   // Edit Image
   const editImage = useCallback(async (params: EditImageParams) => {
@@ -288,7 +312,12 @@ export function useGrokApi() {
         response_format: "b64_json",
       };
 
-      const data = await makeRequest("/images/edits", body);
+      let data: any;
+      if (apiMode === "credits") {
+        data = await makeProxyRequest("edit-image", body);
+      } else {
+        data = await makeRequest("/images/edits", body);
+      }
 
       const newResults: GrokResult[] = data.data.map((item: any, i: number) => ({
         id: `edit-${Date.now()}-${i}`,
@@ -309,7 +338,7 @@ export function useGrokApi() {
     } finally {
       setIsLoading(false);
     }
-  }, [makeRequest, persistNewResults]);
+  }, [apiMode, makeRequest, makeProxyRequest, persistNewResults]);
 
   // Video generation (text-to-video & image-to-video)
   const generateVideo = useCallback(async (params: GenerateVideoParams) => {
@@ -329,6 +358,26 @@ export function useGrokApi() {
         body.aspect_ratio = params.videoSettings.aspectRatio;
       }
 
+      // Credits mode: the edge function handles submission + polling + deduction
+      if (apiMode === "credits") {
+        const data = await makeProxyRequest("generate-video", body);
+        const videoUrl = data.video?.url || data.video_url || data.url || data.data?.[0]?.url;
+        if (!videoUrl) {
+          throw new Error("No video URL found in proxy result");
+        }
+        const newResults: GrokResult[] = [{
+          id: `vid-${Date.now()}`,
+          url: videoUrl,
+          revised_prompt: data.revised_prompt || data.data?.[0]?.revised_prompt,
+          type: "video" as const,
+          timestamp: Date.now(),
+        }];
+        setResults(prev => [...newResults, ...prev]);
+        persistNewResults(newResults);
+        return newResults;
+      }
+
+      // BYOK mode: direct xAI calls with client-side polling
       const submitData = await makeRequest("/videos/generations", body);
       console.info("[generateVideo] Submit response keys:", Object.keys(submitData));
       const requestId = submitData.request_id || submitData.id;
@@ -363,7 +412,7 @@ export function useGrokApi() {
       setIsLoading(false);
       stopTimer();
     }
-  }, [makeRequest, pollVideoResult, persistNewResults, startTimer, stopTimer]);
+  }, [apiMode, makeRequest, makeProxyRequest, pollVideoResult, persistNewResults, startTimer, stopTimer]);
 
   const clearResults = useCallback(async () => {
     setResults([]);
@@ -387,6 +436,8 @@ export function useGrokApi() {
     results,
     elapsedSeconds,
     storageReady,
+    apiMode,
+    setApiMode,
     getApiKey,
     setApiKey,
     clearApiKey,
@@ -397,5 +448,6 @@ export function useGrokApi() {
     clearResults,
     deleteResult,
     clearError,
+    calculateCreditCost,
   };
 }

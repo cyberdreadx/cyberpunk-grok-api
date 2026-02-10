@@ -14,46 +14,71 @@ interface ResultsGridProps {
   onAnimateImage?: (imageUrl: string) => void;
 }
 
-/** Download a file by fetching as blob — works on iOS Safari where <a download> does not. */
-async function downloadMedia(url: string, type: "image" | "video") {
+const isMobile = () => /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+const isIOS = () => /iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+/** Safely fetch a URL as a Blob; returns null on CORS / network errors. */
+async function fetchBlob(url: string): Promise<Blob | null> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    return await res.blob();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Download / save media.
+ *
+ * Strategy by platform:
+ *  - iOS + video:  share-as-file → share-as-URL → long-press hint
+ *  - iOS + image:  share-as-file (images are always local data: or blob:)
+ *  - Android:      share-as-file → blob download → new tab
+ *  - Desktop:      blob download → new tab
+ *
+ * Returns true if the user saw a "long press" alert (so callers can skip toasts).
+ */
+async function downloadMedia(url: string, type: "image" | "video"): Promise<boolean> {
   const ext = type === "image" ? "png" : "mp4";
+  const mime = type === "image" ? "image/png" : "video/mp4";
   const filename = `grok-${type}-${Date.now()}.${ext}`;
 
-  try {
-    // Try native share (iOS share sheet, Android share)
-    if (navigator.share && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-      let blob: Blob;
-      if (url.startsWith("data:")) {
-        const res = await fetch(url);
-        blob = await res.blob();
-      } else if (url.startsWith("blob:")) {
-        const res = await fetch(url);
-        blob = await res.blob();
-      } else {
-        const res = await fetch(url);
-        blob = await res.blob();
+  // ── 1. Try navigator.share with a File (works for local blobs & some CDNs) ──
+  if (navigator.share && isMobile()) {
+    const blob = await fetchBlob(url);
+    if (blob && blob.size > 0) {
+      try {
+        const file = new File([blob], filename, { type: blob.type || mime });
+        if (navigator.canShare?.({ files: [file] })) {
+          await navigator.share({ files: [file] });
+          return false;
+        }
+      } catch (err: any) {
+        // AbortError = user cancelled share sheet — that's fine
+        if (err?.name === "AbortError") return false;
+        // Otherwise fall through
       }
-      const file = new File([blob], filename, { type: blob.type || (type === "image" ? "image/png" : "video/mp4") });
-      await navigator.share({ files: [file] });
-      return;
     }
-  } catch {
-    // Share cancelled or unsupported — fall through to download
+
+    // ── 2. iOS video fallback: share the URL (opens share sheet with "Save Video") ──
+    if (type === "video" && isIOS()) {
+      try {
+        await navigator.share({ url, title: filename });
+        return false;
+      } catch (err: any) {
+        if (err?.name === "AbortError") return false;
+      }
+
+      // ── 3. iOS last resort: tell user to long-press ──
+      alert("To save this video on iPhone:\n\n1. Long-press (hold) on the video\n2. Tap \"Save Video\" or \"Download\"");
+      return true;
+    }
   }
 
-  try {
-    // Standard download: fetch as blob and trigger via object URL
-    let blob: Blob;
-    if (url.startsWith("data:")) {
-      const res = await fetch(url);
-      blob = await res.blob();
-    } else if (url.startsWith("blob:")) {
-      const res = await fetch(url);
-      blob = await res.blob();
-    } else {
-      const res = await fetch(url);
-      blob = await res.blob();
-    }
+  // ── 4. Desktop / Android fallback: blob download via <a> tag ──
+  const blob = await fetchBlob(url);
+  if (blob && blob.size > 0) {
     const blobUrl = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = blobUrl;
@@ -61,11 +86,18 @@ async function downloadMedia(url: string, type: "image" | "video") {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
-  } catch {
-    // Last resort: open in new tab
-    window.open(url, "_blank");
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 10_000);
+    return false;
   }
+
+  // ── 5. True last resort (desktop only): open in new tab ──
+  if (!isIOS()) {
+    window.open(url, "_blank");
+  } else {
+    alert("To save this video on iPhone:\n\n1. Long-press (hold) on the video\n2. Tap \"Save Video\" or \"Download\"");
+    return true;
+  }
+  return false;
 }
 
 const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, elapsedSeconds = 0, onClear, onDelete, onEditImage, onAnimateImage }) => {
