@@ -49,15 +49,33 @@ function New-StripePrice {
     }
 
     # Run stripe CLI — outputs JSON by default
-    $rawJson = & stripe @cmd 2>$null
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "  ERROR: stripe command failed (exit code $LASTEXITCODE)" -ForegroundColor Red
-        Write-Host "  Tip: make sure you ran 'stripe login' first" -ForegroundColor Yellow
+    $rawJson = & stripe @cmd 2>&1
+    $joined = ($rawJson | Out-String).Trim()
+
+    if (-not $joined) {
+        Write-Host "  ERROR: stripe returned no output" -ForegroundColor Red
         exit 1
     }
 
-    $joined = $rawJson -join "`n"
     $parsed = $joined | ConvertFrom-Json
+
+    if ($parsed.error) {
+        Write-Host "  ERROR: $($parsed.error.message)" -ForegroundColor Red
+        exit 1
+    }
+
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "  ERROR: stripe command failed (exit code $LASTEXITCODE)" -ForegroundColor Red
+        Write-Host "  Output: $joined" -ForegroundColor Yellow
+        exit 1
+    }
+
+    if (-not $parsed.id) {
+        Write-Host "  ERROR: No price ID in response" -ForegroundColor Red
+        Write-Host "  Output: $joined" -ForegroundColor Yellow
+        exit 1
+    }
+
     return $parsed.id
 }
 
@@ -91,6 +109,10 @@ Write-Host ""
 Write-Host "============================================" -ForegroundColor Green
 Write-Host "All 5 products created! Copy-paste this:" -ForegroundColor Green
 Write-Host ""
-Write-Host "supabase secrets set STRIPE_PRICE_STARTER=$starter STRIPE_PRICE_PRO=$pro STRIPE_PRICE_MEGA=$mega STRIPE_PRICE_SUB_BASIC=$subBasic STRIPE_PRICE_SUB_PREMIUM=$subPremium" -ForegroundColor White
+Write-Host "STRIPE_PRICE_STARTER=$starter" -ForegroundColor White
+Write-Host "STRIPE_PRICE_PRO=$pro" -ForegroundColor White
+Write-Host "STRIPE_PRICE_MEGA=$mega" -ForegroundColor White
+Write-Host "STRIPE_PRICE_SUB_BASIC=$subBasic" -ForegroundColor White
+Write-Host "STRIPE_PRICE_SUB_PREMIUM=$subPremium" -ForegroundColor White
 Write-Host ""
 Write-Host "============================================" -ForegroundColor Green
