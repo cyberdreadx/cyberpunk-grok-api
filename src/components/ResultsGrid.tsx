@@ -318,6 +318,7 @@ function FolderBar({
   onRequestUnlock,
   onSetPin,
   onRemovePin,
+  onLockFolder,
 }: {
   folders: Folder[];
   selectedFilter: FolderFilter;
@@ -330,6 +331,7 @@ function FolderBar({
   onRequestUnlock: (folderId: string) => void;
   onSetPin: (folderId: string) => void;
   onRemovePin: (folderId: string) => void;
+  onLockFolder: (folderId: string) => void;
 }) {
   const [isCreating, setIsCreating] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
@@ -413,13 +415,24 @@ function FolderBar({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="min-w-[120px] bg-card border-border">
             {hasPin ? (
-              <DropdownMenuItem
-                className="text-[10px] font-mono-share text-secondary focus:bg-secondary/10 cursor-pointer"
-                onSelect={() => onRemovePin(pinId)}
-              >
-                <LockOpen className="w-3 h-3 mr-1.5" />
-                REMOVE PIN
-              </DropdownMenuItem>
+              <>
+                {isUnlocked && (
+                  <DropdownMenuItem
+                    className="text-[10px] font-mono-share text-muted-foreground focus:bg-muted/50 cursor-pointer"
+                    onSelect={() => onLockFolder(pinId)}
+                  >
+                    <Lock className="w-3 h-3 mr-1.5" />
+                    LOCK
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem
+                  className="text-[10px] font-mono-share text-secondary focus:bg-secondary/10 cursor-pointer"
+                  onSelect={() => onRemovePin(pinId)}
+                >
+                  <LockOpen className="w-3 h-3 mr-1.5" />
+                  REMOVE PIN
+                </DropdownMenuItem>
+              </>
             ) : (
               <DropdownMenuItem
                 className="text-[10px] font-mono-share text-primary focus:bg-primary/10 cursor-pointer"
@@ -507,13 +520,24 @@ function FolderBar({
                 RENAME
               </DropdownMenuItem>
               {hasPin ? (
-                <DropdownMenuItem
-                  className="text-[10px] font-mono-share text-secondary focus:bg-secondary/10 cursor-pointer"
-                  onSelect={() => onRemovePin(folder.id)}
-                >
-                  <LockOpen className="w-3 h-3 mr-1.5" />
-                  REMOVE PIN
-                </DropdownMenuItem>
+                <>
+                  {isUnlocked && (
+                    <DropdownMenuItem
+                      className="text-[10px] font-mono-share text-muted-foreground focus:bg-muted/50 cursor-pointer"
+                      onSelect={() => onLockFolder(folder.id)}
+                    >
+                      <Lock className="w-3 h-3 mr-1.5" />
+                      LOCK
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem
+                    className="text-[10px] font-mono-share text-secondary focus:bg-secondary/10 cursor-pointer"
+                    onSelect={() => onRemovePin(folder.id)}
+                  >
+                    <LockOpen className="w-3 h-3 mr-1.5" />
+                    REMOVE PIN
+                  </DropdownMenuItem>
+                </>
               ) : (
                 <DropdownMenuItem
                   className="text-[10px] font-mono-share text-primary focus:bg-primary/10 cursor-pointer"
@@ -696,6 +720,19 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
     setPinDialog({ mode: "remove", folderId, folderName: getFolderName(folderId) });
   }, [getFolderName]);
 
+  const handleLockFolder = useCallback((folderId: string) => {
+    setUnlockedFolders((prev) => {
+      const next = new Set(prev);
+      next.delete(folderId);
+      return next;
+    });
+    // If we're currently viewing this folder, switch to "none" so locked content isn't visible
+    const filterForId = folderId === "__unfiled" ? "unfiled" : folderId === "__all" ? "all" : folderId;
+    if (onSelectFilter && selectedFilter === filterForId) {
+      onSelectFilter("none");
+    }
+  }, [onSelectFilter, selectedFilter]);
+
   // Convert a PIN storage ID back to the filter value for onSelectFilter
   const pinIdToFilter = useCallback((pinId: string): string => {
     if (pinId === "__unfiled") return "unfiled";
@@ -813,6 +850,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
             onRequestUnlock={handleRequestUnlock}
             onSetPin={handleSetPin}
             onRemovePin={handleRemovePin}
+            onLockFolder={handleLockFolder}
           />
         )}
         <div className="border border-dashed border-border rounded p-12 text-center">
@@ -923,6 +961,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
           onRequestUnlock={handleRequestUnlock}
           onSetPin={handleSetPin}
           onRemovePin={handleRemovePin}
+          onLockFolder={handleLockFolder}
         />
       )}
 
