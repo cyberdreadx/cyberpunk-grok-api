@@ -26,7 +26,7 @@ export async function sendVerificationEmail(
   to: string,
   code: string,
 ): Promise<void> {
-  const fromAddress = process.env.EMAIL_FROM || "verify@grokrunner.gltch.app";
+  const fromAddress = process.env.EMAIL_FROM || "noreply@grokrunner.gltch.app";
 
   const { error } = await getResend().emails.send({
     from: `Grok Runner <${fromAddress}>`,

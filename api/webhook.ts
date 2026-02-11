@@ -76,9 +76,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // ── invoice.paid: subscription renewal → reset sub_credits ──
     if (event.type === "invoice.paid") {
       const invoice = event.data.object as Stripe.Invoice;
-      if (!invoice.subscription) return res.status(200).json({ received: true });
+      const subscriptionId = (invoice as any).subscription as string | null;
+      if (!subscriptionId) return res.status(200).json({ received: true });
 
-      const subscription = await stripe.subscriptions.retrieve(invoice.subscription as string);
+      const subscription = await stripe.subscriptions.retrieve(subscriptionId);
       const userId = subscription.metadata?.user_id;
       const tier = subscription.metadata?.tier;
       const creditsPerMonth = parseInt(subscription.metadata?.credits_per_month || "0", 10);
@@ -88,7 +89,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json({ received: true });
       }
 
-      const renewsAt = new Date(subscription.current_period_end * 1000).toISOString();
+      const renewsAt = new Date((subscription as any).current_period_end * 1000).toISOString();
 
       await sql`SELECT reset_sub_credits(${userId}::uuid, ${creditsPerMonth}, ${tier}, ${renewsAt}::timestamptz)`;
 
