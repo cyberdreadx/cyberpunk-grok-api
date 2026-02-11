@@ -1,10 +1,184 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import { Download, Maximize2, X, Trash2, ExternalLink, ChevronLeft, ChevronRight, Pencil, Film, Copy, Check, FolderPlus, FolderOpen, MoreVertical, FolderInput } from "lucide-react";
+import { Download, Maximize2, X, Trash2, ExternalLink, ChevronLeft, ChevronRight, Pencil, Film, Copy, Check, FolderPlus, FolderOpen, MoreVertical, FolderInput, Lock, LockOpen, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { GrokResult } from "@/hooks/useGrokApi";
 import type { Folder } from "@/lib/storage";
 import type { FolderFilter } from "@/hooks/useFolders";
 import { useSwipe } from "@/hooks/useSwipe";
+
+// ── PIN Utilities ────────────────────────────────────────────────────────
+
+const PIN_STORAGE_KEY = "folder-pins";
+
+async function hashPin(pin: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(pin);
+  const hash = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(hash)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+function loadPinHashes(): Record<string, string> {
+  try {
+    const raw = localStorage.getItem(PIN_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function savePinHashes(pins: Record<string, string>) {
+  localStorage.setItem(PIN_STORAGE_KEY, JSON.stringify(pins));
+}
+
+function folderHasPin(folderId: string): boolean {
+  return !!loadPinHashes()[folderId];
+}
+
+async function verifyPin(folderId: string, pin: string): Promise<boolean> {
+  const hashes = loadPinHashes();
+  const stored = hashes[folderId];
+  if (!stored) return true;
+  const attempt = await hashPin(pin);
+  return attempt === stored;
+}
+
+async function setFolderPin(folderId: string, pin: string): Promise<void> {
+  const hashes = loadPinHashes();
+  hashes[folderId] = await hashPin(pin);
+  savePinHashes(hashes);
+}
+
+function removeFolderPin(folderId: string): void {
+  const hashes = loadPinHashes();
+  delete hashes[folderId];
+  savePinHashes(hashes);
+}
+
+// ── PIN Dialog Component ─────────────────────────────────────────────────
+
+function PinDialog({
+  mode,
+  folderName,
+  onSubmit,
+  onCancel,
+}: {
+  mode: "set" | "unlock" | "remove";
+  folderName: string;
+  onSubmit: (pin: string) => void;
+  onCancel: () => void;
+}) {
+  const [digits, setDigits] = useState(["", "", "", ""]);
+  const [error, setError] = useState("");
+  const inputRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
+
+  useEffect(() => {
+    inputRefs[0].current?.focus();
+  }, []);
+
+  const handleChange = (index: number, value: string) => {
+    if (!/^\d*$/.test(value)) return;
+    const newDigits = [...digits];
+    newDigits[index] = value.slice(-1);
+    setDigits(newDigits);
+    setError("");
+    if (value && index < 3) {
+      inputRefs[index + 1].current?.focus();
+    }
+    // Auto-submit when all 4 digits entered
+    if (value && index === 3 && newDigits.every((d) => d !== "")) {
+      onSubmit(newDigits.join(""));
+    }
+  };
+
+  const handleKeyDown = (index: number, e: React.KeyboardEvent) => {
+    if (e.key === "Backspace" && !digits[index] && index > 0) {
+      inputRefs[index - 1].current?.focus();
+    }
+    if (e.key === "Escape") onCancel();
+    if (e.key === "Enter" && digits.every((d) => d !== "")) {
+      onSubmit(digits.join(""));
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 4);
+    if (pasted.length === 4) {
+      const newDigits = pasted.split("");
+      setDigits(newDigits);
+      onSubmit(newDigits.join(""));
+    }
+  };
+
+  const title =
+    mode === "set" ? "SET_SECURITY_PIN" :
+    mode === "remove" ? "REMOVE_SECURITY_PIN" :
+    "ENTER_ACCESS_CODE";
+
+  const subtitle =
+    mode === "set" ? `Arm folder "${folderName}" with a 4-digit lock` :
+    mode === "remove" ? `Enter current PIN to disarm "${folderName}"` :
+    `Folder "${folderName}" is locked — enter PIN to decrypt`;
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm" onClick={onCancel}>
+      <div
+        className="bg-card border border-primary/40 rounded-lg p-6 w-80 shadow-lg shadow-primary/10 animate-slide-up"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="text-center space-y-3">
+          <div className="flex items-center justify-center gap-2">
+            {mode === "unlock" ? (
+              <Lock className="w-5 h-5 text-secondary" />
+            ) : mode === "remove" ? (
+              <LockOpen className="w-5 h-5 text-destructive" />
+            ) : (
+              <ShieldCheck className="w-5 h-5 text-primary" />
+            )}
+            <h3 className="font-orbitron text-sm tracking-wider text-primary">
+              {title}
+            </h3>
+          </div>
+          <p className="font-mono-share text-[10px] text-muted-foreground/60">
+            {subtitle}
+          </p>
+
+          <div className="flex justify-center gap-3 py-3" onPaste={handlePaste}>
+            {digits.map((digit, i) => (
+              <input
+                key={i}
+                ref={inputRefs[i]}
+                type="text"
+                inputMode="numeric"
+                maxLength={1}
+                value={digit}
+                onChange={(e) => handleChange(i, e.target.value)}
+                onKeyDown={(e) => handleKeyDown(i, e)}
+                aria-label={`PIN digit ${i + 1}`}
+                className="w-12 h-14 text-center text-xl font-orbitron bg-background border-2 border-primary/30 rounded-md text-primary outline-none focus:border-primary focus:shadow-[0_0_10px_hsl(var(--neon-cyan)/0.3)] transition-all"
+              />
+            ))}
+          </div>
+
+          {error && (
+            <p className="font-mono-share text-[10px] text-destructive animate-flicker">
+              {error}
+            </p>
+          )}
+
+          <div className="flex justify-center gap-2 pt-1">
+            <button
+              onClick={onCancel}
+              className="px-4 py-1.5 text-[10px] font-mono-share text-muted-foreground/60 hover:text-muted-foreground border border-border/50 rounded transition-colors"
+            >
+              ABORT
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 interface ResultsGridProps {
   results: GrokResult[];
@@ -134,6 +308,10 @@ function FolderBar({
   onRenameFolder,
   onDeleteFolder,
   resultCounts,
+  unlockedFolders,
+  onRequestUnlock,
+  onSetPin,
+  onRemovePin,
 }: {
   folders: Folder[];
   selectedFilter: FolderFilter;
@@ -142,6 +320,10 @@ function FolderBar({
   onRenameFolder?: (id: string, name: string) => Promise<void>;
   onDeleteFolder?: (id: string) => Promise<void>;
   resultCounts: Record<string, number>;
+  unlockedFolders: Set<string>;
+  onRequestUnlock: (folderId: string) => void;
+  onSetPin: (folderId: string) => void;
+  onRemovePin: (folderId: string) => void;
 }) {
   const [isCreating, setIsCreating] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
@@ -204,18 +386,7 @@ function FolderBar({
 
   return (
     <div className="flex items-center gap-0.5 overflow-x-auto scrollbar-hide pb-px border-b border-border/50 -mb-px">
-      {/* ALL tab */}
-      <button
-        className={tabClass(selectedFilter === "all")}
-        onClick={() => onSelectFilter("all")}
-      >
-        ALL
-        <span className="ml-1 text-muted-foreground/40">
-          {resultCounts["__total"] ?? 0}
-        </span>
-      </button>
-
-      {/* UNFILED tab */}
+      {/* UNFILED tab (first) */}
       <button
         className={tabClass(selectedFilter === "unfiled")}
         onClick={() => onSelectFilter("unfiled")}
@@ -227,7 +398,12 @@ function FolderBar({
       </button>
 
       {/* Custom folder tabs */}
-      {folders.map((folder) => (
+      {folders.map((folder) => {
+        const hasPin = folderHasPin(folder.id);
+        const isUnlocked = unlockedFolders.has(folder.id);
+        const isLocked = hasPin && !isUnlocked;
+
+        return (
         <div key={folder.id} className="relative flex items-center">
           {editingId === folder.id ? (
             <input
@@ -244,16 +420,29 @@ function FolderBar({
           ) : (
             <button
               className={tabClass(selectedFilter === folder.id)}
-              onClick={() => onSelectFilter(folder.id)}
+              onClick={() => {
+                if (isLocked) {
+                  onRequestUnlock(folder.id);
+                } else {
+                  onSelectFilter(folder.id);
+                }
+              }}
               onDoubleClick={() => {
-                setEditingId(folder.id);
-                setEditingName(folder.name);
+                if (!isLocked) {
+                  setEditingId(folder.id);
+                  setEditingName(folder.name);
+                }
               }}
             >
-              <FolderOpen className="w-3 h-3 inline-block mr-1 -mt-0.5" />
+              {hasPin && (
+                isLocked
+                  ? <Lock className="w-3 h-3 inline-block mr-1 -mt-0.5 text-secondary" />
+                  : <LockOpen className="w-3 h-3 inline-block mr-1 -mt-0.5 text-primary/50" />
+              )}
+              {!hasPin && <FolderOpen className="w-3 h-3 inline-block mr-1 -mt-0.5" />}
               {folder.name.toUpperCase()}
               <span className="ml-1 text-muted-foreground/40">
-                {resultCounts[folder.id] ?? 0}
+                {isLocked ? "***" : (resultCounts[folder.id] ?? 0)}
               </span>
             </button>
           )}
@@ -285,6 +474,30 @@ function FolderBar({
               >
                 RENAME
               </button>
+              {/* PIN options */}
+              {hasPin ? (
+                <button
+                  className="w-full text-left px-3 py-1.5 text-[10px] font-mono-share text-secondary hover:bg-secondary/10 transition-colors flex items-center gap-1.5"
+                  onClick={() => {
+                    setContextMenuId(null);
+                    onRemovePin(folder.id);
+                  }}
+                >
+                  <LockOpen className="w-3 h-3" />
+                  REMOVE PIN
+                </button>
+              ) : (
+                <button
+                  className="w-full text-left px-3 py-1.5 text-[10px] font-mono-share text-primary hover:bg-primary/10 transition-colors flex items-center gap-1.5"
+                  onClick={() => {
+                    setContextMenuId(null);
+                    onSetPin(folder.id);
+                  }}
+                >
+                  <Lock className="w-3 h-3" />
+                  SET PIN
+                </button>
+              )}
               {onDeleteFolder && (
                 <button
                   className="w-full text-left px-3 py-1.5 text-[10px] font-mono-share text-destructive hover:bg-destructive/10 transition-colors"
@@ -299,7 +512,19 @@ function FolderBar({
             </div>
           )}
         </div>
-      ))}
+        );
+      })}
+
+      {/* ALL tab (last) */}
+      <button
+        className={tabClass(selectedFilter === "all")}
+        onClick={() => onSelectFilter("all")}
+      >
+        ALL
+        <span className="ml-1 text-muted-foreground/40">
+          {resultCounts["__total"] ?? 0}
+        </span>
+      </button>
 
       {/* Create folder button / input */}
       {isCreating ? (
@@ -430,8 +655,76 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [moveMenuId, setMoveMenuId] = useState<string | null>(null);
 
+  // PIN lock state
+  const [unlockedFolders, setUnlockedFolders] = useState<Set<string>>(new Set());
+  const [pinDialog, setPinDialog] = useState<{
+    mode: "set" | "unlock" | "remove";
+    folderId: string;
+    folderName: string;
+  } | null>(null);
+
+  const handleRequestUnlock = useCallback((folderId: string) => {
+    const folder = folders.find((f) => f.id === folderId);
+    if (!folder) return;
+    setPinDialog({ mode: "unlock", folderId, folderName: folder.name });
+  }, [folders]);
+
+  const handleSetPin = useCallback((folderId: string) => {
+    const folder = folders.find((f) => f.id === folderId);
+    if (!folder) return;
+    setPinDialog({ mode: "set", folderId, folderName: folder.name });
+  }, [folders]);
+
+  const handleRemovePin = useCallback((folderId: string) => {
+    const folder = folders.find((f) => f.id === folderId);
+    if (!folder) return;
+    setPinDialog({ mode: "remove", folderId, folderName: folder.name });
+  }, [folders]);
+
+  const handlePinSubmit = useCallback(async (pin: string) => {
+    if (!pinDialog) return;
+    const { mode, folderId } = pinDialog;
+
+    if (mode === "set") {
+      await setFolderPin(folderId, pin);
+      setPinDialog(null);
+    } else if (mode === "unlock") {
+      const valid = await verifyPin(folderId, pin);
+      if (valid) {
+        setUnlockedFolders((prev) => new Set([...prev, folderId]));
+        setPinDialog(null);
+        if (onSelectFilter) onSelectFilter(folderId);
+      } else {
+        // Re-render the dialog with error feedback by briefly clearing and resetting
+        setPinDialog(null);
+        setTimeout(() => {
+          const folder = folders.find((f) => f.id === folderId);
+          if (folder) setPinDialog({ mode: "unlock", folderId, folderName: folder.name });
+        }, 100);
+      }
+    } else if (mode === "remove") {
+      const valid = await verifyPin(folderId, pin);
+      if (valid) {
+        removeFolderPin(folderId);
+        setUnlockedFolders((prev) => {
+          const next = new Set(prev);
+          next.delete(folderId);
+          return next;
+        });
+        setPinDialog(null);
+      } else {
+        setPinDialog(null);
+        setTimeout(() => {
+          const folder = folders.find((f) => f.id === folderId);
+          if (folder) setPinDialog({ mode: "remove", folderId, folderName: folder.name });
+        }, 100);
+      }
+    }
+  }, [pinDialog, folders, onSelectFilter]);
+
   // Filter results based on selected folder
   const filteredResults = React.useMemo(() => {
+    if (selectedFilter === "none") return [];
     if (selectedFilter === "all") return results;
     if (selectedFilter === "unfiled") return results.filter((r) => !r.folderId);
     return results.filter((r) => r.folderId === selectedFilter);
@@ -497,19 +790,36 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
             onRenameFolder={onRenameFolder}
             onDeleteFolder={onDeleteFolder}
             resultCounts={resultCounts}
+            unlockedFolders={unlockedFolders}
+            onRequestUnlock={handleRequestUnlock}
+            onSetPin={handleSetPin}
+            onRemovePin={handleRemovePin}
           />
         )}
         <div className="border border-dashed border-border rounded p-12 text-center">
           <div className="font-mono-share text-sm text-muted-foreground tracking-wider mb-2">
-            <span className="text-primary/40">$</span> ls ./output/
+            <span className="text-primary/40">$</span>{" "}
+            {selectedFilter === "none" ? "echo 'SELECT A FOLDER TO VIEW CONTENTS'" : "ls ./output/"}
           </div>
           <div className="font-mono-share text-xs text-muted-foreground/40">
-            {selectedFilter !== "all" && results.length > 0
-              ? "(no results in this folder)"
-              : "(empty) — submit a prompt to generate results"
+            {selectedFilter === "none"
+              ? "// choose a folder above to decrypt and display files"
+              : selectedFilter !== "all" && results.length > 0
+                ? "(no results in this folder)"
+                : "(empty) — submit a prompt to generate results"
             }
           </div>
         </div>
+
+        {/* PIN Dialog (empty state) */}
+        {pinDialog && (
+          <PinDialog
+            mode={pinDialog.mode}
+            folderName={pinDialog.folderName}
+            onSubmit={handlePinSubmit}
+            onCancel={() => setPinDialog(null)}
+          />
+        )}
       </div>
     );
   }
@@ -590,6 +900,10 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
           onRenameFolder={onRenameFolder}
           onDeleteFolder={onDeleteFolder}
           resultCounts={resultCounts}
+          unlockedFolders={unlockedFolders}
+          onRequestUnlock={handleRequestUnlock}
+          onSetPin={handleSetPin}
+          onRemovePin={handleRemovePin}
         />
       )}
 
@@ -890,6 +1204,16 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
           </div>
         ))}
       </div>
+
+      {/* PIN Dialog */}
+      {pinDialog && (
+        <PinDialog
+          mode={pinDialog.mode}
+          folderName={pinDialog.folderName}
+          onSubmit={handlePinSubmit}
+          onCancel={() => setPinDialog(null)}
+        />
+      )}
 
       {/* Expanded modal */}
       {expandedResult && (

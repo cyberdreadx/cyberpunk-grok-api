@@ -14,12 +14,12 @@ import {
   type Folder,
 } from "@/lib/storage";
 
-/** Filter modes: show all, unfiled only, or a specific folder */
-export type FolderFilter = "all" | "unfiled" | string;
+/** Filter modes: show all, unfiled only, none (empty), or a specific folder */
+export type FolderFilter = "all" | "unfiled" | "none" | string;
 
 export function useFolders() {
   const [folders, setFolders] = useState<Folder[]>([]);
-  const [selectedFilter, setSelectedFilter] = useState<FolderFilter>("all");
+  const [selectedFilter, setSelectedFilter] = useState<FolderFilter>("none");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -58,8 +58,8 @@ export function useFolders() {
   const deleteFolder = useCallback(async (id: string) => {
     await deleteFolderStorage(id);
     setFolders((prev) => prev.filter((f) => f.id !== id));
-    // If the deleted folder was selected, go back to "all"
-    setSelectedFilter((prev) => (prev === id ? "all" : prev));
+    // If the deleted folder was selected, go back to "none"
+    setSelectedFilter((prev) => (prev === id ? "none" : prev));
   }, []);
 
   /**

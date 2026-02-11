@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from "react";
-import { Terminal, Key, Coins } from "lucide-react";
+import { Terminal, Key, Coins, Shield, Eye, MessageCircle } from "lucide-react";
 import CyberLayout from "@/components/CyberLayout";
 import GrokOrb from "@/components/GrokOrb";
 import GlitchText from "@/components/GlitchText";
@@ -11,6 +11,7 @@ import ResultsGrid from "@/components/ResultsGrid";
 import ApiKeyDialog from "@/components/ApiKeyDialog";
 import AuthDialog from "@/components/AuthDialog";
 import CreditDisplay from "@/components/CreditDisplay";
+import LegalDialog from "@/components/LegalDialog";
 import { useGrokApi, type GrokMode, type GenerationSettings, type VideoSettings, type ApiMode, DEFAULT_SETTINGS, DEFAULT_VIDEO_SETTINGS } from "@/hooks/useGrokApi";
 import { useAuth } from "@/hooks/useAuth";
 import { useCredits } from "@/hooks/useCredits";
@@ -76,6 +77,10 @@ const Index = () => {
   const { history, addEntry, removeEntry, clearHistory } = usePromptHistory();
   const [activePrompt, setActivePrompt] = useState("");
   const [activeImageUrl, setActiveImageUrl] = useState("");
+
+  // Legal dialog state
+  const [tosOpen, setTosOpen] = useState(false);
+  const [privacyOpen, setPrivacyOpen] = useState(false);
   const [apiKeySet, setApiKeySet] = useState(() => hasApiKey());
 
   // Automatically switch to credits mode when user is logged in and doesn't have a BYOK key
@@ -413,12 +418,43 @@ const Index = () => {
         </section>
 
         {/* Footer */}
-        <footer className="text-center py-6 border-t border-border/30">
+        <footer className="text-center py-6 border-t border-border/30 space-y-3">
           <p className="font-mono-share text-[10px] text-muted-foreground/40 animate-flicker">
             <span className="text-primary/30">$</span>{" "}
             echo "POWERED BY xAI // {effectiveApiMode === "credits" ? "CREDIT-BASED" : "CLIENT-SIDE"} RENDERING"
           </p>
+          <div className="flex items-center justify-center gap-3 font-mono-share text-[10px]">
+            <button
+              onClick={() => setTosOpen(true)}
+              className="flex items-center gap-1 text-muted-foreground/40 hover:text-primary transition-colors"
+            >
+              <Shield className="w-3 h-3" />
+              TERMS
+            </button>
+            <span className="text-border/50">|</span>
+            <button
+              onClick={() => setPrivacyOpen(true)}
+              className="flex items-center gap-1 text-muted-foreground/40 hover:text-secondary transition-colors"
+            >
+              <Eye className="w-3 h-3" />
+              PRIVACY
+            </button>
+            <span className="text-border/50">|</span>
+            <a
+              href="https://discord.gg/Ge9AxRgCmM"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 text-muted-foreground/40 hover:text-accent transition-colors"
+            >
+              <MessageCircle className="w-3 h-3" />
+              DISCORD
+            </a>
+          </div>
         </footer>
+
+        {/* Legal Dialogs */}
+        <LegalDialog type="tos" open={tosOpen} onOpenChange={setTosOpen} />
+        <LegalDialog type="privacy" open={privacyOpen} onOpenChange={setPrivacyOpen} />
       </div>
     </CyberLayout>
   );
