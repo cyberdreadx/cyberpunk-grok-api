@@ -351,24 +351,8 @@ function FolderBar({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string; count: number } | null>(null);
-  const [showHidden, setShowHidden] = useState(false);
-  const hiddenPanelRef = useRef<HTMLDivElement>(null);
   const createInputRef = useRef<HTMLInputElement>(null);
   const editInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (!showHidden) return;
-    const handleClick = (e: MouseEvent) => {
-      if (hiddenPanelRef.current && !hiddenPanelRef.current.contains(e.target as Node)) {
-        setShowHidden(false);
-      }
-    };
-    const t = setTimeout(() => document.addEventListener("mousedown", handleClick), 0);
-    return () => {
-      clearTimeout(t);
-      document.removeEventListener("mousedown", handleClick);
-    };
-  }, [showHidden]);
 
   const visibleFolders = folders.filter((f) => !f.hidden);
   const hiddenFolders = folders.filter((f) => f.hidden);
@@ -405,7 +389,7 @@ function FolderBar({
   };
 
   const tabClass = (active: boolean) =>
-    `px-2.5 py-1.5 text-[9px] sm:text-[10px] font-mono-share tracking-wider whitespace-nowrap transition-colors rounded-t border-b-2 ${
+    `px-3 py-2 sm:px-2.5 sm:py-1.5 min-h-[44px] sm:min-h-0 text-[11px] sm:text-[10px] font-mono-share tracking-wider whitespace-nowrap transition-colors rounded-t border-b-2 flex items-center ${
       active
         ? "border-primary text-primary bg-primary/10"
         : "border-transparent text-muted-foreground/60 hover:text-muted-foreground hover:bg-muted/30"
@@ -442,36 +426,36 @@ function FolderBar({
         </button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="p-0.5 text-muted-foreground/30 hover:text-muted-foreground transition-colors">
-              <MoreVertical className="w-3 h-3" />
+            <button className="p-2 sm:p-0.5 min-w-[44px] sm:min-w-0 min-h-[44px] sm:min-h-0 flex items-center justify-center text-muted-foreground/30 hover:text-muted-foreground transition-colors">
+              <MoreVertical className="w-3.5 h-3.5 sm:w-3 sm:h-3" />
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="min-w-[120px] bg-card border-border">
+          <DropdownMenuContent align="start" className="min-w-[160px] sm:min-w-[120px] bg-card border-border">
             {hasPin ? (
               <>
                 {isUnlocked && (
                   <DropdownMenuItem
-                    className="text-[10px] font-mono-share text-muted-foreground focus:bg-muted/50 cursor-pointer"
+                    className="text-[11px] sm:text-[10px] min-h-[44px] sm:min-h-0 py-2.5 sm:py-1.5 font-mono-share text-muted-foreground focus:bg-muted/50 cursor-pointer"
                     onSelect={() => onLockFolder(pinId)}
                   >
-                    <Lock className="w-3 h-3 mr-1.5" />
+                    <Lock className="w-3.5 h-3.5 sm:w-3 sm:h-3 mr-1.5" />
                     LOCK
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuItem
-                  className="text-[10px] font-mono-share text-secondary focus:bg-secondary/10 cursor-pointer"
+                  className="text-[11px] sm:text-[10px] min-h-[44px] sm:min-h-0 py-2.5 sm:py-1.5 font-mono-share text-secondary focus:bg-secondary/10 cursor-pointer"
                   onSelect={() => onRemovePin(pinId)}
                 >
-                  <LockOpen className="w-3 h-3 mr-1.5" />
+                  <LockOpen className="w-3.5 h-3.5 sm:w-3 sm:h-3 mr-1.5" />
                   REMOVE PIN
                 </DropdownMenuItem>
               </>
             ) : (
               <DropdownMenuItem
-                className="text-[10px] font-mono-share text-primary focus:bg-primary/10 cursor-pointer"
+                className="text-[11px] sm:text-[10px] min-h-[44px] sm:min-h-0 py-2.5 sm:py-1.5 font-mono-share text-primary focus:bg-primary/10 cursor-pointer"
                 onSelect={() => onSetPin(pinId)}
               >
-                <Lock className="w-3 h-3 mr-1.5" />
+                <Lock className="w-3.5 h-3.5 sm:w-3 sm:h-3 mr-1.5" />
                 SET PIN
               </DropdownMenuItem>
             )}
@@ -539,60 +523,61 @@ function FolderBar({
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="p-0.5 text-muted-foreground/30 hover:text-muted-foreground transition-colors">
-                <MoreVertical className="w-3 h-3" />
+              <button className="p-2 sm:p-0.5 min-w-[44px] sm:min-w-0 min-h-[44px] sm:min-h-0 flex items-center justify-center text-muted-foreground/30 hover:text-muted-foreground transition-colors">
+                <MoreVertical className="w-3.5 h-3.5 sm:w-3 sm:h-3" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="min-w-[120px] bg-card border-border">
+            <DropdownMenuContent align="start" className="min-w-[160px] sm:min-w-[120px] bg-card border-border">
               <DropdownMenuItem
-                className="text-[10px] font-mono-share cursor-pointer"
+                className="text-[11px] sm:text-[10px] min-h-[44px] sm:min-h-0 py-2.5 sm:py-1.5 font-mono-share cursor-pointer"
                 onSelect={() => {
                   setEditingId(folder.id);
                   setEditingName(folder.name);
                 }}
               >
+                <Pencil className="w-3.5 h-3.5 sm:w-3 sm:h-3 mr-1.5" />
                 RENAME
               </DropdownMenuItem>
               {hasPin ? (
                 <>
                   {isUnlocked && (
                     <DropdownMenuItem
-                      className="text-[10px] font-mono-share text-muted-foreground focus:bg-muted/50 cursor-pointer"
+                      className="text-[11px] sm:text-[10px] min-h-[44px] sm:min-h-0 py-2.5 sm:py-1.5 font-mono-share text-muted-foreground focus:bg-muted/50 cursor-pointer"
                       onSelect={() => onLockFolder(folder.id)}
                     >
-                      <Lock className="w-3 h-3 mr-1.5" />
+                      <Lock className="w-3.5 h-3.5 sm:w-3 sm:h-3 mr-1.5" />
                       LOCK
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuItem
-                    className="text-[10px] font-mono-share text-secondary focus:bg-secondary/10 cursor-pointer"
+                    className="text-[11px] sm:text-[10px] min-h-[44px] sm:min-h-0 py-2.5 sm:py-1.5 font-mono-share text-secondary focus:bg-secondary/10 cursor-pointer"
                     onSelect={() => onRemovePin(folder.id)}
                   >
-                    <LockOpen className="w-3 h-3 mr-1.5" />
+                    <LockOpen className="w-3.5 h-3.5 sm:w-3 sm:h-3 mr-1.5" />
                     REMOVE PIN
                   </DropdownMenuItem>
                 </>
               ) : (
                 <DropdownMenuItem
-                  className="text-[10px] font-mono-share text-primary focus:bg-primary/10 cursor-pointer"
+                  className="text-[11px] sm:text-[10px] min-h-[44px] sm:min-h-0 py-2.5 sm:py-1.5 font-mono-share text-primary focus:bg-primary/10 cursor-pointer"
                   onSelect={() => onSetPin(folder.id)}
                 >
-                  <Lock className="w-3 h-3 mr-1.5" />
+                  <Lock className="w-3.5 h-3.5 sm:w-3 sm:h-3 mr-1.5" />
                   SET PIN
                 </DropdownMenuItem>
               )}
               {onToggleFolderHidden && (
                 <DropdownMenuItem
-                  className="text-[10px] font-mono-share text-muted-foreground focus:bg-muted/50 cursor-pointer"
+                  className="text-[11px] sm:text-[10px] min-h-[44px] sm:min-h-0 py-2.5 sm:py-1.5 font-mono-share text-muted-foreground focus:bg-muted/50 cursor-pointer"
                   onSelect={() => onToggleFolderHidden(folder.id)}
                 >
-                  <EyeOff className="w-3 h-3 mr-1.5" />
+                  <EyeOff className="w-3.5 h-3.5 sm:w-3 sm:h-3 mr-1.5" />
                   HIDE
                 </DropdownMenuItem>
               )}
               {onDeleteFolder && (
                 <DropdownMenuItem
-                  className="text-[10px] font-mono-share text-destructive focus:bg-destructive/10 cursor-pointer"
+                  className="text-[11px] sm:text-[10px] min-h-[44px] sm:min-h-0 py-2.5 sm:py-1.5 font-mono-share text-destructive focus:bg-destructive/10 cursor-pointer"
                   onSelect={() =>
                     setDeleteConfirm({
                       id: folder.id,
@@ -601,6 +586,7 @@ function FolderBar({
                     })
                   }
                 >
+                  <Trash2 className="w-3.5 h-3.5 sm:w-3 sm:h-3 mr-1.5" />
                   DELETE
                 </DropdownMenuItem>
               )}
@@ -610,32 +596,28 @@ function FolderBar({
         );
       })}
 
-      {/* Hidden folders (expandable) */}
+      {/* Hidden folders (DropdownMenu — portals correctly, no overflow issues) */}
       {hiddenFolders.length > 0 && (
-        <div ref={hiddenPanelRef} className="relative flex items-center">
-          <button
-            onClick={() => setShowHidden(!showHidden)}
-            className={tabClass(false)}
-          >
-            <EyeOff className="w-3 h-3 inline-block mr-1 -mt-0.5" />
-            HIDDEN ({hiddenFolders.length})
-            {showHidden ? <ChevronDown className="w-2.5 h-2.5 inline-block ml-0.5" /> : <ChevronRight className="w-2.5 h-2.5 inline-block ml-0.5" />}
-          </button>
-          {showHidden && (
-            <div className="absolute left-0 top-full mt-1 z-50 rounded border border-border bg-card p-1 shadow-lg min-w-[120px]">
-              {hiddenFolders.map((folder) => (
-                <button
-                  key={folder.id}
-                  className="w-full flex items-center gap-1.5 px-2 py-1.5 text-[9px] font-mono-share text-muted-foreground hover:bg-muted/50 rounded text-left"
-                  onClick={() => onToggleFolderHidden?.(folder.id)}
-                >
-                  <Eye className="w-3 h-3" />
-                  {folder.name.toUpperCase()} — UNHIDE
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className={tabClass(false)}>
+              <EyeOff className="w-3 h-3 mr-1 -mt-0.5" />
+              HIDDEN ({hiddenFolders.length})
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="min-w-[180px] sm:min-w-[140px] bg-card border-border">
+            {hiddenFolders.map((folder) => (
+              <DropdownMenuItem
+                key={folder.id}
+                className="text-[11px] sm:text-[10px] min-h-[44px] sm:min-h-0 py-2.5 sm:py-1.5 font-mono-share text-muted-foreground focus:bg-muted/50 cursor-pointer"
+                onSelect={() => onToggleFolderHidden?.(folder.id)}
+              >
+                <Eye className="w-3.5 h-3.5 sm:w-3 sm:h-3 mr-1.5" />
+                {folder.name.toUpperCase()} — UNHIDE
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       )}
 
       {/* ALL tab (last) */}
@@ -657,11 +639,11 @@ function FolderBar({
         />
       ) : (
         <button
-          className="px-2 py-1.5 text-muted-foreground/40 hover:text-primary transition-colors"
+          className="px-3 py-2 sm:px-2 sm:py-1.5 min-w-[44px] sm:min-w-0 min-h-[44px] sm:min-h-0 flex items-center justify-center text-muted-foreground/40 hover:text-primary transition-colors"
           onClick={() => setIsCreating(true)}
           title="Create folder"
         >
-          <FolderPlus className="w-3.5 h-3.5" />
+          <FolderPlus className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
         </button>
       )}
     </div>

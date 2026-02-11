@@ -182,31 +182,33 @@ const PricingCards: React.FC<PricingCardsProps> = ({
                   )}
                 </Button>
                 {onPayPalSuccess && (
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 my-1">
                     <div className="h-px flex-1 bg-border/30" />
-                    <span className="font-mono-share text-[8px] text-muted-foreground/40">OR</span>
+                    <span className="font-mono-share text-[8px] text-muted-foreground/40 tracking-widest">OR_PAY_WITH</span>
                     <div className="h-px flex-1 bg-border/30" />
                   </div>
                 )}
                 {onPayPalSuccess && (
-                  <div className="min-h-[35px] [&>div]:min-h-[35px]">
-                    <PayPalButtons
-                      style={{ layout: "horizontal", color: "black", shape: "rect", label: "paypal", height: 35, tagline: false }}
-                      createOrder={async () => {
-                        const { orderId } = (await apiFetch("/paypal", {
-                          method: "POST",
-                          body: { action: "create", package: pkg.id },
-                        })) as { orderId: string };
-                        return orderId;
-                      }}
-                      onApprove={async (data) => {
-                        await apiFetch("/paypal", {
-                          method: "POST",
-                          body: { action: "capture", orderID: data.orderID },
-                        });
-                        onPayPalSuccess();
-                      }}
-                    />
+                  <div className="flex justify-center">
+                    <div className="w-full max-w-[200px] min-h-[40px] [&>div]:min-h-[40px] rounded border border-border/40 bg-black/20 p-1.5 shadow-[0_0_6px_rgba(var(--primary-rgb),0.1)]">
+                      <PayPalButtons
+                        style={{ layout: "horizontal", color: "black", shape: "rect", label: "paypal", height: 35, tagline: false }}
+                        createOrder={async () => {
+                          const { orderId } = (await apiFetch("/paypal", {
+                            method: "POST",
+                            body: { action: "create", package: pkg.id },
+                          })) as { orderId: string };
+                          return orderId;
+                        }}
+                        onApprove={async (data) => {
+                          await apiFetch("/paypal", {
+                            method: "POST",
+                            body: { action: "capture", orderID: data.orderID },
+                          });
+                          onPayPalSuccess();
+                        }}
+                      />
+                    </div>
                   </div>
                 )}
               </div>
