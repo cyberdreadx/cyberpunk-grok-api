@@ -333,6 +333,9 @@ function FolderBar({
   const createInputRef = useRef<HTMLInputElement>(null);
   const editInputRef = useRef<HTMLInputElement>(null);
   const contextMenuRef = useRef<HTMLDivElement>(null);
+  // Separate refs for built-in tabs to avoid conflicts
+  const unfiledMenuRef = useRef<HTMLDivElement>(null);
+  const allMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isCreating) createInputRef.current?.focus();
@@ -346,7 +349,11 @@ function FolderBar({
   useEffect(() => {
     if (!contextMenuId) return;
     const handleClick = (e: MouseEvent) => {
-      if (contextMenuRef.current && !contextMenuRef.current.contains(e.target as Node)) {
+      const allRefs = [contextMenuRef, unfiledMenuRef, allMenuRef];
+      const isInsideAnyMenu = allRefs.some(ref =>
+        ref.current && ref.current.contains(e.target as Node)
+      );
+      if (!isInsideAnyMenu) {
         setContextMenuId(null);
       }
     };
@@ -357,7 +364,7 @@ function FolderBar({
       clearTimeout(timer);
       document.removeEventListener("mousedown", handleClick);
     };
-  }, [contextMenuId]);
+  }, [contextMenuId]); // Note: React will handle ref updates automatically
 
   const handleCreate = async () => {
     const name = newFolderName.trim();
@@ -395,6 +402,7 @@ function FolderBar({
     const hasPin = folderHasPin(pinId);
     const isUnlocked = unlockedFolders.has(pinId);
     const isLocked = hasPin && !isUnlocked;
+    const menuRef = id === "unfiled" ? unfiledMenuRef : allMenuRef;
 
     return (
       <div key={pinId} className="relative flex items-center">
@@ -430,7 +438,7 @@ function FolderBar({
         </button>
         {contextMenuId === pinId && (
           <div
-            ref={contextMenuRef}
+            ref={menuRef}
             onMouseDown={(e) => e.stopPropagation()}
             className="absolute top-full left-0 mt-1 z-50 bg-card border border-border rounded shadow-lg py-1 min-w-[100px]"
           >
