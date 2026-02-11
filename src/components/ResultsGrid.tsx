@@ -1,6 +1,12 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Download, Maximize2, X, Trash2, ExternalLink, ChevronLeft, ChevronRight, Pencil, Film, Copy, Check, FolderPlus, FolderOpen, MoreVertical, FolderInput, Lock, LockOpen, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { GrokResult } from "@/hooks/useGrokApi";
 import type { Folder } from "@/lib/storage";
 import type { FolderFilter } from "@/hooks/useFolders";
@@ -329,13 +335,8 @@ function FolderBar({
   const [newFolderName, setNewFolderName] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
-  const [contextMenuId, setContextMenuId] = useState<string | null>(null);
   const createInputRef = useRef<HTMLInputElement>(null);
   const editInputRef = useRef<HTMLInputElement>(null);
-  const contextMenuRef = useRef<HTMLDivElement>(null);
-  // Separate refs for built-in tabs to avoid conflicts
-  const unfiledMenuRef = useRef<HTMLDivElement>(null);
-  const allMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isCreating) createInputRef.current?.focus();
@@ -344,27 +345,6 @@ function FolderBar({
   useEffect(() => {
     if (editingId) editInputRef.current?.focus();
   }, [editingId]);
-
-  // Close context menu on outside click (deferred to avoid catching the opening click)
-  useEffect(() => {
-    if (!contextMenuId) return;
-    const handleClick = (e: MouseEvent) => {
-      const allRefs = [contextMenuRef, unfiledMenuRef, allMenuRef];
-      const isInsideAnyMenu = allRefs.some(ref =>
-        ref.current && ref.current.contains(e.target as Node)
-      );
-      if (!isInsideAnyMenu) {
-        setContextMenuId(null);
-      }
-    };
-    const timer = setTimeout(() => {
-      document.addEventListener("mousedown", handleClick);
-    }, 0);
-    return () => {
-      clearTimeout(timer);
-      document.removeEventListener("mousedown", handleClick);
-    };
-  }, [contextMenuId]); // Note: React will handle ref updates automatically
 
   const handleCreate = async () => {
     const name = newFolderName.trim();
@@ -396,13 +376,12 @@ function FolderBar({
         : "border-transparent text-muted-foreground/60 hover:text-muted-foreground hover:bg-muted/30"
     }`;
 
-  // Plain render function (NOT a component) to avoid React unmount/remount on state changes
+  // Built-in tabs (UNFILED, ALL) with Radix DropdownMenu - reliable, no custom event handling
   const renderBuiltInTab = (id: string, label: string, countKey: string) => {
     const pinId = `__${id}`;
     const hasPin = folderHasPin(pinId);
     const isUnlocked = unlockedFolders.has(pinId);
     const isLocked = hasPin && !isUnlocked;
-    const menuRef = id === "unfiled" ? unfiledMenuRef : allMenuRef;
 
     return (
       <div key={pinId} className="relative flex items-center">
@@ -426,47 +405,32 @@ function FolderBar({
             {isLocked ? "***" : (resultCounts[countKey] ?? 0)}
           </span>
         </button>
-        <button
-          className="p-0.5 text-muted-foreground/30 hover:text-muted-foreground transition-colors"
-          onMouseDown={(e) => e.stopPropagation()}
-          onClick={(e) => {
-            e.stopPropagation();
-            setContextMenuId(contextMenuId === pinId ? null : pinId);
-          }}
-        >
-          <MoreVertical className="w-3 h-3" />
-        </button>
-        {contextMenuId === pinId && (
-          <div
-            ref={menuRef}
-            onMouseDown={(e) => e.stopPropagation()}
-            className="absolute top-full left-0 mt-1 z-50 bg-card border border-border rounded shadow-lg py-1 min-w-[100px]"
-          >
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="p-0.5 text-muted-foreground/30 hover:text-muted-foreground transition-colors">
+              <MoreVertical className="w-3 h-3" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="min-w-[120px] bg-card border-border">
             {hasPin ? (
-              <button
-                className="w-full text-left px-3 py-1.5 text-[10px] font-mono-share text-secondary hover:bg-secondary/10 transition-colors flex items-center gap-1.5"
-                onClick={() => {
-                  setContextMenuId(null);
-                  onRemovePin(pinId);
-                }}
+              <DropdownMenuItem
+                className="text-[10px] font-mono-share text-secondary focus:bg-secondary/10 cursor-pointer"
+                onSelect={() => onRemovePin(pinId)}
               >
-                <LockOpen className="w-3 h-3" />
+                <LockOpen className="w-3 h-3 mr-1.5" />
                 REMOVE PIN
-              </button>
+              </DropdownMenuItem>
             ) : (
-              <button
-                className="w-full text-left px-3 py-1.5 text-[10px] font-mono-share text-primary hover:bg-primary/10 transition-colors flex items-center gap-1.5"
-                onClick={() => {
-                  setContextMenuId(null);
-                  onSetPin(pinId);
-                }}
+              <DropdownMenuItem
+                className="text-[10px] font-mono-share text-primary focus:bg-primary/10 cursor-pointer"
+                onSelect={() => onSetPin(pinId)}
               >
-                <Lock className="w-3 h-3" />
+                <Lock className="w-3 h-3 mr-1.5" />
                 SET PIN
-              </button>
+              </DropdownMenuItem>
             )}
-          </div>
-        )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     );
   };
@@ -526,72 +490,49 @@ function FolderBar({
             </button>
           )}
 
-          {/* Context menu trigger */}
-          <button
-            className="p-0.5 text-muted-foreground/30 hover:text-muted-foreground transition-colors"
-            onMouseDown={(e) => e.stopPropagation()}
-            onClick={(e) => {
-              e.stopPropagation();
-              setContextMenuId(contextMenuId === folder.id ? null : folder.id);
-            }}
-          >
-            <MoreVertical className="w-3 h-3" />
-          </button>
-
-          {/* Context menu dropdown */}
-          {contextMenuId === folder.id && (
-            <div
-              ref={contextMenuRef}
-              onMouseDown={(e) => e.stopPropagation()}
-              className="absolute top-full left-0 mt-1 z-50 bg-card border border-border rounded shadow-lg py-1 min-w-[100px]"
-            >
-              <button
-                className="w-full text-left px-3 py-1.5 text-[10px] font-mono-share text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-                onClick={() => {
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="p-0.5 text-muted-foreground/30 hover:text-muted-foreground transition-colors">
+                <MoreVertical className="w-3 h-3" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="min-w-[120px] bg-card border-border">
+              <DropdownMenuItem
+                className="text-[10px] font-mono-share cursor-pointer"
+                onSelect={() => {
                   setEditingId(folder.id);
                   setEditingName(folder.name);
-                  setContextMenuId(null);
                 }}
               >
                 RENAME
-              </button>
-              {/* PIN options */}
+              </DropdownMenuItem>
               {hasPin ? (
-                <button
-                  className="w-full text-left px-3 py-1.5 text-[10px] font-mono-share text-secondary hover:bg-secondary/10 transition-colors flex items-center gap-1.5"
-                  onClick={() => {
-                    setContextMenuId(null);
-                    onRemovePin(folder.id);
-                  }}
+                <DropdownMenuItem
+                  className="text-[10px] font-mono-share text-secondary focus:bg-secondary/10 cursor-pointer"
+                  onSelect={() => onRemovePin(folder.id)}
                 >
-                  <LockOpen className="w-3 h-3" />
+                  <LockOpen className="w-3 h-3 mr-1.5" />
                   REMOVE PIN
-                </button>
+                </DropdownMenuItem>
               ) : (
-                <button
-                  className="w-full text-left px-3 py-1.5 text-[10px] font-mono-share text-primary hover:bg-primary/10 transition-colors flex items-center gap-1.5"
-                  onClick={() => {
-                    setContextMenuId(null);
-                    onSetPin(folder.id);
-                  }}
+                <DropdownMenuItem
+                  className="text-[10px] font-mono-share text-primary focus:bg-primary/10 cursor-pointer"
+                  onSelect={() => onSetPin(folder.id)}
                 >
-                  <Lock className="w-3 h-3" />
+                  <Lock className="w-3 h-3 mr-1.5" />
                   SET PIN
-                </button>
+                </DropdownMenuItem>
               )}
               {onDeleteFolder && (
-                <button
-                  className="w-full text-left px-3 py-1.5 text-[10px] font-mono-share text-destructive hover:bg-destructive/10 transition-colors"
-                  onClick={async () => {
-                    setContextMenuId(null);
-                    await onDeleteFolder(folder.id);
-                  }}
+                <DropdownMenuItem
+                  className="text-[10px] font-mono-share text-destructive focus:bg-destructive/10 cursor-pointer"
+                  onSelect={() => onDeleteFolder(folder.id)}
                 >
                   DELETE
-                </button>
+                </DropdownMenuItem>
               )}
-            </div>
-          )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
         );
       })}
