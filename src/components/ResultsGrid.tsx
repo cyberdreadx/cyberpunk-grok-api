@@ -342,7 +342,7 @@ function FolderBar({
     if (editingId) editInputRef.current?.focus();
   }, [editingId]);
 
-  // Close context menu on outside click
+  // Close context menu on outside click (deferred to avoid catching the opening click)
   useEffect(() => {
     if (!contextMenuId) return;
     const handleClick = (e: MouseEvent) => {
@@ -350,8 +350,13 @@ function FolderBar({
         setContextMenuId(null);
       }
     };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
+    const timer = setTimeout(() => {
+      document.addEventListener("mousedown", handleClick);
+    }, 0);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("mousedown", handleClick);
+    };
   }, [contextMenuId]);
 
   const handleCreate = async () => {
@@ -415,6 +420,7 @@ function FolderBar({
         </button>
         <button
           className="p-0.5 text-muted-foreground/30 hover:text-muted-foreground transition-colors"
+          onMouseDown={(e) => e.stopPropagation()}
           onClick={(e) => {
             e.stopPropagation();
             setContextMenuId(contextMenuId === pinId ? null : pinId);
@@ -425,6 +431,7 @@ function FolderBar({
         {contextMenuId === pinId && (
           <div
             ref={contextMenuRef}
+            onMouseDown={(e) => e.stopPropagation()}
             className="absolute top-full left-0 mt-1 z-50 bg-card border border-border rounded shadow-lg py-1 min-w-[100px]"
           >
             {hasPin ? (
@@ -514,6 +521,7 @@ function FolderBar({
           {/* Context menu trigger */}
           <button
             className="p-0.5 text-muted-foreground/30 hover:text-muted-foreground transition-colors"
+            onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation();
               setContextMenuId(contextMenuId === folder.id ? null : folder.id);
@@ -526,6 +534,7 @@ function FolderBar({
           {contextMenuId === folder.id && (
             <div
               ref={contextMenuRef}
+              onMouseDown={(e) => e.stopPropagation()}
               className="absolute top-full left-0 mt-1 z-50 bg-card border border-border rounded shadow-lg py-1 min-w-[100px]"
             >
               <button
