@@ -625,17 +625,17 @@ function MoveToFolderMenu({
   return (
     <div
       ref={menuRef}
-      className="absolute right-0 top-full mt-1 z-[60] bg-card border border-border rounded shadow-lg py-1 min-w-[140px]"
+      className="absolute right-0 top-full mt-1 max-sm:top-auto max-sm:bottom-full max-sm:mt-0 max-sm:mb-1 z-[60] bg-card border border-border rounded shadow-lg py-1 min-w-[140px] max-h-[min(60vh,280px)] overflow-y-auto"
       onClick={(e) => e.stopPropagation()}
       onMouseDown={(e) => e.stopPropagation()}
     >
-      <div className="px-3 py-1 text-[9px] font-orbitron tracking-wider text-muted-foreground/50 border-b border-border/50 mb-1">
+      <div className="px-3 py-1.5 text-[9px] font-orbitron tracking-wider text-muted-foreground/50 border-b border-border/50 mb-1 sticky top-0 bg-card z-10">
         MOVE_TO
       </div>
 
       {/* Unfiled option */}
       <button
-        className={`w-full text-left px-3 py-1.5 text-[10px] font-mono-share transition-colors flex items-center gap-1.5 ${
+        className={`w-full text-left px-3 py-2.5 sm:py-1.5 text-[10px] font-mono-share transition-colors flex items-center gap-1.5 min-h-[44px] sm:min-h-0 ${
           !currentFolderId
             ? "text-primary bg-primary/10"
             : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
@@ -649,14 +649,14 @@ function MoveToFolderMenu({
       {folders.map((folder) => (
         <button
           key={folder.id}
-          className={`w-full text-left px-3 py-1.5 text-[10px] font-mono-share transition-colors flex items-center gap-1.5 ${
+          className={`w-full text-left px-3 py-2.5 sm:py-1.5 text-[10px] font-mono-share transition-colors flex items-center gap-1.5 min-h-[44px] sm:min-h-0 ${
             currentFolderId === folder.id
               ? "text-primary bg-primary/10"
               : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
           }`}
           onClick={() => { onMove(folder.id); onClose(); }}
         >
-          <FolderOpen className="w-3 h-3" />
+          <FolderOpen className="w-3 h-3 flex-shrink-0" />
           {folder.name.toUpperCase()}
         </button>
       ))}
