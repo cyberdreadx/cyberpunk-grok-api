@@ -10,6 +10,7 @@ import {
   renameFolder as renameFolderStorage,
   deleteFolder as deleteFolderStorage,
   moveResultToFolder as moveResultStorage,
+  setFolderHidden as setFolderHiddenStorage,
   type Folder,
 } from "@/lib/storage";
 
@@ -49,6 +50,20 @@ export function useFolders() {
     setSelectedFilter((prev) => (prev === id ? "all" : prev));
   }, []);
 
+  const toggleFolderHidden = useCallback(async (id: string) => {
+    const folder = folders.find((f) => f.id === id);
+    if (!folder) return;
+    const nextHidden = !folder.hidden;
+    await setFolderHiddenStorage(id, nextHidden);
+    setFolders((prev) =>
+      prev.map((f) => (f.id === id ? { ...f, hidden: nextHidden } : f))
+    );
+    // If a now-hidden folder was selected, return to all
+    if (nextHidden && selectedFilter === id) {
+      setSelectedFilter("all");
+    }
+  }, [folders, selectedFilter]);
+
   /**
    * Move a result to a folder (or null for unfiled).
    * Returns the updated folderId so the caller can update React state.
@@ -69,6 +84,7 @@ export function useFolders() {
     createFolder,
     renameFolder,
     deleteFolder,
+    toggleFolderHidden,
     moveToFolder,
     selectFilter,
   };
