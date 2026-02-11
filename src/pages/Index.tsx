@@ -195,11 +195,25 @@ const Index = () => {
         description: "Output generated successfully.",
       });
     } catch (err: any) {
+      const msg = err.message || "Generation failed.";
+      // Split multi-line errors (e.g. billing hints) and show first line as description, rest as secondary
+      const lines = msg.split("\n").filter((l: string) => l.trim());
       toast({
-        title: "SYSTEM ERROR",
-        description: err.message || "Generation failed.",
+        title: "SYSTEM_ERROR",
+        description: lines[0],
         variant: "destructive",
+        duration: lines.length > 1 ? 12000 : 5000,
       });
+      // Show follow-up hint as second toast if there's extra context
+      if (lines.length > 1) {
+        setTimeout(() => {
+          toast({
+            title: "HINT",
+            description: lines.slice(1).join(" "),
+            duration: 15000,
+          });
+        }, 500);
+      }
     }
   };
 

@@ -167,8 +167,25 @@ export function useGrokApi() {
     const response = await fetch(`${API_BASE}${endpoint}`, options);
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error?.message || `API error: ${response.status}`);
+      const errorText = await response.text().catch(() => "");
+      let msg = `xAI API error (${response.status})`;
+      try {
+        const errorData = JSON.parse(errorText);
+        msg = errorData.error?.message || errorData.message || errorData.error || msg;
+      } catch {
+        if (errorText) msg = errorText.slice(0, 300);
+      }
+
+      // Detect billing / quota issues and add helpful context
+      if (response.status === 402 || response.status === 403 || /insufficient|billing|quota|balance|payment/i.test(msg)) {
+        msg += "\n\nYour xAI account has no credits. Add billing at https://console.x.ai";
+      } else if (response.status === 401 || /invalid.*key|unauthorized|authentication/i.test(msg)) {
+        msg += "\n\nYour API key may be invalid. Check it at https://console.x.ai";
+      } else if (response.status === 429) {
+        msg += "\n\nRate limit hit. Wait a moment and try again, or add billing at https://console.x.ai";
+      }
+
+      throw new Error(msg);
     }
 
     return response.json();
@@ -184,7 +201,14 @@ export function useGrokApi() {
       body: { action, ...params },
     });
     if (data?.error) {
-      const msg = typeof data.error === "string" ? data.error : data.error.message || "Proxy request failed";
+      let msg = typeof data.error === "string" ? data.error : data.error.message || "Generation failed";
+      // Server may pass raw xAI JSON as a string — try to extract the real message
+      if (typeof msg === "string" && msg.startsWith("{")) {
+        try {
+          const parsed = JSON.parse(msg);
+          msg = parsed.error?.message || parsed.message || msg;
+        } catch { /* keep raw msg */ }
+      }
       throw new Error(msg);
     }
     return data;
