@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import bcrypt from "bcryptjs";
 import { getDb } from "../_lib/db";
-import { signToken } from "../_lib/auth";
+import { generateVerificationCode, sendVerificationEmail } from "../_lib/email";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === "OPTIONS") return res.status(200).end();
@@ -17,29 +17,53 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const sql = getDb();
+    const normalizedEmail = email.toLowerCase().trim();
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // Insert user — unique constraint on email handles duplicates
-    let rows: any[];
-    try {
-      rows = await sql`
-        INSERT INTO users (email, password_hash)
-        VALUES (${email.toLowerCase().trim()}, ${passwordHash})
-        RETURNING id, email
-      `;
-    } catch (err: any) {
-      if (err.message?.includes("unique") || err.code === "23505") {
+    // Generate a 6-digit verification code (expires in 10 minutes)
+    const code = generateVerificationCode();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+
+    // Check if an unverified account with this email already exists
+    const existing = await sql`
+      SELECT id, email_verified FROM users WHERE email = ${normalizedEmail}
+    `;
+
+    if (existing.length > 0) {
+      if (existing[0].email_verified) {
         return res.status(409).json({ error: "An account with this email already exists" });
       }
-      throw err;
+      // Unverified account exists — update password + resend code
+      await sql`
+        UPDATE users
+        SET password_hash = ${passwordHash},
+            verification_code = ${code},
+            verification_code_expires_at = ${expiresAt},
+            updated_at = now()
+        WHERE id = ${existing[0].id}
+      `;
+    } else {
+      // Insert new user with verification code
+      try {
+        await sql`
+          INSERT INTO users (email, password_hash, email_verified, verification_code, verification_code_expires_at)
+          VALUES (${normalizedEmail}, ${passwordHash}, false, ${code}, ${expiresAt})
+        `;
+      } catch (err: any) {
+        if (err.message?.includes("unique") || err.code === "23505") {
+          return res.status(409).json({ error: "An account with this email already exists" });
+        }
+        throw err;
+      }
     }
 
-    const user = rows[0];
-    const token = signToken({ userId: user.id, email: user.email });
+    // Send the verification email
+    await sendVerificationEmail(normalizedEmail, code);
 
     return res.status(201).json({
-      token,
-      user: { id: user.id, email: user.email },
+      message: "Verification code sent. Check your email.",
+      needsVerification: true,
+      email: normalizedEmail,
     });
   } catch (err: any) {
     console.error("[signup]", err.message);

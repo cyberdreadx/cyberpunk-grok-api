@@ -281,6 +281,10 @@ const Index = () => {
                 onSignIn={auth.signIn}
                 onSignUp={auth.signUp}
                 onSignOut={auth.signOut}
+                pendingVerificationEmail={auth.pendingVerificationEmail}
+                onVerify={auth.verifyEmail}
+                onResendCode={auth.resendCode}
+                onCancelVerification={auth.cancelVerification}
               />
             )}
           </div>
