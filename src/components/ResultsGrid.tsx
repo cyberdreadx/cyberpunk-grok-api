@@ -1,7 +1,9 @@
-import React, { useState, useCallback } from "react";
-import { Download, Maximize2, X, Trash2, ExternalLink, ChevronLeft, ChevronRight, Pencil, Film, Copy, Check } from "lucide-react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
+import { Download, Maximize2, X, Trash2, ExternalLink, ChevronLeft, ChevronRight, Pencil, Film, Copy, Check, FolderPlus, FolderOpen, MoreVertical, FolderInput } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { GrokResult } from "@/hooks/useGrokApi";
+import type { Folder } from "@/lib/storage";
+import type { FolderFilter } from "@/hooks/useFolders";
 import { useSwipe } from "@/hooks/useSwipe";
 
 interface ResultsGridProps {
@@ -12,6 +14,14 @@ interface ResultsGridProps {
   onDelete: (id: string) => void;
   onEditImage?: (imageUrl: string) => void;
   onAnimateImage?: (imageUrl: string) => void;
+  // Folder props
+  folders?: Folder[];
+  selectedFilter?: FolderFilter;
+  onSelectFilter?: (filter: FolderFilter) => void;
+  onCreateFolder?: (name: string) => Promise<any>;
+  onRenameFolder?: (id: string, name: string) => Promise<void>;
+  onDeleteFolder?: (id: string) => Promise<void>;
+  onMoveToFolder?: (resultId: string, folderId: string | null) => Promise<any>;
 }
 
 const isMobile = () => /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
@@ -38,8 +48,6 @@ async function fetchBlob(url: string): Promise<Blob | null> {
  */
 function getProxyDownloadUrl(url: string, filename: string): string {
   const apiUrl = import.meta.env.VITE_API_URL as string;
-  // If a custom API URL is set (e.g. Vercel backend), use /api/download
-  // Otherwise default to Netlify function path
   const base = apiUrl
     ? `${apiUrl}/download`
     : "/.netlify/functions/download";
@@ -48,23 +56,15 @@ function getProxyDownloadUrl(url: string, filename: string): string {
 
 /**
  * Download / save media.
- *
- * Strategy:
- *  - Local URLs (data:/blob:): fetch blob directly, share or download
- *  - External video URLs: use server proxy to bypass CORS
- *  - Mobile: prefer navigator.share, fallback to proxy link
- *  - Desktop: trigger <a download> via proxy URL or blob
  */
 async function downloadMedia(url: string, type: "image" | "video"): Promise<boolean> {
   const ext = type === "image" ? "png" : "mp4";
   const mime = type === "image" ? "image/png" : "video/mp4";
   const filename = `grok-${type}-${Date.now()}.${ext}`;
 
-  // ── Local URLs (images are stored as data: URLs) — fetch blob directly ──
   if (isLocalUrl(url)) {
     const blob = await fetchBlob(url);
     if (blob && blob.size > 0) {
-      // Mobile: try share sheet
       if (navigator.share && isMobile()) {
         try {
           const file = new File([blob], filename, { type: blob.type || mime });
@@ -76,7 +76,6 @@ async function downloadMedia(url: string, type: "image" | "video"): Promise<bool
           if (err?.name === "AbortError") return false;
         }
       }
-      // Desktop / fallback: blob download
       const blobUrl = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = blobUrl;
@@ -89,10 +88,8 @@ async function downloadMedia(url: string, type: "image" | "video"): Promise<bool
     }
   }
 
-  // ── External URLs (videos from vidgen.x.ai etc.) — use proxy to bypass CORS ──
   const proxyUrl = getProxyDownloadUrl(url, filename);
 
-  // Mobile: try sharing the proxy URL as a file
   if (navigator.share && isMobile()) {
     try {
       const proxyBlob = await fetchBlob(proxyUrl);
@@ -107,7 +104,6 @@ async function downloadMedia(url: string, type: "image" | "video"): Promise<bool
       if (err?.name === "AbortError") return false;
     }
 
-    // iOS fallback: share the proxy URL (triggers share sheet)
     if (isIOS()) {
       try {
         await navigator.share({ url: proxyUrl, title: filename });
@@ -118,7 +114,6 @@ async function downloadMedia(url: string, type: "image" | "video"): Promise<bool
     }
   }
 
-  // Desktop / final fallback: navigate to the proxy URL (triggers download via Content-Disposition)
   const a = document.createElement("a");
   a.href = proxyUrl;
   a.download = filename;
@@ -129,18 +124,323 @@ async function downloadMedia(url: string, type: "image" | "video"): Promise<bool
   return false;
 }
 
-const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, elapsedSeconds = 0, onClear, onDelete, onEditImage, onAnimateImage }) => {
+// ── Folder Bar Component ────────────────────────────────────────────────
+
+function FolderBar({
+  folders,
+  selectedFilter,
+  onSelectFilter,
+  onCreateFolder,
+  onRenameFolder,
+  onDeleteFolder,
+  resultCounts,
+}: {
+  folders: Folder[];
+  selectedFilter: FolderFilter;
+  onSelectFilter: (filter: FolderFilter) => void;
+  onCreateFolder: (name: string) => Promise<any>;
+  onRenameFolder?: (id: string, name: string) => Promise<void>;
+  onDeleteFolder?: (id: string) => Promise<void>;
+  resultCounts: Record<string, number>;
+}) {
+  const [isCreating, setIsCreating] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState("");
+  const [contextMenuId, setContextMenuId] = useState<string | null>(null);
+  const createInputRef = useRef<HTMLInputElement>(null);
+  const editInputRef = useRef<HTMLInputElement>(null);
+  const contextMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isCreating) createInputRef.current?.focus();
+  }, [isCreating]);
+
+  useEffect(() => {
+    if (editingId) editInputRef.current?.focus();
+  }, [editingId]);
+
+  // Close context menu on outside click
+  useEffect(() => {
+    if (!contextMenuId) return;
+    const handleClick = (e: MouseEvent) => {
+      if (contextMenuRef.current && !contextMenuRef.current.contains(e.target as Node)) {
+        setContextMenuId(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [contextMenuId]);
+
+  const handleCreate = async () => {
+    const name = newFolderName.trim();
+    if (!name) { setIsCreating(false); return; }
+    await onCreateFolder(name);
+    setNewFolderName("");
+    setIsCreating(false);
+  };
+
+  const handleRename = async (id: string) => {
+    const name = editingName.trim();
+    if (!name || !onRenameFolder) { setEditingId(null); return; }
+    await onRenameFolder(id, name);
+    setEditingId(null);
+  };
+
+  const tabClass = (active: boolean) =>
+    `px-2.5 py-1.5 text-[9px] sm:text-[10px] font-mono-share tracking-wider whitespace-nowrap transition-colors rounded-t border-b-2 ${
+      active
+        ? "border-primary text-primary bg-primary/10"
+        : "border-transparent text-muted-foreground/60 hover:text-muted-foreground hover:bg-muted/30"
+    }`;
+
+  return (
+    <div className="flex items-center gap-0.5 overflow-x-auto scrollbar-hide pb-px border-b border-border/50 -mb-px">
+      {/* ALL tab */}
+      <button
+        className={tabClass(selectedFilter === "all")}
+        onClick={() => onSelectFilter("all")}
+      >
+        ALL
+        <span className="ml-1 text-muted-foreground/40">
+          {resultCounts["__total"] ?? 0}
+        </span>
+      </button>
+
+      {/* UNFILED tab */}
+      <button
+        className={tabClass(selectedFilter === "unfiled")}
+        onClick={() => onSelectFilter("unfiled")}
+      >
+        UNFILED
+        <span className="ml-1 text-muted-foreground/40">
+          {resultCounts["__unfiled"] ?? 0}
+        </span>
+      </button>
+
+      {/* Custom folder tabs */}
+      {folders.map((folder) => (
+        <div key={folder.id} className="relative flex items-center">
+          {editingId === folder.id ? (
+            <input
+              ref={editInputRef}
+              value={editingName}
+              onChange={(e) => setEditingName(e.target.value)}
+              onBlur={() => handleRename(folder.id)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleRename(folder.id);
+                if (e.key === "Escape") setEditingId(null);
+              }}
+              className="bg-input border border-primary/50 rounded px-1.5 py-1 text-[9px] sm:text-[10px] font-mono-share w-20 outline-none text-primary"
+            />
+          ) : (
+            <button
+              className={tabClass(selectedFilter === folder.id)}
+              onClick={() => onSelectFilter(folder.id)}
+              onDoubleClick={() => {
+                setEditingId(folder.id);
+                setEditingName(folder.name);
+              }}
+            >
+              <FolderOpen className="w-3 h-3 inline-block mr-1 -mt-0.5" />
+              {folder.name.toUpperCase()}
+              <span className="ml-1 text-muted-foreground/40">
+                {resultCounts[folder.id] ?? 0}
+              </span>
+            </button>
+          )}
+
+          {/* Context menu trigger */}
+          <button
+            className="p-0.5 text-muted-foreground/30 hover:text-muted-foreground transition-colors"
+            onClick={(e) => {
+              e.stopPropagation();
+              setContextMenuId(contextMenuId === folder.id ? null : folder.id);
+            }}
+          >
+            <MoreVertical className="w-3 h-3" />
+          </button>
+
+          {/* Context menu dropdown */}
+          {contextMenuId === folder.id && (
+            <div
+              ref={contextMenuRef}
+              className="absolute top-full left-0 mt-1 z-50 bg-card border border-border rounded shadow-lg py-1 min-w-[100px]"
+            >
+              <button
+                className="w-full text-left px-3 py-1.5 text-[10px] font-mono-share text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                onClick={() => {
+                  setEditingId(folder.id);
+                  setEditingName(folder.name);
+                  setContextMenuId(null);
+                }}
+              >
+                RENAME
+              </button>
+              {onDeleteFolder && (
+                <button
+                  className="w-full text-left px-3 py-1.5 text-[10px] font-mono-share text-destructive hover:bg-destructive/10 transition-colors"
+                  onClick={async () => {
+                    setContextMenuId(null);
+                    await onDeleteFolder(folder.id);
+                  }}
+                >
+                  DELETE
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      ))}
+
+      {/* Create folder button / input */}
+      {isCreating ? (
+        <input
+          ref={createInputRef}
+          value={newFolderName}
+          onChange={(e) => setNewFolderName(e.target.value)}
+          onBlur={handleCreate}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") handleCreate();
+            if (e.key === "Escape") { setIsCreating(false); setNewFolderName(""); }
+          }}
+          placeholder="folder name..."
+          className="bg-input border border-primary/50 rounded px-1.5 py-1 text-[9px] sm:text-[10px] font-mono-share w-24 outline-none text-primary placeholder:text-muted-foreground/30"
+        />
+      ) : (
+        <button
+          className="px-2 py-1.5 text-muted-foreground/40 hover:text-primary transition-colors"
+          onClick={() => setIsCreating(true)}
+          title="Create folder"
+        >
+          <FolderPlus className="w-3.5 h-3.5" />
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ── Move to Folder Menu ─────────────────────────────────────────────────
+
+function MoveToFolderMenu({
+  folders,
+  currentFolderId,
+  onMove,
+  onClose,
+}: {
+  folders: Folder[];
+  currentFolderId: string | null | undefined;
+  onMove: (folderId: string | null) => void;
+  onClose: () => void;
+}) {
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [onClose]);
+
+  return (
+    <div
+      ref={menuRef}
+      className="absolute right-0 top-full mt-1 z-50 bg-card border border-border rounded shadow-lg py-1 min-w-[140px]"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="px-3 py-1 text-[9px] font-orbitron tracking-wider text-muted-foreground/50 border-b border-border/50 mb-1">
+        MOVE_TO
+      </div>
+
+      {/* Unfiled option */}
+      <button
+        className={`w-full text-left px-3 py-1.5 text-[10px] font-mono-share transition-colors flex items-center gap-1.5 ${
+          !currentFolderId
+            ? "text-primary bg-primary/10"
+            : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+        }`}
+        onClick={() => { onMove(null); onClose(); }}
+      >
+        UNFILED
+      </button>
+
+      {/* Folder options */}
+      {folders.map((folder) => (
+        <button
+          key={folder.id}
+          className={`w-full text-left px-3 py-1.5 text-[10px] font-mono-share transition-colors flex items-center gap-1.5 ${
+            currentFolderId === folder.id
+              ? "text-primary bg-primary/10"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+          }`}
+          onClick={() => { onMove(folder.id); onClose(); }}
+        >
+          <FolderOpen className="w-3 h-3" />
+          {folder.name.toUpperCase()}
+        </button>
+      ))}
+
+      {folders.length === 0 && (
+        <div className="px-3 py-1.5 text-[10px] font-mono-share text-muted-foreground/40">
+          No folders yet
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Main Component ──────────────────────────────────────────────────────
+
+const ResultsGrid: React.FC<ResultsGridProps> = ({
+  results,
+  isLoading,
+  elapsedSeconds = 0,
+  onClear,
+  onDelete,
+  onEditImage,
+  onAnimateImage,
+  folders = [],
+  selectedFilter = "all",
+  onSelectFilter,
+  onCreateFolder,
+  onRenameFolder,
+  onDeleteFolder,
+  onMoveToFolder,
+}) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [mobileIndex, setMobileIndex] = useState(0);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [moveMenuId, setMoveMenuId] = useState<string | null>(null);
 
-  const expandedResult = results.find((r) => r.id === expandedId);
+  // Filter results based on selected folder
+  const filteredResults = React.useMemo(() => {
+    if (selectedFilter === "all") return results;
+    if (selectedFilter === "unfiled") return results.filter((r) => !r.folderId);
+    return results.filter((r) => r.folderId === selectedFilter);
+  }, [results, selectedFilter]);
 
-  const clampedIndex = Math.min(mobileIndex, Math.max(results.length - 1, 0));
+  // Compute result counts per folder for badges
+  const resultCounts = React.useMemo(() => {
+    const counts: Record<string, number> = {
+      __total: results.length,
+      __unfiled: results.filter((r) => !r.folderId).length,
+    };
+    for (const folder of folders) {
+      counts[folder.id] = results.filter((r) => r.folderId === folder.id).length;
+    }
+    return counts;
+  }, [results, folders]);
+
+  const expandedResult = filteredResults.find((r) => r.id === expandedId);
+
+  const clampedIndex = Math.min(mobileIndex, Math.max(filteredResults.length - 1, 0));
 
   const swipeHandlers = useSwipe({
     onSwipeLeft: () => {
-      if (clampedIndex < results.length - 1) setMobileIndex(clampedIndex + 1);
+      if (clampedIndex < filteredResults.length - 1) setMobileIndex(clampedIndex + 1);
     },
     onSwipeRight: () => {
       if (clampedIndex > 0) setMobileIndex(clampedIndex - 1);
@@ -151,7 +451,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, elapsedSe
   // Reset index when results change
   React.useEffect(() => {
     setMobileIndex(0);
-  }, [results.length]);
+  }, [filteredResults.length]);
 
   const handleCopyPrompt = useCallback(async (id: string, text: string) => {
     try {
@@ -161,20 +461,45 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, elapsedSe
     } catch { /* clipboard blocked */ }
   }, []);
 
-  if (results.length === 0 && !isLoading) {
+  const handleMove = useCallback(async (resultId: string, folderId: string | null) => {
+    if (onMoveToFolder) {
+      await onMoveToFolder(resultId, folderId);
+    }
+  }, [onMoveToFolder]);
+
+  const hasFolders = folders.length > 0 || !!onCreateFolder;
+
+  if (filteredResults.length === 0 && !isLoading) {
     return (
-      <div className="border border-dashed border-border rounded p-12 text-center">
-        <div className="font-mono-share text-sm text-muted-foreground tracking-wider mb-2">
-          <span className="text-primary/40">$</span> ls ./output/
-        </div>
-        <div className="font-mono-share text-xs text-muted-foreground/40">
-          (empty) — submit a prompt to generate results
+      <div className="space-y-2">
+        {/* Folder bar even when empty */}
+        {hasFolders && onSelectFilter && onCreateFolder && (
+          <FolderBar
+            folders={folders}
+            selectedFilter={selectedFilter}
+            onSelectFilter={onSelectFilter}
+            onCreateFolder={onCreateFolder}
+            onRenameFolder={onRenameFolder}
+            onDeleteFolder={onDeleteFolder}
+            resultCounts={resultCounts}
+          />
+        )}
+        <div className="border border-dashed border-border rounded p-12 text-center">
+          <div className="font-mono-share text-sm text-muted-foreground tracking-wider mb-2">
+            <span className="text-primary/40">$</span> ls ./output/
+          </div>
+          <div className="font-mono-share text-xs text-muted-foreground/40">
+            {selectedFilter !== "all" && results.length > 0
+              ? "(no results in this folder)"
+              : "(empty) — submit a prompt to generate results"
+            }
+          </div>
         </div>
       </div>
     );
   }
 
-  const currentResult = results[clampedIndex];
+  const currentResult = filteredResults[clampedIndex];
 
   const ImageActions = ({ result, size = "sm" }: { result: GrokResult; size?: "sm" | "icon" }) => {
     if (result.type !== "image") return null;
@@ -240,12 +565,25 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, elapsedSe
 
   return (
     <div className="space-y-4">
+      {/* Folder bar */}
+      {hasFolders && onSelectFilter && onCreateFolder && (
+        <FolderBar
+          folders={folders}
+          selectedFilter={selectedFilter}
+          onSelectFilter={onSelectFilter}
+          onCreateFolder={onCreateFolder}
+          onRenameFolder={onRenameFolder}
+          onDeleteFolder={onDeleteFolder}
+          resultCounts={resultCounts}
+        />
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="font-orbitron text-xs tracking-wider text-muted-foreground">
-          OUTPUT [{results.length}]
+          OUTPUT [{filteredResults.length}]
         </div>
-        {results.length > 0 && (
+        {filteredResults.length > 0 && (
           <Button
             variant="ghost"
             size="sm"
@@ -280,7 +618,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, elapsedSe
       )}
 
       {/* Mobile swipeable carousel */}
-      {results.length > 0 && (
+      {filteredResults.length > 0 && (
         <div className="sm:hidden">
           <div
             className="relative border border-border rounded overflow-hidden bg-card"
@@ -307,7 +645,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, elapsedSe
             ) : null}
 
             {/* Nav arrows */}
-            {results.length > 1 && (
+            {filteredResults.length > 1 && (
               <>
                 <button
                   onClick={() => clampedIndex > 0 && setMobileIndex(clampedIndex - 1)}
@@ -317,8 +655,8 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, elapsedSe
                   <ChevronLeft className="w-4 h-4" />
                 </button>
                 <button
-                  onClick={() => clampedIndex < results.length - 1 && setMobileIndex(clampedIndex + 1)}
-                  disabled={clampedIndex === results.length - 1}
+                  onClick={() => clampedIndex < filteredResults.length - 1 && setMobileIndex(clampedIndex + 1)}
+                  disabled={clampedIndex === filteredResults.length - 1}
                   className="absolute right-1 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-background/70 text-foreground disabled:opacity-20 transition-opacity"
                 >
                   <ChevronRight className="w-4 h-4" />
@@ -332,9 +670,9 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, elapsedSe
             </div>
 
             {/* Counter badge */}
-            {results.length > 1 && (
+            {filteredResults.length > 1 && (
               <div className="absolute top-2 right-2 font-mono-share text-[9px] bg-background/80 text-muted-foreground px-1.5 py-0.5 rounded">
-                {clampedIndex + 1}/{results.length}
+                {clampedIndex + 1}/{filteredResults.length}
               </div>
             )}
           </div>
@@ -359,6 +697,28 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, elapsedSe
               {currentResult && <ImageActions result={currentResult} size="sm" />}
             </div>
             <div className="flex gap-1">
+              {/* Move to folder button (mobile) */}
+              {onMoveToFolder && currentResult && (
+                <div className="relative">
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="text-primary h-7 w-7"
+                    onClick={() => setMoveMenuId(moveMenuId === currentResult.id ? null : currentResult.id)}
+                    title="Move to folder"
+                  >
+                    <FolderInput className="w-3 h-3" />
+                  </Button>
+                  {moveMenuId === currentResult.id && (
+                    <MoveToFolderMenu
+                      folders={folders}
+                      currentFolderId={currentResult.folderId}
+                      onMove={(fid) => handleMove(currentResult.id, fid)}
+                      onClose={() => setMoveMenuId(null)}
+                    />
+                  )}
+                </div>
+              )}
               <Button
                 size="icon"
                 variant="ghost"
@@ -386,9 +746,9 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, elapsedSe
           </div>
 
           {/* Dot indicators */}
-          {results.length > 1 && (
+          {filteredResults.length > 1 && (
             <div className="flex justify-center gap-1.5 pt-2">
-              {results.map((_, i) => (
+              {filteredResults.map((_, i) => (
                 <button
                   key={i}
                   onClick={() => setMobileIndex(i)}
@@ -406,7 +766,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, elapsedSe
 
       {/* Desktop grid */}
       <div className="hidden sm:grid sm:grid-cols-2 md:grid-cols-3 gap-3">
-        {results.map((result, idx) => (
+        {filteredResults.map((result, idx) => (
           <div
             key={result.id}
             className="group relative border border-border rounded overflow-hidden bg-card hover:border-primary/50 transition-all animate-slide-up"
@@ -443,6 +803,31 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, elapsedSe
                 <Maximize2 className="w-4 h-4" />
               </Button>
               <ImageActions result={result} size="icon" />
+              {/* Move to folder button */}
+              {onMoveToFolder && (
+                <div className="relative">
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="text-primary hover:bg-primary/20"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setMoveMenuId(moveMenuId === result.id ? null : result.id);
+                    }}
+                    title="Move to folder"
+                  >
+                    <FolderInput className="w-4 h-4" />
+                  </Button>
+                  {moveMenuId === result.id && (
+                    <MoveToFolderMenu
+                      folders={folders}
+                      currentFolderId={result.folderId}
+                      onMove={(fid) => handleMove(result.id, fid)}
+                      onClose={() => setMoveMenuId(null)}
+                    />
+                  )}
+                </div>
+              )}
               <Button
                 size="icon"
                 variant="ghost"
@@ -477,6 +862,14 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, elapsedSe
             <div className="absolute top-2 left-2 font-mono-share text-[9px] bg-background/80 text-primary px-1.5 py-0.5 rounded">
               {result.type.toUpperCase()}
             </div>
+
+            {/* Folder badge */}
+            {result.folderId && (
+              <div className="absolute top-2 right-2 font-mono-share text-[9px] bg-background/80 text-secondary px-1.5 py-0.5 rounded flex items-center gap-1">
+                <FolderOpen className="w-2.5 h-2.5" />
+                {(folders.find((f) => f.id === result.folderId)?.name || "").toUpperCase()}
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -515,6 +908,28 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({ results, isLoading, elapsedSe
                     <Film className="w-3 h-3" />
                     Animate
                   </Button>
+                )}
+                {/* Move to folder in expanded view */}
+                {onMoveToFolder && (
+                  <div className="relative">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-primary border-primary/30 hover:bg-primary/10 text-xs gap-1.5"
+                      onClick={() => setMoveMenuId(moveMenuId === expandedResult.id ? null : expandedResult.id)}
+                    >
+                      <FolderInput className="w-3 h-3" />
+                      Move
+                    </Button>
+                    {moveMenuId === expandedResult.id && (
+                      <MoveToFolderMenu
+                        folders={folders}
+                        currentFolderId={expandedResult.folderId}
+                        onMove={(fid) => handleMove(expandedResult.id, fid)}
+                        onClose={() => setMoveMenuId(null)}
+                      />
+                    )}
+                  </div>
                 )}
                 <Button
                   size="sm"

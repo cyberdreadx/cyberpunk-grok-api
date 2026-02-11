@@ -84,7 +84,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(xaiResponse.status).json({ error: errText });
     }
 
-    let xaiData = await xaiResponse.json();
+    let xaiData: any = await xaiResponse.json();
 
     // For video: poll until complete
     if (action === "generate-video") {
@@ -112,7 +112,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return res.status(pollRes.status).json({ error: errText });
           }
 
-          const pollData = await pollRes.json();
+          const pollData: any = await pollRes.json();
           const status = pollData.status || pollData.state;
 
           if (status === "failed" || status === "error") {

@@ -43,6 +43,7 @@ export interface GrokResult {
   revised_prompt?: string;
   type: "image" | "video";
   timestamp: number;
+  folderId?: string | null;
 }
 
 interface GenerateImageParams {
@@ -428,6 +429,11 @@ export function useGrokApi() {
     try { await deleteStoredResult(id); } catch { /* best-effort */ }
   }, []);
 
+  /** Update a result's folderId in React state (IndexedDB update is handled separately). */
+  const updateResultFolder = useCallback((resultId: string, folderId: string | null) => {
+    setResults(prev => prev.map(r => r.id === resultId ? { ...r, folderId } : r));
+  }, []);
+
   const clearError = useCallback(() => {
     setError(null);
   }, []);
@@ -449,6 +455,7 @@ export function useGrokApi() {
     generateVideo,
     clearResults,
     deleteResult,
+    updateResultFolder,
     clearError,
     calculateCreditCost,
   };
