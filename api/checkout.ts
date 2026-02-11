@@ -107,7 +107,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
     return res.status(200).json({ url: session.url });
   } catch (err: any) {
-    console.error("[checkout]", err.message);
-    return res.status(500).json({ error: "Failed to create checkout" });
+    console.error("[checkout]", err.message, err.stack);
+    return res.status(500).json({ error: err.message || "Failed to create checkout" });
   }
 }
