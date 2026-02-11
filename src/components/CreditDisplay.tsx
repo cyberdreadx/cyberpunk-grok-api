@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Coins, ShoppingCart, Loader2, Crown, Settings, XCircle } from "lucide-react";
+import { PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -25,7 +26,10 @@ interface CreditDisplayProps {
   onPurchase: (packageId: CreditPackage["id"]) => Promise<void>;
   onSubscribe: (tierId: SubscriptionTier["id"]) => Promise<void>;
   onManageSubscription: () => Promise<void>;
+  onPayPalSuccess?: () => void;
 }
+
+const paypalClientId = import.meta.env.VITE_PAYPAL_CLIENT_ID as string | undefined;
 
 const CreditDisplay: React.FC<CreditDisplayProps> = ({
   totalCredits,
@@ -40,6 +44,7 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
   onPurchase,
   onSubscribe,
   onManageSubscription,
+  onPayPalSuccess,
 }) => {
   const [open, setOpen] = useState(false);
 
@@ -109,24 +114,49 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
           </div>
 
           <div className="mt-4">
-            <PricingCards
-              packages={packages}
-              subscriptionTiers={subscriptionTiers}
-              currentTier={subscriptionTier}
-              purchasing={purchasing}
-              onPurchase={async (id) => {
-                await onPurchase(id);
-              }}
-              onSubscribe={async (id) => {
-                await onSubscribe(id);
-              }}
-              onManageSubscription={onManageSubscription}
-            />
+            {paypalClientId ? (
+              <PayPalScriptProvider
+                options={{
+                  clientId: paypalClientId,
+                  currency: "USD",
+                  intent: "capture",
+                }}
+              >
+                <PricingCards
+                  packages={packages}
+                  subscriptionTiers={subscriptionTiers}
+                  currentTier={subscriptionTier}
+                  purchasing={purchasing}
+                  onPurchase={async (id) => {
+                    await onPurchase(id);
+                  }}
+                  onSubscribe={async (id) => {
+                    await onSubscribe(id);
+                  }}
+                  onManageSubscription={onManageSubscription}
+                  onPayPalSuccess={onPayPalSuccess}
+                />
+              </PayPalScriptProvider>
+            ) : (
+              <PricingCards
+                packages={packages}
+                subscriptionTiers={subscriptionTiers}
+                currentTier={subscriptionTier}
+                purchasing={purchasing}
+                onPurchase={async (id) => {
+                  await onPurchase(id);
+                }}
+                onSubscribe={async (id) => {
+                  await onSubscribe(id);
+                }}
+                onManageSubscription={onManageSubscription}
+              />
+            )}
           </div>
 
           <div className="border-t border-border pt-3 mt-2 space-y-2">
             <p className="text-[10px] font-mono-share text-muted-foreground/60 leading-relaxed">
-              Payments processed securely via Stripe. Pack credits never expire. Subscription credits reset each billing cycle (no rollover).
+              Payments processed securely via Stripe{paypalClientId ? " and PayPal" : ""}. Pack credits never expire. Subscription credits reset each billing cycle (no rollover).
             </p>
             {subscriptionTier && (
               <div className="flex flex-wrap gap-3">

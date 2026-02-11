@@ -1,6 +1,8 @@
 import React from "react";
 import { Loader2, Zap, Crown, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PayPalButtons } from "@paypal/react-paypal-js";
+import { apiFetch } from "@/lib/api";
 import type { CreditPackage, SubscriptionTier } from "@/lib/api";
 
 interface PricingCardsProps {
@@ -11,6 +13,7 @@ interface PricingCardsProps {
   onPurchase: (packageId: CreditPackage["id"]) => void;
   onSubscribe: (tierId: SubscriptionTier["id"]) => void;
   onManageSubscription?: () => void;
+  onPayPalSuccess?: () => void;
 }
 
 const PricingCards: React.FC<PricingCardsProps> = ({
@@ -21,6 +24,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
   onPurchase,
   onSubscribe,
   onManageSubscription,
+  onPayPalSuccess,
 }) => {
   return (
     <div className="space-y-6">
@@ -161,21 +165,44 @@ const PricingCards: React.FC<PricingCardsProps> = ({
                 {pkg.perCredit}/credit — never expires
               </p>
 
-              <Button
-                onClick={() => onPurchase(pkg.id)}
-                disabled={purchasing}
-                className={`w-full font-orbitron text-[10px] tracking-wider gap-1 ${
-                  pkg.popular
-                    ? "bg-secondary text-secondary-foreground hover:bg-secondary/80"
-                    : "bg-primary text-primary-foreground hover:bg-primary/80"
-                }`}
-              >
-                {purchasing ? (
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                ) : (
-                  "PURCHASE"
+              <div className="space-y-2">
+                <Button
+                  onClick={() => onPurchase(pkg.id)}
+                  disabled={purchasing}
+                  className={`w-full font-orbitron text-[10px] tracking-wider gap-1 ${
+                    pkg.popular
+                      ? "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                      : "bg-primary text-primary-foreground hover:bg-primary/80"
+                  }`}
+                >
+                  {purchasing ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    "PURCHASE"
+                  )}
+                </Button>
+                {onPayPalSuccess && (
+                  <div className="min-h-[42px] [&>div]:min-h-[42px]">
+                    <PayPalButtons
+                      style={{ layout: "vertical", color: "gold", height: 36 }}
+                      createOrder={async () => {
+                        const { orderId } = (await apiFetch("/paypal/create-order", {
+                          method: "POST",
+                          body: { package: pkg.id },
+                        })) as { orderId: string };
+                        return orderId;
+                      }}
+                      onApprove={async (data) => {
+                        await apiFetch("/paypal/capture-order", {
+                          method: "POST",
+                          body: { orderID: data.orderID },
+                        });
+                        onPayPalSuccess();
+                      }}
+                    />
+                  </div>
                 )}
-              </Button>
+              </div>
             </div>
           ))}
         </div>

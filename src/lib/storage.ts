@@ -43,6 +43,8 @@ export interface Folder {
   name: string;
   createdAt: number;
   order: number;
+  /** When true, folder is hidden from the main bar (can be unhidden) */
+  hidden?: boolean;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────
@@ -359,6 +361,29 @@ export async function renameFolder(id: string, name: string): Promise<void> {
       const folder: Folder | undefined = getReq.result;
       if (folder) {
         folder.name = name;
+        store.put(folder);
+      }
+    };
+
+    tx.oncomplete = () => { db.close(); resolve(); };
+    tx.onerror = () => { db.close(); reject(tx.error); };
+  });
+}
+
+/**
+ * Toggle folder visibility. Hidden folders are excluded from the main bar.
+ */
+export async function setFolderHidden(id: string, hidden: boolean): Promise<void> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(FOLDERS_STORE_NAME, "readwrite");
+    const store = tx.objectStore(FOLDERS_STORE_NAME);
+    const getReq = store.get(id);
+
+    getReq.onsuccess = () => {
+      const folder: Folder | undefined = getReq.result;
+      if (folder) {
+        folder.hidden = hidden;
         store.put(folder);
       }
     };

@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import { Download, Maximize2, X, Trash2, ExternalLink, ChevronLeft, ChevronRight, Pencil, Film, Copy, Check, FolderPlus, FolderOpen, MoreVertical, FolderInput, Lock, LockOpen, ShieldCheck } from "lucide-react";
+import { Download, Maximize2, X, Trash2, ExternalLink, ChevronLeft, ChevronRight, Pencil, Film, Copy, Check, FolderPlus, FolderOpen, MoreVertical, FolderInput, Lock, LockOpen, ShieldCheck, Eye, EyeOff, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -7,6 +7,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import type { GrokResult } from "@/hooks/useGrokApi";
 import type { Folder } from "@/lib/storage";
 import type { FolderFilter } from "@/hooks/useFolders";
@@ -201,6 +211,7 @@ interface ResultsGridProps {
   onCreateFolder?: (name: string) => Promise<any>;
   onRenameFolder?: (id: string, name: string) => Promise<void>;
   onDeleteFolder?: (id: string) => Promise<void>;
+  onToggleFolderHidden?: (id: string) => Promise<void>;
   onMoveToFolder?: (resultId: string, folderId: string | null) => Promise<any>;
 }
 
@@ -313,6 +324,7 @@ function FolderBar({
   onCreateFolder,
   onRenameFolder,
   onDeleteFolder,
+  onToggleFolderHidden,
   resultCounts,
   unlockedFolders,
   onRequestUnlock,
@@ -326,6 +338,7 @@ function FolderBar({
   onCreateFolder: (name: string) => Promise<any>;
   onRenameFolder?: (id: string, name: string) => Promise<void>;
   onDeleteFolder?: (id: string) => Promise<void>;
+  onToggleFolderHidden?: (id: string) => Promise<void>;
   resultCounts: Record<string, number>;
   unlockedFolders: Set<string>;
   onRequestUnlock: (folderId: string) => void;
@@ -337,8 +350,28 @@ function FolderBar({
   const [newFolderName, setNewFolderName] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string; count: number } | null>(null);
+  const [showHidden, setShowHidden] = useState(false);
+  const hiddenPanelRef = useRef<HTMLDivElement>(null);
   const createInputRef = useRef<HTMLInputElement>(null);
   const editInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!showHidden) return;
+    const handleClick = (e: MouseEvent) => {
+      if (hiddenPanelRef.current && !hiddenPanelRef.current.contains(e.target as Node)) {
+        setShowHidden(false);
+      }
+    };
+    const t = setTimeout(() => document.addEventListener("mousedown", handleClick), 0);
+    return () => {
+      clearTimeout(t);
+      document.removeEventListener("mousedown", handleClick);
+    };
+  }, [showHidden]);
+
+  const visibleFolders = folders.filter((f) => !f.hidden);
+  const hiddenFolders = folders.filter((f) => f.hidden);
 
   useEffect(() => {
     if (isCreating) createInputRef.current?.focus();
@@ -449,12 +482,13 @@ function FolderBar({
   };
 
   return (
+    <>
     <div className="flex items-center gap-0.5 overflow-x-auto scrollbar-hide pb-px border-b border-border/50 -mb-px">
       {/* UNFILED tab (first) */}
       {renderBuiltInTab("unfiled", "UNFILED", "__unfiled")}
 
-      {/* Custom folder tabs */}
-      {folders.map((folder) => {
+      {/* Custom folder tabs (visible only) */}
+      {visibleFolders.map((folder) => {
         const hasPin = folderHasPin(folder.id);
         const isUnlocked = unlockedFolders.has(folder.id);
         const isLocked = hasPin && !isUnlocked;
@@ -547,10 +581,25 @@ function FolderBar({
                   SET PIN
                 </DropdownMenuItem>
               )}
+              {onToggleFolderHidden && (
+                <DropdownMenuItem
+                  className="text-[10px] font-mono-share text-muted-foreground focus:bg-muted/50 cursor-pointer"
+                  onSelect={() => onToggleFolderHidden(folder.id)}
+                >
+                  <EyeOff className="w-3 h-3 mr-1.5" />
+                  HIDE
+                </DropdownMenuItem>
+              )}
               {onDeleteFolder && (
                 <DropdownMenuItem
                   className="text-[10px] font-mono-share text-destructive focus:bg-destructive/10 cursor-pointer"
-                  onSelect={() => onDeleteFolder(folder.id)}
+                  onSelect={() =>
+                    setDeleteConfirm({
+                      id: folder.id,
+                      name: folder.name,
+                      count: resultCounts[folder.id] ?? 0,
+                    })
+                  }
                 >
                   DELETE
                 </DropdownMenuItem>
@@ -560,6 +609,34 @@ function FolderBar({
         </div>
         );
       })}
+
+      {/* Hidden folders (expandable) */}
+      {hiddenFolders.length > 0 && (
+        <div ref={hiddenPanelRef} className="relative flex items-center">
+          <button
+            onClick={() => setShowHidden(!showHidden)}
+            className={tabClass(false)}
+          >
+            <EyeOff className="w-3 h-3 inline-block mr-1 -mt-0.5" />
+            HIDDEN ({hiddenFolders.length})
+            {showHidden ? <ChevronDown className="w-2.5 h-2.5 inline-block ml-0.5" /> : <ChevronRight className="w-2.5 h-2.5 inline-block ml-0.5" />}
+          </button>
+          {showHidden && (
+            <div className="absolute left-0 top-full mt-1 z-50 rounded border border-border bg-card p-1 shadow-lg min-w-[120px]">
+              {hiddenFolders.map((folder) => (
+                <button
+                  key={folder.id}
+                  className="w-full flex items-center gap-1.5 px-2 py-1.5 text-[9px] font-mono-share text-muted-foreground hover:bg-muted/50 rounded text-left"
+                  onClick={() => onToggleFolderHidden?.(folder.id)}
+                >
+                  <Eye className="w-3 h-3" />
+                  {folder.name.toUpperCase()} — UNHIDE
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ALL tab (last) */}
       {renderBuiltInTab("all", "ALL", "__total")}
@@ -588,6 +665,42 @@ function FolderBar({
         </button>
       )}
     </div>
+
+    <AlertDialog open={!!deleteConfirm} onOpenChange={(open) => !open && setDeleteConfirm(null)}>
+      <AlertDialogContent className="bg-card border-border sm:max-w-md">
+        <AlertDialogHeader>
+          <AlertDialogTitle className="font-orbitron text-sm tracking-wider text-destructive">
+            DISMANTLE_FOLDER?
+          </AlertDialogTitle>
+          <AlertDialogDescription asChild>
+            <div className="font-mono-share text-[11px] text-muted-foreground space-y-2">
+              <p>This will permanently deallocate the folder <span className="text-foreground font-semibold">&quot;{deleteConfirm?.name}&quot;</span> from the grid.</p>
+              <p className="text-primary/90">
+                {deleteConfirm && deleteConfirm.count > 0
+                  ? `WARNING: ${deleteConfirm.count} asset(s) currently in this folder will be REASSIGNED to UNFILED. They are not deleted.`
+                  : "No assets in this folder. Safe to proceed."}
+              </p>
+              <p className="text-destructive/80">This operation cannot be undone. Confirm to proceed.</p>
+            </div>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel className="font-orbitron text-[10px]">CANCEL</AlertDialogCancel>
+          <AlertDialogAction
+            className="font-orbitron text-[10px] bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            onClick={async () => {
+              if (deleteConfirm && onDeleteFolder) {
+                await onDeleteFolder(deleteConfirm.id);
+                setDeleteConfirm(null);
+              }
+            }}
+          >
+            DISMANTLE
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
 
@@ -686,6 +799,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
   onCreateFolder,
   onRenameFolder,
   onDeleteFolder,
+  onToggleFolderHidden,
   onMoveToFolder,
 }) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -845,6 +959,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
             onCreateFolder={onCreateFolder}
             onRenameFolder={onRenameFolder}
             onDeleteFolder={onDeleteFolder}
+            onToggleFolderHidden={onToggleFolderHidden}
             resultCounts={resultCounts}
             unlockedFolders={unlockedFolders}
             onRequestUnlock={handleRequestUnlock}
@@ -956,6 +1071,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
           onCreateFolder={onCreateFolder}
           onRenameFolder={onRenameFolder}
           onDeleteFolder={onDeleteFolder}
+          onToggleFolderHidden={onToggleFolderHidden}
           resultCounts={resultCounts}
           unlockedFolders={unlockedFolders}
           onRequestUnlock={handleRequestUnlock}
