@@ -30,9 +30,6 @@ interface CreditDisplayProps {
 }
 
 const paypalClientId = import.meta.env.VITE_PAYPAL_CLIENT_ID as string | undefined;
-if (typeof window !== "undefined") {
-  console.log("[PayPal] VITE_PAYPAL_CLIENT_ID =", paypalClientId ? "SET (" + paypalClientId.slice(0, 8) + "...)" : "NOT SET");
-}
 
 const CreditDisplay: React.FC<CreditDisplayProps> = ({
   totalCredits,
@@ -123,6 +120,7 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
                   clientId: paypalClientId,
                   currency: "USD",
                   intent: "capture",
+                  disableFunding: "paylater,credit,card",
                 }}
               >
                 <PricingCards

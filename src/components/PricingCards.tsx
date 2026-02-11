@@ -182,9 +182,16 @@ const PricingCards: React.FC<PricingCardsProps> = ({
                   )}
                 </Button>
                 {onPayPalSuccess && (
-                  <div className="min-h-[42px] [&>div]:min-h-[42px]">
+                  <div className="flex items-center gap-2">
+                    <div className="h-px flex-1 bg-border/30" />
+                    <span className="font-mono-share text-[8px] text-muted-foreground/40">OR</span>
+                    <div className="h-px flex-1 bg-border/30" />
+                  </div>
+                )}
+                {onPayPalSuccess && (
+                  <div className="min-h-[35px] [&>div]:min-h-[35px]">
                     <PayPalButtons
-                      style={{ layout: "vertical", color: "gold", height: 36 }}
+                      style={{ layout: "horizontal", color: "black", shape: "rect", label: "paypal", height: 35, tagline: false }}
                       createOrder={async () => {
                         const { orderId } = (await apiFetch("/paypal", {
                           method: "POST",
