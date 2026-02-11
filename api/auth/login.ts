@@ -15,7 +15,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const sql = getDb();
     const rows = await sql`
-      SELECT id, email, password_hash
+      SELECT id, email, password_hash, email_verified
       FROM users
       WHERE email = ${email.toLowerCase().trim()}
     `;
@@ -28,6 +28,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const valid = await bcrypt.compare(password, user.password_hash);
     if (!valid) {
       return res.status(401).json({ error: "Invalid email or password" });
+    }
+
+    // Block unverified accounts — tell frontend to show verification step
+    if (!user.email_verified) {
+      return res.status(403).json({
+        error: "Email not verified. Please check your inbox for a verification code.",
+        needsVerification: true,
+        email: user.email,
+      });
     }
 
     const token = signToken({ userId: user.id, email: user.email });

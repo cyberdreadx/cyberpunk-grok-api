@@ -14,6 +14,7 @@ import CreditDisplay from "@/components/CreditDisplay";
 import { useGrokApi, type GrokMode, type GenerationSettings, type VideoSettings, type ApiMode, DEFAULT_SETTINGS, DEFAULT_VIDEO_SETTINGS } from "@/hooks/useGrokApi";
 import { useAuth } from "@/hooks/useAuth";
 import { useCredits } from "@/hooks/useCredits";
+import { useFolders } from "@/hooks/useFolders";
 import { usePromptHistory } from "@/hooks/usePromptHistory";
 import { useToast } from "@/hooks/use-toast";
 import { calculateCreditCost } from "@/lib/api";
@@ -61,12 +62,16 @@ const Index = () => {
     generateVideo,
     clearResults,
     deleteResult,
+    updateResultFolder,
     clearError,
   } = useGrokApi();
 
   // Auth & Credits
   const auth = useAuth();
   const creditsHook = useCredits(auth.user);
+
+  // Folders
+  const foldersHook = useFolders();
 
   const { history, addEntry, removeEntry, clearHistory } = usePromptHistory();
   const [activePrompt, setActivePrompt] = useState("");
@@ -107,6 +112,12 @@ const Index = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
     toast({ title: "ANIMATE MODE", description: "Image loaded — describe the motion to apply." });
   }, [toast]);
+
+  // When a result is moved to a folder, persist to IndexedDB + update React state
+  const handleMoveToFolder = useCallback(async (resultId: string, folderId: string | null) => {
+    await foldersHook.moveToFolder(resultId, folderId);
+    updateResultFolder(resultId, folderId);
+  }, [foldersHook, updateResultFolder]);
 
   const handleSubmit = async (data: { prompt: string; imageUrl?: string }) => {
     // Check access: need either API key (BYOK) or credits
@@ -281,6 +292,10 @@ const Index = () => {
                 onSignIn={auth.signIn}
                 onSignUp={auth.signUp}
                 onSignOut={auth.signOut}
+                pendingVerificationEmail={auth.pendingVerificationEmail}
+                onVerify={auth.verifyEmail}
+                onResendCode={auth.resendCode}
+                onCancelVerification={auth.cancelVerification}
               />
             )}
           </div>
@@ -375,7 +390,22 @@ const Index = () => {
             />
             <div className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
           </div>
-          <ResultsGrid results={results} isLoading={isLoading} elapsedSeconds={elapsedSeconds} onClear={clearResults} onDelete={deleteResult} onEditImage={handleEditImage} onAnimateImage={handleAnimateImage} />
+          <ResultsGrid
+            results={results}
+            isLoading={isLoading}
+            elapsedSeconds={elapsedSeconds}
+            onClear={clearResults}
+            onDelete={deleteResult}
+            onEditImage={handleEditImage}
+            onAnimateImage={handleAnimateImage}
+            folders={foldersHook.folders}
+            selectedFilter={foldersHook.selectedFilter}
+            onSelectFilter={foldersHook.selectFilter}
+            onCreateFolder={foldersHook.createFolder}
+            onRenameFolder={foldersHook.renameFolder}
+            onDeleteFolder={foldersHook.deleteFolder}
+            onMoveToFolder={handleMoveToFolder}
+          />
         </section>
 
         {/* Footer */}

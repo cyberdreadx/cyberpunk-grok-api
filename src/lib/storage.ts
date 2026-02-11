@@ -1,14 +1,18 @@
 /**
- * IndexedDB storage layer for Grok results.
+ * IndexedDB storage layer for Grok results and folders.
  *
  * Replaces localStorage which was limited to ~5-10 MB (a few base64 images).
  * IndexedDB supports hundreds of MB and stores binary blobs natively.
  *
  * Schema:
- *   Database: "grok-media-db" v1
+ *   Database: "grok-media-db" v2
  *   Object store: "results"
  *     key: id (string)
- *     value: { id, type, revised_prompt, timestamp, blob }
+ *     value: { id, type, revised_prompt, timestamp, blob, url, folderId }
+ *     indexes: folderId
+ *   Object store: "folders"
+ *     key: id (string)
+ *     value: { id, name, createdAt, order }
  *
  * Images are stored as Blobs (not base64 strings), saving ~33% memory.
  * On read, blobs are surfaced as object URLs via URL.createObjectURL().
@@ -17,20 +21,54 @@
 import type { GrokResult } from "@/hooks/useGrokApi";
 
 const DB_NAME = "grok-media-db";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_NAME = "results";
+const FOLDERS_STORE_NAME = "folders";
 const OLD_STORAGE_KEY = "grok-results";
+
+// ── Types ────────────────────────────────────────────────────────────────
+
+export interface StoredResult {
+  id: string;
+  type: "image" | "video";
+  revised_prompt?: string;
+  timestamp: number;
+  blob: Blob | null; // null for video (external URL kept as-is)
+  url: string; // original URL for videos, empty string for images (rebuilt via objectURL)
+  folderId?: string | null;
+}
+
+export interface Folder {
+  id: string;
+  name: string;
+  createdAt: number;
+  order: number;
+}
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
-/** Open (or create) the IndexedDB database. */
+/** Open (or create/upgrade) the IndexedDB database. */
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
-    request.onupgradeneeded = () => {
+    request.onupgradeneeded = (event) => {
       const db = request.result;
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
+      const oldVersion = event.oldVersion;
+
+      // v0 → v1: Create results store
+      if (oldVersion < 1) {
         db.createObjectStore(STORE_NAME, { keyPath: "id" });
+      }
+
+      // v1 → v2: Create folders store + add folderId index on results
+      if (oldVersion < 2) {
+        if (!db.objectStoreNames.contains(FOLDERS_STORE_NAME)) {
+          db.createObjectStore(FOLDERS_STORE_NAME, { keyPath: "id" });
+        }
+        const resultsStore = request.transaction!.objectStore(STORE_NAME);
+        if (!resultsStore.indexNames.contains("folderId")) {
+          resultsStore.createIndex("folderId", "folderId", { unique: false });
+        }
       }
     };
     request.onsuccess = () => resolve(request.result);
@@ -58,16 +96,7 @@ function blobToDataUrl(blob: Blob): Promise<string> {
   });
 }
 
-// ── Public API ───────────────────────────────────────────────────────────
-
-export interface StoredResult {
-  id: string;
-  type: "image" | "video";
-  revised_prompt?: string;
-  timestamp: number;
-  blob: Blob | null; // null for video (external URL kept as-is)
-  url: string; // original URL for videos, empty string for images (rebuilt via objectURL)
-}
+// ── Results API ──────────────────────────────────────────────────────────
 
 /**
  * Save a single GrokResult into IndexedDB.
@@ -87,6 +116,7 @@ export async function saveResult(result: GrokResult): Promise<void> {
       timestamp: result.timestamp,
       blob: null,
       url: "",
+      folderId: result.folderId || null,
     };
 
     if (result.type === "image" && result.url.startsWith("data:")) {
@@ -122,6 +152,7 @@ export async function saveResults(results: GrokResult[]): Promise<void> {
         timestamp: result.timestamp,
         blob: null,
         url: "",
+        folderId: result.folderId || null,
       };
 
       if (result.type === "image" && result.url.startsWith("data:")) {
@@ -173,6 +204,7 @@ export async function loadResults(): Promise<{
           revised_prompt: rec.revised_prompt,
           timestamp: rec.timestamp,
           url,
+          folderId: rec.folderId || null,
         };
       });
 
@@ -236,6 +268,159 @@ export async function getResultDataUrl(id: string): Promise<string | null> {
       }
     };
     request.onerror = () => { db.close(); reject(request.error); };
+  });
+}
+
+/**
+ * Move a result to a different folder (or null for unfiled).
+ */
+export async function moveResultToFolder(resultId: string, folderId: string | null): Promise<void> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    const store = tx.objectStore(STORE_NAME);
+    const getReq = store.get(resultId);
+
+    getReq.onsuccess = () => {
+      const rec: StoredResult | undefined = getReq.result;
+      if (rec) {
+        rec.folderId = folderId;
+        store.put(rec);
+      }
+    };
+
+    tx.oncomplete = () => { db.close(); resolve(); };
+    tx.onerror = () => { db.close(); reject(tx.error); };
+  });
+}
+
+// ── Folders API ──────────────────────────────────────────────────────────
+
+/**
+ * Load all folders, sorted by order.
+ */
+export async function loadFolders(): Promise<Folder[]> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(FOLDERS_STORE_NAME, "readonly");
+    const store = tx.objectStore(FOLDERS_STORE_NAME);
+    const request = store.getAll();
+
+    request.onsuccess = () => {
+      db.close();
+      const folders: Folder[] = request.result;
+      folders.sort((a, b) => a.order - b.order);
+      resolve(folders);
+    };
+    request.onerror = () => { db.close(); reject(request.error); };
+  });
+}
+
+/**
+ * Create a new folder. Returns the created folder.
+ */
+export async function createFolder(name: string): Promise<Folder> {
+  const db = await openDB();
+  // Get current max order
+  const folders = await new Promise<Folder[]>((resolve, reject) => {
+    const tx = db.transaction(FOLDERS_STORE_NAME, "readonly");
+    const req = tx.objectStore(FOLDERS_STORE_NAME).getAll();
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+
+  const maxOrder = folders.reduce((max, f) => Math.max(max, f.order), 0);
+  const folder: Folder = {
+    id: `folder-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name,
+    createdAt: Date.now(),
+    order: maxOrder + 1,
+  };
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(FOLDERS_STORE_NAME, "readwrite");
+    tx.objectStore(FOLDERS_STORE_NAME).put(folder);
+    tx.oncomplete = () => { db.close(); resolve(folder); };
+    tx.onerror = () => { db.close(); reject(tx.error); };
+  });
+}
+
+/**
+ * Rename a folder.
+ */
+export async function renameFolder(id: string, name: string): Promise<void> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(FOLDERS_STORE_NAME, "readwrite");
+    const store = tx.objectStore(FOLDERS_STORE_NAME);
+    const getReq = store.get(id);
+
+    getReq.onsuccess = () => {
+      const folder: Folder | undefined = getReq.result;
+      if (folder) {
+        folder.name = name;
+        store.put(folder);
+      }
+    };
+
+    tx.oncomplete = () => { db.close(); resolve(); };
+    tx.onerror = () => { db.close(); reject(tx.error); };
+  });
+}
+
+/**
+ * Delete a folder. Results in this folder are moved to unfiled (folderId = null).
+ */
+export async function deleteFolder(id: string): Promise<void> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction([FOLDERS_STORE_NAME, STORE_NAME], "readwrite");
+
+    // Delete the folder
+    tx.objectStore(FOLDERS_STORE_NAME).delete(id);
+
+    // Move all results in this folder to unfiled
+    const resultsStore = tx.objectStore(STORE_NAME);
+    const index = resultsStore.index("folderId");
+    const cursorReq = index.openCursor(IDBKeyRange.only(id));
+
+    cursorReq.onsuccess = () => {
+      const cursor = cursorReq.result;
+      if (cursor) {
+        const rec = cursor.value as StoredResult;
+        rec.folderId = null;
+        cursor.update(rec);
+        cursor.continue();
+      }
+    };
+
+    tx.oncomplete = () => { db.close(); resolve(); };
+    tx.onerror = () => { db.close(); reject(tx.error); };
+  });
+}
+
+/**
+ * Reorder folders by providing an array of folder IDs in the desired order.
+ */
+export async function reorderFolders(orderedIds: string[]): Promise<void> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(FOLDERS_STORE_NAME, "readwrite");
+    const store = tx.objectStore(FOLDERS_STORE_NAME);
+
+    orderedIds.forEach((id, index) => {
+      const getReq = store.get(id);
+      getReq.onsuccess = () => {
+        const folder: Folder | undefined = getReq.result;
+        if (folder) {
+          folder.order = index;
+          store.put(folder);
+        }
+      };
+    });
+
+    tx.oncomplete = () => { db.close(); resolve(); };
+    tx.onerror = () => { db.close(); reject(tx.error); };
   });
 }
 

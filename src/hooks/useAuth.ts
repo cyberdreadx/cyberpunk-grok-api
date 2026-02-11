@@ -21,6 +21,8 @@ export interface AuthUser {
 export function useAuth() {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+  /** When set, the UI should show the verification code input. */
+  const [pendingVerificationEmail, setPendingVerificationEmail] = useState<string | null>(null);
 
   // Hydrate user from stored token on mount
   useEffect(() => {
@@ -38,30 +40,66 @@ export function useAuth() {
   }, []);
 
   const signUp = useCallback(async (email: string, password: string) => {
-    const data = await apiFetch<{ token: string; user: AuthUser }>("/auth/signup", {
+    const data = await apiFetch<{ message: string; needsVerification: boolean; email: string }>("/auth/signup", {
       method: "POST",
       body: { email, password },
       auth: false,
     });
-    setAuthToken(data.token);
-    setUser(data.user);
+    // Signup no longer returns a token — user needs to verify email first
+    setPendingVerificationEmail(data.email);
     return data;
   }, []);
 
   const signIn = useCallback(async (email: string, password: string) => {
-    const data = await apiFetch<{ token: string; user: AuthUser }>("/auth/login", {
+    try {
+      const data = await apiFetch<{ token: string; user: AuthUser }>("/auth/login", {
+        method: "POST",
+        body: { email, password },
+        auth: false,
+      });
+      setAuthToken(data.token);
+      setUser(data.user);
+      return data;
+    } catch (err: any) {
+      // If the backend says this account needs verification, surface that to the UI
+      if (err.message?.includes("not verified") || err.message?.includes("needsVerification")) {
+        setPendingVerificationEmail(email.toLowerCase().trim());
+      }
+      throw err;
+    }
+  }, []);
+
+  /** Verify email with the 6-digit code. On success, logs the user in. */
+  const verifyEmail = useCallback(async (email: string, code: string) => {
+    const data = await apiFetch<{ token: string; user: AuthUser }>("/auth/verify", {
       method: "POST",
-      body: { email, password },
+      body: { email, code },
       auth: false,
     });
     setAuthToken(data.token);
     setUser(data.user);
+    setPendingVerificationEmail(null);
     return data;
+  }, []);
+
+  /** Resend a verification code to the given email. */
+  const resendCode = useCallback(async (email: string) => {
+    return apiFetch<{ message: string }>("/auth/resend-code", {
+      method: "POST",
+      body: { email },
+      auth: false,
+    });
+  }, []);
+
+  /** Cancel the verification flow (go back to login/signup). */
+  const cancelVerification = useCallback(() => {
+    setPendingVerificationEmail(null);
   }, []);
 
   const signOut = useCallback(async () => {
     clearAuthToken();
     setUser(null);
+    setPendingVerificationEmail(null);
   }, []);
 
   return {
@@ -69,8 +107,12 @@ export function useAuth() {
     loading,
     enabled: backendEnabled,
     isAuthenticated: !!user,
+    pendingVerificationEmail,
     signUp,
     signIn,
     signOut,
+    verifyEmail,
+    resendCode,
+    cancelVerification,
   };
 }
