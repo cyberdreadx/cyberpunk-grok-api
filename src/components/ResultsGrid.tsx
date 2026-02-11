@@ -345,19 +345,26 @@ function MoveToFolderMenu({
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        onClose();
-      }
+      // Ignore clicks inside the menu itself
+      if (menuRef.current && menuRef.current.contains(e.target as Node)) return;
+      onClose();
     };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
+    // Use setTimeout to avoid closing immediately on the same click that opened it
+    const timer = setTimeout(() => {
+      document.addEventListener("mousedown", handleClick);
+    }, 0);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("mousedown", handleClick);
+    };
   }, [onClose]);
 
   return (
     <div
       ref={menuRef}
-      className="absolute right-0 top-full mt-1 z-50 bg-card border border-border rounded shadow-lg py-1 min-w-[140px]"
+      className="absolute right-0 top-full mt-1 z-[60] bg-card border border-border rounded shadow-lg py-1 min-w-[140px]"
       onClick={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
     >
       <div className="px-3 py-1 text-[9px] font-orbitron tracking-wider text-muted-foreground/50 border-b border-border/50 mb-1">
         MOVE_TO
@@ -800,8 +807,10 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
               />
             )}
 
-            {/* Overlay — desktop hover */}
-            <div className="absolute inset-0 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+            {/* Overlay — desktop hover (stays visible when move menu is open) */}
+            <div className={`absolute inset-0 bg-background/80 transition-opacity flex items-center justify-center gap-2 ${
+              moveMenuId === result.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+            }`}>
               <Button
                 size="icon"
                 variant="ghost"
