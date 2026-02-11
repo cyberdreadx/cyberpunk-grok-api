@@ -384,18 +384,82 @@ function FolderBar({
         : "border-transparent text-muted-foreground/60 hover:text-muted-foreground hover:bg-muted/30"
     }`;
 
+  // Plain render function (NOT a component) to avoid React unmount/remount on state changes
+  const renderBuiltInTab = (id: string, label: string, countKey: string) => {
+    const pinId = `__${id}`;
+    const hasPin = folderHasPin(pinId);
+    const isUnlocked = unlockedFolders.has(pinId);
+    const isLocked = hasPin && !isUnlocked;
+
+    return (
+      <div key={pinId} className="relative flex items-center">
+        <button
+          className={tabClass(selectedFilter === id)}
+          onClick={() => {
+            if (isLocked) {
+              onRequestUnlock(pinId);
+            } else {
+              onSelectFilter(id);
+            }
+          }}
+        >
+          {hasPin && (
+            isLocked
+              ? <Lock className="w-3 h-3 inline-block mr-1 -mt-0.5 text-secondary" />
+              : <LockOpen className="w-3 h-3 inline-block mr-1 -mt-0.5 text-primary/50" />
+          )}
+          {label}
+          <span className="ml-1 text-muted-foreground/40">
+            {isLocked ? "***" : (resultCounts[countKey] ?? 0)}
+          </span>
+        </button>
+        <button
+          className="p-0.5 text-muted-foreground/30 hover:text-muted-foreground transition-colors"
+          onClick={(e) => {
+            e.stopPropagation();
+            setContextMenuId(contextMenuId === pinId ? null : pinId);
+          }}
+        >
+          <MoreVertical className="w-3 h-3" />
+        </button>
+        {contextMenuId === pinId && (
+          <div
+            ref={contextMenuRef}
+            className="absolute top-full left-0 mt-1 z-50 bg-card border border-border rounded shadow-lg py-1 min-w-[100px]"
+          >
+            {hasPin ? (
+              <button
+                className="w-full text-left px-3 py-1.5 text-[10px] font-mono-share text-secondary hover:bg-secondary/10 transition-colors flex items-center gap-1.5"
+                onClick={() => {
+                  setContextMenuId(null);
+                  onRemovePin(pinId);
+                }}
+              >
+                <LockOpen className="w-3 h-3" />
+                REMOVE PIN
+              </button>
+            ) : (
+              <button
+                className="w-full text-left px-3 py-1.5 text-[10px] font-mono-share text-primary hover:bg-primary/10 transition-colors flex items-center gap-1.5"
+                onClick={() => {
+                  setContextMenuId(null);
+                  onSetPin(pinId);
+                }}
+              >
+                <Lock className="w-3 h-3" />
+                SET PIN
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="flex items-center gap-0.5 overflow-x-auto scrollbar-hide pb-px border-b border-border/50 -mb-px">
       {/* UNFILED tab (first) */}
-      <button
-        className={tabClass(selectedFilter === "unfiled")}
-        onClick={() => onSelectFilter("unfiled")}
-      >
-        UNFILED
-        <span className="ml-1 text-muted-foreground/40">
-          {resultCounts["__unfiled"] ?? 0}
-        </span>
-      </button>
+      {renderBuiltInTab("unfiled", "UNFILED", "__unfiled")}
 
       {/* Custom folder tabs */}
       {folders.map((folder) => {
@@ -516,15 +580,7 @@ function FolderBar({
       })}
 
       {/* ALL tab (last) */}
-      <button
-        className={tabClass(selectedFilter === "all")}
-        onClick={() => onSelectFilter("all")}
-      >
-        ALL
-        <span className="ml-1 text-muted-foreground/40">
-          {resultCounts["__total"] ?? 0}
-        </span>
-      </button>
+      {renderBuiltInTab("all", "ALL", "__total")}
 
       {/* Create folder button / input */}
       {isCreating ? (
@@ -663,23 +719,31 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
     folderName: string;
   } | null>(null);
 
-  const handleRequestUnlock = useCallback((folderId: string) => {
-    const folder = folders.find((f) => f.id === folderId);
-    if (!folder) return;
-    setPinDialog({ mode: "unlock", folderId, folderName: folder.name });
+  // Resolve display name for any folder ID (including built-in __unfiled / __all)
+  const getFolderName = useCallback((folderId: string): string => {
+    if (folderId === "__unfiled") return "UNFILED";
+    if (folderId === "__all") return "ALL";
+    return folders.find((f) => f.id === folderId)?.name || folderId;
   }, [folders]);
+
+  const handleRequestUnlock = useCallback((folderId: string) => {
+    setPinDialog({ mode: "unlock", folderId, folderName: getFolderName(folderId) });
+  }, [getFolderName]);
 
   const handleSetPin = useCallback((folderId: string) => {
-    const folder = folders.find((f) => f.id === folderId);
-    if (!folder) return;
-    setPinDialog({ mode: "set", folderId, folderName: folder.name });
-  }, [folders]);
+    setPinDialog({ mode: "set", folderId, folderName: getFolderName(folderId) });
+  }, [getFolderName]);
 
   const handleRemovePin = useCallback((folderId: string) => {
-    const folder = folders.find((f) => f.id === folderId);
-    if (!folder) return;
-    setPinDialog({ mode: "remove", folderId, folderName: folder.name });
-  }, [folders]);
+    setPinDialog({ mode: "remove", folderId, folderName: getFolderName(folderId) });
+  }, [getFolderName]);
+
+  // Convert a PIN storage ID back to the filter value for onSelectFilter
+  const pinIdToFilter = useCallback((pinId: string): string => {
+    if (pinId === "__unfiled") return "unfiled";
+    if (pinId === "__all") return "all";
+    return pinId;
+  }, []);
 
   const handlePinSubmit = useCallback(async (pin: string) => {
     if (!pinDialog) return;
@@ -693,13 +757,11 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
       if (valid) {
         setUnlockedFolders((prev) => new Set([...prev, folderId]));
         setPinDialog(null);
-        if (onSelectFilter) onSelectFilter(folderId);
+        if (onSelectFilter) onSelectFilter(pinIdToFilter(folderId));
       } else {
-        // Re-render the dialog with error feedback by briefly clearing and resetting
         setPinDialog(null);
         setTimeout(() => {
-          const folder = folders.find((f) => f.id === folderId);
-          if (folder) setPinDialog({ mode: "unlock", folderId, folderName: folder.name });
+          setPinDialog({ mode: "unlock", folderId, folderName: getFolderName(folderId) });
         }, 100);
       }
     } else if (mode === "remove") {
@@ -715,12 +777,11 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
       } else {
         setPinDialog(null);
         setTimeout(() => {
-          const folder = folders.find((f) => f.id === folderId);
-          if (folder) setPinDialog({ mode: "remove", folderId, folderName: folder.name });
+          setPinDialog({ mode: "remove", folderId, folderName: getFolderName(folderId) });
         }, 100);
       }
     }
-  }, [pinDialog, folders, onSelectFilter]);
+  }, [pinDialog, getFolderName, pinIdToFilter, onSelectFilter]);
 
   // Filter results based on selected folder
   const filteredResults = React.useMemo(() => {
