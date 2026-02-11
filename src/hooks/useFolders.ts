@@ -19,7 +19,8 @@ export type FolderFilter = "all" | "unfiled" | string;
 
 export function useFolders() {
   const [folders, setFolders] = useState<Folder[]>([]);
-  const [selectedFilter, setSelectedFilter] = useState<FolderFilter>("all");
+  // Default landing tab on app load
+  const [selectedFilter, setSelectedFilter] = useState<FolderFilter>("unfiled");
   const [loading, setLoading] = useState(true);
 
   // Load folders from IndexedDB on mount
@@ -46,8 +47,8 @@ export function useFolders() {
   const deleteFolder = useCallback(async (id: string) => {
     await deleteFolderStorage(id);
     setFolders((prev) => prev.filter((f) => f.id !== id));
-    // If the deleted folder was selected, go back to "all"
-    setSelectedFilter((prev) => (prev === id ? "all" : prev));
+    // If the deleted folder was selected, go back to "unfiled"
+    setSelectedFilter((prev) => (prev === id ? "unfiled" : prev));
   }, []);
 
   const toggleFolderHidden = useCallback(async (id: string) => {
@@ -58,9 +59,9 @@ export function useFolders() {
     setFolders((prev) =>
       prev.map((f) => (f.id === id ? { ...f, hidden: nextHidden } : f))
     );
-    // If a now-hidden folder was selected, return to all
+    // If a now-hidden folder was selected, return to unfiled
     if (nextHidden && selectedFilter === id) {
-      setSelectedFilter("all");
+      setSelectedFilter("unfiled");
     }
   }, [folders, selectedFilter]);
 
