@@ -112,7 +112,22 @@ function TosContent() {
 
       <section>
         <h3 className="font-orbitron text-xs tracking-wider text-primary mb-2">
-          6. CONTENT_OWNERSHIP
+          6. SUBSCRIPTION_CANCELLATION
+        </h3>
+        <p>
+          You may cancel your subscription at any time through the billing portal
+          (Manage subscription / Cancel subscription button in the CREDIT_STORE).
+          Cancellation takes effect at the end of your current billing period.
+          Until then, you retain access to your subscription credits. No pro rata
+          refunds are offered for partial months. Once cancelled, you will not be
+          charged again, and your subscription credits will stop replenishing.
+          Pack credits (one-time purchases) are unaffected and never expire.
+        </p>
+      </section>
+
+      <section>
+        <h3 className="font-orbitron text-xs tracking-wider text-primary mb-2">
+          7. CONTENT_OWNERSHIP
         </h3>
         <p>
           Generated content is subject to xAI terms of service and usage

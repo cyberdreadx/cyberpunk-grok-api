@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Coins, ShoppingCart, Loader2, Crown, Settings } from "lucide-react";
+import { Coins, ShoppingCart, Loader2, Crown, Settings, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -124,18 +124,27 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
             />
           </div>
 
-          <div className="border-t border-border pt-3 mt-2 space-y-1">
+          <div className="border-t border-border pt-3 mt-2 space-y-2">
             <p className="text-[10px] font-mono-share text-muted-foreground/60 leading-relaxed">
               Payments processed securely via Stripe. Pack credits never expire. Subscription credits reset each billing cycle (no rollover).
             </p>
             {subscriptionTier && (
-              <button
-                onClick={onManageSubscription}
-                className="flex items-center gap-1 text-[10px] font-mono-share text-primary/60 hover:text-primary transition-colors"
-              >
-                <Settings className="w-3 h-3" />
-                Manage subscription / billing
-              </button>
+              <div className="flex flex-wrap gap-3">
+                <button
+                  onClick={onManageSubscription}
+                  className="flex items-center gap-1 text-[10px] font-mono-share text-primary/60 hover:text-primary transition-colors"
+                >
+                  <Settings className="w-3 h-3" />
+                  Manage subscription / billing
+                </button>
+                <button
+                  onClick={onManageSubscription}
+                  className="flex items-center gap-1 text-[10px] font-mono-share text-destructive/80 hover:text-destructive transition-colors"
+                >
+                  <XCircle className="w-3 h-3" />
+                  Cancel subscription
+                </button>
+              </div>
             )}
           </div>
         </DialogContent>
