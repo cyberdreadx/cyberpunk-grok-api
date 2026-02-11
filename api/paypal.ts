@@ -1,12 +1,14 @@
-/**
- * POST /api/paypal/capture-order — Capture a PayPal order after user approval.
- * Idempotent: duplicate capture IDs return success without double-crediting.
+﻿/**
+ * POST /api/paypal -- Unified PayPal handler for credit pack purchases.
+ * Routes on body.action:
+ *   "create"  -> create a PayPal order (returns { orderId })
+ *   "capture" -> capture an approved order and add credits
  */
 
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { getUserFromRequest } from "../_lib/auth";
-import { capturePayPalOrder } from "../_lib/paypal";
-import { getDb } from "../_lib/db";
+import { getUserFromRequest } from "./_lib/auth";
+import { createPayPalOrder, capturePayPalOrder } from "./_lib/paypal";
+import { getDb } from "./_lib/db";
 
 const PACKAGES: Record<string, { credits: number; priceCents: number }> = {
   starter: { credits: 50, priceCents: 500 },
@@ -22,7 +24,46 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!auth) return res.status(401).json({ error: "Unauthorized" });
 
   const body = req.body || {};
-  const orderId = body.orderID ?? body.orderId;
+  const action = body.action as string;
+
+  if (action === "create") {
+    return handleCreate(res, auth, body);
+  } else if (action === "capture") {
+    return handleCapture(res, auth, body);
+  } else {
+    return res.status(400).json({ error: "Missing or invalid action. Expected create or capture." });
+  }
+}
+
+async function handleCreate(
+  res: VercelResponse,
+  auth: { userId: string },
+  body: any
+) {
+  const packageId = body.package as string;
+  const pkg = PACKAGES[packageId];
+  if (!pkg) return res.status(400).json({ error: "Unknown package: " + packageId });
+
+  try {
+    const orderId = await createPayPalOrder({
+      amountDollars: (pkg.priceCents / 100).toFixed(2),
+      packageId,
+      credits: pkg.credits,
+      userId: auth.userId,
+    });
+    return res.status(200).json({ orderId });
+  } catch (err: any) {
+    console.error("[paypal/create]", err.message);
+    return res.status(500).json({ error: err.message || "Failed to create order" });
+  }
+}
+
+async function handleCapture(
+  res: VercelResponse,
+  auth: { userId: string },
+  body: any
+) {
+  const orderId = body.orderID || body.orderId;
   if (!orderId) return res.status(400).json({ error: "Missing orderID" });
 
   const sql = getDb();
@@ -30,7 +71,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const { captureId, customId } = await capturePayPalOrder(orderId);
 
-    // Idempotency: skip if we already processed this capture
     const existing = await sql`
       SELECT id FROM transactions WHERE paypal_capture_id = ${captureId} LIMIT 1
     `;
@@ -43,9 +83,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     let credits: number;
     try {
       const meta = JSON.parse(customId || "{}") as { user_id?: string; package?: string; credits?: number };
-      userId = meta.user_id ?? "";
-      packageId = meta.package ?? "";
-      credits = meta.credits ?? 0;
+      userId = meta.user_id || "";
+      packageId = meta.package || "";
+      credits = meta.credits || 0;
     } catch {
       return res.status(400).json({ error: "Invalid capture metadata" });
     }
@@ -54,24 +94,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: "Invalid capture metadata" });
     }
 
-    // Verify the authenticated user matches the order
     if (userId !== auth.userId) {
       return res.status(403).json({ error: "Order does not belong to this user" });
     }
 
     const pkg = PACKAGES[packageId];
-    const amountCents = pkg?.priceCents ?? 0;
+    const amountCents = pkg ? pkg.priceCents : 0;
 
-    await sql`SELECT add_pack_credits(${userId}::uuid, ${credits})`;
+    await sql`SELECT add_pack_credits(${userId}::uuid, ${credits})`; 
     await sql`
       INSERT INTO transactions (user_id, credits, amount_cents, paypal_capture_id, package, type)
       VALUES (${userId}::uuid, ${credits}, ${amountCents}, ${captureId}, ${packageId}, 'pack')
     `;
-    console.log(`[paypal/capture] Added ${credits} pack credits to ${userId} via PayPal`);
+    console.log("[paypal/capture] Added " + credits + " pack credits to " + userId);
 
     return res.status(200).json({ success: true, credits });
   } catch (err: any) {
-    console.error("[paypal/capture-order]", err.message);
+    console.error("[paypal/capture]", err.message);
     return res.status(500).json({ error: err.message || "Failed to capture order" });
   }
 }

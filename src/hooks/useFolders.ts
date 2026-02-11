@@ -1,7 +1,6 @@
 /**
  * Folder management hook — manages folders stored in IndexedDB.
  * Handles CRUD operations, selection state, and moving results between folders.
- * Errors are thrown to callers so they can surface them via toast/UI.
  */
 
 import { useState, useEffect, useCallback } from "react";
@@ -11,70 +10,44 @@ import {
   renameFolder as renameFolderStorage,
   deleteFolder as deleteFolderStorage,
   moveResultToFolder as moveResultStorage,
-  setFolderHidden as setFolderHiddenStorage,
   type Folder,
 } from "@/lib/storage";
 
-/** Filter modes: show all, unfiled only, none (empty), or a specific folder */
-export type FolderFilter = "all" | "unfiled" | "none" | string;
+/** Filter modes: show all, unfiled only, or a specific folder */
+export type FolderFilter = "all" | "unfiled" | string;
 
 export function useFolders() {
   const [folders, setFolders] = useState<Folder[]>([]);
-  const [selectedFilter, setSelectedFilter] = useState<FolderFilter>("none");
+  const [selectedFilter, setSelectedFilter] = useState<FolderFilter>("all");
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   // Load folders from IndexedDB on mount
   useEffect(() => {
     loadFolders()
       .then(setFolders)
-      .catch((err) => {
-        console.error("[useFolders] Failed to load folders:", err);
-        setError("Failed to load folders");
-      })
+      .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
   const createFolder = useCallback(async (name: string) => {
-    const trimmed = name.trim();
-    if (!trimmed) throw new Error("Folder name cannot be empty");
-    if (trimmed.length > 50) throw new Error("Folder name too long (max 50 characters)");
-
-    const folder = await createFolderStorage(trimmed);
+    const folder = await createFolderStorage(name);
     setFolders((prev) => [...prev, folder]);
     return folder;
   }, []);
 
   const renameFolder = useCallback(async (id: string, name: string) => {
-    const trimmed = name.trim();
-    if (!trimmed) throw new Error("Folder name cannot be empty");
-    if (trimmed.length > 50) throw new Error("Folder name too long (max 50 characters)");
-
-    await renameFolderStorage(id, trimmed);
+    await renameFolderStorage(id, name);
     setFolders((prev) =>
-      prev.map((f) => (f.id === id ? { ...f, name: trimmed } : f))
+      prev.map((f) => (f.id === id ? { ...f, name } : f))
     );
   }, []);
 
   const deleteFolder = useCallback(async (id: string) => {
     await deleteFolderStorage(id);
     setFolders((prev) => prev.filter((f) => f.id !== id));
-    // If the deleted folder was selected, go back to "none"
-    setSelectedFilter((prev) => (prev === id ? "none" : prev));
+    // If the deleted folder was selected, go back to "all"
+    setSelectedFilter((prev) => (prev === id ? "all" : prev));
   }, []);
-
-  const toggleFolderHidden = useCallback(async (id: string) => {
-    const folder = folders.find((f) => f.id === id);
-    if (!folder) return;
-    const nextHidden = !folder.hidden;
-    await setFolderHiddenStorage(id, nextHidden);
-    setFolders((prev) =>
-      prev.map((f) => (f.id === id ? { ...f, hidden: nextHidden } : f))
-    );
-    if (nextHidden && selectedFilter === id) {
-      setSelectedFilter("none");
-    }
-  }, [folders, selectedFilter]);
 
   /**
    * Move a result to a folder (or null for unfiled).
@@ -93,11 +66,9 @@ export function useFolders() {
     folders,
     selectedFilter,
     loading,
-    error,
     createFolder,
     renameFolder,
     deleteFolder,
-    toggleFolderHidden,
     moveToFolder,
     selectFilter,
   };

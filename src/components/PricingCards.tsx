@@ -186,16 +186,16 @@ const PricingCards: React.FC<PricingCardsProps> = ({
                     <PayPalButtons
                       style={{ layout: "vertical", color: "gold", height: 36 }}
                       createOrder={async () => {
-                        const { orderId } = (await apiFetch("/paypal/create-order", {
+                        const { orderId } = (await apiFetch("/paypal", {
                           method: "POST",
-                          body: { package: pkg.id },
+                          body: { action: "create", package: pkg.id },
                         })) as { orderId: string };
                         return orderId;
                       }}
                       onApprove={async (data) => {
-                        await apiFetch("/paypal/capture-order", {
+                        await apiFetch("/paypal", {
                           method: "POST",
-                          body: { orderID: data.orderID },
+                          body: { action: "capture", orderID: data.orderID },
                         });
                         onPayPalSuccess();
                       }}
