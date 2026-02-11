@@ -2,6 +2,12 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import bcrypt from "bcryptjs";
 import { getDb } from "../_lib/db";
 import { generateVerificationCode, sendVerificationEmail } from "../_lib/email";
+import { checkRateLimit, getClientIp } from "../_lib/ratelimit";
+
+/** Basic email format validation. */
+function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === "OPTIONS") return res.status(200).end();
@@ -12,8 +18,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!email || !password) {
       return res.status(400).json({ error: "Email and password required" });
     }
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ error: "Invalid email format" });
+    }
     if (password.length < 6) {
       return res.status(400).json({ error: "Password must be at least 6 characters" });
+    }
+
+    // Rate limit: 5 signups per IP per 15 minutes
+    const ip = getClientIp(req);
+    const { allowed } = await checkRateLimit(ip, "signup", { max: 5, windowSeconds: 900 });
+    if (!allowed) {
+      return res.status(429).json({ error: "Too many signup attempts. Please try again later." });
     }
 
     const sql = getDb();
@@ -33,12 +49,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (existing[0].email_verified) {
         return res.status(409).json({ error: "An account with this email already exists" });
       }
-      // Unverified account exists — update password + resend code
+      // Unverified account exists — update password + resend code, reset attempts
       await sql`
         UPDATE users
         SET password_hash = ${passwordHash},
             verification_code = ${code},
             verification_code_expires_at = ${expiresAt},
+            verification_attempts = 0,
             updated_at = now()
         WHERE id = ${existing[0].id}
       `;
@@ -46,8 +63,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Insert new user with verification code
       try {
         await sql`
-          INSERT INTO users (email, password_hash, email_verified, verification_code, verification_code_expires_at)
-          VALUES (${normalizedEmail}, ${passwordHash}, false, ${code}, ${expiresAt})
+          INSERT INTO users (email, password_hash, email_verified, verification_code, verification_code_expires_at, verification_attempts)
+          VALUES (${normalizedEmail}, ${passwordHash}, false, ${code}, ${expiresAt}, 0)
         `;
       } catch (err: any) {
         if (err.message?.includes("unique") || err.code === "23505") {

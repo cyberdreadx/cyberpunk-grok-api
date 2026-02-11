@@ -1,6 +1,7 @@
 /**
  * Folder management hook — manages folders stored in IndexedDB.
  * Handles CRUD operations, selection state, and moving results between folders.
+ * Errors are thrown to callers so they can surface them via toast/UI.
  */
 
 import { useState, useEffect, useCallback } from "react";
@@ -20,25 +21,37 @@ export function useFolders() {
   const [folders, setFolders] = useState<Folder[]>([]);
   const [selectedFilter, setSelectedFilter] = useState<FolderFilter>("all");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Load folders from IndexedDB on mount
   useEffect(() => {
     loadFolders()
       .then(setFolders)
-      .catch(() => {})
+      .catch((err) => {
+        console.error("[useFolders] Failed to load folders:", err);
+        setError("Failed to load folders");
+      })
       .finally(() => setLoading(false));
   }, []);
 
   const createFolder = useCallback(async (name: string) => {
-    const folder = await createFolderStorage(name);
+    const trimmed = name.trim();
+    if (!trimmed) throw new Error("Folder name cannot be empty");
+    if (trimmed.length > 50) throw new Error("Folder name too long (max 50 characters)");
+
+    const folder = await createFolderStorage(trimmed);
     setFolders((prev) => [...prev, folder]);
     return folder;
   }, []);
 
   const renameFolder = useCallback(async (id: string, name: string) => {
-    await renameFolderStorage(id, name);
+    const trimmed = name.trim();
+    if (!trimmed) throw new Error("Folder name cannot be empty");
+    if (trimmed.length > 50) throw new Error("Folder name too long (max 50 characters)");
+
+    await renameFolderStorage(id, trimmed);
     setFolders((prev) =>
-      prev.map((f) => (f.id === id ? { ...f, name } : f))
+      prev.map((f) => (f.id === id ? { ...f, name: trimmed } : f))
     );
   }, []);
 
@@ -66,6 +79,7 @@ export function useFolders() {
     folders,
     selectedFilter,
     loading,
+    error,
     createFolder,
     renameFolder,
     deleteFolder,

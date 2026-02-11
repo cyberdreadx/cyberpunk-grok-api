@@ -1,6 +1,7 @@
 /**
  * /api/webhook — Stripe webhook handler.
  * Handles: checkout.session.completed, invoice.paid, customer.subscription.deleted
+ * Includes idempotency checks to prevent double-processing on retries.
  */
 
 import type { VercelRequest, VercelResponse } from "@vercel/node";
@@ -22,6 +23,26 @@ const TIER_CREDITS: Record<string, number> = {
   basic: 150,
   premium: 500,
 };
+
+/**
+ * Check if an event has already been processed. If not, mark it as processed.
+ * Returns true if this is a new event, false if already processed.
+ */
+async function markEventProcessed(sql: any, eventId: string): Promise<boolean> {
+  try {
+    await sql`
+      INSERT INTO processed_events (event_id, processed_at)
+      VALUES (${eventId}, now())
+    `;
+    return true; // New event, successfully inserted
+  } catch (err: any) {
+    // Unique constraint violation = already processed
+    if (err.message?.includes("unique") || err.code === "23505") {
+      return false;
+    }
+    throw err; // Unexpected error
+  }
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === "OPTIONS") return res.status(200).end();
@@ -48,6 +69,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const sql = getDb();
+
+    // Idempotency check: skip if we've already processed this event
+    const isNew = await markEventProcessed(sql, event.id);
+    if (!isNew) {
+      console.log(`[webhook] Skipping duplicate event: ${event.id}`);
+      return res.status(200).json({ received: true, duplicate: true });
+    }
 
     // ── checkout.session.completed: one-time pack purchase ──
     if (event.type === "checkout.session.completed") {

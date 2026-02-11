@@ -115,9 +115,13 @@ const Index = () => {
 
   // When a result is moved to a folder, persist to IndexedDB + update React state
   const handleMoveToFolder = useCallback(async (resultId: string, folderId: string | null) => {
-    await foldersHook.moveToFolder(resultId, folderId);
-    updateResultFolder(resultId, folderId);
-  }, [foldersHook, updateResultFolder]);
+    try {
+      await foldersHook.moveToFolder(resultId, folderId);
+      updateResultFolder(resultId, folderId);
+    } catch {
+      toast({ title: "FOLDER ERROR", description: "Failed to move item.", variant: "destructive" });
+    }
+  }, [foldersHook, updateResultFolder, toast]);
 
   const handleSubmit = async (data: { prompt: string; imageUrl?: string }) => {
     // Check access: need either API key (BYOK) or credits

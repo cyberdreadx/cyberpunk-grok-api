@@ -175,15 +175,23 @@ function FolderBar({
   const handleCreate = async () => {
     const name = newFolderName.trim();
     if (!name) { setIsCreating(false); return; }
-    await onCreateFolder(name);
-    setNewFolderName("");
-    setIsCreating(false);
+    try {
+      await onCreateFolder(name);
+      setNewFolderName("");
+      setIsCreating(false);
+    } catch (err: any) {
+      console.error("[FolderBar] Create failed:", err.message);
+    }
   };
 
   const handleRename = async (id: string) => {
     const name = editingName.trim();
     if (!name || !onRenameFolder) { setEditingId(null); return; }
-    await onRenameFolder(id, name);
+    try {
+      await onRenameFolder(id, name);
+    } catch (err: any) {
+      console.error("[FolderBar] Rename failed:", err.message);
+    }
     setEditingId(null);
   };
 

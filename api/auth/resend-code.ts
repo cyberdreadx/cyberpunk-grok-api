@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getDb } from "../_lib/db";
 import { generateVerificationCode, sendVerificationEmail } from "../_lib/email";
+import { checkRateLimit, getClientIp } from "../_lib/ratelimit";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === "OPTIONS") return res.status(200).end();
@@ -12,8 +13,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: "Email required" });
     }
 
+    // Rate limit: 3 resends per IP per 5 minutes (roughly 1 per minute)
+    const ip = getClientIp(req);
+    const { allowed } = await checkRateLimit(ip, "resend-code", { max: 3, windowSeconds: 300 });
+    if (!allowed) {
+      return res.status(429).json({ error: "Please wait before requesting another code." });
+    }
+
     const sql = getDb();
     const normalizedEmail = email.toLowerCase().trim();
+
+    // Also rate limit per email: 3 resends per email per 5 minutes
+    const { allowed: emailAllowed } = await checkRateLimit(
+      normalizedEmail, "resend-code-email", { max: 3, windowSeconds: 300 }
+    );
+    if (!emailAllowed) {
+      return res.status(429).json({ error: "Please wait before requesting another code." });
+    }
 
     const rows = await sql`
       SELECT id, email_verified FROM users WHERE email = ${normalizedEmail}
@@ -30,7 +46,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: "Email is already verified" });
     }
 
-    // Generate a fresh code
+    // Generate a fresh code and reset attempts
     const code = generateVerificationCode();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
@@ -38,6 +54,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       UPDATE users
       SET verification_code = ${code},
           verification_code_expires_at = ${expiresAt},
+          verification_attempts = 0,
           updated_at = now()
       WHERE id = ${user.id}
     `;

@@ -69,6 +69,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       default: return res.status(400).json({ error: `Unknown action: ${action}` });
     }
 
+    // Deduct credits BEFORE calling xAI (prevents free usage if deduction fails)
+    try {
+      await sql`SELECT deduct_credits(${auth.userId}::uuid, ${cost})`;
+    } catch (err: any) {
+      console.error("Failed to deduct credits:", err.message);
+      return res.status(402).json({ error: "Failed to deduct credits. " + (err.message || "") });
+    }
+
+    // Helper to refund credits on xAI failure
+    const refundCredits = async () => {
+      try {
+        await sql`SELECT add_pack_credits(${auth.userId}::uuid, ${cost})`;
+        console.log(`Refunded ${cost} credits to ${auth.userId}`);
+      } catch (refundErr: any) {
+        console.error("Failed to refund credits:", refundErr.message);
+      }
+    };
+
     // Forward to xAI
     const xaiResponse = await fetch(`${XAI_API_BASE}${xaiEndpoint}`, {
       method: "POST",
@@ -81,6 +99,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (!xaiResponse.ok) {
       const errText = await xaiResponse.text();
+      await refundCredits();
       return res.status(xaiResponse.status).json({ error: errText });
     }
 
@@ -109,6 +128,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
           if (!pollRes.ok) {
             const errText = await pollRes.text();
+            await refundCredits();
             return res.status(pollRes.status).json({ error: errText });
           }
 
@@ -116,6 +136,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           const status = pollData.status || pollData.state;
 
           if (status === "failed" || status === "error") {
+            await refundCredits();
             return res.status(500).json({ error: pollData.error?.message || "Video generation failed" });
           }
 
@@ -126,13 +147,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           }
         }
       }
-    }
-
-    // Deduct credits
-    try {
-      await sql`SELECT deduct_credits(${auth.userId}::uuid, ${cost})`;
-    } catch (err: any) {
-      console.error("Failed to deduct credits:", err.message);
     }
 
     // Log usage
