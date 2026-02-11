@@ -571,8 +571,8 @@ function FolderBar({
                   className="text-[11px] sm:text-[10px] min-h-[44px] sm:min-h-0 py-2.5 sm:py-1.5 font-mono-share text-muted-foreground focus:bg-muted/50 cursor-pointer"
                   onSelect={() => onToggleFolderHidden(folder.id)}
                 >
-                  <EyeOff className="w-3.5 h-3.5 sm:w-3 sm:h-3 mr-1.5" />
-                  HIDE
+                  <ShieldCheck className="w-3.5 h-3.5 sm:w-3 sm:h-3 mr-1.5" />
+                  VAULT
                 </DropdownMenuItem>
               )}
               {onDeleteFolder && (
@@ -596,16 +596,22 @@ function FolderBar({
         );
       })}
 
-      {/* Hidden folders (DropdownMenu — portals correctly, no overflow issues) */}
+      {/* Vault — discreet access to hidden folders */}
       {hiddenFolders.length > 0 && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className={tabClass(false)}>
-              <EyeOff className="w-3 h-3 mr-1 -mt-0.5" />
-              HIDDEN ({hiddenFolders.length})
+            <button
+              className="px-2 py-2 sm:py-1.5 min-h-[44px] sm:min-h-0 flex items-center gap-1 text-muted-foreground/30 hover:text-muted-foreground/60 transition-colors"
+              title="Vault"
+            >
+              <ShieldCheck className="w-3.5 h-3.5 sm:w-3 sm:h-3" />
+              <span className="text-[8px] font-mono-share opacity-50">{hiddenFolders.length}</span>
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="min-w-[180px] sm:min-w-[140px] bg-card border-border">
+          <DropdownMenuContent align="end" className="min-w-[180px] sm:min-w-[140px] bg-card border-border">
+            <div className="px-3 py-1.5 text-[9px] font-orbitron tracking-wider text-muted-foreground/40 border-b border-border/50 mb-1">
+              VAULT
+            </div>
             {hiddenFolders.map((folder) => (
               <DropdownMenuItem
                 key={folder.id}
@@ -613,7 +619,7 @@ function FolderBar({
                 onSelect={() => onToggleFolderHidden?.(folder.id)}
               >
                 <Eye className="w-3.5 h-3.5 sm:w-3 sm:h-3 mr-1.5" />
-                {folder.name.toUpperCase()} — UNHIDE
+                {folder.name.toUpperCase()} — RESTORE
               </DropdownMenuItem>
             ))}
           </DropdownMenuContent>
