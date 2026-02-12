@@ -19,7 +19,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const url = req.query.url as string;
-    const filename = (req.query.filename as string) || "download";
+    // Sanitize filename: strip path separators, control chars, and double-quotes to prevent header injection
+    const rawFilename = (req.query.filename as string) || "download";
+    const filename = rawFilename
+      .replace(/[/\\:*?"<>|\x00-\x1f\x7f]/g, "_") // strip dangerous chars
+      .replace(/\.{2,}/g, ".") // collapse ".."
+      .slice(0, 200); // cap length
 
     if (!url) return res.status(400).json({ error: "Missing url parameter" });
 

@@ -215,6 +215,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json({ received: true });
   } catch (err: any) {
     console.error("[webhook]", err.message);
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: "Webhook processing failed" });
   }
 }

@@ -9,8 +9,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const { email } = req.body || {};
-    if (!email) {
+    if (!email || typeof email !== "string") {
       return res.status(400).json({ error: "Email required" });
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ error: "Invalid email format" });
     }
 
     // Rate limit: 3 resends per IP per 5 minutes (roughly 1 per minute)

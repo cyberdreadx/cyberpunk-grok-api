@@ -11,8 +11,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const { email, code } = req.body || {};
-    if (!email || !code) {
+    if (!email || typeof email !== "string" || !code || typeof code !== "string") {
       return res.status(400).json({ error: "Email and verification code required" });
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ error: "Invalid email format" });
+    }
+    if (!/^\d{6}$/.test(code.trim())) {
+      return res.status(400).json({ error: "Verification code must be 6 digits" });
     }
 
     // Rate limit: 10 verify attempts per IP per 15 minutes
@@ -71,9 +77,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             updated_at = now()
         WHERE id = ${user.id}
       `;
-      const attemptsLeft = MAX_ATTEMPTS - (user.verification_attempts || 0) - 1;
       return res.status(401).json({
-        error: `Invalid verification code. ${attemptsLeft} attempt${attemptsLeft !== 1 ? "s" : ""} remaining.`,
+        error: "Invalid verification code. Please try again or request a new code.",
       });
     }
 

@@ -6,6 +6,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import Stripe from "stripe";
 import { getDb } from "./_lib/db";
 import { getUserFromRequest } from "./_lib/auth";
+import { checkRateLimit } from "./_lib/ratelimit";
 
 const PACKAGES: Record<string, { priceEnvKey: string; credits: number }> = {
   starter: { priceEnvKey: "STRIPE_PRICE_STARTER", credits: 50 },
@@ -29,6 +30,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const auth = getUserFromRequest(req);
     if (!auth) return res.status(401).json({ error: "Unauthorized" });
+
+    // Rate limit: 10 checkout attempts per user per 5 minutes
+    const { allowed } = await checkRateLimit(auth.userId, "checkout", { max: 10, windowSeconds: 300 });
+    if (!allowed) {
+      return res.status(429).json({ error: "Too many checkout attempts. Please wait a moment." });
+    }
 
     const stripe = new Stripe(STRIPE_SECRET_KEY);
     const sql = getDb();
@@ -108,6 +115,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json({ url: session.url });
   } catch (err: any) {
     console.error("[checkout]", err.message, err.stack);
-    return res.status(500).json({ error: err.message || "Failed to create checkout" });
+    return res.status(500).json({ error: "Failed to create checkout session. Please try again." });
   }
 }

@@ -6,6 +6,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getDb } from "./_lib/db";
 import { getUserFromRequest } from "./_lib/auth";
+import { checkRateLimit } from "./_lib/ratelimit";
 
 const XAI_API_BASE = "https://api.x.ai/v1";
 
@@ -14,15 +15,16 @@ const CREDIT_COSTS = {
   videoPerSecond: 1,
 };
 
-function calculateCost(action: string, imageCount: number, videoDuration: number): number {
+const ALLOWED_ACTIONS = ["generate-image", "edit-image", "generate-video"] as const;
+type AllowedAction = (typeof ALLOWED_ACTIONS)[number];
+
+function calculateCost(action: AllowedAction, imageCount: number, videoDuration: number): number {
   switch (action) {
     case "generate-image":
     case "edit-image":
       return CREDIT_COSTS.image * imageCount;
     case "generate-video":
       return CREDIT_COSTS.videoPerSecond * videoDuration;
-    default:
-      return 1;
   }
 }
 
@@ -40,12 +42,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const auth = getUserFromRequest(req);
     if (!auth) return res.status(401).json({ error: "Unauthorized" });
 
-    const { action, ...params } = req.body || {};
-    if (!action) return res.status(400).json({ error: "Missing 'action' field" });
+    // Rate limit: 60 generate requests per user per 5 minutes
+    const { allowed } = await checkRateLimit(auth.userId, "generate", { max: 60, windowSeconds: 300 });
+    if (!allowed) {
+      return res.status(429).json({ error: "Rate limit reached. Please wait a moment before generating again." });
+    }
 
-    const imageCount = params.n || 1;
-    const videoDuration = params.duration || 5;
-    const cost = calculateCost(action, imageCount, videoDuration);
+    const { action, ...params } = req.body || {};
+
+    // Validate action against whitelist
+    if (!action || !ALLOWED_ACTIONS.includes(action as AllowedAction)) {
+      return res.status(400).json({ error: "Invalid action. Expected: generate-image, edit-image, or generate-video." });
+    }
+
+    // Validate and clamp numeric inputs
+    const imageCount = Math.max(1, Math.min(4, Math.floor(Number(params.n) || 1)));
+    const videoDuration = Math.max(1, Math.min(60, Math.floor(Number(params.duration) || 5)));
+    // Sanitize prompt length (DB column accepts 500 chars max)
+    if (params.prompt && typeof params.prompt === "string" && params.prompt.length > 10000) {
+      return res.status(400).json({ error: "Prompt too long (max 10,000 characters)." });
+    }
+
+    const cost = calculateCost(action as AllowedAction, imageCount, videoDuration);
 
     const sql = getDb();
 
@@ -57,7 +75,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const totalCredits = (rows[0].sub_credits || 0) + (rows[0].pack_credits || 0);
     if (totalCredits < cost) {
-      return res.status(402).json({ error: `Insufficient credits. Need ${cost}, have ${totalCredits}.` });
+      return res.status(402).json({ error: "Insufficient credits. Please purchase more in the Credit Store." });
     }
 
     // Map action to xAI endpoint
@@ -66,7 +84,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       case "generate-image": xaiEndpoint = "/images/generations"; break;
       case "edit-image": xaiEndpoint = "/images/edits"; break;
       case "generate-video": xaiEndpoint = "/videos/generations"; break;
-      default: return res.status(400).json({ error: `Unknown action: ${action}` });
+      default: return res.status(400).json({ error: "Invalid action" }); // unreachable — whitelist above
     }
 
     // Deduct credits BEFORE calling xAI (prevents free usage if deduction fails)
@@ -158,6 +176,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json(xaiData);
   } catch (err: any) {
     console.error("[generate]", err.message);
-    return res.status(500).json({ error: err.message || "Internal server error" });
+    return res.status(500).json({ error: "Generation failed. Please try again." });
   }
 }
