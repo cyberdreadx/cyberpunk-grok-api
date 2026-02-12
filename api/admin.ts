@@ -87,11 +87,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           FROM users
         `;
 
-        // Estimate API cost: ~$0.07 per image, ~$0.10 per video second
+        // Estimate API cost: grok-imagine-image = $0.02/image, grok-imagine-video = $0.05/sec
         const [costEstimate] = await sql`
           SELECT
-            COALESCE(SUM(CASE WHEN mode IN ('generate-image','edit-image') THEN credits_used * 7 ELSE credits_used * 10 END) FILTER (WHERE created_at > now() - interval '30 days'), 0)::int AS estimated_cost_30d_hundredths,
-            COALESCE(SUM(CASE WHEN mode IN ('generate-image','edit-image') THEN credits_used * 7 ELSE credits_used * 10 END), 0)::int AS estimated_cost_total_hundredths
+            COALESCE(SUM(CASE WHEN mode IN ('generate-image','edit-image') THEN credits_used * 2 ELSE credits_used * 5 END) FILTER (WHERE created_at > now() - interval '30 days'), 0)::int AS estimated_cost_30d_hundredths,
+            COALESCE(SUM(CASE WHEN mode IN ('generate-image','edit-image') THEN credits_used * 2 ELSE credits_used * 5 END), 0)::int AS estimated_cost_total_hundredths
           FROM usage_log
         `;
 
