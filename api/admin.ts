@@ -128,12 +128,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       case "users": {
         const rows = await sql`
           SELECT
-            date_trunc('day', created_at)::date AS day,
-            COUNT(*)::int AS new_users,
-            SUM(COUNT(*)) OVER (ORDER BY date_trunc('day', created_at))::int AS cumulative
-          FROM users
-          GROUP BY 1
-          ORDER BY 1
+            day,
+            new_users,
+            SUM(new_users) OVER (ORDER BY day)::int AS cumulative
+          FROM (
+            SELECT
+              date_trunc('day', created_at)::date AS day,
+              COUNT(*)::int AS new_users
+            FROM users
+            GROUP BY 1
+          ) daily
+          ORDER BY day
         `;
         return res.status(200).json({ users: rows });
       }
@@ -166,8 +171,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             t.amount_cents,
             CASE
               WHEN t.stripe_session_id IS NOT NULL THEN 'stripe'
-              WHEN t.paypal_capture_id IS NOT NULL THEN 'paypal'
-              ELSE 'unknown'
+              ELSE 'other'
             END AS gateway
           FROM transactions t
           LEFT JOIN users u ON u.id = t.user_id
