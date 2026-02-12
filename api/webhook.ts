@@ -77,11 +77,58 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({ received: true, duplicate: true });
     }
 
-    // ── checkout.session.completed: one-time pack purchase ──
+    // ── checkout.session.completed: pack purchase + subscription fallback grant ──
     if (event.type === "checkout.session.completed") {
       const session = event.data.object as Stripe.Checkout.Session;
       if (session.mode === "subscription") {
-        return res.status(200).json({ received: true }); // handled by invoice.paid
+        // Primary subscription handling is invoice.paid, but this fallback grants initial
+        // credits in case invoice events are delayed/missed.
+        const metadata = session.metadata || {};
+        let userId = session.client_reference_id || metadata.user_id || "";
+        let tier = metadata.tier || "";
+        let creditsPerMonth = parseInt(metadata.credits_per_month || "0", 10);
+        let renewsAt: string | null = null;
+
+        const subscriptionId = typeof session.subscription === "string" ? session.subscription : null;
+        if (subscriptionId) {
+          try {
+            const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+            userId = userId || subscription.metadata?.user_id || "";
+            tier = tier || subscription.metadata?.tier || "";
+            const subMetaCredits = parseInt(subscription.metadata?.credits_per_month || "0", 10);
+            if (subMetaCredits > 0) creditsPerMonth = subMetaCredits;
+            const currentPeriodEnd = (subscription as any).current_period_end as number | undefined;
+            if (currentPeriodEnd) {
+              renewsAt = new Date(currentPeriodEnd * 1000).toISOString();
+            }
+          } catch (subErr: any) {
+            console.warn("[webhook] subscription fallback lookup failed:", subErr.message);
+          }
+        }
+
+        if (creditsPerMonth <= 0 && tier) {
+          creditsPerMonth = TIER_CREDITS[tier] || 0;
+        }
+        if (!userId || !tier || creditsPerMonth <= 0) {
+          console.error("checkout.session.completed(subscription): missing metadata", {
+            userId,
+            tier,
+            creditsPerMonth,
+            sessionId: session.id,
+          });
+          return res.status(200).json({ received: true });
+        }
+
+        await sql`SELECT reset_sub_credits(${userId}::uuid, ${creditsPerMonth}, ${tier}, ${renewsAt}::timestamptz)`;
+        if (session.customer) {
+          await sql`UPDATE users SET stripe_customer_id = ${session.customer as string} WHERE id = ${userId}::uuid`;
+        }
+        await sql`
+          INSERT INTO transactions (user_id, credits, amount_cents, stripe_session_id, package, type)
+          VALUES (${userId}::uuid, ${creditsPerMonth}, ${session.amount_total || 0}, ${session.id}, ${tier}, 'subscription')
+        `;
+        console.log(`Fallback: set sub_credits to ${creditsPerMonth} for ${userId} (${tier})`);
+        return res.status(200).json({ received: true });
       }
 
       const userId = session.client_reference_id || session.metadata?.user_id;
