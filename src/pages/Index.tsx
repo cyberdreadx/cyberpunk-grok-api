@@ -1,5 +1,5 @@
 import React, { useState, useCallback, Suspense } from "react";
-import { Terminal, Key, Coins, Shield, Eye, MessageCircle } from "lucide-react";
+import { Terminal, Key, Coins, Shield, Eye, MessageCircle, HelpCircle } from "lucide-react";
 import CyberLayout from "@/components/CyberLayout";
 
 // Lazy-load the 3D orb — Three.js is ~800 KB and not needed for initial render
@@ -14,6 +14,7 @@ import ApiKeyDialog from "@/components/ApiKeyDialog";
 import AuthDialog from "@/components/AuthDialog";
 import CreditDisplay from "@/components/CreditDisplay";
 import LegalDialog from "@/components/LegalDialog";
+import HowToUseDialog from "@/components/HowToUseDialog";
 import { useGrokApi, type GrokMode, type GenerationSettings, type VideoSettings, type ApiMode, DEFAULT_SETTINGS, DEFAULT_VIDEO_SETTINGS } from "@/hooks/useGrokApi";
 import { useAuth } from "@/hooks/useAuth";
 import { useCredits } from "@/hooks/useCredits";
@@ -80,9 +81,10 @@ const Index = () => {
   const [activePrompt, setActivePrompt] = useState("");
   const [activeImageUrl, setActiveImageUrl] = useState("");
 
-  // Legal dialog state
+  // Legal & guide dialog state
   const [tosOpen, setTosOpen] = useState(false);
   const [privacyOpen, setPrivacyOpen] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(() => !localStorage.getItem("how-to-use-seen"));
   const [apiKeySet, setApiKeySet] = useState(() => hasApiKey());
 
   // Automatically switch to credits mode when user is logged in and doesn't have a BYOK key
@@ -445,6 +447,14 @@ const Index = () => {
           </p>
           <div className="flex items-center justify-center gap-3 font-mono-share text-[10px]">
             <button
+              onClick={() => setGuideOpen(true)}
+              className="flex items-center gap-1 text-muted-foreground/40 hover:text-primary transition-colors"
+            >
+              <HelpCircle className="w-3 h-3" />
+              GUIDE
+            </button>
+            <span className="text-border/50">|</span>
+            <button
               onClick={() => setTosOpen(true)}
               className="flex items-center gap-1 text-muted-foreground/40 hover:text-primary transition-colors"
             >
@@ -472,7 +482,8 @@ const Index = () => {
           </div>
         </footer>
 
-        {/* Legal Dialogs */}
+        {/* Dialogs */}
+        <HowToUseDialog open={guideOpen} onOpenChange={setGuideOpen} />
         <LegalDialog type="tos" open={tosOpen} onOpenChange={setTosOpen} />
         <LegalDialog type="privacy" open={privacyOpen} onOpenChange={setPrivacyOpen} />
       </div>
