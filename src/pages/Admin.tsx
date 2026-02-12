@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Users,
@@ -14,6 +14,9 @@ import {
   Loader2,
   ShieldAlert,
   Receipt,
+  ShieldX,
+  Ban,
+  Flame,
 } from "lucide-react";
 import {
   AreaChart,
@@ -44,12 +47,22 @@ function fmtDate(d: string): string {
 
 // â”€â”€ Types â”€â”€
 
+interface ModerationOffender {
+  email: string; block_count: number; credits_burned: number; last_block: string;
+}
+interface ModerationStats {
+  total_blocks: number; blocks_30d: number; blocks_today: number;
+  total_credits_burned: number; credits_burned_30d: number;
+  wasted_cost_total_cents: number; wasted_cost_30d_cents: number;
+  offenders: ModerationOffender[];
+}
 interface Overview {
   users: { total_users: number; verified_users: number; active_subscribers: number; new_today: number; new_this_week: number };
   revenue: { total_revenue_cents: number; revenue_30d_cents: number; revenue_7d_cents: number; total_transactions: number; pack_purchases: number; sub_renewals: number };
   usage: { total_credits_used: number; credits_30d: number; credits_today: number; total_generations: number; generations_today: number };
   creditPool: { total_sub_credits_outstanding: number; total_pack_credits_outstanding: number };
   apiCost: { estimated30dCents: number; estimatedTotalCents: number };
+  moderation: ModerationStats;
 }
 
 interface RevenueRow { day: string; revenue_cents: number; tx_count: number; packs: number; subs: number }
@@ -281,6 +294,56 @@ export default function Admin() {
           <KpiCard icon={<Activity className="w-4 h-4" />} label="CREDITS_OUTSTANDING" value={(o.creditPool.total_sub_credits_outstanding + o.creditPool.total_pack_credits_outstanding).toLocaleString()} sub={`${o.creditPool.total_sub_credits_outstanding} sub + ${o.creditPool.total_pack_credits_outstanding} pack`} />
           <KpiCard icon={<DollarSign className="w-4 h-4" />} label="REVENUE_7D" value={fmt$(o.revenue.revenue_7d_cents)} sub={`${o.revenue.total_transactions} total txns`} accent="secondary" />
         </section>
+
+        {/* Moderation Defense */}
+        {o.moderation && (
+          <section className="border border-red-500/30 rounded-lg bg-red-950/10 backdrop-blur-sm overflow-hidden">
+            <div className="px-3 sm:px-4 py-3 border-b border-red-500/20 flex items-center justify-between">
+              <h2 className="font-orbitron text-xs tracking-wider text-red-400 flex items-center gap-2">
+                <ShieldX className="w-3.5 h-3.5" />
+                MODERATION_DEFENSE
+              </h2>
+              <span className="font-mono-share text-[9px] text-red-400/60">
+                credits burned = not refunded to user
+              </span>
+            </div>
+            <div className="p-3 sm:p-4 space-y-3">
+              {/* Moderation KPIs */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
+                <KpiCard icon={<Ban className="w-4 h-4" />} label="BLOCKS_30D" value={o.moderation.blocks_30d} sub={`${o.moderation.blocks_today} today // ${o.moderation.total_blocks} total`} accent="destructive" />
+                <KpiCard icon={<Flame className="w-4 h-4" />} label="CREDITS_BURNED_30D" value={o.moderation.credits_burned_30d} sub={`${o.moderation.total_credits_burned} lifetime (not refunded)`} accent="destructive" />
+                <KpiCard icon={<CreditCard className="w-4 h-4" />} label="WASTED_API_COST_30D" value={fmt$(o.moderation.wasted_cost_30d_cents)} sub={`${fmt$(o.moderation.wasted_cost_total_cents)} lifetime (xAI still charges)`} accent="destructive" />
+                <KpiCard icon={<ShieldAlert className="w-4 h-4" />} label="COOLDOWN_THRESHOLD" value="3 blocks/hr" sub="auto-blocks repeat offenders" accent="destructive" />
+              </div>
+              {/* Top Offenders */}
+              {o.moderation.offenders && o.moderation.offenders.length > 0 && (
+                <div className="overflow-x-auto overscroll-x-contain">
+                  <table className="w-full min-w-[400px]">
+                    <thead>
+                      <tr className="border-b border-red-500/20">
+                        {["OFFENDER", "BLOCKS", "CREDITS_BURNED", "LAST_BLOCK"].map((h) => (
+                          <th key={h} className="px-2.5 py-2 text-left font-mono-share text-[9px] text-red-400/50 tracking-wider">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {o.moderation.offenders.map((off, i) => (
+                        <tr key={i} className="border-b border-red-500/10 hover:bg-red-500/5 transition-colors">
+                          <td className="px-2.5 py-2 font-mono-share text-xs text-foreground/80">{off.email}</td>
+                          <td className="px-2.5 py-2 font-mono-share text-xs text-red-400 font-bold">{off.block_count}</td>
+                          <td className="px-2.5 py-2 font-mono-share text-xs text-red-400">{off.credits_burned}</td>
+                          <td className="px-2.5 py-2 font-mono-share text-[10px] text-muted-foreground/50">
+                            {off.last_block ? new Date(off.last_block).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
 
         {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">

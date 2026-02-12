@@ -1,6 +1,11 @@
 /**
  * /api/generate — Proxy xAI requests for credit-mode users.
  * Verifies JWT, checks credits, forwards to xAI, deducts on success.
+ *
+ * MODERATION DEFENSE:
+ * - xAI charges $0.05 per moderated image (2.5x normal) and $0.05/sec for video.
+ * - If xAI blocks a request for guideline violations, we do NOT refund credits.
+ * - Repeat offenders get a cooldown (blocked from generating).
  */
 
 import type { VercelRequest, VercelResponse } from "@vercel/node";
@@ -27,6 +32,45 @@ function calculateCost(action: AllowedAction, imageCount: number, videoDuration:
       return CREDIT_COSTS.videoPerSecond * videoDuration;
   }
 }
+
+// ── Moderation Detection ──
+// xAI returns errors containing these terms when content is blocked
+const MODERATION_KEYWORDS = [
+  "moderat",        // moderated, moderation
+  "content_policy",
+  "content policy",
+  "safety",
+  "blocked",
+  "unsafe",
+  "guideline",
+  "inappropriate",
+  "not allowed",
+  "violat",         // violation, violates
+  "prohibited",
+  "restricted",
+  "harmful",
+  "explicit",
+  "rejected",
+];
+
+function isModerationError(errorText: string): boolean {
+  const lower = errorText.toLowerCase();
+  return MODERATION_KEYWORDS.some((kw) => lower.includes(kw));
+}
+
+// Map generation action → moderation log mode
+function moderationMode(action: string): string {
+  switch (action) {
+    case "generate-image": return "moderation-image";
+    case "edit-image": return "moderation-edit";
+    case "generate-video": return "moderation-video";
+    default: return "moderation-unknown";
+  }
+}
+
+// Max moderation blocks per user per hour before cooldown kicks in
+const MODERATION_COOLDOWN_THRESHOLD = 3;
+const MODERATION_COOLDOWN_WINDOW_HOURS = 1;
 
 // Video generation can take minutes — increase timeout
 export const config = { maxDuration: 300 };
@@ -64,8 +108,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const cost = calculateCost(action as AllowedAction, imageCount, videoDuration);
-
     const sql = getDb();
+
+    // ── Moderation cooldown check ──
+    // If user has hit too many moderation blocks recently, temporarily block them
+    const [modCount] = await sql`
+      SELECT COUNT(*)::int AS strikes
+      FROM usage_log
+      WHERE user_id = ${auth.userId}::uuid
+        AND mode LIKE 'moderation-%'
+        AND created_at > now() - interval '1 hour'
+    `;
+    if (modCount && modCount.strikes >= MODERATION_COOLDOWN_THRESHOLD) {
+      return res.status(429).json({
+        error: `Content policy cooldown active. You've had ${modCount.strikes} blocked requests in the last hour. Please review xAI's content guidelines and try again later.`,
+      });
+    }
 
     // Check credit balance
     const rows = await sql`
@@ -95,13 +153,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(402).json({ error: "Failed to deduct credits. " + (err.message || "") });
     }
 
-    // Helper to refund credits on xAI failure
+    // Helper to refund credits on LEGITIMATE xAI failure (NOT moderation)
     const refundCredits = async () => {
       try {
         await sql`SELECT add_pack_credits(${auth.userId}::uuid, ${cost})`;
         console.log(`Refunded ${cost} credits to ${auth.userId}`);
       } catch (refundErr: any) {
         console.error("Failed to refund credits:", refundErr.message);
+      }
+    };
+
+    // Helper to log a moderation block (credits NOT refunded)
+    const logModerationBlock = async (errText: string) => {
+      try {
+        const modMode = moderationMode(action);
+        const promptSnippet = (params.prompt || "").slice(0, 500);
+        await sql`
+          INSERT INTO usage_log (user_id, mode, credits_used, prompt)
+          VALUES (${auth.userId}::uuid, ${modMode}, ${cost}, ${promptSnippet})
+        `;
+        console.warn(`[moderation-block] user=${auth.userId} mode=${modMode} cost=${cost} err=${errText.slice(0, 200)}`);
+      } catch (logErr: any) {
+        console.error("Failed to log moderation block:", logErr.message);
       }
     };
 
@@ -117,6 +190,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (!xaiResponse.ok) {
       const errText = await xaiResponse.text();
+
+      // Check if this was a moderation / content policy block
+      if (isModerationError(errText)) {
+        // ❌ NO REFUND — user loses credits as penalty for policy violation
+        await logModerationBlock(errText);
+        return res.status(451).json({
+          error: "Your request was blocked by xAI's content policy. Credits were NOT refunded. Repeated violations will result in a temporary cooldown. Please review the content guidelines.",
+          moderated: true,
+        });
+      }
+
+      // Legitimate API error → refund credits
       await refundCredits();
       return res.status(xaiResponse.status).json({ error: errText });
     }
@@ -146,6 +231,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
           if (!pollRes.ok) {
             const errText = await pollRes.text();
+            // Check moderation on polling failure too
+            if (isModerationError(errText)) {
+              await logModerationBlock(errText);
+              return res.status(451).json({
+                error: "Your video was blocked by xAI's content policy. Credits were NOT refunded.",
+                moderated: true,
+              });
+            }
             await refundCredits();
             return res.status(pollRes.status).json({ error: errText });
           }
@@ -154,8 +247,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           const status = pollData.status || pollData.state;
 
           if (status === "failed" || status === "error") {
+            const failMsg = pollData.error?.message || "Video generation failed";
+            // Check moderation on video failure
+            if (isModerationError(failMsg)) {
+              await logModerationBlock(failMsg);
+              return res.status(451).json({
+                error: "Your video was blocked by xAI's content policy. Credits were NOT refunded.",
+                moderated: true,
+              });
+            }
             await refundCredits();
-            return res.status(500).json({ error: pollData.error?.message || "Video generation failed" });
+            return res.status(500).json({ error: failMsg });
           }
 
           const url = pollData.video?.url || pollData.video_url || pollData.url;
@@ -167,7 +269,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
-    // Log usage
+    // Log successful usage
     await sql`
       INSERT INTO usage_log (user_id, mode, credits_used, prompt)
       VALUES (${auth.userId}::uuid, ${action}, ${cost}, ${(params.prompt || "").slice(0, 500)})

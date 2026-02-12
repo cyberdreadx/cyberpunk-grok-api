@@ -1,4 +1,4 @@
-﻿/**
+/**
  * /api/admin â€” Admin dashboard stats + health check.
  *
  * GET  (no auth)         â†’ health check
@@ -87,12 +87,60 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           FROM users
         `;
 
-        // Estimate API cost: grok-imagine-image = $0.02/image, grok-imagine-video = $0.05/sec
+        // Estimate API cost:
+        //   Successful images: $0.02/image (2 cents)
+        //   Moderated images: $0.05/image (5 cents) — xAI charges more for blocked content!
+        //   Video: $0.05/sec (5 cents) — same whether successful or blocked
         const [costEstimate] = await sql`
           SELECT
-            COALESCE(SUM(CASE WHEN mode IN ('generate-image','edit-image') THEN credits_used * 2 ELSE credits_used * 5 END) FILTER (WHERE created_at > now() - interval '30 days'), 0)::int AS estimated_cost_30d_cents,
-            COALESCE(SUM(CASE WHEN mode IN ('generate-image','edit-image') THEN credits_used * 2 ELSE credits_used * 5 END), 0)::int AS estimated_cost_total_cents
+            COALESCE(SUM(
+              CASE
+                WHEN mode IN ('moderation-image','moderation-edit') THEN credits_used * 5
+                WHEN mode IN ('generate-image','edit-image') THEN credits_used * 2
+                ELSE credits_used * 5
+              END
+            ) FILTER (WHERE created_at > now() - interval '30 days'), 0)::int AS estimated_cost_30d_cents,
+            COALESCE(SUM(
+              CASE
+                WHEN mode IN ('moderation-image','moderation-edit') THEN credits_used * 5
+                WHEN mode IN ('generate-image','edit-image') THEN credits_used * 2
+                ELSE credits_used * 5
+              END
+            ), 0)::int AS estimated_cost_total_cents
           FROM usage_log
+        `;
+
+        // Moderation stats
+        const [moderationStats] = await sql`
+          SELECT
+            COUNT(*)::int AS total_blocks,
+            COUNT(*) FILTER (WHERE created_at > now() - interval '30 days')::int AS blocks_30d,
+            COUNT(*) FILTER (WHERE created_at > now() - interval '24 hours')::int AS blocks_today,
+            COALESCE(SUM(credits_used), 0)::int AS total_credits_burned,
+            COALESCE(SUM(credits_used) FILTER (WHERE created_at > now() - interval '30 days'), 0)::int AS credits_burned_30d,
+            COALESCE(SUM(
+              CASE WHEN mode IN ('moderation-image','moderation-edit') THEN credits_used * 5 ELSE credits_used * 5 END
+            ), 0)::int AS wasted_cost_total_cents,
+            COALESCE(SUM(
+              CASE WHEN mode IN ('moderation-image','moderation-edit') THEN credits_used * 5 ELSE credits_used * 5 END
+            ) FILTER (WHERE created_at > now() - interval '30 days'), 0)::int AS wasted_cost_30d_cents
+          FROM usage_log
+          WHERE mode LIKE 'moderation-%'
+        `;
+
+        // Top moderation offenders
+        const moderationOffenders = await sql`
+          SELECT
+            u.email,
+            COUNT(*)::int AS block_count,
+            COALESCE(SUM(ul.credits_used), 0)::int AS credits_burned,
+            MAX(ul.created_at) AS last_block
+          FROM usage_log ul
+          JOIN users u ON u.id = ul.user_id
+          WHERE ul.mode LIKE 'moderation-%'
+          GROUP BY u.email
+          ORDER BY block_count DESC
+          LIMIT 10
         `;
 
         return res.status(200).json({
@@ -103,6 +151,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           apiCost: {
             estimated30dCents: costEstimate.estimated_cost_30d_cents,
             estimatedTotalCents: costEstimate.estimated_cost_total_cents,
+          },
+          moderation: {
+            ...moderationStats,
+            offenders: moderationOffenders,
           },
         });
       }
