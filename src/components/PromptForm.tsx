@@ -19,6 +19,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
   const [imageUrl, setImageUrl] = useState(initialImageUrl || "");
   const [imageSource, setImageSource] = useState<"url" | "upload">(initialImageUrl ? "url" : "upload");
   const [uploadPreview, setUploadPreview] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -36,23 +37,57 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
 
   const needsImage = mode === "edit-image" || mode === "image-to-video";
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const isHeicLike = (file: File): boolean => {
+    const type = (file.type || "").toLowerCase();
+    const name = (file.name || "").toLowerCase();
+    return type === "image/heic" || type === "image/heif" || name.endsWith(".heic") || name.endsWith(".heif");
+  };
+
+  const readBlobAsDataUrl = (blob: Blob): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(blob);
+    });
+
+  const fileToDataUrl = async (file: File): Promise<string> => {
+    if (!isHeicLike(file)) {
+      return readBlobAsDataUrl(file);
+    }
+    // HEIC/HEIF is often unsupported in browser decoders; convert to JPEG first.
+    const { default: heic2any } = await import("heic2any");
+    const converted = await heic2any({
+      blob: file,
+      toType: "image/jpeg",
+      quality: 0.92,
+    });
+    const convertedBlob = Array.isArray(converted) ? converted[0] : converted;
+    return readBlobAsDataUrl(convertedBlob as Blob);
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) return;
+    setUploadError(null);
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result as string;
+    try {
+      const dataUrl = await fileToDataUrl(file);
       setImageUrl(dataUrl);
       setUploadPreview(dataUrl);
-    };
-    reader.readAsDataURL(file);
+      setImageSource("upload");
+    } catch (err: any) {
+      console.error("[PromptForm] Upload conversion failed:", err?.message || err);
+      setUploadError("Could not read this image format. Try JPEG/PNG/WebP, or convert HEIC to JPEG.");
+      clearUpload();
+    }
   };
 
   const clearUpload = () => {
     setImageUrl("");
     setUploadPreview(null);
+    setUploadError(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -82,14 +117,17 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
         e.preventDefault();
         const file = item.getAsFile();
         if (!file) return;
-        const reader = new FileReader();
-        reader.onload = () => {
-          const dataUrl = reader.result as string;
-          setImageUrl(dataUrl);
-          setUploadPreview(dataUrl);
-          setImageSource("upload");
-        };
-        reader.readAsDataURL(file);
+        setUploadError(null);
+        fileToDataUrl(file)
+          .then((dataUrl) => {
+            setImageUrl(dataUrl);
+            setUploadPreview(dataUrl);
+            setImageSource("upload");
+          })
+          .catch((err: any) => {
+            console.error("[PromptForm] Paste conversion failed:", err?.message || err);
+            setUploadError("Clipboard image format is unsupported. Try JPEG/PNG/WebP.");
+          });
         return;
       }
     }
@@ -167,17 +205,20 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
                 >
                   <ImagePlus className="w-5 h-5 text-muted-foreground" />
                   <span className="font-mono-share text-[10px] text-muted-foreground">
-                    Click to upload or paste (Ctrl+V)
+                    Click to upload or paste (Ctrl+V) — HEIC auto-converts
                   </span>
                 </button>
               )}
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/*,.heic,.heif"
                 onChange={handleFileChange}
                 className="hidden"
               />
+              {uploadError && (
+                <p className="mt-1 font-mono-share text-[10px] text-destructive/80">{uploadError}</p>
+              )}
             </div>
           ) : (
             <Input

@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import { Download, Maximize2, X, Trash2, ExternalLink, ChevronLeft, ChevronRight, Pencil, Film, Copy, Check, FolderPlus, FolderOpen, MoreVertical, FolderInput, Lock, LockOpen, ShieldCheck, Eye, EyeOff, ChevronDown, ChevronRight } from "lucide-react";
+import { Download, Maximize2, X, Trash2, ExternalLink, ChevronLeft, ChevronRight, Pencil, Film, Copy, Check, FolderPlus, FolderOpen, MoreVertical, FolderInput, Lock, LockOpen, ShieldCheck, Eye, EyeOff, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,

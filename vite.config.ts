@@ -50,6 +50,9 @@ export default defineConfig(({ mode }) => ({
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+        // Lazy-loaded chunks: skip precache to keep PWA install lightweight.
+        // heic2any (~1.3 MB) loaded only for HEIC uploads; vendor-3d (~800 KB) loaded for 3D orb.
+        globIgnores: ["**/heic2any-*.js", "**/vendor-3d-*.js"],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
@@ -74,15 +77,17 @@ export default defineConfig(({ mode }) => ({
     }),
   ].filter(Boolean),
   build: {
-    chunkSizeWarningLimit: 850,
+    // heic2any (~1.3 MB) is lazy-loaded on demand only; vendor-3d (~800 KB) is lazy via GrokOrb.
+    // Both are fine — suppress the warning.
+    chunkSizeWarningLimit: 1400,
     rollupOptions: {
       output: {
         manualChunks(id) {
           if (id.includes("node_modules")) {
             if (id.includes("three") || id.includes("@react-three")) return "vendor-3d";
             if (id.includes("recharts") || id.includes("d3-")) return "vendor-charts";
-            if (id.includes("react-dom")) return "vendor-react";
-            if (id.includes("@radix-ui")) return "vendor-ui";
+            // Keep react-dom and radix-ui together to avoid circular chunk deps
+            if (id.includes("react-dom") || id.includes("@radix-ui")) return "vendor-ui";
           }
         },
       },

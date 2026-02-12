@@ -1,4 +1,4 @@
-﻿/**
+/**
  * POST /api/paypal -- Unified PayPal handler for credit pack purchases.
  * Routes on body.action:
  *   "create"  -> create a PayPal order (returns { orderId })
@@ -71,13 +71,6 @@ async function handleCapture(
   try {
     const { captureId, customId } = await capturePayPalOrder(orderId);
 
-    const existing = await sql`
-      SELECT id FROM transactions WHERE paypal_capture_id = ${captureId} LIMIT 1
-    `;
-    if (existing.length > 0) {
-      return res.status(200).json({ success: true, credits: "already_added" });
-    }
-
     let userId: string;
     let packageId: string;
     let credits: number;
@@ -101,11 +94,28 @@ async function handleCapture(
     const pkg = PACKAGES[packageId];
     const amountCents = pkg ? pkg.priceCents : 0;
 
-    await sql`SELECT add_pack_credits(${userId}::uuid, ${credits})`; 
-    await sql`
-      INSERT INTO transactions (user_id, credits, amount_cents, paypal_capture_id, package, type)
-      VALUES (${userId}::uuid, ${credits}, ${amountCents}, ${captureId}, ${packageId}, 'pack')
+    // Atomic + idempotent: insert transaction first, then add credits only if inserted.
+    const rows = await sql`
+      WITH ins AS (
+        INSERT INTO transactions (user_id, credits, amount_cents, paypal_capture_id, package, type)
+        VALUES (${userId}::uuid, ${credits}, ${amountCents}, ${captureId}, ${packageId}, 'pack')
+        ON CONFLICT DO NOTHING
+        RETURNING user_id, credits
+      ), upd AS (
+        UPDATE users
+        SET pack_credits = pack_credits + (SELECT credits FROM ins),
+            updated_at = now()
+        WHERE id = ${userId}::uuid
+          AND EXISTS (SELECT 1 FROM ins)
+        RETURNING id
+      )
+      SELECT EXISTS(SELECT 1 FROM ins) AS inserted
     `;
+
+    const inserted = !!rows?.[0]?.inserted;
+    if (!inserted) {
+      return res.status(200).json({ success: true, credits: "already_added" });
+    }
     console.log("[paypal/capture] Added " + credits + " pack credits to " + userId);
 
     return res.status(200).json({ success: true, credits });

@@ -113,6 +113,47 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
             )}
           </div>
 
+          {/* Active subscription management — shown prominently before pricing */}
+          {subscriptionTier && (
+            <div className="mt-3 border border-primary/30 rounded-lg bg-primary/5 p-3 space-y-2.5">
+              <div className="flex items-center gap-2">
+                <Crown className="w-4 h-4 text-primary" />
+                <span className="font-orbitron text-xs tracking-wider text-primary">
+                  ACTIVE_PLAN: {subscriptionTier.toUpperCase()}
+                </span>
+                {renewsLabel && (
+                  <span className="font-mono-share text-[10px] text-muted-foreground/60 ml-auto">
+                    renews {renewsLabel}
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onManageSubscription}
+                  className="font-mono-share text-xs gap-1.5 border-primary/30 hover:bg-primary/10"
+                >
+                  <Settings className="w-3.5 h-3.5" />
+                  MANAGE_BILLING
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onManageSubscription}
+                  className="font-mono-share text-xs gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                >
+                  <XCircle className="w-3.5 h-3.5" />
+                  CANCEL_SUBSCRIPTION
+                </Button>
+              </div>
+              <p className="font-mono-share text-[10px] text-muted-foreground/50 leading-relaxed">
+                Manage billing, update payment method, or cancel your subscription via the Stripe portal.
+                Cancellation takes effect at the end of your current billing period.
+              </p>
+            </div>
+          )}
+
           <div className="mt-4">
             {paypalClientId ? (
               <PayPalScriptProvider
@@ -155,28 +196,10 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
             )}
           </div>
 
-          <div className="border-t border-border pt-3 mt-2 space-y-2">
+          <div className="border-t border-border pt-3 mt-2">
             <p className="text-[10px] font-mono-share text-muted-foreground/60 leading-relaxed">
               Payments processed securely via Stripe{paypalClientId ? " and PayPal" : ""}. Pack credits never expire. Subscription credits reset each billing cycle (no rollover).
             </p>
-            {subscriptionTier && (
-              <div className="flex flex-wrap gap-3">
-                <button
-                  onClick={onManageSubscription}
-                  className="flex items-center gap-1 text-[10px] font-mono-share text-primary/60 hover:text-primary transition-colors"
-                >
-                  <Settings className="w-3 h-3" />
-                  Manage subscription / billing
-                </button>
-                <button
-                  onClick={onManageSubscription}
-                  className="flex items-center gap-1 text-[10px] font-mono-share text-destructive/80 hover:text-destructive transition-colors"
-                >
-                  <XCircle className="w-3 h-3" />
-                  Cancel subscription
-                </button>
-              </div>
-            )}
           </div>
         </DialogContent>
       </Dialog>

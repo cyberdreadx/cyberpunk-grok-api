@@ -81,6 +81,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (event.type === "checkout.session.completed") {
       const session = event.data.object as Stripe.Checkout.Session;
       if (session.mode === "subscription") {
+        // Only grant fallback credits when Stripe marks checkout as paid.
+        if (session.payment_status !== "paid") {
+          console.log("[webhook] subscription checkout completed but not paid yet:", session.id, session.payment_status);
+          return res.status(200).json({ received: true });
+        }
+
         // Primary subscription handling is invoice.paid, but this fallback grants initial
         // credits in case invoice events are delayed/missed.
         const metadata = session.metadata || {};
@@ -140,12 +146,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json({ received: true });
       }
 
-      await sql`SELECT add_pack_credits(${userId}::uuid, ${credits})`;
-      await sql`
-        INSERT INTO transactions (user_id, credits, amount_cents, stripe_session_id, package, type)
-        VALUES (${userId}::uuid, ${credits}, ${session.amount_total || 0}, ${session.id}, ${packageId}, 'pack')
+      // Atomic + idempotent: insert transaction first, then add credits only if inserted.
+      const rows = await sql`
+        WITH ins AS (
+          INSERT INTO transactions (user_id, credits, amount_cents, stripe_session_id, package, type)
+          VALUES (${userId}::uuid, ${credits}, ${session.amount_total || 0}, ${session.id}, ${packageId}, 'pack')
+          ON CONFLICT DO NOTHING
+          RETURNING user_id, credits
+        ), upd AS (
+          UPDATE users
+          SET pack_credits = pack_credits + (SELECT credits FROM ins),
+              updated_at = now()
+          WHERE id = ${userId}::uuid
+            AND EXISTS (SELECT 1 FROM ins)
+          RETURNING id
+        )
+        SELECT EXISTS(SELECT 1 FROM ins) AS inserted
       `;
-      console.log(`Added ${credits} pack credits to ${userId}`);
+      const inserted = !!rows?.[0]?.inserted;
+      if (inserted) {
+        console.log(`Added ${credits} pack credits to ${userId}`);
+      } else {
+        console.log(`[webhook] Duplicate pack transaction skipped for session ${session.id}`);
+      }
     }
 
     // ── invoice.paid: subscription renewal → reset sub_credits ──

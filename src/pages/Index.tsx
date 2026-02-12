@@ -1,7 +1,9 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, Suspense } from "react";
 import { Terminal, Key, Coins, Shield, Eye, MessageCircle } from "lucide-react";
 import CyberLayout from "@/components/CyberLayout";
-import GrokOrb from "@/components/GrokOrb";
+
+// Lazy-load the 3D orb — Three.js is ~800 KB and not needed for initial render
+const GrokOrb = React.lazy(() => import("@/components/GrokOrb"));
 import GlitchText from "@/components/GlitchText";
 import ModeSelector from "@/components/ModeSelector";
 import PromptForm from "@/components/PromptForm";
@@ -222,9 +224,11 @@ const Index = () => {
       <div className="max-w-5xl mx-auto px-3 sm:px-4 py-4 sm:py-8 space-y-4 sm:space-y-6">
         {/* Header with Orb */}
         <header className="text-center space-y-2 animate-slide-up">
-          {/* Grok Orb */}
+          {/* Grok Orb — lazy-loaded (Three.js) */}
           <div className="w-32 h-32 sm:w-48 sm:h-48 md:w-64 md:h-64 mx-auto">
-            <GrokOrb isGenerating={isLoading} />
+            <Suspense fallback={<div className="w-full h-full rounded-full bg-primary/5 animate-pulse" />}>
+              <GrokOrb isGenerating={isLoading} />
+            </Suspense>
           </div>
 
           <GlitchText

@@ -5,7 +5,6 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Shield, Eye } from "lucide-react";
 
 type LegalType = "tos" | "privacy";
@@ -405,9 +404,9 @@ export default function LegalDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className={`bg-card ${borderClass} sm:max-w-2xl max-h-[85vh] flex flex-col`}
+        className={`bg-card ${borderClass} sm:max-w-2xl max-h-[85vh] !flex flex-col`}
       >
-        <DialogHeader>
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle
             className={`font-orbitron tracking-wider flex items-center gap-2 ${accentClass}`}
           >
@@ -420,9 +419,9 @@ export default function LegalDialog({
               : "// data_handling_manifest -- your privacy matters to us"}
           </DialogDescription>
         </DialogHeader>
-        <ScrollArea className="flex-1 max-h-[65vh] pr-4">
+        <div className="flex-1 min-h-0 overflow-y-auto pr-2 -mr-2 overscroll-contain">
           {isTos ? <TosContent /> : <PrivacyContent />}
-        </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
   );
