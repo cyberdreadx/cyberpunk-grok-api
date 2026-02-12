@@ -68,10 +68,6 @@ function moderationMode(action: string): string {
   }
 }
 
-// Max moderation blocks per user per hour before cooldown kicks in
-const MODERATION_COOLDOWN_THRESHOLD = 3;
-const MODERATION_COOLDOWN_WINDOW_HOURS = 1;
-
 // Video generation can take minutes — increase timeout
 export const config = { maxDuration: 300 };
 
@@ -109,21 +105,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const cost = calculateCost(action as AllowedAction, imageCount, videoDuration);
     const sql = getDb();
-
-    // ── Moderation cooldown check ──
-    // If user has hit too many moderation blocks recently, temporarily block them
-    const [modCount] = await sql`
-      SELECT COUNT(*)::int AS strikes
-      FROM usage_log
-      WHERE user_id = ${auth.userId}::uuid
-        AND mode LIKE 'moderation-%'
-        AND created_at > now() - interval '1 hour'
-    `;
-    if (modCount && modCount.strikes >= MODERATION_COOLDOWN_THRESHOLD) {
-      return res.status(429).json({
-        error: `Content policy cooldown active. You've had ${modCount.strikes} blocked requests in the last hour. Please review xAI's content guidelines and try again later.`,
-      });
-    }
 
     // Check credit balance
     const rows = await sql`
@@ -193,10 +174,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // Check if this was a moderation / content policy block
       if (isModerationError(errText)) {
-        // ❌ NO REFUND — user loses credits as penalty for policy violation
+        // Credits not refunded — xAI still charges us for moderated requests
         await logModerationBlock(errText);
         return res.status(451).json({
-          error: "Your request was blocked by xAI's content policy. Credits were NOT refunded. Repeated violations will result in a temporary cooldown. Please review the content guidelines.",
+          error: "This prompt was flagged by xAI's content filter. Credits were used because xAI charges for moderated requests too. Try rephrasing your prompt.",
           moderated: true,
         });
       }
@@ -235,7 +216,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             if (isModerationError(errText)) {
               await logModerationBlock(errText);
               return res.status(451).json({
-                error: "Your video was blocked by xAI's content policy. Credits were NOT refunded.",
+                error: "This video was flagged by xAI's content filter. Credits were used because xAI charges for moderated requests. Try a different prompt.",
                 moderated: true,
               });
             }
@@ -252,7 +233,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             if (isModerationError(failMsg)) {
               await logModerationBlock(failMsg);
               return res.status(451).json({
-                error: "Your video was blocked by xAI's content policy. Credits were NOT refunded.",
+                error: "This video was flagged by xAI's content filter. Credits were used because xAI charges for moderated requests. Try a different prompt.",
                 moderated: true,
               });
             }

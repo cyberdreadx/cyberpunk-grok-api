@@ -96,21 +96,6 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
     if (!prompt.trim()) return;
     if (needsImage && !imageUrl.trim()) return;
 
-    // Basic client-side pre-screen for obviously prohibited content.
-    // Saves credits AND avoids the $0.05 xAI moderation charge.
-    const lower = prompt.toLowerCase();
-    const blockedPatterns = [
-      /\b(child|minor|underage|loli|shota)\b.*\b(nude|naked|sex|erotic|porn)/,
-      /\b(nude|naked|sex|erotic|porn)\b.*\b(child|minor|underage|loli|shota)\b/,
-      /\bcsam\b/,
-      /\bjailbreak\b.*\b(filter|safety|bypass)\b/,
-      /\b(gore|dismember|mutilat)\b.*\b(real|photo|person)\b/,
-    ];
-    if (blockedPatterns.some((rx) => rx.test(lower))) {
-      setUploadError("This prompt contains content that violates usage guidelines. Please revise your prompt.");
-      return;
-    }
-
     setUploadError(null);
     onSubmit({ prompt: prompt.trim(), imageUrl: imageUrl.trim() || undefined });
   };

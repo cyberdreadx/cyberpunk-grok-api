@@ -304,24 +304,23 @@ export default function Admin() {
                 MODERATION_DEFENSE
               </h2>
               <span className="font-mono-share text-[9px] text-red-400/60">
-                credits burned = not refunded to user
+                xAI charges for flagged requests — credits not refunded
               </span>
             </div>
             <div className="p-3 sm:p-4 space-y-3">
               {/* Moderation KPIs */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
-                <KpiCard icon={<Ban className="w-4 h-4" />} label="BLOCKS_30D" value={o.moderation.blocks_30d} sub={`${o.moderation.blocks_today} today // ${o.moderation.total_blocks} total`} accent="destructive" />
-                <KpiCard icon={<Flame className="w-4 h-4" />} label="CREDITS_BURNED_30D" value={o.moderation.credits_burned_30d} sub={`${o.moderation.total_credits_burned} lifetime (not refunded)`} accent="destructive" />
-                <KpiCard icon={<CreditCard className="w-4 h-4" />} label="WASTED_API_COST_30D" value={fmt$(o.moderation.wasted_cost_30d_cents)} sub={`${fmt$(o.moderation.wasted_cost_total_cents)} lifetime (xAI still charges)`} accent="destructive" />
-                <KpiCard icon={<ShieldAlert className="w-4 h-4" />} label="COOLDOWN_THRESHOLD" value="3 blocks/hr" sub="auto-blocks repeat offenders" accent="destructive" />
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 sm:gap-3">
+                <KpiCard icon={<Ban className="w-4 h-4" />} label="FLAGGED_30D" value={o.moderation.blocks_30d} sub={`${o.moderation.blocks_today} today // ${o.moderation.total_blocks} total`} accent="destructive" />
+                <KpiCard icon={<Flame className="w-4 h-4" />} label="CREDITS_USED_30D" value={o.moderation.credits_burned_30d} sub={`${o.moderation.total_credits_burned} lifetime (not refunded)`} accent="destructive" />
+                <KpiCard icon={<CreditCard className="w-4 h-4" />} label="xAI_COST_30D" value={fmt$(o.moderation.wasted_cost_30d_cents)} sub={`${fmt$(o.moderation.wasted_cost_total_cents)} lifetime (xAI still charges you)`} accent="destructive" />
               </div>
-              {/* Top Offenders */}
+              {/* Flagged Users */}
               {o.moderation.offenders && o.moderation.offenders.length > 0 && (
                 <div className="overflow-x-auto overscroll-x-contain">
                   <table className="w-full min-w-[400px]">
                     <thead>
                       <tr className="border-b border-red-500/20">
-                        {["OFFENDER", "BLOCKS", "CREDITS_BURNED", "LAST_BLOCK"].map((h) => (
+                        {["USER", "FLAGS", "CREDITS", "LAST"].map((h) => (
                           <th key={h} className="px-2.5 py-2 text-left font-mono-share text-[9px] text-red-400/50 tracking-wider">{h}</th>
                         ))}
                       </tr>
