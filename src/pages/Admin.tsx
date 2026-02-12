@@ -111,6 +111,7 @@ export default function Admin() {
   const [topUsers, setTopUsers] = useState<TopUser[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchAll = useCallback(async () => {
     setRefreshing(true);
@@ -130,9 +131,15 @@ export default function Admin() {
       setTopUsers(t.topUsers || []);
       setTransactions(tx.transactions || []);
       setAuthorized(true);
+      setError(null);
     } catch (err: any) {
-      if (err.message?.includes("Access denied") || err.message?.includes("403")) {
+      console.error("[admin] fetch error:", err.message);
+      if (err.message?.includes("Access denied") || err.message?.includes("403") || err.message?.includes("Unauthorized")) {
         setAuthorized(false);
+        setError(null);
+      } else {
+        // Non-auth error — still might be authorized, show the error
+        setError(err.message || "Failed to load admin data");
       }
     } finally {
       setLoading(false);
@@ -170,7 +177,7 @@ export default function Admin() {
     );
   }
 
-  if (!authorized) {
+  if (!authorized && !error) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-4 p-8">
@@ -186,7 +193,29 @@ export default function Admin() {
     );
   }
 
-  const o = overview!;
+  if (error || !overview) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4 p-8">
+          <ShieldAlert className="w-16 h-16 text-destructive/60 mx-auto" />
+          <h1 className="font-orbitron text-xl tracking-wider text-destructive">SYSTEM_ERROR</h1>
+          <p className="font-mono-share text-sm text-muted-foreground max-w-md">{error || "Failed to load data"}</p>
+          <div className="flex gap-3 justify-center">
+            <Button variant="outline" onClick={() => navigate("/")} className="font-mono-share text-xs gap-2">
+              <ArrowLeft className="w-3.5 h-3.5" />
+              RETURN
+            </Button>
+            <Button variant="outline" onClick={fetchAll} disabled={refreshing} className="font-mono-share text-xs gap-2">
+              <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
+              RETRY
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const o = overview;
   const profitMargin30d = o.revenue.revenue_30d_cents - o.apiCost.estimated30dCents;
 
   return (
