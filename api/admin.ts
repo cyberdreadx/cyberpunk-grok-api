@@ -1,12 +1,12 @@
-/**
- * /api/admin — Admin dashboard stats + health check.
+﻿/**
+ * /api/admin â€” Admin dashboard stats + health check.
  *
- * GET  (no auth)         → health check
- * POST { action: "overview" }  → high-level KPIs
- * POST { action: "revenue" }   → revenue time series
- * POST { action: "users" }     → user growth time series
- * POST { action: "usage" }     → generation volume by mode
- * POST { action: "top-users" } → top users by usage
+ * GET  (no auth)         â†’ health check
+ * POST { action: "overview" }  â†’ high-level KPIs
+ * POST { action: "revenue" }   â†’ revenue time series
+ * POST { action: "users" }     â†’ user growth time series
+ * POST { action: "usage" }     â†’ generation volume by mode
+ * POST { action: "top-users" } â†’ top users by usage
  *
  * All POST actions require admin JWT (hardcoded admin email).
  */
@@ -23,7 +23,7 @@ function isAdmin(req: VercelRequest): boolean {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // ── Health check (GET, no auth) ──
+  // â”€â”€ Health check (GET, no auth) â”€â”€
   if (req.method === "GET") {
     try {
       const sql = getDb();
@@ -47,7 +47,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     switch (action) {
-      // ── Overview KPIs ──
+      // â”€â”€ Overview KPIs â”€â”€
       case "overview": {
         const [userStats] = await sql`
           SELECT
@@ -90,8 +90,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // Estimate API cost: grok-imagine-image = $0.02/image, grok-imagine-video = $0.05/sec
         const [costEstimate] = await sql`
           SELECT
-            COALESCE(SUM(CASE WHEN mode IN ('generate-image','edit-image') THEN credits_used * 2 ELSE credits_used * 5 END) FILTER (WHERE created_at > now() - interval '30 days'), 0)::int AS estimated_cost_30d_hundredths,
-            COALESCE(SUM(CASE WHEN mode IN ('generate-image','edit-image') THEN credits_used * 2 ELSE credits_used * 5 END), 0)::int AS estimated_cost_total_hundredths
+            COALESCE(SUM(CASE WHEN mode IN ('generate-image','edit-image') THEN credits_used * 2 ELSE credits_used * 5 END) FILTER (WHERE created_at > now() - interval '30 days'), 0)::int AS estimated_cost_30d_cents,
+            COALESCE(SUM(CASE WHEN mode IN ('generate-image','edit-image') THEN credits_used * 2 ELSE credits_used * 5 END), 0)::int AS estimated_cost_total_cents
           FROM usage_log
         `;
 
@@ -101,13 +101,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           usage: usageStats,
           creditPool,
           apiCost: {
-            estimated30dCents: Math.round(costEstimate.estimated_cost_30d_hundredths / 100),
-            estimatedTotalCents: Math.round(costEstimate.estimated_cost_total_hundredths / 100),
+            estimated30dCents: costEstimate.estimated_cost_30d_cents,
+            estimatedTotalCents: costEstimate.estimated_cost_total_cents,
           },
         });
       }
 
-      // ── Revenue time series (daily, last 30 days) ──
+      // â”€â”€ Revenue time series (daily, last 30 days) â”€â”€
       case "revenue": {
         const rows = await sql`
           SELECT
@@ -124,7 +124,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json({ revenue: rows });
       }
 
-      // ── User growth time series (daily, last 30 days) ──
+      // â”€â”€ User growth time series (daily, last 30 days) â”€â”€
       case "users": {
         const rows = await sql`
           SELECT
@@ -143,7 +143,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json({ users: rows });
       }
 
-      // ── Generation volume by mode (daily, last 30 days) ──
+      // â”€â”€ Generation volume by mode (daily, last 30 days) â”€â”€
       case "usage": {
         const rows = await sql`
           SELECT
@@ -159,7 +159,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json({ usage: rows });
       }
 
-      // ── Transaction log (last 100 transactions) ──
+      // â”€â”€ Transaction log (last 100 transactions) â”€â”€
       case "transactions": {
         const rows = await sql`
           SELECT
@@ -181,7 +181,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json({ transactions: rows });
       }
 
-      // ── Top users by credit usage ──
+      // â”€â”€ Top users by credit usage â”€â”€
       case "top-users": {
         const rows = await sql`
           SELECT
