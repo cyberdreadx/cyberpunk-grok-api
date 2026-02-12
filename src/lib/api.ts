@@ -95,26 +95,39 @@ export function calculateCreditCost(
   }
 }
 
-// ── Monthly subscription tiers ───────────────────────────────────────────
+// ── Subscription tiers ───────────────────────────────────────────────────
 
 export interface SubscriptionTier {
-  id: "basic" | "premium";
+  id: string;
   name: string;
   creditsPerMonth: number;
   priceCents: number;
   perCredit: string;
   popular?: boolean;
+  interval: "month" | "year";
+  /** For yearly: equivalent monthly price for display */
+  monthlyEquivalentCents?: number;
+  /** Savings vs monthly */
+  savingsPercent?: number;
 }
 
-export const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
-  { id: "basic", name: "BASIC", creditsPerMonth: 150, priceCents: 999, perCredit: "$0.067" },
-  { id: "premium", name: "PREMIUM", creditsPerMonth: 500, priceCents: 2499, perCredit: "$0.050", popular: true },
+export const SUBSCRIPTION_TIERS_MONTHLY: SubscriptionTier[] = [
+  { id: "basic", name: "BASIC", creditsPerMonth: 150, priceCents: 999, perCredit: "$0.067", interval: "month" },
+  { id: "premium", name: "PREMIUM", creditsPerMonth: 500, priceCents: 2499, perCredit: "$0.050", popular: true, interval: "month" },
 ];
+
+export const SUBSCRIPTION_TIERS_YEARLY: SubscriptionTier[] = [
+  { id: "basic-yearly", name: "BASIC", creditsPerMonth: 150, priceCents: 10548, perCredit: "$0.059", interval: "year", monthlyEquivalentCents: 879, savingsPercent: 12 },
+  { id: "premium-yearly", name: "PREMIUM", creditsPerMonth: 500, priceCents: 26388, perCredit: "$0.044", popular: true, interval: "year", monthlyEquivalentCents: 2199, savingsPercent: 12 },
+];
+
+/** Combined for backward compat */
+export const SUBSCRIPTION_TIERS: SubscriptionTier[] = SUBSCRIPTION_TIERS_MONTHLY;
 
 // ── One-time credit packs ────────────────────────────────────────────────
 
 export interface CreditPackage {
-  id: "starter" | "pro" | "mega";
+  id: string;
   name: string;
   credits: number;
   priceCents: number;
@@ -126,4 +139,6 @@ export const CREDIT_PACKAGES: CreditPackage[] = [
   { id: "starter", name: "STARTER", credits: 50, priceCents: 500, perCredit: "$0.10" },
   { id: "pro", name: "PRO", credits: 175, priceCents: 1500, perCredit: "$0.086", popular: true },
   { id: "mega", name: "MEGA", credits: 450, priceCents: 3500, perCredit: "$0.078" },
+  { id: "ultra", name: "ULTRA", credits: 1800, priceCents: 15000, perCredit: "$0.083" },
+  { id: "enterprise", name: "ENTERPRISE", credits: 4000, priceCents: 30000, perCredit: "$0.075" },
 ];

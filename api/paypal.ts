@@ -14,6 +14,8 @@ const PACKAGES: Record<string, { credits: number; priceCents: number }> = {
   starter: { credits: 50, priceCents: 500 },
   pro: { credits: 175, priceCents: 1500 },
   mega: { credits: 450, priceCents: 3500 },
+  ultra: { credits: 1800, priceCents: 15000 },
+  enterprise: { credits: 4000, priceCents: 30000 },
 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {

@@ -12,11 +12,15 @@ const PACKAGES: Record<string, { priceEnvKey: string; credits: number }> = {
   starter: { priceEnvKey: "STRIPE_PRICE_STARTER", credits: 50 },
   pro: { priceEnvKey: "STRIPE_PRICE_PRO", credits: 175 },
   mega: { priceEnvKey: "STRIPE_PRICE_MEGA", credits: 450 },
+  ultra: { priceEnvKey: "STRIPE_PRICE_ULTRA", credits: 1800 },
+  enterprise: { priceEnvKey: "STRIPE_PRICE_ENTERPRISE", credits: 4000 },
 };
 
 const SUBSCRIPTIONS: Record<string, { priceEnvKey: string; creditsPerMonth: number }> = {
   basic: { priceEnvKey: "STRIPE_PRICE_SUB_BASIC", creditsPerMonth: 150 },
   premium: { priceEnvKey: "STRIPE_PRICE_SUB_PREMIUM", creditsPerMonth: 500 },
+  "basic-yearly": { priceEnvKey: "STRIPE_PRICE_SUB_BASIC_YEARLY", creditsPerMonth: 150 },
+  "premium-yearly": { priceEnvKey: "STRIPE_PRICE_SUB_PREMIUM_YEARLY", creditsPerMonth: 500 },
 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {

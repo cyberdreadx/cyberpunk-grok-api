@@ -1,5 +1,6 @@
 import React, { useState, useCallback, Suspense } from "react";
-import { Terminal, Key, Coins, Shield, Eye, MessageCircle, HelpCircle } from "lucide-react";
+import { Terminal, Key, Coins, Shield, Eye, MessageCircle, HelpCircle, Server } from "lucide-react";
+import { Link } from "react-router-dom";
 import CyberLayout from "@/components/CyberLayout";
 
 // Lazy-load the 3D orb — Three.js is ~800 KB and not needed for initial render
@@ -479,6 +480,18 @@ const Index = () => {
               <MessageCircle className="w-3 h-3" />
               DISCORD
             </a>
+            {auth.user?.email === "cyberdreadx@proton.me" && (
+              <>
+                <span className="text-border/50">|</span>
+                <Link
+                  to="/admin"
+                  className="flex items-center gap-1 text-muted-foreground/40 hover:text-primary transition-colors"
+                >
+                  <Server className="w-3 h-3" />
+                  ADMIN
+                </Link>
+              </>
+            )}
           </div>
         </footer>
 

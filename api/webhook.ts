@@ -22,6 +22,8 @@ async function getRawBody(req: VercelRequest): Promise<Buffer> {
 const TIER_CREDITS: Record<string, number> = {
   basic: 150,
   premium: 500,
+  "basic-yearly": 150,
+  "premium-yearly": 500,
 };
 
 /**

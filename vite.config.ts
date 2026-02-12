@@ -52,7 +52,7 @@ export default defineConfig(({ mode }) => ({
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
         // Lazy-loaded chunks: skip precache to keep PWA install lightweight.
         // heic2any (~1.3 MB) loaded only for HEIC uploads; vendor-3d (~800 KB) loaded for 3D orb.
-        globIgnores: ["**/heic2any-*.js", "**/vendor-3d-*.js"],
+        globIgnores: ["**/heic2any-*.js", "**/vendor-3d-*.js", "**/vendor-charts-*.js"],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,

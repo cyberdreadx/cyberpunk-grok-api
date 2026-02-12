@@ -1,8 +1,8 @@
-import React from "react";
-import { Loader2, Zap, Crown, RefreshCw } from "lucide-react";
+import React, { useState } from "react";
+import { Loader2, Zap, Crown, RefreshCw, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PayPalButtons } from "@paypal/react-paypal-js";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, SUBSCRIPTION_TIERS_MONTHLY, SUBSCRIPTION_TIERS_YEARLY } from "@/lib/api";
 import type { CreditPackage, SubscriptionTier } from "@/lib/api";
 
 interface PricingCardsProps {
@@ -10,15 +10,14 @@ interface PricingCardsProps {
   subscriptionTiers: SubscriptionTier[];
   currentTier: string | null;
   purchasing: boolean;
-  onPurchase: (packageId: CreditPackage["id"]) => void;
-  onSubscribe: (tierId: SubscriptionTier["id"]) => void;
+  onPurchase: (packageId: string) => void;
+  onSubscribe: (tierId: string) => void;
   onManageSubscription?: () => void;
   onPayPalSuccess?: () => void;
 }
 
 const PricingCards: React.FC<PricingCardsProps> = ({
   packages,
-  subscriptionTiers,
   currentTier,
   purchasing,
   onPurchase,
@@ -26,21 +25,62 @@ const PricingCards: React.FC<PricingCardsProps> = ({
   onManageSubscription,
   onPayPalSuccess,
 }) => {
+  const [billingInterval, setBillingInterval] = useState<"month" | "year">("month");
+
+  const activeTiers =
+    billingInterval === "year" ? SUBSCRIPTION_TIERS_YEARLY : SUBSCRIPTION_TIERS_MONTHLY;
+
+  /** Check if the current sub matches one of these tiers */
+  const tierIsActive = (tier: SubscriptionTier) => {
+    if (!currentTier) return false;
+    // "premium" matches "premium" or "premium-yearly"
+    const base = tier.id.replace("-yearly", "");
+    const currentBase = currentTier.replace("-yearly", "");
+    return base === currentBase;
+  };
+
   return (
     <div className="space-y-6">
-      {/* ── Monthly Subscriptions ── */}
+      {/* ── Subscription Plans ── */}
       <div>
         <div className="flex items-center gap-2 mb-3">
           <RefreshCw className="w-3 h-3 text-primary/60" />
           <h4 className="font-orbitron text-[10px] tracking-widest text-muted-foreground">
-            MONTHLY_PLANS
+            SUBSCRIPTION_PLANS
           </h4>
           <div className="h-px flex-1 bg-border/30" />
         </div>
 
+        {/* Monthly / Yearly toggle */}
+        <div className="flex items-center justify-center gap-1 mb-4">
+          <button
+            onClick={() => setBillingInterval("month")}
+            className={`font-orbitron text-[9px] tracking-wider px-3 py-1.5 rounded-l border transition-all ${
+              billingInterval === "month"
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-card/40 text-muted-foreground border-border hover:bg-primary/10"
+            }`}
+          >
+            MONTHLY
+          </button>
+          <button
+            onClick={() => setBillingInterval("year")}
+            className={`font-orbitron text-[9px] tracking-wider px-3 py-1.5 rounded-r border transition-all relative ${
+              billingInterval === "year"
+                ? "bg-secondary text-secondary-foreground border-secondary"
+                : "bg-card/40 text-muted-foreground border-border hover:bg-secondary/10"
+            }`}
+          >
+            YEARLY
+            <span className="absolute -top-2 -right-2 bg-green-500 text-white font-mono text-[7px] px-1.5 py-0.5 rounded-full leading-none">
+              -12%
+            </span>
+          </button>
+        </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {subscriptionTiers.map((tier) => {
-            const isActive = currentTier === tier.id;
+          {activeTiers.map((tier) => {
+            const isActive = tierIsActive(tier);
             return (
               <div
                 key={tier.id}
@@ -66,12 +106,20 @@ const PricingCards: React.FC<PricingCardsProps> = ({
                   <h3 className="font-orbitron text-xs tracking-wider text-foreground">{tier.name}</h3>
                 </div>
 
-                <div className="flex items-baseline gap-1 mb-2">
+                <div className="flex items-baseline gap-1 mb-1">
                   <span className="font-orbitron text-2xl font-bold text-foreground">
                     ${(tier.priceCents / 100).toFixed(2)}
                   </span>
-                  <span className="font-mono-share text-[10px] text-muted-foreground">/month</span>
+                  <span className="font-mono-share text-[10px] text-muted-foreground">
+                    /{tier.interval === "year" ? "year" : "month"}
+                  </span>
                 </div>
+
+                {tier.interval === "year" && tier.monthlyEquivalentCents && (
+                  <p className="font-mono-share text-[10px] text-green-400 mb-1">
+                    ${(tier.monthlyEquivalentCents / 100).toFixed(2)}/mo &mdash; save {tier.savingsPercent}%
+                  </p>
+                )}
 
                 <div className="flex items-center gap-1 mb-2">
                   <Zap className="w-3 h-3 text-secondary" />
@@ -129,95 +177,141 @@ const PricingCards: React.FC<PricingCardsProps> = ({
           <div className="h-px flex-1 bg-border/30" />
         </div>
 
+        {/* Standard packs (3 cols) */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {packages.map((pkg) => (
-            <div
-              key={pkg.id}
-              className={`relative flex flex-col border rounded-lg p-4 transition-all ${
-                pkg.popular
-                  ? "border-secondary/60 bg-secondary/5 shadow-[0_0_12px_rgba(var(--secondary-rgb),0.15)]"
-                  : "border-border bg-card/40"
-              }`}
-            >
-              {pkg.popular && (
-                <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-secondary text-secondary-foreground font-orbitron text-[8px] tracking-widest px-3 py-0.5 rounded-full">
-                  POPULAR
-                </div>
-              )}
-
-              <h3 className="font-orbitron text-xs tracking-wider text-foreground mb-1">{pkg.name}</h3>
-
-              <div className="flex items-baseline gap-1 mb-2">
-                <span className="font-orbitron text-2xl font-bold text-foreground">
-                  ${(pkg.priceCents / 100).toFixed(0)}
-                </span>
-                <span className="font-mono-share text-[10px] text-muted-foreground">one-time</span>
-              </div>
-
-              <div className="flex items-center gap-1 mb-3">
-                <Zap className="w-3 h-3 text-secondary" />
-                <span className="font-mono-share text-sm text-secondary font-bold">
-                  {pkg.credits} credits
-                </span>
-              </div>
-
-              <p className="font-mono-share text-[10px] text-muted-foreground mb-1 flex-1">
-                {pkg.perCredit}/credit — never expires
-              </p>
-
-              <div className="space-y-2">
-                <Button
-                  onClick={() => onPurchase(pkg.id)}
-                  disabled={purchasing}
-                  className={`w-full font-orbitron text-[10px] tracking-wider gap-1 ${
-                    pkg.popular
-                      ? "bg-secondary text-secondary-foreground hover:bg-secondary/80"
-                      : "bg-primary text-primary-foreground hover:bg-primary/80"
-                  }`}
-                >
-                  {purchasing ? (
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                  ) : (
-                    "PURCHASE"
-                  )}
-                </Button>
-                {onPayPalSuccess && (
-                  <div className="flex items-center gap-2 my-1">
-                    <div className="h-px flex-1 bg-border/30" />
-                    <span className="font-mono-share text-[8px] text-muted-foreground/40 tracking-widest">OR_PAY_WITH</span>
-                    <div className="h-px flex-1 bg-border/30" />
-                  </div>
-                )}
-                {onPayPalSuccess && (
-                  <div className="flex justify-center">
-                    <div className="w-full max-w-[200px] min-h-[40px] [&>div]:min-h-[40px] rounded border border-border/40 bg-black/20 p-1.5 shadow-[0_0_6px_rgba(var(--primary-rgb),0.1)]">
-                      <PayPalButtons
-                        style={{ layout: "horizontal", color: "black", shape: "rect", label: "paypal", height: 35, tagline: false }}
-                        createOrder={async () => {
-                          const { orderId } = (await apiFetch("/paypal", {
-                            method: "POST",
-                            body: { action: "create", package: pkg.id },
-                          })) as { orderId: string };
-                          return orderId;
-                        }}
-                        onApprove={async (data) => {
-                          await apiFetch("/paypal", {
-                            method: "POST",
-                            body: { action: "capture", orderID: data.orderID },
-                          });
-                          onPayPalSuccess();
-                        }}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
+          {packages.slice(0, 3).map((pkg) => (
+            <PackCard key={pkg.id} pkg={pkg} purchasing={purchasing} onPurchase={onPurchase} onPayPalSuccess={onPayPalSuccess} />
           ))}
         </div>
+
+        {/* Big packs (2 cols) */}
+        {packages.length > 3 && (
+          <>
+            <div className="flex items-center gap-2 my-3">
+              <Sparkles className="w-3 h-3 text-secondary/60" />
+              <h4 className="font-orbitron text-[10px] tracking-widest text-muted-foreground/60">
+                BULK_PACKS
+              </h4>
+              <div className="h-px flex-1 bg-border/20" />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {packages.slice(3).map((pkg) => (
+                <PackCard key={pkg.id} pkg={pkg} purchasing={purchasing} onPurchase={onPurchase} onPayPalSuccess={onPayPalSuccess} isBulk />
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
 };
+
+/** Reusable pack card */
+function PackCard({
+  pkg,
+  purchasing,
+  onPurchase,
+  onPayPalSuccess,
+  isBulk,
+}: {
+  pkg: CreditPackage;
+  purchasing: boolean;
+  onPurchase: (id: string) => void;
+  onPayPalSuccess?: () => void;
+  isBulk?: boolean;
+}) {
+  return (
+    <div
+      className={`relative flex flex-col border rounded-lg p-4 transition-all ${
+        pkg.popular
+          ? "border-secondary/60 bg-secondary/5 shadow-[0_0_12px_rgba(var(--secondary-rgb),0.15)]"
+          : isBulk
+          ? "border-primary/40 bg-primary/5 shadow-[0_0_8px_rgba(var(--primary-rgb),0.1)]"
+          : "border-border bg-card/40"
+      }`}
+    >
+      {pkg.popular && (
+        <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-secondary text-secondary-foreground font-orbitron text-[8px] tracking-widest px-3 py-0.5 rounded-full">
+          POPULAR
+        </div>
+      )}
+      {isBulk && !pkg.popular && (
+        <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground font-orbitron text-[8px] tracking-widest px-3 py-0.5 rounded-full">
+          BULK
+        </div>
+      )}
+
+      <h3 className="font-orbitron text-xs tracking-wider text-foreground mb-1">{pkg.name}</h3>
+
+      <div className="flex items-baseline gap-1 mb-2">
+        <span className="font-orbitron text-2xl font-bold text-foreground">
+          ${(pkg.priceCents / 100).toFixed(0)}
+        </span>
+        <span className="font-mono-share text-[10px] text-muted-foreground">one-time</span>
+      </div>
+
+      <div className="flex items-center gap-1 mb-3">
+        <Zap className="w-3 h-3 text-secondary" />
+        <span className="font-mono-share text-sm text-secondary font-bold">
+          {pkg.credits.toLocaleString()} credits
+        </span>
+      </div>
+
+      <p className="font-mono-share text-[10px] text-muted-foreground mb-1 flex-1">
+        {pkg.perCredit}/credit &mdash; never expires
+      </p>
+
+      <div className="space-y-2">
+        <Button
+          onClick={() => onPurchase(pkg.id)}
+          disabled={purchasing}
+          className={`w-full font-orbitron text-[10px] tracking-wider gap-1 ${
+            pkg.popular
+              ? "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+              : isBulk
+              ? "bg-primary text-primary-foreground hover:bg-primary/80"
+              : "bg-primary text-primary-foreground hover:bg-primary/80"
+          }`}
+        >
+          {purchasing ? (
+            <Loader2 className="w-3 h-3 animate-spin" />
+          ) : (
+            "PURCHASE"
+          )}
+        </Button>
+        {onPayPalSuccess && (
+          <div className="flex items-center gap-2 my-1">
+            <div className="h-px flex-1 bg-border/30" />
+            <span className="font-mono-share text-[8px] text-muted-foreground/40 tracking-widest">OR_PAY_WITH</span>
+            <div className="h-px flex-1 bg-border/30" />
+          </div>
+        )}
+        {onPayPalSuccess && (
+          <div className="flex justify-center">
+            <div className="w-full max-w-[200px] min-h-[40px] [&>div]:min-h-[40px] rounded border border-border/40 bg-black/20 p-1.5 shadow-[0_0_6px_rgba(var(--primary-rgb),0.1)]">
+              <PayPalButtons
+                style={{ layout: "horizontal", color: "black", shape: "rect", label: "paypal", height: 35, tagline: false }}
+                createOrder={async () => {
+                  const { orderId } = (await apiFetch("/paypal", {
+                    method: "POST",
+                    body: { action: "create", package: pkg.id },
+                  })) as { orderId: string };
+                  return orderId;
+                }}
+                onApprove={async (data) => {
+                  await apiFetch("/paypal", {
+                    method: "POST",
+                    body: { action: "capture", orderID: data.orderID },
+                  });
+                  onPayPalSuccess();
+                }}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default PricingCards;
