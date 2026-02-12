@@ -441,12 +441,12 @@ const Index = () => {
         </section>
 
         {/* Footer */}
-        <footer className="text-center py-6 border-t border-border/30 space-y-3">
+        <footer className="text-center py-6 border-t border-border/30 space-y-3 overflow-hidden">
           <p className="font-mono-share text-[10px] text-muted-foreground/40 animate-flicker">
             <span className="text-primary/30">$</span>{" "}
             echo "POWERED BY xAI // {effectiveApiMode === "credits" ? "CREDIT-BASED" : "CLIENT-SIDE"} RENDERING"
           </p>
-          <div className="flex items-center justify-center gap-3 font-mono-share text-[10px]">
+          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 font-mono-share text-[10px] px-4">
             <button
               onClick={() => setGuideOpen(true)}
               className="flex items-center gap-1 text-muted-foreground/40 hover:text-primary transition-colors"
