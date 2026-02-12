@@ -213,6 +213,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   } catch (err: any) {
     console.error("[admin]", err.message);
-    return res.status(500).json({ error: "Failed to fetch stats" });
+    return res.status(500).json({ error: `Failed: ${err.message}` });
   }
 }

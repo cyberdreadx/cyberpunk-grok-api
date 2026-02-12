@@ -115,32 +115,47 @@ export default function Admin() {
 
   const fetchAll = useCallback(async () => {
     setRefreshing(true);
+    const errors: string[] = [];
+
+    // Helper: fetch one action, return null on failure
+    async function fetchAction(action: string) {
+      try {
+        return await apiFetch("/admin", { method: "POST", body: { action } });
+      } catch (err: any) {
+        const msg = err.message || String(err);
+        // Auth errors should stop everything
+        if (msg.includes("Access denied") || msg.includes("403") || msg.includes("Unauthorized")) {
+          throw err;
+        }
+        console.error(`[admin] ${action} failed:`, msg);
+        errors.push(`${action}: ${msg}`);
+        return null;
+      }
+    }
+
     try {
       const [o, r, u, us, t, tx] = await Promise.all([
-        apiFetch("/admin", { method: "POST", body: { action: "overview" } }),
-        apiFetch("/admin", { method: "POST", body: { action: "revenue" } }),
-        apiFetch("/admin", { method: "POST", body: { action: "users" } }),
-        apiFetch("/admin", { method: "POST", body: { action: "usage" } }),
-        apiFetch("/admin", { method: "POST", body: { action: "top-users" } }),
-        apiFetch("/admin", { method: "POST", body: { action: "transactions" } }),
+        fetchAction("overview"),
+        fetchAction("revenue"),
+        fetchAction("users"),
+        fetchAction("usage"),
+        fetchAction("top-users"),
+        fetchAction("transactions"),
       ]);
-      setOverview(o);
-      setRevenue((r.revenue || []).map((row: RevenueRow) => ({ ...row, day: fmtDate(row.day) })));
-      setUsers((u.users || []).map((row: UserRow) => ({ ...row, day: fmtDate(row.day) })));
-      setUsage(us.usage || []);
-      setTopUsers(t.topUsers || []);
-      setTransactions(tx.transactions || []);
+
+      if (o) setOverview(o);
+      if (r) setRevenue((r.revenue || []).map((row: RevenueRow) => ({ ...row, day: fmtDate(row.day) })));
+      if (u) setUsers((u.users || []).map((row: UserRow) => ({ ...row, day: fmtDate(row.day) })));
+      if (us) setUsage(us.usage || []);
+      if (t) setTopUsers(t.topUsers || []);
+      if (tx) setTransactions(tx.transactions || []);
+
       setAuthorized(true);
-      setError(null);
+      setError(errors.length > 0 ? errors.join(" | ") : null);
     } catch (err: any) {
-      console.error("[admin] fetch error:", err.message);
-      if (err.message?.includes("Access denied") || err.message?.includes("403") || err.message?.includes("Unauthorized")) {
-        setAuthorized(false);
-        setError(null);
-      } else {
-        // Non-auth error — still might be authorized, show the error
-        setError(err.message || "Failed to load admin data");
-      }
+      // Auth error thrown from fetchAction
+      setAuthorized(false);
+      setError(null);
     } finally {
       setLoading(false);
       setRefreshing(false);
