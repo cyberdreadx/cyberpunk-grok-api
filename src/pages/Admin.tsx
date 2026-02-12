@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+﻿import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Users,
@@ -32,7 +32,7 @@ import { apiFetch, hasAuthToken } from "@/lib/api";
 
 const ADMIN_EMAIL = "cyberdreadx@proton.me";
 
-// ── Helpers ──
+// â”€â”€ Helpers â”€â”€
 
 function fmt$(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`;
@@ -42,7 +42,7 @@ function fmtDate(d: string): string {
   return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-// ── Types ──
+// â”€â”€ Types â”€â”€
 
 interface Overview {
   users: { total_users: number; verified_users: number; active_subscribers: number; new_today: number; new_this_week: number };
@@ -63,7 +63,7 @@ interface TopUser {
   created_at: string; total_spent_cents: number; total_generations: number; total_credits_used: number; last_generation: string | null;
 }
 
-// ── KPI Card ──
+// â”€â”€ KPI Card â”€â”€
 
 function KpiCard({ icon, label, value, sub, accent = "primary" }: {
   icon: React.ReactNode; label: string; value: string | number; sub?: string; accent?: "primary" | "secondary" | "destructive";
@@ -71,18 +71,18 @@ function KpiCard({ icon, label, value, sub, accent = "primary" }: {
   const borderMap = { primary: "border-primary/30", secondary: "border-secondary/30", destructive: "border-destructive/30" };
   const glowMap = { primary: "shadow-primary/5", secondary: "shadow-secondary/5", destructive: "shadow-destructive/5" };
   return (
-    <div className={`border ${borderMap[accent]} rounded-lg bg-card/60 backdrop-blur-sm p-4 shadow-lg ${glowMap[accent]} space-y-1`}>
-      <div className="flex items-center gap-2 text-muted-foreground/60">
+    <div className={`border ${borderMap[accent]} rounded-lg bg-card/60 backdrop-blur-sm p-3 sm:p-4 shadow-lg ${glowMap[accent]} space-y-1 min-w-0 overflow-hidden`}>
+      <div className="flex items-center gap-1.5 text-muted-foreground/60">
         {icon}
-        <span className="font-mono-share text-[10px] tracking-wider uppercase">{label}</span>
+        <span className="font-mono-share text-[9px] sm:text-[10px] tracking-wider uppercase truncate">{label}</span>
       </div>
-      <div className="font-orbitron text-xl font-bold tracking-wide">{value}</div>
-      {sub && <div className="font-mono-share text-[10px] text-muted-foreground/50">{sub}</div>}
+      <div className="font-orbitron text-lg sm:text-xl font-bold tracking-wide truncate">{value}</div>
+      {sub && <div className="font-mono-share text-[9px] sm:text-[10px] text-muted-foreground/50 truncate">{sub}</div>}
     </div>
   );
 }
 
-// ── Cyber Tooltip ──
+// â”€â”€ Cyber Tooltip â”€â”€
 
 function CyberTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
@@ -98,7 +98,7 @@ function CyberTooltip({ active, payload, label }: any) {
   );
 }
 
-// ── Main Admin Page ──
+// â”€â”€ Main Admin Page â”€â”€
 
 export default function Admin() {
   const navigate = useNavigate();
@@ -183,7 +183,7 @@ export default function Admin() {
     return Array.from(map.values());
   }, [usage]);
 
-  // ── Access denied / loading ──
+  // â”€â”€ Access denied / loading â”€â”€
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -234,40 +234,40 @@ export default function Admin() {
   const profitMargin30d = o.revenue.revenue_30d_cents - o.apiCost.estimated30dCents;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background w-full overflow-x-hidden">
       {/* Header */}
       <header className="border-b border-border/30 bg-card/40 backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="gap-1.5 font-mono-share text-xs">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 py-3 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="gap-1 font-mono-share text-xs shrink-0 px-2">
               <ArrowLeft className="w-3.5 h-3.5" />
-              BACK
+              <span className="hidden sm:inline">BACK</span>
             </Button>
-            <div className="h-4 w-px bg-border/30" />
-            <h1 className="font-orbitron text-sm tracking-wider neon-text-cyan flex items-center gap-2">
-              <Server className="w-4 h-4" />
-              ADMIN_CONSOLE
+            <div className="h-4 w-px bg-border/30 shrink-0 hidden sm:block" />
+            <h1 className="font-orbitron text-xs sm:text-sm tracking-wider neon-text-cyan flex items-center gap-1.5 min-w-0">
+              <Server className="w-4 h-4 shrink-0" />
+              <span className="truncate">ADMIN</span>
             </h1>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="font-mono-share text-[10px] text-muted-foreground/40">{ADMIN_EMAIL}</span>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="font-mono-share text-[9px] text-muted-foreground/40 hidden md:inline">{ADMIN_EMAIL}</span>
             <Button
               variant="outline"
               size="sm"
               onClick={fetchAll}
               disabled={refreshing}
-              className="font-mono-share text-xs gap-1.5"
+              className="font-mono-share text-xs gap-1.5 px-2 sm:px-3"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
-              REFRESH
+              <span className="hidden sm:inline">REFRESH</span>
             </Button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+      <main className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
         {/* KPI Grid */}
-        <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <section className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
           <KpiCard icon={<Users className="w-4 h-4" />} label="TOTAL_USERS" value={o.users.total_users} sub={`${o.users.verified_users} verified // +${o.users.new_this_week} this week`} />
           <KpiCard icon={<DollarSign className="w-4 h-4" />} label="REVENUE_30D" value={fmt$(o.revenue.revenue_30d_cents)} sub={`${fmt$(o.revenue.total_revenue_cents)} lifetime`} accent="secondary" />
           <KpiCard icon={<Zap className="w-4 h-4" />} label="GENERATIONS_30D" value={o.usage.credits_30d} sub={`${o.usage.generations_today} today // ${o.usage.total_generations} total`} />
@@ -275,7 +275,7 @@ export default function Admin() {
         </section>
 
         {/* Financial overview */}
-        <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <section className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
           <KpiCard icon={<CreditCard className="w-4 h-4" />} label="API_COST_30D" value={fmt$(o.apiCost.estimated30dCents)} sub="estimated xAI spend" accent="destructive" />
           <KpiCard icon={<TrendingUp className="w-4 h-4" />} label="MARGIN_30D" value={fmt$(profitMargin30d)} sub={profitMargin30d >= 0 ? "revenue - api cost" : "WARNING: negative margin"} accent={profitMargin30d >= 0 ? "secondary" : "destructive"} />
           <KpiCard icon={<Activity className="w-4 h-4" />} label="CREDITS_OUTSTANDING" value={(o.creditPool.total_sub_credits_outstanding + o.creditPool.total_pack_credits_outstanding).toLocaleString()} sub={`${o.creditPool.total_sub_credits_outstanding} sub + ${o.creditPool.total_pack_credits_outstanding} pack`} />
@@ -283,14 +283,14 @@ export default function Admin() {
         </section>
 
         {/* Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
           {/* Revenue Chart */}
-          <div className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm p-4">
+          <div className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm p-3 sm:p-4 min-w-0 overflow-hidden">
             <h2 className="font-orbitron text-xs tracking-wider text-primary/80 mb-4 flex items-center gap-2">
               <DollarSign className="w-3.5 h-3.5" />
               REVENUE_STREAM (30d)
             </h2>
-            <ResponsiveContainer width="100%" height={240}>
+            <ResponsiveContainer width="100%" height={200}>
               <AreaChart data={revenue}>
                 <defs>
                   <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
@@ -299,8 +299,8 @@ export default function Admin() {
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.3} />
-                <XAxis dataKey="day" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
-                <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickFormatter={(v) => fmt$(v)} />
+                <XAxis dataKey="day" interval="preserveStartEnd" tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} />
+                <YAxis tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} tickFormatter={(v) => fmt$(v)} width={48} />
                 <Tooltip content={<CyberTooltip />} />
                 <Area type="monotone" dataKey="revenue_cents" name="Revenue" stroke="hsl(var(--secondary))" fill="url(#revGrad)" strokeWidth={2} />
               </AreaChart>
@@ -308,12 +308,12 @@ export default function Admin() {
           </div>
 
           {/* User Growth Chart */}
-          <div className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm p-4">
+          <div className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm p-3 sm:p-4 min-w-0 overflow-hidden">
             <h2 className="font-orbitron text-xs tracking-wider text-primary/80 mb-4 flex items-center gap-2">
               <Users className="w-3.5 h-3.5" />
               USER_GROWTH
             </h2>
-            <ResponsiveContainer width="100%" height={240}>
+            <ResponsiveContainer width="100%" height={200}>
               <AreaChart data={users}>
                 <defs>
                   <linearGradient id="userGrad" x1="0" y1="0" x2="0" y2="1">
@@ -322,8 +322,8 @@ export default function Admin() {
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.3} />
-                <XAxis dataKey="day" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
-                <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
+                <XAxis dataKey="day" interval="preserveStartEnd" tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} />
+                <YAxis tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} width={30} />
                 <Tooltip content={<CyberTooltip />} />
                 <Area type="monotone" dataKey="cumulative" name="Total Users" stroke="hsl(var(--primary))" fill="url(#userGrad)" strokeWidth={2} />
                 <Bar dataKey="new_users" name="New Users" fill="hsl(var(--primary))" fillOpacity={0.5} />
@@ -332,18 +332,18 @@ export default function Admin() {
           </div>
 
           {/* Generation Volume */}
-          <div className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm p-4 lg:col-span-2">
+          <div className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm p-3 sm:p-4 lg:col-span-2 min-w-0 overflow-hidden">
             <h2 className="font-orbitron text-xs tracking-wider text-primary/80 mb-4 flex items-center gap-2">
               <Zap className="w-3.5 h-3.5" />
               GENERATION_VOLUME (30d)
             </h2>
-            <ResponsiveContainer width="100%" height={240}>
+            <ResponsiveContainer width="100%" height={200}>
               <BarChart data={usagePivot}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.3} />
-                <XAxis dataKey="day" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
-                <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
+                <XAxis dataKey="day" interval="preserveStartEnd" tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} />
+                <YAxis tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} width={30} />
                 <Tooltip content={<CyberTooltip />} />
-                <Legend wrapperStyle={{ fontSize: 10, fontFamily: "var(--font-mono-share)" }} />
+                <Legend wrapperStyle={{ fontSize: 9, fontFamily: "var(--font-mono-share)" }} />
                 <Bar dataKey="generate-image" name="Images" stackId="a" fill="hsl(var(--primary))" fillOpacity={0.8} />
                 <Bar dataKey="edit-image" name="Edits" stackId="a" fill="hsl(var(--secondary))" fillOpacity={0.8} />
                 <Bar dataKey="generate-video" name="Videos" stackId="a" fill="#ff6b6b" fillOpacity={0.8} />
@@ -354,26 +354,26 @@ export default function Admin() {
 
         {/* Top Users Table */}
         <section className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm overflow-hidden">
-          <div className="px-4 py-3 border-b border-border/30">
+          <div className="px-3 sm:px-4 py-3 border-b border-border/30">
             <h2 className="font-orbitron text-xs tracking-wider text-primary/80 flex items-center gap-2">
               <Users className="w-3.5 h-3.5" />
               TOP_OPERATORS (by usage)
             </h2>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
+          <div className="overflow-x-auto overscroll-x-contain">
+            <table className="w-full min-w-[560px]">
               <thead>
                 <tr className="border-b border-border/20">
-                  {["OPERATOR", "TIER", "SPENT", "GENS", "CREDITS_USED", "BALANCE", "LAST_ACTIVE"].map((h) => (
-                    <th key={h} className="px-4 py-2 text-left font-mono-share text-[10px] text-muted-foreground/50 tracking-wider">{h}</th>
+                  {["OPERATOR", "TIER", "SPENT", "GENS", "USED", "BAL", "LAST"].map((h) => (
+                    <th key={h} className="px-2.5 py-2 text-left font-mono-share text-[9px] text-muted-foreground/50 tracking-wider">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {topUsers.map((u, i) => (
                   <tr key={i} className="border-b border-border/10 hover:bg-primary/5 transition-colors">
-                    <td className="px-4 py-2.5 font-mono-share text-xs text-foreground/80">{u.email}</td>
-                    <td className="px-4 py-2.5">
+                    <td className="px-2.5 py-2 font-mono-share text-xs text-foreground/80">{u.email}</td>
+                    <td className="px-2.5 py-2">
                       {u.subscription_tier ? (
                         <span className="font-orbitron text-[9px] tracking-wider px-2 py-0.5 rounded bg-secondary/20 text-secondary border border-secondary/30">
                           {u.subscription_tier.toUpperCase()}
@@ -382,11 +382,11 @@ export default function Admin() {
                         <span className="font-mono-share text-[10px] text-muted-foreground/40">none</span>
                       )}
                     </td>
-                    <td className="px-4 py-2.5 font-mono-share text-xs text-secondary">{fmt$(u.total_spent_cents)}</td>
-                    <td className="px-4 py-2.5 font-mono-share text-xs">{u.total_generations}</td>
-                    <td className="px-4 py-2.5 font-mono-share text-xs">{u.total_credits_used}</td>
-                    <td className="px-4 py-2.5 font-mono-share text-xs text-primary">{u.sub_credits + u.pack_credits}</td>
-                    <td className="px-4 py-2.5 font-mono-share text-[10px] text-muted-foreground/50">
+                    <td className="px-2.5 py-2 font-mono-share text-xs text-secondary">{fmt$(u.total_spent_cents)}</td>
+                    <td className="px-2.5 py-2 font-mono-share text-xs">{u.total_generations}</td>
+                    <td className="px-2.5 py-2 font-mono-share text-xs">{u.total_credits_used}</td>
+                    <td className="px-2.5 py-2 font-mono-share text-xs text-primary">{u.sub_credits + u.pack_credits}</td>
+                    <td className="px-2.5 py-2 font-mono-share text-[10px] text-muted-foreground/50">
                       {u.last_generation ? new Date(u.last_generation).toLocaleDateString() : "never"}
                     </td>
                   </tr>
@@ -401,42 +401,42 @@ export default function Admin() {
 
         {/* Transaction Log */}
         <section className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm overflow-hidden">
-          <div className="px-4 py-3 border-b border-border/30 flex items-center justify-between">
+          <div className="px-3 sm:px-4 py-3 border-b border-border/30 flex items-center justify-between">
             <h2 className="font-orbitron text-xs tracking-wider text-primary/80 flex items-center gap-2">
               <Receipt className="w-3.5 h-3.5" />
               TRANSACTION_LOG (last 100)
             </h2>
             <span className="font-mono-share text-[10px] text-muted-foreground/40">{transactions.length} records</span>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
+          <div className="overflow-x-auto overscroll-x-contain">
+            <table className="w-full min-w-[560px]">
               <thead>
                 <tr className="border-b border-border/20">
-                  {["DATE", "USER", "TYPE", "PACKAGE", "CREDITS", "AMOUNT", "GATEWAY"].map((h) => (
-                    <th key={h} className="px-4 py-2 text-left font-mono-share text-[10px] text-muted-foreground/50 tracking-wider">{h}</th>
+                  {["DATE", "USER", "TYPE", "PKG", "CR", "AMT", "VIA"].map((h) => (
+                    <th key={h} className="px-2.5 py-2 text-left font-mono-share text-[9px] text-muted-foreground/50 tracking-wider">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {transactions.map((tx, i) => (
                   <tr key={i} className="border-b border-border/10 hover:bg-primary/5 transition-colors">
-                    <td className="px-4 py-2.5 font-mono-share text-[10px] text-muted-foreground/60 whitespace-nowrap">
+                    <td className="px-2.5 py-2 font-mono-share text-[10px] text-muted-foreground/60 whitespace-nowrap">
                       {new Date(tx.created_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                     </td>
-                    <td className="px-4 py-2.5 font-mono-share text-xs text-foreground/80">{tx.email || "unknown"}</td>
-                    <td className="px-4 py-2.5">
+                    <td className="px-2.5 py-2 font-mono-share text-xs text-foreground/80">{tx.email || "unknown"}</td>
+                    <td className="px-2.5 py-2">
                       <span className={`font-orbitron text-[9px] tracking-wider px-2 py-0.5 rounded border ${
                         tx.type === "subscription"
                           ? "bg-secondary/20 text-secondary border-secondary/30"
                           : "bg-primary/20 text-primary border-primary/30"
                       }`}>
-                        {tx.type?.toUpperCase() || "—"}
+                        {tx.type?.toUpperCase() || "â€”"}
                       </span>
                     </td>
-                    <td className="px-4 py-2.5 font-mono-share text-xs text-foreground/70">{tx.package?.toUpperCase() || "—"}</td>
-                    <td className="px-4 py-2.5 font-mono-share text-xs text-primary font-bold">{tx.credits}</td>
-                    <td className="px-4 py-2.5 font-mono-share text-xs text-secondary">{fmt$(tx.amount_cents)}</td>
-                    <td className="px-4 py-2.5">
+                    <td className="px-2.5 py-2 font-mono-share text-xs text-foreground/70">{tx.package?.toUpperCase() || "â€”"}</td>
+                    <td className="px-2.5 py-2 font-mono-share text-xs text-primary font-bold">{tx.credits}</td>
+                    <td className="px-2.5 py-2 font-mono-share text-xs text-secondary">{fmt$(tx.amount_cents)}</td>
+                    <td className="px-2.5 py-2">
                       <span className={`font-mono-share text-[9px] px-2 py-0.5 rounded ${
                         tx.gateway === "stripe"
                           ? "bg-indigo-500/20 text-indigo-400 border border-indigo-500/30"
@@ -444,7 +444,7 @@ export default function Admin() {
                           ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
                           : "bg-muted/20 text-muted-foreground"
                       }`}>
-                        {tx.gateway?.toUpperCase() || "—"}
+                        {tx.gateway?.toUpperCase() || "â€”"}
                       </span>
                     </td>
                   </tr>
