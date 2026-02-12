@@ -480,6 +480,16 @@ const Index = () => {
               <MessageCircle className="w-3 h-3" />
               DISCORD
             </a>
+            <span className="text-border/50">|</span>
+            <a
+              href="https://dexscreener.com/base/0xa36f942a5ee23030ac66fb0677540365c0939e662df33f729c5fa5a301eea6d2"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 text-muted-foreground/40 hover:text-green-400 transition-colors"
+            >
+              <span className="text-[8px] font-bold leading-none border border-current rounded-sm px-0.5">$</span>
+              GROKRUN
+            </a>
             {auth.user?.email === "cyberdreadx@proton.me" && (
               <>
                 <span className="text-border/50">|</span>
