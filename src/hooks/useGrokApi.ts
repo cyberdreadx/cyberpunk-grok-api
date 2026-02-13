@@ -85,6 +85,24 @@ async function urlToBase64(url: string): Promise<string> {
   }
 }
 
+/** Make raw API error messages more user-friendly. */
+function friendlyError(msg: string): string {
+  const lower = msg.toLowerCase();
+  if (lower.includes("content moderation") || lower.includes("rejected by content"))
+    return "Your prompt was flagged by content moderation. Please try rephrasing it.";
+  if (lower.includes("rate limit") || lower.includes("too many requests") || lower.includes("high demand"))
+    return "Too many requests — xAI is rate-limiting. Please wait a moment and try again.";
+  if (lower.includes("invalid api key") || lower.includes("unauthorized") || lower.includes("401"))
+    return "Invalid API key. Please check your key in Settings.";
+  if (lower.includes("insufficient credits"))
+    return "Not enough credits. Please purchase more to continue.";
+  if (lower.includes("timeout") || lower.includes("timed out"))
+    return "Request timed out. The servers may be busy — please try again.";
+  if (lower.includes("network") || lower.includes("failed to fetch"))
+    return "Network error. Please check your connection and try again.";
+  return msg;
+}
+
 export function useGrokApi() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -315,7 +333,7 @@ export function useGrokApi() {
       persistNewResults(newResults);
       return newResults;
     } catch (err: any) {
-      setError(err.message);
+      setError(friendlyError(err.message));
       throw err;
     } finally {
       setIsLoading(false);
@@ -360,7 +378,7 @@ export function useGrokApi() {
       persistNewResults(newResults);
       return newResults;
     } catch (err: any) {
-      setError(err.message);
+      setError(friendlyError(err.message));
       throw err;
     } finally {
       setIsLoading(false);
@@ -433,7 +451,7 @@ export function useGrokApi() {
       persistNewResults(newResults);
       return newResults;
     } catch (err: any) {
-      setError(err.message);
+      setError(friendlyError(err.message));
       throw err;
     } finally {
       setIsLoading(false);
