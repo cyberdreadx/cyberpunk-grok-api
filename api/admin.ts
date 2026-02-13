@@ -343,12 +343,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               (s) => s.status === "active" || s.status === "trialing"
             );
 
+            // Debug: always log what Stripe returned for this user
+            const debugInfo = {
+              email: user.email,
+              subs_found: subs.data.length,
+              statuses: subs.data.map((s) => ({
+                id: s.id,
+                status: s.status,
+                cancel_at_period_end: s.cancel_at_period_end,
+                cancel_at: s.cancel_at,
+                current_period_end: s.current_period_end,
+                meta_user_id: s.metadata?.user_id,
+              })),
+            };
+
             if (!activeSub) {
               // No active subscription in Stripe — this user's sub already ended
               // Clear their subscription in our DB
               await sql`SELECT clear_subscription(${user.id}::uuid)`;
               already_deleted++;
-              details.push({ email: user.email, action: "cleared (no active sub in Stripe)" });
+              details.push({ ...debugInfo, action: "cleared (no active sub in Stripe)" });
             } else if (activeSub.cancel_at_period_end && !user.subscription_cancel_at) {
               // Stripe says cancelling, but we didn't know — backfill
               const cancelAt = new Date(activeSub.current_period_end * 1000).toISOString();
@@ -358,7 +372,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 WHERE id = ${user.id}::uuid
               `;
               marked_cancelling++;
-              details.push({ email: user.email, action: "marked cancelling", cancel_at: cancelAt });
+              details.push({ ...debugInfo, action: "marked cancelling", cancel_at: cancelAt });
             } else if (!activeSub.cancel_at_period_end && user.subscription_cancel_at) {
               // Stripe says active (not cancelling), but we had a cancel_at — clear it
               await sql`
@@ -367,7 +381,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 WHERE id = ${user.id}::uuid
               `;
               cleared++;
-              details.push({ email: user.email, action: "cleared cancel_at (reactivated)" });
+              details.push({ ...debugInfo, action: "cleared cancel_at (reactivated)" });
+            } else {
+              // No action needed — include debug info anyway
+              details.push({ ...debugInfo, action: "no change" });
             }
             synced++;
           } catch (err: any) {
