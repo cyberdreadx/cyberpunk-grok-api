@@ -86,7 +86,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const session = await stripe.checkout.sessions.create({
         mode: "subscription",
         customer: customerId,
-        payment_method_types: ["card"],
         line_items: [{ price: priceId, quantity: 1 }],
         client_reference_id: auth.userId,
         metadata: { user_id: auth.userId, tier: tierId, credits_per_month: String(tier.creditsPerMonth) },
@@ -109,7 +108,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
-      payment_method_types: ["card"],
       line_items: [{ price: priceId, quantity: 1 }],
       client_reference_id: auth.userId,
       metadata: { user_id: auth.userId, package: packageId, credits: String(pkg.credits), type: "pack" },

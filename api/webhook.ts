@@ -79,15 +79,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({ received: true, duplicate: true });
     }
 
-    // ── checkout.session.completed: pack purchase + subscription fallback grant ──
-    if (event.type === "checkout.session.completed") {
+    // ── checkout.session.completed OR async_payment_succeeded ──
+    // PayPal (and other async methods) fire "completed" with payment_status="unpaid",
+    // then "async_payment_succeeded" when money actually clears.
+    if (
+      event.type === "checkout.session.completed" ||
+      event.type === "checkout.session.async_payment_succeeded"
+    ) {
       const session = event.data.object as Stripe.Checkout.Session;
+
+      // For async payment methods (PayPal): skip "completed" if not paid yet —
+      // credits will be granted when "async_payment_succeeded" fires.
+      if (event.type === "checkout.session.completed" && session.payment_status !== "paid") {
+        console.log("[webhook] checkout completed but payment pending (async method):", session.id, session.payment_status);
+        return res.status(200).json({ received: true, pending: true });
+      }
+
       if (session.mode === "subscription") {
-        // Only grant fallback credits when Stripe marks checkout as paid.
-        if (session.payment_status !== "paid") {
-          console.log("[webhook] subscription checkout completed but not paid yet:", session.id, session.payment_status);
-          return res.status(200).json({ received: true });
-        }
 
         // Primary subscription handling is invoice.paid, but this fallback grants initial
         // credits in case invoice events are delayed/missed.
@@ -219,6 +227,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // triggered the purchase reward yet. Grant 10 credits to referrer + 5 bonus to referee.
     if (
       event.type === "checkout.session.completed" ||
+      event.type === "checkout.session.async_payment_succeeded" ||
       event.type === "invoice.paid"
     ) {
       try {

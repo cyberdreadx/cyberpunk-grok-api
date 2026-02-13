@@ -128,9 +128,35 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- 8. Processed events — webhook idempotency
+CREATE TABLE IF NOT EXISTS public.processed_events (
+  event_id TEXT PRIMARY KEY,
+  processed_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- 9. Referrals table
+CREATE TABLE IF NOT EXISTS public.referrals (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  referrer_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  referee_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  referee_purchased BOOLEAN NOT NULL DEFAULT false,
+  referrer_rewarded BOOLEAN NOT NULL DEFAULT false,
+  referee_purchase_reward BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(referrer_id, referee_id)
+);
+
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_users_email ON public.users(email);
 CREATE INDEX IF NOT EXISTS idx_users_stripe_customer ON public.users(stripe_customer_id) WHERE stripe_customer_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON public.transactions(user_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_session ON public.transactions(stripe_session_id) WHERE stripe_session_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_usage_log_user_id ON public.usage_log(user_id);
 CREATE INDEX IF NOT EXISTS idx_usage_log_created_at ON public.usage_log(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_referrals_referee ON public.referrals(referee_id);
+CREATE INDEX IF NOT EXISTS idx_referrals_referrer ON public.referrals(referrer_id);
+
+-- Unique constraint for idempotent pack transactions
+CREATE UNIQUE INDEX IF NOT EXISTS idx_transactions_stripe_session_unique
+  ON public.transactions(stripe_session_id)
+  WHERE stripe_session_id IS NOT NULL;
