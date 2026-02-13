@@ -36,6 +36,8 @@ CREATE TABLE IF NOT EXISTS public.transactions (
   package TEXT,
   -- 'pack' for one-time purchases, 'subscription' for monthly renewals
   type TEXT NOT NULL DEFAULT 'pack',
+  -- Payment method: 'card', 'paypal', 'apple_pay', 'google_pay', 'link', 'cashapp', 'unknown'
+  payment_method TEXT NOT NULL DEFAULT 'unknown',
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

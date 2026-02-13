@@ -19,6 +19,43 @@ async function getRawBody(req: VercelRequest): Promise<Buffer> {
   return Buffer.concat(chunks);
 }
 
+/**
+ * Detect payment method from a checkout session or invoice.
+ * Returns 'paypal', 'card', 'apple_pay', 'google_pay', 'link', etc.
+ */
+async function detectPaymentMethod(stripe: Stripe, session: any): Promise<string> {
+  try {
+    // checkout.session has payment_method_types array
+    const types = session.payment_method_types as string[] | undefined;
+    if (types?.length === 1) return types[0]; // e.g. "paypal", "card"
+
+    // Try to get the actual payment method from the payment intent
+    const piId = session.payment_intent as string | undefined;
+    if (piId) {
+      const pi = await stripe.paymentIntents.retrieve(piId);
+      const pmId = typeof pi.payment_method === "string" ? pi.payment_method : pi.payment_method?.id;
+      if (pmId) {
+        const pm = await stripe.paymentMethods.retrieve(pmId);
+        if (pm.type === "card" && pm.card?.wallet?.type) {
+          return pm.card.wallet.type; // 'apple_pay', 'google_pay', 'link'
+        }
+        return pm.type; // 'card', 'paypal', 'cashapp', etc.
+      }
+    }
+
+    // Fallback for invoices: check the charge
+    const chargeId = session.charge as string | undefined;
+    if (chargeId) {
+      const charge = await stripe.charges.retrieve(chargeId);
+      const pmDetails = (charge as any).payment_method_details;
+      if (pmDetails?.type) return pmDetails.type;
+    }
+  } catch (err: any) {
+    console.warn("[webhook] detectPaymentMethod failed:", err.message);
+  }
+  return "unknown";
+}
+
 const TIER_CREDITS: Record<string, number> = {
   basic: 150,
   premium: 500,
@@ -139,11 +176,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (session.customer) {
           await sql`UPDATE users SET stripe_customer_id = ${session.customer as string} WHERE id = ${userId}::uuid`;
         }
+        const subPayMethod = await detectPaymentMethod(stripe, session);
         await sql`
-          INSERT INTO transactions (user_id, credits, amount_cents, stripe_session_id, package, type)
-          VALUES (${userId}::uuid, ${creditsPerMonth}, ${session.amount_total || 0}, ${session.id}, ${tier}, 'subscription')
+          INSERT INTO transactions (user_id, credits, amount_cents, stripe_session_id, package, type, payment_method)
+          VALUES (${userId}::uuid, ${creditsPerMonth}, ${session.amount_total || 0}, ${session.id}, ${tier}, 'subscription', ${subPayMethod})
         `;
-        console.log(`Fallback: set sub_credits to ${creditsPerMonth} for ${userId} (${tier})`);
+        console.log(`Fallback: set sub_credits to ${creditsPerMonth} for ${userId} (${tier}) via ${subPayMethod}`);
         return res.status(200).json({ received: true });
       }
 
@@ -156,11 +194,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json({ received: true });
       }
 
+      // Detect payment method (card, paypal, apple_pay, etc.)
+      const paymentMethod = await detectPaymentMethod(stripe, session);
+
       // Atomic + idempotent: insert transaction first, then add credits only if inserted.
       const rows = await sql`
         WITH ins AS (
-          INSERT INTO transactions (user_id, credits, amount_cents, stripe_session_id, package, type)
-          VALUES (${userId}::uuid, ${credits}, ${session.amount_total || 0}, ${session.id}, ${packageId}, 'pack')
+          INSERT INTO transactions (user_id, credits, amount_cents, stripe_session_id, package, type, payment_method)
+          VALUES (${userId}::uuid, ${credits}, ${session.amount_total || 0}, ${session.id}, ${packageId}, 'pack', ${paymentMethod})
           ON CONFLICT DO NOTHING
           RETURNING user_id, credits
         ), upd AS (
@@ -235,11 +276,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         await sql`UPDATE users SET stripe_customer_id = ${invoice.customer as string} WHERE id = ${userId}::uuid`;
       }
 
+      const invoicePayMethod = await detectPaymentMethod(stripe, invoice);
       await sql`
-        INSERT INTO transactions (user_id, credits, amount_cents, stripe_session_id, package, type)
-        VALUES (${userId}::uuid, ${creditsPerMonth}, ${invoice.amount_paid || 0}, ${invoice.id}, ${tier}, 'subscription')
+        INSERT INTO transactions (user_id, credits, amount_cents, stripe_session_id, package, type, payment_method)
+        VALUES (${userId}::uuid, ${creditsPerMonth}, ${invoice.amount_paid || 0}, ${invoice.id}, ${tier}, 'subscription', ${invoicePayMethod})
       `;
-      console.log(`Reset sub_credits to ${creditsPerMonth} for ${userId} (${tier})`);
+      console.log(`Reset sub_credits to ${creditsPerMonth} for ${userId} (${tier}) via ${invoicePayMethod}`);
     }
 
     // ── customer.subscription.deleted ──
