@@ -187,17 +187,47 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const subscriptionId = (invoice as any).subscription as string | null;
       if (!subscriptionId) return res.status(200).json({ received: true });
 
-      const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-      const userId = subscription.metadata?.user_id;
-      const tier = subscription.metadata?.tier;
-      const creditsPerMonth = parseInt(subscription.metadata?.credits_per_month || "0", 10);
+      // Extract metadata from the invoice payload directly (avoids extra API call
+      // that can fail with restricted keys). Metadata is in multiple places:
+      const subDetails = (invoice as any).parent?.subscription_details?.metadata
+        || (invoice as any).subscription_details?.metadata
+        || {};
+      const lineItemMeta = (invoice as any).lines?.data?.[0]?.metadata || {};
+      const meta = {
+        user_id: subDetails.user_id || lineItemMeta.user_id || "",
+        tier: subDetails.tier || lineItemMeta.tier || "",
+        credits_per_month: subDetails.credits_per_month || lineItemMeta.credits_per_month || "0",
+      };
+
+      // Fallback: if metadata not in invoice, retrieve subscription from Stripe
+      if (!meta.user_id || !meta.tier) {
+        try {
+          const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+          meta.user_id = meta.user_id || subscription.metadata?.user_id || "";
+          meta.tier = meta.tier || subscription.metadata?.tier || "";
+          meta.credits_per_month = meta.credits_per_month || subscription.metadata?.credits_per_month || "0";
+        } catch (subErr: any) {
+          console.warn("[webhook] subscription retrieve failed:", subErr.message);
+        }
+      }
+
+      const userId = meta.user_id;
+      const tier = meta.tier;
+      let creditsPerMonth = parseInt(meta.credits_per_month, 10);
+      if (creditsPerMonth <= 0 && tier) {
+        creditsPerMonth = TIER_CREDITS[tier] || 0;
+      }
 
       if (!userId || !tier || creditsPerMonth <= 0) {
-        console.error("invoice.paid: missing metadata", { userId, tier, creditsPerMonth });
+        console.error("invoice.paid: missing metadata", { userId, tier, creditsPerMonth, subDetails, lineItemMeta });
         return res.status(200).json({ received: true });
       }
 
-      const renewsAt = new Date((subscription as any).current_period_end * 1000).toISOString();
+      // Compute renewal date from line item period or current time + 30 days
+      const periodEnd = (invoice as any).lines?.data?.[0]?.period?.end;
+      const renewsAt = periodEnd
+        ? new Date(periodEnd * 1000).toISOString()
+        : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
       await sql`SELECT reset_sub_credits(${userId}::uuid, ${creditsPerMonth}, ${tier}, ${renewsAt}::timestamptz)`;
 
