@@ -304,6 +304,7 @@ const Index = () => {
                 packCredits={creditsHook.packCredits}
                 subscriptionTier={creditsHook.subscriptionTier}
                 subscriptionRenewsAt={creditsHook.subscriptionRenewsAt}
+                subscriptionCancelAt={creditsHook.subscriptionCancelAt}
                 loading={creditsHook.loading}
                 purchasing={creditsHook.purchasing}
                 packages={creditsHook.packages}

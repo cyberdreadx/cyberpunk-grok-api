@@ -59,7 +59,7 @@ interface ModerationStats {
   offenders: ModerationOffender[];
 }
 interface Overview {
-  users: { total_users: number; verified_users: number; active_subscribers: number; new_today: number; new_this_week: number };
+  users: { total_users: number; verified_users: number; active_subscribers: number; cancelling_subscribers: number; new_today: number; new_this_week: number };
   revenue: { total_revenue_cents: number; revenue_30d_cents: number; revenue_7d_cents: number; total_transactions: number; pack_purchases: number; sub_renewals: number };
   usage: { total_credits_used: number; credits_30d: number; credits_today: number; total_generations: number; generations_today: number };
   creditPool: { total_sub_credits_outstanding: number; total_pack_credits_outstanding: number };
@@ -74,7 +74,7 @@ interface Transaction {
   created_at: string; email: string; type: string; package: string; credits: number; amount_cents: number; gateway: string;
 }
 interface TopUser {
-  email: string; subscription_tier: string | null; sub_credits: number; pack_credits: number;
+  email: string; subscription_tier: string | null; subscription_cancel_at: string | null; sub_credits: number; pack_credits: number;
   created_at: string; total_spent_cents: number; total_generations: number; total_credits_used: number; last_generation: string | null;
 }
 
@@ -289,7 +289,7 @@ export default function Admin() {
           <KpiCard icon={<Users className="w-4 h-4" />} label="TOTAL_USERS" value={o.users.total_users} sub={`${o.users.verified_users} verified // +${o.users.new_this_week} this week`} />
           <KpiCard icon={<DollarSign className="w-4 h-4" />} label="REVENUE_30D" value={fmt$(o.revenue.revenue_30d_cents)} sub={`${fmt$(o.revenue.total_revenue_cents)} lifetime`} accent="secondary" />
           <KpiCard icon={<Zap className="w-4 h-4" />} label="GENERATIONS_30D" value={o.usage.credits_30d} sub={`${o.usage.generations_today} today // ${o.usage.total_generations} total`} />
-          <KpiCard icon={<Crown className="w-4 h-4" />} label="SUBSCRIBERS" value={o.users.active_subscribers} sub={`${o.revenue.pack_purchases} pack buys // ${o.revenue.sub_renewals} renewals`} accent="secondary" />
+          <KpiCard icon={<Crown className="w-4 h-4" />} label="SUBSCRIBERS" value={o.users.active_subscribers} sub={`${o.users.cancelling_subscribers} cancelling // ${o.revenue.pack_purchases} pack buys // ${o.revenue.sub_renewals} renewals`} accent="secondary" />
         </section>
 
         {/* Financial overview */}
@@ -442,8 +442,13 @@ export default function Admin() {
                     <td className="px-2.5 py-2 font-mono-share text-xs text-foreground/80">{u.email}</td>
                     <td className="px-2.5 py-2">
                       {u.subscription_tier ? (
-                        <span className="font-orbitron text-[9px] tracking-wider px-2 py-0.5 rounded bg-secondary/20 text-secondary border border-secondary/30">
+                        <span className={`font-orbitron text-[9px] tracking-wider px-2 py-0.5 rounded border ${
+                          u.subscription_cancel_at
+                            ? "bg-destructive/20 text-destructive border-destructive/30"
+                            : "bg-secondary/20 text-secondary border-secondary/30"
+                        }`}>
                           {u.subscription_tier.toUpperCase()}
+                          {u.subscription_cancel_at && " (ending)"}
                         </span>
                       ) : (
                         <span className="font-mono-share text-[10px] text-muted-foreground/40">none</span>

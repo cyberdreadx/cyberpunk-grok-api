@@ -21,6 +21,8 @@ CREATE TABLE IF NOT EXISTS public.users (
   subscription_tier TEXT,
   -- When the current subscription period renews (credits reset)
   subscription_renews_at TIMESTAMPTZ,
+  -- If set, the subscription is pending cancellation and will end at this time
+  subscription_cancel_at TIMESTAMPTZ,
   byok_enabled BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -112,6 +114,7 @@ BEGIN
   SET sub_credits = p_amount,
       subscription_tier = p_tier,
       subscription_renews_at = p_renews_at,
+      subscription_cancel_at = NULL,
       updated_at = now()
   WHERE id = p_user_id;
 END;
@@ -125,6 +128,7 @@ BEGIN
   SET sub_credits = 0,
       subscription_tier = NULL,
       subscription_renews_at = NULL,
+      subscription_cancel_at = NULL,
       updated_at = now()
   WHERE id = p_user_id;
 END;

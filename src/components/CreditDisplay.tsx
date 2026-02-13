@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Coins, ShoppingCart, Loader2, Crown, Settings, XCircle, Share2, Copy, Check, Gift, Users } from "lucide-react";
+import { Coins, ShoppingCart, Loader2, Crown, Settings, XCircle, AlertTriangle, Share2, Copy, Check, Gift, Users } from "lucide-react";
 import { PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
@@ -20,6 +20,7 @@ interface CreditDisplayProps {
   packCredits: number;
   subscriptionTier: string | null;
   subscriptionRenewsAt: string | null;
+  subscriptionCancelAt: string | null;
   loading: boolean;
   purchasing: boolean;
   packages: CreditPackage[];
@@ -38,6 +39,7 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
   packCredits,
   subscriptionTier,
   subscriptionRenewsAt,
+  subscriptionCancelAt,
   loading,
   purchasing,
   packages,
@@ -53,6 +55,12 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
     ? new Date(subscriptionRenewsAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })
     : null;
 
+  const cancelLabel = subscriptionCancelAt
+    ? new Date(subscriptionCancelAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })
+    : null;
+
+  const isCancelling = !!subscriptionTier && !!subscriptionCancelAt;
+
   return (
     <div className="flex items-center gap-2">
       {/* Credit balance badge */}
@@ -65,8 +73,8 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
           {loading ? "..." : totalCredits.toLocaleString()}
         </span>
         {subscriptionTier && (
-          <span className="font-orbitron text-[7px] text-primary/70 uppercase tracking-wider ml-0.5">
-            {subscriptionTier}
+          <span className={`font-orbitron text-[7px] uppercase tracking-wider ml-0.5 ${isCancelling ? "text-destructive/70" : "text-primary/70"}`}>
+            {isCancelling ? `${subscriptionTier} (ending)` : subscriptionTier}
           </span>
         )}
       </div>
@@ -116,42 +124,78 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
 
           {/* Active subscription management — shown prominently before pricing */}
           {subscriptionTier && (
-            <div className="mt-3 border border-primary/30 rounded-lg bg-primary/5 p-3 space-y-2.5">
-              <div className="flex items-center gap-2">
-                <Crown className="w-4 h-4 text-primary" />
-                <span className="font-orbitron text-xs tracking-wider text-primary">
-                  ACTIVE_PLAN: {subscriptionTier.toUpperCase()}
-                </span>
-                {renewsLabel && (
-                  <span className="font-mono-share text-[10px] text-muted-foreground/60 ml-auto">
-                    renews {renewsLabel}
-                  </span>
-                )}
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={onManageSubscription}
-                  className="font-mono-share text-xs gap-1.5 border-primary/30 hover:bg-primary/10"
-                >
-                  <Settings className="w-3.5 h-3.5" />
-                  MANAGE_BILLING
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={onManageSubscription}
-                  className="font-mono-share text-xs gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                >
-                  <XCircle className="w-3.5 h-3.5" />
-                  CANCEL_SUBSCRIPTION
-                </Button>
-              </div>
-              <p className="font-mono-share text-[10px] text-muted-foreground/50 leading-relaxed">
-                Manage billing, update payment method, or cancel your subscription via the Stripe portal.
-                Cancellation takes effect at the end of your current billing period.
-              </p>
+            <div className={`mt-3 border rounded-lg p-3 space-y-2.5 ${
+              isCancelling
+                ? "border-destructive/40 bg-destructive/5"
+                : "border-primary/30 bg-primary/5"
+            }`}>
+              {isCancelling ? (
+                <>
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-destructive" />
+                    <span className="font-orbitron text-xs tracking-wider text-destructive">
+                      CANCELLING: {subscriptionTier.toUpperCase()}
+                    </span>
+                    {cancelLabel && (
+                      <span className="font-mono-share text-[10px] text-destructive/60 ml-auto">
+                        ends {cancelLabel}
+                      </span>
+                    )}
+                  </div>
+                  <p className="font-mono-share text-[10px] text-destructive/70 leading-relaxed">
+                    Your subscription is scheduled for cancellation. You can still use your remaining {subCredits} sub credits
+                    until {cancelLabel || "the end of your billing period"}.
+                    Reactivate anytime before then to keep your plan.
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onManageSubscription}
+                    className="font-mono-share text-xs gap-1.5 border-primary/30 hover:bg-primary/10"
+                  >
+                    <Settings className="w-3.5 h-3.5" />
+                    REACTIVATE_SUBSCRIPTION
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-center gap-2">
+                    <Crown className="w-4 h-4 text-primary" />
+                    <span className="font-orbitron text-xs tracking-wider text-primary">
+                      ACTIVE_PLAN: {subscriptionTier.toUpperCase()}
+                    </span>
+                    {renewsLabel && (
+                      <span className="font-mono-share text-[10px] text-muted-foreground/60 ml-auto">
+                        renews {renewsLabel}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={onManageSubscription}
+                      className="font-mono-share text-xs gap-1.5 border-primary/30 hover:bg-primary/10"
+                    >
+                      <Settings className="w-3.5 h-3.5" />
+                      MANAGE_BILLING
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={onManageSubscription}
+                      className="font-mono-share text-xs gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    >
+                      <XCircle className="w-3.5 h-3.5" />
+                      CANCEL_SUBSCRIPTION
+                    </Button>
+                  </div>
+                  <p className="font-mono-share text-[10px] text-muted-foreground/50 leading-relaxed">
+                    Manage billing, update payment method, or cancel your subscription via the Stripe portal.
+                    Cancellation takes effect at the end of your current billing period.
+                  </p>
+                </>
+              )}
             </div>
           )}
 

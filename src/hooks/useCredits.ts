@@ -20,6 +20,7 @@ export function useCredits(user: AuthUser | null) {
   const [packCredits, setPackCredits] = useState<number>(0);
   const [subscriptionTier, setSubscriptionTier] = useState<string | null>(null);
   const [subscriptionRenewsAt, setSubscriptionRenewsAt] = useState<string | null>(null);
+  const [subscriptionCancelAt, setSubscriptionCancelAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [purchasing, setPurchasing] = useState(false);
 
@@ -32,6 +33,7 @@ export function useCredits(user: AuthUser | null) {
       setPackCredits(0);
       setSubscriptionTier(null);
       setSubscriptionRenewsAt(null);
+      setSubscriptionCancelAt(null);
       return;
     }
     setLoading(true);
@@ -41,6 +43,7 @@ export function useCredits(user: AuthUser | null) {
       setPackCredits(data.pack_credits ?? 0);
       setSubscriptionTier(data.subscription_tier ?? null);
       setSubscriptionRenewsAt(data.subscription_renews_at ?? null);
+      setSubscriptionCancelAt(data.subscription_cancel_at ?? null);
     } catch (err: any) {
       console.warn("[useCredits] Error fetching:", err.message);
     } finally {
@@ -127,7 +130,9 @@ export function useCredits(user: AuthUser | null) {
     packCredits,
     subscriptionTier,
     subscriptionRenewsAt,
+    subscriptionCancelAt,
     hasSubscription: !!subscriptionTier,
+    isCancelling: !!subscriptionTier && !!subscriptionCancelAt,
     loading,
     purchasing,
     packages: CREDIT_PACKAGES,

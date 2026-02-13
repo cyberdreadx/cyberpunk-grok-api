@@ -12,7 +12,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const sql = getDb();
     const rows = await sql`
-      SELECT sub_credits, pack_credits, subscription_tier, subscription_renews_at
+      SELECT sub_credits, pack_credits, subscription_tier, subscription_renews_at, subscription_cancel_at
       FROM users
       WHERE id = ${auth.userId}
     `;

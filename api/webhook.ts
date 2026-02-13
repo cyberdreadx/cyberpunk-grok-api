@@ -1,6 +1,6 @@
 /**
  * /api/webhook — Stripe webhook handler.
- * Handles: checkout.session.completed, invoice.paid, customer.subscription.deleted
+ * Handles: checkout.session.completed, invoice.paid, customer.subscription.updated, customer.subscription.deleted
  * Includes idempotency checks to prevent double-processing on retries.
  */
 
@@ -282,6 +282,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         VALUES (${userId}::uuid, ${creditsPerMonth}, ${invoice.amount_paid || 0}, ${invoice.id}, ${tier}, 'subscription', ${invoicePayMethod})
       `;
       console.log(`Reset sub_credits to ${creditsPerMonth} for ${userId} (${tier}) via ${invoicePayMethod}`);
+    }
+
+    // ── customer.subscription.updated ──
+    // Fires when user cancels in portal (cancel_at_period_end = true)
+    // or reactivates before the period ends (cancel_at_period_end = false)
+    if (event.type === "customer.subscription.updated") {
+      const subscription = event.data.object as Stripe.Subscription;
+      const userId = subscription.metadata?.user_id;
+      if (userId) {
+        if (subscription.cancel_at_period_end) {
+          // User cancelled — record when it will end
+          const cancelAt = subscription.current_period_end
+            ? new Date(subscription.current_period_end * 1000).toISOString()
+            : null;
+          await sql`
+            UPDATE users
+            SET subscription_cancel_at = ${cancelAt}::timestamptz,
+                updated_at = now()
+            WHERE id = ${userId}::uuid
+          `;
+          console.log(`Subscription pending cancellation for ${userId}, ends at ${cancelAt}`);
+        } else {
+          // User reactivated — clear the cancel_at flag
+          await sql`
+            UPDATE users
+            SET subscription_cancel_at = NULL,
+                updated_at = now()
+            WHERE id = ${userId}::uuid
+          `;
+          console.log(`Subscription reactivated for ${userId}`);
+        }
+      }
     }
 
     // ── customer.subscription.deleted ──

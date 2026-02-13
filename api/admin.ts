@@ -54,6 +54,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             COUNT(*)::int AS total_users,
             COUNT(*) FILTER (WHERE email_verified = true)::int AS verified_users,
             COUNT(*) FILTER (WHERE subscription_tier IS NOT NULL)::int AS active_subscribers,
+            COUNT(*) FILTER (WHERE subscription_tier IS NOT NULL AND subscription_cancel_at IS NOT NULL)::int AS cancelling_subscribers,
             COUNT(*) FILTER (WHERE created_at > now() - interval '24 hours')::int AS new_today,
             COUNT(*) FILTER (WHERE created_at > now() - interval '7 days')::int AS new_this_week
           FROM users
@@ -239,6 +240,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           SELECT
             u.email,
             u.subscription_tier,
+            u.subscription_cancel_at,
             u.sub_credits,
             u.pack_credits,
             u.created_at,
