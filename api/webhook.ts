@@ -214,6 +214,78 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
+    // ── Referral purchase reward ──
+    // After any successful purchase, check if the buyer was referred and hasn't
+    // triggered the purchase reward yet. Grant 10 credits to referrer + 5 bonus to referee.
+    if (
+      event.type === "checkout.session.completed" ||
+      event.type === "invoice.paid"
+    ) {
+      try {
+        // Determine the purchasing user's ID
+        let buyerUserId: string | null = null;
+        if (event.type === "checkout.session.completed") {
+          const s = event.data.object as Stripe.Checkout.Session;
+          buyerUserId = s.client_reference_id || s.metadata?.user_id || null;
+        } else if (event.type === "invoice.paid") {
+          const inv = event.data.object as Stripe.Invoice;
+          const subId = (inv as any).subscription as string | null;
+          if (subId) {
+            const sub = await stripe.subscriptions.retrieve(subId);
+            buyerUserId = sub.metadata?.user_id || null;
+          }
+        }
+
+        if (buyerUserId) {
+          // Find an unrewarded referral for this buyer
+          const [ref] = await sql`
+            SELECT r.id, r.referrer_id
+            FROM referrals r
+            WHERE r.referee_id = ${buyerUserId}::uuid
+              AND r.referee_purchased = false
+          `;
+
+          if (ref) {
+            // Check referrer hasn't exceeded 50 lifetime rewarded referrals
+            const [cap] = await sql`
+              SELECT COUNT(*)::int AS rewarded
+              FROM referrals
+              WHERE referrer_id = ${ref.referrer_id}::uuid AND referrer_rewarded = true
+            `;
+
+            if ((cap?.rewarded || 0) < 50) {
+              // Grant 10 credits to referrer
+              await sql`SELECT add_pack_credits(${ref.referrer_id}::uuid, 10)`;
+              // Grant 5 bonus credits to referee (buyer)
+              await sql`SELECT add_pack_credits(${buyerUserId}::uuid, 5)`;
+              // Mark referral as fully rewarded
+              await sql`
+                UPDATE referrals
+                SET referee_purchased = true,
+                    referrer_rewarded = true,
+                    referee_purchase_reward = true
+                WHERE id = ${ref.id}::uuid
+              `;
+              console.log(`[referral] Purchase reward: +10 to referrer ${ref.referrer_id}, +5 bonus to buyer ${buyerUserId}`);
+            } else {
+              // Referrer hit cap — still mark purchase but don't grant referrer credits
+              await sql`
+                UPDATE referrals
+                SET referee_purchased = true, referee_purchase_reward = true
+                WHERE id = ${ref.id}::uuid
+              `;
+              // Still give the buyer their 5 bonus
+              await sql`SELECT add_pack_credits(${buyerUserId}::uuid, 5)`;
+              console.log(`[referral] Referrer ${ref.referrer_id} hit 50-cap, but buyer ${buyerUserId} still gets +5 bonus`);
+            }
+          }
+        }
+      } catch (refErr: any) {
+        // Non-critical — don't fail the webhook if referral logic errors
+        console.error("[referral] purchase reward error:", refErr.message);
+      }
+    }
+
     return res.status(200).json({ received: true });
   } catch (err: any) {
     console.error("[webhook]", err.message);

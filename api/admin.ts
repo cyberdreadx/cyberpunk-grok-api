@@ -264,8 +264,49 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json({ topUsers: rows });
       }
 
+      // —— Referral stats ——
+      case "referrals": {
+        const [stats] = await sql`
+          SELECT
+            COUNT(*)::int AS total_referrals,
+            COUNT(*) FILTER (WHERE referee_verified)::int AS verified,
+            COUNT(*) FILTER (WHERE referee_purchased)::int AS converted,
+            COUNT(*) FILTER (WHERE referrer_rewarded)::int AS rewarded,
+            COALESCE(COUNT(*) FILTER (WHERE referee_purchased), 0)::int AS purchases
+          FROM referrals
+        `;
+        const conversionRate = stats.total_referrals > 0
+          ? Math.round((stats.converted / stats.total_referrals) * 100)
+          : 0;
+        // Credits granted: 3 per verified signup + 10 per rewarded referrer + 5 per purchase bonus
+        const creditsGranted = (stats.verified * 3) + (stats.rewarded * 10) + (stats.purchases * 5);
+
+        // Top referrers
+        const topReferrers = await sql`
+          SELECT
+            u.email,
+            COUNT(*)::int AS referral_count,
+            COUNT(*) FILTER (WHERE r.referee_purchased)::int AS conversions,
+            COUNT(*) FILTER (WHERE r.referrer_rewarded)::int AS rewards
+          FROM referrals r
+          JOIN users u ON u.id = r.referrer_id
+          GROUP BY u.email
+          ORDER BY referral_count DESC
+          LIMIT 10
+        `;
+
+        return res.status(200).json({
+          referrals: {
+            ...stats,
+            conversionRate,
+            creditsGranted,
+            topReferrers,
+          },
+        });
+      }
+
       default:
-        return res.status(400).json({ error: "Unknown action. Expected: overview, revenue, users, usage, transactions, top-users" });
+        return res.status(400).json({ error: "Unknown action. Expected: overview, revenue, users, usage, transactions, top-users, referrals" });
     }
   } catch (err: any) {
     console.error("[admin]", err.message);

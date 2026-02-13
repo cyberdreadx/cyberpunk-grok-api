@@ -39,10 +39,12 @@ export function useAuth() {
       .finally(() => setLoading(false));
   }, []);
 
-  const signUp = useCallback(async (email: string, password: string) => {
+  const signUp = useCallback(async (email: string, password: string, referralCode?: string) => {
+    const body: Record<string, string> = { email, password };
+    if (referralCode) body.referral_code = referralCode;
     const data = await apiFetch<{ message: string; needsVerification: boolean; email: string }>("/auth/signup", {
       method: "POST",
-      body: { email, password },
+      body,
       auth: false,
     });
     // Signup no longer returns a token — user needs to verify email first

@@ -14,7 +14,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   try {
-    const { email, password } = req.body || {};
+    const { email, password, referral_code } = req.body || {};
     if (!email || !password) {
       return res.status(400).json({ error: "Email and password required" });
     }
@@ -45,27 +45,57 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       SELECT id, email_verified FROM users WHERE email = ${normalizedEmail}
     `;
 
+    // Look up referrer if a referral code was provided
+    let referrerId: string | null = null;
+    if (referral_code && typeof referral_code === "string") {
+      const refRows = await sql`
+        SELECT id, email FROM users WHERE referral_code = ${referral_code.trim().toUpperCase()}
+      `;
+      if (refRows.length > 0 && refRows[0].email !== normalizedEmail) {
+        referrerId = refRows[0].id;
+      }
+    }
+
     if (existing.length > 0) {
       if (existing[0].email_verified) {
         return res.status(409).json({ error: "An account with this email already exists" });
       }
       // Unverified account exists — update password + resend code, reset attempts
+      // Also set referred_by if not already set
       await sql`
         UPDATE users
         SET password_hash = ${passwordHash},
             verification_code = ${code},
             verification_code_expires_at = ${expiresAt},
             verification_attempts = 0,
+            referred_by = COALESCE(referred_by, ${referrerId}::uuid),
             updated_at = now()
         WHERE id = ${existing[0].id}
       `;
-    } else {
-      // Insert new user with verification code
-      try {
+      // Create referral row if referrer was found and not already linked
+      if (referrerId) {
         await sql`
-          INSERT INTO users (email, password_hash, email_verified, verification_code, verification_code_expires_at, verification_attempts)
-          VALUES (${normalizedEmail}, ${passwordHash}, false, ${code}, ${expiresAt}, 0)
+          INSERT INTO referrals (referrer_id, referee_id)
+          VALUES (${referrerId}::uuid, ${existing[0].id}::uuid)
+          ON CONFLICT (referee_id) DO NOTHING
         `;
+      }
+    } else {
+      // Insert new user with verification code + referral link
+      try {
+        const newRows = await sql`
+          INSERT INTO users (email, password_hash, email_verified, verification_code, verification_code_expires_at, verification_attempts, referred_by)
+          VALUES (${normalizedEmail}, ${passwordHash}, false, ${code}, ${expiresAt}, 0, ${referrerId}::uuid)
+          RETURNING id
+        `;
+        // Create referral row linking referrer → referee
+        if (referrerId && newRows.length > 0) {
+          await sql`
+            INSERT INTO referrals (referrer_id, referee_id)
+            VALUES (${referrerId}::uuid, ${newRows[0].id}::uuid)
+            ON CONFLICT (referee_id) DO NOTHING
+          `;
+        }
       } catch (err: any) {
         if (err.message?.includes("unique") || err.code === "23505") {
           return res.status(409).json({ error: "An account with this email already exists" });

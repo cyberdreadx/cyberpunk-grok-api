@@ -93,6 +93,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       WHERE id = ${user.id}
     `;
 
+    // Referral signup reward: grant 3 free credits if this user was referred
+    try {
+      const [ref] = await sql`
+        SELECT id, referrer_id FROM referrals
+        WHERE referee_id = ${user.id}::uuid AND referee_signup_reward = false
+      `;
+      if (ref) {
+        await sql`SELECT add_pack_credits(${user.id}::uuid, 3)`;
+        await sql`
+          UPDATE referrals
+          SET referee_verified = true, referee_signup_reward = true
+          WHERE id = ${ref.id}::uuid
+        `;
+        console.log(`[referral] Granted 3 welcome credits to ${user.email} (referred by ${ref.referrer_id})`);
+      }
+    } catch (refErr: any) {
+      // Non-critical — don't block verification if referral reward fails
+      console.error("[referral] signup reward failed:", refErr.message);
+    }
+
     const token = signToken({ userId: user.id, email: user.email });
 
     return res.status(200).json({

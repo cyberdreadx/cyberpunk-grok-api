@@ -16,7 +16,7 @@ interface AuthDialogProps {
   isAuthenticated: boolean;
   userEmail?: string | null;
   onSignIn: (email: string, password: string) => Promise<any>;
-  onSignUp: (email: string, password: string) => Promise<any>;
+  onSignUp: (email: string, password: string, referralCode?: string) => Promise<any>;
   onSignOut: () => Promise<void>;
   pendingVerificationEmail?: string | null;
   onVerify?: (email: string, code: string) => Promise<any>;
@@ -42,12 +42,26 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // Force dialog open when verification is needed
+  // Read referral code from URL (?ref=CODE)
+  const referralCode = React.useMemo(() => {
+    try {
+      return new URLSearchParams(window.location.search).get("ref") || undefined;
+    } catch { return undefined; }
+  }, []);
+
+  // Force dialog open when verification is needed or when referral code is in URL
   useEffect(() => {
     if (pendingVerificationEmail) {
       setOpen(true);
     }
   }, [pendingVerificationEmail]);
+
+  // Auto-open on referral link (only once, only if not authenticated)
+  useEffect(() => {
+    if (referralCode && !isAuthenticated) {
+      setOpen(true);
+    }
+  }, [referralCode, isAuthenticated]);
 
   const handleSubmit = async (action: "signin" | "signup") => {
     setLoading(true);
@@ -58,7 +72,7 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
         await onSignIn(email, password);
         setOpen(false);
       } else {
-        await onSignUp(email, password);
+        await onSignUp(email, password, referralCode);
         // After signup, the hook will set pendingVerificationEmail
         // which triggers the verification UI
       }
@@ -153,6 +167,14 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
               </TabsContent>
 
               <TabsContent value="signup" className="space-y-3 mt-3">
+                {referralCode && (
+                  <div className="bg-green-500/10 border border-green-500/30 rounded px-3 py-2 flex items-center gap-2">
+                    <span className="text-green-400 text-sm">&#127873;</span>
+                    <p className="font-mono-share text-[10px] text-green-400">
+                      Referred by a friend! You'll get <span className="font-bold">3 free credits</span> after verifying your email.
+                    </p>
+                  </div>
+                )}
                 <AuthForm
                   email={email}
                   password={password}
