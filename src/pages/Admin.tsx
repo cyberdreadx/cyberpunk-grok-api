@@ -127,6 +127,8 @@ export default function Admin() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [referralStats, setReferralStats] = useState<any>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
 
   const fetchAll = useCallback(async () => {
@@ -179,6 +181,21 @@ export default function Admin() {
       setRefreshing(false);
     }
   }, []);
+
+  const syncSubscriptions = useCallback(async () => {
+    setSyncing(true);
+    setSyncResult(null);
+    try {
+      const result = await apiFetch("/admin", { method: "POST", body: { action: "sync-subscriptions" } });
+      setSyncResult(result);
+      // Refresh dashboard data after sync
+      fetchAll();
+    } catch (err: any) {
+      setSyncResult({ error: err.message });
+    } finally {
+      setSyncing(false);
+    }
+  }, [fetchAll]);
 
   useEffect(() => {
     if (!hasAuthToken()) {
@@ -290,6 +307,59 @@ export default function Admin() {
           <KpiCard icon={<DollarSign className="w-4 h-4" />} label="REVENUE_30D" value={fmt$(o.revenue.revenue_30d_cents)} sub={`${fmt$(o.revenue.total_revenue_cents)} lifetime`} accent="secondary" />
           <KpiCard icon={<Zap className="w-4 h-4" />} label="GENERATIONS_30D" value={o.usage.credits_30d} sub={`${o.usage.generations_today} today // ${o.usage.total_generations} total`} />
           <KpiCard icon={<Crown className="w-4 h-4" />} label="SUBSCRIBERS" value={o.users.active_subscribers} sub={`${o.users.cancelling_subscribers} cancelling // ${o.revenue.pack_purchases} pack buys // ${o.revenue.sub_renewals} renewals`} accent="secondary" />
+        </section>
+
+        {/* Subscription Sync */}
+        <section className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm p-3 sm:p-4">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
+              <Crown className="w-3.5 h-3.5 text-secondary" />
+              <span className="font-orbitron text-[10px] tracking-wider text-muted-foreground">SUBSCRIPTION_SYNC</span>
+              <span className="font-mono-share text-[9px] text-muted-foreground/40">
+                Pull cancellation status from Stripe for all active subscribers
+              </span>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={syncSubscriptions}
+              disabled={syncing}
+              className="font-mono-share text-xs gap-1.5 border-secondary/30 hover:bg-secondary/10"
+            >
+              {syncing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+              {syncing ? "SYNCING..." : "SYNC_NOW"}
+            </Button>
+          </div>
+          {syncResult && (
+            <div className="mt-3 space-y-2">
+              {syncResult.error ? (
+                <p className="font-mono-share text-xs text-destructive">{syncResult.error}</p>
+              ) : (
+                <>
+                  <div className="flex flex-wrap gap-3 font-mono-share text-[10px] text-muted-foreground/70">
+                    <span>Checked: <span className="text-foreground">{syncResult.total_checked}</span></span>
+                    <span>Marked cancelling: <span className="text-destructive">{syncResult.marked_cancelling}</span></span>
+                    <span>Cleared (reactivated): <span className="text-green-400">{syncResult.cleared}</span></span>
+                    <span>Already ended: <span className="text-muted-foreground">{syncResult.already_deleted}</span></span>
+                  </div>
+                  {syncResult.details?.length > 0 && (
+                    <div className="max-h-32 overflow-y-auto bg-input/30 rounded p-2 space-y-0.5">
+                      {syncResult.details.map((d: any, i: number) => (
+                        <p key={i} className={`font-mono-share text-[9px] ${
+                          d.action?.includes("error") ? "text-destructive" :
+                          d.action?.includes("cancelling") ? "text-destructive/80" :
+                          d.action?.includes("cleared") ? "text-green-400/80" :
+                          "text-muted-foreground/60"
+                        }`}>
+                          {d.email}: {d.action}{d.cancel_at ? ` (${new Date(d.cancel_at).toLocaleDateString()})` : ""}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
         </section>
 
         {/* Financial overview */}

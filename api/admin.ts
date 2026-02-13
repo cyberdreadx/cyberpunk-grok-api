@@ -12,6 +12,7 @@
  */
 
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import Stripe from "stripe";
 import { getDb } from "./_lib/db";
 import { getUserFromRequest } from "./_lib/auth";
 
@@ -307,8 +308,85 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
 
+      // —— Sync subscription cancellation status from Stripe ——
+      case "sync-subscriptions": {
+        const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
+        if (!STRIPE_SECRET_KEY) return res.status(500).json({ error: "Stripe not configured" });
+        const stripe = new Stripe(STRIPE_SECRET_KEY);
+
+        // Get all users who have an active subscription_tier and a stripe_customer_id
+        const activeSubUsers = await sql`
+          SELECT id, email, stripe_customer_id, subscription_tier, subscription_cancel_at
+          FROM users
+          WHERE subscription_tier IS NOT NULL AND stripe_customer_id IS NOT NULL
+        `;
+
+        let synced = 0;
+        let marked_cancelling = 0;
+        let cleared = 0;
+        let already_deleted = 0;
+        const details: any[] = [];
+
+        for (const user of activeSubUsers) {
+          try {
+            // List active subscriptions for this customer
+            const subs = await stripe.subscriptions.list({
+              customer: user.stripe_customer_id,
+              status: "all",
+              limit: 5,
+            });
+
+            // Find the subscription matching our metadata
+            const activeSub = subs.data.find(
+              (s) => s.metadata?.user_id === user.id && (s.status === "active" || s.status === "trialing")
+            ) || subs.data.find(
+              (s) => s.status === "active" || s.status === "trialing"
+            );
+
+            if (!activeSub) {
+              // No active subscription in Stripe — this user's sub already ended
+              // Clear their subscription in our DB
+              await sql`SELECT clear_subscription(${user.id}::uuid)`;
+              already_deleted++;
+              details.push({ email: user.email, action: "cleared (no active sub in Stripe)" });
+            } else if (activeSub.cancel_at_period_end && !user.subscription_cancel_at) {
+              // Stripe says cancelling, but we didn't know — backfill
+              const cancelAt = new Date(activeSub.current_period_end * 1000).toISOString();
+              await sql`
+                UPDATE users
+                SET subscription_cancel_at = ${cancelAt}::timestamptz, updated_at = now()
+                WHERE id = ${user.id}::uuid
+              `;
+              marked_cancelling++;
+              details.push({ email: user.email, action: "marked cancelling", cancel_at: cancelAt });
+            } else if (!activeSub.cancel_at_period_end && user.subscription_cancel_at) {
+              // Stripe says active (not cancelling), but we had a cancel_at — clear it
+              await sql`
+                UPDATE users
+                SET subscription_cancel_at = NULL, updated_at = now()
+                WHERE id = ${user.id}::uuid
+              `;
+              cleared++;
+              details.push({ email: user.email, action: "cleared cancel_at (reactivated)" });
+            }
+            synced++;
+          } catch (err: any) {
+            details.push({ email: user.email, action: "error", error: err.message });
+          }
+        }
+
+        return res.status(200).json({
+          total_checked: activeSubUsers.length,
+          synced,
+          marked_cancelling,
+          cleared,
+          already_deleted,
+          details,
+        });
+      }
+
       default:
-        return res.status(400).json({ error: "Unknown action. Expected: overview, revenue, users, usage, transactions, top-users, referrals" });
+        return res.status(400).json({ error: "Unknown action. Expected: overview, revenue, users, usage, transactions, top-users, referrals, sync-subscriptions" });
     }
   } catch (err: any) {
     console.error("[admin]", err.message);
