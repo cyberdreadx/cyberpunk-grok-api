@@ -6,7 +6,7 @@ import {
   clearStoredResults,
   migrateFromLocalStorage,
 } from "@/lib/storage";
-import { apiFetch, calculateCreditCost } from "@/lib/api";
+import { apiFetch, calculateCreditCost, backendEnabled } from "@/lib/api";
 
 export type GrokMode = "text-to-image" | "edit-image" | "text-to-video" | "image-to-video";
 
@@ -109,7 +109,7 @@ export function useGrokApi() {
   const [results, setResults] = useState<GrokResult[]>([]);
   const [storageReady, setStorageReady] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const [apiMode, setApiMode] = useState<ApiMode>("byok");
+  const [apiMode, setApiMode] = useState<ApiMode>(backendEnabled ? "credits" : "byok");
   const revokeAllRef = useRef<(() => void) | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 

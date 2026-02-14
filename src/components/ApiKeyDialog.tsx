@@ -43,11 +43,11 @@ const ApiKeyDialog: React.FC<ApiKeyDialogProps> = ({ hasKey, onSave, onClear }) 
           className={`font-mono-share text-xs gap-2 ${
             hasKey
               ? "text-primary hover:text-primary/80"
-              : "text-neon-red hover:text-neon-red/80 animate-pulse-glow"
+              : "text-muted-foreground/60 hover:text-muted-foreground"
           }`}
         >
           {hasKey ? <Shield className="w-3 h-3" /> : <Key className="w-3 h-3" />}
-          {hasKey ? "API_KEY: SET" : "API_KEY: REQUIRED"}
+          {hasKey ? "API_KEY: SET" : "SET_API_KEY"}
         </Button>
       </DialogTrigger>
       <DialogContent className="bg-card border-border sm:max-w-md">
@@ -56,7 +56,10 @@ const ApiKeyDialog: React.FC<ApiKeyDialogProps> = ({ hasKey, onSave, onClear }) 
             XAI_CREDENTIALS
           </DialogTitle>
           <DialogDescription className="font-rajdhani text-muted-foreground">
-            Enter your xAI API key. It's stored locally in your browser only.
+            Bring your own xAI API key for free, unlimited use. Your key is stored locally in your browser only.
+            <span className="block mt-1 text-secondary/80">
+              Don't have a key? Switch to Credits mode — no setup needed.
+            </span>
           </DialogDescription>
         </DialogHeader>
 
