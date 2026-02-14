@@ -343,16 +343,24 @@ export default function Admin() {
                     <span>Already ended: <span className="text-muted-foreground">{syncResult.already_deleted}</span></span>
                   </div>
                   {syncResult.details?.length > 0 && (
-                    <div className="max-h-32 overflow-y-auto bg-input/30 rounded p-2 space-y-0.5">
+                    <div className="max-h-64 overflow-y-auto bg-input/30 rounded p-2 space-y-1.5">
                       {syncResult.details.map((d: any, i: number) => (
-                        <p key={i} className={`font-mono-share text-[9px] ${
+                        <div key={i} className={`font-mono-share text-[9px] border-b border-border/10 pb-1 ${
                           d.action?.includes("error") ? "text-destructive" :
                           d.action?.includes("cancelling") ? "text-destructive/80" :
                           d.action?.includes("cleared") ? "text-green-400/80" :
                           "text-muted-foreground/60"
                         }`}>
-                          {d.email}: {d.action}{d.cancel_at ? ` (${new Date(d.cancel_at).toLocaleDateString()})` : ""}
-                        </p>
+                          <p className="font-bold">{d.email}: {d.action}{d.cancel_at ? ` (${new Date(d.cancel_at).toLocaleDateString()})` : ""}</p>
+                          {d.subs_found !== undefined && (
+                            <p className="text-muted-foreground/40 ml-2">subs: {d.subs_found}</p>
+                          )}
+                          {d.statuses?.map((s: any, j: number) => (
+                            <p key={j} className="text-muted-foreground/40 ml-2">
+                              {s.id}: status={s.status}, cancel_at_end={String(s.cancel_at_period_end)}, cancel_at={s.cancel_at || "null"}, period_end={s.current_period_end}
+                            </p>
+                          ))}
+                        </div>
                       ))}
                     </div>
                   )}
