@@ -285,17 +285,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // ── customer.subscription.updated ──
-    // Fires when user cancels in portal (cancel_at_period_end = true)
-    // or reactivates before the period ends (cancel_at_period_end = false)
+    // Fires when user cancels/reactivates in Stripe portal.
+    // Stripe has TWO cancellation signals:
+    //   1. cancel_at_period_end = true → cancels at end of billing period
+    //   2. cancel_at (timestamp) → cancels at a specific date
     if (event.type === "customer.subscription.updated") {
       const subscription = event.data.object as Stripe.Subscription;
       const userId = subscription.metadata?.user_id;
       if (userId) {
-        if (subscription.cancel_at_period_end) {
-          // User cancelled — record when it will end
-          const cancelAt = subscription.current_period_end
-            ? new Date(subscription.current_period_end * 1000).toISOString()
-            : null;
+        const isCancelling = subscription.cancel_at_period_end || !!subscription.cancel_at;
+
+        if (isCancelling) {
+          // User cancelled — determine when it will end
+          const cancelAt = subscription.cancel_at
+            ? new Date(subscription.cancel_at * 1000).toISOString()
+            : subscription.current_period_end
+              ? new Date(subscription.current_period_end * 1000).toISOString()
+              : null;
           await sql`
             UPDATE users
             SET subscription_cancel_at = ${cancelAt}::timestamptz,
