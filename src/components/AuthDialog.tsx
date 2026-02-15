@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { LogIn, UserPlus, LogOut, Mail, Lock, Loader2, ShieldCheck, ArrowLeft, RefreshCw } from "lucide-react";
+import { LogIn, UserPlus, LogOut, Mail, Lock, Loader2, ShieldCheck, ArrowLeft, RefreshCw, KeyRound, Trash2, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -22,6 +22,9 @@ interface AuthDialogProps {
   onVerify?: (email: string, code: string) => Promise<any>;
   onResendCode?: (email: string) => Promise<any>;
   onCancelVerification?: () => void;
+  onForgotPassword?: (email: string) => Promise<any>;
+  onResetPassword?: (email: string, code: string, newPassword: string) => Promise<any>;
+  onDeleteAccount?: (password: string) => Promise<void>;
 }
 
 const AuthDialog: React.FC<AuthDialogProps> = ({
@@ -34,6 +37,9 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
   onVerify,
   onResendCode,
   onCancelVerification,
+  onForgotPassword,
+  onResetPassword,
+  onDeleteAccount,
 }) => {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
@@ -41,6 +47,8 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  /** When set, shows the password reset flow */
+  const [resetEmail, setResetEmail] = useState<string | null>(null);
 
   // Read referral code from URL (?ref=CODE)
   const referralCode = React.useMemo(() => {
@@ -97,6 +105,23 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
         <span className="font-mono-share text-[10px] text-primary/70 hidden sm:inline truncate max-w-[120px]">
           {userEmail}
         </span>
+        {onDeleteAccount && (
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="font-mono-share text-xs gap-1 text-muted-foreground/40 hover:text-destructive"
+                title="Account settings"
+              >
+                <Trash2 className="w-3 h-3" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="bg-card border-border sm:max-w-sm">
+              <DeleteAccountForm onDelete={onDeleteAccount} />
+            </DialogContent>
+          </Dialog>
+        )}
         <Button
           variant="ghost"
           size="sm"
@@ -132,6 +157,14 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
             onBack={onCancelVerification}
             onSuccess={handleVerified}
           />
+        ) : resetEmail && onForgotPassword && onResetPassword ? (
+          <ResetPasswordForm
+            email={resetEmail}
+            onRequestCode={onForgotPassword}
+            onReset={onResetPassword}
+            onBack={() => setResetEmail(null)}
+            onSuccess={() => { setResetEmail(null); setOpen(false); }}
+          />
         ) : (
           <>
             <DialogHeader>
@@ -164,6 +197,15 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
                   buttonLabel="AUTHENTICATE"
                   buttonIcon={<LogIn className="w-3 h-3" />}
                 />
+                {onForgotPassword && (
+                  <button
+                    type="button"
+                    onClick={() => setResetEmail(email || "")}
+                    className="font-mono-share text-[10px] text-muted-foreground/60 hover:text-secondary transition-colors"
+                  >
+                    Forgot password?
+                  </button>
+                )}
               </TabsContent>
 
               <TabsContent value="signup" className="space-y-3 mt-3">
@@ -453,6 +495,288 @@ function VerificationForm({
           Code expires in 10 minutes. Check your spam folder if you don't see it.
         </p>
       </div>
+    </div>
+  );
+}
+
+/** Password reset flow: enter email → get code → enter code + new password. */
+function ResetPasswordForm({
+  email: initialEmail,
+  onRequestCode,
+  onReset,
+  onBack,
+  onSuccess,
+}: {
+  email: string;
+  onRequestCode: (email: string) => Promise<any>;
+  onReset: (email: string, code: string, newPassword: string) => Promise<any>;
+  onBack: () => void;
+  onSuccess: () => void;
+}) {
+  const [step, setStep] = useState<"email" | "code">(initialEmail ? "email" : "email");
+  const [emailVal, setEmailVal] = useState(initialEmail);
+  const [code, setCode] = useState(["", "", "", "", "", ""]);
+  const [newPassword, setNewPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  const handleRequestCode = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      await onRequestCode(emailVal);
+      setSuccessMsg("If that email exists, a reset code has been sent.");
+      setStep("code");
+      setTimeout(() => inputRefs.current[0]?.focus(), 100);
+    } catch (err: any) {
+      setError(err.message || "Failed to send reset code");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleChange = (index: number, value: string) => {
+    const digit = value.replace(/\D/g, "").slice(-1);
+    const newCode = [...code];
+    newCode[index] = digit;
+    setCode(newCode);
+    if (digit && index < 5) inputRefs.current[index + 1]?.focus();
+  };
+
+  const handleKeyDown = (index: number, e: React.KeyboardEvent) => {
+    if (e.key === "Backspace" && !code[index] && index > 0) {
+      inputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    if (pasted.length === 6) {
+      setCode(pasted.split(""));
+      inputRefs.current[5]?.focus();
+    }
+  };
+
+  const handleReset = async () => {
+    const fullCode = code.join("");
+    if (fullCode.length !== 6 || !newPassword) return;
+    setLoading(true);
+    setError(null);
+    try {
+      await onReset(emailVal, fullCode, newPassword);
+      onSuccess();
+    } catch (err: any) {
+      setError(err.message || "Reset failed");
+      setCode(["", "", "", "", "", ""]);
+      inputRefs.current[0]?.focus();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <DialogHeader>
+        <DialogTitle className="font-orbitron text-sm tracking-wider neon-text-magenta flex items-center gap-2">
+          <KeyRound className="w-4 h-4" />
+          RESET_PASSWORD
+        </DialogTitle>
+        <DialogDescription className="font-rajdhani text-muted-foreground">
+          {step === "email"
+            ? "Enter your email to receive a reset code."
+            : "Enter the 6-digit code and your new password."}
+        </DialogDescription>
+      </DialogHeader>
+
+      {step === "email" ? (
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <label className="font-mono-share text-[10px] text-muted-foreground/60 uppercase tracking-wider flex items-center gap-1">
+              <Mail className="w-3 h-3" /> Email
+            </label>
+            <Input
+              type="email"
+              value={emailVal}
+              onChange={(e) => setEmailVal(e.target.value)}
+              placeholder="operator@neural.net"
+              className="bg-input border-border font-mono-share text-sm"
+              onKeyDown={(e) => e.key === "Enter" && handleRequestCode()}
+            />
+          </div>
+          <Button
+            onClick={handleRequestCode}
+            disabled={loading || !emailVal.trim()}
+            className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/80 font-orbitron text-xs tracking-wider gap-2"
+          >
+            {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Mail className="w-3 h-3" />}
+            SEND_RESET_CODE
+          </Button>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {/* 6-digit code */}
+          <div className="flex justify-center gap-2" onPaste={handlePaste}>
+            {code.map((digit, i) => (
+              <input
+                key={i}
+                ref={(el) => { inputRefs.current[i] = el; }}
+                type="text"
+                inputMode="numeric"
+                maxLength={1}
+                value={digit}
+                onChange={(e) => handleChange(i, e.target.value)}
+                onKeyDown={(e) => handleKeyDown(i, e)}
+                disabled={loading}
+                placeholder="·"
+                className="w-10 h-12 text-center text-lg font-mono-share bg-input border border-border rounded
+                           text-secondary placeholder:text-muted-foreground/30 focus:border-secondary focus:ring-1
+                           focus:ring-secondary/50 outline-none transition-colors disabled:opacity-50"
+              />
+            ))}
+          </div>
+          {/* New password */}
+          <div className="space-y-1.5">
+            <label className="font-mono-share text-[10px] text-muted-foreground/60 uppercase tracking-wider flex items-center gap-1">
+              <Lock className="w-3 h-3" /> New Password
+            </label>
+            <Input
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="••••••••"
+              className="bg-input border-border font-mono-share text-sm"
+              onKeyDown={(e) => e.key === "Enter" && handleReset()}
+              minLength={6}
+            />
+          </div>
+          <Button
+            onClick={handleReset}
+            disabled={loading || code.join("").length !== 6 || newPassword.length < 6}
+            className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/80 font-orbitron text-xs tracking-wider gap-2"
+          >
+            {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <KeyRound className="w-3 h-3" />}
+            SET_NEW_PASSWORD
+          </Button>
+        </div>
+      )}
+
+      {error && (
+        <div className="bg-destructive/10 border border-destructive/30 rounded px-3 py-2">
+          <p className="font-mono-share text-xs text-destructive">{error}</p>
+        </div>
+      )}
+      {successMsg && (
+        <div className="bg-primary/10 border border-primary/30 rounded px-3 py-2">
+          <p className="font-mono-share text-xs text-primary">{successMsg}</p>
+        </div>
+      )}
+
+      <div className="flex items-center justify-between pt-2 border-t border-border">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onBack}
+          className="font-mono-share text-xs gap-1.5 text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="w-3 h-3" />
+          BACK_TO_LOGIN
+        </Button>
+        {step === "code" && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => { setStep("email"); setCode(["", "", "", "", "", ""]); setError(null); }}
+            className="font-mono-share text-xs gap-1.5 text-muted-foreground hover:text-secondary"
+          >
+            <RefreshCw className="w-3 h-3" />
+            RESEND
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Delete account confirmation with password input. */
+function DeleteAccountForm({ onDelete }: { onDelete: (password: string) => Promise<void> }) {
+  const [password, setPassword] = useState("");
+  const [confirmText, setConfirmText] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const canDelete = confirmText === "DELETE" && password.length >= 1;
+
+  const handleDelete = async () => {
+    if (!canDelete) return;
+    setLoading(true);
+    setError(null);
+    try {
+      await onDelete(password);
+    } catch (err: any) {
+      setError(err.message || "Failed to delete account");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <DialogHeader>
+        <DialogTitle className="font-orbitron text-sm tracking-wider text-destructive flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4" />
+          DELETE_ACCOUNT
+        </DialogTitle>
+        <DialogDescription className="font-rajdhani text-muted-foreground">
+          This will permanently delete your account, all credits, and cancel any active subscription.
+          <span className="text-destructive font-semibold"> This cannot be undone.</span>
+        </DialogDescription>
+      </DialogHeader>
+
+      <div className="space-y-3">
+        <div className="space-y-1.5">
+          <label className="font-mono-share text-[10px] text-muted-foreground/60 uppercase tracking-wider flex items-center gap-1">
+            <Lock className="w-3 h-3" /> Confirm Password
+          </label>
+          <Input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="••••••••"
+            className="bg-input border-border font-mono-share text-sm"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <label className="font-mono-share text-[10px] text-muted-foreground/60 uppercase tracking-wider">
+            Type <span className="text-destructive">DELETE</span> to confirm
+          </label>
+          <Input
+            type="text"
+            value={confirmText}
+            onChange={(e) => setConfirmText(e.target.value)}
+            placeholder="DELETE"
+            className="bg-input border-border font-mono-share text-sm"
+            onKeyDown={(e) => e.key === "Enter" && handleDelete()}
+          />
+        </div>
+        <Button
+          onClick={handleDelete}
+          disabled={loading || !canDelete}
+          variant="destructive"
+          className="w-full font-orbitron text-xs tracking-wider gap-2"
+        >
+          {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+          PERMANENTLY_DELETE_ACCOUNT
+        </Button>
+      </div>
+
+      {error && (
+        <div className="bg-destructive/10 border border-destructive/30 rounded px-3 py-2">
+          <p className="font-mono-share text-xs text-destructive">{error}</p>
+        </div>
+      )}
     </div>
   );
 }

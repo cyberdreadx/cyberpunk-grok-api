@@ -329,6 +329,9 @@ const Index = () => {
                 onVerify={auth.verifyEmail}
                 onResendCode={auth.resendCode}
                 onCancelVerification={auth.cancelVerification}
+                onForgotPassword={auth.forgotPassword}
+                onResetPassword={auth.resetPassword}
+                onDeleteAccount={auth.deleteAccount}
               />
             )}
           </div>

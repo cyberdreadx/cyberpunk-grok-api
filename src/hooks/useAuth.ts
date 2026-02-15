@@ -98,6 +98,38 @@ export function useAuth() {
     setPendingVerificationEmail(null);
   }, []);
 
+  /** Request a password reset code. */
+  const forgotPassword = useCallback(async (email: string) => {
+    return apiFetch<{ message: string }>("/auth/forgot-password", {
+      method: "POST",
+      body: { email },
+      auth: false,
+    });
+  }, []);
+
+  /** Reset password with the 6-digit code. Auto-logs the user in. */
+  const resetPassword = useCallback(async (email: string, code: string, newPassword: string) => {
+    const data = await apiFetch<{ token: string; user: AuthUser; message: string }>("/auth/reset-password", {
+      method: "POST",
+      body: { email, code, new_password: newPassword },
+      auth: false,
+    });
+    setAuthToken(data.token);
+    setUser(data.user);
+    return data;
+  }, []);
+
+  /** Delete the user's account permanently. Requires password. */
+  const deleteAccount = useCallback(async (password: string) => {
+    await apiFetch<{ message: string }>("/auth/delete-account", {
+      method: "POST",
+      body: { password },
+    });
+    clearAuthToken();
+    setUser(null);
+    setPendingVerificationEmail(null);
+  }, []);
+
   const signOut = useCallback(async () => {
     clearAuthToken();
     setUser(null);
@@ -116,5 +148,8 @@ export function useAuth() {
     verifyEmail,
     resendCode,
     cancelVerification,
+    forgotPassword,
+    resetPassword,
+    deleteAccount,
   };
 }

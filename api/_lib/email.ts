@@ -59,3 +59,42 @@ export async function sendVerificationEmail(
     throw new Error("Failed to send verification email");
   }
 }
+
+/** Send a password reset code email. */
+export async function sendPasswordResetEmail(
+  to: string,
+  code: string,
+): Promise<void> {
+  const fromAddress = process.env.EMAIL_FROM || "noreply@grokrunner.gltch.app";
+
+  const { error } = await getResend().emails.send({
+    from: `Grok Runner <${fromAddress}>`,
+    to: [to],
+    subject: `Password reset code: ${code}`,
+    html: `
+      <div style="font-family: 'Courier New', monospace; background: #0a0a0f; color: #e0e0e0; padding: 32px; max-width: 480px; margin: 0 auto;">
+        <div style="border: 1px solid #ff00e533; padding: 24px; border-radius: 4px;">
+          <h1 style="color: #ff00e5; font-size: 18px; letter-spacing: 3px; margin: 0 0 16px;">
+            GROK RUNNER
+          </h1>
+          <p style="font-size: 14px; color: #a0a0a0; margin: 0 0 8px;">
+            You requested a password reset. Enter this code:
+          </p>
+          <div style="background: #111; border: 1px solid #ff00e555; padding: 16px; text-align: center; border-radius: 4px; margin: 0 0 24px;">
+            <span style="font-size: 32px; letter-spacing: 8px; color: #ff00e5; font-weight: bold;">
+              ${code}
+            </span>
+          </div>
+          <p style="font-size: 12px; color: #666; margin: 0;">
+            This code expires in 10 minutes. If you didn't request this, ignore this email — your password won't change.
+          </p>
+        </div>
+      </div>
+    `,
+  });
+
+  if (error) {
+    console.error("[email] Failed to send password reset email:", error);
+    throw new Error("Failed to send password reset email");
+  }
+}
