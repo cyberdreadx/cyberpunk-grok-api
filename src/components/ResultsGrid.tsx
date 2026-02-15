@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import { Download, Maximize2, X, Trash2, ExternalLink, ChevronLeft, ChevronRight, Pencil, Film, Copy, Check, FolderPlus, FolderOpen, MoreVertical, FolderInput, Lock, LockOpen, ShieldCheck, Eye, EyeOff, ChevronDown } from "lucide-react";
+import { Download, Maximize2, X, Trash2, ExternalLink, ChevronLeft, ChevronRight, Pencil, Film, Copy, Check, FolderPlus, FolderOpen, MoreVertical, FolderInput, Lock, LockOpen, ShieldCheck, Eye, EyeOff, ChevronDown, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -1324,6 +1324,18 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
               <Button
                 size="icon"
                 variant="ghost"
+                className="text-secondary hover:bg-secondary/20"
+                onClick={() => {
+                  const grokkerUrl = "https://grokker.gltch.app";
+                  window.open(`${grokkerUrl}/dashboard/new-post?media=${encodeURIComponent(result.url)}&caption=${encodeURIComponent(result.revised_prompt || "")}`, "_blank");
+                }}
+                title="Post to Grokker"
+              >
+                <Sparkles className="w-4 h-4" />
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
                 className="text-primary hover:bg-primary/20"
                 onClick={() => downloadMedia(result.url, result.type)}
                 title="Download / Save"
@@ -1434,6 +1446,18 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
                     )}
                   </div>
                 )}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-secondary border-secondary/30 hover:bg-secondary/10 text-xs gap-1.5"
+                  onClick={() => {
+                    const grokkerUrl = "https://grokker.gltch.app";
+                    window.open(`${grokkerUrl}/dashboard/new-post?media=${encodeURIComponent(expandedResult.url)}&caption=${encodeURIComponent(expandedResult.revised_prompt || "")}`, "_blank");
+                  }}
+                >
+                  <Sparkles className="w-3 h-3" />
+                  Grokker
+                </Button>
                 <Button
                   size="sm"
                   variant="outline"
