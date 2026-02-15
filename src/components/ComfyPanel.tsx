@@ -43,8 +43,8 @@ export default function ComfyPanel() {
 
   const [prompt, setPrompt] = useState("");
   const [negPrompt, setNegPrompt] = useState("");
-  const [width, setWidth] = useState(1080);
-  const [height, setHeight] = useState(1920);
+  const [width, setWidth] = useState(1024);
+  const [height, setHeight] = useState(1536);
   const [steps, setSteps] = useState(5);
   const [cfg, setCfg] = useState(1);
   const [seed, setSeed] = useState("");
@@ -301,7 +301,7 @@ export default function ComfyPanel() {
                 key={m}
                 onClick={() => {
                   setWorkflowMode(m);
-                  if (m === "qwen-edit") { setSteps(5); setCfg(1); setWidth(1080); setHeight(1920); }
+                  if (m === "qwen-edit") { setSteps(5); setCfg(1); setWidth(1024); setHeight(1536); }
                   else { setSteps(20); setCfg(7); setWidth(1024); setHeight(1024); }
                 }}
                 className={`flex-1 px-3 py-2 rounded text-xs font-mono font-bold uppercase tracking-wider border transition-colors ${
