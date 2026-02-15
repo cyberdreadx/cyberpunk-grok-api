@@ -1,0 +1,504 @@
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import {
+  Cpu,
+  Wifi,
+  WifiOff,
+  Play,
+  Loader2,
+  RefreshCw,
+  ChevronDown,
+  ChevronUp,
+  Download,
+  Upload,
+  ImageIcon,
+  X,
+} from "lucide-react";
+import { apiFetch } from "@/lib/api";
+
+interface GenerationState {
+  promptId: string | null;
+  status: "idle" | "submitting" | "generating" | "done" | "error";
+  image: string | null;
+  error: string | null;
+  seed: number | null;
+  elapsed: number;
+}
+
+const SIZES = [512, 768, 1024, 1280, 1536];
+
+export default function ComfyPanel() {
+  const [collapsed, setCollapsed] = useState(true);
+  const [connected, setConnected] = useState(false);
+  const [checkpoints, setCheckpoints] = useState<string[]>([]);
+  const [selectedCkpt, setSelectedCkpt] = useState("");
+
+  // Workflow mode
+  type WorkflowMode = "txt2img" | "qwen-edit";
+  const [workflowMode, setWorkflowMode] = useState<WorkflowMode>("qwen-edit");
+
+  // Image upload (for qwen-edit)
+  const [inputImage, setInputImage] = useState<string | null>(null);
+  const [inputImageName, setInputImageName] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [prompt, setPrompt] = useState("");
+  const [negPrompt, setNegPrompt] = useState("");
+  const [width, setWidth] = useState(1024);
+  const [height, setHeight] = useState(1024);
+  const [steps, setSteps] = useState(20);
+  const [cfg, setCfg] = useState(7);
+  const [seed, setSeed] = useState("");
+
+  // Generation
+  const [gen, setGen] = useState<GenerationState>({
+    promptId: null,
+    status: "idle",
+    image: null,
+    error: null,
+    seed: null,
+    elapsed: 0,
+  });
+
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const startRef = useRef(0);
+
+  // Cleanup
+  useEffect(() => {
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, []);
+
+  const checkStatus = useCallback(async () => {
+    try {
+      await apiFetch("/comfyui", {
+        method: "POST",
+        body: { action: "status" },
+      });
+      setConnected(true);
+    } catch {
+      setConnected(false);
+    }
+  }, []);
+
+  const fetchModels = useCallback(async () => {
+    try {
+      const data = await apiFetch<{ checkpoints: string[] }>("/comfyui", {
+        method: "POST",
+        body: { action: "models" },
+      });
+      setCheckpoints(data.checkpoints || []);
+      if (data.checkpoints?.length && !selectedCkpt) {
+        setSelectedCkpt(data.checkpoints[0]);
+      }
+    } catch {
+      setCheckpoints([]);
+    }
+  }, [selectedCkpt]);
+
+  // On expand, load status + models
+  useEffect(() => {
+    if (!collapsed) {
+      checkStatus();
+      fetchModels();
+    }
+  }, [collapsed, checkStatus, fetchModels]);
+
+  // Handle image file selection
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setInputImageName(file.name);
+    const reader = new FileReader();
+    reader.onload = () => setInputImage(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const clearImage = () => {
+    setInputImage(null);
+    setInputImageName("");
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  // Poll for result
+  const startPolling = useCallback((pid: string) => {
+    if (pollRef.current) clearInterval(pollRef.current);
+    pollRef.current = setInterval(async () => {
+      try {
+        const data = await apiFetch<{
+          status: string;
+          image?: string;
+          error?: string;
+        }>("/comfyui", {
+          method: "POST",
+          body: { action: "poll", promptId: pid },
+        });
+
+        if (data.status === "done") {
+          if (pollRef.current) clearInterval(pollRef.current);
+          if (timerRef.current) clearInterval(timerRef.current);
+          setGen((p) => ({ ...p, status: "done", image: data.image || null }));
+        } else if (data.status === "error") {
+          if (pollRef.current) clearInterval(pollRef.current);
+          if (timerRef.current) clearInterval(timerRef.current);
+          setGen((p) => ({
+            ...p,
+            status: "error",
+            error: data.error || "Generation failed",
+          }));
+        }
+      } catch (err: any) {
+        if (pollRef.current) clearInterval(pollRef.current);
+        if (timerRef.current) clearInterval(timerRef.current);
+        setGen((p) => ({
+          ...p,
+          status: "error",
+          error: err.message || "Poll failed",
+        }));
+      }
+    }, 2000);
+  }, []);
+
+  const handleGenerate = async () => {
+    if (!prompt.trim() || !selectedCkpt) return;
+    if (workflowMode === "qwen-edit" && !inputImage) return;
+
+    if (pollRef.current) clearInterval(pollRef.current);
+    if (timerRef.current) clearInterval(timerRef.current);
+    setGen({ promptId: null, status: "submitting", image: null, error: null, seed: null, elapsed: 0 });
+
+    startRef.current = Date.now();
+    timerRef.current = setInterval(() => {
+      setGen((p) => ({ ...p, elapsed: Math.floor((Date.now() - startRef.current) / 1000) }));
+    }, 1000);
+
+    try {
+      let imageFilename: string | undefined;
+
+      // For qwen-edit, upload the image first
+      if (workflowMode === "qwen-edit" && inputImage) {
+        const uploadData = await apiFetch<{ filename: string }>("/comfyui", {
+          method: "POST",
+          body: { action: "upload-image", imageBase64: inputImage, filename: inputImageName },
+        });
+        imageFilename = uploadData.filename;
+      }
+
+      const data = await apiFetch<{ promptId: string; seed: number }>("/comfyui", {
+        method: "POST",
+        body: {
+          action: "generate",
+          workflow: workflowMode,
+          prompt: prompt.trim(),
+          negativePrompt: workflowMode === "txt2img" ? negPrompt.trim() : undefined,
+          width,
+          height,
+          steps,
+          cfg,
+          seed: seed.trim() ? parseInt(seed, 10) : undefined,
+          checkpoint: selectedCkpt,
+          imageFilename,
+        },
+      });
+      setGen((p) => ({ ...p, promptId: data.promptId, seed: data.seed, status: "generating" }));
+      startPolling(data.promptId);
+    } catch (err: any) {
+      if (timerRef.current) clearInterval(timerRef.current);
+      setGen((p) => ({ ...p, status: "error", error: err.message || "Submission failed" }));
+    }
+  };
+
+  const handleDownload = () => {
+    if (!gen.image) return;
+    const a = document.createElement("a");
+    a.href = gen.image;
+    a.download = `comfy_${gen.seed || "output"}.png`;
+    a.click();
+  };
+
+  const busy = gen.status === "submitting" || gen.status === "generating";
+
+  const inputClass =
+    "w-full bg-black/60 border border-cyan-500/30 rounded px-3 py-2 text-sm font-mono text-cyan-100 placeholder-cyan-800 focus:outline-none focus:border-cyan-400/60";
+  const labelClass =
+    "block text-[10px] font-mono text-cyan-400/70 mb-1 uppercase tracking-wider";
+
+  return (
+    <div className="mb-6">
+      {/* Toggle header */}
+      <button
+        onClick={() => setCollapsed(!collapsed)}
+        className="w-full flex items-center justify-between gap-3 px-4 py-2.5 bg-black/60 border border-purple-500/30 rounded-lg hover:border-purple-400/50 transition-colors group"
+      >
+        <div className="flex items-center gap-2.5">
+          <Cpu className="w-4 h-4 text-purple-400" />
+          <span className="text-sm font-mono font-semibold tracking-wider text-purple-300 uppercase">
+            Comfy_Lab
+          </span>
+          {!collapsed && (
+            <span
+              className={`inline-flex items-center gap-1.5 text-xs font-mono ${
+                connected ? "text-green-400" : "text-red-400"
+              }`}
+            >
+              {connected ? (
+                <Wifi className="w-3 h-3" />
+              ) : (
+                <WifiOff className="w-3 h-3" />
+              )}
+              {connected ? "ONLINE" : "OFFLINE"}
+            </span>
+          )}
+        </div>
+        {collapsed ? (
+          <ChevronDown className="w-4 h-4 text-purple-400/60 group-hover:text-purple-300" />
+        ) : (
+          <ChevronUp className="w-4 h-4 text-purple-400/60 group-hover:text-purple-300" />
+        )}
+      </button>
+
+      {/* Panel body */}
+      {!collapsed && (
+        <div className="mt-2 p-4 bg-black/40 border border-purple-500/20 rounded-lg space-y-4">
+          {/* Offline warning */}
+          {!connected && (
+            <div className="flex items-center justify-between p-3 bg-red-500/10 border border-red-500/30 rounded text-red-300 text-xs font-mono">
+              <span>ComfyUI not reachable. Check tunnel & server.</span>
+              <button
+                onClick={checkStatus}
+                className="hover:text-red-100 ml-2"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
+          {/* Workflow mode toggle */}
+          <div className="flex gap-2">
+            {(["txt2img", "qwen-edit"] as const).map((m) => (
+              <button
+                key={m}
+                onClick={() => setWorkflowMode(m)}
+                className={`flex-1 px-3 py-2 rounded text-xs font-mono font-bold uppercase tracking-wider border transition-colors ${
+                  workflowMode === m
+                    ? "bg-purple-600/60 border-purple-400/60 text-white"
+                    : "bg-black/40 border-purple-500/20 text-purple-400/60 hover:border-purple-400/40"
+                }`}
+              >
+                {m === "txt2img" ? "Text to Image" : "Qwen Edit"}
+              </button>
+            ))}
+          </div>
+
+          {/* Image upload (qwen-edit only) */}
+          {workflowMode === "qwen-edit" && (
+            <div>
+              <label className={labelClass}>Input Image</label>
+              {inputImage ? (
+                <div className="relative">
+                  <img src={inputImage} alt="Input" className="w-full max-h-48 object-contain rounded border border-cyan-500/20 bg-black/60" />
+                  <button onClick={clearImage} className="absolute top-1 right-1 p-1 bg-black/80 rounded-full text-red-400 hover:text-red-300">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                  <div className="mt-1 text-[10px] font-mono text-cyan-400/50 truncate">{inputImageName}</div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-6 bg-black/60 border border-dashed border-cyan-500/30 rounded text-sm font-mono text-cyan-400/60 hover:border-cyan-400/50 hover:text-cyan-300 transition-colors"
+                >
+                  <Upload className="w-4 h-4" />
+                  Upload image to edit
+                </button>
+              )}
+              <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageSelect} className="hidden" />
+            </div>
+          )}
+
+          {/* Checkpoint */}
+          <div>
+            <label className={labelClass}>Checkpoint</label>
+            <select
+              value={selectedCkpt}
+              onChange={(e) => setSelectedCkpt(e.target.value)}
+              className={inputClass}
+            >
+              {checkpoints.length === 0 && (
+                <option value="">No models found</option>
+              )}
+              {checkpoints.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Prompt */}
+          <div>
+            <label className={labelClass}>Prompt</label>
+            <textarea
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              rows={3}
+              placeholder={workflowMode === "qwen-edit" ? "describe how to edit the image..." : "describe your image..."}
+              className={`${inputClass} resize-none`}
+            />
+          </div>
+
+          {/* Negative prompt (txt2img only) */}
+          {workflowMode === "txt2img" && (
+            <div>
+              <label className={labelClass}>Negative Prompt</label>
+              <input
+                type="text"
+                value={negPrompt}
+                onChange={(e) => setNegPrompt(e.target.value)}
+                placeholder="bad quality, blurry..."
+                className={inputClass}
+              />
+            </div>
+          )}
+
+          {/* Settings grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div>
+              <label className={labelClass}>W</label>
+              <select
+                value={width}
+                onChange={(e) => setWidth(Number(e.target.value))}
+                className={inputClass}
+              >
+                {SIZES.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className={labelClass}>H</label>
+              <select
+                value={height}
+                onChange={(e) => setHeight(Number(e.target.value))}
+                className={inputClass}
+              >
+                {SIZES.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className={labelClass}>
+                Steps: {steps}
+              </label>
+              <input
+                type="range"
+                min={1}
+                max={50}
+                value={steps}
+                onChange={(e) => setSteps(Number(e.target.value))}
+                className="w-full accent-purple-500 mt-1"
+              />
+            </div>
+            <div>
+              <label className={labelClass}>
+                CFG: {cfg}
+              </label>
+              <input
+                type="range"
+                min={1}
+                max={15}
+                step={0.5}
+                value={cfg}
+                onChange={(e) => setCfg(Number(e.target.value))}
+                className="w-full accent-purple-500 mt-1"
+              />
+            </div>
+          </div>
+
+          {/* Seed */}
+          <div className="flex items-end gap-2">
+            <div className="flex-1">
+              <label className={labelClass}>Seed</label>
+              <input
+                type="text"
+                value={seed}
+                onChange={(e) =>
+                  setSeed(e.target.value.replace(/[^0-9]/g, ""))
+                }
+                placeholder="random"
+                className={inputClass}
+              />
+            </div>
+            {gen.seed !== null && (
+              <button
+                onClick={() => setSeed(String(gen.seed))}
+                className="shrink-0 px-3 py-2 bg-purple-500/20 border border-purple-500/30 rounded text-xs font-mono text-purple-300 hover:bg-purple-500/30 transition-colors"
+                title="Reuse last seed"
+              >
+                Reuse {gen.seed}
+              </button>
+            )}
+          </div>
+
+          {/* Generate button */}
+          <button
+            onClick={handleGenerate}
+            disabled={busy || !prompt.trim() || !selectedCkpt || !connected || (workflowMode === "qwen-edit" && !inputImage)}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-purple-600/80 hover:bg-purple-500/80 disabled:bg-gray-700/50 disabled:text-gray-500 border border-purple-500/40 rounded-lg text-sm font-mono font-bold uppercase tracking-wider text-white transition-colors"
+          >
+            {busy ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                {gen.status === "submitting"
+                  ? "SUBMITTING..."
+                  : `GENERATING... ${gen.elapsed}s`}
+              </>
+            ) : (
+              <>
+                <Play className="w-4 h-4" />
+                GENERATE
+              </>
+            )}
+          </button>
+
+          {/* Error */}
+          {gen.status === "error" && gen.error && (
+            <div className="p-3 bg-red-500/10 border border-red-500/30 rounded text-red-300 text-xs font-mono break-all">
+              {gen.error}
+            </div>
+          )}
+
+          {/* Result */}
+          {gen.image && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs font-mono text-cyan-400/70">
+                <span>
+                  OUTPUT | {gen.elapsed}s
+                  {gen.seed !== null ? ` | seed: ${gen.seed}` : ""}
+                </span>
+                <button
+                  onClick={handleDownload}
+                  className="flex items-center gap-1 hover:text-cyan-300 transition-colors"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Save
+                </button>
+              </div>
+              <img
+                src={gen.image}
+                alt="ComfyUI output"
+                className="w-full rounded border border-cyan-500/20"
+              />
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
