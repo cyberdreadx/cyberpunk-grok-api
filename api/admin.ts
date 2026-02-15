@@ -325,6 +325,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         let marked_cancelling = 0;
         let cleared = 0;
         let already_deleted = 0;
+        let duplicates = 0;
         const details: any[] = [];
 
         for (const user of activeSubUsers) {
@@ -359,32 +360,52 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             if (!activeSub) {
               // No active subscription in Stripe — this user's sub already ended
-              // Clear their subscription in our DB
               await sql`SELECT clear_subscription(${user.id}::uuid)`;
               already_deleted++;
               details.push({ ...debugInfo, action: "cleared (no active sub in Stripe)" });
-            } else if (activeSub.cancel_at_period_end && !user.subscription_cancel_at) {
-              // Stripe says cancelling, but we didn't know — backfill
-              const cancelAt = new Date(activeSub.current_period_end * 1000).toISOString();
-              await sql`
-                UPDATE users
-                SET subscription_cancel_at = ${cancelAt}::timestamptz, updated_at = now()
-                WHERE id = ${user.id}::uuid
-              `;
-              marked_cancelling++;
-              details.push({ ...debugInfo, action: "marked cancelling", cancel_at: cancelAt });
-            } else if (!activeSub.cancel_at_period_end && user.subscription_cancel_at) {
-              // Stripe says active (not cancelling), but we had a cancel_at — clear it
-              await sql`
-                UPDATE users
-                SET subscription_cancel_at = NULL, updated_at = now()
-                WHERE id = ${user.id}::uuid
-              `;
-              cleared++;
-              details.push({ ...debugInfo, action: "cleared cancel_at (reactivated)" });
             } else {
-              // No action needed — include debug info anyway
-              details.push({ ...debugInfo, action: "no change" });
+              // Determine if sub is scheduled to cancel:
+              // Stripe has TWO cancellation signals:
+              //   1. cancel_at_period_end = true → cancels at end of billing period
+              //   2. cancel_at (timestamp) → cancels at a specific date
+              const isCancelling = activeSub.cancel_at_period_end || !!activeSub.cancel_at;
+              const cancelTimestamp = activeSub.cancel_at
+                ? new Date(activeSub.cancel_at * 1000).toISOString()
+                : activeSub.cancel_at_period_end
+                  ? new Date(activeSub.current_period_end * 1000).toISOString()
+                  : null;
+
+              if (isCancelling && !user.subscription_cancel_at) {
+                // Stripe says cancelling, but we didn't know — backfill
+                await sql`
+                  UPDATE users
+                  SET subscription_cancel_at = ${cancelTimestamp}::timestamptz, updated_at = now()
+                  WHERE id = ${user.id}::uuid
+                `;
+                marked_cancelling++;
+                details.push({ ...debugInfo, action: "marked cancelling", cancel_at: cancelTimestamp });
+              } else if (!isCancelling && user.subscription_cancel_at) {
+                // Stripe says fully active (not cancelling), but we had a cancel_at — clear it
+                await sql`
+                  UPDATE users
+                  SET subscription_cancel_at = NULL, updated_at = now()
+                  WHERE id = ${user.id}::uuid
+                `;
+                cleared++;
+                details.push({ ...debugInfo, action: "cleared cancel_at (reactivated)" });
+              } else {
+                // No action needed
+                details.push({ ...debugInfo, action: "no change" });
+              }
+
+              // Flag duplicate active subscriptions for this user
+              const activeSubs = subs.data.filter(
+                (s) => s.status === "active" || s.status === "trialing"
+              );
+              if (activeSubs.length > 1) {
+                duplicates++;
+                details[details.length - 1].warning = `DUPLICATE: ${activeSubs.length} active subs`;
+              }
             }
             synced++;
           } catch (err: any) {
@@ -398,6 +419,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           marked_cancelling,
           cleared,
           already_deleted,
+          duplicates,
           details,
         });
       }

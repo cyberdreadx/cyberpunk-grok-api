@@ -16,6 +16,7 @@ import AuthDialog from "@/components/AuthDialog";
 import CreditDisplay from "@/components/CreditDisplay";
 import LegalDialog from "@/components/LegalDialog";
 import HowToUseDialog from "@/components/HowToUseDialog";
+import ComfyPanel from "@/components/ComfyPanel";
 import { useGrokApi, type GrokMode, type GenerationSettings, type VideoSettings, type ApiMode, DEFAULT_SETTINGS, DEFAULT_VIDEO_SETTINGS } from "@/hooks/useGrokApi";
 import { useAuth } from "@/hooks/useAuth";
 import { useCredits } from "@/hooks/useCredits";
@@ -346,6 +347,9 @@ const Index = () => {
           </div>
           <ModeSelector activeMode={mode} onModeChange={(m) => { setMode(m); setActiveImageUrl(""); }} />
         </section>
+
+        {/* ComfyUI Lab — admin only */}
+        {auth.user?.email === "cyberdreadx@proton.me" && <ComfyPanel />}
 
         {/* Prompt form — Terminal block */}
         <section

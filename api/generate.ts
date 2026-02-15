@@ -88,6 +88,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(429).json({ error: "Rate limit reached. Please wait a moment before generating again." });
     }
 
+    // Moderation cooldown: 15 flags in 10 minutes → block until window clears.
+    // Lenient threshold since xAI's filter can be aggressive with borderline content.
+    // Only checks usage_log (actual flags), not every request.
+    const sql = getDb();
+    const [modCheck] = await sql`
+      SELECT COUNT(*)::int AS flag_count
+      FROM usage_log
+      WHERE user_id = ${auth.userId}::uuid
+        AND mode LIKE 'moderation-%'
+        AND created_at > now() - interval '10 minutes'
+    `;
+    if (modCheck.flag_count >= 15) {
+      return res.status(429).json({
+        error: "Too many flagged requests in a short time. Take a breather and try again in a few minutes. Tip: try rephrasing your prompt.",
+        moderated: true,
+      });
+    }
+
     const { action, ...params } = req.body || {};
 
     // Validate action against whitelist
@@ -104,7 +122,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const cost = calculateCost(action as AllowedAction, imageCount, videoDuration);
-    const sql = getDb();
 
     // Check credit balance
     const rows = await sql`
