@@ -2,6 +2,10 @@
  * /api/webhook — Stripe webhook handler.
  * Handles: checkout.session.completed, invoice.paid, customer.subscription.updated, customer.subscription.deleted
  * Includes idempotency checks to prevent double-processing on retries.
+ *
+ * IMPORTANT: Subscription credits + transaction logging are handled SOLELY by invoice.paid.
+ * checkout.session.completed for subscriptions only sets stripe_customer_id.
+ * This prevents double transaction entries (both events fire for new subscriptions).
  */
 
 import type { VercelRequest, VercelResponse } from "@vercel/node";
@@ -134,54 +138,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       if (session.mode === "subscription") {
 
-        // Primary subscription handling is invoice.paid, but this fallback grants initial
-        // credits in case invoice events are delayed/missed.
+        // NOTE: Do NOT grant credits or log transactions here!
+        // invoice.paid is the sole handler for subscription credits + transaction logging.
+        // Previously this "fallback" ran alongside invoice.paid, causing double transaction
+        // entries and inflated revenue reporting.
+        //
+        // We only use checkout.session.completed for subscriptions to set stripe_customer_id
+        // early (invoice.paid also sets it, but this ensures it's captured immediately).
         const metadata = session.metadata || {};
-        let userId = session.client_reference_id || metadata.user_id || "";
-        let tier = metadata.tier || "";
-        let creditsPerMonth = parseInt(metadata.credits_per_month || "0", 10);
-        let renewsAt: string | null = null;
+        const userId = session.client_reference_id || metadata.user_id || "";
 
-        const subscriptionId = typeof session.subscription === "string" ? session.subscription : null;
-        if (subscriptionId) {
-          try {
-            const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-            userId = userId || subscription.metadata?.user_id || "";
-            tier = tier || subscription.metadata?.tier || "";
-            const subMetaCredits = parseInt(subscription.metadata?.credits_per_month || "0", 10);
-            if (subMetaCredits > 0) creditsPerMonth = subMetaCredits;
-            const currentPeriodEnd = (subscription as any).current_period_end as number | undefined;
-            if (currentPeriodEnd) {
-              renewsAt = new Date(currentPeriodEnd * 1000).toISOString();
-            }
-          } catch (subErr: any) {
-            console.warn("[webhook] subscription fallback lookup failed:", subErr.message);
-          }
-        }
-
-        if (creditsPerMonth <= 0 && tier) {
-          creditsPerMonth = TIER_CREDITS[tier] || 0;
-        }
-        if (!userId || !tier || creditsPerMonth <= 0) {
-          console.error("checkout.session.completed(subscription): missing metadata", {
-            userId,
-            tier,
-            creditsPerMonth,
-            sessionId: session.id,
-          });
-          return res.status(200).json({ received: true });
-        }
-
-        await sql`SELECT reset_sub_credits(${userId}::uuid, ${creditsPerMonth}, ${tier}, ${renewsAt}::timestamptz)`;
-        if (session.customer) {
+        if (userId && session.customer) {
           await sql`UPDATE users SET stripe_customer_id = ${session.customer as string} WHERE id = ${userId}::uuid`;
+          console.log(`[webhook] checkout.session.completed(subscription): set stripe_customer_id for ${userId}`);
         }
-        const subPayMethod = await detectPaymentMethod(stripe, session);
-        await sql`
-          INSERT INTO transactions (user_id, credits, amount_cents, stripe_session_id, package, type, payment_method)
-          VALUES (${userId}::uuid, ${creditsPerMonth}, ${session.amount_total || 0}, ${session.id}, ${tier}, 'subscription', ${subPayMethod})
-        `;
-        console.log(`Fallback: set sub_credits to ${creditsPerMonth} for ${userId} (${tier}) via ${subPayMethod}`);
         return res.status(200).json({ received: true });
       }
 
