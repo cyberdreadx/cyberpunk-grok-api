@@ -24,7 +24,7 @@ interface GenerationState {
   elapsed: number;
 }
 
-const SIZES = [512, 768, 1024, 1280, 1536];
+const SIZES = [512, 768, 1024, 1080, 1280, 1536, 1920];
 
 export default function ComfyPanel() {
   const [collapsed, setCollapsed] = useState(true);
@@ -43,10 +43,10 @@ export default function ComfyPanel() {
 
   const [prompt, setPrompt] = useState("");
   const [negPrompt, setNegPrompt] = useState("");
-  const [width, setWidth] = useState(1024);
-  const [height, setHeight] = useState(1024);
-  const [steps, setSteps] = useState(20);
-  const [cfg, setCfg] = useState(7);
+  const [width, setWidth] = useState(1080);
+  const [height, setHeight] = useState(1920);
+  const [steps, setSteps] = useState(5);
+  const [cfg, setCfg] = useState(1);
   const [seed, setSeed] = useState("");
 
   // Generation
@@ -106,14 +106,31 @@ export default function ComfyPanel() {
     }
   }, [collapsed, checkStatus, fetchModels]);
 
-  // Handle image file selection
+  // Handle image file selection (converts any format to JPEG via canvas)
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setInputImageName(file.name);
-    const reader = new FileReader();
-    reader.onload = () => setInputImage(reader.result as string);
-    reader.readAsDataURL(file);
+    const baseName = file.name.replace(/\.[^.]+$/, "");
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.drawImage(img, 0, 0);
+        const jpeg = canvas.toDataURL("image/jpeg", 0.92);
+        setInputImage(jpeg);
+        setInputImageName(`${baseName}.jpg`);
+      }
+      URL.revokeObjectURL(url);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      setGen((p) => ({ ...p, status: "error", error: "Could not load image. HEIC may not be supported in this browser." }));
+    };
+    img.src = url;
   };
 
   const clearImage = () => {
@@ -192,7 +209,7 @@ export default function ComfyPanel() {
           action: "generate",
           workflow: workflowMode,
           prompt: prompt.trim(),
-          negativePrompt: workflowMode === "txt2img" ? negPrompt.trim() : undefined,
+          negativePrompt: negPrompt.trim() || undefined,
           width,
           height,
           steps,
@@ -280,7 +297,11 @@ export default function ComfyPanel() {
             {(["txt2img", "qwen-edit"] as const).map((m) => (
               <button
                 key={m}
-                onClick={() => setWorkflowMode(m)}
+                onClick={() => {
+                  setWorkflowMode(m);
+                  if (m === "qwen-edit") { setSteps(5); setCfg(1); setWidth(1080); setHeight(1920); }
+                  else { setSteps(20); setCfg(7); setWidth(1024); setHeight(1024); }
+                }}
                 className={`flex-1 px-3 py-2 rounded text-xs font-mono font-bold uppercase tracking-wider border transition-colors ${
                   workflowMode === m
                     ? "bg-purple-600/60 border-purple-400/60 text-white"
@@ -348,19 +369,17 @@ export default function ComfyPanel() {
             />
           </div>
 
-          {/* Negative prompt (txt2img only) */}
-          {workflowMode === "txt2img" && (
-            <div>
-              <label className={labelClass}>Negative Prompt</label>
-              <input
-                type="text"
-                value={negPrompt}
-                onChange={(e) => setNegPrompt(e.target.value)}
-                placeholder="bad quality, blurry..."
-                className={inputClass}
-              />
-            </div>
-          )}
+          {/* Negative prompt */}
+          <div>
+            <label className={labelClass}>Negative Prompt</label>
+            <input
+              type="text"
+              value={negPrompt}
+              onChange={(e) => setNegPrompt(e.target.value)}
+              placeholder={workflowMode === "qwen-edit" ? "smooth skin, drawn, cgi, fake, cartoon, ugly, disfigured, sfx" : "bad quality, blurry..."}
+              className={inputClass}
+            />
+          </div>
 
           {/* Settings grid */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

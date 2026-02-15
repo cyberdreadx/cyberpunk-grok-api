@@ -82,8 +82,11 @@ function buildTxt2ImgWorkflow(p: {
  * Flow: LoadImage -> TextEncodeQwenImageEditPlus (positive + negative)
  *       -> ModelSamplingAuraFlow -> CFGNorm -> KSampler -> cleanGpu -> VAEDecode -> SaveImage
  */
+const QWEN_DEFAULT_NEGATIVE = "smooth skin, drawn, cgi, fake, cartoon, ugly, disfigured, sfx";
+
 function buildQwenEditWorkflow(p: {
   prompt: string;
+  negativePrompt: string;
   imageFilename: string;
   width: number;
   height: number;
@@ -113,13 +116,13 @@ function buildQwenEditWorkflow(p: {
         prompt: p.prompt,
       },
     },
-    // Negative prompt (empty)
+    // Negative prompt
     "133": {
       class_type: "TextEncodeQwenImageEditPlus",
       inputs: {
         clip: ["125", 1],
         vae: ["125", 2],
-        prompt: "",
+        prompt: p.negativePrompt,
       },
     },
     // AuraFlow sampling adjustment
@@ -294,6 +297,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           return res.status(400).json({ error: "imageFilename is required for qwen-edit" });
         workflow = buildQwenEditWorkflow({
           prompt: prompt.trim(),
+          negativePrompt: (negativePrompt || "").trim() || QWEN_DEFAULT_NEGATIVE,
           imageFilename,
           width: clampW,
           height: clampH,
