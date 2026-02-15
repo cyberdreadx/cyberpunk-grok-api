@@ -10,18 +10,23 @@ import {
   ChevronUp,
   Download,
   Upload,
-  ImageIcon,
   X,
+  Trash2,
 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 
-interface GenerationState {
+/* ─── Job types ─── */
+interface ComfyJob {
+  id: string;
   promptId: string | null;
-  status: "idle" | "submitting" | "generating" | "done" | "error";
+  status: "submitting" | "generating" | "done" | "error";
   image: string | null;
   error: string | null;
   seed: number | null;
   elapsed: number;
+  /** Snapshot of prompt so user can see what each job was */
+  label: string;
+  workflowMode: "txt2img" | "qwen-edit";
 }
 
 const SIZES = [512, 768, 1024, 1080, 1280, 1536, 1920];
@@ -50,28 +55,42 @@ export default function ComfyPanel() {
   const [seed, setSeed] = useState("");
   const [upscale, setUpscale] = useState(false);
 
-  // Generation
-  const [gen, setGen] = useState<GenerationState>({
-    promptId: null,
-    status: "idle",
-    image: null,
-    error: null,
-    seed: null,
-    elapsed: 0,
-  });
+  /* ─── Job queue ─── */
+  const [jobs, setJobs] = useState<ComfyJob[]>([]);
+  const pollRefs = useRef<Map<string, ReturnType<typeof setInterval>>>(new Map());
+  const timerRefs = useRef<Map<string, ReturnType<typeof setInterval>>>(new Map());
+  const startRefs = useRef<Map<string, number>>(new Map());
 
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const startRef = useRef(0);
+  // Derived: any jobs still in progress?
+  const activeCount = jobs.filter(
+    (j) => j.status === "submitting" || j.status === "generating"
+  ).length;
 
-  // Cleanup
+  // Last completed seed (for "reuse seed" button)
+  const lastSeed = [...jobs].reverse().find((j) => j.seed !== null)?.seed ?? null;
+
+  /* ─── Cleanup all intervals on unmount ─── */
   useEffect(() => {
     return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
-      if (timerRef.current) clearInterval(timerRef.current);
+      pollRefs.current.forEach((iv) => clearInterval(iv));
+      timerRefs.current.forEach((iv) => clearInterval(iv));
     };
   }, []);
 
+  /* ─── Helpers to manage per-job intervals ─── */
+  const clearJobIntervals = useCallback((jobId: string) => {
+    const poll = pollRefs.current.get(jobId);
+    if (poll) { clearInterval(poll); pollRefs.current.delete(jobId); }
+    const timer = timerRefs.current.get(jobId);
+    if (timer) { clearInterval(timer); timerRefs.current.delete(jobId); }
+    startRefs.current.delete(jobId);
+  }, []);
+
+  const updateJob = useCallback((jobId: string, patch: Partial<ComfyJob>) => {
+    setJobs((prev) => prev.map((j) => (j.id === jobId ? { ...j, ...patch } : j)));
+  }, []);
+
+  /* ─── Server connectivity ─── */
   const checkStatus = useCallback(async () => {
     try {
       await apiFetch("/comfyui", {
@@ -107,7 +126,7 @@ export default function ComfyPanel() {
     }
   }, [collapsed, checkStatus, fetchModels]);
 
-  // Handle image file selection (converts any format to JPEG via canvas)
+  /* ─── Image upload handling ─── */
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -129,7 +148,6 @@ export default function ComfyPanel() {
     };
     img.onerror = () => {
       URL.revokeObjectURL(url);
-      setGen((p) => ({ ...p, status: "error", error: "Could not load image. HEIC may not be supported in this browser." }));
     };
     img.src = url;
   };
@@ -140,105 +158,157 @@ export default function ComfyPanel() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  // Poll for result
-  const startPolling = useCallback((pid: string) => {
-    if (pollRef.current) clearInterval(pollRef.current);
-    pollRef.current = setInterval(async () => {
-      try {
-        const data = await apiFetch<{
-          status: string;
-          image?: string;
-          error?: string;
-        }>("/comfyui", {
-          method: "POST",
-          body: { action: "poll", promptId: pid },
-        });
+  /* ─── Polling for a specific job ─── */
+  const startPolling = useCallback(
+    (jobId: string, pid: string) => {
+      // Clear any existing poll for this job
+      const existing = pollRefs.current.get(jobId);
+      if (existing) clearInterval(existing);
 
-        if (data.status === "done") {
-          if (pollRef.current) clearInterval(pollRef.current);
-          if (timerRef.current) clearInterval(timerRef.current);
-          setGen((p) => ({ ...p, status: "done", image: data.image || null }));
-        } else if (data.status === "error") {
-          if (pollRef.current) clearInterval(pollRef.current);
-          if (timerRef.current) clearInterval(timerRef.current);
-          setGen((p) => ({
-            ...p,
+      const iv = setInterval(async () => {
+        try {
+          const data = await apiFetch<{
+            status: string;
+            image?: string;
+            error?: string;
+          }>("/comfyui", {
+            method: "POST",
+            body: { action: "poll", promptId: pid },
+          });
+
+          if (data.status === "done") {
+            clearJobIntervals(jobId);
+            updateJob(jobId, { status: "done", image: data.image || null });
+          } else if (data.status === "error") {
+            clearJobIntervals(jobId);
+            updateJob(jobId, {
+              status: "error",
+              error: data.error || "Generation failed",
+            });
+          }
+        } catch (err: any) {
+          clearJobIntervals(jobId);
+          updateJob(jobId, {
             status: "error",
-            error: data.error || "Generation failed",
-          }));
+            error: err.message || "Poll failed",
+          });
         }
-      } catch (err: any) {
-        if (pollRef.current) clearInterval(pollRef.current);
-        if (timerRef.current) clearInterval(timerRef.current);
-        setGen((p) => ({
-          ...p,
-          status: "error",
-          error: err.message || "Poll failed",
-        }));
-      }
-    }, 2000);
-  }, []);
+      }, 2000);
 
+      pollRefs.current.set(jobId, iv);
+    },
+    [clearJobIntervals, updateJob]
+  );
+
+  /* ─── Generate: creates a new job each time ─── */
   const handleGenerate = async () => {
     if (!prompt.trim() || !selectedCkpt) return;
     if (workflowMode === "qwen-edit" && !inputImage) return;
 
-    if (pollRef.current) clearInterval(pollRef.current);
-    if (timerRef.current) clearInterval(timerRef.current);
-    setGen({ promptId: null, status: "submitting", image: null, error: null, seed: null, elapsed: 0 });
+    const jobId = `job-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const label =
+      prompt.trim().length > 50
+        ? prompt.trim().slice(0, 50) + "…"
+        : prompt.trim();
 
-    startRef.current = Date.now();
-    timerRef.current = setInterval(() => {
-      setGen((p) => ({ ...p, elapsed: Math.floor((Date.now() - startRef.current) / 1000) }));
+    const newJob: ComfyJob = {
+      id: jobId,
+      promptId: null,
+      status: "submitting",
+      image: null,
+      error: null,
+      seed: null,
+      elapsed: 0,
+      label,
+      workflowMode,
+    };
+
+    setJobs((prev) => [newJob, ...prev]);
+
+    // Start per-job elapsed timer
+    startRefs.current.set(jobId, Date.now());
+    const timerIv = setInterval(() => {
+      const start = startRefs.current.get(jobId);
+      if (start) {
+        setJobs((prev) =>
+          prev.map((j) =>
+            j.id === jobId
+              ? { ...j, elapsed: Math.floor((Date.now() - start) / 1000) }
+              : j
+          )
+        );
+      }
     }, 1000);
+    timerRefs.current.set(jobId, timerIv);
 
     try {
-      let imageFilename: string | undefined;
-
-      // For qwen-edit, upload the image first
-      if (workflowMode === "qwen-edit" && inputImage) {
-        const uploadData = await apiFetch<{ filename: string }>("/comfyui", {
+      const data = await apiFetch<{ promptId: string; seed: number }>(
+        "/comfyui",
+        {
           method: "POST",
-          body: { action: "upload-image", imageBase64: inputImage, filename: inputImageName },
-        });
-        imageFilename = uploadData.filename;
-      }
-
-      const data = await apiFetch<{ promptId: string; seed: number }>("/comfyui", {
-        method: "POST",
-        body: {
-          action: "generate",
-          workflow: workflowMode,
-          prompt: prompt.trim(),
-          negativePrompt: negPrompt.trim() || undefined,
-          width,
-          height,
-          steps,
-          cfg,
-          seed: seed.trim() ? parseInt(seed, 10) : undefined,
-          checkpoint: selectedCkpt,
-          imageFilename,
-          upscale: upscale || undefined,
-        },
+          body: {
+            action: "generate",
+            workflow: workflowMode,
+            prompt: prompt.trim(),
+            negativePrompt: negPrompt.trim() || undefined,
+            width,
+            height,
+            steps,
+            cfg,
+            seed: seed.trim() ? parseInt(seed, 10) : undefined,
+            checkpoint: selectedCkpt,
+            imageBase64:
+              workflowMode === "qwen-edit" ? inputImage : undefined,
+            imageFilename:
+              workflowMode === "qwen-edit" ? inputImageName : undefined,
+            upscale: upscale || undefined,
+          },
+        }
+      );
+      updateJob(jobId, {
+        promptId: data.promptId,
+        seed: data.seed,
+        status: "generating",
       });
-      setGen((p) => ({ ...p, promptId: data.promptId, seed: data.seed, status: "generating" }));
-      startPolling(data.promptId);
+      startPolling(jobId, data.promptId);
     } catch (err: any) {
-      if (timerRef.current) clearInterval(timerRef.current);
-      setGen((p) => ({ ...p, status: "error", error: err.message || "Submission failed" }));
+      clearJobIntervals(jobId);
+      updateJob(jobId, {
+        status: "error",
+        error: err.message || "Submission failed",
+      });
     }
   };
 
-  const handleDownload = () => {
-    if (!gen.image) return;
+  /* ─── Per-job actions ─── */
+  const handleDownload = (job: ComfyJob) => {
+    if (!job.image) return;
     const a = document.createElement("a");
-    a.href = gen.image;
-    a.download = `comfy_${gen.seed || "output"}.png`;
+    a.href = job.image;
+    a.download = `comfy_${job.seed || "output"}.png`;
     a.click();
   };
 
-  const busy = gen.status === "submitting" || gen.status === "generating";
+  const dismissJob = (jobId: string) => {
+    clearJobIntervals(jobId);
+    setJobs((prev) => prev.filter((j) => j.id !== jobId));
+  };
 
+  const clearFinished = () => {
+    setJobs((prev) => {
+      const keep: ComfyJob[] = [];
+      for (const j of prev) {
+        if (j.status === "submitting" || j.status === "generating") {
+          keep.push(j);
+        } else {
+          clearJobIntervals(j.id);
+        }
+      }
+      return keep;
+    });
+  };
+
+  /* ─── Styles ─── */
   const inputClass =
     "w-full bg-black/60 border border-cyan-500/30 rounded px-3 py-2 text-sm font-mono text-cyan-100 placeholder-cyan-800 focus:outline-none focus:border-cyan-400/60";
   const labelClass =
@@ -268,6 +338,12 @@ export default function ComfyPanel() {
                 <WifiOff className="w-3 h-3" />
               )}
               {connected ? "ONLINE" : "OFFLINE"}
+            </span>
+          )}
+          {/* Badge: active job count */}
+          {activeCount > 0 && (
+            <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-purple-500/80 text-[10px] font-mono font-bold text-white animate-pulse">
+              {activeCount}
             </span>
           )}
         </div>
@@ -301,8 +377,17 @@ export default function ComfyPanel() {
                 key={m}
                 onClick={() => {
                   setWorkflowMode(m);
-                  if (m === "qwen-edit") { setSteps(5); setCfg(1); setWidth(1024); setHeight(1536); }
-                  else { setSteps(20); setCfg(7); setWidth(1024); setHeight(1024); }
+                  if (m === "qwen-edit") {
+                    setSteps(5);
+                    setCfg(1);
+                    setWidth(1024);
+                    setHeight(1536);
+                  } else {
+                    setSteps(20);
+                    setCfg(7);
+                    setWidth(1024);
+                    setHeight(1024);
+                  }
                 }}
                 className={`flex-1 px-3 py-2 rounded text-xs font-mono font-bold uppercase tracking-wider border transition-colors ${
                   workflowMode === m
@@ -321,11 +406,20 @@ export default function ComfyPanel() {
               <label className={labelClass}>Input Image</label>
               {inputImage ? (
                 <div className="relative">
-                  <img src={inputImage} alt="Input" className="w-full max-h-48 object-contain rounded border border-cyan-500/20 bg-black/60" />
-                  <button onClick={clearImage} className="absolute top-1 right-1 p-1 bg-black/80 rounded-full text-red-400 hover:text-red-300">
+                  <img
+                    src={inputImage}
+                    alt="Input"
+                    className="w-full max-h-48 object-contain rounded border border-cyan-500/20 bg-black/60"
+                  />
+                  <button
+                    onClick={clearImage}
+                    className="absolute top-1 right-1 p-1 bg-black/80 rounded-full text-red-400 hover:text-red-300"
+                  >
                     <X className="w-3.5 h-3.5" />
                   </button>
-                  <div className="mt-1 text-[10px] font-mono text-cyan-400/50 truncate">{inputImageName}</div>
+                  <div className="mt-1 text-[10px] font-mono text-cyan-400/50 truncate">
+                    {inputImageName}
+                  </div>
                 </div>
               ) : (
                 <button
@@ -336,7 +430,13 @@ export default function ComfyPanel() {
                   Upload image to edit
                 </button>
               )}
-              <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageSelect} className="hidden" />
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageSelect}
+                className="hidden"
+              />
             </div>
           )}
 
@@ -366,7 +466,11 @@ export default function ComfyPanel() {
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               rows={3}
-              placeholder={workflowMode === "qwen-edit" ? "describe how to edit the image..." : "describe your image..."}
+              placeholder={
+                workflowMode === "qwen-edit"
+                  ? "describe how to edit the image..."
+                  : "describe your image..."
+              }
               className={`${inputClass} resize-none`}
             />
           </div>
@@ -378,7 +482,11 @@ export default function ComfyPanel() {
               type="text"
               value={negPrompt}
               onChange={(e) => setNegPrompt(e.target.value)}
-              placeholder={workflowMode === "qwen-edit" ? "smooth skin, drawn, cgi, fake, cartoon, ugly, disfigured, sfx" : "bad quality, blurry..."}
+              placeholder={
+                workflowMode === "qwen-edit"
+                  ? "smooth skin, drawn, cgi, fake, cartoon, ugly, disfigured, sfx"
+                  : "bad quality, blurry..."
+              }
               className={inputClass}
             />
           </div>
@@ -414,9 +522,7 @@ export default function ComfyPanel() {
               </select>
             </div>
             <div>
-              <label className={labelClass}>
-                Steps: {steps}
-              </label>
+              <label className={labelClass}>Steps: {steps}</label>
               <input
                 type="range"
                 min={1}
@@ -427,9 +533,7 @@ export default function ComfyPanel() {
               />
             </div>
             <div>
-              <label className={labelClass}>
-                CFG: {cfg}
-              </label>
+              <label className={labelClass}>CFG: {cfg}</label>
               <input
                 type="range"
                 min={1}
@@ -456,13 +560,13 @@ export default function ComfyPanel() {
                 className={inputClass}
               />
             </div>
-            {gen.seed !== null && (
+            {lastSeed !== null && (
               <button
-                onClick={() => setSeed(String(gen.seed))}
+                onClick={() => setSeed(String(lastSeed))}
                 className="shrink-0 px-3 py-2 bg-purple-500/20 border border-purple-500/30 rounded text-xs font-mono text-purple-300 hover:bg-purple-500/30 transition-colors"
                 title="Reuse last seed"
               >
-                Reuse {gen.seed}
+                Reuse {lastSeed}
               </button>
             )}
           </div>
@@ -470,64 +574,176 @@ export default function ComfyPanel() {
           {/* HD Upscale toggle (qwen-edit only) */}
           {workflowMode === "qwen-edit" && (
             <label className="flex items-center gap-2.5 cursor-pointer">
-              <input type="checkbox" checked={upscale} onChange={(e) => setUpscale(e.target.checked)} className="sr-only peer" />
+              <input
+                type="checkbox"
+                checked={upscale}
+                onChange={(e) => setUpscale(e.target.checked)}
+                className="sr-only peer"
+              />
               <div className="w-9 h-5 bg-black/60 border border-cyan-500/30 rounded-full peer peer-checked:bg-purple-600/60 peer-checked:border-purple-400/60 relative after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:bg-gray-400 after:rounded-full after:transition-all peer-checked:after:translate-x-4 peer-checked:after:bg-white" />
-              <span className="text-xs font-mono text-cyan-400/70 uppercase tracking-wider">HD Upscale (1.5x, slower)</span>
+              <span className="text-xs font-mono text-cyan-400/70 uppercase tracking-wider">
+                HD Upscale (1.5x, slower)
+              </span>
             </label>
           )}
 
-          {/* Generate button */}
+          {/* Generate button — ALWAYS enabled (no busy lock) */}
           <button
             onClick={handleGenerate}
-            disabled={busy || !prompt.trim() || !selectedCkpt || !connected || (workflowMode === "qwen-edit" && !inputImage)}
+            disabled={
+              !prompt.trim() ||
+              !selectedCkpt ||
+              !connected ||
+              (workflowMode === "qwen-edit" && !inputImage)
+            }
             className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-purple-600/80 hover:bg-purple-500/80 disabled:bg-gray-700/50 disabled:text-gray-500 border border-purple-500/40 rounded-lg text-sm font-mono font-bold uppercase tracking-wider text-white transition-colors"
           >
-            {busy ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                {gen.status === "submitting"
-                  ? "SUBMITTING..."
-                  : `GENERATING... ${gen.elapsed}s`}
-              </>
-            ) : (
-              <>
-                <Play className="w-4 h-4" />
-                GENERATE
-              </>
-            )}
+            <Play className="w-4 h-4" />
+            {activeCount > 0
+              ? `GENERATE (${activeCount} running)`
+              : "GENERATE"}
           </button>
 
-          {/* Error */}
-          {gen.status === "error" && gen.error && (
-            <div className="p-3 bg-red-500/10 border border-red-500/30 rounded text-red-300 text-xs font-mono break-all">
-              {gen.error}
-            </div>
-          )}
-
-          {/* Result */}
-          {gen.image && (
+          {/* ─── Job Queue ─── */}
+          {jobs.length > 0 && (
             <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs font-mono text-cyan-400/70">
-                <span>
-                  OUTPUT | {gen.elapsed}s
-                  {gen.seed !== null ? ` | seed: ${gen.seed}` : ""}
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-mono text-purple-400/70 uppercase tracking-wider">
+                  Jobs ({jobs.length})
                 </span>
-                <button
-                  onClick={handleDownload}
-                  className="flex items-center gap-1 hover:text-cyan-300 transition-colors"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  Save
-                </button>
+                {jobs.some(
+                  (j) => j.status === "done" || j.status === "error"
+                ) && (
+                  <button
+                    onClick={clearFinished}
+                    className="flex items-center gap-1 text-[10px] font-mono text-purple-400/50 hover:text-purple-300 transition-colors"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    Clear finished
+                  </button>
+                )}
               </div>
-              <img
-                src={gen.image}
-                alt="ComfyUI output"
-                className="w-full rounded border border-cyan-500/20"
-              />
+
+              <div className="max-h-[600px] overflow-y-auto space-y-2 pr-1 scrollbar-thin scrollbar-thumb-purple-500/30">
+                {jobs.map((job) => (
+                  <JobCard
+                    key={job.id}
+                    job={job}
+                    onDownload={() => handleDownload(job)}
+                    onDismiss={() => dismissJob(job.id)}
+                    onReuseSeed={() => setSeed(String(job.seed))}
+                  />
+                ))}
+              </div>
             </div>
           )}
         </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Job Card Component ─── */
+function JobCard({
+  job,
+  onDownload,
+  onDismiss,
+  onReuseSeed,
+}: {
+  job: ComfyJob;
+  onDownload: () => void;
+  onDismiss: () => void;
+  onReuseSeed: () => void;
+}) {
+  const isActive = job.status === "submitting" || job.status === "generating";
+
+  const statusColor = {
+    submitting: "text-yellow-400",
+    generating: "text-cyan-400",
+    done: "text-green-400",
+    error: "text-red-400",
+  }[job.status];
+
+  const statusLabel = {
+    submitting: "SUBMITTING",
+    generating: `GENERATING ${job.elapsed}s`,
+    done: `DONE ${job.elapsed}s`,
+    error: "ERROR",
+  }[job.status];
+
+  const borderColor = {
+    submitting: "border-yellow-500/30",
+    generating: "border-cyan-500/30",
+    done: "border-green-500/30",
+    error: "border-red-500/30",
+  }[job.status];
+
+  return (
+    <div
+      className={`p-3 bg-black/50 border ${borderColor} rounded-lg space-y-2`}
+    >
+      {/* Header row */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            {isActive && (
+              <Loader2 className="w-3 h-3 animate-spin text-cyan-400 shrink-0" />
+            )}
+            <span className={`text-[10px] font-mono font-bold ${statusColor}`}>
+              {statusLabel}
+            </span>
+            <span className="text-[9px] font-mono text-purple-400/40 uppercase">
+              {job.workflowMode}
+            </span>
+          </div>
+          <p className="text-xs font-mono text-cyan-100/60 truncate mt-0.5">
+            {job.label}
+          </p>
+          {job.seed !== null && (
+            <button
+              onClick={onReuseSeed}
+              className="text-[9px] font-mono text-purple-400/40 hover:text-purple-300 transition-colors"
+            >
+              seed: {job.seed}
+            </button>
+          )}
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          {job.image && (
+            <button
+              onClick={onDownload}
+              className="p-1.5 text-cyan-400/60 hover:text-cyan-300 transition-colors"
+              title="Download"
+            >
+              <Download className="w-3.5 h-3.5" />
+            </button>
+          )}
+          {!isActive && (
+            <button
+              onClick={onDismiss}
+              className="p-1.5 text-red-400/40 hover:text-red-300 transition-colors"
+              title="Dismiss"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Error */}
+      {job.status === "error" && job.error && (
+        <div className="p-2 bg-red-500/10 border border-red-500/20 rounded text-red-300 text-[10px] font-mono break-all">
+          {job.error}
+        </div>
+      )}
+
+      {/* Result image */}
+      {job.image && (
+        <img
+          src={job.image}
+          alt="ComfyUI output"
+          className="w-full rounded border border-cyan-500/20"
+        />
       )}
     </div>
   );
