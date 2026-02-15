@@ -94,6 +94,7 @@ function buildQwenEditWorkflow(p: {
   steps: number;
   cfg: number;
   checkpoint: string;
+  upscale?: boolean;
 }): Record<string, any> {
   return {
     // Load checkpoint (Qwen model)
@@ -166,11 +167,52 @@ function buildQwenEditWorkflow(p: {
       class_type: "VAEDecode",
       inputs: { samples: ["72", 0], vae: ["125", 2] },
     },
-    // Save output
+    // Save base output
     "77": {
       class_type: "SaveImage",
       inputs: { images: ["73", 0], filename_prefix: "GrokRunner" },
     },
+    // Upscale nodes (conditionally added)
+    ...(p.upscale ? {
+      "128": {
+        class_type: "UpscaleModelLoader",
+        inputs: { model_name: "4x_foolhardy_Remacri.pth" },
+      },
+      "126": {
+        class_type: "UltimateSDUpscale",
+        inputs: {
+          image: ["73", 0],
+          model: ["125", 0],
+          positive: ["132", 0],
+          negative: ["133", 0],
+          vae: ["125", 2],
+          upscale_model: ["128", 0],
+          upscale_by: 1.5,
+          seed: p.seed,
+          steps: 6,
+          cfg: p.cfg,
+          sampler_name: "sa_solver",
+          scheduler: "simple",
+          denoise: 0.2,
+          mode_type: "Linear",
+          tile_width: 1024,
+          tile_height: 1024,
+          mask_blur: 8,
+          tile_padding: 32,
+          seam_fix_mode: "None",
+          seam_fix_denoise: 1,
+          seam_fix_width: 64,
+          seam_fix_mask_blur: 8,
+          seam_fix_padding: 16,
+          force_uniform_tiles: true,
+          tiled_decode: false,
+        },
+      },
+      "200": {
+        class_type: "SaveImage",
+        inputs: { images: ["126", 0], filename_prefix: "GrokRunner_HD" },
+      },
+    } : {}),
   };
 }
 
@@ -273,6 +315,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         cfg = 7,
         checkpoint,
         imageFilename,
+        upscale,
       } = req.body;
 
       if (!prompt)
@@ -305,6 +348,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           steps: clampSteps,
           cfg: clampCfg,
           checkpoint,
+          upscale: !!upscale,
         });
       } else {
         workflow = buildTxt2ImgWorkflow({

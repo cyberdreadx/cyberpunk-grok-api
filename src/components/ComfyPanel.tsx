@@ -48,6 +48,7 @@ export default function ComfyPanel() {
   const [steps, setSteps] = useState(5);
   const [cfg, setCfg] = useState(1);
   const [seed, setSeed] = useState("");
+  const [upscale, setUpscale] = useState(false);
 
   // Generation
   const [gen, setGen] = useState<GenerationState>({
@@ -217,6 +218,7 @@ export default function ComfyPanel() {
           seed: seed.trim() ? parseInt(seed, 10) : undefined,
           checkpoint: selectedCkpt,
           imageFilename,
+          upscale: upscale || undefined,
         },
       });
       setGen((p) => ({ ...p, promptId: data.promptId, seed: data.seed, status: "generating" }));
@@ -464,6 +466,15 @@ export default function ComfyPanel() {
               </button>
             )}
           </div>
+
+          {/* HD Upscale toggle (qwen-edit only) */}
+          {workflowMode === "qwen-edit" && (
+            <label className="flex items-center gap-2.5 cursor-pointer">
+              <input type="checkbox" checked={upscale} onChange={(e) => setUpscale(e.target.checked)} className="sr-only peer" />
+              <div className="w-9 h-5 bg-black/60 border border-cyan-500/30 rounded-full peer peer-checked:bg-purple-600/60 peer-checked:border-purple-400/60 relative after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:bg-gray-400 after:rounded-full after:transition-all peer-checked:after:translate-x-4 peer-checked:after:bg-white" />
+              <span className="text-xs font-mono text-cyan-400/70 uppercase tracking-wider">HD Upscale (1.5x, slower)</span>
+            </label>
+          )}
 
           {/* Generate button */}
           <button
