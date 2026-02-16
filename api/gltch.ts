@@ -361,7 +361,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const resp = await runpodRequest(backend.runpodEndpoint!, backend.runpodKey!, `/status/${promptId}`);
         if (!resp.ok) throw new Error(`Status check failed (${resp.status})`);
 
-        const data = await resp.json();
+        const data: any = await resp.json();
 
         if (data.status === "COMPLETED") {
           const images = data.output?.images;
