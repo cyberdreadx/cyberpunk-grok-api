@@ -6,7 +6,7 @@
 #
 # Or connect this repo to RunPod via GitHub for automatic builds.
 
-FROM runpod/worker-comfyui:latest-base
+FROM runpod/worker-comfyui:5.7.1-base
 
 # ── Custom Nodes ──────────────────────────────────────────────────
 # Qwen Image Edit text encoder (TextEncodeQwenImageEditPlus)
