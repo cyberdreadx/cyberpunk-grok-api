@@ -125,6 +125,7 @@ export default function Admin() {
   const [usage, setUsage] = useState<UsageRow[]>([]);
   const [topUsers, setTopUsers] = useState<TopUser[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [revenueBreakdown, setRevenueBreakdown] = useState<any>(null);
   const [referralStats, setReferralStats] = useState<any>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -152,7 +153,7 @@ export default function Admin() {
     }
 
     try {
-      const [o, r, u, us, t, tx, ref] = await Promise.all([
+      const [o, r, u, us, t, tx, ref, rb] = await Promise.all([
         fetchAction("overview"),
         fetchAction("revenue"),
         fetchAction("users"),
@@ -160,6 +161,7 @@ export default function Admin() {
         fetchAction("top-users"),
         fetchAction("transactions"),
         fetchAction("referrals"),
+        fetchAction("revenue-breakdown"),
       ]);
 
       if (o) setOverview(o);
@@ -169,6 +171,7 @@ export default function Admin() {
       if (t) setTopUsers(t.topUsers || []);
       if (tx) setTransactions(tx.transactions || []);
       if (ref) setReferralStats(ref.referrals || null);
+      if (rb) setRevenueBreakdown(rb);
 
       setAuthorized(true);
       setError(errors.length > 0 ? errors.join(" | ") : null);
@@ -497,6 +500,125 @@ export default function Admin() {
           </div>
         </div>
 
+        {/* Revenue Breakdown */}
+        {revenueBreakdown && (
+          <section className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
+            {/* By Pack (30d) */}
+            <div className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm overflow-hidden">
+              <div className="px-3 sm:px-4 py-3 border-b border-border/30 flex items-center justify-between">
+                <h2 className="font-orbitron text-xs tracking-wider text-secondary/80 flex items-center gap-2">
+                  <CreditCard className="w-3.5 h-3.5" />
+                  REVENUE_BY_PACK (30d)
+                </h2>
+              </div>
+              <div className="overflow-x-auto overscroll-x-contain">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-border/20">
+                      {["PACK", "TYPE", "COUNT", "REVENUE", "CREDITS"].map((h) => (
+                        <th key={h} className="px-2.5 py-2 text-left font-mono-share text-[9px] text-muted-foreground/50 tracking-wider">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(revenueBreakdown.byPack30d || []).map((row: any, i: number) => (
+                      <tr key={i} className="border-b border-border/10 hover:bg-primary/5 transition-colors">
+                        <td className="px-2.5 py-2 font-orbitron text-[10px] tracking-wider text-foreground/80">{row.package?.toUpperCase() || "--"}</td>
+                        <td className="px-2.5 py-2">
+                          <span className={`font-orbitron text-[9px] tracking-wider px-2 py-0.5 rounded border ${
+                            row.type === "subscription"
+                              ? "bg-secondary/20 text-secondary border-secondary/30"
+                              : "bg-primary/20 text-primary border-primary/30"
+                          }`}>
+                            {row.type?.toUpperCase()}
+                          </span>
+                        </td>
+                        <td className="px-2.5 py-2 font-mono-share text-xs font-bold">{row.count}</td>
+                        <td className="px-2.5 py-2 font-mono-share text-xs text-secondary font-bold">{fmt$(row.total_cents)}</td>
+                        <td className="px-2.5 py-2 font-mono-share text-xs text-primary">{row.total_credits?.toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* By Gateway */}
+            <div className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm overflow-hidden">
+              <div className="px-3 sm:px-4 py-3 border-b border-border/30">
+                <h2 className="font-orbitron text-xs tracking-wider text-secondary/80 flex items-center gap-2">
+                  <DollarSign className="w-3.5 h-3.5" />
+                  REVENUE_BY_GATEWAY (lifetime)
+                </h2>
+              </div>
+              <div className="p-3 sm:p-4 space-y-2">
+                {(revenueBreakdown.byGateway || []).map((row: any, i: number) => {
+                  const totalCents = (revenueBreakdown.byGateway || []).reduce((s: number, r: any) => s + (r.total_cents || 0), 0);
+                  const pct = totalCents > 0 ? Math.round((row.total_cents / totalCents) * 100) : 0;
+                  return (
+                    <div key={i} className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className={`font-mono-share text-[10px] font-bold px-2 py-0.5 rounded ${
+                          row.gateway === "stripe"
+                            ? "bg-indigo-500/20 text-indigo-400 border border-indigo-500/30"
+                            : row.gateway === "paypal"
+                            ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                            : row.gateway === "xrge"
+                            ? "bg-pink-500/20 text-pink-400 border border-pink-500/30"
+                            : "bg-muted/20 text-muted-foreground"
+                        }`}>
+                          {row.gateway === "xrge" ? "$XRGE" : row.gateway?.toUpperCase()}
+                        </span>
+                        <div className="flex items-center gap-3">
+                          <span className="font-mono-share text-[10px] text-muted-foreground/60">{row.count} txns</span>
+                          <span className="font-mono-share text-sm text-secondary font-bold">{fmt$(row.total_cents)}</span>
+                          <span className="font-mono-share text-[10px] text-muted-foreground/40">{pct}%</span>
+                        </div>
+                      </div>
+                      <div className="w-full bg-border/20 rounded-full h-1.5 overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${
+                            row.gateway === "stripe" ? "bg-indigo-500" :
+                            row.gateway === "paypal" ? "bg-blue-500" :
+                            row.gateway === "xrge" ? "bg-pink-500" : "bg-muted-foreground"
+                          }`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* All-time by pack */}
+              <div className="px-3 sm:px-4 py-3 border-t border-border/20">
+                <h3 className="font-orbitron text-[9px] tracking-wider text-muted-foreground/50 mb-2">ALL_TIME_BY_PACK</h3>
+                <div className="overflow-x-auto overscroll-x-contain">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-border/20">
+                        {["PACK", "TYPE", "#", "REVENUE"].map((h) => (
+                          <th key={h} className="px-2 py-1 text-left font-mono-share text-[8px] text-muted-foreground/40 tracking-wider">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(revenueBreakdown.byPack || []).map((row: any, i: number) => (
+                        <tr key={i} className="border-b border-border/5">
+                          <td className="px-2 py-1 font-mono-share text-[10px] text-foreground/70">{row.package?.toUpperCase() || "--"}</td>
+                          <td className="px-2 py-1 font-mono-share text-[9px] text-muted-foreground/50">{row.type}</td>
+                          <td className="px-2 py-1 font-mono-share text-[10px]">{row.count}</td>
+                          <td className="px-2 py-1 font-mono-share text-[10px] text-secondary">{fmt$(row.total_cents)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* Top Users Table */}
         <section className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm overflow-hidden">
           <div className="px-3 sm:px-4 py-3 border-b border-border/30">
@@ -580,10 +702,10 @@ export default function Admin() {
                           ? "bg-secondary/20 text-secondary border-secondary/30"
                           : "bg-primary/20 text-primary border-primary/30"
                       }`}>
-                        {tx.type?.toUpperCase() || "â€”"}
+                        {tx.type?.toUpperCase() || "--"}
                       </span>
                     </td>
-                    <td className="px-2.5 py-2 font-mono-share text-xs text-foreground/70">{tx.package?.toUpperCase() || "â€”"}</td>
+                    <td className="px-2.5 py-2 font-mono-share text-xs text-foreground/70">{tx.package?.toUpperCase() || "--"}</td>
                     <td className="px-2.5 py-2 font-mono-share text-xs text-primary font-bold">{tx.credits}</td>
                     <td className="px-2.5 py-2 font-mono-share text-xs text-secondary">{fmt$(tx.amount_cents)}</td>
                     <td className="px-2.5 py-2">
@@ -592,9 +714,11 @@ export default function Admin() {
                           ? "bg-indigo-500/20 text-indigo-400 border border-indigo-500/30"
                           : tx.gateway === "paypal"
                           ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                          : tx.gateway === "xrge"
+                          ? "bg-pink-500/20 text-pink-400 border border-pink-500/30"
                           : "bg-muted/20 text-muted-foreground"
                       }`}>
-                        {tx.gateway?.toUpperCase() || "â€”"}
+                        {tx.gateway === "xrge" ? "$XRGE" : tx.gateway?.toUpperCase() || "--"}
                       </span>
                     </td>
                   </tr>

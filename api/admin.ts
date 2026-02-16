@@ -1,12 +1,16 @@
 /**
- * /api/admin â€” Admin dashboard stats + health check.
+ * /api/admin -- Admin dashboard stats + health check.
  *
- * GET  (no auth)         â†’ health check
- * POST { action: "overview" }  â†’ high-level KPIs
- * POST { action: "revenue" }   â†’ revenue time series
- * POST { action: "users" }     â†’ user growth time series
- * POST { action: "usage" }     â†’ generation volume by mode
- * POST { action: "top-users" } â†’ top users by usage
+ * GET  (no auth)         -> health check
+ * POST { action: "overview" }           -> high-level KPIs
+ * POST { action: "revenue" }            -> revenue time series
+ * POST { action: "revenue-breakdown" }  -> revenue by pack, gateway, type
+ * POST { action: "users" }              -> user growth time series
+ * POST { action: "usage" }              -> generation volume by mode
+ * POST { action: "top-users" }          -> top users by usage
+ * POST { action: "transactions" }       -> last 100 transactions
+ * POST { action: "referrals" }          -> referral program stats
+ * POST { action: "sync-subscriptions" } -> pull cancellation status from Stripe
  *
  * All POST actions require admin JWT (hardcoded admin email).
  */
@@ -24,7 +28,7 @@ function isAdmin(req: VercelRequest): boolean {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // â”€â”€ Health check (GET, no auth) â”€â”€
+  // Health check (GET, no auth)
   if (req.method === "GET") {
     try {
       const sql = getDb();
@@ -48,7 +52,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     switch (action) {
-      // â”€â”€ Overview KPIs â”€â”€
+      // -- Overview KPIs --
       case "overview": {
         const [userStats] = await sql`
           SELECT
@@ -91,8 +95,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         // Estimate API cost:
         //   Successful images: $0.02/image (2 cents)
-        //   Moderated images: $0.05/image (5 cents) — xAI charges more for blocked content!
-        //   Video: $0.05/sec (5 cents) — same whether successful or blocked
+        //   Moderated images: $0.05/image (5 cents) -- xAI charges more for blocked content!
+        //   Video: $0.05/sec (5 cents) -- same whether successful or blocked
         const [costEstimate] = await sql`
           SELECT
             COALESCE(SUM(
@@ -161,7 +165,49 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
 
-      // â”€â”€ Revenue time series (daily, last 30 days) â”€â”€
+      // -- Revenue breakdown by pack/type/gateway --
+      case "revenue-breakdown": {
+        const byPack = await sql`
+          SELECT
+            package,
+            type,
+            COUNT(*)::int AS count,
+            SUM(amount_cents)::int AS total_cents,
+            SUM(credits)::int AS total_credits
+          FROM transactions
+          GROUP BY package, type
+          ORDER BY total_cents DESC
+        `;
+        const byGateway = await sql`
+          SELECT
+            CASE
+              WHEN payment_method = 'xrge' THEN 'xrge'
+              WHEN paypal_capture_id IS NOT NULL THEN 'paypal'
+              WHEN stripe_session_id IS NOT NULL THEN 'stripe'
+              ELSE 'other'
+            END AS gateway,
+            COUNT(*)::int AS count,
+            SUM(amount_cents)::int AS total_cents
+          FROM transactions
+          GROUP BY 1
+          ORDER BY total_cents DESC
+        `;
+        const byPack30d = await sql`
+          SELECT
+            package,
+            type,
+            COUNT(*)::int AS count,
+            SUM(amount_cents)::int AS total_cents,
+            SUM(credits)::int AS total_credits
+          FROM transactions
+          WHERE created_at > now() - interval '30 days'
+          GROUP BY package, type
+          ORDER BY total_cents DESC
+        `;
+        return res.status(200).json({ byPack, byGateway, byPack30d });
+      }
+
+      // -- Revenue time series (daily, last 30 days) --
       case "revenue": {
         const rows = await sql`
           SELECT
@@ -178,7 +224,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json({ revenue: rows });
       }
 
-      // â”€â”€ User growth time series (daily, last 30 days) â”€â”€
+      // -- User growth time series (daily, last 30 days) --
       case "users": {
         const rows = await sql`
           SELECT
@@ -197,7 +243,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json({ users: rows });
       }
 
-      // â”€â”€ Generation volume by mode (daily, last 30 days) â”€â”€
+      // -- Generation volume by mode (daily, last 30 days) --
       case "usage": {
         const rows = await sql`
           SELECT
@@ -213,7 +259,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json({ usage: rows });
       }
 
-      // â”€â”€ Transaction log (last 100 transactions) â”€â”€
+      // -- Transaction log (last 100 transactions) --
       case "transactions": {
         const rows = await sql`
           SELECT
@@ -224,6 +270,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             t.credits,
             t.amount_cents,
             CASE
+              WHEN t.payment_method = 'xrge' THEN 'xrge'
+              WHEN t.paypal_capture_id IS NOT NULL THEN 'paypal'
               WHEN t.stripe_session_id IS NOT NULL THEN 'stripe'
               ELSE 'other'
             END AS gateway
@@ -235,7 +283,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json({ transactions: rows });
       }
 
-      // â”€â”€ Top users by credit usage â”€â”€
+      // -- Top users by credit usage --
       case "top-users": {
         const rows = await sql`
           SELECT
@@ -267,7 +315,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json({ topUsers: rows });
       }
 
-      // —— Referral stats ——
+      // -- Referral stats --
       case "referrals": {
         const [stats] = await sql`
           SELECT
@@ -308,13 +356,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
 
-      // —— Sync subscription cancellation status from Stripe ——
+      // -- Sync subscription cancellation status from Stripe --
       case "sync-subscriptions": {
         const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
         if (!STRIPE_SECRET_KEY) return res.status(500).json({ error: "Stripe not configured" });
         const stripe = new Stripe(STRIPE_SECRET_KEY);
 
-        // Get all users who have an active subscription_tier and a stripe_customer_id
         const activeSubUsers = await sql`
           SELECT id, email, stripe_customer_id, subscription_tier, subscription_cancel_at
           FROM users
@@ -330,21 +377,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         for (const user of activeSubUsers) {
           try {
-            // List active subscriptions for this customer
             const subs = await stripe.subscriptions.list({
               customer: user.stripe_customer_id,
               status: "all",
               limit: 5,
             });
 
-            // Find the subscription matching our metadata
             const activeSub = subs.data.find(
               (s) => s.metadata?.user_id === user.id && (s.status === "active" || s.status === "trialing")
             ) || subs.data.find(
               (s) => s.status === "active" || s.status === "trialing"
             );
 
-            // Debug: always log what Stripe returned for this user
             const debugInfo = {
               email: user.email,
               subs_found: subs.data.length,
@@ -359,15 +403,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             };
 
             if (!activeSub) {
-              // No active subscription in Stripe — this user's sub already ended
               await sql`SELECT clear_subscription(${user.id}::uuid)`;
               already_deleted++;
               details.push({ ...debugInfo, action: "cleared (no active sub in Stripe)" });
             } else {
-              // Determine if sub is scheduled to cancel:
-              // Stripe has TWO cancellation signals:
-              //   1. cancel_at_period_end = true → cancels at end of billing period
-              //   2. cancel_at (timestamp) → cancels at a specific date
               const isCancelling = activeSub.cancel_at_period_end || !!activeSub.cancel_at;
               const cancelTimestamp = activeSub.cancel_at
                 ? new Date(activeSub.cancel_at * 1000).toISOString()
@@ -376,7 +415,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                   : null;
 
               if (isCancelling && !user.subscription_cancel_at) {
-                // Stripe says cancelling, but we didn't know — backfill
                 await sql`
                   UPDATE users
                   SET subscription_cancel_at = ${cancelTimestamp}::timestamptz, updated_at = now()
@@ -385,7 +423,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 marked_cancelling++;
                 details.push({ ...debugInfo, action: "marked cancelling", cancel_at: cancelTimestamp });
               } else if (!isCancelling && user.subscription_cancel_at) {
-                // Stripe says fully active (not cancelling), but we had a cancel_at — clear it
                 await sql`
                   UPDATE users
                   SET subscription_cancel_at = NULL, updated_at = now()
@@ -394,11 +431,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 cleared++;
                 details.push({ ...debugInfo, action: "cleared cancel_at (reactivated)" });
               } else {
-                // No action needed
                 details.push({ ...debugInfo, action: "no change" });
               }
 
-              // Flag duplicate active subscriptions for this user
               const activeSubs = subs.data.filter(
                 (s) => s.status === "active" || s.status === "trialing"
               );
@@ -425,7 +460,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       default:
-        return res.status(400).json({ error: "Unknown action. Expected: overview, revenue, users, usage, transactions, top-users, referrals, sync-subscriptions" });
+        return res.status(400).json({ error: "Unknown action. Expected: overview, revenue, revenue-breakdown, users, usage, transactions, top-users, referrals, sync-subscriptions" });
     }
   } catch (err: any) {
     console.error("[admin]", err.message);
