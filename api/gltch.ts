@@ -9,6 +9,7 @@
  */
 
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { put, del } from "@vercel/blob";
 import { getUserFromRequest } from "./_lib/auth";
 import { getDb } from "./_lib/db";
 import { checkRateLimit } from "./_lib/ratelimit";
@@ -54,7 +55,7 @@ function friendlyError(msg: string): string {
   return "Edit failed. Please try again.";
 }
 
-export const config = { maxDuration: 120 };
+export const config = { maxDuration: 60 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === "OPTIONS") return res.status(200).end();
@@ -113,22 +114,35 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const seed = Math.floor(Math.random() * 2 ** 32);
       const size = aspectToSize(aspectRatio);
 
-      // Strip data URL prefix to get raw base64
+      // Strip data URL prefix to get raw base64, upload to Vercel Blob for a URL
       const rawBase64 = imageBase64.replace(/^data:[^;]+;base64,/, "");
+      const imgBuffer = Buffer.from(rawBase64, "base64");
+
+      let blobUrl = "";
+      try {
+        const blob = await put(`gltch/${auth.userId}-${Date.now()}.jpg`, imgBuffer, {
+          access: "public",
+          contentType: "image/jpeg",
+        });
+        blobUrl = blob.url;
+        console.log("[gltch] Uploaded image to blob:", blobUrl.slice(0, 80));
+      } catch (uploadErr: any) {
+        await refundCredits();
+        console.error("[gltch] Blob upload failed:", uploadErr.message);
+        return res.status(500).json({ error: "Failed to prepare image for editing." });
+      }
 
       const runpodInput = {
         input: {
           prompt: prompt.trim(),
-          images: [`data:image/jpeg;base64,${rawBase64}`],
+          images: [blobUrl],
           size,
           seed,
           output_format: "jpeg",
-          enable_base64_output: true,
-          enable_sync_mode: false,
         },
       };
 
-      // Try runsync first (waits for result, up to 90s)
+      // Use runsync — public endpoint typically finishes in ~5-15s
       const resp = await fetch(`${RUNPOD_API_BASE}/${endpointId}/runsync`, {
         method: "POST",
         headers: {
@@ -136,8 +150,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify(runpodInput),
-        signal: AbortSignal.timeout(95000),
+        signal: AbortSignal.timeout(55000),
       });
+
+      // Clean up blob regardless of outcome
+      del(blobUrl).catch(() => {});
 
       if (!resp.ok) {
         await refundCredits();
@@ -147,35 +164,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       const result: any = await resp.json();
-      console.log("[gltch] RunPod response status:", result.status, "output type:", typeof result.output, "keys:", result.output ? Object.keys(result.output) : "null");
+      console.log("[gltch] RunPod response — status:", result.status,
+        "output:", result.output ? JSON.stringify(result.output).slice(0, 200) : "null");
 
       await sql`
         INSERT INTO usage_log (user_id, mode, credits_used, prompt)
         VALUES (${auth.userId}::uuid, ${hd ? "gltch-edit-hd" : "gltch-edit"}, ${cost}, ${prompt.trim().slice(0, 500)})
       `.catch(() => {});
 
-      // If runsync completed, return result directly
+      // runsync returns completed result directly
       if (result.status === "COMPLETED" && result.output) {
-        const output = result.output;
-        let image: string | null = null;
-
-        if (typeof output === "string") {
-          image = output.startsWith("data:") || output.startsWith("http") ? output : `data:image/jpeg;base64,${output}`;
-        } else if (output.image_url) {
-          image = output.image_url;
-        } else if (output.images?.length) {
-          const img = output.images[output.images.length - 1];
-          image = typeof img === "string"
-            ? (img.startsWith("data:") || img.startsWith("http") ? img : `data:image/jpeg;base64,${img}`)
-            : img.url || img.image_url || (img.data ? `data:image/jpeg;base64,${img.data}` : null);
-        } else if (output.output) {
-          image = typeof output.output === "string" ? output.output : null;
-        }
-
+        const image = result.output.image_url || result.output.output || null;
         if (image) {
           return res.status(200).json({ promptId: result.id, seed, syncResult: { status: "done", image } });
         }
-        console.error("[gltch] Could not parse output:", JSON.stringify(output).slice(0, 500));
+        console.error("[gltch] Could not parse output:", JSON.stringify(result.output).slice(0, 500));
+        return res.status(200).json({ promptId: result.id, seed, syncResult: { status: "error", error: "Could not parse result." } });
       }
 
       if (result.status === "FAILED") {
@@ -184,7 +188,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(502).json({ error: friendlyError(result.error || "Job failed") });
       }
 
-      // If still in progress (runsync timed out), fall back to async polling
+      // If runsync timed out, fall back to async polling
       return res.status(200).json({ promptId: result.id, seed });
     }
 
@@ -200,6 +204,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (!resp.ok) throw new Error(`Status check failed (${resp.status})`);
 
       const data: any = await resp.json();
+      console.log("[gltch] Poll — status:", data.status, "output type:", typeof data.output, "output keys:", data.output && typeof data.output === "object" ? Object.keys(data.output) : "n/a", "output preview:", JSON.stringify(data.output)?.slice(0, 200));
 
       if (data.status === "COMPLETED") {
         const output = data.output;

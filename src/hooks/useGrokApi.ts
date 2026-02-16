@@ -479,7 +479,7 @@ export function useGrokApi() {
       const submitData = await apiFetch<{
         promptId: string;
         seed: number;
-        syncResult?: { status: string; image: string };
+        syncResult?: { status: string; image?: string; error?: string };
       }>("/gltch", {
         method: "POST",
         body: {
@@ -503,6 +503,10 @@ export function useGrokApi() {
         setResults(prev => [...newResults, ...prev]);
         persistNewResults(newResults);
         return newResults;
+      }
+
+      if (submitData.syncResult?.status === "error") {
+        throw new Error(submitData.syncResult.error || "GLTCH edit failed");
       }
 
       // Otherwise fall back to polling (max ~4 minutes)
