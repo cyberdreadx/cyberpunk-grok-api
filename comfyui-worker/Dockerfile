@@ -32,4 +32,4 @@ RUN cd /comfyui/custom_nodes/ComfyUI-Easy-Use && \
 # Tell ComfyUI to also look for models on the RunPod Network Volume
 # (mounted at /runpod-volume). This avoids baking the 10-20GB model
 # into the Docker image.
-RUN printf "\nrunpod_volume:\n    base_path: /runpod-volume/models\n    checkpoints: checkpoints\n    upscale_models: upscale_models\n" >> /comfyui/extra_model_paths.yaml
+RUN printf "\nrunpod_volume:\n    base_path: /runpod-volume/models\n    checkpoints: checkpoints\n    diffusion_models: diffusion_models\n    upscale_models: upscale_models\n    vae: vae\n    clip: text_encoders\n    loras: loras\n    unet: unet\n" >> /comfyui/extra_model_paths.yaml
