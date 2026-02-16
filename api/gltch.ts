@@ -54,7 +54,7 @@ function friendlyError(msg: string): string {
   return "Edit failed. Please try again.";
 }
 
-export const config = { maxDuration: 60 };
+export const config = { maxDuration: 120 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === "OPTIONS") return res.status(200).end();
@@ -113,15 +113,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const seed = Math.floor(Math.random() * 2 ** 32);
       const size = aspectToSize(aspectRatio);
 
-      // Strip data URL prefix if present, pass raw base64 as a data URI for the images array
-      const imageForApi = imageBase64.startsWith("data:")
-        ? imageBase64
-        : `data:image/jpeg;base64,${imageBase64}`;
+      // Strip data URL prefix to get raw base64
+      const rawBase64 = imageBase64.replace(/^data:[^;]+;base64,/, "");
 
       const runpodInput = {
         input: {
           prompt: prompt.trim(),
-          images: [imageForApi],
+          images: [`data:image/jpeg;base64,${rawBase64}`],
           size,
           seed,
           output_format: "jpeg",
@@ -130,30 +128,63 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         },
       };
 
-      const resp = await fetch(`${RUNPOD_API_BASE}/${endpointId}/run`, {
+      // Try runsync first (waits for result, up to 90s)
+      const resp = await fetch(`${RUNPOD_API_BASE}/${endpointId}/runsync`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify(runpodInput),
-        signal: AbortSignal.timeout(30000),
+        signal: AbortSignal.timeout(95000),
       });
 
       if (!resp.ok) {
         await refundCredits();
         const errText = await resp.text().catch(() => "Unknown error");
-        console.error("[gltch] RunPod submit failed:", errText.slice(0, 500));
+        console.error("[gltch] RunPod submit failed:", resp.status, errText.slice(0, 500));
         return res.status(502).json({ error: friendlyError(errText) });
       }
 
       const result: any = await resp.json();
+      console.log("[gltch] RunPod response status:", result.status, "output type:", typeof result.output, "keys:", result.output ? Object.keys(result.output) : "null");
 
       await sql`
         INSERT INTO usage_log (user_id, mode, credits_used, prompt)
         VALUES (${auth.userId}::uuid, ${hd ? "gltch-edit-hd" : "gltch-edit"}, ${cost}, ${prompt.trim().slice(0, 500)})
       `.catch(() => {});
 
+      // If runsync completed, return result directly
+      if (result.status === "COMPLETED" && result.output) {
+        const output = result.output;
+        let image: string | null = null;
+
+        if (typeof output === "string") {
+          image = output.startsWith("data:") || output.startsWith("http") ? output : `data:image/jpeg;base64,${output}`;
+        } else if (output.image_url) {
+          image = output.image_url;
+        } else if (output.images?.length) {
+          const img = output.images[output.images.length - 1];
+          image = typeof img === "string"
+            ? (img.startsWith("data:") || img.startsWith("http") ? img : `data:image/jpeg;base64,${img}`)
+            : img.url || img.image_url || (img.data ? `data:image/jpeg;base64,${img.data}` : null);
+        } else if (output.output) {
+          image = typeof output.output === "string" ? output.output : null;
+        }
+
+        if (image) {
+          return res.status(200).json({ promptId: result.id, seed, syncResult: { status: "done", image } });
+        }
+        console.error("[gltch] Could not parse output:", JSON.stringify(output).slice(0, 500));
+      }
+
+      if (result.status === "FAILED") {
+        await refundCredits();
+        console.error("[gltch] Job failed:", JSON.stringify(result).slice(0, 500));
+        return res.status(502).json({ error: friendlyError(result.error || "Job failed") });
+      }
+
+      // If still in progress (runsync timed out), fall back to async polling
       return res.status(200).json({ promptId: result.id, seed });
     }
 

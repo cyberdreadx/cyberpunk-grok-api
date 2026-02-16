@@ -475,8 +475,12 @@ export function useGrokApi() {
         ? params.image_url
         : await urlToBase64(params.image_url);
 
-      // Submit job
-      const submitData = await apiFetch<{ promptId: string; seed: number }>("/gltch", {
+      // Submit job (uses runsync — may return result directly)
+      const submitData = await apiFetch<{
+        promptId: string;
+        seed: number;
+        syncResult?: { status: string; image: string };
+      }>("/gltch", {
         method: "POST",
         body: {
           action: "submit",
@@ -487,7 +491,21 @@ export function useGrokApi() {
         },
       });
 
-      // Poll for result (max ~4 minutes)
+      // If runsync returned the result directly, use it
+      if (submitData.syncResult?.status === "done" && submitData.syncResult.image) {
+        const newResults: GrokResult[] = [{
+          id: `gltch-${Date.now()}`,
+          url: submitData.syncResult.image,
+          revised_prompt: `GLTCH Edit: ${params.prompt}`,
+          type: "image" as const,
+          timestamp: Date.now(),
+        }];
+        setResults(prev => [...newResults, ...prev]);
+        persistNewResults(newResults);
+        return newResults;
+      }
+
+      // Otherwise fall back to polling (max ~4 minutes)
       const maxAttempts = 120;
       for (let i = 0; i < maxAttempts; i++) {
         await new Promise((resolve) => setTimeout(resolve, 2000));
