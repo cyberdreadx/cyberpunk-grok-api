@@ -22,7 +22,7 @@ function TosContent() {
         <span className="text-primary">$</span> cat /sys/legal/terms_of_service.dat
         <br />
         <span className="text-muted-foreground/40">
-          {"// Last updated: 2026.02.10 // Protocol v2.0"}
+          {"// Last updated: 2026.02.16 // Protocol v3.0"}
         </span>
       </p>
 
@@ -31,22 +31,29 @@ function TosContent() {
           1. NEURAL_CONTRACT_ACCEPTANCE
         </h3>
         <p>
-          By jacking into Grok Runner, you agree to be bound by this neural
-          contract. If you do not accept these terms, disconnect immediately and
-          clear your browser cache. Continued use of this interface constitutes
-          full acceptance of all protocols outlined below.
+          By accessing or using Grok Runner ("the Platform", "the Service"), operated
+          by CyberDread ("we", "us", "our"), you agree to be legally bound by these
+          Terms of Service. If you do not accept these terms, you must immediately
+          stop using the Platform. Continued use constitutes full acceptance of all
+          provisions outlined below, including the limitation of liability,
+          indemnification, and dispute resolution clauses.
         </p>
       </section>
 
       <section>
         <h3 className="font-orbitron text-xs tracking-wider text-primary mb-2">
-          2. SERVICE_DESCRIPTION
+          2. PLATFORM_AS_INTERMEDIARY
         </h3>
         <p>
-          Grok Runner provides a cyberpunk-themed frontend interface for xAI
-          image and video generation APIs. We act as a relay node between your
-          terminal and xAI neural networks. The actual generation is performed by
-          xAI infrastructure - we just make it look cooler.
+          Grok Runner is an <strong>intermediary platform</strong> that provides a user
+          interface for third-party AI generation services, specifically the xAI API.
+          We do not create, control, or pre-screen AI-generated outputs. All content
+          generation is performed by xAI's infrastructure and models. We function solely
+          as a technical relay between users and the xAI API. We do not train, fine-tune,
+          or modify the underlying AI models. The Platform qualifies as an "interactive
+          computer service" under Section 230 of the Communications Decency Act (47 U.S.C.
+          § 230), and we are not the "information content provider" of any user-generated
+          or AI-generated content accessed through our Service.
         </p>
       </section>
 
@@ -55,10 +62,11 @@ function TosContent() {
           3. OPERATOR_ELIGIBILITY
         </h3>
         <p>
-          You must be at least 18 solar rotations old to operate this platform.
-          By using Grok Runner, you confirm you have reached legal adulthood in
-          your jurisdiction. We reserve the right to terminate accounts suspected
-          of being operated by minors.
+          You must be at least <strong>18 years of age</strong> (or the age of legal
+          majority in your jurisdiction, whichever is greater) to use this Platform.
+          By using Grok Runner, you represent and warrant that you meet this requirement.
+          We reserve the right to immediately terminate any account suspected of being
+          operated by a minor, without notice or refund.
         </p>
       </section>
 
@@ -66,56 +74,157 @@ function TosContent() {
         <h3 className="font-orbitron text-xs tracking-wider text-primary mb-2">
           4. ACCEPTABLE_USE_POLICY
         </h3>
-        <p>You agree NOT to use Grok Runner to:</p>
-        <ul className="list-none space-y-1 pl-4 mt-2 text-foreground/70">
+        <p>
+          You are <strong>solely and fully responsible</strong> for all prompts you
+          submit and all content generated through your use of the Platform. You agree
+          NOT to use Grok Runner to generate, attempt to generate, solicit, store, or
+          distribute any of the following:
+        </p>
+        <ul className="list-none space-y-1.5 pl-4 mt-2 text-foreground/70">
           <li>
-            <span className="text-primary/40 mr-2">//</span>Generate illegal,
-            harmful, or exploitative content
+            <span className="text-destructive mr-2">!!</span>
+            <strong>Child Sexual Abuse Material (CSAM)</strong> or any sexual, suggestive,
+            or exploitative depiction of minors in any form whatsoever
           </li>
           <li>
-            <span className="text-primary/40 mr-2">//</span>Attempt to bypass
-            xAI safety filters or content policies
+            <span className="text-destructive mr-2">!!</span>
+            <strong>Non-consensual intimate imagery</strong> (NCII), including AI-generated
+            deepfakes of real individuals in sexual or compromising scenarios
           </li>
           <li>
-            <span className="text-primary/40 mr-2">//</span>Reverse-engineer,
-            scrape, or overload our relay infrastructure
+            <span className="text-destructive mr-2">!!</span>
+            <strong>Realistic depictions of identified real persons</strong> without
+            their consent, particularly in defamatory, sexual, violent, or fraudulent contexts
           </li>
           <li>
-            <span className="text-primary/40 mr-2">//</span>Impersonate other
-            users or create fraudulent accounts
+            <span className="text-destructive mr-2">!!</span>
+            Content promoting <strong>terrorism, extremist violence, or radicalization</strong>
           </li>
           <li>
-            <span className="text-primary/40 mr-2">//</span>Use automated bots
-            or scripts to spam generation requests
+            <span className="text-destructive mr-2">!!</span>
+            Content facilitating <strong>fraud, impersonation, scams, or identity theft</strong>
+          </li>
+          <li>
+            <span className="text-destructive mr-2">!!</span>
+            Content that constitutes or facilitates <strong>harassment, threats, stalking,
+            or doxxing</strong> of any individual
+          </li>
+          <li>
+            <span className="text-primary/40 mr-2">//</span>
+            Any other content that violates applicable local, state, federal, or
+            international law
+          </li>
+          <li>
+            <span className="text-primary/40 mr-2">//</span>
+            Attempts to bypass, circumvent, or defeat xAI safety filters or content policies
+          </li>
+          <li>
+            <span className="text-primary/40 mr-2">//</span>
+            Reverse-engineering, scraping, overloading, or interfering with Platform infrastructure
+          </li>
+          <li>
+            <span className="text-primary/40 mr-2">//</span>
+            Automated bots, scripts, or bulk generation not authorized by us
           </li>
         </ul>
+        <p className="mt-3 text-foreground/90 font-semibold">
+          ZERO TOLERANCE: We maintain a strict zero-tolerance policy for CSAM and
+          non-consensual intimate imagery. Any suspected CSAM will be reported to the
+          National Center for Missing & Exploited Children (NCMEC) and relevant law
+          enforcement agencies, as required by federal law (18 U.S.C. § 2258A). We
+          will cooperate fully with any law enforcement investigation.
+        </p>
         <p className="mt-2">
-          Violations may result in immediate account termination and forfeiture
-          of remaining credits. No refunds will be issued for accounts terminated
-          due to policy violations.
+          Violations will result in <strong>immediate, permanent account termination</strong>,
+          forfeiture of all credits, and reporting to appropriate authorities where
+          required by law. No refunds will be issued.
         </p>
       </section>
 
       <section>
         <h3 className="font-orbitron text-xs tracking-wider text-primary mb-2">
-          5. CREDITS_AND_PAYMENTS
+          5. USER_CONTENT_RESPONSIBILITY
+        </h3>
+        <p>
+          <strong>You bear sole legal responsibility</strong> for all content generated
+          through your account. The Platform does not review, approve, endorse, or take
+          responsibility for any AI-generated output. You acknowledge that:
+        </p>
+        <ul className="list-none space-y-1.5 pl-4 mt-2 text-foreground/70">
+          <li>
+            <span className="text-primary/40 mr-2">//</span>
+            AI-generated content may inadvertently resemble copyrighted works, trademarks,
+            or real individuals — you are responsible for verifying legality before use
+          </li>
+          <li>
+            <span className="text-primary/40 mr-2">//</span>
+            AI outputs are not guaranteed to be accurate, legal, or fit for any purpose
+          </li>
+          <li>
+            <span className="text-primary/40 mr-2">//</span>
+            You must comply with all applicable laws in your jurisdiction regarding
+            AI-generated content, including copyright, right of publicity, and defamation laws
+          </li>
+          <li>
+            <span className="text-primary/40 mr-2">//</span>
+            Using generated content for commercial purposes is at your own risk and
+            subject to xAI's terms
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h3 className="font-orbitron text-xs tracking-wider text-primary mb-2">
+          6. CONTENT_MODERATION
+        </h3>
+        <p>
+          The Platform relies primarily on xAI's built-in content filtering and safety
+          systems. Additionally, we reserve the right (but have no obligation) to:
+        </p>
+        <ul className="list-none space-y-1 pl-4 mt-2 text-foreground/70">
+          <li>
+            <span className="text-primary/40 mr-2">//</span>
+            Log generation metadata (type, cost, timestamps) for billing and abuse detection
+          </li>
+          <li>
+            <span className="text-primary/40 mr-2">//</span>
+            Monitor usage patterns for signs of abuse or policy violations
+          </li>
+          <li>
+            <span className="text-primary/40 mr-2">//</span>
+            Suspend or terminate accounts engaged in suspicious activity
+          </li>
+          <li>
+            <span className="text-primary/40 mr-2">//</span>
+            Report illegal activity to law enforcement without prior notice to the user
+          </li>
+        </ul>
+        <p className="mt-2">
+          Content moderation does not create any duty to monitor, and failure to detect
+          a violation does not constitute endorsement or approval of any content.
+        </p>
+      </section>
+
+      <section>
+        <h3 className="font-orbitron text-xs tracking-wider text-primary mb-2">
+          7. CREDITS_AND_PAYMENTS
         </h3>
         <p>
           Credits are a virtual currency used to pay for generations through our
           relay. Credits are non-refundable, non-transferable, and have no
           real-world cash value. Subscription credits reset each billing cycle
           and do not roll over. Credit packs do not expire. We reserve the right
-          to adjust credit costs as API pricing changes.
+          to adjust credit costs as API pricing changes. All payments are processed
+          by Stripe; we do not store payment card information.
         </p>
       </section>
 
       <section>
         <h3 className="font-orbitron text-xs tracking-wider text-primary mb-2">
-          6. SUBSCRIPTION_CANCELLATION
+          8. SUBSCRIPTION_CANCELLATION
         </h3>
         <p>
-          You may cancel your subscription at any time through the billing portal
-          (Manage subscription / Cancel subscription button in the CREDIT_STORE).
+          You may cancel your subscription at any time through the billing portal.
           Cancellation takes effect at the end of your current billing period.
           Until then, you retain access to your subscription credits. No pro rata
           refunds are offered for partial months. Once cancelled, you will not be
@@ -126,66 +235,159 @@ function TosContent() {
 
       <section>
         <h3 className="font-orbitron text-xs tracking-wider text-primary mb-2">
-          7. CONTENT_OWNERSHIP
+          9. CONTENT_OWNERSHIP_AND_IP
         </h3>
         <p>
-          Generated content is subject to xAI terms of service and usage
-          policies. We do not claim ownership of your prompts or generated
-          outputs. Generated content is stored locally in your browser
-          (IndexedDB) - we do not store your images or videos on our servers.
+          Generated content is subject to xAI's terms of service and applicable
+          intellectual property law. We do not claim ownership of your prompts or
+          generated outputs. Generated content is stored locally in your browser
+          (IndexedDB) — we do not store your images or videos on our servers. You
+          acknowledge that AI-generated content may not be eligible for copyright
+          protection under current law. You represent that you will not use generated
+          content in a way that infringes on the intellectual property rights of
+          any third party.
         </p>
       </section>
 
       <section>
         <h3 className="font-orbitron text-xs tracking-wider text-primary mb-2">
-          7. BYOK_MODE_DISCLAIMER
+          10. DMCA_TAKEDOWN_PROCEDURE
+        </h3>
+        <p>
+          If you believe that content accessible through the Platform infringes your
+          copyright, you may submit a DMCA takedown notice to our designated agent.
+          Notices must include: (1) identification of the copyrighted work, (2)
+          identification of the infringing material, (3) your contact information,
+          (4) a statement of good faith belief, (5) a statement of accuracy under
+          penalty of perjury, and (6) your physical or electronic signature. Send
+          notices to: <span className="text-primary font-mono-share">dmca@grokrunner.gltch.app</span>.
+          We will respond to valid DMCA notices in accordance with the Digital
+          Millennium Copyright Act (17 U.S.C. § 512).
+        </p>
+      </section>
+
+      <section>
+        <h3 className="font-orbitron text-xs tracking-wider text-primary mb-2">
+          11. BYOK_MODE_DISCLAIMER
         </h3>
         <p>
           When using Bring Your Own Key (BYOK) mode, your xAI API key is stored
           exclusively in your browser localStorage. We never transmit, log, or
           store your API key on our servers. You are solely responsible for any
-          charges incurred on your xAI account.
+          charges incurred on your xAI account. In BYOK mode, your prompts are sent
+          directly from your browser to xAI without passing through our servers.
         </p>
       </section>
 
       <section>
         <h3 className="font-orbitron text-xs tracking-wider text-primary mb-2">
-          8. NO_WARRANTIES
+          12. NO_WARRANTIES
         </h3>
         <p>
-          Grok Runner is provided AS IS with no warranties of any kind. We do
-          not guarantee uptime, generation quality, or that the service will meet
-          your specific needs. xAI may change their APIs at any time, which could
-          affect functionality. We are not liable for any damages arising from
-          the use of this platform.
+          THE PLATFORM IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF
+          ANY KIND, WHETHER EXPRESS, IMPLIED, OR STATUTORY, INCLUDING BUT NOT LIMITED
+          TO IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE,
+          NON-INFRINGEMENT, AND TITLE. We do not warrant that the Service will be
+          uninterrupted, error-free, secure, or that any content generated will be
+          legal, accurate, non-infringing, or suitable for any purpose. xAI may change
+          their APIs at any time, which could affect functionality without notice.
         </p>
       </section>
 
       <section>
         <h3 className="font-orbitron text-xs tracking-wider text-primary mb-2">
-          9. ACCOUNT_TERMINATION
+          13. LIMITATION_OF_LIABILITY
         </h3>
         <p>
-          We may suspend or terminate your account at any time for violations of
-          these terms or for any reason at our discretion. You may delete your
-          account by contacting us. Upon termination, any remaining credits are
-          forfeited.
+          TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT SHALL
+          CYBERDREAD, ITS OFFICERS, DIRECTORS, EMPLOYEES, AGENTS, OR AFFILIATES
+          BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE
+          DAMAGES, INCLUDING BUT NOT LIMITED TO LOSS OF PROFITS, DATA, USE, GOODWILL,
+          OR OTHER INTANGIBLE LOSSES, RESULTING FROM: (A) YOUR USE OF OR INABILITY
+          TO USE THE SERVICE; (B) ANY CONTENT GENERATED THROUGH THE SERVICE; (C) ANY
+          UNAUTHORIZED ACCESS TO YOUR ACCOUNT; (D) ANY THIRD-PARTY CLAIMS ARISING
+          FROM CONTENT YOU GENERATED OR DISTRIBUTED; OR (E) ANY OTHER MATTER RELATING
+          TO THE SERVICE. OUR TOTAL AGGREGATE LIABILITY SHALL NOT EXCEED THE AMOUNT
+          YOU PAID TO US IN THE TWELVE (12) MONTHS PRECEDING THE CLAIM, OR FIFTY
+          U.S. DOLLARS ($50), WHICHEVER IS GREATER.
         </p>
       </section>
 
       <section>
         <h3 className="font-orbitron text-xs tracking-wider text-primary mb-2">
-          10. MODIFICATIONS
+          14. INDEMNIFICATION
         </h3>
         <p>
-          We reserve the right to update these terms at any time. Continued use
-          of Grok Runner after changes constitutes acceptance of the updated
-          terms. Major changes will be announced via the platform interface.
+          You agree to <strong>indemnify, defend, and hold harmless</strong> CyberDread
+          and its officers, directors, employees, agents, and affiliates from and against
+          any and all claims, damages, obligations, losses, liabilities, costs, and
+          expenses (including reasonable attorneys' fees) arising from: (a) your use of
+          the Platform; (b) content you generate, store, or distribute using the
+          Platform; (c) your violation of these Terms; (d) your violation of any
+          applicable law or third-party rights; or (e) any dispute between you and a
+          third party related to content generated through your account.
+        </p>
+      </section>
+
+      <section>
+        <h3 className="font-orbitron text-xs tracking-wider text-primary mb-2">
+          15. ACCOUNT_TERMINATION
+        </h3>
+        <p>
+          We may suspend or terminate your account at any time, with or without cause,
+          with or without notice, at our sole discretion. Grounds for termination include
+          but are not limited to: violations of these Terms, suspected illegal activity,
+          suspected fraud, abuse of the credit system, or any behavior we determine to
+          be harmful to the Platform or its users. Upon termination, any remaining credits
+          are forfeited. You may delete your own account at any time through the
+          Platform interface.
+        </p>
+      </section>
+
+      <section>
+        <h3 className="font-orbitron text-xs tracking-wider text-primary mb-2">
+          16. GOVERNING_LAW_AND_JURISDICTION
+        </h3>
+        <p>
+          These Terms shall be governed by and construed in accordance with the laws of
+          the United States and the State of Delaware, without regard to conflict of law
+          principles. You consent to the exclusive jurisdiction and venue of the state
+          and federal courts located in Delaware for all disputes arising out of or
+          relating to these Terms or the Service.
+        </p>
+      </section>
+
+      <section>
+        <h3 className="font-orbitron text-xs tracking-wider text-primary mb-2">
+          17. DISPUTE_RESOLUTION
+        </h3>
+        <p>
+          Any dispute, controversy, or claim arising out of or relating to these Terms
+          or the Service shall first be attempted to be resolved through good-faith
+          negotiation. If the dispute cannot be resolved within thirty (30) days, either
+          party may initiate binding arbitration administered by a mutually agreed-upon
+          arbitration provider, conducted in English. YOU AGREE THAT ANY CLAIMS SHALL BE
+          BROUGHT IN YOUR INDIVIDUAL CAPACITY AND NOT AS A PLAINTIFF OR CLASS MEMBER IN
+          ANY PURPORTED CLASS OR REPRESENTATIVE PROCEEDING (class action waiver).
+        </p>
+      </section>
+
+      <section>
+        <h3 className="font-orbitron text-xs tracking-wider text-primary mb-2">
+          18. SEVERABILITY_AND_MODIFICATIONS
+        </h3>
+        <p>
+          If any provision of these Terms is found to be unenforceable or invalid, that
+          provision shall be limited or eliminated to the minimum extent necessary, and
+          the remaining provisions shall remain in full force and effect. We reserve the
+          right to update these Terms at any time. Material changes will be communicated
+          via the Platform. Continued use after changes constitutes acceptance of the
+          updated Terms.
         </p>
       </section>
 
       <p className="font-mono-share text-[10px] text-muted-foreground/30 pt-2 border-t border-border/30">
-        {"EOF // end_of_neural_contract.dat"}
+        {"EOF // end_of_neural_contract_v3.dat"}
       </p>
     </div>
   );
