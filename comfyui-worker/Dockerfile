@@ -8,18 +8,18 @@
 
 FROM runpod/worker-comfyui:5.7.1-base
 
-# ── Custom Nodes ──────────────────────────────────────────────────
-# Qwen Image Edit text encoder (TextEncodeQwenImageEditPlus)
+# ── Custom Nodes (zip download — more reliable than git in build env) ─
 RUN cd /comfyui/custom_nodes && \
-    git clone https://github.com/Elpatoli/Comfyui-QwenEditUtils
+    wget -q -O QwenEditUtils.zip https://github.com/Elpatoli/Comfyui-QwenEditUtils/archive/refs/heads/main.zip && \
+    unzip -q QwenEditUtils.zip && mv Comfyui-QwenEditUtils-main Comfyui-QwenEditUtils && rm QwenEditUtils.zip
 
-# Easy-Use utilities (easy cleanGpuUsed)
 RUN cd /comfyui/custom_nodes && \
-    git clone https://github.com/yolain/ComfyUI-Easy-Use
+    wget -q -O EasyUse.zip https://github.com/yolain/ComfyUI-Easy-Use/archive/refs/heads/main.zip && \
+    unzip -q EasyUse.zip && mv ComfyUI-Easy-Use-main ComfyUI-Easy-Use && rm EasyUse.zip
 
-# Ultimate SD Upscale (for HD upscale option)
 RUN cd /comfyui/custom_nodes && \
-    git clone https://github.com/ssitu/ComfyUI_UltimateSDUpscale
+    wget -q -O UltimateSDUpscale.zip https://github.com/ssitu/ComfyUI_UltimateSDUpscale/archive/refs/heads/master.zip && \
+    unzip -q UltimateSDUpscale.zip && mv ComfyUI_UltimateSDUpscale-master ComfyUI_UltimateSDUpscale && rm UltimateSDUpscale.zip
 
 # ── Python Dependencies ──────────────────────────────────────────
 RUN cd /comfyui/custom_nodes/Comfyui-QwenEditUtils && \
