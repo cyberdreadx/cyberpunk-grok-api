@@ -75,10 +75,10 @@ export const CREDIT_COSTS = {
   image: 1,
   /** 1 credit per second of video */
   videoPerSecond: 1,
-  /** 0.5 credits per GLTCH edit */
-  gltchEdit: 0.5,
-  /** 1 credit per GLTCH edit with HD upscale */
-  gltchEditHd: 1,
+  /** 1 credit per GLTCH edit (integer — DB requires whole numbers) */
+  gltchEdit: 1,
+  /** 2 credits per GLTCH edit with HD upscale */
+  gltchEditHd: 2,
 } as const;
 
 export type CreditMode =

@@ -15,8 +15,10 @@ import { checkRateLimit, getClientIp } from "./_lib/ratelimit";
 
 // ── Credit costs (must match client-side CREDIT_COSTS) ──
 
-const GLTCH_COST = 0.5;
-const GLTCH_HD_COST = 1;
+// DB deduct_credits() uses integers — use 1 credit for now.
+// TODO: add fractional credit support to DB for 0.5 pricing.
+const GLTCH_COST = 1;
+const GLTCH_HD_COST = 2;
 
 // ── RunPod / Backend config ──
 

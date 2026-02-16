@@ -471,7 +471,7 @@ const Index = () => {
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>Qwen Edit</span>
                       <span className={editEngine === "gltch" ? "text-secondary/70" : "text-muted-foreground/50"}>
-                        {gltchHd ? "1" : "0.5"} cr
+                        {gltchHd ? "2" : "1"} cr
                       </span>
                     </div>
                   </button>
@@ -500,7 +500,7 @@ const Index = () => {
                       HD UPSCALE (1.5x UltraSharp)
                     </span>
                     <span className="text-[9px]">
-                      {gltchHd ? "1 cr" : "+0.5 cr"}
+                      {gltchHd ? "2 cr" : "+1 cr"}
                     </span>
                   </button>
                 )}
