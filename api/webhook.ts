@@ -269,8 +269,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           // User cancelled — determine when it will end
           const cancelAt = subscription.cancel_at
             ? new Date(subscription.cancel_at * 1000).toISOString()
-            : subscription.current_period_end
-              ? new Date(subscription.current_period_end * 1000).toISOString()
+            : (subscription as any).current_period_end
+              ? new Date((subscription as any).current_period_end * 1000).toISOString()
               : null;
           await sql`
             UPDATE users

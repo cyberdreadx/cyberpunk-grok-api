@@ -743,7 +743,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         );
         if (!resp.ok) throw new Error(`RunPod status failed (${resp.status})`);
 
-        const data = await resp.json();
+        const data: any = await resp.json();
 
         // RunPod statuses: IN_QUEUE, IN_PROGRESS, COMPLETED, FAILED, CANCELLED, TIMED_OUT
         if (data.status === "COMPLETED") {
