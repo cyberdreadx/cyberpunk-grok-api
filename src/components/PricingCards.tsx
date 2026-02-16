@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Loader2, Zap, Crown, RefreshCw, Sparkles, Coins } from "lucide-react";
+import { Loader2, Zap, Crown, RefreshCw, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PayPalButtons } from "@paypal/react-paypal-js";
 import { apiFetch, SUBSCRIPTION_TIERS_MONTHLY, SUBSCRIPTION_TIERS_YEARLY } from "@/lib/api";
@@ -315,21 +315,20 @@ function PackCard({
         )}
         {onXrgePurchase && (
           <>
-            <div className="flex items-center gap-2 my-1">
+            <div className="flex items-center gap-2 my-1.5">
               <div className="h-px flex-1 bg-border/30" />
               <span className="font-mono-share text-[8px] text-muted-foreground/40 tracking-widest">OR</span>
               <div className="h-px flex-1 bg-border/30" />
             </div>
-            <Button
+            <button
               onClick={() => onXrgePurchase(pkg.id)}
               disabled={purchasing}
-              variant="outline"
-              className="w-full font-orbitron text-[9px] tracking-wider gap-1.5 border-secondary/40 text-secondary hover:bg-secondary/10 hover:border-secondary/60"
+              className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-md border border-[#c44b8b]/50 bg-gradient-to-r from-[#8b2fc0]/10 via-[#c44b8b]/10 to-[#e8445a]/10 hover:from-[#8b2fc0]/20 hover:via-[#c44b8b]/20 hover:to-[#e8445a]/20 hover:border-[#c44b8b]/70 transition-all disabled:opacity-50"
             >
-              <Coins className="w-3 h-3" />
-              PAY WITH $XRGE
-              <span className="text-green-400 font-mono-share text-[8px] ml-1">+15% BONUS</span>
-            </Button>
+              <img src="/xrge-logo.png" alt="XRGE" className="w-5 h-5 rounded-full" />
+              <span className="font-orbitron text-[10px] tracking-wider text-white/90">PAY WITH $XRGE</span>
+              <span className="text-green-400 font-mono-share text-[8px] font-bold bg-green-400/10 px-1.5 py-0.5 rounded-full leading-none">+15%</span>
+            </button>
           </>
         )}
       </div>
