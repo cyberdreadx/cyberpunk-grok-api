@@ -13,6 +13,7 @@ import { put, del } from "@vercel/blob";
 import { getUserFromRequest } from "./_lib/auth";
 import { getDb } from "./_lib/db";
 import { checkRateLimit } from "./_lib/ratelimit";
+import { checkPrompt, logSafetyViolation } from "./_lib/safety";
 
 const GLTCH_COST = 1;
 const GLTCH_HD_COST = 2;
@@ -84,13 +85,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (!imageBase64)
         return res.status(400).json({ error: "An image is required for editing." });
 
+      // Safety check — runs before credits are touched
+      const sql = getDb();
+
+      // Check if user is already banned from repeat violations
+      const banCheck = await sql`
+        SELECT COUNT(*)::int AS strikes FROM safety_log
+        WHERE user_id = ${auth.userId}::uuid
+          AND created_at > now() - interval '24 hours'
+      `.catch(() => [{ strikes: 0 }]);
+
+      if ((banCheck[0]?.strikes || 0) >= 5) {
+        return res.status(403).json({ error: "Your account has been temporarily restricted." });
+      }
+
+      const safety = checkPrompt(prompt);
+      if (safety.blocked) {
+        await logSafetyViolation(auth.userId, "gltch", prompt, safety.reason || "unknown");
+        return res.status(451).json({ error: "This prompt violates our content policy." });
+      }
+
       const { allowed } = await checkRateLimit(auth.userId, "gltch", { max: 20, windowSeconds: 300 });
       if (!allowed) {
         return res.status(429).json({ error: "Too many GLTCH requests. Please wait a moment." });
       }
 
       const cost = hd ? GLTCH_HD_COST : GLTCH_COST;
-      const sql = getDb();
 
       const rows = await sql`SELECT sub_credits, pack_credits FROM users WHERE id = ${auth.userId}`;
       if (rows.length === 0) return res.status(404).json({ error: "User not found." });
