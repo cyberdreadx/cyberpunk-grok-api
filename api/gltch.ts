@@ -196,12 +196,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // runsync returns completed result directly
       if (result.status === "COMPLETED" && result.output) {
-        const image = result.output.image_url || result.output.output || null;
+        const out = result.output;
+        let image: string | null = null;
+
+        // Format 1: { image_url: "https://..." }
+        if (out.image_url) image = out.image_url;
+        // Format 2: { output: "https://..." } or { output: "base64..." }
+        else if (typeof out.output === "string") image = out.output;
+        // Format 3: output is a direct URL string
+        else if (typeof out === "string") image = out;
+        // Format 4: { images: [...] }
+        else if (out.images?.length) {
+          const img = out.images[out.images.length - 1];
+          image = typeof img === "string" ? img : img?.url || img?.image_url || img?.data || null;
+        }
+        // Format 5: { result: "https://..." }
+        else if (out.result) image = typeof out.result === "string" ? out.result : null;
+
         if (image) {
           return res.status(200).json({ promptId: result.id, seed, syncResult: { status: "done", image } });
         }
-        console.error("[gltch] Could not parse output:", JSON.stringify(result.output).slice(0, 500));
-        return res.status(200).json({ promptId: result.id, seed, syncResult: { status: "error", error: "Could not parse result." } });
+
+        // Return the actual output shape so we can diagnose
+        const shape = JSON.stringify(out).slice(0, 300);
+        console.error("[gltch] Unknown output shape:", shape);
+        return res.status(200).json({
+          promptId: result.id, seed,
+          syncResult: { status: "error", error: `Unexpected output format: ${shape}` },
+        });
       }
 
       if (result.status === "FAILED") {
