@@ -459,6 +459,77 @@ export function useGrokApi() {
     }
   }, [apiMode, makeRequest, makeProxyRequest, pollVideoResult, persistNewResults, startTimer, stopTimer]);
 
+  // GLTCH Edit (Qwen model via /api/gltch — credits only)
+  const gltchEdit = useCallback(async (params: {
+    prompt: string;
+    image_url: string;
+    aspectRatio: string;
+    hd?: boolean;
+  }) => {
+    setIsLoading(true);
+    setError(null);
+    startTimer();
+    try {
+      // Convert URL to base64 if needed
+      const imageBase64 = params.image_url.startsWith("data:")
+        ? params.image_url
+        : await urlToBase64(params.image_url);
+
+      // Submit job
+      const submitData = await apiFetch<{ promptId: string; seed: number }>("/gltch", {
+        method: "POST",
+        body: {
+          action: "submit",
+          prompt: params.prompt,
+          imageBase64,
+          aspectRatio: params.aspectRatio,
+          hd: params.hd || false,
+        },
+      });
+
+      // Poll for result (max ~4 minutes)
+      const maxAttempts = 120;
+      for (let i = 0; i < maxAttempts; i++) {
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+
+        const pollData = await apiFetch<{
+          status: string;
+          image?: string;
+          error?: string;
+        }>("/gltch", {
+          method: "POST",
+          body: { action: "poll", promptId: submitData.promptId },
+        });
+
+        if (pollData.status === "done" && pollData.image) {
+          const newResults: GrokResult[] = [{
+            id: `gltch-${Date.now()}`,
+            url: pollData.image,
+            revised_prompt: `GLTCH Edit: ${params.prompt}`,
+            type: "image" as const,
+            timestamp: Date.now(),
+          }];
+
+          setResults(prev => [...newResults, ...prev]);
+          persistNewResults(newResults);
+          return newResults;
+        }
+
+        if (pollData.status === "error") {
+          throw new Error(pollData.error || "GLTCH edit failed");
+        }
+      }
+
+      throw new Error("GLTCH edit timed out after 4 minutes");
+    } catch (err: any) {
+      setError(friendlyError(err.message));
+      throw err;
+    } finally {
+      setIsLoading(false);
+      stopTimer();
+    }
+  }, [persistNewResults, startTimer, stopTimer]);
+
   const clearResults = useCallback(async () => {
     setResults([]);
     revokeAllRef.current?.();
@@ -495,6 +566,7 @@ export function useGrokApi() {
     generateImage,
     editImage,
     generateVideo,
+    gltchEdit,
     clearResults,
     deleteResult,
     updateResultFolder,

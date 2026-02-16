@@ -42,6 +42,217 @@ function getBackend(): { mode: Backend; runpodEndpoint?: string; runpodKey?: str
 
 // ---- Workflow builders ----
 
+const WAN_DEFAULT_NEGATIVE =
+  "色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走";
+
+/**
+ * WAN 2.2 Image-to-Video workflow (API format).
+ *
+ * Two-pass sampling (high noise → low noise) with optional Lightx2v 4-step LoRA,
+ * optional RIFE frame interpolation, and optional 4x-UltraSharp upscale.
+ */
+function buildWanVideoWorkflow(p: {
+  prompt: string;
+  negativePrompt: string;
+  imageFilename: string;
+  width: number;
+  height: number;
+  seed: number;
+  steps: number;
+  cfg: number;
+  frameCount: number;
+  useRife: boolean;
+  useUpscale: boolean;
+}): Record<string, any> {
+  const halfSteps = Math.max(1, Math.floor(p.steps / 2));
+
+  const workflow: Record<string, any> = {
+    // Text encoder
+    "84": {
+      class_type: "CLIPLoader",
+      inputs: {
+        clip_name: "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+        type: "wan",
+        device: "default",
+      },
+    },
+    // VAE
+    "90": {
+      class_type: "VAELoader",
+      inputs: { vae_name: "wan_2.1_vae.safetensors" },
+    },
+    // High-noise diffusion model
+    "95": {
+      class_type: "UNETLoader",
+      inputs: {
+        unet_name: "wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors",
+        weight_dtype: "default",
+      },
+    },
+    // Low-noise diffusion model
+    "96": {
+      class_type: "UNETLoader",
+      inputs: {
+        unet_name: "wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors",
+        weight_dtype: "default",
+      },
+    },
+    // High-noise LoRA (4-step acceleration)
+    "101": {
+      class_type: "LoraLoaderModelOnly",
+      inputs: {
+        model: ["95", 0],
+        lora_name: "wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise.safetensors",
+        strength_model: 1.0,
+      },
+    },
+    // Low-noise LoRA
+    "102": {
+      class_type: "LoraLoaderModelOnly",
+      inputs: {
+        model: ["96", 0],
+        lora_name: "wan2.2_i2v_lightx2v_4steps_lora_v1_low_noise.safetensors",
+        strength_model: 1.0,
+      },
+    },
+    // Shift scheduling — high noise path
+    "104": {
+      class_type: "ModelSamplingSD3",
+      inputs: { model: ["101", 0], shift: 5.0 },
+    },
+    // Shift scheduling — low noise path
+    "103": {
+      class_type: "ModelSamplingSD3",
+      inputs: { model: ["102", 0], shift: 5.0 },
+    },
+    // Start image
+    "97": {
+      class_type: "LoadImage",
+      inputs: { image: p.imageFilename },
+    },
+    // Positive prompt
+    "93": {
+      class_type: "CLIPTextEncode",
+      inputs: { clip: ["84", 0], text: p.prompt },
+    },
+    // Negative prompt
+    "89": {
+      class_type: "CLIPTextEncode",
+      inputs: { clip: ["84", 0], text: p.negativePrompt },
+    },
+    // Image-to-Video conditioning
+    "98": {
+      class_type: "WanImageToVideo",
+      inputs: {
+        positive: ["93", 0],
+        negative: ["89", 0],
+        vae: ["90", 0],
+        start_image: ["97", 0],
+        width: p.width,
+        height: p.height,
+        length: p.frameCount,
+        batch_size: 1,
+      },
+    },
+    // Pass 1: high-noise sampler
+    "86": {
+      class_type: "KSamplerAdvanced",
+      inputs: {
+        model: ["104", 0],
+        positive: ["98", 0],
+        negative: ["98", 1],
+        latent_image: ["98", 2],
+        add_noise: "enable",
+        noise_seed: p.seed,
+        steps: p.steps,
+        cfg: p.cfg,
+        sampler_name: "euler",
+        scheduler: "simple",
+        start_at_step: 0,
+        end_at_step: halfSteps,
+        return_with_leftover_noise: "enable",
+      },
+    },
+    // Pass 2: low-noise sampler
+    "85": {
+      class_type: "KSamplerAdvanced",
+      inputs: {
+        model: ["103", 0],
+        positive: ["98", 0],
+        negative: ["98", 1],
+        latent_image: ["86", 0],
+        add_noise: "disable",
+        noise_seed: 0,
+        steps: p.steps,
+        cfg: p.cfg,
+        sampler_name: "euler",
+        scheduler: "simple",
+        start_at_step: halfSteps,
+        end_at_step: p.steps,
+        return_with_leftover_noise: "disable",
+      },
+    },
+    // Decode latent → frames
+    "87": {
+      class_type: "VAEDecode",
+      inputs: { samples: ["85", 0], vae: ["90", 0] },
+    },
+  };
+
+  // Post-processing chain
+  let lastNode = "87";
+  let lastOut = 0;
+  let fps = 16;
+
+  if (p.useRife) {
+    workflow["116"] = {
+      class_type: "RIFE VFI",
+      inputs: {
+        frames: [lastNode, lastOut],
+        ckpt_name: "rife47.pth",
+        clear_cache_after_n_frames: 10,
+        multiplier: 2,
+        fast_mode: false,
+        ensemble: true,
+        scale_factor: 1,
+      },
+    };
+    lastNode = "116";
+    lastOut = 0;
+    fps = 24;
+  }
+
+  if (p.useUpscale) {
+    workflow["118"] = {
+      class_type: "UpscaleModelLoader",
+      inputs: { model_name: "4x-UltraSharp.pth" },
+    };
+    workflow["117"] = {
+      class_type: "ImageUpscaleWithModel",
+      inputs: { upscale_model: ["118", 0], image: [lastNode, lastOut] },
+    };
+    lastNode = "117";
+    lastOut = 0;
+  }
+
+  // Encode frames → video → save
+  workflow["94"] = {
+    class_type: "CreateVideo",
+    inputs: { images: [lastNode, lastOut], frame_rate: fps },
+  };
+  workflow["108"] = {
+    class_type: "SaveVideo",
+    inputs: {
+      video: ["94", 0],
+      filename_prefix: "video/GrokRunner",
+      codec: "auto",
+      quality: "auto",
+    },
+  };
+
+  return workflow;
+}
+
 function buildTxt2ImgWorkflow(p: {
   prompt: string;
   negativePrompt: string;
@@ -362,11 +573,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         imageBase64,
         imageFilename: clientFilename,
         upscale,
+        frameCount = 81,
+        useRife = false,
+        useUpscale: useVidUpscale = false,
       } = req.body;
 
       if (!prompt)
         return res.status(400).json({ error: "Prompt is required" });
-      if (!checkpoint)
+      // Checkpoint is required for txt2img/qwen-edit but not wan-video (fixed models)
+      if (workflowType !== "wan-video" && !checkpoint)
         return res.status(400).json({ error: "Checkpoint is required" });
 
       const actualSeed =
@@ -379,27 +594,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const clampSteps = Math.min(100, Math.max(1, Number(steps)));
       const clampCfg = Math.min(30, Math.max(0.1, Number(cfg)));
 
+      // Workflows that need a start image
+      const needsImage = workflowType === "qwen-edit" || workflowType === "wan-video";
+
       // Determine image filename for workflow
       let imageFilename: string | undefined;
 
-      if (workflowType === "qwen-edit") {
+      if (needsImage) {
         if (!imageBase64 && !clientFilename) {
-          return res.status(400).json({ error: "Image is required for qwen-edit" });
+          return res.status(400).json({ error: `Image is required for ${workflowType}` });
         }
 
         if (backend.mode === "runpod") {
-          // For RunPod, use a consistent filename — image data goes in images array
-          imageFilename = clientFilename || `input_edit_${Date.now()}.jpg`;
+          imageFilename = clientFilename || `input_${workflowType}_${Date.now()}.jpg`;
         } else {
-          // For local, upload the image to ComfyUI's input folder
           if (imageBase64) {
             imageFilename = await uploadImageToLocal(
               backend.comfyUrl!,
               imageBase64,
-              clientFilename || `input_edit_${Date.now()}.jpg`,
+              clientFilename || `input_${workflowType}_${Date.now()}.jpg`,
             );
           } else {
-            // clientFilename was already uploaded via a prior call
             imageFilename = clientFilename;
           }
         }
@@ -407,7 +622,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // Build the workflow
       let workflow: Record<string, any>;
-      if (workflowType === "qwen-edit") {
+      if (workflowType === "wan-video") {
+        workflow = buildWanVideoWorkflow({
+          prompt: prompt.trim(),
+          negativePrompt: (negativePrompt || "").trim() || WAN_DEFAULT_NEGATIVE,
+          imageFilename: imageFilename!,
+          width: clampW,
+          height: clampH,
+          seed: actualSeed,
+          steps: clampSteps,
+          cfg: clampCfg,
+          frameCount: Math.min(241, Math.max(17, Number(frameCount))),
+          useRife: !!useRife,
+          useUpscale: !!useVidUpscale,
+        });
+      } else if (workflowType === "qwen-edit") {
         workflow = buildQwenEditWorkflow({
           prompt: prompt.trim(),
           negativePrompt: (negativePrompt || "").trim() || QWEN_DEFAULT_NEGATIVE,
@@ -433,23 +662,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
 
+      // Resolve which RunPod endpoint to use (WAN video may have its own)
+      const runpodEndpoint = workflowType === "wan-video"
+        ? (process.env.RUNPOD_WAN_ENDPOINT_ID || backend.runpodEndpoint)
+        : backend.runpodEndpoint;
+
       // Submit to the appropriate backend
       if (backend.mode === "runpod") {
-        // Build RunPod input payload
         const runpodInput: any = { workflow };
 
-        // Include input image if editing
-        if (workflowType === "qwen-edit" && imageBase64) {
+        if (needsImage && imageBase64) {
           runpodInput.images = [
             {
               name: imageFilename!,
-              image: imageBase64, // data URI or raw base64 — RunPod handles both
+              image: imageBase64,
             },
           ];
         }
 
         const resp = await runpodRequest(
-          backend.runpodEndpoint!,
+          runpodEndpoint!,
           backend.runpodKey!,
           "/run",
           "POST",
@@ -463,9 +695,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         const result = await resp.json();
         return res.status(200).json({
-          promptId: result.id, // RunPod job ID
+          promptId: result.id,
           seed: actualSeed,
           backend: "runpod",
+          outputType: workflowType === "wan-video" ? "video" : "image",
         });
       } else {
         // Local ComfyUI
@@ -486,19 +719,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           promptId: result.prompt_id,
           seed: actualSeed,
           backend: "local",
+          outputType: workflowType === "wan-video" ? "video" : "image",
         });
       }
     }
 
     // ========== POLL ==========
     if (action === "poll") {
-      const { promptId } = req.body;
+      const { promptId, outputType } = req.body;
       if (!promptId)
         return res.status(400).json({ error: "promptId is required" });
 
+      // Resolve which RunPod endpoint to poll (WAN video may have its own)
+      const pollEndpoint = process.env.RUNPOD_WAN_ENDPOINT_ID && outputType === "video"
+        ? process.env.RUNPOD_WAN_ENDPOINT_ID
+        : backend.runpodEndpoint;
+
       if (backend.mode === "runpod") {
         const resp = await runpodRequest(
-          backend.runpodEndpoint!,
+          pollEndpoint!,
           backend.runpodKey!,
           `/status/${promptId}`,
         );
@@ -508,24 +747,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         // RunPod statuses: IN_QUEUE, IN_PROGRESS, COMPLETED, FAILED, CANCELLED, TIMED_OUT
         if (data.status === "COMPLETED") {
-          // Output format (worker-comfyui v5+): { images: [{ filename, type, data }] }
+          // Check for video output first
+          const videos = data.output?.videos;
+          if (videos?.length) {
+            const vid = videos[videos.length - 1];
+            const base64Data = vid.data;
+            const videoUri = base64Data.startsWith("data:")
+              ? base64Data
+              : `data:video/mp4;base64,${base64Data}`;
+            return res.status(200).json({ status: "done", video: videoUri });
+          }
+
+          // Image output
           const images = data.output?.images;
           if (images?.length) {
-            const img = images[images.length - 1]; // Take last image (HD if upscaled)
+            const img = images[images.length - 1];
             const base64Data = img.data;
-            // If it's already a data URI, use as-is; otherwise wrap it
             const imageUri = base64Data.startsWith("data:")
               ? base64Data
               : `data:image/png;base64,${base64Data}`;
             return res.status(200).json({ status: "done", image: imageUri });
           }
-          // Fallback: check older output format (message field)
+          // Fallback: older output format
           if (data.output?.message) {
             const msg = data.output.message;
             const imageUri = msg.startsWith("data:") ? msg : `data:image/png;base64,${msg}`;
             return res.status(200).json({ status: "done", image: imageUri });
           }
-          return res.status(200).json({ status: "error", error: "Job completed but no image in output" });
+          return res.status(200).json({ status: "error", error: "Job completed but no output found" });
         }
 
         if (data.status === "FAILED" || data.status === "CANCELLED" || data.status === "TIMED_OUT") {
@@ -564,10 +813,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         const outputs = entry.outputs || {};
+
+        // Check for video outputs first (SaveVideo node)
+        for (const nodeId of Object.keys(outputs)) {
+          const videos = outputs[nodeId]?.videos || outputs[nodeId]?.gifs;
+          if (videos?.length) {
+            const vid = videos[videos.length - 1];
+            const params = new URLSearchParams({
+              filename: vid.filename,
+              subfolder: vid.subfolder || "",
+              type: vid.type || "output",
+            });
+
+            const vidResp = await fetch(`${backend.comfyUrl}/view?${params}`, {
+              signal: AbortSignal.timeout(60000), // videos can be larger
+            });
+            if (!vidResp.ok)
+              throw new Error(`Failed to fetch video (${vidResp.status})`);
+
+            const buffer = await vidResp.arrayBuffer();
+            const base64 = Buffer.from(buffer).toString("base64");
+            const ct = vidResp.headers.get("content-type") || "video/mp4";
+
+            return res.status(200).json({
+              status: "done",
+              video: `data:${ct};base64,${base64}`,
+            });
+          }
+        }
+
+        // Check for image outputs
         for (const nodeId of Object.keys(outputs)) {
           const images = outputs[nodeId]?.images;
           if (images?.length) {
-            const img = images[0];
+            const img = images[images.length - 1];
             const params = new URLSearchParams({
               filename: img.filename,
               subfolder: img.subfolder || "",

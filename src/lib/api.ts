@@ -71,15 +71,23 @@ export async function apiFetch<T = any>(path: string, options: ApiOptions = {}):
 // ── Credit cost configuration ────────────────────────────────────────────
 
 export const CREDIT_COSTS = {
-  /** 1 credit per image generated or edited */
+  /** 1 credit per image generated or edited (Grok) */
   image: 1,
   /** 1 credit per second of video */
   videoPerSecond: 1,
+  /** 0.5 credits per GLTCH edit */
+  gltchEdit: 0.5,
+  /** 1 credit per GLTCH edit with HD upscale */
+  gltchEditHd: 1,
 } as const;
+
+export type CreditMode =
+  | "text-to-image" | "edit-image" | "text-to-video" | "image-to-video"
+  | "gltch-edit" | "gltch-edit-hd";
 
 /** Calculate credit cost for a given action. */
 export function calculateCreditCost(
-  mode: "text-to-image" | "edit-image" | "text-to-video" | "image-to-video",
+  mode: CreditMode,
   imageCount: number = 1,
   videoDurationSeconds: number = 5,
 ): number {
@@ -90,6 +98,10 @@ export function calculateCreditCost(
     case "text-to-video":
     case "image-to-video":
       return CREDIT_COSTS.videoPerSecond * videoDurationSeconds;
+    case "gltch-edit":
+      return CREDIT_COSTS.gltchEdit;
+    case "gltch-edit-hd":
+      return CREDIT_COSTS.gltchEditHd;
     default:
       return 1;
   }

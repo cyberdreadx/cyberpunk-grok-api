@@ -1,5 +1,5 @@
 import React, { useState, useCallback, Suspense } from "react";
-import { Terminal, Key, Coins, Shield, Eye, MessageCircle, HelpCircle, Server } from "lucide-react";
+import { Terminal, Key, Coins, Shield, Eye, MessageCircle, HelpCircle, Server, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
 import CyberLayout from "@/components/CyberLayout";
 
@@ -66,6 +66,7 @@ const Index = () => {
     generateImage,
     editImage,
     generateVideo,
+    gltchEdit,
     clearResults,
     deleteResult,
     updateResultFolder,
@@ -82,6 +83,11 @@ const Index = () => {
   const { history, addEntry, removeEntry, clearHistory } = usePromptHistory();
   const [activePrompt, setActivePrompt] = useState("");
   const [activeImageUrl, setActiveImageUrl] = useState("");
+
+  // Engine selector: "grok" (default) or "gltch" (Qwen Edit via our GPU)
+  type EditEngine = "grok" | "gltch";
+  const [editEngine, setEditEngine] = useState<EditEngine>("grok");
+  const [gltchHd, setGltchHd] = useState(false);
 
   // Legal & guide dialog state
   const [tosOpen, setTosOpen] = useState(false);
@@ -135,8 +141,11 @@ const Index = () => {
   }, [foldersHook, updateResultFolder, toast]);
 
   const handleSubmit = async (data: { prompt: string; imageUrl?: string }) => {
+    // Determine if this is a GLTCH edit (only in credits mode + edit-image + gltch engine)
+    const isGltchEdit = mode === "edit-image" && editEngine === "gltch" && effectiveApiMode === "credits";
+
     // Check access: need either API key (BYOK) or credits
-    if (effectiveApiMode === "byok" && !apiKeySet) {
+    if (!isGltchEdit && effectiveApiMode === "byok" && !apiKeySet) {
       toast({
         title: "ACCESS DENIED",
         description: "Configure your xAI API key first, or switch to Credits mode.",
@@ -145,7 +154,7 @@ const Index = () => {
       return;
     }
 
-    if (effectiveApiMode === "credits") {
+    if (effectiveApiMode === "credits" || isGltchEdit) {
       if (!auth.isAuthenticated) {
         toast({
           title: "ACCESS DENIED",
@@ -154,9 +163,17 @@ const Index = () => {
         });
         return;
       }
-      const imageCount = (mode === "text-to-image" || mode === "edit-image") ? settings.count : 1;
-      const videoDuration = (mode === "text-to-video" || mode === "image-to-video") ? videoSettings.duration : 0;
-      const cost = calculateCreditCost(mode, imageCount, videoDuration);
+
+      // Calculate cost
+      let cost: number;
+      if (isGltchEdit) {
+        cost = calculateCreditCost(gltchHd ? "gltch-edit-hd" : "gltch-edit");
+      } else {
+        const imageCount = (mode === "text-to-image" || mode === "edit-image") ? settings.count : 1;
+        const videoDuration = (mode === "text-to-video" || mode === "image-to-video") ? videoSettings.duration : 0;
+        cost = calculateCreditCost(mode, imageCount, videoDuration);
+      }
+
       if (!creditsHook.hasEnoughCredits(cost)) {
         toast({
           title: "INSUFFICIENT CREDITS",
@@ -171,28 +188,42 @@ const Index = () => {
     setActivePrompt("");
 
     try {
-      switch (mode) {
-        case "text-to-image":
-          await generateImage({ prompt: data.prompt, settings });
-          break;
-        case "edit-image":
-          await editImage({ prompt: data.prompt, image_url: data.imageUrl!, settings });
-          break;
-        case "text-to-video":
-          await generateVideo({ prompt: data.prompt, videoSettings });
-          break;
-        case "image-to-video":
-          await generateVideo({ prompt: data.prompt, image_url: data.imageUrl, videoSettings });
-          break;
+      if (isGltchEdit) {
+        // GLTCH Qwen Edit pathway
+        await gltchEdit({
+          prompt: data.prompt,
+          image_url: data.imageUrl!,
+          aspectRatio: settings.aspectRatio,
+          hd: gltchHd,
+        });
+      } else {
+        switch (mode) {
+          case "text-to-image":
+            await generateImage({ prompt: data.prompt, settings });
+            break;
+          case "edit-image":
+            await editImage({ prompt: data.prompt, image_url: data.imageUrl!, settings });
+            break;
+          case "text-to-video":
+            await generateVideo({ prompt: data.prompt, videoSettings });
+            break;
+          case "image-to-video":
+            await generateVideo({ prompt: data.prompt, image_url: data.imageUrl, videoSettings });
+            break;
+        }
       }
 
       // Optimistically deduct credits on success
       if (effectiveApiMode === "credits") {
-        const imageCount = (mode === "text-to-image" || mode === "edit-image") ? settings.count : 1;
-        const videoDuration = (mode === "text-to-video" || mode === "image-to-video") ? videoSettings.duration : 0;
-        const cost = calculateCreditCost(mode, imageCount, videoDuration);
+        let cost: number;
+        if (isGltchEdit) {
+          cost = calculateCreditCost(gltchHd ? "gltch-edit-hd" : "gltch-edit");
+        } else {
+          const imageCount = (mode === "text-to-image" || mode === "edit-image") ? settings.count : 1;
+          const videoDuration = (mode === "text-to-video" || mode === "image-to-video") ? videoSettings.duration : 0;
+          cost = calculateCreditCost(mode, imageCount, videoDuration);
+        }
         creditsHook.deductCreditsLocally(cost);
-        // Refresh from server to get actual balance
         setTimeout(() => creditsHook.refreshCredits(), 2000);
       }
 
@@ -393,6 +424,99 @@ const Index = () => {
             <div className="h-px bg-border/30" />
 
             <SettingsPanel settings={settings} videoSettings={videoSettings} onChange={handleSettingsChange} onVideoChange={handleVideoSettingsChange} mode={mode} />
+
+            {/* Engine selector — shows in edit-image + credits mode */}
+            {mode === "edit-image" && effectiveApiMode === "credits" && (
+              <div className="space-y-2">
+                <label className="font-orbitron text-[10px] tracking-wider text-muted-foreground flex items-center gap-1.5">
+                  <Zap className="w-3 h-3" />
+                  ENGINE
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditEngine("grok")}
+                    className={`
+                      p-2.5 border rounded text-left transition-all duration-200
+                      ${editEngine === "grok"
+                        ? "border-primary neon-border bg-primary/5"
+                        : "border-border bg-card/30 hover:border-primary/40"
+                      }
+                    `}
+                  >
+                    <div className={`font-orbitron text-[11px] ${editEngine === "grok" ? "text-primary" : "text-foreground"}`}>
+                      GROK
+                    </div>
+                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
+                      <span>xAI</span>
+                      <span className={editEngine === "grok" ? "text-primary/70" : "text-muted-foreground/50"}>
+                        {settings.count} cr
+                      </span>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditEngine("gltch")}
+                    className={`
+                      p-2.5 border rounded text-left transition-all duration-200
+                      ${editEngine === "gltch"
+                        ? "border-secondary neon-border bg-secondary/5"
+                        : "border-border bg-card/30 hover:border-secondary/40"
+                      }
+                    `}
+                  >
+                    <div className={`font-orbitron text-[11px] ${editEngine === "gltch" ? "text-secondary" : "text-foreground"}`}>
+                      GLTCH
+                    </div>
+                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
+                      <span>Qwen Edit</span>
+                      <span className={editEngine === "gltch" ? "text-secondary/70" : "text-muted-foreground/50"}>
+                        {gltchHd ? "1" : "0.5"} cr
+                      </span>
+                    </div>
+                  </button>
+                </div>
+
+                {/* GLTCH HD toggle */}
+                {editEngine === "gltch" && (
+                  <button
+                    type="button"
+                    onClick={() => setGltchHd(!gltchHd)}
+                    className={`
+                      w-full flex items-center justify-between px-3 py-2 border rounded
+                      font-mono-share text-[10px] transition-all duration-200
+                      ${gltchHd
+                        ? "border-secondary/50 bg-secondary/5 text-secondary"
+                        : "border-border bg-card/30 text-muted-foreground hover:border-secondary/30"
+                      }
+                    `}
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <span className={`w-3 h-3 border rounded-sm flex items-center justify-center text-[8px]
+                        ${gltchHd ? "border-secondary bg-secondary text-secondary-foreground" : "border-muted-foreground/30"}
+                      `}>
+                        {gltchHd && "✓"}
+                      </span>
+                      HD UPSCALE (1.5x UltraSharp)
+                    </span>
+                    <span className="text-[9px]">
+                      {gltchHd ? "1 cr" : "+0.5 cr"}
+                    </span>
+                  </button>
+                )}
+
+                {/* GLTCH info badge */}
+                {editEngine === "gltch" && (
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-secondary/5 border border-secondary/20 rounded">
+                    <div className="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse" />
+                    <span className="font-mono-share text-[9px] text-secondary/70">
+                      Qwen2.5 VL Edit — 5 step, 1 image per job
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
             <PromptHistory history={history} onSelect={handleSelectPrompt} onRemove={removeEntry} onClear={clearHistory} />
             <PromptForm mode={mode} isLoading={isLoading} onSubmit={handleSubmit} settings={settings} initialPrompt={activePrompt} initialImageUrl={activeImageUrl} />
           </div>
