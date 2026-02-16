@@ -119,10 +119,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const imgBuffer = Buffer.from(rawBase64, "base64");
 
       let blobUrl = "";
+      const blobToken = process.env.BLOB_READ_WRITE_TOKEN || process.env.grokrun_READ_WRITE_TOKEN || "";
       try {
         const blob = await put(`gltch/${auth.userId}-${Date.now()}.jpg`, imgBuffer, {
           access: "public",
           contentType: "image/jpeg",
+          token: blobToken,
         });
         blobUrl = blob.url;
         console.log("[gltch] Uploaded image to blob:", blobUrl.slice(0, 80));
@@ -154,7 +156,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
 
       // Clean up blob regardless of outcome
-      del(blobUrl).catch(() => {});
+      del(blobUrl, { token: blobToken }).catch(() => {});
 
       if (!resp.ok) {
         await refundCredits();
