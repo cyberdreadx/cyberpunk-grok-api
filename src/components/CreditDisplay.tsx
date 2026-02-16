@@ -12,6 +12,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import PricingCards from "@/components/PricingCards";
+import XrgePaymentDialog from "@/components/XrgePaymentDialog";
 import type { CreditPackage, SubscriptionTier } from "@/lib/api";
 
 interface CreditDisplayProps {
@@ -50,6 +51,18 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
   onPayPalSuccess,
 }) => {
   const [open, setOpen] = useState(false);
+  const [xrgeOpen, setXrgeOpen] = useState(false);
+  const [xrgePackageId, setXrgePackageId] = useState<string | null>(null);
+
+  const handleXrgePurchase = (packageId: string) => {
+    setXrgePackageId(packageId);
+    setXrgeOpen(true);
+  };
+
+  const handleXrgeSuccess = () => {
+    // Refresh credits after successful XRGE payment
+    if (onPayPalSuccess) onPayPalSuccess(); // reuse the same refresh callback
+  };
 
   const renewsLabel = subscriptionRenewsAt
     ? new Date(subscriptionRenewsAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })
@@ -222,6 +235,7 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
                   }}
                   onManageSubscription={onManageSubscription}
                   onPayPalSuccess={onPayPalSuccess}
+                  onXrgePurchase={handleXrgePurchase}
                 />
               </PayPalScriptProvider>
             ) : (
@@ -237,6 +251,7 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
                   await onSubscribe(id);
                 }}
                 onManageSubscription={onManageSubscription}
+                onXrgePurchase={handleXrgePurchase}
               />
             )}
           </div>
@@ -251,6 +266,14 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* XRGE Payment Dialog */}
+      <XrgePaymentDialog
+        open={xrgeOpen}
+        onClose={() => setXrgeOpen(false)}
+        packageId={xrgePackageId}
+        onSuccess={handleXrgeSuccess}
+      />
     </div>
   );
 };

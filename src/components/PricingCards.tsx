@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Loader2, Zap, Crown, RefreshCw, Sparkles } from "lucide-react";
+import { Loader2, Zap, Crown, RefreshCw, Sparkles, Coins } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PayPalButtons } from "@paypal/react-paypal-js";
 import { apiFetch, SUBSCRIPTION_TIERS_MONTHLY, SUBSCRIPTION_TIERS_YEARLY } from "@/lib/api";
@@ -14,6 +14,7 @@ interface PricingCardsProps {
   onSubscribe: (tierId: string) => void;
   onManageSubscription?: () => void;
   onPayPalSuccess?: () => void;
+  onXrgePurchase?: (packageId: string) => void;
 }
 
 const PricingCards: React.FC<PricingCardsProps> = ({
@@ -24,6 +25,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
   onSubscribe,
   onManageSubscription,
   onPayPalSuccess,
+  onXrgePurchase,
 }) => {
   const [billingInterval, setBillingInterval] = useState<"month" | "year">("month");
 
@@ -180,7 +182,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
         {/* Standard packs (3 cols) */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {packages.slice(0, 3).map((pkg) => (
-            <PackCard key={pkg.id} pkg={pkg} purchasing={purchasing} onPurchase={onPurchase} onPayPalSuccess={onPayPalSuccess} />
+            <PackCard key={pkg.id} pkg={pkg} purchasing={purchasing} onPurchase={onPurchase} onPayPalSuccess={onPayPalSuccess} onXrgePurchase={onXrgePurchase} />
           ))}
         </div>
 
@@ -196,7 +198,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {packages.slice(3).map((pkg) => (
-                <PackCard key={pkg.id} pkg={pkg} purchasing={purchasing} onPurchase={onPurchase} onPayPalSuccess={onPayPalSuccess} isBulk />
+                <PackCard key={pkg.id} pkg={pkg} purchasing={purchasing} onPurchase={onPurchase} onPayPalSuccess={onPayPalSuccess} onXrgePurchase={onXrgePurchase} isBulk />
               ))}
             </div>
           </>
@@ -212,12 +214,14 @@ function PackCard({
   purchasing,
   onPurchase,
   onPayPalSuccess,
+  onXrgePurchase,
   isBulk,
 }: {
   pkg: CreditPackage;
   purchasing: boolean;
   onPurchase: (id: string) => void;
   onPayPalSuccess?: () => void;
+  onXrgePurchase?: (id: string) => void;
   isBulk?: boolean;
 }) {
   return (
@@ -308,6 +312,25 @@ function PackCard({
               />
             </div>
           </div>
+        )}
+        {onXrgePurchase && (
+          <>
+            <div className="flex items-center gap-2 my-1">
+              <div className="h-px flex-1 bg-border/30" />
+              <span className="font-mono-share text-[8px] text-muted-foreground/40 tracking-widest">OR</span>
+              <div className="h-px flex-1 bg-border/30" />
+            </div>
+            <Button
+              onClick={() => onXrgePurchase(pkg.id)}
+              disabled={purchasing}
+              variant="outline"
+              className="w-full font-orbitron text-[9px] tracking-wider gap-1.5 border-secondary/40 text-secondary hover:bg-secondary/10 hover:border-secondary/60"
+            >
+              <Coins className="w-3 h-3" />
+              PAY WITH $XRGE
+              <span className="text-green-400 font-mono-share text-[8px] ml-1">+15% BONUS</span>
+            </Button>
+          </>
         )}
       </div>
     </div>
