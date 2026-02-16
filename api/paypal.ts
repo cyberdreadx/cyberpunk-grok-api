@@ -99,8 +99,8 @@ async function handleCapture(
     // Atomic + idempotent: insert transaction first, then add credits only if inserted.
     const rows = await sql`
       WITH ins AS (
-        INSERT INTO transactions (user_id, credits, amount_cents, paypal_capture_id, package, type)
-        VALUES (${userId}::uuid, ${credits}, ${amountCents}, ${captureId}, ${packageId}, 'pack')
+        INSERT INTO transactions (user_id, credits, amount_cents, stripe_session_id, package, type, payment_method)
+        VALUES (${userId}::uuid, ${credits}, ${amountCents}, ${captureId}, ${packageId}, 'pack', 'paypal')
         ON CONFLICT DO NOTHING
         RETURNING user_id, credits
       ), upd AS (

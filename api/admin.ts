@@ -182,7 +182,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           SELECT
             CASE
               WHEN payment_method = 'xrge' THEN 'xrge'
-              WHEN paypal_capture_id IS NOT NULL THEN 'paypal'
+              WHEN payment_method = 'paypal' THEN 'paypal'
               WHEN stripe_session_id IS NOT NULL THEN 'stripe'
               ELSE 'other'
             END AS gateway,
@@ -271,7 +271,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             t.amount_cents,
             CASE
               WHEN t.payment_method = 'xrge' THEN 'xrge'
-              WHEN t.paypal_capture_id IS NOT NULL THEN 'paypal'
+              WHEN t.payment_method = 'paypal' THEN 'paypal'
               WHEN t.stripe_session_id IS NOT NULL THEN 'stripe'
               ELSE 'other'
             END AS gateway
