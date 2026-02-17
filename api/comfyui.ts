@@ -238,15 +238,14 @@ function buildWanVideoWorkflow(p: {
   // Encode frames → video → save
   workflow["94"] = {
     class_type: "CreateVideo",
-    inputs: { images: [lastNode, lastOut], frame_rate: fps },
+    inputs: { images: [lastNode, lastOut], fps: fps },
   };
   workflow["108"] = {
     class_type: "SaveVideo",
     inputs: {
       video: ["94", 0],
       filename_prefix: "video/GrokRunner",
-      codec: "auto",
-      quality: "auto",
+      format: "auto",
     },
   };
 
