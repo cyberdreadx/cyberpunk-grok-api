@@ -10,8 +10,8 @@ FROM runpod/worker-comfyui:5.7.1-base
 
 # ── Custom Nodes (zip download — more reliable than git in build env) ─
 RUN cd /comfyui/custom_nodes && \
-    wget -q -O QwenEditUtils.zip https://github.com/Elpatoli/Comfyui-QwenEditUtils/archive/refs/heads/main.zip && \
-    unzip -q QwenEditUtils.zip && mv Comfyui-QwenEditUtils-main Comfyui-QwenEditUtils && rm QwenEditUtils.zip
+    wget -q -O QwenEditUtils.zip https://github.com/lrzjason/Comfyui-QwenEditUtils/archive/refs/heads/master.zip && \
+    unzip -q QwenEditUtils.zip && mv Comfyui-QwenEditUtils-master Comfyui-QwenEditUtils && rm QwenEditUtils.zip
 
 RUN cd /comfyui/custom_nodes && \
     wget -q -O EasyUse.zip https://github.com/yolain/ComfyUI-Easy-Use/archive/refs/heads/main.zip && \
