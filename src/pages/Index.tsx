@@ -1,5 +1,5 @@
 import React, { useState, useCallback, Suspense } from "react";
-import { Terminal, Key, Coins, Shield, Eye, MessageCircle, HelpCircle, Server, Zap, Cpu, ChevronDown, Film } from "lucide-react";
+import { Terminal, Key, Coins, Shield, Eye, MessageCircle, HelpCircle, Server, Zap, Cpu, ChevronDown, Film, X, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import CyberLayout from "@/components/CyberLayout";
 
@@ -16,7 +16,7 @@ import AuthDialog from "@/components/AuthDialog";
 import CreditDisplay from "@/components/CreditDisplay";
 import LegalDialog from "@/components/LegalDialog";
 import HowToUseDialog from "@/components/HowToUseDialog";
-import { useGrokApi, urlToBase64, type GrokMode, type GenerationSettings, type VideoSettings, type ApiMode, type VideoLoraEntry, DEFAULT_SETTINGS, DEFAULT_VIDEO_SETTINGS } from "@/hooks/useGrokApi";
+import { useGrokApi, urlToBase64, type GrokMode, type GenerationSettings, type VideoSettings, type ApiMode, type VideoLoraEntry, type ComfyJob, DEFAULT_SETTINGS, DEFAULT_VIDEO_SETTINGS } from "@/hooks/useGrokApi";
 import { useAuth } from "@/hooks/useAuth";
 import { useCredits } from "@/hooks/useCredits";
 import { useFolders } from "@/hooks/useFolders";
@@ -71,6 +71,9 @@ const Index = () => {
     comfyTextToVideo,
     comfyLongLook,
     comfyPhase,
+    comfyJobs,
+    dismissComfyJob,
+    clearFinishedComfyJobs,
     comfyModels,
     fetchComfyModels,
     clearResults,
@@ -254,70 +257,92 @@ const Index = () => {
     addEntry(data.prompt, mode);
     setActivePrompt("");
 
+    // ── ComfyUI (fire-and-forget with optimistic credit deduction) ──────
+    if (isComfy) {
+      // Deduct credits optimistically before firing the job
+      if (!isAdmin) {
+        let cost: number;
+        if (isComfyGen) cost = calculateCreditCost("comfy-image");
+        else if (isComfyLongLook) cost = calculateCreditCost("comfy-longlook", longLookSeqCount);
+        else cost = calculateCreditCost("comfy-video");
+        creditsHook.deductCreditsLocally(cost);
+        setTimeout(() => creditsHook.refreshCredits(), 5000);
+      }
+
+      try {
+        if (isComfyGen) {
+          comfyGenerate({
+            prompt: data.prompt,
+            negativePrompt: comfyNegPrompt || undefined,
+            checkpoint: comfyCheckpoint,
+            lora: comfyLora !== "none" ? comfyLora : undefined,
+            loraStrength: comfyLoraStrength,
+            width: comfyWidth,
+            height: comfyHeight,
+            steps: comfySteps,
+            cfg: comfyCfg,
+          });
+        } else if (isComfyRender) {
+          comfyTextToVideo({
+            prompt: data.prompt,
+            negativePrompt: comfyNegPrompt || undefined,
+            checkpoint: comfyCheckpoint,
+            width: comfyWidth,
+            height: comfyHeight,
+            steps: comfySteps,
+            cfg: comfyCfg,
+            frameCount: comfyFrameCount,
+            useRife: comfyRife,
+            videoLora: comfyVideoLora !== "none" ? comfyVideoLora : undefined,
+            videoLoraStrength: comfyVideoLoraStrength,
+            videoLoraPass: comfyVideoLoraPass,
+          });
+        } else if (isComfyLongLook) {
+          const imageBase64 = data.imageUrl?.startsWith("data:")
+            ? data.imageUrl
+            : data.imageUrl ? await urlToBase64(data.imageUrl) : "";
+          if (!imageBase64) throw new Error("Image is required for LongLook");
+          comfyLongLook({
+            prompt: data.prompt,
+            negativePrompt: comfyNegPrompt || undefined,
+            imageBase64,
+            sequenceCount: longLookSeqCount,
+            frameCount: longLookFrameCount,
+            motionScale: longLookMotionScale,
+            useFreeLong: longLookFreeLong,
+            useRife: comfyRife,
+            useUpscale: comfyVidUpscale,
+            videoLora: comfyVideoLora !== "none" ? comfyVideoLora : undefined,
+            videoLoraStrength: comfyVideoLoraStrength,
+            videoLoraPass: comfyVideoLoraPass,
+          });
+        } else if (isComfyAnimate) {
+          const imageBase64 = data.imageUrl?.startsWith("data:")
+            ? data.imageUrl
+            : data.imageUrl ? await urlToBase64(data.imageUrl) : "";
+          if (!imageBase64) throw new Error("Image is required for animation");
+          comfyVideo({
+            prompt: data.prompt,
+            negativePrompt: comfyNegPrompt || undefined,
+            imageBase64,
+            frameCount: comfyFrameCount,
+            useRife: comfyRife,
+            useUpscale: comfyVidUpscale,
+            videoLora: comfyVideoLora !== "none" ? comfyVideoLora : undefined,
+            videoLoraStrength: comfyVideoLoraStrength,
+            videoLoraPass: comfyVideoLoraPass,
+          });
+        }
+        toast({ title: "JOB QUEUED", description: "ComfyUI generation started — you can queue more." });
+      } catch (err: any) {
+        toast({ title: "SYSTEM_ERROR", description: err.message || "Failed to queue job.", variant: "destructive" });
+      }
+      return;
+    }
+
+    // ── Grok / GLTCH (blocking) ─────────────────────────────────────────
     try {
-      if (isComfyGen) {
-        await comfyGenerate({
-          prompt: data.prompt,
-          negativePrompt: comfyNegPrompt || undefined,
-          checkpoint: comfyCheckpoint,
-          lora: comfyLora !== "none" ? comfyLora : undefined,
-          loraStrength: comfyLoraStrength,
-          width: comfyWidth,
-          height: comfyHeight,
-          steps: comfySteps,
-          cfg: comfyCfg,
-        });
-      } else if (isComfyRender) {
-        await comfyTextToVideo({
-          prompt: data.prompt,
-          negativePrompt: comfyNegPrompt || undefined,
-          checkpoint: comfyCheckpoint,
-          width: comfyWidth,
-          height: comfyHeight,
-          steps: comfySteps,
-          cfg: comfyCfg,
-          frameCount: comfyFrameCount,
-          useRife: comfyRife,
-          videoLora: comfyVideoLora !== "none" ? comfyVideoLora : undefined,
-          videoLoraStrength: comfyVideoLoraStrength,
-          videoLoraPass: comfyVideoLoraPass,
-        });
-      } else if (isComfyLongLook) {
-        const imageBase64 = data.imageUrl?.startsWith("data:")
-          ? data.imageUrl
-          : data.imageUrl ? await urlToBase64(data.imageUrl) : "";
-        if (!imageBase64) throw new Error("Image is required for LongLook");
-        await comfyLongLook({
-          prompt: data.prompt,
-          negativePrompt: comfyNegPrompt || undefined,
-          imageBase64,
-          sequenceCount: longLookSeqCount,
-          frameCount: longLookFrameCount,
-          motionScale: longLookMotionScale,
-          useFreeLong: longLookFreeLong,
-          useRife: comfyRife,
-          useUpscale: comfyVidUpscale,
-          videoLora: comfyVideoLora !== "none" ? comfyVideoLora : undefined,
-          videoLoraStrength: comfyVideoLoraStrength,
-          videoLoraPass: comfyVideoLoraPass,
-        });
-      } else if (isComfyAnimate) {
-        const imageBase64 = data.imageUrl?.startsWith("data:")
-          ? data.imageUrl
-          : data.imageUrl ? await urlToBase64(data.imageUrl) : "";
-        if (!imageBase64) throw new Error("Image is required for animation");
-        await comfyVideo({
-          prompt: data.prompt,
-          negativePrompt: comfyNegPrompt || undefined,
-          imageBase64,
-          frameCount: comfyFrameCount,
-          useRife: comfyRife,
-          useUpscale: comfyVidUpscale,
-          videoLora: comfyVideoLora !== "none" ? comfyVideoLora : undefined,
-          videoLoraStrength: comfyVideoLoraStrength,
-          videoLoraPass: comfyVideoLoraPass,
-        });
-      } else if (isGltchEdit) {
+      if (isGltchEdit) {
         await gltchEdit({
           prompt: data.prompt,
           image_url: data.imageUrl!,
@@ -342,16 +367,10 @@ const Index = () => {
       }
 
       // Optimistically deduct credits on success (admin is free on backend)
-      if ((effectiveApiMode === "credits" || isComfy || isGltchEdit) && !isAdmin) {
+      if ((effectiveApiMode === "credits" || isGltchEdit) && !isAdmin) {
         let cost: number;
         if (isGltchEdit) {
           cost = calculateCreditCost(gltchHd ? "gltch-edit-hd" : "gltch-edit");
-        } else if (isComfyGen) {
-          cost = calculateCreditCost("comfy-image");
-        } else if (isComfyLongLook) {
-          cost = calculateCreditCost("comfy-longlook", longLookSeqCount);
-        } else if (isComfyRender || isComfyAnimate) {
-          cost = calculateCreditCost("comfy-video");
         } else {
           const imageCount = (mode === "text-to-image" || mode === "edit-image") ? settings.count : 1;
           const videoDuration = (mode === "text-to-video" || mode === "image-to-video") ? videoSettings.duration : 0;
@@ -367,7 +386,6 @@ const Index = () => {
       });
     } catch (err: any) {
       const msg = err.message || "Generation failed.";
-      // Split multi-line errors (e.g. billing hints) and show first line as description, rest as secondary
       const lines = msg.split("\n").filter((l: string) => l.trim());
       toast({
         title: "SYSTEM_ERROR",
@@ -375,7 +393,6 @@ const Index = () => {
         variant: "destructive",
         duration: lines.length > 1 ? 12000 : 5000,
       });
-      // Show follow-up hint as second toast if there's extra context
       if (lines.length > 1) {
         setTimeout(() => {
           toast({
@@ -1108,6 +1125,129 @@ const Index = () => {
               </button>
             </div>
           </div>
+        )}
+
+        {/* ComfyUI Job Queue */}
+        {comfyJobs.length > 0 && (
+          <section className="animate-slide-up space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="font-mono-share text-purple-400/60 text-xs">❯</span>
+                <span className="font-orbitron text-[10px] tracking-widest text-purple-400/80">
+                  COMFY_QUEUE
+                </span>
+                <span className="font-mono-share text-[9px] text-muted-foreground/50">
+                  [{comfyJobs.filter(j => j.status === "submitting" || j.status === "generating").length} active]
+                </span>
+              </div>
+              {comfyJobs.some(j => j.status === "done" || j.status === "error") && (
+                <button
+                  onClick={clearFinishedComfyJobs}
+                  className="font-mono-share text-[9px] text-muted-foreground/50 hover:text-purple-400 transition-colors"
+                >
+                  CLEAR FINISHED
+                </button>
+              )}
+            </div>
+
+            <div className="grid gap-2 sm:grid-cols-2">
+              {comfyJobs.map(job => {
+                const isActive = job.status === "submitting" || job.status === "generating";
+                const isDone = job.status === "done";
+                const isError = job.status === "error";
+                const mins = Math.floor(job.elapsed / 60).toString().padStart(2, "0");
+                const secs = (job.elapsed % 60).toString().padStart(2, "0");
+
+                return (
+                  <div
+                    key={job.id}
+                    className={`relative border rounded-lg p-3 transition-all ${
+                      isActive
+                        ? "border-purple-500/40 bg-purple-500/5 shadow-[0_0_12px_rgba(168,85,247,0.1)]"
+                        : isDone
+                        ? "border-green-500/30 bg-green-500/5"
+                        : "border-red-500/30 bg-red-500/5"
+                    }`}
+                  >
+                    {/* Dismiss button */}
+                    {!isActive && (
+                      <button
+                        onClick={() => dismissComfyJob(job.id)}
+                        className="absolute top-2 right-2 p-0.5 rounded hover:bg-background/50 transition-colors text-muted-foreground/40 hover:text-foreground"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+
+                    {/* Status row */}
+                    <div className="flex items-center gap-2 mb-1.5">
+                      {isActive && <Loader2 className="w-3.5 h-3.5 text-cyan-400 animate-spin" />}
+                      {isDone && <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />}
+                      {isError && <AlertCircle className="w-3.5 h-3.5 text-red-400" />}
+
+                      <span className={`font-orbitron text-[9px] tracking-widest uppercase ${
+                        isActive ? "text-cyan-400" : isDone ? "text-green-400" : "text-red-400"
+                      }`}>
+                        {job.status === "submitting" ? "SUBMITTING" : job.status.toUpperCase()}
+                      </span>
+
+                      {/* Timer */}
+                      <span className={`font-mono-share text-xs tabular-nums ml-auto ${
+                        isActive ? "text-purple-300" : "text-muted-foreground/50"
+                      }`}>
+                        {mins}:{secs}
+                      </span>
+                    </div>
+
+                    {/* Phase */}
+                    {isActive && job.phase && (
+                      <div className="font-mono-share text-[10px] text-purple-300/80 mb-1 animate-flicker">
+                        {job.phase}
+                      </div>
+                    )}
+
+                    {/* Progress bar for active jobs */}
+                    {isActive && (
+                      <div className="w-full h-0.5 bg-border/30 rounded-full overflow-hidden mb-1.5">
+                        <div className="h-full bg-purple-500/50 rounded-full" style={{ width: "100%", animation: "pulse 1.5s ease-in-out infinite" }} />
+                      </div>
+                    )}
+
+                    {/* Prompt preview */}
+                    <div className="font-mono-share text-[10px] text-muted-foreground/60 truncate">
+                      {job.prompt}
+                    </div>
+
+                    {/* Workflow badge + seed */}
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="font-mono-share text-[8px] text-purple-400/50 uppercase bg-purple-500/10 px-1.5 py-0.5 rounded">
+                        {job.workflowType}
+                      </span>
+                      {job.seed && (
+                        <span className="font-mono-share text-[8px] text-muted-foreground/40">
+                          seed: {job.seed}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Error message */}
+                    {isError && job.error && (
+                      <div className="font-mono-share text-[9px] text-red-400/80 mt-1.5 line-clamp-2">
+                        {job.error}
+                      </div>
+                    )}
+
+                    {/* Hint text for active */}
+                    {isActive && (
+                      <div className="font-mono-share text-[8px] text-muted-foreground/30 mt-1">
+                        {job.elapsed > 120 ? "Complex renders can take 3-5 min" : job.elapsed > 30 ? "GPU is working hard..." : "Processing..."}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
         )}
 
         {/* Results */}

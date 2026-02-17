@@ -53,6 +53,17 @@ export interface VideoLoraEntry {
   single?: string;
 }
 
+export interface ComfyJob {
+  id: string;
+  status: "submitting" | "generating" | "done" | "error";
+  workflowType: string;
+  prompt: string;
+  phase: string | null;
+  elapsed: number;
+  seed: number | null;
+  error: string | null;
+}
+
 interface GenerateImageParams {
   prompt: string;
   settings: GenerationSettings;
@@ -582,6 +593,35 @@ export function useGrokApi() {
     try { await saveResult(result); } catch { /* best-effort */ }
   }, []);
 
+  // ── ComfyUI Job Queue ─────────────────────────────────────────────────────
+
+  const [comfyJobs, setComfyJobs] = useState<ComfyJob[]>([]);
+  const comfyTimerRefs = useRef<Map<string, ReturnType<typeof setInterval>>>(new Map());
+
+  // Clean up intervals on unmount
+  useEffect(() => {
+    return () => {
+      comfyTimerRefs.current.forEach(iv => clearInterval(iv));
+    };
+  }, []);
+
+  const dismissComfyJob = useCallback((jobId: string) => {
+    const iv = comfyTimerRefs.current.get(jobId);
+    if (iv) { clearInterval(iv); comfyTimerRefs.current.delete(jobId); }
+    setComfyJobs(prev => prev.filter(j => j.id !== jobId));
+  }, []);
+
+  const clearFinishedComfyJobs = useCallback(() => {
+    setComfyJobs(prev => {
+      const removed = prev.filter(j => j.status === "done" || j.status === "error");
+      for (const j of removed) {
+        const iv = comfyTimerRefs.current.get(j.id);
+        if (iv) { clearInterval(iv); comfyTimerRefs.current.delete(j.id); }
+      }
+      return prev.filter(j => j.status !== "done" && j.status !== "error");
+    });
+  }, []);
+
   // ── ComfyUI Functions ────────────────────────────────────────────────────
 
   // Shared submit + poll helper for ComfyUI workflows
@@ -670,8 +710,8 @@ export function useGrokApi() {
     }
   }, []);
 
-  // ComfyUI Text-to-Image
-  const comfyGenerate = useCallback(async (params: {
+  // ComfyUI Text-to-Image (fire-and-forget — adds to comfyJobs queue)
+  const comfyGenerate = useCallback((params: {
     prompt: string;
     negativePrompt?: string;
     checkpoint: string;
@@ -683,49 +723,69 @@ export function useGrokApi() {
     cfg?: number;
     seed?: number;
   }) => {
-    setIsLoading(true);
-    setError(null);
-    setComfyPhase("Generating image...");
-    startTimer();
-    try {
-      const result = await comfySubmitAndPoll({
-        workflow: "txt2img",
-        prompt: params.prompt,
-        negativePrompt: params.negativePrompt,
-        checkpoint: params.checkpoint,
-        lora: params.lora,
-        loraStrength: params.loraStrength,
-        width: params.width || 1024,
-        height: params.height || 1024,
-        steps: params.steps || 5,
-        cfg: params.cfg || 1,
-        seed: params.seed,
-      });
+    const jobId = `cj-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const label = params.prompt.length > 80 ? params.prompt.slice(0, 80) + "…" : params.prompt;
 
-      if (!result.image) throw new Error("No image returned from ComfyUI");
+    const newJob: ComfyJob = {
+      id: jobId, status: "submitting", workflowType: "txt2img",
+      prompt: label, phase: "Generating image...", elapsed: 0, seed: null, error: null,
+    };
+    setComfyJobs(prev => [newJob, ...prev]);
 
-      const newResults: GrokResult[] = [{
-        id: `comfy-img-${Date.now()}`,
-        url: result.image,
-        revised_prompt: params.prompt,
-        type: "image" as const,
-        timestamp: Date.now(),
-      }];
-      setResults(prev => [...newResults, ...prev]);
-      persistNewResults(newResults);
-      return newResults;
-    } catch (err: any) {
-      setError(friendlyError(err.message));
-      throw err;
-    } finally {
-      setIsLoading(false);
-      setComfyPhase(null);
-      stopTimer();
-    }
-  }, [comfySubmitAndPoll, persistNewResults, startTimer, stopTimer]);
+    const startTime = Date.now();
+    const timerIv = setInterval(() => {
+      setComfyJobs(prev => prev.map(j =>
+        j.id === jobId && (j.status === "submitting" || j.status === "generating")
+          ? { ...j, elapsed: Math.floor((Date.now() - startTime) / 1000) }
+          : j
+      ));
+    }, 1000);
+    comfyTimerRefs.current.set(jobId, timerIv);
 
-  // ComfyUI Image-to-Video (WAN Video)
-  const comfyVideo = useCallback(async (params: {
+    (async () => {
+      try {
+        const result = await comfySubmitAndPoll({
+          workflow: "txt2img",
+          prompt: params.prompt,
+          negativePrompt: params.negativePrompt,
+          checkpoint: params.checkpoint,
+          lora: params.lora,
+          loraStrength: params.loraStrength,
+          width: params.width || 1024,
+          height: params.height || 1024,
+          steps: params.steps || 5,
+          cfg: params.cfg || 1,
+          seed: params.seed,
+        });
+
+        clearInterval(timerIv);
+        comfyTimerRefs.current.delete(jobId);
+
+        if (!result.image) throw new Error("No image returned from ComfyUI");
+
+        const newResults: GrokResult[] = [{
+          id: `comfy-img-${Date.now()}`,
+          url: result.image,
+          revised_prompt: params.prompt,
+          type: "image" as const,
+          timestamp: Date.now(),
+        }];
+        setResults(prev => [...newResults, ...prev]);
+        persistNewResults(newResults);
+        setComfyJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "done", phase: null } : j));
+      } catch (err: any) {
+        clearInterval(timerIv);
+        comfyTimerRefs.current.delete(jobId);
+        setComfyJobs(prev => prev.map(j => j.id === jobId
+          ? { ...j, status: "error", error: err.message || "Generation failed", phase: null }
+          : j
+        ));
+      }
+    })();
+  }, [comfySubmitAndPoll, persistNewResults]);
+
+  // ComfyUI Image-to-Video (WAN Video) — fire-and-forget
+  const comfyVideo = useCallback((params: {
     prompt: string;
     negativePrompt?: string;
     imageBase64: string;
@@ -737,50 +797,71 @@ export function useGrokApi() {
     videoLoraStrength?: number;
     videoLoraPass?: "high" | "low" | "both";
   }) => {
-    setIsLoading(true);
-    setError(null);
-    setComfyPhase("Rendering video...");
-    startTimer();
-    try {
-      const result = await comfySubmitAndPoll({
-        workflow: "wan-video",
-        prompt: params.prompt,
-        negativePrompt: params.negativePrompt,
-        imageBase64: params.imageBase64,
-        imageFilename: params.imageFilename || "input.jpg",
-        frameCount: params.frameCount || 81,
-        useRife: params.useRife ?? true,
-        useUpscale: params.useUpscale ?? false,
-        videoLora: params.videoLora,
-        videoLoraStrength: params.videoLoraStrength,
-        videoLoraPass: params.videoLoraPass,
-      }, { pollInterval: 5000, maxAttempts: 120 });
+    const jobId = `cj-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const label = params.prompt.length > 80 ? params.prompt.slice(0, 80) + "…" : params.prompt;
 
-      const videoSrc = result.video || result.image;
-      if (!videoSrc) throw new Error("No video returned from ComfyUI");
+    const newJob: ComfyJob = {
+      id: jobId, status: "submitting", workflowType: "wan-video",
+      prompt: label, phase: "Rendering video...", elapsed: 0, seed: null, error: null,
+    };
+    setComfyJobs(prev => [newJob, ...prev]);
 
-      const newResults: GrokResult[] = [{
-        id: `comfy-vid-${Date.now()}`,
-        url: videoSrc,
-        revised_prompt: params.prompt,
-        type: "video" as const,
-        timestamp: Date.now(),
-      }];
-      setResults(prev => [...newResults, ...prev]);
-      persistNewResults(newResults);
-      return newResults;
-    } catch (err: any) {
-      setError(friendlyError(err.message));
-      throw err;
-    } finally {
-      setIsLoading(false);
-      setComfyPhase(null);
-      stopTimer();
-    }
-  }, [comfySubmitAndPoll, persistNewResults, startTimer, stopTimer]);
+    const startTime = Date.now();
+    const timerIv = setInterval(() => {
+      setComfyJobs(prev => prev.map(j =>
+        j.id === jobId && (j.status === "submitting" || j.status === "generating")
+          ? { ...j, elapsed: Math.floor((Date.now() - startTime) / 1000) }
+          : j
+      ));
+    }, 1000);
+    comfyTimerRefs.current.set(jobId, timerIv);
 
-  // ComfyUI Chained Text-to-Video (txt2img → wan-video)
-  const comfyTextToVideo = useCallback(async (params: {
+    (async () => {
+      try {
+        setComfyJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "generating" } : j));
+        const result = await comfySubmitAndPoll({
+          workflow: "wan-video",
+          prompt: params.prompt,
+          negativePrompt: params.negativePrompt,
+          imageBase64: params.imageBase64,
+          imageFilename: params.imageFilename || "input.jpg",
+          frameCount: params.frameCount || 81,
+          useRife: params.useRife ?? true,
+          useUpscale: params.useUpscale ?? false,
+          videoLora: params.videoLora,
+          videoLoraStrength: params.videoLoraStrength,
+          videoLoraPass: params.videoLoraPass,
+        }, { pollInterval: 5000, maxAttempts: 120 });
+
+        clearInterval(timerIv);
+        comfyTimerRefs.current.delete(jobId);
+
+        const videoSrc = result.video || result.image;
+        if (!videoSrc) throw new Error("No video returned from ComfyUI");
+
+        const newResults: GrokResult[] = [{
+          id: `comfy-vid-${Date.now()}`,
+          url: videoSrc,
+          revised_prompt: params.prompt,
+          type: "video" as const,
+          timestamp: Date.now(),
+        }];
+        setResults(prev => [...newResults, ...prev]);
+        persistNewResults(newResults);
+        setComfyJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "done", phase: null } : j));
+      } catch (err: any) {
+        clearInterval(timerIv);
+        comfyTimerRefs.current.delete(jobId);
+        setComfyJobs(prev => prev.map(j => j.id === jobId
+          ? { ...j, status: "error", error: err.message || "Render failed", phase: null }
+          : j
+        ));
+      }
+    })();
+  }, [comfySubmitAndPoll, persistNewResults]);
+
+  // ComfyUI Chained Text-to-Video (txt2img → wan-video) — fire-and-forget
+  const comfyTextToVideo = useCallback((params: {
     prompt: string;
     negativePrompt?: string;
     checkpoint: string;
@@ -794,67 +875,94 @@ export function useGrokApi() {
     videoLoraStrength?: number;
     videoLoraPass?: "high" | "low" | "both";
   }) => {
-    setIsLoading(true);
-    setError(null);
-    startTimer();
-    try {
-      // Phase 1: Generate start frame (skipCredits — video step pays for both)
-      setComfyPhase("Generating start frame...");
-      const imgResult = await comfySubmitAndPoll({
-        workflow: "txt2img",
-        prompt: params.prompt,
-        negativePrompt: params.negativePrompt,
-        checkpoint: params.checkpoint,
-        width: params.width || 832,
-        height: params.height || 480,
-        steps: params.steps || 5,
-        cfg: params.cfg || 1,
-        skipCredits: true,
-      });
+    const jobId = `cj-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const label = params.prompt.length > 80 ? params.prompt.slice(0, 80) + "…" : params.prompt;
 
-      if (!imgResult.image) throw new Error("Failed to generate start frame");
+    const newJob: ComfyJob = {
+      id: jobId, status: "submitting", workflowType: "txt2video",
+      prompt: label, phase: "Generating start frame...", elapsed: 0, seed: null, error: null,
+    };
+    setComfyJobs(prev => [newJob, ...prev]);
 
-      // Phase 2: Animate with WAN Video
-      setComfyPhase("Rendering video...");
-      const vidResult = await comfySubmitAndPoll({
-        workflow: "wan-video",
-        prompt: params.prompt,
-        negativePrompt: params.negativePrompt,
-        imageBase64: imgResult.image,
-        imageFilename: "start_frame.png",
-        frameCount: params.frameCount || 81,
-        useRife: params.useRife ?? true,
-        useUpscale: false,
-        videoLora: params.videoLora,
-        videoLoraStrength: params.videoLoraStrength,
-        videoLoraPass: params.videoLoraPass,
-      }, { pollInterval: 5000, maxAttempts: 120 });
+    const startTime = Date.now();
+    const timerIv = setInterval(() => {
+      setComfyJobs(prev => prev.map(j =>
+        j.id === jobId && (j.status === "submitting" || j.status === "generating")
+          ? { ...j, elapsed: Math.floor((Date.now() - startTime) / 1000) }
+          : j
+      ));
+    }, 1000);
+    comfyTimerRefs.current.set(jobId, timerIv);
 
-      const videoSrc = vidResult.video || vidResult.image;
-      if (!videoSrc) throw new Error("No video returned from ComfyUI");
+    (async () => {
+      try {
+        // Phase 1: Generate start frame (skipCredits — video step pays for both)
+        setComfyJobs(prev => prev.map(j => j.id === jobId
+          ? { ...j, status: "generating", phase: "Generating start frame..." }
+          : j
+        ));
+        const imgResult = await comfySubmitAndPoll({
+          workflow: "txt2img",
+          prompt: params.prompt,
+          negativePrompt: params.negativePrompt,
+          checkpoint: params.checkpoint,
+          width: params.width || 832,
+          height: params.height || 480,
+          steps: params.steps || 5,
+          cfg: params.cfg || 1,
+          skipCredits: true,
+        });
 
-      const newResults: GrokResult[] = [{
-        id: `comfy-t2v-${Date.now()}`,
-        url: videoSrc,
-        revised_prompt: params.prompt,
-        type: "video" as const,
-        timestamp: Date.now(),
-      }];
-      setResults(prev => [...newResults, ...prev]);
-      persistNewResults(newResults);
-      return newResults;
-    } catch (err: any) {
-      setError(friendlyError(err.message));
-      throw err;
-    } finally {
-      setIsLoading(false);
-      setComfyPhase(null);
-      stopTimer();
-    }
-  }, [comfySubmitAndPoll, persistNewResults, startTimer, stopTimer]);
+        if (!imgResult.image) throw new Error("Failed to generate start frame");
 
-  // ComfyUI LongLook Multi-Clip Video
-  const comfyLongLook = useCallback(async (params: {
+        // Phase 2: Animate with WAN Video
+        setComfyJobs(prev => prev.map(j => j.id === jobId
+          ? { ...j, phase: "Rendering video..." }
+          : j
+        ));
+        const vidResult = await comfySubmitAndPoll({
+          workflow: "wan-video",
+          prompt: params.prompt,
+          negativePrompt: params.negativePrompt,
+          imageBase64: imgResult.image,
+          imageFilename: "start_frame.png",
+          frameCount: params.frameCount || 81,
+          useRife: params.useRife ?? true,
+          useUpscale: false,
+          videoLora: params.videoLora,
+          videoLoraStrength: params.videoLoraStrength,
+          videoLoraPass: params.videoLoraPass,
+        }, { pollInterval: 5000, maxAttempts: 120 });
+
+        clearInterval(timerIv);
+        comfyTimerRefs.current.delete(jobId);
+
+        const videoSrc = vidResult.video || vidResult.image;
+        if (!videoSrc) throw new Error("No video returned from ComfyUI");
+
+        const newResults: GrokResult[] = [{
+          id: `comfy-t2v-${Date.now()}`,
+          url: videoSrc,
+          revised_prompt: params.prompt,
+          type: "video" as const,
+          timestamp: Date.now(),
+        }];
+        setResults(prev => [...newResults, ...prev]);
+        persistNewResults(newResults);
+        setComfyJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "done", phase: null } : j));
+      } catch (err: any) {
+        clearInterval(timerIv);
+        comfyTimerRefs.current.delete(jobId);
+        setComfyJobs(prev => prev.map(j => j.id === jobId
+          ? { ...j, status: "error", error: err.message || "Chained render failed", phase: null }
+          : j
+        ));
+      }
+    })();
+  }, [comfySubmitAndPoll, persistNewResults]);
+
+  // ComfyUI LongLook Multi-Clip Video — fire-and-forget
+  const comfyLongLook = useCallback((params: {
     prompt: string;
     negativePrompt?: string;
     imageBase64: string;
@@ -868,53 +976,72 @@ export function useGrokApi() {
     videoLoraStrength?: number;
     videoLoraPass?: "high" | "low" | "both";
   }) => {
-    setIsLoading(true);
-    setError(null);
     const seqCount = Math.min(4, Math.max(1, params.sequenceCount ?? 2));
-    setComfyPhase("Splitting prompt...");
-    startTimer();
-    try {
-      const result = await comfySubmitAndPoll({
-        workflow: "longlook",
-        prompt: params.prompt,
-        negativePrompt: params.negativePrompt,
-        imageBase64: params.imageBase64,
-        imageFilename: "input_longlook.jpg",
-        sequenceCount: seqCount,
-        frameCount: params.frameCount || 81,
-        motionScale: params.motionScale ?? 1.2,
-        useFreeLong: params.useFreeLong ?? false,
-        useRife: params.useRife ?? true,
-        useUpscale: params.useUpscale ?? false,
-        videoLora: params.videoLora,
-        videoLoraStrength: params.videoLoraStrength,
-        videoLoraPass: params.videoLoraPass,
-      }, { pollInterval: 5000, maxAttempts: 240 });
+    const jobId = `cj-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const label = params.prompt.length > 80 ? params.prompt.slice(0, 80) + "…" : params.prompt;
 
-      setComfyPhase(`Rendering ${seqCount} sequences...`);
+    const newJob: ComfyJob = {
+      id: jobId, status: "submitting", workflowType: "longlook",
+      prompt: label, phase: `Rendering ${seqCount} sequences...`, elapsed: 0, seed: null, error: null,
+    };
+    setComfyJobs(prev => [newJob, ...prev]);
 
-      const videoSrc = result.video || result.image;
-      if (!videoSrc) throw new Error("No video returned from ComfyUI");
+    const startTime = Date.now();
+    const timerIv = setInterval(() => {
+      setComfyJobs(prev => prev.map(j =>
+        j.id === jobId && (j.status === "submitting" || j.status === "generating")
+          ? { ...j, elapsed: Math.floor((Date.now() - startTime) / 1000) }
+          : j
+      ));
+    }, 1000);
+    comfyTimerRefs.current.set(jobId, timerIv);
 
-      const newResults: GrokResult[] = [{
-        id: `comfy-ll-${Date.now()}`,
-        url: videoSrc,
-        revised_prompt: params.prompt,
-        type: "video" as const,
-        timestamp: Date.now(),
-      }];
-      setResults(prev => [...newResults, ...prev]);
-      persistNewResults(newResults);
-      return newResults;
-    } catch (err: any) {
-      setError(friendlyError(err.message));
-      throw err;
-    } finally {
-      setIsLoading(false);
-      setComfyPhase(null);
-      stopTimer();
-    }
-  }, [comfySubmitAndPoll, persistNewResults, startTimer, stopTimer]);
+    (async () => {
+      try {
+        setComfyJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "generating" } : j));
+        const result = await comfySubmitAndPoll({
+          workflow: "longlook",
+          prompt: params.prompt,
+          negativePrompt: params.negativePrompt,
+          imageBase64: params.imageBase64,
+          imageFilename: "input_longlook.jpg",
+          sequenceCount: seqCount,
+          frameCount: params.frameCount || 81,
+          motionScale: params.motionScale ?? 1.2,
+          useFreeLong: params.useFreeLong ?? false,
+          useRife: params.useRife ?? true,
+          useUpscale: params.useUpscale ?? false,
+          videoLora: params.videoLora,
+          videoLoraStrength: params.videoLoraStrength,
+          videoLoraPass: params.videoLoraPass,
+        }, { pollInterval: 5000, maxAttempts: 240 });
+
+        clearInterval(timerIv);
+        comfyTimerRefs.current.delete(jobId);
+
+        const videoSrc = result.video || result.image;
+        if (!videoSrc) throw new Error("No video returned from ComfyUI");
+
+        const newResults: GrokResult[] = [{
+          id: `comfy-ll-${Date.now()}`,
+          url: videoSrc,
+          revised_prompt: params.prompt,
+          type: "video" as const,
+          timestamp: Date.now(),
+        }];
+        setResults(prev => [...newResults, ...prev]);
+        persistNewResults(newResults);
+        setComfyJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "done", phase: null } : j));
+      } catch (err: any) {
+        clearInterval(timerIv);
+        comfyTimerRefs.current.delete(jobId);
+        setComfyJobs(prev => prev.map(j => j.id === jobId
+          ? { ...j, status: "error", error: err.message || "LongLook render failed", phase: null }
+          : j
+        ));
+      }
+    })();
+  }, [comfySubmitAndPoll, persistNewResults]);
 
   const clearError = useCallback(() => {
     setError(null);
@@ -941,6 +1068,9 @@ export function useGrokApi() {
     comfyTextToVideo,
     comfyLongLook,
     comfyPhase,
+    comfyJobs,
+    dismissComfyJob,
+    clearFinishedComfyJobs,
     comfyModels,
     fetchComfyModels,
     clearResults,
