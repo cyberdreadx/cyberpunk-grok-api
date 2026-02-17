@@ -259,12 +259,13 @@ const Index = () => {
     addEntry(data.prompt, mode);
     setActivePrompt("");
 
-    // ── ComfyUI (fire-and-forget with optimistic credit deduction) ──────
-    if (isComfy) {
+    // ── ComfyUI + GLTCH (fire-and-forget with optimistic credit deduction) ──
+    if (isComfy || isGltchEdit) {
       // Deduct credits optimistically before firing the job
       if (!isAdmin) {
         let cost: number;
-        if (isComfyGen) cost = calculateCreditCost("comfy-image");
+        if (isGltchEdit) cost = calculateCreditCost(gltchHd ? "gltch-edit-hd" : "gltch-edit");
+        else if (isComfyGen) cost = calculateCreditCost("comfy-image");
         else if (isComfyLongLook) cost = calculateCreditCost("comfy-longlook", longLookSeqCount);
         else cost = calculateCreditCost("comfy-video");
         creditsHook.deductCreditsLocally(cost);
@@ -272,7 +273,14 @@ const Index = () => {
       }
 
       try {
-        if (isComfyGen) {
+        if (isGltchEdit) {
+          gltchEdit({
+            prompt: data.prompt,
+            image_url: data.imageUrl!,
+            aspectRatio: settings.aspectRatio,
+            hd: gltchHd,
+          });
+        } else if (isComfyGen) {
           comfyGenerate({
             prompt: data.prompt,
             negativePrompt: comfyNegPrompt || undefined,
@@ -333,49 +341,35 @@ const Index = () => {
             videoLoraPass: comfyVideoLoraPass,
           });
         }
-        toast({ title: "JOB QUEUED", description: "ComfyUI generation started — you can queue more." });
+        toast({ title: "JOB QUEUED", description: "Generation started — you can queue more." });
       } catch (err: any) {
         toast({ title: "SYSTEM_ERROR", description: err.message || "Failed to queue job.", variant: "destructive" });
       }
       return;
     }
 
-    // ── Grok / GLTCH (blocking) ─────────────────────────────────────────
+    // ── Grok (blocking) ─────────────────────────────────────────────────
     try {
-      if (isGltchEdit) {
-        await gltchEdit({
-          prompt: data.prompt,
-          image_url: data.imageUrl!,
-          aspectRatio: settings.aspectRatio,
-          hd: gltchHd,
-        });
-      } else {
-        switch (mode) {
-          case "text-to-image":
-            await generateImage({ prompt: data.prompt, settings });
-            break;
-          case "edit-image":
-            await editImage({ prompt: data.prompt, image_url: data.imageUrl!, settings });
-            break;
-          case "text-to-video":
-            await generateVideo({ prompt: data.prompt, videoSettings });
-            break;
-          case "image-to-video":
-            await generateVideo({ prompt: data.prompt, image_url: data.imageUrl, videoSettings });
-            break;
-        }
+      switch (mode) {
+        case "text-to-image":
+          await generateImage({ prompt: data.prompt, settings });
+          break;
+        case "edit-image":
+          await editImage({ prompt: data.prompt, image_url: data.imageUrl!, settings });
+          break;
+        case "text-to-video":
+          await generateVideo({ prompt: data.prompt, videoSettings });
+          break;
+        case "image-to-video":
+          await generateVideo({ prompt: data.prompt, image_url: data.imageUrl, videoSettings });
+          break;
       }
 
       // Optimistically deduct credits on success (admin is free on backend)
-      if ((effectiveApiMode === "credits" || isGltchEdit) && !isAdmin) {
-        let cost: number;
-        if (isGltchEdit) {
-          cost = calculateCreditCost(gltchHd ? "gltch-edit-hd" : "gltch-edit");
-        } else {
-          const imageCount = (mode === "text-to-image" || mode === "edit-image") ? settings.count : 1;
-          const videoDuration = (mode === "text-to-video" || mode === "image-to-video") ? videoSettings.duration : 0;
-          cost = calculateCreditCost(mode, imageCount, videoDuration);
-        }
+      if (effectiveApiMode === "credits" && !isAdmin) {
+        const imageCount = (mode === "text-to-image" || mode === "edit-image") ? settings.count : 1;
+        const videoDuration = (mode === "text-to-video" || mode === "image-to-video") ? videoSettings.duration : 0;
+        const cost = calculateCreditCost(mode, imageCount, videoDuration);
         creditsHook.deductCreditsLocally(cost);
         setTimeout(() => creditsHook.refreshCredits(), 2000);
       }

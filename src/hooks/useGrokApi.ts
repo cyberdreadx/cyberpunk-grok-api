@@ -477,98 +477,122 @@ export function useGrokApi() {
     }
   }, [apiMode, makeRequest, makeProxyRequest, pollVideoResult, persistNewResults, startTimer, stopTimer]);
 
-  // GLTCH Edit (Qwen model via /api/gltch — credits only)
-  const gltchEdit = useCallback(async (params: {
+  // GLTCH Edit (Qwen model via /api/gltch) — fire-and-forget with queue
+  const gltchEdit = useCallback((params: {
     prompt: string;
     image_url: string;
     aspectRatio: string;
     hd?: boolean;
   }) => {
-    setIsLoading(true);
-    setError(null);
-    startTimer();
-    try {
-      // Convert URL to base64 if needed
-      const imageBase64 = params.image_url.startsWith("data:")
-        ? params.image_url
-        : await urlToBase64(params.image_url);
+    const jobId = `cj-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const label = params.prompt.length > 80 ? params.prompt.slice(0, 80) + "…" : params.prompt;
 
-      // Submit job (uses runsync — may return result directly)
-      const submitData = await apiFetch<{
-        promptId: string;
-        seed: number;
-        syncResult?: { status: string; image?: string; error?: string };
-      }>("/gltch", {
-        method: "POST",
-        body: {
-          action: "submit",
-          prompt: params.prompt,
-          imageBase64,
-          aspectRatio: params.aspectRatio,
-          hd: params.hd || false,
-        },
-      });
+    const newJob: ComfyJob = {
+      id: jobId, status: "submitting", workflowType: params.hd ? "gltch-hd" : "gltch",
+      prompt: label, phase: "Editing image...", elapsed: 0, seed: null, error: null,
+    };
+    setComfyJobs(prev => [newJob, ...prev]);
 
-      // If runsync returned the result directly, use it
-      if (submitData.syncResult?.status === "done" && submitData.syncResult.image) {
-        const newResults: GrokResult[] = [{
-          id: `gltch-${Date.now()}`,
-          url: submitData.syncResult.image,
-          revised_prompt: `GLTCH Edit: ${params.prompt}`,
-          type: "image" as const,
-          timestamp: Date.now(),
-        }];
-        setResults(prev => [...newResults, ...prev]);
-        persistNewResults(newResults);
-        return newResults;
-      }
+    const startTime = Date.now();
+    const timerIv = setInterval(() => {
+      setComfyJobs(prev => prev.map(j =>
+        j.id === jobId && (j.status === "submitting" || j.status === "generating")
+          ? { ...j, elapsed: Math.floor((Date.now() - startTime) / 1000) }
+          : j
+      ));
+    }, 1000);
+    comfyTimerRefs.current.set(jobId, timerIv);
 
-      if (submitData.syncResult?.status === "error") {
-        throw new Error(submitData.syncResult.error || "GLTCH edit failed");
-      }
+    (async () => {
+      try {
+        const imageBase64 = params.image_url.startsWith("data:")
+          ? params.image_url
+          : await urlToBase64(params.image_url);
 
-      // Otherwise fall back to polling (max ~4 minutes)
-      const maxAttempts = 120;
-      for (let i = 0; i < maxAttempts; i++) {
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+        setComfyJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "generating" } : j));
 
-        const pollData = await apiFetch<{
-          status: string;
-          image?: string;
-          error?: string;
+        const submitData = await apiFetch<{
+          promptId: string;
+          seed: number;
+          syncResult?: { status: string; image?: string; error?: string };
         }>("/gltch", {
           method: "POST",
-          body: { action: "poll", promptId: submitData.promptId },
+          body: {
+            action: "submit",
+            prompt: params.prompt,
+            imageBase64,
+            aspectRatio: params.aspectRatio,
+            hd: params.hd || false,
+          },
         });
 
-        if (pollData.status === "done" && pollData.image) {
+        // runsync may return result directly
+        if (submitData.syncResult?.status === "done" && submitData.syncResult.image) {
+          clearInterval(timerIv);
+          comfyTimerRefs.current.delete(jobId);
           const newResults: GrokResult[] = [{
             id: `gltch-${Date.now()}`,
-            url: pollData.image,
+            url: submitData.syncResult.image,
             revised_prompt: `GLTCH Edit: ${params.prompt}`,
             type: "image" as const,
             timestamp: Date.now(),
           }];
-
           setResults(prev => [...newResults, ...prev]);
           persistNewResults(newResults);
-          return newResults;
+          setComfyJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "done", phase: null, seed: submitData.seed } : j));
+          return;
         }
 
-        if (pollData.status === "error") {
-          throw new Error(pollData.error || "GLTCH edit failed");
+        if (submitData.syncResult?.status === "error") {
+          throw new Error(submitData.syncResult.error || "GLTCH edit failed");
         }
+
+        // Fall back to polling
+        const maxAttempts = 120;
+        for (let i = 0; i < maxAttempts; i++) {
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+
+          const pollData = await apiFetch<{
+            status: string;
+            image?: string;
+            error?: string;
+          }>("/gltch", {
+            method: "POST",
+            body: { action: "poll", promptId: submitData.promptId },
+          });
+
+          if (pollData.status === "done" && pollData.image) {
+            clearInterval(timerIv);
+            comfyTimerRefs.current.delete(jobId);
+            const newResults: GrokResult[] = [{
+              id: `gltch-${Date.now()}`,
+              url: pollData.image,
+              revised_prompt: `GLTCH Edit: ${params.prompt}`,
+              type: "image" as const,
+              timestamp: Date.now(),
+            }];
+            setResults(prev => [...newResults, ...prev]);
+            persistNewResults(newResults);
+            setComfyJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "done", phase: null, seed: submitData.seed } : j));
+            return;
+          }
+
+          if (pollData.status === "error") {
+            throw new Error(pollData.error || "GLTCH edit failed");
+          }
+        }
+
+        throw new Error("GLTCH edit timed out after 4 minutes");
+      } catch (err: any) {
+        clearInterval(timerIv);
+        comfyTimerRefs.current.delete(jobId);
+        setComfyJobs(prev => prev.map(j => j.id === jobId
+          ? { ...j, status: "error", error: err.message || "GLTCH edit failed", phase: null }
+          : j
+        ));
       }
-
-      throw new Error("GLTCH edit timed out after 4 minutes");
-    } catch (err: any) {
-      setError(friendlyError(err.message));
-      throw err;
-    } finally {
-      setIsLoading(false);
-      stopTimer();
-    }
-  }, [persistNewResults, startTimer, stopTimer]);
+    })();
+  }, [persistNewResults]);
 
   const clearResults = useCallback(async () => {
     setResults([]);
