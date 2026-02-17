@@ -569,7 +569,6 @@ function buildLongLookWorkflow(p: {
         upscale_method: "lanczos",
         keep_proportion: false,
         divisible_by: 2,
-        get_image_size: false,
       },
     };
 
