@@ -633,23 +633,25 @@ export function useGrokApi() {
   const [comfyPhase, setComfyPhase] = useState<string | null>(null);
 
   /** ComfyUI models + LoRAs (fetched on demand) */
-  const [comfyModels, setComfyModels] = useState<{ checkpoints: string[]; loras: string[] }>({
+  const [comfyModels, setComfyModels] = useState<{ checkpoints: string[]; loras: string[]; videoLoras: string[] }>({
     checkpoints: [],
     loras: [],
+    videoLoras: [],
   });
 
   const fetchComfyModels = useCallback(async () => {
     try {
-      const data = await apiFetch<{ checkpoints: string[]; loras?: string[] }>("/comfyui", {
+      const data = await apiFetch<{ checkpoints: string[]; loras?: string[]; videoLoras?: string[] }>("/comfyui", {
         method: "POST",
         body: { action: "models" },
       });
       setComfyModels({
         checkpoints: data.checkpoints || [],
         loras: data.loras || [],
+        videoLoras: data.videoLoras || [],
       });
     } catch {
-      setComfyModels({ checkpoints: [], loras: [] });
+      setComfyModels({ checkpoints: [], loras: [], videoLoras: [] });
     }
   }, []);
 
@@ -713,6 +715,9 @@ export function useGrokApi() {
     frameCount?: number;
     useRife?: boolean;
     useUpscale?: boolean;
+    videoLora?: string;
+    videoLoraStrength?: number;
+    videoLoraPass?: "high" | "low" | "both";
   }) => {
     setIsLoading(true);
     setError(null);
@@ -727,6 +732,9 @@ export function useGrokApi() {
         frameCount: params.frameCount || 81,
         useRife: params.useRife ?? true,
         useUpscale: params.useUpscale ?? false,
+        videoLora: params.videoLora,
+        videoLoraStrength: params.videoLoraStrength,
+        videoLoraPass: params.videoLoraPass,
       }, { pollInterval: 5000, maxAttempts: 120 });
 
       const videoSrc = result.video || result.image;
@@ -762,6 +770,9 @@ export function useGrokApi() {
     cfg?: number;
     frameCount?: number;
     useRife?: boolean;
+    videoLora?: string;
+    videoLoraStrength?: number;
+    videoLoraPass?: "high" | "low" | "both";
   }) => {
     setIsLoading(true);
     setError(null);
@@ -792,6 +803,9 @@ export function useGrokApi() {
         frameCount: params.frameCount || 81,
         useRife: params.useRife ?? true,
         useUpscale: false,
+        videoLora: params.videoLora,
+        videoLoraStrength: params.videoLoraStrength,
+        videoLoraPass: params.videoLoraPass,
       }, { pollInterval: 5000, maxAttempts: 120 });
 
       const videoSrc = vidResult.video || vidResult.image;

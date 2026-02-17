@@ -67,6 +67,9 @@ function buildWanVideoWorkflow(p: {
   frameCount: number;
   useRife: boolean;
   useUpscale: boolean;
+  videoLora?: string;
+  videoLoraStrength?: number;
+  videoLoraPass?: "high" | "low" | "both";
 }): Record<string, any> {
   const halfSteps = Math.max(1, Math.floor(p.steps / 2));
 
@@ -202,6 +205,38 @@ function buildWanVideoWorkflow(p: {
       inputs: { samples: ["85", 0], vae: ["90", 0] },
     },
   };
+
+  // Optional user video LoRA — insert between accel LoRA and shift scheduling
+  if (p.videoLora) {
+    const str = p.videoLoraStrength ?? 0.8;
+    const pass = p.videoLoraPass || "both";
+
+    if (pass === "high" || pass === "both") {
+      // Insert node 110 after accel LoRA 101, before shift 104
+      workflow["110"] = {
+        class_type: "LoraLoaderModelOnly",
+        inputs: {
+          model: ["101", 0],
+          lora_name: p.videoLora,
+          strength_model: str,
+        },
+      };
+      workflow["104"].inputs.model = ["110", 0];
+    }
+
+    if (pass === "low" || pass === "both") {
+      // Insert node 111 after accel LoRA 102, before shift 103
+      workflow["111"] = {
+        class_type: "LoraLoaderModelOnly",
+        inputs: {
+          model: ["102", 0],
+          lora_name: p.videoLora,
+          strength_model: str,
+        },
+      };
+      workflow["103"].inputs.model = ["111", 0];
+    }
+  }
 
   // Post-processing chain
   let lastNode = "87";
@@ -579,7 +614,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const loras = lorasEnv
           ? lorasEnv.split(",").map((m) => m.trim()).filter(Boolean)
           : [];
-        return res.status(200).json({ checkpoints, loras });
+        const videoLorasEnv = process.env.COMFYUI_VIDEO_LORAS || "";
+        const videoLoras = videoLorasEnv
+          ? videoLorasEnv.split(",").map((m) => m.trim()).filter(Boolean)
+          : [];
+        return res.status(200).json({ checkpoints, loras, videoLoras });
       } else {
         const resp = await fetch(
           `${backend.comfyUrl}/object_info/CheckpointLoaderSimple`,
@@ -601,7 +640,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             loras = loraInfo?.LoraLoader?.input?.required?.lora_name?.[0] || [];
           }
         } catch { /* best effort */ }
-        return res.status(200).json({ checkpoints, loras });
+        // For local mode, video LoRAs are in the same lora folder;
+        // use COMFYUI_VIDEO_LORAS env or return all loras for selection
+        const videoLorasEnv = process.env.COMFYUI_VIDEO_LORAS || "";
+        const videoLoras = videoLorasEnv
+          ? videoLorasEnv.split(",").map((m) => m.trim()).filter(Boolean)
+          : [];
+        return res.status(200).json({ checkpoints, loras, videoLoras });
       }
     }
 
@@ -625,6 +670,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         frameCount = 81,
         useRife = false,
         useUpscale: useVidUpscale = false,
+        videoLora,
+        videoLoraStrength = 0.8,
+        videoLoraPass = "both",
       } = req.body;
 
       if (!prompt)
@@ -716,6 +764,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           frameCount: Math.min(241, Math.max(17, Number(frameCount))),
           useRife: !!useRife,
           useUpscale: !!useVidUpscale,
+          videoLora: videoLora || undefined,
+          videoLoraStrength: Number(videoLoraStrength),
+          videoLoraPass: (["high", "low", "both"].includes(videoLoraPass) ? videoLoraPass : "both") as "high" | "low" | "both",
         });
       } else if (workflowType === "qwen-edit") {
         // Qwen edit always uses the Qwen checkpoint — ignore client checkpoint
