@@ -16,7 +16,7 @@ import AuthDialog from "@/components/AuthDialog";
 import CreditDisplay from "@/components/CreditDisplay";
 import LegalDialog from "@/components/LegalDialog";
 import HowToUseDialog from "@/components/HowToUseDialog";
-import { useGrokApi, urlToBase64, type GrokMode, type GenerationSettings, type VideoSettings, type ApiMode, DEFAULT_SETTINGS, DEFAULT_VIDEO_SETTINGS } from "@/hooks/useGrokApi";
+import { useGrokApi, urlToBase64, type GrokMode, type GenerationSettings, type VideoSettings, type ApiMode, type VideoLoraEntry, DEFAULT_SETTINGS, DEFAULT_VIDEO_SETTINGS } from "@/hooks/useGrokApi";
 import { useAuth } from "@/hooks/useAuth";
 import { useCredits } from "@/hooks/useCredits";
 import { useFolders } from "@/hooks/useFolders";
@@ -726,29 +726,45 @@ const Index = () => {
                         <select value={comfyVideoLora} onChange={(e) => setComfyVideoLora(e.target.value)}
                           className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-[10px] font-mono-share text-foreground">
                           <option value="none">None</option>
-                          {comfyModels.videoLoras.map((l) => <option key={l} value={l}>{l.replace(/\.[^.]+$/, "")}</option>)}
+                          {comfyModels.videoLoras.map((entry) => (
+                            <option key={entry.name} value={entry.name}>
+                              {entry.name.replace(/_/g, " ")}{entry.high && entry.low ? " (paired)" : ""}
+                            </option>
+                          ))}
                         </select>
-                        {comfyVideoLora !== "none" && (
-                          <div className="mt-1.5 space-y-1.5">
-                            <div>
-                              <label className="font-mono-share text-[9px] text-muted-foreground/70">Strength: {comfyVideoLoraStrength.toFixed(2)}</label>
-                              <input type="range" min={0} max={2} step={0.05} value={comfyVideoLoraStrength}
-                                onChange={(e) => setComfyVideoLoraStrength(Number(e.target.value))}
-                                className="w-full accent-purple-500 mt-0.5" />
-                            </div>
-                            <div>
-                              <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Apply to pass</label>
-                              <div className="flex gap-1.5">
-                                {(["high", "low", "both"] as const).map((p) => (
-                                  <button key={p} type="button" onClick={() => setComfyVideoLoraPass(p)}
-                                    className={`px-2 py-1 rounded text-[9px] font-mono-share transition-all ${comfyVideoLoraPass === p ? "bg-purple-500/20 border-purple-500/50 text-purple-300 border" : "bg-card/30 border border-border text-muted-foreground hover:border-purple-500/30"}`}>
-                                    {p === "high" ? "High Noise" : p === "low" ? "Low Noise" : "Both"}
-                                  </button>
-                                ))}
+                        {comfyVideoLora !== "none" && (() => {
+                          const selected = comfyModels.videoLoras.find((e) => e.name === comfyVideoLora);
+                          const isPaired = selected?.high && selected?.low;
+                          return (
+                            <div className="mt-1.5 space-y-1.5">
+                              <div>
+                                <label className="font-mono-share text-[9px] text-muted-foreground/70">Strength: {comfyVideoLoraStrength.toFixed(2)}</label>
+                                <input type="range" min={0} max={2} step={0.05} value={comfyVideoLoraStrength}
+                                  onChange={(e) => setComfyVideoLoraStrength(Number(e.target.value))}
+                                  className="w-full accent-purple-500 mt-0.5" />
                               </div>
+                              {isPaired ? (
+                                <div className="flex items-center gap-2 px-2 py-1 bg-purple-500/5 border border-purple-500/20 rounded">
+                                  <span className="font-mono-share text-[9px] text-purple-400/70">
+                                    Auto-paired: high + low noise files detected
+                                  </span>
+                                </div>
+                              ) : (
+                                <div>
+                                  <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Apply to pass</label>
+                                  <div className="flex gap-1.5">
+                                    {(["high", "low", "both"] as const).map((p) => (
+                                      <button key={p} type="button" onClick={() => setComfyVideoLoraPass(p)}
+                                        className={`px-2 py-1 rounded text-[9px] font-mono-share transition-all ${comfyVideoLoraPass === p ? "bg-purple-500/20 border-purple-500/50 text-purple-300 border" : "bg-card/30 border border-border text-muted-foreground hover:border-purple-500/30"}`}>
+                                        {p === "high" ? "High Noise" : p === "low" ? "Low Noise" : "Both"}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
                             </div>
-                          </div>
-                        )}
+                          );
+                        })()}
                       </div>
                     )}
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-500/5 border border-purple-500/20 rounded">
@@ -825,29 +841,45 @@ const Index = () => {
                         <select value={comfyVideoLora} onChange={(e) => setComfyVideoLora(e.target.value)}
                           className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-[10px] font-mono-share text-foreground">
                           <option value="none">None</option>
-                          {comfyModels.videoLoras.map((l) => <option key={l} value={l}>{l.replace(/\.[^.]+$/, "")}</option>)}
+                          {comfyModels.videoLoras.map((entry) => (
+                            <option key={entry.name} value={entry.name}>
+                              {entry.name.replace(/_/g, " ")}{entry.high && entry.low ? " (paired)" : ""}
+                            </option>
+                          ))}
                         </select>
-                        {comfyVideoLora !== "none" && (
-                          <div className="mt-1.5 space-y-1.5">
-                            <div>
-                              <label className="font-mono-share text-[9px] text-muted-foreground/70">Strength: {comfyVideoLoraStrength.toFixed(2)}</label>
-                              <input type="range" min={0} max={2} step={0.05} value={comfyVideoLoraStrength}
-                                onChange={(e) => setComfyVideoLoraStrength(Number(e.target.value))}
-                                className="w-full accent-purple-500 mt-0.5" />
-                            </div>
-                            <div>
-                              <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Apply to pass</label>
-                              <div className="flex gap-1.5">
-                                {(["high", "low", "both"] as const).map((p) => (
-                                  <button key={p} type="button" onClick={() => setComfyVideoLoraPass(p)}
-                                    className={`px-2 py-1 rounded text-[9px] font-mono-share transition-all ${comfyVideoLoraPass === p ? "bg-purple-500/20 border-purple-500/50 text-purple-300 border" : "bg-card/30 border border-border text-muted-foreground hover:border-purple-500/30"}`}>
-                                    {p === "high" ? "High Noise" : p === "low" ? "Low Noise" : "Both"}
-                                  </button>
-                                ))}
+                        {comfyVideoLora !== "none" && (() => {
+                          const selected = comfyModels.videoLoras.find((e) => e.name === comfyVideoLora);
+                          const isPaired = selected?.high && selected?.low;
+                          return (
+                            <div className="mt-1.5 space-y-1.5">
+                              <div>
+                                <label className="font-mono-share text-[9px] text-muted-foreground/70">Strength: {comfyVideoLoraStrength.toFixed(2)}</label>
+                                <input type="range" min={0} max={2} step={0.05} value={comfyVideoLoraStrength}
+                                  onChange={(e) => setComfyVideoLoraStrength(Number(e.target.value))}
+                                  className="w-full accent-purple-500 mt-0.5" />
                               </div>
+                              {isPaired ? (
+                                <div className="flex items-center gap-2 px-2 py-1 bg-purple-500/5 border border-purple-500/20 rounded">
+                                  <span className="font-mono-share text-[9px] text-purple-400/70">
+                                    Auto-paired: high + low noise files detected
+                                  </span>
+                                </div>
+                              ) : (
+                                <div>
+                                  <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Apply to pass</label>
+                                  <div className="flex gap-1.5">
+                                    {(["high", "low", "both"] as const).map((p) => (
+                                      <button key={p} type="button" onClick={() => setComfyVideoLoraPass(p)}
+                                        className={`px-2 py-1 rounded text-[9px] font-mono-share transition-all ${comfyVideoLoraPass === p ? "bg-purple-500/20 border-purple-500/50 text-purple-300 border" : "bg-card/30 border border-border text-muted-foreground hover:border-purple-500/30"}`}>
+                                        {p === "high" ? "High Noise" : p === "low" ? "Low Noise" : "Both"}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
                             </div>
-                          </div>
-                        )}
+                          );
+                        })()}
                       </div>
                     )}
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-500/5 border border-purple-500/20 rounded">

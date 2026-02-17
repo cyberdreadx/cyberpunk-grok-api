@@ -46,6 +46,13 @@ export interface GrokResult {
   folderId?: string | null;
 }
 
+export interface VideoLoraEntry {
+  name: string;
+  high?: string;
+  low?: string;
+  single?: string;
+}
+
 interface GenerateImageParams {
   prompt: string;
   settings: GenerationSettings;
@@ -633,7 +640,11 @@ export function useGrokApi() {
   const [comfyPhase, setComfyPhase] = useState<string | null>(null);
 
   /** ComfyUI models + LoRAs (fetched on demand) */
-  const [comfyModels, setComfyModels] = useState<{ checkpoints: string[]; loras: string[]; videoLoras: string[] }>({
+  const [comfyModels, setComfyModels] = useState<{
+    checkpoints: string[];
+    loras: string[];
+    videoLoras: VideoLoraEntry[];
+  }>({
     checkpoints: [],
     loras: [],
     videoLoras: [],
@@ -641,7 +652,11 @@ export function useGrokApi() {
 
   const fetchComfyModels = useCallback(async () => {
     try {
-      const data = await apiFetch<{ checkpoints: string[]; loras?: string[]; videoLoras?: string[] }>("/comfyui", {
+      const data = await apiFetch<{
+        checkpoints: string[];
+        loras?: string[];
+        videoLoras?: VideoLoraEntry[];
+      }>("/comfyui", {
         method: "POST",
         body: { action: "models" },
       });

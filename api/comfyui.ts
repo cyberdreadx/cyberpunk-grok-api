@@ -27,6 +27,52 @@ const COMFY_COSTS: Record<string, number> = {
   "wan-video": 3,
 };
 
+// ---- Video LoRA pairing ----
+
+interface VideoLoraEntry {
+  name: string;       // Display name (e.g. "pornmaster_slow_twerk")
+  high?: string;      // Filename for high noise pass
+  low?: string;       // Filename for low noise pass
+  single?: string;    // Filename if not paired (applied per user-selected pass)
+}
+
+/**
+ * Group video LoRA filenames into paired entries.
+ * Files ending in _high_noise / _low_noise with the same base are paired.
+ * Other files become single entries.
+ */
+function groupVideoLoras(files: string[]): VideoLoraEntry[] {
+  const pairs = new Map<string, { high?: string; low?: string }>();
+  const singles: string[] = [];
+
+  for (const f of files) {
+    const noExt = f.replace(/\.[^.]+$/, "");
+    if (noExt.endsWith("_high_noise")) {
+      const base = noExt.replace(/_high_noise$/, "");
+      const entry = pairs.get(base) || {};
+      entry.high = f;
+      pairs.set(base, entry);
+    } else if (noExt.endsWith("_low_noise")) {
+      const base = noExt.replace(/_low_noise$/, "");
+      const entry = pairs.get(base) || {};
+      entry.low = f;
+      pairs.set(base, entry);
+    } else {
+      singles.push(f);
+    }
+  }
+
+  const result: VideoLoraEntry[] = [];
+  for (const [base, { high, low }] of pairs) {
+    result.push({ name: base, high, low });
+  }
+  for (const f of singles) {
+    const name = f.replace(/\.[^.]+$/, "");
+    result.push({ name, single: f });
+  }
+  return result;
+}
+
 // ---- Backend detection ----
 
 type Backend = "runpod" | "local";
@@ -68,6 +114,8 @@ function buildWanVideoWorkflow(p: {
   useRife: boolean;
   useUpscale: boolean;
   videoLora?: string;
+  videoLoraHigh?: string;
+  videoLoraLow?: string;
   videoLoraStrength?: number;
   videoLoraPass?: "high" | "low" | "both";
 }): Record<string, any> {
@@ -207,35 +255,35 @@ function buildWanVideoWorkflow(p: {
   };
 
   // Optional user video LoRA — insert between accel LoRA and shift scheduling
-  if (p.videoLora) {
-    const str = p.videoLoraStrength ?? 0.8;
-    const pass = p.videoLoraPass || "both";
+  // Supports paired LoRAs (separate high/low files) or a single file applied to one or both passes
+  const hasHigh = p.videoLoraHigh || (p.videoLora && (p.videoLoraPass === "high" || p.videoLoraPass === "both"));
+  const hasLow = p.videoLoraLow || (p.videoLora && (p.videoLoraPass === "low" || p.videoLoraPass === "both"));
+  const str = p.videoLoraStrength ?? 0.8;
 
-    if (pass === "high" || pass === "both") {
-      // Insert node 110 after accel LoRA 101, before shift 104
-      workflow["110"] = {
-        class_type: "LoraLoaderModelOnly",
-        inputs: {
-          model: ["101", 0],
-          lora_name: p.videoLora,
-          strength_model: str,
-        },
-      };
-      workflow["104"].inputs.model = ["110", 0];
-    }
+  if (hasHigh) {
+    const loraFile = p.videoLoraHigh || p.videoLora!;
+    workflow["110"] = {
+      class_type: "LoraLoaderModelOnly",
+      inputs: {
+        model: ["101", 0],
+        lora_name: loraFile,
+        strength_model: str,
+      },
+    };
+    workflow["104"].inputs.model = ["110", 0];
+  }
 
-    if (pass === "low" || pass === "both") {
-      // Insert node 111 after accel LoRA 102, before shift 103
-      workflow["111"] = {
-        class_type: "LoraLoaderModelOnly",
-        inputs: {
-          model: ["102", 0],
-          lora_name: p.videoLora,
-          strength_model: str,
-        },
-      };
-      workflow["103"].inputs.model = ["111", 0];
-    }
+  if (hasLow) {
+    const loraFile = p.videoLoraLow || p.videoLora!;
+    workflow["111"] = {
+      class_type: "LoraLoaderModelOnly",
+      inputs: {
+        model: ["102", 0],
+        lora_name: loraFile,
+        strength_model: str,
+      },
+    };
+    workflow["103"].inputs.model = ["111", 0];
   }
 
   // Post-processing chain
@@ -615,9 +663,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           ? lorasEnv.split(",").map((m) => m.trim()).filter(Boolean)
           : [];
         const videoLorasEnv = process.env.COMFYUI_VIDEO_LORAS || "";
-        const videoLoras = videoLorasEnv
+        const videoLoraFiles = videoLorasEnv
           ? videoLorasEnv.split(",").map((m) => m.trim()).filter(Boolean)
           : [];
+        const videoLoras = groupVideoLoras(videoLoraFiles);
         return res.status(200).json({ checkpoints, loras, videoLoras });
       } else {
         const resp = await fetch(
@@ -640,12 +689,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             loras = loraInfo?.LoraLoader?.input?.required?.lora_name?.[0] || [];
           }
         } catch { /* best effort */ }
-        // For local mode, video LoRAs are in the same lora folder;
-        // use COMFYUI_VIDEO_LORAS env or return all loras for selection
+        // For local mode, video LoRAs are in the same lora folder
         const videoLorasEnv = process.env.COMFYUI_VIDEO_LORAS || "";
-        const videoLoras = videoLorasEnv
+        const videoLoraFiles = videoLorasEnv
           ? videoLorasEnv.split(",").map((m) => m.trim()).filter(Boolean)
           : [];
+        const videoLoras = groupVideoLoras(videoLoraFiles);
         return res.status(200).json({ checkpoints, loras, videoLoras });
       }
     }
@@ -752,6 +801,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Build the workflow
       let workflow: Record<string, any>;
       if (workflowType === "wan-video") {
+        // Resolve video LoRA — could be a paired entry name or a direct filename
+        let resolvedVideoLora: string | undefined;
+        let resolvedVideoLoraHigh: string | undefined;
+        let resolvedVideoLoraLow: string | undefined;
+        if (videoLora) {
+          const videoLoraFiles = (process.env.COMFYUI_VIDEO_LORAS || "")
+            .split(",").map((m: string) => m.trim()).filter(Boolean);
+          const grouped = groupVideoLoras(videoLoraFiles);
+          const match = grouped.find((g) => g.name === videoLora);
+          if (match) {
+            if (match.high && match.low) {
+              // Paired LoRA — apply each to its respective pass
+              resolvedVideoLoraHigh = match.high;
+              resolvedVideoLoraLow = match.low;
+            } else if (match.single) {
+              resolvedVideoLora = match.single;
+            } else {
+              // Only one half of a pair exists
+              resolvedVideoLoraHigh = match.high;
+              resolvedVideoLoraLow = match.low;
+            }
+          } else {
+            // Direct filename (not grouped)
+            resolvedVideoLora = videoLora;
+          }
+        }
+
         workflow = buildWanVideoWorkflow({
           prompt: prompt.trim(),
           negativePrompt: (negativePrompt || "").trim() || WAN_DEFAULT_NEGATIVE,
@@ -764,7 +840,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           frameCount: Math.min(241, Math.max(17, Number(frameCount))),
           useRife: !!useRife,
           useUpscale: !!useVidUpscale,
-          videoLora: videoLora || undefined,
+          videoLora: resolvedVideoLora,
+          videoLoraHigh: resolvedVideoLoraHigh,
+          videoLoraLow: resolvedVideoLoraLow,
           videoLoraStrength: Number(videoLoraStrength),
           videoLoraPass: (["high", "low", "both"].includes(videoLoraPass) ? videoLoraPass : "both") as "high" | "low" | "both",
         });
