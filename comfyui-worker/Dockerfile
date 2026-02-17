@@ -8,18 +8,18 @@
 
 FROM runpod/worker-comfyui:5.7.1-base
 
-# ── Custom Nodes (zip download — more reliable than git in build env) ─
+# ── Custom Nodes (tarball download — no git/unzip needed) ────────
 RUN cd /comfyui/custom_nodes && \
-    wget -q -O QwenEditUtils.zip https://github.com/lrzjason/Comfyui-QwenEditUtils/archive/refs/heads/master.zip && \
-    unzip -q QwenEditUtils.zip && mv Comfyui-QwenEditUtils-master Comfyui-QwenEditUtils && rm QwenEditUtils.zip
+    wget -qO- https://github.com/lrzjason/Comfyui-QwenEditUtils/archive/refs/heads/master.tar.gz | tar xz && \
+    mv Comfyui-QwenEditUtils-master Comfyui-QwenEditUtils
 
 RUN cd /comfyui/custom_nodes && \
-    wget -q -O EasyUse.zip https://github.com/yolain/ComfyUI-Easy-Use/archive/refs/heads/main.zip && \
-    unzip -q EasyUse.zip && mv ComfyUI-Easy-Use-main ComfyUI-Easy-Use && rm EasyUse.zip
+    wget -qO- https://github.com/yolain/ComfyUI-Easy-Use/archive/refs/heads/main.tar.gz | tar xz && \
+    mv ComfyUI-Easy-Use-main ComfyUI-Easy-Use
 
 RUN cd /comfyui/custom_nodes && \
-    wget -q -O UltimateSDUpscale.zip https://github.com/ssitu/ComfyUI_UltimateSDUpscale/archive/refs/heads/master.zip && \
-    unzip -q UltimateSDUpscale.zip && mv ComfyUI_UltimateSDUpscale-master ComfyUI_UltimateSDUpscale && rm UltimateSDUpscale.zip
+    wget -qO- https://github.com/ssitu/ComfyUI_UltimateSDUpscale/archive/refs/heads/master.tar.gz | tar xz && \
+    mv ComfyUI_UltimateSDUpscale-master ComfyUI_UltimateSDUpscale
 
 # ── Python Dependencies ──────────────────────────────────────────
 RUN cd /comfyui/custom_nodes/Comfyui-QwenEditUtils && \
