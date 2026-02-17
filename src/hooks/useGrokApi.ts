@@ -571,8 +571,17 @@ export function useGrokApi() {
 
   /** Add an externally-produced result (e.g. from ComfyUI) to the gallery. */
   const addExternalResult = useCallback(async (result: GrokResult) => {
-    setResults(prev => [result, ...prev]);
-    try { await saveResult(result); } catch { /* best-effort */ }
+    console.log("[useGrokApi] addExternalResult called:", result.id, result.type);
+    setResults(prev => {
+      console.log("[useGrokApi] Adding result to state. Previous count:", prev.length);
+      return [result, ...prev];
+    });
+    try {
+      await saveResult(result);
+      console.log("[useGrokApi] Result saved to IndexedDB:", result.id);
+    } catch (err) {
+      console.error("[useGrokApi] Failed to save to IndexedDB:", err);
+    }
   }, []);
 
   const clearError = useCallback(() => {

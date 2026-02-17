@@ -266,11 +266,18 @@ function buildTxt2ImgWorkflow(p: {
   steps: number;
   cfg: number;
   checkpoint: string;
+  lora?: string;
+  loraStrength?: number;
 }): Record<string, any> {
   // Auto-detect FLUX models — they need different sampler settings
   const isFlux = p.checkpoint.toLowerCase().includes("flux");
+  const hasLora = !!p.lora && p.lora !== "none";
 
-  return {
+  // Model/clip source: goes through LoraLoader if a LoRA is selected
+  const modelSource: [string, number] = hasLora ? ["10", 0] : ["4", 0];
+  const clipSource: [string, number] = hasLora ? ["10", 1] : ["4", 1];
+
+  const workflow: Record<string, any> = {
     "4": {
       class_type: "CheckpointLoaderSimple",
       inputs: { ckpt_name: p.checkpoint },
@@ -281,11 +288,11 @@ function buildTxt2ImgWorkflow(p: {
     },
     "6": {
       class_type: "CLIPTextEncode",
-      inputs: { text: p.prompt, clip: ["4", 1] },
+      inputs: { text: p.prompt, clip: clipSource },
     },
     "7": {
       class_type: "CLIPTextEncode",
-      inputs: { text: isFlux ? "" : (p.negativePrompt || ""), clip: ["4", 1] },
+      inputs: { text: isFlux ? "" : (p.negativePrompt || ""), clip: clipSource },
     },
     "3": {
       class_type: "KSampler",
@@ -296,7 +303,7 @@ function buildTxt2ImgWorkflow(p: {
         sampler_name: "euler",
         scheduler: isFlux ? "simple" : "normal",
         denoise: 1,
-        model: ["4", 0],
+        model: modelSource,
         positive: ["6", 0],
         negative: ["7", 0],
         latent_image: ["5", 0],
@@ -311,6 +318,22 @@ function buildTxt2ImgWorkflow(p: {
       inputs: { filename_prefix: "GrokRunner", images: ["8", 0] },
     },
   };
+
+  if (hasLora) {
+    const strength = p.loraStrength ?? 0.8;
+    workflow["10"] = {
+      class_type: "LoraLoader",
+      inputs: {
+        lora_name: p.lora!,
+        strength_model: strength,
+        strength_clip: strength,
+        model: ["4", 0],
+        clip: ["4", 1],
+      },
+    };
+  }
+
+  return workflow;
 }
 
 /**
@@ -548,13 +571,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // ========== MODELS ==========
     if (action === "models") {
       if (backend.mode === "runpod") {
-        // Models are baked into the Docker image. Use COMFYUI_MODELS env var
-        // or return a sensible default.
         const modelsEnv = process.env.COMFYUI_MODELS || "";
         const checkpoints = modelsEnv
           ? modelsEnv.split(",").map((m) => m.trim()).filter(Boolean)
-          : ["model.safetensors"]; // placeholder — update COMFYUI_MODELS env var
-        return res.status(200).json({ checkpoints });
+          : ["model.safetensors"];
+        const lorasEnv = process.env.COMFYUI_LORAS || "";
+        const loras = lorasEnv
+          ? lorasEnv.split(",").map((m) => m.trim()).filter(Boolean)
+          : [];
+        return res.status(200).json({ checkpoints, loras });
       } else {
         const resp = await fetch(
           `${backend.comfyUrl}/object_info/CheckpointLoaderSimple`,
@@ -564,7 +589,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const info = await resp.json();
         const checkpoints: string[] =
           info?.CheckpointLoaderSimple?.input?.required?.ckpt_name?.[0] || [];
-        return res.status(200).json({ checkpoints });
+        // Try to fetch LoRA list too
+        let loras: string[] = [];
+        try {
+          const loraResp = await fetch(
+            `${backend.comfyUrl}/object_info/LoraLoader`,
+            { signal: AbortSignal.timeout(5000) }
+          );
+          if (loraResp.ok) {
+            const loraInfo = await loraResp.json();
+            loras = loraInfo?.LoraLoader?.input?.required?.lora_name?.[0] || [];
+          }
+        } catch { /* best effort */ }
+        return res.status(200).json({ checkpoints, loras });
       }
     }
 
@@ -580,6 +617,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         steps = 20,
         cfg = 7,
         checkpoint,
+        lora,
+        loraStrength = 0.8,
         imageBase64,
         imageFilename: clientFilename,
         upscale,
@@ -590,8 +629,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       if (!prompt)
         return res.status(400).json({ error: "Prompt is required" });
-      // Checkpoint is required for txt2img/qwen-edit but not wan-video (fixed models)
-      if (workflowType !== "wan-video" && !checkpoint)
+      // Checkpoint is required for txt2img only; qwen-edit and wan-video use fixed models
+      if (workflowType === "txt2img" && !checkpoint)
         return res.status(400).json({ error: "Checkpoint is required" });
 
       // ── Credit gate (admin is free) ──
@@ -676,6 +715,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           useUpscale: !!useVidUpscale,
         });
       } else if (workflowType === "qwen-edit") {
+        // Qwen edit always uses the Qwen checkpoint — ignore client checkpoint
+        const qwenCkpt = process.env.COMFYUI_QWEN_MODEL || "Qwen-Rapid-AIO-v2.safetensors";
         workflow = buildQwenEditWorkflow({
           prompt: prompt.trim(),
           negativePrompt: (negativePrompt || "").trim() || QWEN_DEFAULT_NEGATIVE,
@@ -685,7 +726,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           seed: actualSeed,
           steps: clampSteps,
           cfg: clampCfg,
-          checkpoint,
+          checkpoint: qwenCkpt,
           upscale: !!upscale,
         });
       } else {
@@ -698,6 +739,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           steps: clampSteps,
           cfg: clampCfg,
           checkpoint,
+          lora: lora || undefined,
+          loraStrength: Number(loraStrength) || 0.8,
         });
       }
 

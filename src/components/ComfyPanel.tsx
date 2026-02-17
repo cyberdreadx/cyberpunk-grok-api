@@ -46,7 +46,7 @@ const FRAME_PRESETS = [
 
 interface ComfyPanelProps {
   /** Called when a job finishes successfully, to persist the result in the main gallery. */
-  onResultReady?: (result: GrokResult) => void;
+  onResultReady?: (result: GrokResult) => void | Promise<void>;
 }
 
 export default function ComfyPanel({ onResultReady }: ComfyPanelProps) {
@@ -54,6 +54,9 @@ export default function ComfyPanel({ onResultReady }: ComfyPanelProps) {
   const [connected, setConnected] = useState(false);
   const [checkpoints, setCheckpoints] = useState<string[]>([]);
   const [selectedCkpt, setSelectedCkpt] = useState("");
+  const [loras, setLoras] = useState<string[]>([]);
+  const [selectedLora, setSelectedLora] = useState("none");
+  const [loraStrength, setLoraStrength] = useState(0.8);
 
   // Workflow mode
   const [workflowMode, setWorkflowMode] = useState<WorkflowMode>("qwen-edit");
@@ -83,6 +86,7 @@ export default function ComfyPanel({ onResultReady }: ComfyPanelProps) {
   const pollRefs = useRef<Map<string, ReturnType<typeof setInterval>>>(new Map());
   const timerRefs = useRef<Map<string, ReturnType<typeof setInterval>>>(new Map());
   const startRefs = useRef<Map<string, number>>(new Map());
+  const doneRefs = useRef<Set<string>>(new Set()); // guard against duplicate poll completions
 
   const activeCount = jobs.filter(
     (j) => j.status === "submitting" || j.status === "generating"
@@ -92,8 +96,8 @@ export default function ComfyPanel({ onResultReady }: ComfyPanelProps) {
 
   // Does this mode need a start image?
   const needsImage = workflowMode === "qwen-edit" || workflowMode === "wan-video";
-  // Does this mode use checkpoint selection?
-  const needsCheckpoint = workflowMode !== "wan-video";
+  // Does this mode use checkpoint selection? (qwen-edit uses a fixed model, wan-video too)
+  const needsCheckpoint = workflowMode === "txt2img";
 
   /* ─── Cleanup all intervals on unmount ─── */
   useEffect(() => {
@@ -128,7 +132,7 @@ export default function ComfyPanel({ onResultReady }: ComfyPanelProps) {
 
   const fetchModels = useCallback(async () => {
     try {
-      const data = await apiFetch<{ checkpoints: string[] }>("/comfyui", {
+      const data = await apiFetch<{ checkpoints: string[]; loras?: string[] }>("/comfyui", {
         method: "POST",
         body: { action: "models" },
       });
@@ -136,8 +140,10 @@ export default function ComfyPanel({ onResultReady }: ComfyPanelProps) {
       if (data.checkpoints?.length && !selectedCkpt) {
         setSelectedCkpt(data.checkpoints[0]);
       }
+      setLoras(data.loras || []);
     } catch {
       setCheckpoints([]);
+      setLoras([]);
     }
   }, [selectedCkpt]);
 
@@ -182,6 +188,9 @@ export default function ComfyPanel({ onResultReady }: ComfyPanelProps) {
       if (existing) clearInterval(existing);
 
       const iv = setInterval(async () => {
+        // Guard: if this job already completed, skip (prevents race with overlapping polls)
+        if (doneRefs.current.has(jobId)) return;
+
         try {
           const data = await apiFetch<{
             status: string;
@@ -193,25 +202,39 @@ export default function ComfyPanel({ onResultReady }: ComfyPanelProps) {
             body: { action: "poll", promptId: pid, outputType: outType },
           });
 
+          // Double-check guard after async call
+          if (doneRefs.current.has(jobId)) return;
+
           if (data.status === "done") {
+            doneRefs.current.add(jobId);
             clearJobIntervals(jobId);
+            const imgSrc = data.image || null;
+            const vidSrc = data.video || null;
             updateJob(jobId, {
               status: "done",
-              image: data.image || null,
-              video: data.video || null,
+              image: imgSrc,
+              video: vidSrc,
             });
             // Persist to main gallery
-            const src = data.video || data.image;
+            const src = vidSrc || imgSrc;
             if (src && onResultReady) {
-              onResultReady({
-                id: `comfy-${jobId}-${Date.now()}`,
-                url: src,
-                type: data.video ? "video" : "image",
-                revised_prompt: promptText,
-                timestamp: Date.now(),
-              });
+              try {
+                await onResultReady({
+                  id: `comfy-${jobId}-${Date.now()}`,
+                  url: src,
+                  type: vidSrc ? "video" : "image",
+                  revised_prompt: promptText,
+                  timestamp: Date.now(),
+                });
+                console.log("[ComfyPanel] Result saved to gallery:", jobId);
+              } catch (saveErr) {
+                console.error("[ComfyPanel] Failed to save result to gallery:", saveErr);
+              }
+            } else if (!src) {
+              console.warn("[ComfyPanel] Job done but no image/video in response:", data);
             }
           } else if (data.status === "error") {
+            doneRefs.current.add(jobId);
             clearJobIntervals(jobId);
             updateJob(jobId, {
               status: "error",
@@ -219,13 +242,17 @@ export default function ComfyPanel({ onResultReady }: ComfyPanelProps) {
             });
           }
         } catch (err: any) {
-          clearJobIntervals(jobId);
-          updateJob(jobId, {
-            status: "error",
-            error: err.message || "Poll failed",
-          });
+          // Only set error if job hasn't already been resolved
+          if (!doneRefs.current.has(jobId)) {
+            doneRefs.current.add(jobId);
+            clearJobIntervals(jobId);
+            updateJob(jobId, {
+              status: "error",
+              error: err.message || "Poll failed",
+            });
+          }
         }
-      }, workflowMode === "wan-video" ? 5000 : 2000); // Video takes longer, poll less aggressively
+      }, workflowMode === "wan-video" ? 5000 : 2000);
 
       pollRefs.current.set(jobId, iv);
     },
@@ -290,8 +317,14 @@ export default function ComfyPanel({ onResultReady }: ComfyPanelProps) {
         seed: seed.trim() ? parseInt(seed, 10) : undefined,
       };
 
-      // Checkpoint (only for txt2img/qwen-edit)
+      // Checkpoint: txt2img uses user-selected, qwen-edit is fixed server-side
       if (needsCheckpoint) body.checkpoint = selectedCkpt;
+
+      // LoRA (txt2img only)
+      if (workflowMode === "txt2img" && selectedLora && selectedLora !== "none") {
+        body.lora = selectedLora;
+        body.loraStrength = loraStrength;
+      }
 
       // Image data (qwen-edit & wan-video)
       if (needsImage) {
@@ -343,6 +376,7 @@ export default function ComfyPanel({ onResultReady }: ComfyPanelProps) {
 
   const dismissJob = (jobId: string) => {
     clearJobIntervals(jobId);
+    doneRefs.current.delete(jobId);
     setJobs((prev) => prev.filter((j) => j.id !== jobId));
   };
 
@@ -353,6 +387,7 @@ export default function ComfyPanel({ onResultReady }: ComfyPanelProps) {
         if (j.status === "submitting" || j.status === "generating") {
           keep.push(j);
         } else {
+          doneRefs.current.delete(j.id);
           clearJobIntervals(j.id);
         }
       }
@@ -560,6 +595,39 @@ export default function ComfyPanel({ onResultReady }: ComfyPanelProps) {
                   <option key={c} value={c}>{c}</option>
                 ))}
               </select>
+            </div>
+          )}
+
+          {/* LoRA (txt2img only) */}
+          {workflowMode === "txt2img" && loras.length > 0 && (
+            <div className="space-y-2">
+              <div>
+                <label className={labelClass}>LoRA (optional)</label>
+                <select
+                  value={selectedLora}
+                  onChange={(e) => setSelectedLora(e.target.value)}
+                  className={inputClass}
+                >
+                  <option value="none">None</option>
+                  {loras.map((l) => (
+                    <option key={l} value={l}>{l.replace(/\.[^.]+$/, "")}</option>
+                  ))}
+                </select>
+              </div>
+              {selectedLora !== "none" && (
+                <div>
+                  <label className={labelClass}>LoRA Strength: {loraStrength.toFixed(2)}</label>
+                  <input
+                    type="range"
+                    min={0}
+                    max={1.5}
+                    step={0.05}
+                    value={loraStrength}
+                    onChange={(e) => setLoraStrength(Number(e.target.value))}
+                    className="w-full accent-purple-500 mt-1"
+                  />
+                </div>
+              )}
             </div>
           )}
 
