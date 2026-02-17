@@ -82,6 +82,7 @@ const Index = () => {
   // Auth & Credits
   const auth = useAuth();
   const creditsHook = useCredits(auth.user);
+  const isAdmin = auth.user?.email === "cyberdreadx@proton.me";
 
   // Folders
   const foldersHook = useFolders();
@@ -204,7 +205,7 @@ const Index = () => {
       }
     }
 
-    if (effectiveApiMode === "credits" || isGltchEdit || isComfy) {
+    if ((effectiveApiMode === "credits" || isGltchEdit || isComfy) && !isAdmin) {
       if (!auth.isAuthenticated) {
         toast({ title: "ACCESS DENIED", description: "Sign in to use credits.", variant: "destructive" });
         return;
@@ -294,8 +295,8 @@ const Index = () => {
         }
       }
 
-      // Optimistically deduct credits on success
-      if (effectiveApiMode === "credits" || isComfy || isGltchEdit) {
+      // Optimistically deduct credits on success (admin is free on backend)
+      if ((effectiveApiMode === "credits" || isComfy || isGltchEdit) && !isAdmin) {
         let cost: number;
         if (isGltchEdit) {
           cost = calculateCreditCost(gltchHd ? "gltch-edit-hd" : "gltch-edit");
