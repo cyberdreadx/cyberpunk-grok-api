@@ -24,11 +24,19 @@ RUN cd /comfyui/custom_nodes && \
     wget -qO- https://github.com/Coyote-A/ultimate-upscale-for-automatic1111/archive/refs/heads/master.tar.gz | tar xz && \
     mv ultimate-upscale-for-automatic1111-master ultimate_sd_upscale
 
+# RIFE frame interpolation (RIFE VFI node for wan-video)
+RUN cd /comfyui/custom_nodes && \
+    wget -qO- https://github.com/Fannovel16/ComfyUI-Frame-Interpolation/archive/refs/heads/main.tar.gz | tar xz && \
+    mv ComfyUI-Frame-Interpolation-main ComfyUI-Frame-Interpolation
+
 # ── Python Dependencies ──────────────────────────────────────────
 RUN cd /comfyui/custom_nodes/Comfyui-QwenEditUtils && \
     if [ -f requirements.txt ]; then pip install -r requirements.txt --no-cache-dir; fi
 
 RUN cd /comfyui/custom_nodes/ComfyUI-Easy-Use && \
+    if [ -f requirements.txt ]; then pip install -r requirements.txt --no-cache-dir; fi
+
+RUN cd /comfyui/custom_nodes/ComfyUI-Frame-Interpolation && \
     if [ -f requirements.txt ]; then pip install -r requirements.txt --no-cache-dir; fi
 
 # ── Network Volume Model Paths ───────────────────────────────────
