@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import { Loader2, Zap, Crown, RefreshCw, Sparkles } from "lucide-react";
+import { Loader2, Zap, Crown, RefreshCw, Sparkles, ArrowUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PayPalButtons } from "@paypal/react-paypal-js";
-import { apiFetch, SUBSCRIPTION_TIERS_MONTHLY, SUBSCRIPTION_TIERS_YEARLY } from "@/lib/api";
+import { apiFetch, SUBSCRIPTION_TIERS_MONTHLY, SUBSCRIPTION_TIERS_YEARLY, TIER_RANK } from "@/lib/api";
 import type { CreditPackage, SubscriptionTier } from "@/lib/api";
 
 interface PricingCardsProps {
@@ -35,10 +35,18 @@ const PricingCards: React.FC<PricingCardsProps> = ({
   /** Check if the current sub matches one of these tiers */
   const tierIsActive = (tier: SubscriptionTier) => {
     if (!currentTier) return false;
-    // "premium" matches "premium" or "premium-yearly"
     const base = tier.id.replace("-yearly", "");
     const currentBase = currentTier.replace("-yearly", "");
     return base === currentBase;
+  };
+
+  /** Determine button state for a tier */
+  const getTierAction = (tier: SubscriptionTier): "subscribe" | "active" | "upgrade" | "downgrade" => {
+    if (!currentTier) return "subscribe";
+    if (tierIsActive(tier)) return "active";
+    const currentRank = TIER_RANK[currentTier] || 0;
+    const tierRank = TIER_RANK[tier.id] || 0;
+    return tierRank > currentRank ? "upgrade" : "downgrade";
   };
 
   return (
@@ -80,7 +88,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
           </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {activeTiers.map((tier) => {
             const isActive = tierIsActive(tier);
             return (
@@ -137,32 +145,67 @@ const PricingCards: React.FC<PricingCardsProps> = ({
                   Credits reset each billing cycle
                 </p>
 
-                {isActive ? (
-                  <Button
-                    onClick={onManageSubscription}
-                    disabled={purchasing}
-                    variant="outline"
-                    className="w-full font-orbitron text-[10px] tracking-wider gap-1 border-primary/50 text-primary"
-                  >
-                    MANAGE_PLAN
-                  </Button>
-                ) : (
-                  <Button
-                    onClick={() => onSubscribe(tier.id)}
-                    disabled={purchasing}
-                    className={`w-full font-orbitron text-[10px] tracking-wider gap-1 ${
-                      tier.popular
-                        ? "bg-secondary text-secondary-foreground hover:bg-secondary/80"
-                        : "bg-primary text-primary-foreground hover:bg-primary/80"
-                    }`}
-                  >
-                    {purchasing ? (
-                      <Loader2 className="w-3 h-3 animate-spin" />
-                    ) : (
-                      "SUBSCRIBE"
-                    )}
-                  </Button>
-                )}
+                {(() => {
+                  const action = getTierAction(tier);
+                  if (action === "active") {
+                    return (
+                      <Button
+                        onClick={onManageSubscription}
+                        disabled={purchasing}
+                        variant="outline"
+                        className="w-full font-orbitron text-[10px] tracking-wider gap-1 border-primary/50 text-primary"
+                      >
+                        MANAGE_PLAN
+                      </Button>
+                    );
+                  }
+                  if (action === "downgrade") {
+                    return (
+                      <Button
+                        disabled
+                        variant="outline"
+                        className="w-full font-orbitron text-[10px] tracking-wider gap-1 opacity-40 cursor-not-allowed"
+                      >
+                        CURRENT_PLAN_HIGHER
+                      </Button>
+                    );
+                  }
+                  if (action === "upgrade") {
+                    return (
+                      <Button
+                        onClick={() => onSubscribe(tier.id)}
+                        disabled={purchasing}
+                        className="w-full font-orbitron text-[10px] tracking-wider gap-1 bg-green-600 text-white hover:bg-green-500"
+                      >
+                        {purchasing ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <>
+                            <ArrowUp className="w-3 h-3" />
+                            UPGRADE
+                          </>
+                        )}
+                      </Button>
+                    );
+                  }
+                  return (
+                    <Button
+                      onClick={() => onSubscribe(tier.id)}
+                      disabled={purchasing}
+                      className={`w-full font-orbitron text-[10px] tracking-wider gap-1 ${
+                        tier.popular
+                          ? "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                          : "bg-primary text-primary-foreground hover:bg-primary/80"
+                      }`}
+                    >
+                      {purchasing ? (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      ) : (
+                        "SUBSCRIBE"
+                      )}
+                    </Button>
+                  );
+                })()}
               </div>
             );
           })}

@@ -19,8 +19,12 @@ const PACKAGES: Record<string, { priceEnvKey: string; credits: number }> = {
 const SUBSCRIPTIONS: Record<string, { priceEnvKey: string; creditsPerMonth: number }> = {
   basic: { priceEnvKey: "STRIPE_PRICE_SUB_BASIC", creditsPerMonth: 150 },
   premium: { priceEnvKey: "STRIPE_PRICE_SUB_PREMIUM", creditsPerMonth: 500 },
+  pro: { priceEnvKey: "STRIPE_PRICE_SUB_PRO", creditsPerMonth: 2000 },
+  elite: { priceEnvKey: "STRIPE_PRICE_SUB_ELITE", creditsPerMonth: 10000 },
   "basic-yearly": { priceEnvKey: "STRIPE_PRICE_SUB_BASIC_YEARLY", creditsPerMonth: 150 },
   "premium-yearly": { priceEnvKey: "STRIPE_PRICE_SUB_PREMIUM_YEARLY", creditsPerMonth: 500 },
+  "pro-yearly": { priceEnvKey: "STRIPE_PRICE_SUB_PRO_YEARLY", creditsPerMonth: 2000 },
+  "elite-yearly": { priceEnvKey: "STRIPE_PRICE_SUB_ELITE_YEARLY", creditsPerMonth: 10000 },
 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
