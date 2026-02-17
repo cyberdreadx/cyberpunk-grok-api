@@ -758,11 +758,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return res.status(200).json({ status: "done", video: videoUri });
           }
 
-          // Image output
+          // Image output (worker-comfyui puts video data here too)
           const images = data.output?.images;
           if (images?.length) {
             const img = images[images.length - 1];
             const base64Data = img.data;
+            // If this was a video job, the data is actually video bytes
+            if (outputType === "video") {
+              const videoUri = base64Data.startsWith("data:")
+                ? base64Data
+                : `data:video/mp4;base64,${base64Data}`;
+              return res.status(200).json({ status: "done", video: videoUri });
+            }
             const imageUri = base64Data.startsWith("data:")
               ? base64Data
               : `data:image/png;base64,${base64Data}`;
@@ -771,6 +778,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           // Fallback: older output format
           if (data.output?.message) {
             const msg = data.output.message;
+            if (outputType === "video") {
+              const videoUri = msg.startsWith("data:") ? msg : `data:video/mp4;base64,${msg}`;
+              return res.status(200).json({ status: "done", video: videoUri });
+            }
             const imageUri = msg.startsWith("data:") ? msg : `data:image/png;base64,${msg}`;
             return res.status(200).json({ status: "done", image: imageUri });
           }
