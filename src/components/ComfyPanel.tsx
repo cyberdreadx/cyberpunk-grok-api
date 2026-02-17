@@ -44,6 +44,51 @@ const FRAME_PRESETS = [
   { label: "~10s (161f)", value: 161 },
 ];
 
+/* ─── Persistent job storage (survives page close / refresh) ─── */
+const PENDING_JOBS_KEY = "comfy-pending-jobs";
+const JOB_MAX_AGE_MS = 30 * 60 * 1000; // 30 min — RunPod jobs expire after this
+
+interface PendingJob {
+  id: string;
+  promptId: string;
+  outputType: "image" | "video";
+  workflowMode: WorkflowMode;
+  label: string;
+  prompt: string;
+  seed: number | null;
+  submittedAt: number;
+}
+
+function loadPendingJobs(): PendingJob[] {
+  try {
+    const raw = localStorage.getItem(PENDING_JOBS_KEY);
+    if (!raw) return [];
+    const jobs: PendingJob[] = JSON.parse(raw);
+    // Filter out expired jobs
+    const now = Date.now();
+    return jobs.filter((j) => now - j.submittedAt < JOB_MAX_AGE_MS);
+  } catch {
+    return [];
+  }
+}
+
+function savePendingJobs(jobs: PendingJob[]) {
+  try {
+    localStorage.setItem(PENDING_JOBS_KEY, JSON.stringify(jobs));
+  } catch { /* quota exceeded — best effort */ }
+}
+
+function addPendingJob(job: PendingJob) {
+  const current = loadPendingJobs();
+  current.push(job);
+  savePendingJobs(current);
+}
+
+function removePendingJob(jobId: string) {
+  const current = loadPendingJobs();
+  savePendingJobs(current.filter((j) => j.id !== jobId));
+}
+
 interface ComfyPanelProps {
   /** Called when a job finishes successfully, to persist the result in the main gallery. */
   onResultReady?: (result: GrokResult) => void | Promise<void>;
@@ -208,6 +253,7 @@ export default function ComfyPanel({ onResultReady }: ComfyPanelProps) {
           if (data.status === "done") {
             doneRefs.current.add(jobId);
             clearJobIntervals(jobId);
+            removePendingJob(jobId);
             const imgSrc = data.image || null;
             const vidSrc = data.video || null;
             updateJob(jobId, {
@@ -236,6 +282,7 @@ export default function ComfyPanel({ onResultReady }: ComfyPanelProps) {
           } else if (data.status === "error") {
             doneRefs.current.add(jobId);
             clearJobIntervals(jobId);
+            removePendingJob(jobId);
             updateJob(jobId, {
               status: "error",
               error: data.error || "Generation failed",
@@ -246,6 +293,7 @@ export default function ComfyPanel({ onResultReady }: ComfyPanelProps) {
           if (!doneRefs.current.has(jobId)) {
             doneRefs.current.add(jobId);
             clearJobIntervals(jobId);
+            removePendingJob(jobId);
             updateJob(jobId, {
               status: "error",
               error: err.message || "Poll failed",
@@ -258,6 +306,56 @@ export default function ComfyPanel({ onResultReady }: ComfyPanelProps) {
     },
     [clearJobIntervals, updateJob, workflowMode, onResultReady]
   );
+
+  /* ─── Resume pending jobs on mount (survives page close / refresh) ─── */
+  const resumedRef = useRef(false);
+  useEffect(() => {
+    if (resumedRef.current) return;
+    resumedRef.current = true;
+
+    const pending = loadPendingJobs();
+    if (pending.length === 0) return;
+
+    console.log(`[ComfyPanel] Resuming ${pending.length} pending job(s) from previous session`);
+
+    const restoredJobs: ComfyJob[] = pending.map((pj) => ({
+      id: pj.id,
+      promptId: pj.promptId,
+      status: "generating" as const,
+      image: null,
+      video: null,
+      error: null,
+      seed: pj.seed,
+      elapsed: Math.floor((Date.now() - pj.submittedAt) / 1000),
+      label: pj.label,
+      workflowMode: pj.workflowMode,
+      outputType: pj.outputType,
+    }));
+
+    setJobs((prev) => [...restoredJobs, ...prev]);
+
+    // Auto-expand the panel so the user sees their resumed jobs
+    if (restoredJobs.length > 0) setCollapsed(false);
+
+    // Start polling + elapsed timers for each restored job
+    for (const pj of pending) {
+      startRefs.current.set(pj.id, pj.submittedAt);
+      const timerIv = setInterval(() => {
+        const start = startRefs.current.get(pj.id);
+        if (start) {
+          setJobs((prev) =>
+            prev.map((j) =>
+              j.id === pj.id
+                ? { ...j, elapsed: Math.floor((Date.now() - start) / 1000) }
+                : j
+            )
+          );
+        }
+      }, 1000);
+      timerRefs.current.set(pj.id, timerIv);
+      startPolling(pj.id, pj.promptId, pj.outputType, pj.prompt);
+    }
+  }, [startPolling]);
 
   /* ─── Generate ─── */
   const handleGenerate = async () => {
@@ -352,6 +450,19 @@ export default function ComfyPanel({ onResultReady }: ComfyPanelProps) {
         seed: data.seed,
         status: "generating",
       });
+
+      // Persist so the job survives page close / refresh
+      addPendingJob({
+        id: jobId,
+        promptId: data.promptId,
+        outputType: outType,
+        workflowMode,
+        label,
+        prompt: prompt.trim(),
+        seed: data.seed,
+        submittedAt: Date.now(),
+      });
+
       startPolling(jobId, data.promptId, outType, prompt.trim());
     } catch (err: any) {
       clearJobIntervals(jobId);
@@ -377,6 +488,7 @@ export default function ComfyPanel({ onResultReady }: ComfyPanelProps) {
   const dismissJob = (jobId: string) => {
     clearJobIntervals(jobId);
     doneRefs.current.delete(jobId);
+    removePendingJob(jobId);
     setJobs((prev) => prev.filter((j) => j.id !== jobId));
   };
 
@@ -388,6 +500,7 @@ export default function ComfyPanel({ onResultReady }: ComfyPanelProps) {
           keep.push(j);
         } else {
           doneRefs.current.delete(j.id);
+          removePendingJob(j.id);
           clearJobIntervals(j.id);
         }
       }
