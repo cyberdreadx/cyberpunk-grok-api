@@ -267,6 +267,9 @@ function buildTxt2ImgWorkflow(p: {
   cfg: number;
   checkpoint: string;
 }): Record<string, any> {
+  // Auto-detect FLUX models — they need different sampler settings
+  const isFlux = p.checkpoint.toLowerCase().includes("flux");
+
   return {
     "4": {
       class_type: "CheckpointLoaderSimple",
@@ -282,16 +285,16 @@ function buildTxt2ImgWorkflow(p: {
     },
     "7": {
       class_type: "CLIPTextEncode",
-      inputs: { text: p.negativePrompt || "", clip: ["4", 1] },
+      inputs: { text: isFlux ? "" : (p.negativePrompt || ""), clip: ["4", 1] },
     },
     "3": {
       class_type: "KSampler",
       inputs: {
         seed: p.seed,
-        steps: p.steps,
-        cfg: p.cfg,
+        steps: isFlux ? Math.max(p.steps, 20) : p.steps,
+        cfg: isFlux ? 1 : p.cfg,
         sampler_name: "euler",
-        scheduler: "normal",
+        scheduler: isFlux ? "simple" : "normal",
         denoise: 1,
         model: ["4", 0],
         positive: ["6", 0],
