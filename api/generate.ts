@@ -14,6 +14,7 @@ import { getUserFromRequest } from "./_lib/auth";
 import { checkRateLimit } from "./_lib/ratelimit";
 
 const XAI_API_BASE = "https://api.x.ai/v1";
+const ADMIN_EMAIL = "cyberdreadx@proton.me";
 
 const CREDIT_COSTS = {
   image: 1,
@@ -122,16 +123,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const cost = calculateCost(action as AllowedAction, imageCount, videoDuration);
+    const isAdminUser = auth.email === ADMIN_EMAIL;
 
-    // Check credit balance
-    const rows = await sql`
-      SELECT sub_credits, pack_credits FROM users WHERE id = ${auth.userId}
-    `;
-    if (rows.length === 0) return res.status(404).json({ error: "User not found" });
+    // Credit gate (admin is free)
+    if (!isAdminUser) {
+      const rows = await sql`
+        SELECT sub_credits, pack_credits FROM users WHERE id = ${auth.userId}
+      `;
+      if (rows.length === 0) return res.status(404).json({ error: "User not found" });
 
-    const totalCredits = (rows[0].sub_credits || 0) + (rows[0].pack_credits || 0);
-    if (totalCredits < cost) {
-      return res.status(402).json({ error: "Insufficient credits. Please purchase more in the Credit Store." });
+      const totalCredits = (rows[0].sub_credits || 0) + (rows[0].pack_credits || 0);
+      if (totalCredits < cost) {
+        return res.status(402).json({ error: "Insufficient credits. Please purchase more in the Credit Store." });
+      }
     }
 
     // Map action to xAI endpoint
@@ -143,16 +147,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       default: return res.status(400).json({ error: "Invalid action" }); // unreachable — whitelist above
     }
 
-    // Deduct credits BEFORE calling xAI (prevents free usage if deduction fails)
-    try {
-      await sql`SELECT deduct_credits(${auth.userId}::uuid, ${cost})`;
-    } catch (err: any) {
-      console.error("Failed to deduct credits:", err.message);
-      return res.status(402).json({ error: "Failed to deduct credits. " + (err.message || "") });
+    // Deduct credits BEFORE calling xAI (admin skips deduction)
+    if (!isAdminUser) {
+      try {
+        await sql`SELECT deduct_credits(${auth.userId}::uuid, ${cost})`;
+      } catch (err: any) {
+        console.error("Failed to deduct credits:", err.message);
+        return res.status(402).json({ error: "Failed to deduct credits. " + (err.message || "") });
+      }
     }
 
     // Helper to refund credits on LEGITIMATE xAI failure (NOT moderation)
     const refundCredits = async () => {
+      if (isAdminUser) return; // nothing to refund
       try {
         await sql`SELECT add_pack_credits(${auth.userId}::uuid, ${cost})`;
         console.log(`Refunded ${cost} credits to ${auth.userId}`);

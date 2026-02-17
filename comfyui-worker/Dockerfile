@@ -29,6 +29,31 @@ RUN cd /comfyui/custom_nodes && \
     wget -qO- https://github.com/Fannovel16/ComfyUI-Frame-Interpolation/archive/refs/heads/main.tar.gz | tar xz && \
     mv ComfyUI-Frame-Interpolation-main ComfyUI-Frame-Interpolation
 
+# ComfyUI-GGUF (UnetLoaderGGUF for GGUF-quantized models)
+RUN cd /comfyui/custom_nodes && \
+    wget -qO- https://github.com/city96/ComfyUI-GGUF/archive/refs/heads/main.tar.gz | tar xz && \
+    mv ComfyUI-GGUF-main ComfyUI-GGUF
+
+# ComfyUI-VideoHelperSuite (VHS_VideoCombine for video encoding)
+RUN cd /comfyui/custom_nodes && \
+    wget -qO- https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite/archive/refs/heads/main.tar.gz | tar xz && \
+    mv ComfyUI-VideoHelperSuite-main ComfyUI-VideoHelperSuite
+
+# ComfyUI-KJNodes (ImageResizeKJ, FinalFrameSelector)
+RUN cd /comfyui/custom_nodes && \
+    wget -qO- https://github.com/kijai/ComfyUI-KJNodes/archive/refs/heads/main.tar.gz | tar xz && \
+    mv ComfyUI-KJNodes-main ComfyUI-KJNodes
+
+# ComfyUI-Crystools (Switch any)
+RUN cd /comfyui/custom_nodes && \
+    wget -qO- https://github.com/crystian/ComfyUI-Crystools/archive/refs/heads/main.tar.gz | tar xz && \
+    mv ComfyUI-Crystools-main ComfyUI-Crystools
+
+# rgthree-comfy (Fast Bypasser)
+RUN cd /comfyui/custom_nodes && \
+    wget -qO- https://github.com/rgthree/rgthree-comfy/archive/refs/heads/main.tar.gz | tar xz && \
+    mv rgthree-comfy-main rgthree-comfy
+
 # ── Python Dependencies ──────────────────────────────────────────
 RUN cd /comfyui/custom_nodes/Comfyui-QwenEditUtils && \
     if [ -f requirements.txt ]; then pip install -r requirements.txt --no-cache-dir; fi
@@ -39,8 +64,23 @@ RUN cd /comfyui/custom_nodes/ComfyUI-Easy-Use && \
 RUN cd /comfyui/custom_nodes/ComfyUI-Frame-Interpolation && \
     pip install -r requirements-no-cupy.txt --no-cache-dir
 
+RUN cd /comfyui/custom_nodes/ComfyUI-GGUF && \
+    if [ -f requirements.txt ]; then pip install -r requirements.txt --no-cache-dir; fi
+
+RUN cd /comfyui/custom_nodes/ComfyUI-VideoHelperSuite && \
+    if [ -f requirements.txt ]; then pip install -r requirements.txt --no-cache-dir; fi
+
+RUN cd /comfyui/custom_nodes/ComfyUI-KJNodes && \
+    if [ -f requirements.txt ]; then pip install -r requirements.txt --no-cache-dir; fi
+
+RUN cd /comfyui/custom_nodes/ComfyUI-Crystools && \
+    if [ -f requirements.txt ]; then pip install -r requirements.txt --no-cache-dir; fi
+
+RUN cd /comfyui/custom_nodes/rgthree-comfy && \
+    if [ -f requirements.txt ]; then pip install -r requirements.txt --no-cache-dir; fi
+
 # ── Network Volume Model Paths ───────────────────────────────────
 # Tell ComfyUI to also look for models on the RunPod Network Volume
 # (mounted at /runpod-volume). This avoids baking the 10-20GB model
 # into the Docker image.
-RUN printf "\nrunpod_volume:\n    base_path: /runpod-volume/models\n    checkpoints: checkpoints\n    diffusion_models: diffusion_models\n    upscale_models: upscale_models\n    vae: vae\n    clip: text_encoders\n    loras: loras\n    unet: unet\n" >> /comfyui/extra_model_paths.yaml
+RUN printf "\nrunpod_volume:\n    base_path: /runpod-volume/models\n    checkpoints: checkpoints\n    diffusion_models: diffusion_models\n    upscale_models: upscale_models\n    vae: vae\n    clip: text_encoders\n    loras: loras\n    unet: unet\n    gguf: gguf\n" >> /comfyui/extra_model_paths.yaml

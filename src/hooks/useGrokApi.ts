@@ -598,7 +598,7 @@ export function useGrokApi() {
     }>("/comfyui", { method: "POST", body: { action: "generate", ...body } });
 
     const { promptId, outputType } = submitData;
-    const outType = outputType || (body.workflow === "wan-video" ? "video" : "image");
+    const outType = outputType || (body.workflow === "wan-video" || body.workflow === "longlook" ? "video" : "image");
 
     // Save to localStorage so we can resume if page closes
     try {
@@ -846,6 +846,67 @@ export function useGrokApi() {
     }
   }, [comfySubmitAndPoll, persistNewResults, startTimer, stopTimer]);
 
+  // ComfyUI LongLook Multi-Clip Video
+  const comfyLongLook = useCallback(async (params: {
+    prompt: string;
+    imageBase64: string;
+    sequenceCount?: number;
+    frameCount?: number;
+    motionScale?: number;
+    useFreeLong?: boolean;
+    useRife?: boolean;
+    useUpscale?: boolean;
+    videoLora?: string;
+    videoLoraStrength?: number;
+    videoLoraPass?: "high" | "low" | "both";
+  }) => {
+    setIsLoading(true);
+    setError(null);
+    const seqCount = Math.min(4, Math.max(1, params.sequenceCount ?? 2));
+    setComfyPhase("Splitting prompt...");
+    startTimer();
+    try {
+      const result = await comfySubmitAndPoll({
+        workflow: "longlook",
+        prompt: params.prompt,
+        imageBase64: params.imageBase64,
+        imageFilename: "input_longlook.jpg",
+        sequenceCount: seqCount,
+        frameCount: params.frameCount || 81,
+        motionScale: params.motionScale ?? 1.2,
+        useFreeLong: params.useFreeLong ?? false,
+        useRife: params.useRife ?? true,
+        useUpscale: params.useUpscale ?? false,
+        videoLora: params.videoLora,
+        videoLoraStrength: params.videoLoraStrength,
+        videoLoraPass: params.videoLoraPass,
+      }, { pollInterval: 5000, maxAttempts: 240 });
+
+      setComfyPhase(`Rendering ${seqCount} sequences...`);
+
+      const videoSrc = result.video || result.image;
+      if (!videoSrc) throw new Error("No video returned from ComfyUI");
+
+      const newResults: GrokResult[] = [{
+        id: `comfy-ll-${Date.now()}`,
+        url: videoSrc,
+        revised_prompt: params.prompt,
+        type: "video" as const,
+        timestamp: Date.now(),
+      }];
+      setResults(prev => [...newResults, ...prev]);
+      persistNewResults(newResults);
+      return newResults;
+    } catch (err: any) {
+      setError(friendlyError(err.message));
+      throw err;
+    } finally {
+      setIsLoading(false);
+      setComfyPhase(null);
+      stopTimer();
+    }
+  }, [comfySubmitAndPoll, persistNewResults, startTimer, stopTimer]);
+
   const clearError = useCallback(() => {
     setError(null);
   }, []);
@@ -869,6 +930,7 @@ export function useGrokApi() {
     comfyGenerate,
     comfyVideo,
     comfyTextToVideo,
+    comfyLongLook,
     comfyPhase,
     comfyModels,
     fetchComfyModels,

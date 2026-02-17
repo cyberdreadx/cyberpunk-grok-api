@@ -25,6 +25,7 @@ const COMFY_COSTS: Record<string, number> = {
   "qwen-edit": 1,
   "qwen-edit-hd": 2,
   "wan-video": 3,
+  "longlook": 3, // per sequence — actual cost = sequenceCount * 3
 };
 
 // ---- Video LoRA pairing ----
@@ -370,6 +371,401 @@ function buildWanVideoWorkflow(p: {
       format: "mp4",
     },
   };
+
+  return workflow;
+}
+
+/**
+ * LongLook Multi-Clip WAN 2.2 workflow (API format).
+ *
+ * Chains 1-4 sequences of video generation. Each sequence's last frame
+ * becomes the next sequence's start frame. Uses GGUF-quantized models
+ * (smoothMixWan22I2VT2V) for high/low noise passes.
+ */
+function buildLongLookWorkflow(p: {
+  prompts: string[];
+  negativePrompt: string;
+  imageFilename: string;
+  width: number;
+  height: number;
+  seed: number;
+  steps: number;
+  cfg: number;
+  frameCount: number;
+  useRife: boolean;
+  useUpscale: boolean;
+  motionScale?: number;
+  useFreeLong?: boolean;
+  videoLora?: string;
+  videoLoraHigh?: string;
+  videoLoraLow?: string;
+  videoLoraStrength?: number;
+  videoLoraPass?: "high" | "low" | "both";
+}): Record<string, any> {
+  const halfSteps = Math.max(1, Math.floor(p.steps / 2));
+  const seqCount = Math.min(4, Math.max(1, p.prompts.length));
+
+  const workflow: Record<string, any> = {};
+
+  // ── Shared nodes (built once) ──
+
+  // CLIPLoader
+  workflow["10"] = {
+    class_type: "CLIPLoader",
+    inputs: {
+      clip_name: "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+      type: "wan",
+      device: "default",
+    },
+  };
+
+  // VAELoader
+  workflow["11"] = {
+    class_type: "VAELoader",
+    inputs: { vae_name: "wan_2.1_vae.safetensors" },
+  };
+
+  // UnetLoaderGGUF — high noise model
+  workflow["12"] = {
+    class_type: "UnetLoaderGGUF",
+    inputs: { unet_name: "smoothMixWan22I2VT2V_i2vHigh-Q6_K.gguf" },
+  };
+
+  // UnetLoaderGGUF — low noise model
+  workflow["13"] = {
+    class_type: "UnetLoaderGGUF",
+    inputs: { unet_name: "smoothMixWan22I2VT2V_i2vLow-Q6_K.gguf" },
+  };
+
+  // High-noise LoRA (4-step acceleration)
+  workflow["14"] = {
+    class_type: "LoraLoaderModelOnly",
+    inputs: {
+      model: ["12", 0],
+      lora_name: "wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise.safetensors",
+      strength_model: 1.0,
+    },
+  };
+
+  // Low-noise LoRA (4-step acceleration)
+  workflow["15"] = {
+    class_type: "LoraLoaderModelOnly",
+    inputs: {
+      model: ["13", 0],
+      lora_name: "wan2.2_i2v_lightx2v_4steps_lora_v1_low_noise.safetensors",
+      strength_model: 1.0,
+    },
+  };
+
+  // Track the model node that feeds into ModelSamplingSD3
+  let highModelSource: [string, number] = ["14", 0];
+  let lowModelSource: [string, number] = ["15", 0];
+
+  // Optional user video LoRA — insert between accel LoRA and shift scheduling
+  const hasHighLora = p.videoLoraHigh || (p.videoLora && (p.videoLoraPass === "high" || p.videoLoraPass === "both"));
+  const hasLowLora = p.videoLoraLow || (p.videoLora && (p.videoLoraPass === "low" || p.videoLoraPass === "both"));
+  const loraStr = p.videoLoraStrength ?? 0.8;
+
+  if (hasHighLora) {
+    const loraFile = p.videoLoraHigh || p.videoLora!;
+    workflow["16"] = {
+      class_type: "LoraLoaderModelOnly",
+      inputs: {
+        model: highModelSource,
+        lora_name: loraFile,
+        strength_model: loraStr,
+      },
+    };
+    highModelSource = ["16", 0];
+  }
+
+  if (hasLowLora) {
+    const loraFile = p.videoLoraLow || p.videoLora!;
+    workflow["17"] = {
+      class_type: "LoraLoaderModelOnly",
+      inputs: {
+        model: lowModelSource,
+        lora_name: loraFile,
+        strength_model: loraStr,
+      },
+    };
+    lowModelSource = ["17", 0];
+  }
+
+  // Optional WanFreeLong
+  if (p.useFreeLong) {
+    workflow["18"] = {
+      class_type: "WanFreeLong",
+      inputs: { model: highModelSource },
+    };
+    highModelSource = ["18", 0];
+    workflow["19"] = {
+      class_type: "WanFreeLong",
+      inputs: { model: lowModelSource },
+    };
+    lowModelSource = ["19", 0];
+  }
+
+  // Optional WanMotionScale (applied if motionScale != 1.0)
+  const motionScale = p.motionScale ?? 1.2;
+  if (motionScale !== 1.0) {
+    workflow["20"] = {
+      class_type: "WanMotionScale",
+      inputs: { model: highModelSource, motion_scale: motionScale },
+    };
+    highModelSource = ["20", 0];
+    workflow["21"] = {
+      class_type: "WanMotionScale",
+      inputs: { model: lowModelSource, motion_scale: motionScale },
+    };
+    lowModelSource = ["21", 0];
+  }
+
+  // ModelSamplingSD3 — high noise shift
+  workflow["22"] = {
+    class_type: "ModelSamplingSD3",
+    inputs: { model: highModelSource, shift: 5.0 },
+  };
+
+  // ModelSamplingSD3 — low noise shift
+  workflow["23"] = {
+    class_type: "ModelSamplingSD3",
+    inputs: { model: lowModelSource, shift: 5.0 },
+  };
+
+  // UpscaleModelLoader (if needed)
+  if (p.useUpscale) {
+    workflow["24"] = {
+      class_type: "UpscaleModelLoader",
+      inputs: { model_name: "RealESRGAN_x2.pth" },
+    };
+  }
+
+  // Start image
+  workflow["25"] = {
+    class_type: "LoadImage",
+    inputs: { image: p.imageFilename },
+  };
+
+  // ── Per-sequence nodes ──
+  const seqOutputNodes: string[] = [];
+
+  for (let i = 0; i < seqCount; i++) {
+    const base = 1000 + i * 100;
+    const promptText = p.prompts[i] || p.prompts[p.prompts.length - 1];
+
+    // CLIPTextEncode positive
+    const posNode = `${base}`;
+    workflow[posNode] = {
+      class_type: "CLIPTextEncode",
+      inputs: { clip: ["10", 0], text: promptText },
+    };
+
+    // CLIPTextEncode negative
+    const negNode = `${base + 1}`;
+    workflow[negNode] = {
+      class_type: "CLIPTextEncode",
+      inputs: { clip: ["10", 0], text: p.negativePrompt },
+    };
+
+    // ImageResizeKJ — resize input image (or previous last frame) to target
+    const resizeNode = `${base + 2}`;
+
+    // Determine source image for this sequence
+    let sourceImage: [string, number];
+    if (i === 0) {
+      sourceImage = ["25", 0]; // LoadImage
+    } else {
+      // FinalFrameSelector from previous sequence
+      const prevBase = 1000 + (i - 1) * 100;
+      sourceImage = [`${prevBase + 7}`, 0]; // FinalFrameSelector
+    }
+
+    workflow[resizeNode] = {
+      class_type: "ImageResizeKJ",
+      inputs: {
+        image: sourceImage,
+        width: p.width,
+        height: p.height,
+        interpolation: "lanczos",
+        keep_proportion: false,
+        divisible_by: 2,
+        get_image_size: false,
+      },
+    };
+
+    // Conditioning: WanImageToVideo for seq 0, WanContinuationConditioning for seq 1+
+    const condNode = `${base + 3}`;
+    if (i === 0) {
+      workflow[condNode] = {
+        class_type: "WanImageToVideo",
+        inputs: {
+          positive: [posNode, 0],
+          negative: [negNode, 0],
+          vae: ["11", 0],
+          start_image: [resizeNode, 0],
+          width: p.width,
+          height: p.height,
+          length: p.frameCount,
+          batch_size: 1,
+        },
+      };
+    } else {
+      workflow[condNode] = {
+        class_type: "WanImageToVideo",
+        inputs: {
+          positive: [posNode, 0],
+          negative: [negNode, 0],
+          vae: ["11", 0],
+          start_image: [resizeNode, 0],
+          width: p.width,
+          height: p.height,
+          length: p.frameCount,
+          batch_size: 1,
+        },
+      };
+    }
+
+    // KSamplerAdvanced (high noise)
+    const highSampler = `${base + 4}`;
+    workflow[highSampler] = {
+      class_type: "KSamplerAdvanced",
+      inputs: {
+        model: ["22", 0],
+        positive: [condNode, 0],
+        negative: [condNode, 1],
+        latent_image: [condNode, 2],
+        add_noise: "enable",
+        noise_seed: p.seed + i,
+        steps: p.steps,
+        cfg: p.cfg,
+        sampler_name: "euler",
+        scheduler: "simple",
+        start_at_step: 0,
+        end_at_step: halfSteps,
+        return_with_leftover_noise: "enable",
+      },
+    };
+
+    // KSamplerAdvanced (low noise)
+    const lowSampler = `${base + 5}`;
+    workflow[lowSampler] = {
+      class_type: "KSamplerAdvanced",
+      inputs: {
+        model: ["23", 0],
+        positive: [condNode, 0],
+        negative: [condNode, 1],
+        latent_image: [highSampler, 0],
+        add_noise: "disable",
+        noise_seed: 0,
+        steps: p.steps,
+        cfg: p.cfg,
+        sampler_name: "euler",
+        scheduler: "simple",
+        start_at_step: halfSteps,
+        end_at_step: p.steps,
+        return_with_leftover_noise: "disable",
+      },
+    };
+
+    // VAEDecode
+    const decodeNode = `${base + 6}`;
+    workflow[decodeNode] = {
+      class_type: "VAEDecode",
+      inputs: { samples: [lowSampler, 0], vae: ["11", 0] },
+    };
+
+    // FinalFrameSelector (for sequences 0 to N-2, to feed next sequence)
+    if (i < seqCount - 1) {
+      const ffNode = `${base + 7}`;
+      workflow[ffNode] = {
+        class_type: "FinalFrameSelector",
+        inputs: { images: [decodeNode, 0] },
+      };
+    }
+
+    // Track the decoded output (before RIFE/upscale) for post-processing
+    let seqLastNode = decodeNode;
+    let seqLastOut = 0;
+
+    // RIFE per sequence
+    if (p.useRife) {
+      const rifeNode = `${base + 8}`;
+      workflow[rifeNode] = {
+        class_type: "RIFE VFI",
+        inputs: {
+          frames: [seqLastNode, seqLastOut],
+          ckpt_name: "rife47.pth",
+          clear_cache_after_n_frames: 10,
+          multiplier: 2,
+          fast_mode: false,
+          ensemble: true,
+          scale_factor: 1,
+        },
+      };
+      seqLastNode = rifeNode;
+      seqLastOut = 0;
+    }
+
+    // Upscale per sequence
+    if (p.useUpscale) {
+      const upscaleNode = `${base + 9}`;
+      workflow[upscaleNode] = {
+        class_type: "ImageUpscaleWithModel",
+        inputs: { upscale_model: ["24", 0], image: [seqLastNode, seqLastOut] },
+      };
+      seqLastNode = upscaleNode;
+      seqLastOut = 0;
+    }
+
+    seqOutputNodes.push(seqLastNode);
+  }
+
+  // ── Final output nodes ──
+
+  const fps = p.useRife ? 30 : 16;
+
+  if (seqCount === 1) {
+    // Single sequence — output directly via VHS_VideoCombine
+    workflow["900"] = {
+      class_type: "VHS_VideoCombine",
+      inputs: {
+        images: [seqOutputNodes[0], 0],
+        frame_rate: fps,
+        loop_count: 0,
+        filename_prefix: "video/GrokRunner_LongLook",
+        format: "video/h264-mp4",
+        pingpong: false,
+        save_output: true,
+        unique_id: "900",
+      },
+    };
+  } else {
+    // Multiple sequences — combine with ImageBatchMulti then encode
+    const batchInputs: Record<string, any> = {
+      images_count: seqCount,
+    };
+    for (let i = 0; i < seqCount; i++) {
+      batchInputs[`image_${i + 1}`] = [seqOutputNodes[i], 0];
+    }
+    workflow["899"] = {
+      class_type: "ImageBatchMulti",
+      inputs: batchInputs,
+    };
+    workflow["900"] = {
+      class_type: "VHS_VideoCombine",
+      inputs: {
+        images: ["899", 0],
+        frame_rate: fps,
+        loop_count: 0,
+        filename_prefix: "video/GrokRunner_LongLook",
+        format: "video/h264-mp4",
+        pingpong: false,
+        save_output: true,
+        unique_id: "900",
+      },
+    };
+  }
 
   return workflow;
 }
@@ -760,6 +1156,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         videoLora,
         videoLoraStrength = 0.8,
         videoLoraPass = "both",
+        sequenceCount = 2,
+        motionScale = 1.2,
+        useFreeLong = false,
       } = req.body;
 
       if (!prompt)
@@ -773,7 +1172,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // (e.g. txt2img as part of text-to-video — the video step pays for both)
       const skipCredits = req.body.skipCredits === true;
       const costKey = workflowType === "qwen-edit" && upscale ? "qwen-edit-hd" : workflowType;
-      const cost = skipCredits ? 0 : (COMFY_COSTS[costKey] ?? 1);
+      const baseCost = COMFY_COSTS[costKey] ?? 1;
+      const cost = skipCredits ? 0 : (workflowType === "longlook" ? baseCost * Math.min(4, Math.max(1, Number(sequenceCount))) : baseCost);
       let creditDeducted = false;
 
       if (!isAdminUser) {
@@ -811,7 +1211,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const clampCfg = Math.min(30, Math.max(0.1, Number(cfg)));
 
       // Workflows that need a start image
-      const needsImage = workflowType === "qwen-edit" || workflowType === "wan-video";
+      const needsImage = workflowType === "qwen-edit" || workflowType === "wan-video" || workflowType === "longlook";
 
       // Determine image filename for workflow
       let imageFilename: string | undefined;
@@ -884,6 +1284,106 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           videoLoraStrength: Number(videoLoraStrength),
           videoLoraPass: (["high", "low", "both"].includes(videoLoraPass) ? videoLoraPass : "both") as "high" | "low" | "both",
         });
+      } else if (workflowType === "longlook") {
+        // LongLook multi-clip workflow — split prompt via Grok LLM
+        const seqN = Math.min(4, Math.max(1, Number(sequenceCount)));
+
+        // Call xAI Grok to split the user prompt into N sub-prompts
+        const xaiKey = process.env.XAI_API_KEY;
+        if (!xaiKey) throw new Error("XAI_API_KEY not configured for LongLook prompt splitting");
+
+        const llmSystemPrompt = `You are an AI prompt artist specialized in cinematic video generation.
+Using one input image and one user prompt, generate ${seqN} fully independent but logically connected prompts that together form a short, dynamic video sequence.
+First, analyze the user prompt to identify all key visual elements, style cues, mood, environment, subjects, and actions.
+Then divide the scene into ${seqN} consecutive sequences, each representing a clear moment in time.
+Rules for each prompt:
+- Each prompt must be self-contained, usable on its own
+- Maintain visual, stylistic, and narrative consistency across all prompts
+- Predict and describe natural motion progression from the previous sequence
+- Include both motion description and camera movement
+Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3..." with no line breaks.`;
+
+        const llmResp = await fetch("https://api.x.ai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${xaiKey}`,
+          },
+          body: JSON.stringify({
+            model: "grok-3-mini",
+            messages: [
+              { role: "system", content: llmSystemPrompt },
+              { role: "user", content: prompt.trim() },
+            ],
+          }),
+          signal: AbortSignal.timeout(30000),
+        });
+
+        if (!llmResp.ok) {
+          const errText = await llmResp.text().catch(() => "");
+          throw new Error(`LLM prompt split failed (${llmResp.status}): ${errText.slice(0, 300)}`);
+        }
+
+        const llmData = await llmResp.json();
+        const llmContent: string = llmData.choices?.[0]?.message?.content || "";
+
+        // Parse "***1***Prompt1***2***Prompt2..." format
+        const splitPrompts: string[] = [];
+        const parts = llmContent.split(/\*\*\*\d+\*\*\*/);
+        for (const part of parts) {
+          const trimmed = part.trim();
+          if (trimmed) splitPrompts.push(trimmed);
+        }
+
+        // Fallback: if parsing failed, use the raw prompt for all sequences
+        const prompts = splitPrompts.length >= 1 ? splitPrompts.slice(0, seqN) : Array(seqN).fill(prompt.trim());
+        // Pad if we got fewer prompts than sequences
+        while (prompts.length < seqN) prompts.push(prompts[prompts.length - 1]);
+
+        // Resolve video LoRA (same logic as wan-video)
+        let resolvedVideoLora2: string | undefined;
+        let resolvedVideoLoraHigh2: string | undefined;
+        let resolvedVideoLoraLow2: string | undefined;
+        if (videoLora) {
+          const videoLoraFiles = (process.env.COMFYUI_VIDEO_LORAS || "")
+            .split(",").map((m: string) => m.trim()).filter(Boolean);
+          const grouped = groupVideoLoras(videoLoraFiles);
+          const match = grouped.find((g) => g.name === videoLora);
+          if (match) {
+            if (match.high && match.low) {
+              resolvedVideoLoraHigh2 = match.high;
+              resolvedVideoLoraLow2 = match.low;
+            } else if (match.single) {
+              resolvedVideoLora2 = match.single;
+            } else {
+              resolvedVideoLoraHigh2 = match.high;
+              resolvedVideoLoraLow2 = match.low;
+            }
+          } else {
+            resolvedVideoLora2 = videoLora;
+          }
+        }
+
+        workflow = buildLongLookWorkflow({
+          prompts,
+          negativePrompt: (negativePrompt || "").trim() || WAN_DEFAULT_NEGATIVE,
+          imageFilename: imageFilename!,
+          width: clampW,
+          height: clampH,
+          seed: actualSeed,
+          steps: Math.min(100, Math.max(1, Number(steps) || 8)),
+          cfg: Number(cfg) || 1,
+          frameCount: Math.min(241, Math.max(17, Number(frameCount))),
+          useRife: !!useRife,
+          useUpscale: !!useVidUpscale,
+          motionScale: Number(motionScale) || 1.2,
+          useFreeLong: !!useFreeLong,
+          videoLora: resolvedVideoLora2,
+          videoLoraHigh: resolvedVideoLoraHigh2,
+          videoLoraLow: resolvedVideoLoraLow2,
+          videoLoraStrength: Number(videoLoraStrength),
+          videoLoraPass: (["high", "low", "both"].includes(videoLoraPass) ? videoLoraPass : "both") as "high" | "low" | "both",
+        });
       } else if (workflowType === "qwen-edit") {
         // Qwen edit always uses the Qwen checkpoint — ignore client checkpoint
         const qwenCkpt = process.env.COMFYUI_QWEN_MODEL || "Qwen-Rapid-AIO-v2.safetensors";
@@ -915,7 +1415,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       // Resolve which RunPod endpoint to use (WAN video may have its own)
-      const runpodEndpoint = workflowType === "wan-video"
+      const isVideoWorkflow = workflowType === "wan-video" || workflowType === "longlook";
+      const runpodEndpoint = isVideoWorkflow
         ? (process.env.RUNPOD_WAN_ENDPOINT_ID || backend.runpodEndpoint)
         : backend.runpodEndpoint;
 
@@ -966,7 +1467,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           promptId: result.id,
           seed: actualSeed,
           backend: "runpod",
-          outputType: workflowType === "wan-video" ? "video" : "image",
+          outputType: isVideoWorkflow ? "video" : "image",
         });
       } else {
         // Local ComfyUI
@@ -1001,7 +1502,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           promptId: result.prompt_id,
           seed: actualSeed,
           backend: "local",
-          outputType: workflowType === "wan-video" ? "video" : "image",
+          outputType: isVideoWorkflow ? "video" : "image",
         });
       }
     }

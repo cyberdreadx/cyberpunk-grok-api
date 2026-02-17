@@ -69,6 +69,7 @@ const Index = () => {
     comfyGenerate,
     comfyVideo,
     comfyTextToVideo,
+    comfyLongLook,
     comfyPhase,
     comfyModels,
     fetchComfyModels,
@@ -111,6 +112,13 @@ const Index = () => {
   const [comfyVideoLora, setComfyVideoLora] = useState("none");
   const [comfyVideoLoraStrength, setComfyVideoLoraStrength] = useState(0.8);
   const [comfyVideoLoraPass, setComfyVideoLoraPass] = useState<"high" | "low" | "both">("both");
+
+  // LongLook settings
+  const [longLookEnabled, setLongLookEnabled] = useState(false);
+  const [longLookSeqCount, setLongLookSeqCount] = useState(2);
+  const [longLookMotionScale, setLongLookMotionScale] = useState(1.2);
+  const [longLookFreeLong, setLongLookFreeLong] = useState(false);
+  const [longLookFrameCount, setLongLookFrameCount] = useState(81);
 
   // Fetch ComfyUI models on mount
   React.useEffect(() => {
@@ -180,8 +188,9 @@ const Index = () => {
     const isGltchEdit = mode === "edit-image" && editEngine === "gltch" && effectiveApiMode === "credits";
     const isComfyGen = mode === "text-to-image" && genEngine === "comfy";
     const isComfyRender = mode === "text-to-video" && renderEngine === "comfy";
-    const isComfyAnimate = mode === "image-to-video" && animateEngine === "comfy";
-    const isComfy = isComfyGen || isComfyRender || isComfyAnimate;
+    const isComfyAnimate = mode === "image-to-video" && animateEngine === "comfy" && !longLookEnabled;
+    const isComfyLongLook = mode === "image-to-video" && animateEngine === "comfy" && longLookEnabled;
+    const isComfy = isComfyGen || isComfyRender || isComfyAnimate || isComfyLongLook;
 
     // Check access: need either API key (BYOK) or credits
     if (!isGltchEdit && !isComfy && effectiveApiMode === "byok" && !apiKeySet) {
@@ -217,6 +226,8 @@ const Index = () => {
         cost = calculateCreditCost(gltchHd ? "gltch-edit-hd" : "gltch-edit");
       } else if (isComfyGen) {
         cost = calculateCreditCost("comfy-image");
+      } else if (isComfyLongLook) {
+        cost = calculateCreditCost("comfy-longlook", longLookSeqCount);
       } else if (isComfyRender || isComfyAnimate) {
         cost = calculateCreditCost("comfy-video");
       } else {
@@ -252,6 +263,24 @@ const Index = () => {
           checkpoint: comfyCheckpoint,
           frameCount: comfyFrameCount,
           useRife: comfyRife,
+          videoLora: comfyVideoLora !== "none" ? comfyVideoLora : undefined,
+          videoLoraStrength: comfyVideoLoraStrength,
+          videoLoraPass: comfyVideoLoraPass,
+        });
+      } else if (isComfyLongLook) {
+        const imageBase64 = data.imageUrl?.startsWith("data:")
+          ? data.imageUrl
+          : data.imageUrl ? await urlToBase64(data.imageUrl) : "";
+        if (!imageBase64) throw new Error("Image is required for LongLook");
+        await comfyLongLook({
+          prompt: data.prompt,
+          imageBase64,
+          sequenceCount: longLookSeqCount,
+          frameCount: longLookFrameCount,
+          motionScale: longLookMotionScale,
+          useFreeLong: longLookFreeLong,
+          useRife: comfyRife,
+          useUpscale: comfyVidUpscale,
           videoLora: comfyVideoLora !== "none" ? comfyVideoLora : undefined,
           videoLoraStrength: comfyVideoLoraStrength,
           videoLoraPass: comfyVideoLoraPass,
@@ -302,6 +331,8 @@ const Index = () => {
           cost = calculateCreditCost(gltchHd ? "gltch-edit-hd" : "gltch-edit");
         } else if (isComfyGen) {
           cost = calculateCreditCost("comfy-image");
+        } else if (isComfyLongLook) {
+          cost = calculateCreditCost("comfy-longlook", longLookSeqCount);
         } else if (isComfyRender || isComfyAnimate) {
           cost = calculateCreditCost("comfy-video");
         } else {
@@ -807,17 +838,76 @@ const Index = () => {
                 {/* Comfy ANIMATE settings */}
                 {animateEngine === "comfy" && (
                   <div className="space-y-2">
-                    <div>
-                      <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Duration</label>
-                      <div className="flex flex-wrap gap-1.5">
-                        {[{ label: "~2s", value: 33 }, { label: "~3s", value: 49 }, { label: "~5s", value: 81 }, { label: "~7s", value: 113 }].map((p) => (
-                          <button key={p.value} type="button" onClick={() => setComfyFrameCount(p.value)}
-                            className={`px-2 py-1 rounded text-[9px] font-mono-share transition-all ${comfyFrameCount === p.value ? "bg-purple-500/20 border-purple-500/50 text-purple-300 border" : "bg-card/30 border border-border text-muted-foreground hover:border-purple-500/30"}`}>
-                            {p.label}
-                          </button>
-                        ))}
+                    {/* LongLook toggle */}
+                    <button type="button" onClick={() => setLongLookEnabled(!longLookEnabled)}
+                      className={`w-full flex items-center justify-between px-3 py-2 border rounded font-mono-share text-[10px] transition-all duration-200 ${longLookEnabled ? "border-purple-500/50 bg-purple-500/10 text-purple-300" : "border-border bg-card/30 text-muted-foreground hover:border-purple-500/30"}`}>
+                      <span className="flex items-center gap-1.5">
+                        <span className={`w-3 h-3 border rounded-sm flex items-center justify-center text-[8px] ${longLookEnabled ? "border-purple-500 bg-purple-500 text-white" : "border-muted-foreground/30"}`}>
+                          {longLookEnabled && "✓"}
+                        </span>
+                        LONGLOOK (Multi-Clip)
+                      </span>
+                      <span className="font-mono-share text-[8px] text-purple-400/50">GGUF</span>
+                    </button>
+
+                    {/* LongLook settings */}
+                    {longLookEnabled && (
+                      <div className="space-y-2 pl-2 border-l-2 border-purple-500/20">
+                        <div>
+                          <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Sequences</label>
+                          <div className="flex gap-1.5">
+                            {[1, 2, 3, 4].map((n) => (
+                              <button key={n} type="button" onClick={() => setLongLookSeqCount(n)}
+                                className={`px-3 py-1 rounded text-[10px] font-mono-share transition-all ${longLookSeqCount === n ? "bg-purple-500/20 border-purple-500/50 text-purple-300 border" : "bg-card/30 border border-border text-muted-foreground hover:border-purple-500/30"}`}>
+                                {n}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Motion Scale: {longLookMotionScale.toFixed(1)}</label>
+                          <input type="range" min={0.5} max={2.0} step={0.1} value={longLookMotionScale}
+                            onChange={(e) => setLongLookMotionScale(Number(e.target.value))}
+                            className="w-full accent-purple-500" />
+                        </div>
+                        <button type="button" onClick={() => setLongLookFreeLong(!longLookFreeLong)}
+                          className={`w-full flex items-center justify-between px-3 py-2 border rounded font-mono-share text-[10px] transition-all duration-200 ${longLookFreeLong ? "border-purple-500/50 bg-purple-500/5 text-purple-300" : "border-border bg-card/30 text-muted-foreground hover:border-purple-500/30"}`}>
+                          <span className="flex items-center gap-1.5">
+                            <span className={`w-3 h-3 border rounded-sm flex items-center justify-center text-[8px] ${longLookFreeLong ? "border-purple-500 bg-purple-500 text-white" : "border-muted-foreground/30"}`}>
+                              {longLookFreeLong && "✓"}
+                            </span>
+                            FreeLong <span className="text-[8px] text-amber-400/70">(3x VRAM)</span>
+                          </span>
+                        </button>
+                        <div>
+                          <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Duration per sequence</label>
+                          <div className="flex flex-wrap gap-1.5">
+                            {[{ label: "~2s", value: 33 }, { label: "~3s", value: 49 }, { label: "~5s", value: 81 }, { label: "~7s", value: 113 }].map((p) => (
+                              <button key={p.value} type="button" onClick={() => setLongLookFrameCount(p.value)}
+                                className={`px-2 py-1 rounded text-[9px] font-mono-share transition-all ${longLookFrameCount === p.value ? "bg-purple-500/20 border-purple-500/50 text-purple-300 border" : "bg-card/30 border border-border text-muted-foreground hover:border-purple-500/30"}`}>
+                                {p.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
                       </div>
-                    </div>
+                    )}
+
+                    {/* Standard duration (only when LongLook is off) */}
+                    {!longLookEnabled && (
+                      <div>
+                        <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Duration</label>
+                        <div className="flex flex-wrap gap-1.5">
+                          {[{ label: "~2s", value: 33 }, { label: "~3s", value: 49 }, { label: "~5s", value: 81 }, { label: "~7s", value: 113 }].map((p) => (
+                            <button key={p.value} type="button" onClick={() => setComfyFrameCount(p.value)}
+                              className={`px-2 py-1 rounded text-[9px] font-mono-share transition-all ${comfyFrameCount === p.value ? "bg-purple-500/20 border-purple-500/50 text-purple-300 border" : "bg-card/30 border border-border text-muted-foreground hover:border-purple-500/30"}`}>
+                              {p.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     <button type="button" onClick={() => setComfyRife(!comfyRife)}
                       className={`w-full flex items-center justify-between px-3 py-2 border rounded font-mono-share text-[10px] transition-all duration-200 ${comfyRife ? "border-purple-500/50 bg-purple-500/5 text-purple-300" : "border-border bg-card/30 text-muted-foreground hover:border-purple-500/30"}`}>
                       <span className="flex items-center gap-1.5">
@@ -886,7 +976,9 @@ const Index = () => {
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-500/5 border border-purple-500/20 rounded">
                       <Film className="w-3 h-3 text-purple-400/70" />
                       <span className="font-mono-share text-[9px] text-purple-400/70">
-                        WAN 2.2 I2V — 3 credits per video
+                        {longLookEnabled
+                          ? `LongLook ${longLookSeqCount} x 3 = ${longLookSeqCount * 3} cr`
+                          : "WAN 2.2 I2V — 3 credits per video"}
                       </span>
                     </div>
                   </div>

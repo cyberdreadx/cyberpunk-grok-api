@@ -17,6 +17,7 @@ import { checkPrompt, logSafetyViolation } from "./_lib/safety";
 
 const GLTCH_COST = 1;
 const GLTCH_HD_COST = 2;
+const ADMIN_EMAIL = "cyberdreadx@proton.me";
 
 const RUNPOD_API_BASE = "https://api.runpod.ai/v2";
 
@@ -111,22 +112,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       const cost = hd ? GLTCH_HD_COST : GLTCH_COST;
+      const isAdminUser = auth.email === ADMIN_EMAIL;
 
-      const rows = await sql`SELECT sub_credits, pack_credits FROM users WHERE id = ${auth.userId}`;
-      if (rows.length === 0) return res.status(404).json({ error: "User not found." });
+      // Credit gate (admin is free)
+      if (!isAdminUser) {
+        const rows = await sql`SELECT sub_credits, pack_credits FROM users WHERE id = ${auth.userId}`;
+        if (rows.length === 0) return res.status(404).json({ error: "User not found." });
 
-      const total = (rows[0].sub_credits || 0) + (rows[0].pack_credits || 0);
-      if (total < cost) {
-        return res.status(402).json({ error: `Not enough credits. This edit costs ${cost} credit${cost !== 1 ? "s" : ""}.` });
-      }
+        const total = (rows[0].sub_credits || 0) + (rows[0].pack_credits || 0);
+        if (total < cost) {
+          return res.status(402).json({ error: `Not enough credits. This edit costs ${cost} credit${cost !== 1 ? "s" : ""}.` });
+        }
 
-      try {
-        await sql`SELECT deduct_credits(${auth.userId}::uuid, ${cost})`;
-      } catch {
-        return res.status(402).json({ error: "Failed to deduct credits." });
+        try {
+          await sql`SELECT deduct_credits(${auth.userId}::uuid, ${cost})`;
+        } catch {
+          return res.status(402).json({ error: "Failed to deduct credits." });
+        }
       }
 
       const refundCredits = async () => {
+        if (isAdminUser) return;
         try { await sql`SELECT add_pack_credits(${auth.userId}::uuid, ${cost})`; }
         catch { /* best effort */ }
       };
