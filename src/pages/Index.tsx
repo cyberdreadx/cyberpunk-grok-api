@@ -146,10 +146,14 @@ const Index = () => {
   const [guideOpen, setGuideOpen] = useState(() => !localStorage.getItem("how-to-use-seen"));
   const [apiKeySet, setApiKeySet] = useState(() => hasApiKey());
 
-  // Automatically switch to credits mode when user is logged in and doesn't have a BYOK key
-  // and back to byok when they have a key set
-  const effectiveApiMode = apiMode;
+  // Auto-switch to credits mode when user logs in without a BYOK key
   const canUseCredits = auth.isAuthenticated && creditsHook.enabled;
+  React.useEffect(() => {
+    if (canUseCredits && !apiKeySet && apiMode === "byok") {
+      setApiMode("credits");
+    }
+  }, [canUseCredits, apiKeySet, apiMode, setApiMode]);
+  const effectiveApiMode = apiMode;
 
   const handleSaveApiKey = useCallback((key: string) => {
     setApiKeyRaw(key);
@@ -441,34 +445,32 @@ const Index = () => {
             />
 
             {/* API Mode toggle: BYOK vs Credits */}
-            {(canUseCredits || apiKeySet) && (
-              <div className="flex items-center bg-card/60 border border-border/50 rounded overflow-hidden">
+            <div className="flex items-center bg-card/60 border border-border/50 rounded overflow-hidden">
+              <button
+                onClick={() => setApiMode("byok")}
+                className={`flex items-center gap-1 px-2 py-1 text-[9px] sm:text-[10px] font-mono-share transition-colors ${
+                  effectiveApiMode === "byok"
+                    ? "bg-primary/20 text-primary"
+                    : "text-muted-foreground/50 hover:text-muted-foreground"
+                }`}
+              >
+                <Key className="w-2.5 h-2.5" />
+                BYOK
+              </button>
+              {canUseCredits && (
                 <button
-                  onClick={() => setApiMode("byok")}
+                  onClick={() => setApiMode("credits")}
                   className={`flex items-center gap-1 px-2 py-1 text-[9px] sm:text-[10px] font-mono-share transition-colors ${
-                    effectiveApiMode === "byok"
-                      ? "bg-primary/20 text-primary"
+                    effectiveApiMode === "credits"
+                      ? "bg-secondary/20 text-secondary"
                       : "text-muted-foreground/50 hover:text-muted-foreground"
                   }`}
                 >
-                  <Key className="w-2.5 h-2.5" />
-                  BYOK
+                  <Coins className="w-2.5 h-2.5" />
+                  CREDITS
                 </button>
-                {canUseCredits && (
-                  <button
-                    onClick={() => setApiMode("credits")}
-                    className={`flex items-center gap-1 px-2 py-1 text-[9px] sm:text-[10px] font-mono-share transition-colors ${
-                      effectiveApiMode === "credits"
-                        ? "bg-secondary/20 text-secondary"
-                        : "text-muted-foreground/50 hover:text-muted-foreground"
-                    }`}
-                  >
-                    <Coins className="w-2.5 h-2.5" />
-                    CREDITS
-                  </button>
-                )}
-              </div>
-            )}
+              )}
+            </div>
 
             {/* BYOK: API key dialog */}
             {effectiveApiMode === "byok" && (
