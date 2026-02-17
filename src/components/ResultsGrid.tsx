@@ -200,6 +200,7 @@ interface ResultsGridProps {
   results: GrokResult[];
   isLoading: boolean;
   elapsedSeconds?: number;
+  loadingPhase?: string | null;
   onClear: () => void;
   onDelete: (id: string) => void;
   onEditImage?: (imageUrl: string) => void;
@@ -777,6 +778,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
   results,
   isLoading,
   elapsedSeconds = 0,
+  loadingPhase,
   onClear,
   onDelete,
   onEditImage,
@@ -1092,7 +1094,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
         <div className="border border-primary/30 rounded p-1 animate-pulse-glow">
           <div className="aspect-square bg-muted rounded flex flex-col items-center justify-center gap-2">
             <div className="font-mono-share text-xs text-primary animate-flicker">
-              RENDERING...
+              {loadingPhase || "RENDERING..."}
             </div>
             {elapsedSeconds > 0 && (
               <div className="font-mono-share text-[10px] text-muted-foreground tabular-nums">

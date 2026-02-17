@@ -1,5 +1,5 @@
 import React, { useState, useCallback, Suspense } from "react";
-import { Terminal, Key, Coins, Shield, Eye, MessageCircle, HelpCircle, Server, Zap } from "lucide-react";
+import { Terminal, Key, Coins, Shield, Eye, MessageCircle, HelpCircle, Server, Zap, Cpu, ChevronDown, Film } from "lucide-react";
 import { Link } from "react-router-dom";
 import CyberLayout from "@/components/CyberLayout";
 
@@ -16,8 +16,7 @@ import AuthDialog from "@/components/AuthDialog";
 import CreditDisplay from "@/components/CreditDisplay";
 import LegalDialog from "@/components/LegalDialog";
 import HowToUseDialog from "@/components/HowToUseDialog";
-import ComfyPanel from "@/components/ComfyPanel";
-import { useGrokApi, type GrokMode, type GenerationSettings, type VideoSettings, type ApiMode, DEFAULT_SETTINGS, DEFAULT_VIDEO_SETTINGS } from "@/hooks/useGrokApi";
+import { useGrokApi, urlToBase64, type GrokMode, type GenerationSettings, type VideoSettings, type ApiMode, DEFAULT_SETTINGS, DEFAULT_VIDEO_SETTINGS } from "@/hooks/useGrokApi";
 import { useAuth } from "@/hooks/useAuth";
 import { useCredits } from "@/hooks/useCredits";
 import { useFolders } from "@/hooks/useFolders";
@@ -67,6 +66,12 @@ const Index = () => {
     editImage,
     generateVideo,
     gltchEdit,
+    comfyGenerate,
+    comfyVideo,
+    comfyTextToVideo,
+    comfyPhase,
+    comfyModels,
+    fetchComfyModels,
     clearResults,
     deleteResult,
     updateResultFolder,
@@ -85,10 +90,35 @@ const Index = () => {
   const [activePrompt, setActivePrompt] = useState("");
   const [activeImageUrl, setActiveImageUrl] = useState("");
 
-  // Engine selector: "grok" (default) or "gltch" (Qwen Edit via our GPU)
+  // Engine selectors per mode
   type EditEngine = "grok" | "gltch";
   const [editEngine, setEditEngine] = useState<EditEngine>("grok");
   const [gltchHd, setGltchHd] = useState(false);
+
+  type ComfyEngine = "grok" | "comfy";
+  const [genEngine, setGenEngine] = useState<ComfyEngine>("grok");
+  const [renderEngine, setRenderEngine] = useState<ComfyEngine>("grok");
+  const [animateEngine, setAnimateEngine] = useState<ComfyEngine>("grok");
+
+  // ComfyUI settings
+  const [comfyCheckpoint, setComfyCheckpoint] = useState("");
+  const [comfyLora, setComfyLora] = useState("none");
+  const [comfyLoraStrength, setComfyLoraStrength] = useState(0.8);
+  const [comfyFrameCount, setComfyFrameCount] = useState(81);
+  const [comfyRife, setComfyRife] = useState(true);
+  const [comfyVidUpscale, setComfyVidUpscale] = useState(false);
+
+  // Fetch ComfyUI models on mount
+  React.useEffect(() => {
+    if (auth.isAuthenticated) fetchComfyModels();
+  }, [auth.isAuthenticated, fetchComfyModels]);
+
+  // Auto-select first checkpoint when models load
+  React.useEffect(() => {
+    if (comfyModels.checkpoints.length > 0 && !comfyCheckpoint) {
+      setComfyCheckpoint(comfyModels.checkpoints[0]);
+    }
+  }, [comfyModels.checkpoints, comfyCheckpoint]);
 
   // Legal & guide dialog state
   const [tosOpen, setTosOpen] = useState(false);
@@ -142,11 +172,15 @@ const Index = () => {
   }, [foldersHook, updateResultFolder, toast]);
 
   const handleSubmit = async (data: { prompt: string; imageUrl?: string }) => {
-    // Determine if this is a GLTCH edit (only in credits mode + edit-image + gltch engine)
+    // Determine which engine pathway
     const isGltchEdit = mode === "edit-image" && editEngine === "gltch" && effectiveApiMode === "credits";
+    const isComfyGen = mode === "text-to-image" && genEngine === "comfy";
+    const isComfyRender = mode === "text-to-video" && renderEngine === "comfy";
+    const isComfyAnimate = mode === "image-to-video" && animateEngine === "comfy";
+    const isComfy = isComfyGen || isComfyRender || isComfyAnimate;
 
     // Check access: need either API key (BYOK) or credits
-    if (!isGltchEdit && effectiveApiMode === "byok" && !apiKeySet) {
+    if (!isGltchEdit && !isComfy && effectiveApiMode === "byok" && !apiKeySet) {
       toast({
         title: "ACCESS DENIED",
         description: "Configure your xAI API key first, or switch to Credits mode.",
@@ -155,7 +189,8 @@ const Index = () => {
       return;
     }
 
-    if (effectiveApiMode === "credits" || isGltchEdit) {
+    // Comfy and GLTCH always require auth
+    if (isComfy || isGltchEdit) {
       if (!auth.isAuthenticated) {
         toast({
           title: "ACCESS DENIED",
@@ -164,11 +199,22 @@ const Index = () => {
         });
         return;
       }
+    }
+
+    if (effectiveApiMode === "credits" || isGltchEdit || isComfy) {
+      if (!auth.isAuthenticated) {
+        toast({ title: "ACCESS DENIED", description: "Sign in to use credits.", variant: "destructive" });
+        return;
+      }
 
       // Calculate cost
       let cost: number;
       if (isGltchEdit) {
         cost = calculateCreditCost(gltchHd ? "gltch-edit-hd" : "gltch-edit");
+      } else if (isComfyGen) {
+        cost = calculateCreditCost("comfy-image");
+      } else if (isComfyRender || isComfyAnimate) {
+        cost = calculateCreditCost("comfy-video");
       } else {
         const imageCount = (mode === "text-to-image" || mode === "edit-image") ? settings.count : 1;
         const videoDuration = (mode === "text-to-video" || mode === "image-to-video") ? videoSettings.duration : 0;
@@ -189,8 +235,33 @@ const Index = () => {
     setActivePrompt("");
 
     try {
-      if (isGltchEdit) {
-        // GLTCH Qwen Edit pathway
+      if (isComfyGen) {
+        await comfyGenerate({
+          prompt: data.prompt,
+          checkpoint: comfyCheckpoint,
+          lora: comfyLora !== "none" ? comfyLora : undefined,
+          loraStrength: comfyLoraStrength,
+        });
+      } else if (isComfyRender) {
+        await comfyTextToVideo({
+          prompt: data.prompt,
+          checkpoint: comfyCheckpoint,
+          frameCount: comfyFrameCount,
+          useRife: comfyRife,
+        });
+      } else if (isComfyAnimate) {
+        const imageBase64 = data.imageUrl?.startsWith("data:")
+          ? data.imageUrl
+          : data.imageUrl ? await urlToBase64(data.imageUrl) : "";
+        if (!imageBase64) throw new Error("Image is required for animation");
+        await comfyVideo({
+          prompt: data.prompt,
+          imageBase64,
+          frameCount: comfyFrameCount,
+          useRife: comfyRife,
+          useUpscale: comfyVidUpscale,
+        });
+      } else if (isGltchEdit) {
         await gltchEdit({
           prompt: data.prompt,
           image_url: data.imageUrl!,
@@ -215,10 +286,14 @@ const Index = () => {
       }
 
       // Optimistically deduct credits on success
-      if (effectiveApiMode === "credits") {
+      if (effectiveApiMode === "credits" || isComfy || isGltchEdit) {
         let cost: number;
         if (isGltchEdit) {
           cost = calculateCreditCost(gltchHd ? "gltch-edit-hd" : "gltch-edit");
+        } else if (isComfyGen) {
+          cost = calculateCreditCost("comfy-image");
+        } else if (isComfyRender || isComfyAnimate) {
+          cost = calculateCreditCost("comfy-video");
         } else {
           const imageCount = (mode === "text-to-image" || mode === "edit-image") ? settings.count : 1;
           const videoDuration = (mode === "text-to-video" || mode === "image-to-video") ? videoSettings.duration : 0;
@@ -383,11 +458,6 @@ const Index = () => {
           <ModeSelector activeMode={mode} onModeChange={(m) => { setMode(m); setActiveImageUrl(""); }} />
         </section>
 
-        {/* ComfyUI Lab — available to all authenticated users */}
-        {auth.isAuthenticated && (
-          <ComfyPanel onResultReady={addExternalResult} />
-        )}
-
         {/* Prompt form — Terminal block */}
         <section
           className="relative border border-border rounded bg-card/40 backdrop-blur-sm animate-slide-up overflow-hidden"
@@ -520,6 +590,206 @@ const Index = () => {
               </div>
             )}
 
+            {/* Engine selector — GENERATE mode */}
+            {mode === "text-to-image" && auth.isAuthenticated && (
+              <div className="space-y-2">
+                <label className="font-orbitron text-[10px] tracking-wider text-muted-foreground flex items-center gap-1.5">
+                  <Zap className="w-3 h-3" />
+                  ENGINE
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button type="button" onClick={() => setGenEngine("grok")}
+                    className={`p-2.5 border rounded text-left transition-all duration-200 ${genEngine === "grok" ? "border-primary neon-border bg-primary/5" : "border-border bg-card/30 hover:border-primary/40"}`}>
+                    <div className={`font-orbitron text-[11px] ${genEngine === "grok" ? "text-primary" : "text-foreground"}`}>GROK</div>
+                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
+                      <span>xAI</span>
+                      <span className={genEngine === "grok" ? "text-primary/70" : "text-muted-foreground/50"}>{settings.count} cr</span>
+                    </div>
+                  </button>
+                  <button type="button" onClick={() => setGenEngine("comfy")}
+                    className={`p-2.5 border rounded text-left transition-all duration-200 ${genEngine === "comfy" ? "border-purple-500 bg-purple-500/5 shadow-[0_0_8px_rgba(168,85,247,0.15)]" : "border-border bg-card/30 hover:border-purple-500/40"}`}>
+                    <div className={`font-orbitron text-[11px] ${genEngine === "comfy" ? "text-purple-400" : "text-foreground"}`}>COMFY</div>
+                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
+                      <span>GPU Studio</span>
+                      <span className={genEngine === "comfy" ? "text-purple-400/70" : "text-muted-foreground/50"}>1 cr</span>
+                    </div>
+                  </button>
+                </div>
+                {/* Comfy GENERATE settings */}
+                {genEngine === "comfy" && (
+                  <div className="space-y-2">
+                    <div>
+                      <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Checkpoint</label>
+                      <select value={comfyCheckpoint} onChange={(e) => setComfyCheckpoint(e.target.value)}
+                        className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-[10px] font-mono-share text-foreground">
+                        {comfyModels.checkpoints.length === 0 && <option value="">No models found</option>}
+                        {comfyModels.checkpoints.map((c) => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </div>
+                    {comfyModels.loras.length > 0 && (
+                      <div>
+                        <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">LoRA (optional)</label>
+                        <select value={comfyLora} onChange={(e) => setComfyLora(e.target.value)}
+                          className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-[10px] font-mono-share text-foreground">
+                          <option value="none">None</option>
+                          {comfyModels.loras.map((l) => <option key={l} value={l}>{l.replace(/\.[^.]+$/, "")}</option>)}
+                        </select>
+                        {comfyLora !== "none" && (
+                          <div className="mt-1">
+                            <label className="font-mono-share text-[9px] text-muted-foreground/70">Strength: {comfyLoraStrength.toFixed(2)}</label>
+                            <input type="range" min={0} max={1.5} step={0.05} value={comfyLoraStrength}
+                              onChange={(e) => setComfyLoraStrength(Number(e.target.value))}
+                              className="w-full accent-purple-500 mt-0.5" />
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-500/5 border border-purple-500/20 rounded">
+                      <Cpu className="w-3 h-3 text-purple-400/70" />
+                      <span className="font-mono-share text-[9px] text-purple-400/70">
+                        Self-hosted GPU — 1 credit per image
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Engine selector — RENDER (text-to-video) mode */}
+            {mode === "text-to-video" && auth.isAuthenticated && (
+              <div className="space-y-2">
+                <label className="font-orbitron text-[10px] tracking-wider text-muted-foreground flex items-center gap-1.5">
+                  <Zap className="w-3 h-3" />
+                  ENGINE
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button type="button" onClick={() => setRenderEngine("grok")}
+                    className={`p-2.5 border rounded text-left transition-all duration-200 ${renderEngine === "grok" ? "border-primary neon-border bg-primary/5" : "border-border bg-card/30 hover:border-primary/40"}`}>
+                    <div className={`font-orbitron text-[11px] ${renderEngine === "grok" ? "text-primary" : "text-foreground"}`}>GROK</div>
+                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
+                      <span>xAI</span>
+                      <span className={renderEngine === "grok" ? "text-primary/70" : "text-muted-foreground/50"}>5 cr</span>
+                    </div>
+                  </button>
+                  <button type="button" onClick={() => setRenderEngine("comfy")}
+                    className={`p-2.5 border rounded text-left transition-all duration-200 ${renderEngine === "comfy" ? "border-purple-500 bg-purple-500/5 shadow-[0_0_8px_rgba(168,85,247,0.15)]" : "border-border bg-card/30 hover:border-purple-500/40"}`}>
+                    <div className={`font-orbitron text-[11px] ${renderEngine === "comfy" ? "text-purple-400" : "text-foreground"}`}>COMFY</div>
+                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
+                      <span>WAN Video</span>
+                      <span className={renderEngine === "comfy" ? "text-purple-400/70" : "text-muted-foreground/50"}>3 cr</span>
+                    </div>
+                  </button>
+                </div>
+                {/* Comfy RENDER settings */}
+                {renderEngine === "comfy" && (
+                  <div className="space-y-2">
+                    <div>
+                      <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Checkpoint (for start frame)</label>
+                      <select value={comfyCheckpoint} onChange={(e) => setComfyCheckpoint(e.target.value)}
+                        className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-[10px] font-mono-share text-foreground">
+                        {comfyModels.checkpoints.length === 0 && <option value="">No models found</option>}
+                        {comfyModels.checkpoints.map((c) => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Duration</label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {[{ label: "~2s", value: 33 }, { label: "~3s", value: 49 }, { label: "~5s", value: 81 }, { label: "~7s", value: 113 }].map((p) => (
+                          <button key={p.value} type="button" onClick={() => setComfyFrameCount(p.value)}
+                            className={`px-2 py-1 rounded text-[9px] font-mono-share transition-all ${comfyFrameCount === p.value ? "bg-purple-500/20 border-purple-500/50 text-purple-300 border" : "bg-card/30 border border-border text-muted-foreground hover:border-purple-500/30"}`}>
+                            {p.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <button type="button" onClick={() => setComfyRife(!comfyRife)}
+                      className={`w-full flex items-center justify-between px-3 py-2 border rounded font-mono-share text-[10px] transition-all duration-200 ${comfyRife ? "border-purple-500/50 bg-purple-500/5 text-purple-300" : "border-border bg-card/30 text-muted-foreground hover:border-purple-500/30"}`}>
+                      <span className="flex items-center gap-1.5">
+                        <span className={`w-3 h-3 border rounded-sm flex items-center justify-center text-[8px] ${comfyRife ? "border-purple-500 bg-purple-500 text-white" : "border-muted-foreground/30"}`}>
+                          {comfyRife && "✓"}
+                        </span>
+                        RIFE 2x interpolation (smoother)
+                      </span>
+                    </button>
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-500/5 border border-purple-500/20 rounded">
+                      <Film className="w-3 h-3 text-purple-400/70" />
+                      <span className="font-mono-share text-[9px] text-purple-400/70">
+                        Auto-generates start frame, then animates — 3 cr flat
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Engine selector — ANIMATE (image-to-video) mode */}
+            {mode === "image-to-video" && auth.isAuthenticated && (
+              <div className="space-y-2">
+                <label className="font-orbitron text-[10px] tracking-wider text-muted-foreground flex items-center gap-1.5">
+                  <Zap className="w-3 h-3" />
+                  ENGINE
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button type="button" onClick={() => setAnimateEngine("grok")}
+                    className={`p-2.5 border rounded text-left transition-all duration-200 ${animateEngine === "grok" ? "border-primary neon-border bg-primary/5" : "border-border bg-card/30 hover:border-primary/40"}`}>
+                    <div className={`font-orbitron text-[11px] ${animateEngine === "grok" ? "text-primary" : "text-foreground"}`}>GROK</div>
+                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
+                      <span>xAI</span>
+                      <span className={animateEngine === "grok" ? "text-primary/70" : "text-muted-foreground/50"}>5 cr</span>
+                    </div>
+                  </button>
+                  <button type="button" onClick={() => setAnimateEngine("comfy")}
+                    className={`p-2.5 border rounded text-left transition-all duration-200 ${animateEngine === "comfy" ? "border-purple-500 bg-purple-500/5 shadow-[0_0_8px_rgba(168,85,247,0.15)]" : "border-border bg-card/30 hover:border-purple-500/40"}`}>
+                    <div className={`font-orbitron text-[11px] ${animateEngine === "comfy" ? "text-purple-400" : "text-foreground"}`}>COMFY</div>
+                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
+                      <span>WAN Video</span>
+                      <span className={animateEngine === "comfy" ? "text-purple-400/70" : "text-muted-foreground/50"}>3 cr</span>
+                    </div>
+                  </button>
+                </div>
+                {/* Comfy ANIMATE settings */}
+                {animateEngine === "comfy" && (
+                  <div className="space-y-2">
+                    <div>
+                      <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Duration</label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {[{ label: "~2s", value: 33 }, { label: "~3s", value: 49 }, { label: "~5s", value: 81 }, { label: "~7s", value: 113 }].map((p) => (
+                          <button key={p.value} type="button" onClick={() => setComfyFrameCount(p.value)}
+                            className={`px-2 py-1 rounded text-[9px] font-mono-share transition-all ${comfyFrameCount === p.value ? "bg-purple-500/20 border-purple-500/50 text-purple-300 border" : "bg-card/30 border border-border text-muted-foreground hover:border-purple-500/30"}`}>
+                            {p.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <button type="button" onClick={() => setComfyRife(!comfyRife)}
+                      className={`w-full flex items-center justify-between px-3 py-2 border rounded font-mono-share text-[10px] transition-all duration-200 ${comfyRife ? "border-purple-500/50 bg-purple-500/5 text-purple-300" : "border-border bg-card/30 text-muted-foreground hover:border-purple-500/30"}`}>
+                      <span className="flex items-center gap-1.5">
+                        <span className={`w-3 h-3 border rounded-sm flex items-center justify-center text-[8px] ${comfyRife ? "border-purple-500 bg-purple-500 text-white" : "border-muted-foreground/30"}`}>
+                          {comfyRife && "✓"}
+                        </span>
+                        RIFE 2x interpolation (smoother)
+                      </span>
+                    </button>
+                    <button type="button" onClick={() => setComfyVidUpscale(!comfyVidUpscale)}
+                      className={`w-full flex items-center justify-between px-3 py-2 border rounded font-mono-share text-[10px] transition-all duration-200 ${comfyVidUpscale ? "border-purple-500/50 bg-purple-500/5 text-purple-300" : "border-border bg-card/30 text-muted-foreground hover:border-purple-500/30"}`}>
+                      <span className="flex items-center gap-1.5">
+                        <span className={`w-3 h-3 border rounded-sm flex items-center justify-center text-[8px] ${comfyVidUpscale ? "border-purple-500 bg-purple-500 text-white" : "border-muted-foreground/30"}`}>
+                          {comfyVidUpscale && "✓"}
+                        </span>
+                        4x UltraSharp upscale (slower)
+                      </span>
+                    </button>
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-500/5 border border-purple-500/20 rounded">
+                      <Film className="w-3 h-3 text-purple-400/70" />
+                      <span className="font-mono-share text-[9px] text-purple-400/70">
+                        WAN 2.2 I2V — 3 credits per video
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             <PromptHistory history={history} onSelect={handleSelectPrompt} onRemove={removeEntry} onClear={clearHistory} />
             <PromptForm mode={mode} isLoading={isLoading} onSubmit={handleSubmit} settings={settings} initialPrompt={activePrompt} initialImageUrl={activeImageUrl} />
           </div>
@@ -560,6 +830,7 @@ const Index = () => {
             results={results}
             isLoading={isLoading}
             elapsedSeconds={elapsedSeconds}
+            loadingPhase={comfyPhase}
             onClear={clearResults}
             onDelete={deleteResult}
             onEditImage={handleEditImage}

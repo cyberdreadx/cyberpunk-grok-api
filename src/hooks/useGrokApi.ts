@@ -69,7 +69,7 @@ export type ApiMode = "byok" | "credits";
 const API_BASE = "https://api.x.ai/v1";
 
 /** Convert an external URL to a base64 data-URL (used for user-provided URLs). */
-async function urlToBase64(url: string): Promise<string> {
+export async function urlToBase64(url: string): Promise<string> {
   if (!url || url.startsWith("data:")) return url;
   try {
     const res = await fetch(url);
@@ -571,18 +571,251 @@ export function useGrokApi() {
 
   /** Add an externally-produced result (e.g. from ComfyUI) to the gallery. */
   const addExternalResult = useCallback(async (result: GrokResult) => {
-    console.log("[useGrokApi] addExternalResult called:", result.id, result.type);
-    setResults(prev => {
-      console.log("[useGrokApi] Adding result to state. Previous count:", prev.length);
-      return [result, ...prev];
-    });
+    setResults(prev => [result, ...prev]);
+    try { await saveResult(result); } catch { /* best-effort */ }
+  }, []);
+
+  // ── ComfyUI Functions ────────────────────────────────────────────────────
+
+  // Shared submit + poll helper for ComfyUI workflows
+  const comfySubmitAndPoll = useCallback(async (
+    body: Record<string, any>,
+    opts: { pollInterval?: number; maxAttempts?: number } = {},
+  ): Promise<{ image?: string; video?: string }> => {
+    const { pollInterval = 2000, maxAttempts = 300 } = opts;
+
+    const submitData = await apiFetch<{
+      promptId: string;
+      seed: number;
+      outputType?: string;
+    }>("/comfyui", { method: "POST", body: { action: "generate", ...body } });
+
+    const { promptId, outputType } = submitData;
+    const outType = outputType || (body.workflow === "wan-video" ? "video" : "image");
+
+    // Save to localStorage so we can resume if page closes
     try {
-      await saveResult(result);
-      console.log("[useGrokApi] Result saved to IndexedDB:", result.id);
-    } catch (err) {
-      console.error("[useGrokApi] Failed to save to IndexedDB:", err);
+      localStorage.setItem("comfy-active-job", JSON.stringify({
+        promptId,
+        outputType: outType,
+        submittedAt: Date.now(),
+      }));
+    } catch { /* best-effort */ }
+
+    for (let i = 0; i < maxAttempts; i++) {
+      await new Promise((r) => setTimeout(r, pollInterval));
+
+      const pollData = await apiFetch<{
+        status: string;
+        image?: string;
+        video?: string;
+        error?: string;
+      }>("/comfyui", {
+        method: "POST",
+        body: { action: "poll", promptId, outputType: outType },
+      });
+
+      if (pollData.status === "done") {
+        localStorage.removeItem("comfy-active-job");
+        return { image: pollData.image, video: pollData.video };
+      }
+      if (pollData.status === "error") {
+        localStorage.removeItem("comfy-active-job");
+        throw new Error(pollData.error || "ComfyUI generation failed");
+      }
+    }
+
+    localStorage.removeItem("comfy-active-job");
+    throw new Error("ComfyUI generation timed out");
+  }, []);
+
+  /** Two-phase status for chained text-to-video */
+  const [comfyPhase, setComfyPhase] = useState<string | null>(null);
+
+  /** ComfyUI models + LoRAs (fetched on demand) */
+  const [comfyModels, setComfyModels] = useState<{ checkpoints: string[]; loras: string[] }>({
+    checkpoints: [],
+    loras: [],
+  });
+
+  const fetchComfyModels = useCallback(async () => {
+    try {
+      const data = await apiFetch<{ checkpoints: string[]; loras?: string[] }>("/comfyui", {
+        method: "POST",
+        body: { action: "models" },
+      });
+      setComfyModels({
+        checkpoints: data.checkpoints || [],
+        loras: data.loras || [],
+      });
+    } catch {
+      setComfyModels({ checkpoints: [], loras: [] });
     }
   }, []);
+
+  // ComfyUI Text-to-Image
+  const comfyGenerate = useCallback(async (params: {
+    prompt: string;
+    checkpoint: string;
+    lora?: string;
+    loraStrength?: number;
+    width?: number;
+    height?: number;
+    steps?: number;
+    cfg?: number;
+    seed?: number;
+  }) => {
+    setIsLoading(true);
+    setError(null);
+    setComfyPhase("Generating image...");
+    startTimer();
+    try {
+      const result = await comfySubmitAndPoll({
+        workflow: "txt2img",
+        prompt: params.prompt,
+        checkpoint: params.checkpoint,
+        lora: params.lora,
+        loraStrength: params.loraStrength,
+        width: params.width || 1024,
+        height: params.height || 1024,
+        steps: params.steps || 5,
+        cfg: params.cfg || 1,
+        seed: params.seed,
+      });
+
+      if (!result.image) throw new Error("No image returned from ComfyUI");
+
+      const newResults: GrokResult[] = [{
+        id: `comfy-img-${Date.now()}`,
+        url: result.image,
+        revised_prompt: params.prompt,
+        type: "image" as const,
+        timestamp: Date.now(),
+      }];
+      setResults(prev => [...newResults, ...prev]);
+      persistNewResults(newResults);
+      return newResults;
+    } catch (err: any) {
+      setError(friendlyError(err.message));
+      throw err;
+    } finally {
+      setIsLoading(false);
+      setComfyPhase(null);
+      stopTimer();
+    }
+  }, [comfySubmitAndPoll, persistNewResults, startTimer, stopTimer]);
+
+  // ComfyUI Image-to-Video (WAN Video)
+  const comfyVideo = useCallback(async (params: {
+    prompt: string;
+    imageBase64: string;
+    imageFilename?: string;
+    frameCount?: number;
+    useRife?: boolean;
+    useUpscale?: boolean;
+  }) => {
+    setIsLoading(true);
+    setError(null);
+    setComfyPhase("Rendering video...");
+    startTimer();
+    try {
+      const result = await comfySubmitAndPoll({
+        workflow: "wan-video",
+        prompt: params.prompt,
+        imageBase64: params.imageBase64,
+        imageFilename: params.imageFilename || "input.jpg",
+        frameCount: params.frameCount || 81,
+        useRife: params.useRife ?? true,
+        useUpscale: params.useUpscale ?? false,
+      }, { pollInterval: 5000, maxAttempts: 120 });
+
+      const videoSrc = result.video || result.image;
+      if (!videoSrc) throw new Error("No video returned from ComfyUI");
+
+      const newResults: GrokResult[] = [{
+        id: `comfy-vid-${Date.now()}`,
+        url: videoSrc,
+        revised_prompt: params.prompt,
+        type: "video" as const,
+        timestamp: Date.now(),
+      }];
+      setResults(prev => [...newResults, ...prev]);
+      persistNewResults(newResults);
+      return newResults;
+    } catch (err: any) {
+      setError(friendlyError(err.message));
+      throw err;
+    } finally {
+      setIsLoading(false);
+      setComfyPhase(null);
+      stopTimer();
+    }
+  }, [comfySubmitAndPoll, persistNewResults, startTimer, stopTimer]);
+
+  // ComfyUI Chained Text-to-Video (txt2img → wan-video)
+  const comfyTextToVideo = useCallback(async (params: {
+    prompt: string;
+    checkpoint: string;
+    width?: number;
+    height?: number;
+    steps?: number;
+    cfg?: number;
+    frameCount?: number;
+    useRife?: boolean;
+  }) => {
+    setIsLoading(true);
+    setError(null);
+    startTimer();
+    try {
+      // Phase 1: Generate start frame (skipCredits — video step pays for both)
+      setComfyPhase("Generating start frame...");
+      const imgResult = await comfySubmitAndPoll({
+        workflow: "txt2img",
+        prompt: params.prompt,
+        checkpoint: params.checkpoint,
+        width: params.width || 832,
+        height: params.height || 480,
+        steps: params.steps || 5,
+        cfg: params.cfg || 1,
+        skipCredits: true,
+      });
+
+      if (!imgResult.image) throw new Error("Failed to generate start frame");
+
+      // Phase 2: Animate with WAN Video
+      setComfyPhase("Rendering video...");
+      const vidResult = await comfySubmitAndPoll({
+        workflow: "wan-video",
+        prompt: params.prompt,
+        imageBase64: imgResult.image,
+        imageFilename: "start_frame.png",
+        frameCount: params.frameCount || 81,
+        useRife: params.useRife ?? true,
+        useUpscale: false,
+      }, { pollInterval: 5000, maxAttempts: 120 });
+
+      const videoSrc = vidResult.video || vidResult.image;
+      if (!videoSrc) throw new Error("No video returned from ComfyUI");
+
+      const newResults: GrokResult[] = [{
+        id: `comfy-t2v-${Date.now()}`,
+        url: videoSrc,
+        revised_prompt: params.prompt,
+        type: "video" as const,
+        timestamp: Date.now(),
+      }];
+      setResults(prev => [...newResults, ...prev]);
+      persistNewResults(newResults);
+      return newResults;
+    } catch (err: any) {
+      setError(friendlyError(err.message));
+      throw err;
+    } finally {
+      setIsLoading(false);
+      setComfyPhase(null);
+      stopTimer();
+    }
+  }, [comfySubmitAndPoll, persistNewResults, startTimer, stopTimer]);
 
   const clearError = useCallback(() => {
     setError(null);
@@ -604,6 +837,12 @@ export function useGrokApi() {
     editImage,
     generateVideo,
     gltchEdit,
+    comfyGenerate,
+    comfyVideo,
+    comfyTextToVideo,
+    comfyPhase,
+    comfyModels,
+    fetchComfyModels,
     clearResults,
     deleteResult,
     updateResultFolder,

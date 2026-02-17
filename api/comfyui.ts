@@ -634,8 +634,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ error: "Checkpoint is required" });
 
       // ── Credit gate (admin is free) ──
+      // skipCredits: client passes true for the first step of a chained workflow
+      // (e.g. txt2img as part of text-to-video — the video step pays for both)
+      const skipCredits = req.body.skipCredits === true;
       const costKey = workflowType === "qwen-edit" && upscale ? "qwen-edit-hd" : workflowType;
-      const cost = COMFY_COSTS[costKey] ?? 1;
+      const cost = skipCredits ? 0 : (COMFY_COSTS[costKey] ?? 1);
       let creditDeducted = false;
 
       if (!isAdminUser) {
