@@ -245,7 +245,7 @@ function buildWanVideoWorkflow(p: {
     inputs: {
       video: ["94", 0],
       filename_prefix: "video/GrokRunner",
-      format: "auto",
+      codec: "auto",
     },
   };
 
