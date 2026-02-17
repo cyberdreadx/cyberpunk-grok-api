@@ -700,27 +700,16 @@ function buildLongLookWorkflow(p: {
     seqOutputNodes.push(seqLastNode);
   }
 
-  // ── Final output nodes ──
+  // ── Final output nodes (use same CreateVideo + SaveVideo as WAN video) ──
 
-  const fps = p.useRife ? 30 : 16;
+  const fps = p.useRife ? 24 : 16;
+
+  let finalFrames: [string, number];
 
   if (seqCount === 1) {
-    // Single sequence — output directly via VHS_VideoCombine
-    workflow["900"] = {
-      class_type: "VHS_VideoCombine",
-      inputs: {
-        images: [seqOutputNodes[0], 0],
-        frame_rate: fps,
-        loop_count: 0,
-        filename_prefix: "video/GrokRunner_LongLook",
-        format: "video/h264-mp4",
-        pingpong: false,
-        save_output: true,
-        unique_id: "900",
-      },
-    };
+    finalFrames = [seqOutputNodes[0], 0];
   } else {
-    // Multiple sequences — combine with ImageBatchMulti then encode
+    // Multiple sequences — combine frames with ImageBatchMulti
     const batchInputs: Record<string, any> = {
       inputcount: seqCount,
     };
@@ -731,20 +720,23 @@ function buildLongLookWorkflow(p: {
       class_type: "ImageBatchMulti",
       inputs: batchInputs,
     };
-    workflow["900"] = {
-      class_type: "VHS_VideoCombine",
-      inputs: {
-        images: ["899", 0],
-        frame_rate: fps,
-        loop_count: 0,
-        filename_prefix: "video/GrokRunner_LongLook",
-        format: "video/h264-mp4",
-        pingpong: false,
-        save_output: true,
-        unique_id: "900",
-      },
-    };
+    finalFrames = ["899", 0];
   }
+
+  // CreateVideo → SaveVideo (same proven nodes as WAN video workflow)
+  workflow["900"] = {
+    class_type: "CreateVideo",
+    inputs: { images: finalFrames, fps: fps },
+  };
+  workflow["901"] = {
+    class_type: "SaveVideo",
+    inputs: {
+      video: ["900", 0],
+      filename_prefix: "video/GrokRunner_LongLook",
+      codec: "auto",
+      format: "mp4",
+    },
+  };
 
   return workflow;
 }
