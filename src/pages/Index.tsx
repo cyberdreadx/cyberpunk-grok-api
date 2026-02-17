@@ -383,8 +383,8 @@ const Index = () => {
           <ModeSelector activeMode={mode} onModeChange={(m) => { setMode(m); setActiveImageUrl(""); }} />
         </section>
 
-        {/* ComfyUI Lab — admin only */}
-        {auth.user?.email === "cyberdreadx@proton.me" && (
+        {/* ComfyUI Lab — available to all authenticated users */}
+        {auth.isAuthenticated && (
           <ComfyPanel onResultReady={addExternalResult} />
         )}
 

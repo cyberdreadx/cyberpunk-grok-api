@@ -1,5 +1,5 @@
 /**
- * /api/comfyui - ComfyUI proxy (admin-only for now).
+ * /api/comfyui - ComfyUI proxy for all authenticated users.
  *
  * Supports two backends:
  *   1. RunPod Serverless (RUNPOD_ENDPOINT_ID + RUNPOD_API_KEY) — cloud GPU
@@ -7,21 +7,25 @@
  *
  * POST { action: "status" }    - health check
  * POST { action: "models" }    - list available checkpoints
- * POST { action: "generate" }  - submit workflow, return jobId + seed
- * POST { action: "poll" }      - check job status, return base64 image when done
+ * POST { action: "generate" }  - submit workflow, deduct credits, return jobId + seed
+ * POST { action: "poll" }      - check job status, return base64 image/video when done
  *
- * All actions require admin JWT.
+ * Requires auth. Admin gets free usage; regular users pay credits.
  */
 
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getUserFromRequest } from "./_lib/auth";
+import { getDb } from "./_lib/db";
+import { checkRateLimit } from "./_lib/ratelimit";
 
 const ADMIN_EMAIL = "cyberdreadx@proton.me";
 
-function isAdmin(req: VercelRequest): boolean {
-  const auth = getUserFromRequest(req);
-  return !!auth && auth.email === ADMIN_EMAIL;
-}
+const COMFY_COSTS: Record<string, number> = {
+  "txt2img": 1,
+  "qwen-edit": 1,
+  "qwen-edit-hd": 2,
+  "wan-video": 3,
+};
 
 // ---- Backend detection ----
 
@@ -501,9 +505,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST")
     return res.status(405).json({ error: "Method not allowed" });
 
-  if (!isAdmin(req)) {
-    return res.status(403).json({ error: "Access denied" });
+  const auth = getUserFromRequest(req);
+  if (!auth) {
+    return res.status(401).json({ error: "Sign in to use Comfy Lab." });
   }
+
+  const isAdminUser = auth.email === ADMIN_EMAIL;
 
   const backend = getBackend();
   if (backend.mode === "local" && !backend.comfyUrl) {
@@ -583,6 +590,35 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Checkpoint is required for txt2img/qwen-edit but not wan-video (fixed models)
       if (workflowType !== "wan-video" && !checkpoint)
         return res.status(400).json({ error: "Checkpoint is required" });
+
+      // ── Credit gate (admin is free) ──
+      const costKey = workflowType === "qwen-edit" && upscale ? "qwen-edit-hd" : workflowType;
+      const cost = COMFY_COSTS[costKey] ?? 1;
+      let creditDeducted = false;
+
+      if (!isAdminUser) {
+        // Rate limit: 20 comfy requests per 5 min
+        const { allowed } = await checkRateLimit(auth.userId, "comfyui", { max: 20, windowSeconds: 300 });
+        if (!allowed) {
+          return res.status(429).json({ error: "Too many ComfyUI requests. Please wait a moment." });
+        }
+
+        const sql = getDb();
+        const rows = await sql`SELECT sub_credits, pack_credits FROM users WHERE id = ${auth.userId}`;
+        if (rows.length === 0) return res.status(404).json({ error: "User not found." });
+
+        const totalCredits = (rows[0].sub_credits || 0) + (rows[0].pack_credits || 0);
+        if (totalCredits < cost) {
+          return res.status(402).json({ error: `Not enough credits. This costs ${cost} credit${cost !== 1 ? "s" : ""}.` });
+        }
+
+        try {
+          await sql`SELECT deduct_credits(${auth.userId}::uuid, ${cost})`;
+          creditDeducted = true;
+        } catch (err: any) {
+          return res.status(402).json({ error: "Failed to deduct credits. " + (err.message || "") });
+        }
+      }
 
       const actualSeed =
         seed != null && seed !== ""
@@ -690,10 +726,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         if (!resp.ok) {
           const errText = await resp.text().catch(() => "Unknown error");
+          // Refund credits on submission failure
+          if (creditDeducted) {
+            const sql = getDb();
+            await sql`SELECT add_pack_credits(${auth.userId}::uuid, ${cost})`.catch(() => {});
+          }
           throw new Error(`RunPod submit failed (${resp.status}): ${errText}`);
         }
 
         const result = await resp.json();
+
+        // Log usage
+        if (!isAdminUser) {
+          const sql = getDb();
+          const logMode = `comfy-${workflowType}`;
+          await sql`
+            INSERT INTO usage_log (user_id, mode, credits_used, prompt)
+            VALUES (${auth.userId}::uuid, ${logMode}, ${cost}, ${(prompt || "").slice(0, 500)})
+          `.catch(() => {});
+        }
+
         return res.status(200).json({
           promptId: result.id,
           seed: actualSeed,
@@ -711,10 +763,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         if (!resp.ok) {
           const errText = await resp.text().catch(() => "Unknown error");
+          if (creditDeducted) {
+            const sql = getDb();
+            await sql`SELECT add_pack_credits(${auth.userId}::uuid, ${cost})`.catch(() => {});
+          }
           throw new Error(`ComfyUI prompt failed (${resp.status}): ${errText}`);
         }
 
         const result = await resp.json();
+
+        if (!isAdminUser) {
+          const sql = getDb();
+          const logMode = `comfy-${workflowType}`;
+          await sql`
+            INSERT INTO usage_log (user_id, mode, credits_used, prompt)
+            VALUES (${auth.userId}::uuid, ${logMode}, ${cost}, ${(prompt || "").slice(0, 500)})
+          `.catch(() => {});
+        }
+
         return res.status(200).json({
           promptId: result.prompt_id,
           seed: actualSeed,

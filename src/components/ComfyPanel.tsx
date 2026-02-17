@@ -14,7 +14,7 @@ import {
   Trash2,
   Film,
 } from "lucide-react";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, CREDIT_COSTS } from "@/lib/api";
 import type { GrokResult } from "@/hooks/useGrokApi";
 
 /* ─── Job types ─── */
@@ -373,6 +373,14 @@ export default function ComfyPanel({ onResultReady }: ComfyPanelProps) {
     }
   };
 
+  /* ─── Credit cost for current mode ─── */
+  const currentCost =
+    workflowMode === "wan-video"
+      ? CREDIT_COSTS.comfyVideo
+      : workflowMode === "qwen-edit"
+      ? upscale ? CREDIT_COSTS.comfyEditHd : CREDIT_COSTS.comfyEdit
+      : CREDIT_COSTS.comfyImage;
+
   /* ─── Styles ─── */
   const inputClass =
     "w-full bg-black/60 border border-cyan-500/30 rounded px-3 py-2 text-sm font-mono text-cyan-100 placeholder-cyan-800 focus:outline-none focus:border-cyan-400/60";
@@ -716,6 +724,7 @@ export default function ComfyPanel({ onResultReady }: ComfyPanelProps) {
               : workflowMode === "wan-video"
               ? "RENDER VIDEO"
               : "GENERATE"}
+            <span className="text-[10px] opacity-70 ml-1">({currentCost} cr)</span>
           </button>
 
           {/* ─── Job Queue ─── */}
