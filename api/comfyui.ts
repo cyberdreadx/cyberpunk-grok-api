@@ -24,8 +24,8 @@ const COMFY_COSTS: Record<string, number> = {
   "txt2img": 1,
   "qwen-edit": 1,
   "qwen-edit-hd": 2,
-  "wan-video": 3,
-  "longlook": 3, // per sequence — actual cost = sequenceCount * 3
+  "wan-video": 2,
+  "longlook": 2, // per sequence — actual cost = sequenceCount * 2
 };
 
 // ---- Video LoRA pairing ----

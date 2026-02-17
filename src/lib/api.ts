@@ -79,17 +79,18 @@ export const CREDIT_COSTS = {
   gltchEdit: 1,
   /** 2 credits per GLTCH edit with HD upscale */
   gltchEditHd: 2,
-  /** ComfyUI — priced slightly below Grok to incentivize */
+  /** ComfyUI — priced below Grok to incentivize */
   comfyImage: 1,
   comfyEdit: 1,
   comfyEditHd: 2,
-  comfyVideo: 3,
+  comfyVideo: 2,
+  comfyLongLook: 2,
 } as const;
 
 export type CreditMode =
   | "text-to-image" | "edit-image" | "text-to-video" | "image-to-video"
   | "gltch-edit" | "gltch-edit-hd"
-  | "comfy-image" | "comfy-edit" | "comfy-edit-hd" | "comfy-video";
+  | "comfy-image" | "comfy-edit" | "comfy-edit-hd" | "comfy-video" | "comfy-longlook";
 
 /** Calculate credit cost for a given action. */
 export function calculateCreditCost(
@@ -116,6 +117,8 @@ export function calculateCreditCost(
       return CREDIT_COSTS.comfyEditHd;
     case "comfy-video":
       return CREDIT_COSTS.comfyVideo;
+    case "comfy-longlook":
+      return CREDIT_COSTS.comfyLongLook * imageCount;
     default:
       return 1;
   }
