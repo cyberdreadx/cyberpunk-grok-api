@@ -119,7 +119,7 @@ const Index = () => {
   const [comfyVidUpscale, setComfyVidUpscale] = useState(false);
   const [comfyVideoLora, setComfyVideoLora] = useState("none");
   const [comfyVideoLoraStrength, setComfyVideoLoraStrength] = useState(0.8);
-  const [comfyVideoLoraPass, setComfyVideoLoraPass] = useState<"high" | "low" | "both">("both");
+  const [comfyVideoLoraPass, setComfyVideoLoraPass] = useState<"high" | "low" | "both">("high");
 
   // LongLook settings
   const [longLookEnabled, setLongLookEnabled] = useState(false);

@@ -290,9 +290,12 @@ function buildWanVideoWorkflow(p: {
   };
 
   // Optional user video LoRA — insert between accel LoRA and shift scheduling
-  // Supports paired LoRAs (separate high/low files) or a single file applied to one or both passes
-  const hasHigh = p.videoLoraHigh || (p.videoLora && (p.videoLoraPass === "high" || p.videoLoraPass === "both"));
-  const hasLow = p.videoLoraLow || (p.videoLora && (p.videoLoraPass === "low" || p.videoLoraPass === "both"));
+  // Paired LoRAs (separate high/low files) always apply to both passes since they're designed for it.
+  // Single-file LoRAs respect videoLoraPass (defaults to "high" — applying to low-noise pass
+  // with a non-paired LoRA causes wavy/underwater artifacts).
+  const isPaired = !!(p.videoLoraHigh && p.videoLoraLow);
+  const hasHigh = isPaired || p.videoLoraHigh || (p.videoLora && (p.videoLoraPass === "high" || p.videoLoraPass === "both"));
+  const hasLow = isPaired || p.videoLoraLow || (p.videoLora && (p.videoLoraPass === "low" || p.videoLoraPass === "both"));
   const str = p.videoLoraStrength ?? 0.8;
 
   if (hasHigh) {
@@ -423,16 +426,22 @@ function buildLongLookWorkflow(p: {
     inputs: { vae_name: "wan_2.1_vae.safetensors" },
   };
 
-  // UnetLoaderGGUF — high noise model
+  // High noise diffusion model (same FP8 models as WAN video workflow)
   workflow["12"] = {
-    class_type: "UnetLoaderGGUF",
-    inputs: { unet_name: "smoothMixWan22I2VT2V_i2vHigh-Q6_K.gguf" },
+    class_type: "UNETLoader",
+    inputs: {
+      unet_name: "wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors",
+      weight_dtype: "default",
+    },
   };
 
-  // UnetLoaderGGUF — low noise model
+  // Low noise diffusion model
   workflow["13"] = {
-    class_type: "UnetLoaderGGUF",
-    inputs: { unet_name: "smoothMixWan22I2VT2V_i2vLow-Q6_K.gguf" },
+    class_type: "UNETLoader",
+    inputs: {
+      unet_name: "wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors",
+      weight_dtype: "default",
+    },
   };
 
   // High-noise LoRA (4-step acceleration)
@@ -459,9 +468,10 @@ function buildLongLookWorkflow(p: {
   let highModelSource: [string, number] = ["14", 0];
   let lowModelSource: [string, number] = ["15", 0];
 
-  // Optional user video LoRA — insert between accel LoRA and shift scheduling
-  const hasHighLora = p.videoLoraHigh || (p.videoLora && (p.videoLoraPass === "high" || p.videoLoraPass === "both"));
-  const hasLowLora = p.videoLoraLow || (p.videoLora && (p.videoLoraPass === "low" || p.videoLoraPass === "both"));
+  // Optional user video LoRA — paired LoRAs always apply to both passes
+  const isPairedLora = !!(p.videoLoraHigh && p.videoLoraLow);
+  const hasHighLora = isPairedLora || p.videoLoraHigh || (p.videoLora && (p.videoLoraPass === "high" || p.videoLoraPass === "both"));
+  const hasLowLora = isPairedLora || p.videoLoraLow || (p.videoLora && (p.videoLoraPass === "low" || p.videoLoraPass === "both"));
   const loraStr = p.videoLoraStrength ?? 0.8;
 
   if (hasHighLora) {
@@ -556,7 +566,7 @@ function buildLongLookWorkflow(p: {
         image: sourceImage,
         width: p.width,
         height: p.height,
-        interpolation: "lanczos",
+        upscale_method: "lanczos",
         keep_proportion: false,
         divisible_by: 2,
         get_image_size: false,
@@ -712,7 +722,7 @@ function buildLongLookWorkflow(p: {
   } else {
     // Multiple sequences — combine with ImageBatchMulti then encode
     const batchInputs: Record<string, any> = {
-      images_count: seqCount,
+      inputcount: seqCount,
     };
     for (let i = 0; i < seqCount; i++) {
       batchInputs[`image_${i + 1}`] = [seqOutputNodes[i], 0];
