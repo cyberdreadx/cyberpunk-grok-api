@@ -177,7 +177,7 @@ export default function ComfyPanel({ onResultReady }: ComfyPanelProps) {
 
   /* ─── Polling for a specific job ─── */
   const startPolling = useCallback(
-    (jobId: string, pid: string, outType: "image" | "video") => {
+    (jobId: string, pid: string, outType: "image" | "video", promptText: string) => {
       const existing = pollRefs.current.get(jobId);
       if (existing) clearInterval(existing);
 
@@ -207,7 +207,7 @@ export default function ComfyPanel({ onResultReady }: ComfyPanelProps) {
                 id: `comfy-${jobId}-${Date.now()}`,
                 url: src,
                 type: data.video ? "video" : "image",
-                revised_prompt: `[ComfyUI ${outType}] ${pid}`,
+                revised_prompt: promptText,
                 timestamp: Date.now(),
               });
             }
@@ -319,7 +319,7 @@ export default function ComfyPanel({ onResultReady }: ComfyPanelProps) {
         seed: data.seed,
         status: "generating",
       });
-      startPolling(jobId, data.promptId, outType);
+      startPolling(jobId, data.promptId, outType, prompt.trim());
     } catch (err: any) {
       clearJobIntervals(jobId);
       updateJob(jobId, {
@@ -909,7 +909,7 @@ function JobCard({
           loop
           muted
           playsInline
-          className="w-full max-h-[320px] object-contain rounded border border-indigo-500/20 bg-black/80"
+          className="w-full max-h-[240px] object-contain rounded border border-indigo-500/20 bg-black/80"
         />
       )}
 
@@ -918,7 +918,7 @@ function JobCard({
         <img
           src={job.image}
           alt="ComfyUI output"
-          className="w-full max-h-[400px] object-contain rounded border border-cyan-500/20 bg-black/80"
+          className="w-full max-h-[240px] object-contain rounded border border-cyan-500/20 bg-black/80"
         />
       )}
     </div>
