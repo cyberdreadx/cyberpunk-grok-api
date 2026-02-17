@@ -121,12 +121,12 @@ export async function saveResult(result: GrokResult): Promise<void> {
       folderId: result.folderId || null,
     };
 
-    if (result.type === "image" && result.url.startsWith("data:")) {
-      // Convert base64 data URL to a Blob for compact storage
+    if (result.url.startsWith("data:")) {
+      // Convert any data URL (image or video) to a Blob for compact storage
       record.blob = dataUrlToBlob(result.url);
       record.url = "";
     } else {
-      // Video URLs or external image URLs — store the URL string directly
+      // External URLs — store the URL string directly
       record.url = result.url;
     }
 
@@ -157,7 +157,7 @@ export async function saveResults(results: GrokResult[]): Promise<void> {
         folderId: result.folderId || null,
       };
 
-      if (result.type === "image" && result.url.startsWith("data:")) {
+      if (result.url.startsWith("data:")) {
         record.blob = dataUrlToBlob(result.url);
         record.url = "";
       } else {

@@ -70,6 +70,7 @@ const Index = () => {
     clearResults,
     deleteResult,
     updateResultFolder,
+    addExternalResult,
     clearError,
   } = useGrokApi();
 
@@ -383,7 +384,9 @@ const Index = () => {
         </section>
 
         {/* ComfyUI Lab — admin only */}
-        {auth.user?.email === "cyberdreadx@proton.me" && <ComfyPanel />}
+        {auth.user?.email === "cyberdreadx@proton.me" && (
+          <ComfyPanel onResultReady={addExternalResult} />
+        )}
 
         {/* Prompt form — Terminal block */}
         <section

@@ -569,6 +569,12 @@ export function useGrokApi() {
     setResults(prev => prev.map(r => r.id === resultId ? { ...r, folderId } : r));
   }, []);
 
+  /** Add an externally-produced result (e.g. from ComfyUI) to the gallery. */
+  const addExternalResult = useCallback(async (result: GrokResult) => {
+    setResults(prev => [result, ...prev]);
+    try { await saveResult(result); } catch { /* best-effort */ }
+  }, []);
+
   const clearError = useCallback(() => {
     setError(null);
   }, []);
@@ -592,6 +598,7 @@ export function useGrokApi() {
     clearResults,
     deleteResult,
     updateResultFolder,
+    addExternalResult,
     clearError,
     calculateCreditCost,
   };

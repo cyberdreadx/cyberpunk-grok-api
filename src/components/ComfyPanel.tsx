@@ -15,6 +15,7 @@ import {
   Film,
 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
+import type { GrokResult } from "@/hooks/useGrokApi";
 
 /* ─── Job types ─── */
 type WorkflowMode = "txt2img" | "qwen-edit" | "wan-video";
@@ -43,7 +44,12 @@ const FRAME_PRESETS = [
   { label: "~10s (161f)", value: 161 },
 ];
 
-export default function ComfyPanel() {
+interface ComfyPanelProps {
+  /** Called when a job finishes successfully, to persist the result in the main gallery. */
+  onResultReady?: (result: GrokResult) => void;
+}
+
+export default function ComfyPanel({ onResultReady }: ComfyPanelProps) {
   const [collapsed, setCollapsed] = useState(true);
   const [connected, setConnected] = useState(false);
   const [checkpoints, setCheckpoints] = useState<string[]>([]);
@@ -194,6 +200,17 @@ export default function ComfyPanel() {
               image: data.image || null,
               video: data.video || null,
             });
+            // Persist to main gallery
+            const src = data.video || data.image;
+            if (src && onResultReady) {
+              onResultReady({
+                id: `comfy-${jobId}-${Date.now()}`,
+                url: src,
+                type: data.video ? "video" : "image",
+                revised_prompt: `[ComfyUI ${outType}] ${pid}`,
+                timestamp: Date.now(),
+              });
+            }
           } else if (data.status === "error") {
             clearJobIntervals(jobId);
             updateJob(jobId, {
@@ -212,7 +229,7 @@ export default function ComfyPanel() {
 
       pollRefs.current.set(jobId, iv);
     },
-    [clearJobIntervals, updateJob, workflowMode]
+    [clearJobIntervals, updateJob, workflowMode, onResultReady]
   );
 
   /* ─── Generate ─── */
@@ -848,7 +865,7 @@ function JobCard({
           loop
           muted
           playsInline
-          className="w-full rounded border border-indigo-500/20"
+          className="w-full max-h-[320px] object-contain rounded border border-indigo-500/20 bg-black/80"
         />
       )}
 
@@ -857,7 +874,7 @@ function JobCard({
         <img
           src={job.image}
           alt="ComfyUI output"
-          className="w-full rounded border border-cyan-500/20"
+          className="w-full max-h-[400px] object-contain rounded border border-cyan-500/20 bg-black/80"
         />
       )}
     </div>
