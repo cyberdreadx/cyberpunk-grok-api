@@ -37,7 +37,7 @@ RUN cd /comfyui/custom_nodes/ComfyUI-Easy-Use && \
     if [ -f requirements.txt ]; then pip install -r requirements.txt --no-cache-dir; fi
 
 RUN cd /comfyui/custom_nodes/ComfyUI-Frame-Interpolation && \
-    if [ -f requirements.txt ]; then pip install -r requirements.txt --no-cache-dir; fi
+    pip install -r requirements-no-cupy.txt --no-cache-dir
 
 # ── Network Volume Model Paths ───────────────────────────────────
 # Tell ComfyUI to also look for models on the RunPod Network Volume
