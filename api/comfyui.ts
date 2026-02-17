@@ -38,28 +38,62 @@ interface VideoLoraEntry {
 
 /**
  * Group video LoRA filenames into paired entries.
- * Files ending in _high_noise / _low_noise with the same base are paired.
+ * Detects pairs by common suffixes:
+ *   _high_noise / _low_noise   (e.g. pornmaster_slow_twerk_high_noise.safetensors)
+ *   -H- / -L-                  (e.g. NSFW-22-H-e8.safetensors)
+ *   _H / _L                    (e.g. something_H.safetensors)
  * Other files become single entries.
  */
 function groupVideoLoras(files: string[]): VideoLoraEntry[] {
   const pairs = new Map<string, { high?: string; low?: string }>();
   const singles: string[] = [];
 
+  // Patterns: [regex to match, group 1 = base name, "high" or "low"]
+  const highPatterns = [
+    /^(.+)_high_noise$/,   // pornmaster_slow_twerk_high_noise
+    /^(.+)-H-(.+)$/,      // NSFW-22-H-e8  (capture both sides as base)
+    /^(.+)_H$/,            // something_H
+  ];
+  const lowPatterns = [
+    /^(.+)_low_noise$/,
+    /^(.+)-L-(.+)$/,
+    /^(.+)_L$/,
+  ];
+
   for (const f of files) {
     const noExt = f.replace(/\.[^.]+$/, "");
-    if (noExt.endsWith("_high_noise")) {
-      const base = noExt.replace(/_high_noise$/, "");
-      const entry = pairs.get(base) || {};
-      entry.high = f;
-      pairs.set(base, entry);
-    } else if (noExt.endsWith("_low_noise")) {
-      const base = noExt.replace(/_low_noise$/, "");
-      const entry = pairs.get(base) || {};
-      entry.low = f;
-      pairs.set(base, entry);
-    } else {
-      singles.push(f);
+    let matched = false;
+
+    // Check high patterns
+    for (let i = 0; i < highPatterns.length; i++) {
+      const m = noExt.match(highPatterns[i]);
+      if (m) {
+        // For -H-/-L- patterns, build base from both sides: "NSFW-22" + "-e8" → "NSFW-22-e8"
+        const base = i === 1 ? `${m[1]}-${m[2]}` : m[1];
+        const entry = pairs.get(base) || {};
+        entry.high = f;
+        pairs.set(base, entry);
+        matched = true;
+        break;
+      }
     }
+    if (matched) continue;
+
+    // Check low patterns
+    for (let i = 0; i < lowPatterns.length; i++) {
+      const m = noExt.match(lowPatterns[i]);
+      if (m) {
+        const base = i === 1 ? `${m[1]}-${m[2]}` : m[1];
+        const entry = pairs.get(base) || {};
+        entry.low = f;
+        pairs.set(base, entry);
+        matched = true;
+        break;
+      }
+    }
+    if (matched) continue;
+
+    singles.push(f);
   }
 
   const result: VideoLoraEntry[] = [];
@@ -426,7 +460,11 @@ function buildTxt2ImgWorkflow(p: {
  * Flow: LoadImage -> TextEncodeQwenImageEditPlus (positive + negative)
  *       -> ModelSamplingAuraFlow -> CFGNorm -> KSampler -> cleanGpu -> VAEDecode -> SaveImage
  */
-const QWEN_DEFAULT_NEGATIVE = "smooth skin, drawn, cgi, fake, cartoon, ugly, disfigured, sfx";
+const TXT2IMG_DEFAULT_NEGATIVE =
+  "cgi, 3d render, cartoon, anime, illustration, drawing, painting, sketch, plastic skin, smooth skin, airbrushed, doll-like, mannequin, blurry, low quality, worst quality, jpeg artifacts, deformed, bad anatomy, bad proportions, extra limbs, missing limbs, disfigured, ugly, watermark, text, signature, cropped";
+
+const QWEN_DEFAULT_NEGATIVE =
+  "smooth skin, plastic skin, waxy skin, cgi, 3d render, airbrushed, doll-like, mannequin, fake, cartoon, anime, illustration, drawing, painting, sketch, over-processed, over-smoothed, blurry, low quality, deformed, bad anatomy, bad proportions, extra limbs, disfigured, ugly, watermark, text, signature";
 
 function buildQwenEditWorkflow(p: {
   prompt: string;
@@ -864,7 +902,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       } else {
         workflow = buildTxt2ImgWorkflow({
           prompt: prompt.trim(),
-          negativePrompt: (negativePrompt || "").trim(),
+          negativePrompt: (negativePrompt || "").trim() || TXT2IMG_DEFAULT_NEGATIVE,
           width: clampW,
           height: clampH,
           seed: actualSeed,
