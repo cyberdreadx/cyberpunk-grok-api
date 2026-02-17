@@ -246,6 +246,7 @@ function buildWanVideoWorkflow(p: {
       video: ["94", 0],
       filename_prefix: "video/GrokRunner",
       codec: "auto",
+      format: "video/h264-mp4",
     },
   };
 
