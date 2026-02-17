@@ -404,13 +404,21 @@ export default function ComfyPanel({ onResultReady }: ComfyPanelProps) {
       {/* Toggle header */}
       <button
         onClick={() => setCollapsed(!collapsed)}
-        className="w-full flex items-center justify-between gap-3 px-4 py-2.5 bg-black/60 border border-purple-500/30 rounded-lg hover:border-purple-400/50 transition-colors group"
+        className="w-full flex items-center justify-between gap-3 px-4 py-2.5 bg-gradient-to-r from-purple-900/40 via-indigo-900/30 to-purple-900/40 border border-purple-500/40 rounded-lg hover:border-purple-400/60 hover:from-purple-900/50 hover:via-indigo-900/40 hover:to-purple-900/50 transition-all group"
       >
         <div className="flex items-center gap-2.5">
           <Cpu className="w-4 h-4 text-purple-400" />
           <span className="text-sm font-mono font-semibold tracking-wider text-purple-300 uppercase">
             Comfy_Lab
           </span>
+          <span className="px-1.5 py-0.5 rounded text-[8px] font-mono font-bold uppercase tracking-widest bg-green-500/20 text-green-400 border border-green-500/30 animate-pulse">
+            New
+          </span>
+          {collapsed && (
+            <span className="hidden sm:inline text-[9px] font-mono text-purple-400/50">
+              AI Video &amp; Image Studio
+            </span>
+          )}
           {!collapsed && (
             <span
               className={`inline-flex items-center gap-1.5 text-xs font-mono ${
@@ -427,16 +435,38 @@ export default function ComfyPanel({ onResultReady }: ComfyPanelProps) {
             </span>
           )}
         </div>
-        {collapsed ? (
-          <ChevronDown className="w-4 h-4 text-purple-400/60 group-hover:text-purple-300" />
-        ) : (
-          <ChevronUp className="w-4 h-4 text-purple-400/60 group-hover:text-purple-300" />
-        )}
+        <div className="flex items-center gap-2">
+          {collapsed && (
+            <span className="hidden sm:inline text-[9px] font-mono text-indigo-400/60 border border-indigo-500/20 rounded px-1.5 py-0.5">
+              Video from 3 cr
+            </span>
+          )}
+          {collapsed ? (
+            <ChevronDown className="w-4 h-4 text-purple-400/60 group-hover:text-purple-300" />
+          ) : (
+            <ChevronUp className="w-4 h-4 text-purple-400/60 group-hover:text-purple-300" />
+          )}
+        </div>
       </button>
 
       {/* Panel body */}
       {!collapsed && (
         <div className="mt-2 p-4 bg-black/40 border border-purple-500/20 rounded-lg space-y-4">
+          {/* Promo banner */}
+          <div className="flex items-center gap-3 px-3 py-2 bg-gradient-to-r from-purple-500/10 via-indigo-500/10 to-purple-500/10 border border-purple-500/20 rounded-lg">
+            <div className="flex-1">
+              <p className="text-[11px] font-mono font-bold text-purple-200">
+                GPU-Powered AI Studio
+              </p>
+              <p className="text-[9px] font-mono text-purple-400/60 mt-0.5">
+                Images from 1 cr &middot; Video from 3 cr &middot; Cheaper than Grok video (5 cr)
+              </p>
+            </div>
+            <div className="shrink-0 px-2 py-1 bg-green-500/10 border border-green-500/20 rounded text-[9px] font-mono font-bold text-green-400">
+              SAVE 40%
+            </div>
+          </div>
+
           {/* Offline warning */}
           {!connected && (
             <div className="flex items-center justify-between p-3 bg-red-500/10 border border-red-500/30 rounded text-red-300 text-xs font-mono">
@@ -535,8 +565,13 @@ export default function ComfyPanel({ onResultReady }: ComfyPanelProps) {
 
           {/* WAN Video fixed model info */}
           {workflowMode === "wan-video" && (
-            <div className="px-3 py-2 bg-indigo-500/10 border border-indigo-500/20 rounded text-[10px] font-mono text-indigo-300/70">
-              <span className="text-indigo-400 font-bold">MODEL:</span> WAN 2.2 I2V 14B fp8 + Lightx2v 4-step LoRA
+            <div className="px-3 py-2 bg-indigo-500/10 border border-indigo-500/20 rounded text-[10px] font-mono text-indigo-300/70 space-y-1">
+              <div>
+                <span className="text-indigo-400 font-bold">MODEL:</span> WAN 2.2 I2V 14B fp8 + Lightx2v 4-step LoRA
+              </div>
+              <div className="text-[9px] text-green-400/70">
+                3 credits per video vs 5 cr/5s with Grok Video
+              </div>
             </div>
           )}
 
