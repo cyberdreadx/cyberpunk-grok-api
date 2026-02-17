@@ -673,6 +673,7 @@ export function useGrokApi() {
   // ComfyUI Text-to-Image
   const comfyGenerate = useCallback(async (params: {
     prompt: string;
+    negativePrompt?: string;
     checkpoint: string;
     lora?: string;
     loraStrength?: number;
@@ -690,6 +691,7 @@ export function useGrokApi() {
       const result = await comfySubmitAndPoll({
         workflow: "txt2img",
         prompt: params.prompt,
+        negativePrompt: params.negativePrompt,
         checkpoint: params.checkpoint,
         lora: params.lora,
         loraStrength: params.loraStrength,
@@ -725,6 +727,7 @@ export function useGrokApi() {
   // ComfyUI Image-to-Video (WAN Video)
   const comfyVideo = useCallback(async (params: {
     prompt: string;
+    negativePrompt?: string;
     imageBase64: string;
     imageFilename?: string;
     frameCount?: number;
@@ -742,6 +745,7 @@ export function useGrokApi() {
       const result = await comfySubmitAndPoll({
         workflow: "wan-video",
         prompt: params.prompt,
+        negativePrompt: params.negativePrompt,
         imageBase64: params.imageBase64,
         imageFilename: params.imageFilename || "input.jpg",
         frameCount: params.frameCount || 81,
@@ -778,6 +782,7 @@ export function useGrokApi() {
   // ComfyUI Chained Text-to-Video (txt2img → wan-video)
   const comfyTextToVideo = useCallback(async (params: {
     prompt: string;
+    negativePrompt?: string;
     checkpoint: string;
     width?: number;
     height?: number;
@@ -798,6 +803,7 @@ export function useGrokApi() {
       const imgResult = await comfySubmitAndPoll({
         workflow: "txt2img",
         prompt: params.prompt,
+        negativePrompt: params.negativePrompt,
         checkpoint: params.checkpoint,
         width: params.width || 832,
         height: params.height || 480,
@@ -813,6 +819,7 @@ export function useGrokApi() {
       const vidResult = await comfySubmitAndPoll({
         workflow: "wan-video",
         prompt: params.prompt,
+        negativePrompt: params.negativePrompt,
         imageBase64: imgResult.image,
         imageFilename: "start_frame.png",
         frameCount: params.frameCount || 81,
@@ -849,6 +856,7 @@ export function useGrokApi() {
   // ComfyUI LongLook Multi-Clip Video
   const comfyLongLook = useCallback(async (params: {
     prompt: string;
+    negativePrompt?: string;
     imageBase64: string;
     sequenceCount?: number;
     frameCount?: number;
@@ -869,6 +877,7 @@ export function useGrokApi() {
       const result = await comfySubmitAndPoll({
         workflow: "longlook",
         prompt: params.prompt,
+        negativePrompt: params.negativePrompt,
         imageBase64: params.imageBase64,
         imageFilename: "input_longlook.jpg",
         sequenceCount: seqCount,

@@ -106,6 +106,11 @@ const Index = () => {
   const [comfyCheckpoint, setComfyCheckpoint] = useState("");
   const [comfyLora, setComfyLora] = useState("none");
   const [comfyLoraStrength, setComfyLoraStrength] = useState(0.8);
+  const [comfyNegPrompt, setComfyNegPrompt] = useState("");
+  const [comfyWidth, setComfyWidth] = useState(1024);
+  const [comfyHeight, setComfyHeight] = useState(1024);
+  const [comfySteps, setComfySteps] = useState(5);
+  const [comfyCfg, setComfyCfg] = useState(1);
   const [comfyFrameCount, setComfyFrameCount] = useState(81);
   const [comfyRife, setComfyRife] = useState(true);
   const [comfyVidUpscale, setComfyVidUpscale] = useState(false);
@@ -253,14 +258,24 @@ const Index = () => {
       if (isComfyGen) {
         await comfyGenerate({
           prompt: data.prompt,
+          negativePrompt: comfyNegPrompt || undefined,
           checkpoint: comfyCheckpoint,
           lora: comfyLora !== "none" ? comfyLora : undefined,
           loraStrength: comfyLoraStrength,
+          width: comfyWidth,
+          height: comfyHeight,
+          steps: comfySteps,
+          cfg: comfyCfg,
         });
       } else if (isComfyRender) {
         await comfyTextToVideo({
           prompt: data.prompt,
+          negativePrompt: comfyNegPrompt || undefined,
           checkpoint: comfyCheckpoint,
+          width: comfyWidth,
+          height: comfyHeight,
+          steps: comfySteps,
+          cfg: comfyCfg,
           frameCount: comfyFrameCount,
           useRife: comfyRife,
           videoLora: comfyVideoLora !== "none" ? comfyVideoLora : undefined,
@@ -274,6 +289,7 @@ const Index = () => {
         if (!imageBase64) throw new Error("Image is required for LongLook");
         await comfyLongLook({
           prompt: data.prompt,
+          negativePrompt: comfyNegPrompt || undefined,
           imageBase64,
           sequenceCount: longLookSeqCount,
           frameCount: longLookFrameCount,
@@ -292,6 +308,7 @@ const Index = () => {
         if (!imageBase64) throw new Error("Image is required for animation");
         await comfyVideo({
           prompt: data.prompt,
+          negativePrompt: comfyNegPrompt || undefined,
           imageBase64,
           frameCount: comfyFrameCount,
           useRife: comfyRife,
@@ -685,6 +702,45 @@ const Index = () => {
                         )}
                       </div>
                     )}
+                    {/* Negative Prompt */}
+                    <div>
+                      <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Negative Prompt</label>
+                      <input type="text" value={comfyNegPrompt} onChange={(e) => setComfyNegPrompt(e.target.value)}
+                        placeholder="(uses smart default if empty)"
+                        className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-[10px] font-mono-share text-foreground placeholder-muted-foreground/40" />
+                    </div>
+                    {/* Resolution */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">W</label>
+                        <select value={comfyWidth} onChange={(e) => setComfyWidth(Number(e.target.value))}
+                          className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-[10px] font-mono-share text-foreground">
+                          {[512, 768, 832, 1024, 1080, 1280, 1536].map((s) => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">H</label>
+                        <select value={comfyHeight} onChange={(e) => setComfyHeight(Number(e.target.value))}
+                          className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-[10px] font-mono-share text-foreground">
+                          {[512, 768, 832, 1024, 1080, 1280, 1536].map((s) => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                    {/* Steps & CFG */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Steps: {comfySteps}</label>
+                        <input type="range" min={1} max={50} value={comfySteps}
+                          onChange={(e) => setComfySteps(Number(e.target.value))}
+                          className="w-full accent-purple-500" />
+                      </div>
+                      <div>
+                        <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">CFG: {comfyCfg}</label>
+                        <input type="range" min={0.5} max={15} step={0.5} value={comfyCfg}
+                          onChange={(e) => setComfyCfg(Number(e.target.value))}
+                          className="w-full accent-purple-500" />
+                      </div>
+                    </div>
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-500/5 border border-purple-500/20 rounded">
                       <Cpu className="w-3 h-3 text-purple-400/70" />
                       <span className="font-mono-share text-[9px] text-purple-400/70">
@@ -731,6 +787,42 @@ const Index = () => {
                         {comfyModels.checkpoints.length === 0 && <option value="">No models found</option>}
                         {comfyModels.checkpoints.map((c) => <option key={c} value={c}>{c}</option>)}
                       </select>
+                    </div>
+                    {/* Negative Prompt */}
+                    <div>
+                      <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Negative Prompt</label>
+                      <input type="text" value={comfyNegPrompt} onChange={(e) => setComfyNegPrompt(e.target.value)}
+                        placeholder="(uses WAN default if empty)"
+                        className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-[10px] font-mono-share text-foreground placeholder-muted-foreground/40" />
+                    </div>
+                    {/* Resolution & Steps/CFG */}
+                    <div className="grid grid-cols-4 gap-2">
+                      <div>
+                        <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">W</label>
+                        <select value={comfyWidth} onChange={(e) => setComfyWidth(Number(e.target.value))}
+                          className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-[10px] font-mono-share text-foreground">
+                          {[480, 512, 640, 768, 832, 1024].map((s) => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">H</label>
+                        <select value={comfyHeight} onChange={(e) => setComfyHeight(Number(e.target.value))}
+                          className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-[10px] font-mono-share text-foreground">
+                          {[480, 512, 640, 768, 832, 1024].map((s) => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Steps: {comfySteps}</label>
+                        <input type="range" min={1} max={10} value={comfySteps}
+                          onChange={(e) => setComfySteps(Number(e.target.value))}
+                          className="w-full accent-purple-500" />
+                      </div>
+                      <div>
+                        <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">CFG: {comfyCfg}</label>
+                        <input type="range" min={0.5} max={15} step={0.5} value={comfyCfg}
+                          onChange={(e) => setComfyCfg(Number(e.target.value))}
+                          className="w-full accent-purple-500" />
+                      </div>
                     </div>
                     <div>
                       <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Duration</label>
@@ -893,6 +985,13 @@ const Index = () => {
                       </div>
                     )}
 
+                    {/* Negative Prompt */}
+                    <div>
+                      <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Negative Prompt</label>
+                      <input type="text" value={comfyNegPrompt} onChange={(e) => setComfyNegPrompt(e.target.value)}
+                        placeholder="(uses WAN default if empty)"
+                        className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-[10px] font-mono-share text-foreground placeholder-muted-foreground/40" />
+                    </div>
                     {/* Standard duration (only when LongLook is off) */}
                     {!longLookEnabled && (
                       <div>

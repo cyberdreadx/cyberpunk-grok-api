@@ -1089,23 +1089,43 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
         )}
       </div>
 
-      {/* Loading skeleton with elapsed timer */}
+      {/* Loading skeleton with elapsed timer — ComfyUI-style polished status */}
       {isLoading && (
-        <div className="border border-primary/30 rounded p-1 animate-pulse-glow">
-          <div className="aspect-square bg-muted rounded flex flex-col items-center justify-center gap-2">
-            <div className="font-mono-share text-xs text-primary animate-flicker">
+        <div className={`border rounded p-1 ${loadingPhase ? "border-purple-500/40 shadow-[0_0_12px_rgba(168,85,247,0.15)]" : "border-primary/30"} animate-pulse-glow`}>
+          <div className="aspect-square bg-muted rounded flex flex-col items-center justify-center gap-3 relative overflow-hidden">
+            {/* Animated background gradient */}
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-purple-500/5 to-transparent animate-pulse" />
+
+            {/* Status indicator */}
+            <div className="flex items-center gap-2">
+              <div className={`w-2 h-2 rounded-full animate-pulse ${loadingPhase ? "bg-cyan-400" : "bg-primary"}`} />
+              <span className={`font-orbitron text-[10px] tracking-widest uppercase ${loadingPhase ? "text-cyan-400" : "text-primary"}`}>
+                {loadingPhase?.includes("start frame") ? "PHASE 1" : loadingPhase?.includes("video") || loadingPhase?.includes("Rendering") ? "RENDERING" : "GENERATING"}
+              </span>
+            </div>
+
+            {/* Phase text */}
+            <div className={`font-mono-share text-xs animate-flicker ${loadingPhase ? "text-purple-300" : "text-primary"}`}>
               {loadingPhase || "RENDERING..."}
             </div>
+
+            {/* Timer */}
             {elapsedSeconds > 0 && (
-              <div className="font-mono-share text-[10px] text-muted-foreground tabular-nums">
-                {Math.floor(elapsedSeconds / 60).toString().padStart(2, "0")}:{(elapsedSeconds % 60).toString().padStart(2, "0")}
+              <div className="flex flex-col items-center gap-1.5">
+                <div className={`font-mono-share text-lg font-bold tabular-nums ${loadingPhase ? "text-cyan-400" : "text-primary"}`}>
+                  {Math.floor(elapsedSeconds / 60).toString().padStart(2, "0")}:{(elapsedSeconds % 60).toString().padStart(2, "0")}
+                </div>
+                <div className="w-40 h-1 bg-border/50 rounded-full overflow-hidden">
+                  <div className={`h-full rounded-full ${loadingPhase ? "bg-purple-500/60" : "bg-primary/60"}`}
+                    style={{ width: "100%", animation: "pulse 1.5s ease-in-out infinite" }} />
+                </div>
               </div>
             )}
-            {elapsedSeconds > 0 && (
-              <div className="w-32 h-0.5 bg-border rounded-full overflow-hidden">
-                <div className="h-full bg-primary/60 rounded-full animate-pulse" style={{ width: "100%" }} />
-              </div>
-            )}
+
+            {/* Hint text */}
+            <div className="font-mono-share text-[9px] text-muted-foreground/50 mt-1">
+              {elapsedSeconds > 120 ? "Complex renders can take 3-5 min" : elapsedSeconds > 30 ? "GPU is working hard..." : "Please wait"}
+            </div>
           </div>
         </div>
       )}
