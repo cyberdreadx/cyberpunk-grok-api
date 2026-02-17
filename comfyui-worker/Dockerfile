@@ -59,6 +59,11 @@ RUN cd /comfyui/custom_nodes && \
     wget -qO- https://github.com/DoctorDiffusion/ComfyUI-MediaMixer/archive/refs/heads/main.tar.gz | tar xz && \
     mv ComfyUI-MediaMixer-main ComfyUI-MediaMixer
 
+# comfyUI-LongLook (WanFreeLong, WanMotionScale, WanContinuationConditioning)
+RUN cd /comfyui/custom_nodes && \
+    wget -qO- https://github.com/shootthesound/comfyUI-LongLook/archive/refs/heads/main.tar.gz | tar xz && \
+    mv comfyUI-LongLook-main comfyUI-LongLook
+
 # ── Python Dependencies ──────────────────────────────────────────
 RUN cd /comfyui/custom_nodes/Comfyui-QwenEditUtils && \
     if [ -f requirements.txt ]; then pip install -r requirements.txt --no-cache-dir; fi

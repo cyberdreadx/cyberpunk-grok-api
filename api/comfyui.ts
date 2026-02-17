@@ -324,6 +324,36 @@ function buildWanVideoWorkflow(p: {
     workflow["103"].inputs.model = ["111", 0];
   }
 
+  // WanFreeLong — spectral blending for improved motion consistency within 81 frames
+  workflow["120"] = {
+    class_type: "WanFreeLong",
+    inputs: {
+      model: ["104", 0],
+      enabled: true,
+      blend_strength: 0.8,
+      low_freq_ratio: 0.8,
+      local_window_frames: 33,
+      blend_start_block: 0,
+      blend_end_block: -1,
+    },
+  };
+  workflow["121"] = {
+    class_type: "WanFreeLong",
+    inputs: {
+      model: ["103", 0],
+      enabled: true,
+      blend_strength: 0.8,
+      low_freq_ratio: 0.8,
+      local_window_frames: 33,
+      blend_start_block: 0,
+      blend_end_block: -1,
+    },
+  };
+
+  // Point KSamplers at the FreeLong-patched models instead of raw ModelSamplingSD3
+  workflow["86"].inputs.model = ["120", 0];
+  workflow["85"].inputs.model = ["121", 0];
+
   // Post-processing chain
   let lastNode = "87";
   let lastOut = 0;
@@ -381,9 +411,10 @@ function buildWanVideoWorkflow(p: {
 /**
  * LongLook Multi-Clip WAN 2.2 workflow (API format).
  *
- * Chains 1-4 sequences of video generation. Each sequence's last frame
- * becomes the next sequence's start frame. Uses GGUF-quantized models
- * (smoothMixWan22I2VT2V) for high/low noise passes.
+ * Uses actual LongLook custom nodes (github.com/shootthesound/comfyUI-LongLook):
+ * - WanFreeLong: Spectral blending for motion consistency within each 81-frame chunk
+ * - WanMotionScale: Temporal RoPE scaling to reduce slomo (scale_t > 1 = faster motion)
+ * - WanContinuationConditioning: Proper VAE-re-encoded last-frame chaining between clips
  */
 function buildLongLookWorkflow(p: {
   prompts: string[];
@@ -397,6 +428,7 @@ function buildLongLookWorkflow(p: {
   frameCount: number;
   useRife: boolean;
   useUpscale: boolean;
+  motionScale?: number;
   videoLora?: string;
   videoLoraHigh?: string;
   videoLoraLow?: string;
@@ -500,17 +532,63 @@ function buildLongLookWorkflow(p: {
     lowModelSource = ["17", 0];
   }
 
-  // ModelSamplingSD3 — high noise shift
+  // ModelSamplingSD3 — noise scheduling (shift 5.0 per LightX2V recommendations)
   workflow["22"] = {
     class_type: "ModelSamplingSD3",
     inputs: { model: highModelSource, shift: 5.0 },
   };
-
-  // ModelSamplingSD3 — low noise shift
   workflow["23"] = {
     class_type: "ModelSamplingSD3",
     inputs: { model: lowModelSource, shift: 5.0 },
   };
+
+  // WanFreeLong — spectral blending for motion consistency (the core LongLook feature)
+  let highFinal: [string, number] = ["22", 0];
+  let lowFinal: [string, number] = ["23", 0];
+
+  workflow["30"] = {
+    class_type: "WanFreeLong",
+    inputs: {
+      model: highFinal,
+      enabled: true,
+      blend_strength: 0.8,
+      low_freq_ratio: 0.8,
+      local_window_frames: 33,
+      blend_start_block: 0,
+      blend_end_block: -1,
+    },
+  };
+  highFinal = ["30", 0];
+
+  workflow["31"] = {
+    class_type: "WanFreeLong",
+    inputs: {
+      model: lowFinal,
+      enabled: true,
+      blend_strength: 0.8,
+      low_freq_ratio: 0.8,
+      local_window_frames: 33,
+      blend_start_block: 0,
+      blend_end_block: -1,
+    },
+  };
+  lowFinal = ["31", 0];
+
+  // WanMotionScale — reduce slomo / pack more motion (scale_t > 1 = faster)
+  const motionT = p.motionScale ?? 1.5;
+  if (motionT !== 1.0) {
+    workflow["32"] = {
+      class_type: "WanMotionScale",
+      inputs: { model: highFinal, enabled: true, scale_t: motionT },
+    };
+    highFinal = ["32", 0];
+
+    workflow["33"] = {
+      class_type: "WanMotionScale",
+      inputs: { model: lowFinal, enabled: true, scale_t: motionT },
+    };
+    lowFinal = ["33", 0];
+  }
 
   // UpscaleModelLoader (if needed)
   if (p.useUpscale) {
@@ -533,48 +611,37 @@ function buildLongLookWorkflow(p: {
     const base = 1000 + i * 100;
     const promptText = p.prompts[i] || p.prompts[p.prompts.length - 1];
 
-    // CLIPTextEncode positive
+    // Text encoding
     const posNode = `${base}`;
     workflow[posNode] = {
       class_type: "CLIPTextEncode",
       inputs: { clip: ["10", 0], text: promptText },
     };
 
-    // CLIPTextEncode negative
     const negNode = `${base + 1}`;
     workflow[negNode] = {
       class_type: "CLIPTextEncode",
       inputs: { clip: ["10", 0], text: p.negativePrompt },
     };
 
-    // ImageResizeKJ — resize input image (or previous last frame) to target
-    const resizeNode = `${base + 2}`;
-
-    // Determine source image for this sequence
-    let sourceImage: [string, number];
-    if (i === 0) {
-      sourceImage = ["25", 0]; // LoadImage
-    } else {
-      // FinalFrameSelector from previous sequence
-      const prevBase = 1000 + (i - 1) * 100;
-      sourceImage = [`${prevBase + 7}`, 0]; // FinalFrameSelector
-    }
-
-    workflow[resizeNode] = {
-      class_type: "ImageResizeKJ",
-      inputs: {
-        image: sourceImage,
-        width: p.width,
-        height: p.height,
-        upscale_method: "lanczos",
-        keep_proportion: false,
-        divisible_by: 2,
-      },
-    };
-
-    // Conditioning: WanImageToVideo for seq 0, WanContinuationConditioning for seq 1+
+    // Conditioning — seq 0 uses WanImageToVideo, seq 1+ uses WanContinuationConditioning
     const condNode = `${base + 3}`;
+
     if (i === 0) {
+      // First sequence: resize start image → standard i2v conditioning
+      const resizeNode = `${base + 2}`;
+      workflow[resizeNode] = {
+        class_type: "ImageResizeKJ",
+        inputs: {
+          image: ["25", 0],
+          width: p.width,
+          height: p.height,
+          upscale_method: "lanczos",
+          keep_proportion: false,
+          divisible_by: 2,
+        },
+      };
+
       workflow[condNode] = {
         class_type: "WanImageToVideo",
         inputs: {
@@ -589,27 +656,29 @@ function buildLongLookWorkflow(p: {
         },
       };
     } else {
+      // Continuation: WanContinuationConditioning extracts last frame from previous
+      // VAEDecode output, VAE-re-encodes it, and handles resizing internally.
+      const prevDecodeNode = `${1000 + (i - 1) * 100 + 6}`;
       workflow[condNode] = {
-        class_type: "WanImageToVideo",
+        class_type: "WanContinuationConditioning",
         inputs: {
           positive: [posNode, 0],
           negative: [negNode, 0],
+          anchor_images: [prevDecodeNode, 0],
           vae: ["11", 0],
-          start_image: [resizeNode, 0],
           width: p.width,
           height: p.height,
-          length: p.frameCount,
-          batch_size: 1,
+          video_length: p.frameCount,
         },
       };
     }
 
-    // KSamplerAdvanced (high noise)
+    // KSamplerAdvanced (high noise pass — uses FreeLong-patched model)
     const highSampler = `${base + 4}`;
     workflow[highSampler] = {
       class_type: "KSamplerAdvanced",
       inputs: {
-        model: ["22", 0],
+        model: highFinal,
         positive: [condNode, 0],
         negative: [condNode, 1],
         latent_image: [condNode, 2],
@@ -625,12 +694,12 @@ function buildLongLookWorkflow(p: {
       },
     };
 
-    // KSamplerAdvanced (low noise)
+    // KSamplerAdvanced (low noise pass)
     const lowSampler = `${base + 5}`;
     workflow[lowSampler] = {
       class_type: "KSamplerAdvanced",
       inputs: {
-        model: ["23", 0],
+        model: lowFinal,
         positive: [condNode, 0],
         negative: [condNode, 1],
         latent_image: [highSampler, 0],
@@ -646,27 +715,17 @@ function buildLongLookWorkflow(p: {
       },
     };
 
-    // VAEDecode
+    // VAEDecode — raw output used for both continuation AND post-processing
     const decodeNode = `${base + 6}`;
     workflow[decodeNode] = {
       class_type: "VAEDecode",
       inputs: { samples: [lowSampler, 0], vae: ["11", 0] },
     };
 
-    // FinalFrameSelector (for sequences 0 to N-2, to feed next sequence)
-    if (i < seqCount - 1) {
-      const ffNode = `${base + 7}`;
-      workflow[ffNode] = {
-        class_type: "FinalFrameSelector",
-        inputs: { images: [decodeNode, 0] },
-      };
-    }
-
-    // Track the decoded output (before RIFE/upscale) for post-processing
+    // Post-processing per sequence (RIFE/upscale) for final output
     let seqLastNode = decodeNode;
     let seqLastOut = 0;
 
-    // RIFE per sequence
     if (p.useRife) {
       const rifeNode = `${base + 8}`;
       workflow[rifeNode] = {
@@ -685,7 +744,6 @@ function buildLongLookWorkflow(p: {
       seqLastOut = 0;
     }
 
-    // Upscale per sequence
     if (p.useUpscale) {
       const upscaleNode = `${base + 9}`;
       workflow[upscaleNode] = {
@@ -1127,6 +1185,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         videoLoraStrength = 0.8,
         videoLoraPass = "both",
         sequenceCount = 2,
+        motionScale,
       } = req.body;
 
       if (!prompt)
@@ -1175,8 +1234,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       const clampW = Math.min(2048, Math.max(256, Number(width)));
       const clampH = Math.min(2048, Math.max(256, Number(height)));
-      const clampSteps = Math.min(100, Math.max(1, Number(steps)));
-      const clampCfg = Math.min(30, Math.max(0.1, Number(cfg)));
+      const clampSteps = Math.min(100, Math.max(1, Number(steps) || 8));
+      const clampCfg = Math.min(30, Math.max(0.1, Number(cfg) || 1));
 
       // Workflows that need a start image
       const needsImage = workflowType === "qwen-edit" || workflowType === "wan-video" || workflowType === "longlook";
@@ -1344,6 +1403,7 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           frameCount: Math.min(241, Math.max(17, Number(frameCount))),
           useRife: !!useRife,
           useUpscale: !!useVidUpscale,
+          motionScale: motionScale != null ? Number(motionScale) : undefined,
           videoLora: resolvedVideoLora2,
           videoLoraHigh: resolvedVideoLoraHigh2,
           videoLoraLow: resolvedVideoLoraLow2,

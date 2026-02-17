@@ -24,6 +24,8 @@ interface CreditDisplayProps {
   subscriptionCancelAt: string | null;
   loading: boolean;
   purchasing: boolean;
+  purchaseError: string | null;
+  clearPurchaseError: () => void;
   packages: CreditPackage[];
   subscriptionTiers: SubscriptionTier[];
   onPurchase: (packageId: CreditPackage["id"]) => Promise<void>;
@@ -43,6 +45,8 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
   subscriptionCancelAt,
   loading,
   purchasing,
+  purchaseError,
+  clearPurchaseError,
   packages,
   subscriptionTiers,
   onPurchase,
@@ -209,6 +213,22 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
                   </p>
                 </>
               )}
+            </div>
+          )}
+
+          {/* Purchase error banner */}
+          {purchaseError && (
+            <div className="mt-3 flex items-start gap-2 border border-destructive/40 bg-destructive/10 rounded-lg px-3 py-2.5">
+              <AlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="font-mono-share text-xs text-destructive leading-relaxed">{purchaseError}</p>
+              </div>
+              <button
+                onClick={clearPurchaseError}
+                className="text-destructive/60 hover:text-destructive transition-colors"
+              >
+                <XCircle className="w-4 h-4" />
+              </button>
             </div>
           )}
 

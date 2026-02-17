@@ -10,9 +10,9 @@ interface PricingCardsProps {
   subscriptionTiers: SubscriptionTier[];
   currentTier: string | null;
   purchasing: boolean;
-  onPurchase: (packageId: string) => void;
-  onSubscribe: (tierId: string) => void;
-  onManageSubscription?: () => void;
+  onPurchase: (packageId: string) => Promise<void> | void;
+  onSubscribe: (tierId: string) => Promise<void> | void;
+  onManageSubscription?: () => Promise<void> | void;
   onPayPalSuccess?: () => void;
   onXrgePurchase?: (packageId: string) => void;
 }
@@ -147,10 +147,13 @@ const PricingCards: React.FC<PricingCardsProps> = ({
 
                 {(() => {
                   const action = getTierAction(tier);
+                  const safeSubscribe = (id: string) => {
+                    Promise.resolve(onSubscribe(id)).catch(() => {});
+                  };
                   if (action === "active") {
                     return (
                       <Button
-                        onClick={onManageSubscription}
+                        onClick={() => { Promise.resolve(onManageSubscription?.()).catch(() => {}); }}
                         disabled={purchasing}
                         variant="outline"
                         className="w-full font-orbitron text-[10px] tracking-wider gap-1 border-primary/50 text-primary"
@@ -173,7 +176,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
                   if (action === "upgrade") {
                     return (
                       <Button
-                        onClick={() => onSubscribe(tier.id)}
+                        onClick={() => safeSubscribe(tier.id)}
                         disabled={purchasing}
                         className="w-full font-orbitron text-[10px] tracking-wider gap-1 bg-green-600 text-white hover:bg-green-500"
                       >
@@ -190,7 +193,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
                   }
                   return (
                     <Button
-                      onClick={() => onSubscribe(tier.id)}
+                      onClick={() => safeSubscribe(tier.id)}
                       disabled={purchasing}
                       className={`w-full font-orbitron text-[10px] tracking-wider gap-1 ${
                         tier.popular
@@ -262,7 +265,7 @@ function PackCard({
 }: {
   pkg: CreditPackage;
   purchasing: boolean;
-  onPurchase: (id: string) => void;
+  onPurchase: (id: string) => Promise<void> | void;
   onPayPalSuccess?: () => void;
   onXrgePurchase?: (id: string) => void;
   isBulk?: boolean;
@@ -310,7 +313,7 @@ function PackCard({
 
       <div className="space-y-2">
         <Button
-          onClick={() => onPurchase(pkg.id)}
+          onClick={() => { Promise.resolve(onPurchase(pkg.id)).catch(() => {}); }}
           disabled={purchasing}
           className={`w-full font-orbitron text-[10px] tracking-wider gap-1 ${
             pkg.popular

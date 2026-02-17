@@ -815,6 +815,8 @@ export function useGrokApi() {
     imageBase64: string;
     imageFilename?: string;
     frameCount?: number;
+    steps?: number;
+    cfg?: number;
     useRife?: boolean;
     useUpscale?: boolean;
     videoLora?: string;
@@ -850,6 +852,8 @@ export function useGrokApi() {
           imageBase64: params.imageBase64,
           imageFilename: params.imageFilename || "input.jpg",
           frameCount: params.frameCount || 81,
+          steps: params.steps || 8,
+          cfg: params.cfg || 1,
           useRife: params.useRife ?? true,
           useUpscale: params.useUpscale ?? false,
           videoLora: params.videoLora,
@@ -951,6 +955,8 @@ export function useGrokApi() {
           imageBase64: imgResult.image,
           imageFilename: "start_frame.png",
           frameCount: params.frameCount || 81,
+          steps: params.steps || 8,
+          cfg: params.cfg || 1,
           useRife: params.useRife ?? true,
           useUpscale: false,
           videoLora: params.videoLora,
@@ -992,6 +998,9 @@ export function useGrokApi() {
     imageBase64: string;
     sequenceCount?: number;
     frameCount?: number;
+    steps?: number;
+    cfg?: number;
+    motionScale?: number;
     useRife?: boolean;
     useUpscale?: boolean;
     videoLora?: string;
@@ -1029,6 +1038,9 @@ export function useGrokApi() {
           imageFilename: "input_longlook.jpg",
           sequenceCount: seqCount,
           frameCount: params.frameCount || 81,
+          steps: params.steps || 8,
+          cfg: params.cfg || 1,
+          motionScale: params.motionScale ?? 1.5,
           useRife: params.useRife ?? true,
           useUpscale: params.useUpscale ?? false,
           videoLora: params.videoLora,

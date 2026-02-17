@@ -23,6 +23,7 @@ export function useCredits(user: AuthUser | null) {
   const [subscriptionCancelAt, setSubscriptionCancelAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [purchasing, setPurchasing] = useState(false);
+  const [purchaseError, setPurchaseError] = useState<string | null>(null);
 
   const totalCredits = subCredits + packCredits;
 
@@ -59,6 +60,7 @@ export function useCredits(user: AuthUser | null) {
   const purchaseCredits = useCallback(async (packageId: CreditPackage["id"]) => {
     if (!user) throw new Error("Not authenticated");
     setPurchasing(true);
+    setPurchaseError(null);
     try {
       const data = await apiFetch("/checkout", {
         method: "POST",
@@ -69,6 +71,10 @@ export function useCredits(user: AuthUser | null) {
       } else {
         throw new Error("No checkout URL returned");
       }
+    } catch (err: any) {
+      const msg = err.message || "Purchase failed. Please try again.";
+      setPurchaseError(msg);
+      throw err;
     } finally {
       setPurchasing(false);
     }
@@ -78,6 +84,7 @@ export function useCredits(user: AuthUser | null) {
   const subscribeToPlan = useCallback(async (tierId: SubscriptionTier["id"]) => {
     if (!user) throw new Error("Not authenticated");
     setPurchasing(true);
+    setPurchaseError(null);
     try {
       const data = await apiFetch("/checkout", {
         method: "POST",
@@ -88,6 +95,10 @@ export function useCredits(user: AuthUser | null) {
       } else {
         throw new Error("No checkout URL returned");
       }
+    } catch (err: any) {
+      const msg = err.message || "Subscription failed. Please try again.";
+      setPurchaseError(msg);
+      throw err;
     } finally {
       setPurchasing(false);
     }
@@ -97,6 +108,7 @@ export function useCredits(user: AuthUser | null) {
   const manageSubscription = useCallback(async () => {
     if (!user) throw new Error("Not authenticated");
     setPurchasing(true);
+    setPurchaseError(null);
     try {
       const data = await apiFetch("/checkout", {
         method: "POST",
@@ -107,6 +119,10 @@ export function useCredits(user: AuthUser | null) {
       } else {
         throw new Error("No portal URL returned");
       }
+    } catch (err: any) {
+      const msg = err.message || "Failed to open billing portal. Please try again.";
+      setPurchaseError(msg);
+      throw err;
     } finally {
       setPurchasing(false);
     }
@@ -135,6 +151,8 @@ export function useCredits(user: AuthUser | null) {
     isCancelling: !!subscriptionTier && !!subscriptionCancelAt,
     loading,
     purchasing,
+    purchaseError,
+    clearPurchaseError: () => setPurchaseError(null),
     packages: CREDIT_PACKAGES,
     subscriptionTiers: SUBSCRIPTION_TIERS,
     enabled: backendEnabled && !!user,

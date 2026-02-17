@@ -125,6 +125,7 @@ const Index = () => {
   const [longLookEnabled, setLongLookEnabled] = useState(false);
   const [longLookSeqCount, setLongLookSeqCount] = useState(2);
   const [longLookFrameCount, setLongLookFrameCount] = useState(81);
+  const [longLookMotionScale, setLongLookMotionScale] = useState(1.5);
 
   // Fetch ComfyUI models on mount
   React.useEffect(() => {
@@ -318,6 +319,9 @@ const Index = () => {
             imageBase64,
             sequenceCount: longLookSeqCount,
             frameCount: longLookFrameCount,
+            steps: comfySteps,
+            cfg: comfyCfg,
+            motionScale: longLookMotionScale,
             useRife: comfyRife,
             useUpscale: comfyVidUpscale,
             videoLora: comfyVideoLora !== "none" ? comfyVideoLora : undefined,
@@ -334,6 +338,8 @@ const Index = () => {
             negativePrompt: comfyNegPrompt || undefined,
             imageBase64,
             frameCount: comfyFrameCount,
+            steps: comfySteps,
+            cfg: comfyCfg,
             useRife: comfyRife,
             useUpscale: comfyVidUpscale,
             videoLora: comfyVideoLora !== "none" ? comfyVideoLora : undefined,
@@ -482,6 +488,8 @@ const Index = () => {
                 subscriptionCancelAt={creditsHook.subscriptionCancelAt}
                 loading={creditsHook.loading}
                 purchasing={creditsHook.purchasing}
+                purchaseError={creditsHook.purchaseError}
+                clearPurchaseError={creditsHook.clearPurchaseError}
                 packages={creditsHook.packages}
                 subscriptionTiers={creditsHook.subscriptionTiers}
                 onPurchase={creditsHook.purchaseCredits}
@@ -976,6 +984,17 @@ const Index = () => {
                             ))}
                           </div>
                         </div>
+                        <div>
+                          <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Motion Scale: {longLookMotionScale.toFixed(1)}x</label>
+                          <input type="range" min={0.5} max={3.0} step={0.1} value={longLookMotionScale}
+                            onChange={(e) => setLongLookMotionScale(Number(e.target.value))}
+                            className="w-full accent-purple-500" />
+                          <div className="flex justify-between text-[8px] text-muted-foreground/40 font-mono-share mt-0.5">
+                            <span>Slower</span>
+                            <span>1.5x optimal</span>
+                            <span>Faster</span>
+                          </div>
+                        </div>
                       </div>
                     )}
 
@@ -1070,8 +1089,8 @@ const Index = () => {
                       <Film className="w-3 h-3 text-purple-400/70" />
                       <span className="font-mono-share text-[9px] text-purple-400/70">
                         {longLookEnabled
-                          ? `LongLook ${longLookSeqCount} x 3 = ${longLookSeqCount * 3} cr`
-                          : "WAN 2.2 I2V — 3 credits per video"}
+                          ? `LongLook ${longLookSeqCount} x 2 = ${longLookSeqCount * 2} cr`
+                          : "WAN 2.2 I2V — 2 credits per video"}
                       </span>
                     </div>
                   </div>
