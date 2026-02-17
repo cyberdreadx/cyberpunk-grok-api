@@ -124,8 +124,6 @@ const Index = () => {
   // LongLook settings
   const [longLookEnabled, setLongLookEnabled] = useState(false);
   const [longLookSeqCount, setLongLookSeqCount] = useState(2);
-  const [longLookMotionScale, setLongLookMotionScale] = useState(1.2);
-  const [longLookFreeLong, setLongLookFreeLong] = useState(false);
   const [longLookFrameCount, setLongLookFrameCount] = useState(81);
 
   // Fetch ComfyUI models on mount
@@ -197,7 +195,7 @@ const Index = () => {
 
   const handleSubmit = async (data: { prompt: string; imageUrl?: string }) => {
     // Determine which engine pathway
-    const isGltchEdit = mode === "edit-image" && editEngine === "gltch" && effectiveApiMode === "credits";
+    const isGltchEdit = mode === "edit-image" && editEngine === "gltch";
     const isComfyGen = mode === "text-to-image" && genEngine === "comfy";
     const isComfyRender = mode === "text-to-video" && renderEngine === "comfy";
     const isComfyAnimate = mode === "image-to-video" && animateEngine === "comfy" && !longLookEnabled;
@@ -312,8 +310,6 @@ const Index = () => {
             imageBase64,
             sequenceCount: longLookSeqCount,
             frameCount: longLookFrameCount,
-            motionScale: longLookMotionScale,
-            useFreeLong: longLookFreeLong,
             useRife: comfyRife,
             useUpscale: comfyVidUpscale,
             videoLora: comfyVideoLora !== "none" ? comfyVideoLora : undefined,
@@ -575,8 +571,8 @@ const Index = () => {
 
             <SettingsPanel settings={settings} videoSettings={videoSettings} onChange={handleSettingsChange} onVideoChange={handleVideoSettingsChange} mode={mode} />
 
-            {/* Engine selector — shows in edit-image + credits mode */}
-            {mode === "edit-image" && effectiveApiMode === "credits" && (
+            {/* Engine selector — shows in edit-image when user is logged in */}
+            {mode === "edit-image" && auth.isAuthenticated && (
               <div className="space-y-2">
                 <label className="font-orbitron text-[10px] tracking-wider text-muted-foreground flex items-center gap-1.5">
                   <Zap className="w-3 h-3" />
@@ -975,21 +971,6 @@ const Index = () => {
                             ))}
                           </div>
                         </div>
-                        <div>
-                          <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Motion Scale: {longLookMotionScale.toFixed(1)}</label>
-                          <input type="range" min={0.5} max={2.0} step={0.1} value={longLookMotionScale}
-                            onChange={(e) => setLongLookMotionScale(Number(e.target.value))}
-                            className="w-full accent-purple-500" />
-                        </div>
-                        <button type="button" onClick={() => setLongLookFreeLong(!longLookFreeLong)}
-                          className={`w-full flex items-center justify-between px-3 py-2 border rounded font-mono-share text-[10px] transition-all duration-200 ${longLookFreeLong ? "border-purple-500/50 bg-purple-500/5 text-purple-300" : "border-border bg-card/30 text-muted-foreground hover:border-purple-500/30"}`}>
-                          <span className="flex items-center gap-1.5">
-                            <span className={`w-3 h-3 border rounded-sm flex items-center justify-center text-[8px] ${longLookFreeLong ? "border-purple-500 bg-purple-500 text-white" : "border-muted-foreground/30"}`}>
-                              {longLookFreeLong && "✓"}
-                            </span>
-                            FreeLong <span className="text-[8px] text-amber-400/70">(3x VRAM)</span>
-                          </span>
-                        </button>
                         <div>
                           <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Duration per sequence</label>
                           <div className="flex flex-wrap gap-1.5">

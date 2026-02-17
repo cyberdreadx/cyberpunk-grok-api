@@ -394,8 +394,6 @@ function buildLongLookWorkflow(p: {
   frameCount: number;
   useRife: boolean;
   useUpscale: boolean;
-  motionScale?: number;
-  useFreeLong?: boolean;
   videoLora?: string;
   videoLoraHigh?: string;
   videoLoraLow?: string;
@@ -490,35 +488,6 @@ function buildLongLookWorkflow(p: {
       },
     };
     lowModelSource = ["17", 0];
-  }
-
-  // Optional WanFreeLong
-  if (p.useFreeLong) {
-    workflow["18"] = {
-      class_type: "WanFreeLong",
-      inputs: { model: highModelSource },
-    };
-    highModelSource = ["18", 0];
-    workflow["19"] = {
-      class_type: "WanFreeLong",
-      inputs: { model: lowModelSource },
-    };
-    lowModelSource = ["19", 0];
-  }
-
-  // Optional WanMotionScale (applied if motionScale != 1.0)
-  const motionScale = p.motionScale ?? 1.2;
-  if (motionScale !== 1.0) {
-    workflow["20"] = {
-      class_type: "WanMotionScale",
-      inputs: { model: highModelSource, motion_scale: motionScale },
-    };
-    highModelSource = ["20", 0];
-    workflow["21"] = {
-      class_type: "WanMotionScale",
-      inputs: { model: lowModelSource, motion_scale: motionScale },
-    };
-    lowModelSource = ["21", 0];
   }
 
   // ModelSamplingSD3 — high noise shift
@@ -1157,8 +1126,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         videoLoraStrength = 0.8,
         videoLoraPass = "both",
         sequenceCount = 2,
-        motionScale = 1.2,
-        useFreeLong = false,
       } = req.body;
 
       if (!prompt)
@@ -1376,8 +1343,6 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           frameCount: Math.min(241, Math.max(17, Number(frameCount))),
           useRife: !!useRife,
           useUpscale: !!useVidUpscale,
-          motionScale: Number(motionScale) || 1.2,
-          useFreeLong: !!useFreeLong,
           videoLora: resolvedVideoLora2,
           videoLoraHigh: resolvedVideoLoraHigh2,
           videoLoraLow: resolvedVideoLoraLow2,

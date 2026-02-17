@@ -968,8 +968,6 @@ export function useGrokApi() {
     imageBase64: string;
     sequenceCount?: number;
     frameCount?: number;
-    motionScale?: number;
-    useFreeLong?: boolean;
     useRife?: boolean;
     useUpscale?: boolean;
     videoLora?: string;
@@ -1007,8 +1005,6 @@ export function useGrokApi() {
           imageFilename: "input_longlook.jpg",
           sequenceCount: seqCount,
           frameCount: params.frameCount || 81,
-          motionScale: params.motionScale ?? 1.2,
-          useFreeLong: params.useFreeLong ?? false,
           useRife: params.useRife ?? true,
           useUpscale: params.useUpscale ?? false,
           videoLora: params.videoLora,
