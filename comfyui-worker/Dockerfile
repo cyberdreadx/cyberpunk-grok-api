@@ -54,6 +54,11 @@ RUN cd /comfyui/custom_nodes && \
     wget -qO- https://github.com/rgthree/rgthree-comfy/archive/refs/heads/main.tar.gz | tar xz && \
     mv rgthree-comfy-main rgthree-comfy
 
+# ComfyUI-MediaMixer (FinalFrameSelector for LongLook multi-clip continuation)
+RUN cd /comfyui/custom_nodes && \
+    wget -qO- https://github.com/DoctorDiffusion/ComfyUI-MediaMixer/archive/refs/heads/main.tar.gz | tar xz && \
+    mv ComfyUI-MediaMixer-main ComfyUI-MediaMixer
+
 # ── Python Dependencies ──────────────────────────────────────────
 RUN cd /comfyui/custom_nodes/Comfyui-QwenEditUtils && \
     if [ -f requirements.txt ]; then pip install -r requirements.txt --no-cache-dir; fi
@@ -77,6 +82,9 @@ RUN cd /comfyui/custom_nodes/ComfyUI-Crystools && \
     if [ -f requirements.txt ]; then pip install -r requirements.txt --no-cache-dir; fi
 
 RUN cd /comfyui/custom_nodes/rgthree-comfy && \
+    if [ -f requirements.txt ]; then pip install -r requirements.txt --no-cache-dir; fi
+
+RUN cd /comfyui/custom_nodes/ComfyUI-MediaMixer && \
     if [ -f requirements.txt ]; then pip install -r requirements.txt --no-cache-dir; fi
 
 # ── Network Volume Model Paths ───────────────────────────────────
