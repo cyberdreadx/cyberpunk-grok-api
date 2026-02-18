@@ -1067,7 +1067,7 @@ async function uploadImageToLocal(baseUrl: string, imageBase64: string, rawName:
     const errText = await resp.text().catch(() => "Upload failed");
     throw new Error(`Image upload failed (${resp.status}): ${errText}`);
   }
-  const result = await resp.json();
+  const result = (await resp.json()) as any;
   return result.name as string;
 }
 
@@ -1142,7 +1142,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           { signal: AbortSignal.timeout(5000) }
         );
         if (!resp.ok) throw new Error(`ComfyUI returned ${resp.status}`);
-        const info = await resp.json();
+        const info = (await resp.json()) as any;
         const checkpoints: string[] =
           info?.CheckpointLoaderSimple?.input?.required?.ckpt_name?.[0] || [];
         // Try to fetch LoRA list too
@@ -1153,7 +1153,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             { signal: AbortSignal.timeout(5000) }
           );
           if (loraResp.ok) {
-            const loraInfo = await loraResp.json();
+            const loraInfo = (await loraResp.json()) as any;
             loras = loraInfo?.LoraLoader?.input?.required?.lora_name?.[0] || [];
           }
         } catch { /* best effort */ }
@@ -1362,7 +1362,7 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           throw new Error(`LLM prompt split failed (${llmResp.status}): ${errText.slice(0, 300)}`);
         }
 
-        const llmData = await llmResp.json();
+        const llmData = (await llmResp.json()) as any;
         const llmContent: string = llmData.choices?.[0]?.message?.content || "";
 
         // Parse "***1***Prompt1***2***Prompt2..." format
@@ -1507,7 +1507,7 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           throw new Error(`RunPod submit failed (${resp.status}): ${errText}`);
         }
 
-        const result = await resp.json();
+        const result = (await resp.json()) as any;
 
         // Log usage
         if (!isAdminUser) {
@@ -1543,7 +1543,7 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           throw new Error(`ComfyUI prompt failed (${resp.status}): ${errText}`);
         }
 
-        const result = await resp.json();
+        const result = (await resp.json()) as any;
 
         if (!isAdminUser) {
           const sql = getDb();
