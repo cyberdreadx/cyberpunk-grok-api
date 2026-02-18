@@ -372,15 +372,15 @@ function buildWanVideoWorkflow(p: {
         frames: [lastNode, lastOut],
         ckpt_name: "rife47.pth",
         clear_cache_after_n_frames: 10,
-        multiplier: 3,
-        fast_mode: false,
-        ensemble: true,
+        multiplier: 2,
+        fast_mode: true,
+        ensemble: false,
         scale_factor: 1,
       },
     };
     lastNode = "116";
     lastOut = 0;
-    fps = 60;
+    fps = 48;
   }
 
   if (p.useUpscale) {
@@ -402,7 +402,7 @@ function buildWanVideoWorkflow(p: {
       filename_prefix: "GrokRunner",
       format: "video/h264-mp4",
       pix_fmt: "yuv420p",
-      crf: 15,
+      crf: 19,
       save_metadata: true,
       trim_to_audio: false,
       pingpong: false,
@@ -753,9 +753,9 @@ function buildLongLookWorkflow(p: {
           frames: [seqLastNode, seqLastOut],
           ckpt_name: "rife47.pth",
           clear_cache_after_n_frames: 10,
-          multiplier: 3,
-          fast_mode: false,
-          ensemble: true,
+          multiplier: 2,
+          fast_mode: true,
+          ensemble: false,
           scale_factor: 1,
         },
       };
@@ -778,7 +778,7 @@ function buildLongLookWorkflow(p: {
 
   // ── Final output nodes (use same CreateVideo + SaveVideo as WAN video) ──
 
-  const fps = p.useRife ? 60 : 24;
+  const fps = p.useRife ? 48 : 24;
 
   let finalFrames: [string, number];
 
@@ -809,7 +809,7 @@ function buildLongLookWorkflow(p: {
       filename_prefix: "GrokRunner_LongLook",
       format: "video/h264-mp4",
       pix_fmt: "yuv420p",
-      crf: 15,
+      crf: 19,
       save_metadata: true,
       trim_to_audio: false,
       pingpong: false,
@@ -1648,37 +1648,40 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
 
         // RunPod statuses: IN_QUEUE, IN_PROGRESS, COMPLETED, FAILED, CANCELLED, TIMED_OUT
         if (data.status === "COMPLETED") {
-          // Check for video output first
-          const videos = data.output?.videos;
+          const out = data.output || {};
+          console.log("[comfyui-poll] COMPLETED output keys:", Object.keys(out));
+
+          // Check for video output — workers may use videos, gifs, or images
+          const videos = out.videos || out.gifs;
           if (videos?.length) {
             const vid = videos[videos.length - 1];
-            const base64Data = vid.data;
-            const videoUri = base64Data.startsWith("data:")
+            const base64Data = vid.data || vid;
+            const videoUri = typeof base64Data === "string" && base64Data.startsWith("data:")
               ? base64Data
               : `data:video/mp4;base64,${base64Data}`;
             return res.status(200).json({ status: "done", video: videoUri });
           }
 
-          // Image output (worker-comfyui puts video data here too)
-          const images = data.output?.images;
+          // Image output (some workers put video data here too)
+          const images = out.images;
           if (images?.length) {
             const img = images[images.length - 1];
-            const base64Data = img.data;
-            // If this was a video job, the data is actually video bytes
+            const base64Data = img.data || img;
             if (outputType === "video") {
-              const videoUri = base64Data.startsWith("data:")
+              const videoUri = typeof base64Data === "string" && base64Data.startsWith("data:")
                 ? base64Data
                 : `data:video/mp4;base64,${base64Data}`;
               return res.status(200).json({ status: "done", video: videoUri });
             }
-            const imageUri = base64Data.startsWith("data:")
+            const imageUri = typeof base64Data === "string" && base64Data.startsWith("data:")
               ? base64Data
               : `data:image/png;base64,${base64Data}`;
             return res.status(200).json({ status: "done", image: imageUri });
           }
-          // Fallback: older output format
-          if (data.output?.message) {
-            const msg = data.output.message;
+
+          // Fallback: message field or any string-like output
+          const msg = out.message || (typeof out === "string" ? out : null);
+          if (msg) {
             if (outputType === "video") {
               const videoUri = msg.startsWith("data:") ? msg : `data:video/mp4;base64,${msg}`;
               return res.status(200).json({ status: "done", video: videoUri });
@@ -1686,7 +1689,9 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
             const imageUri = msg.startsWith("data:") ? msg : `data:image/png;base64,${msg}`;
             return res.status(200).json({ status: "done", image: imageUri });
           }
-          return res.status(200).json({ status: "error", error: "Job completed but no output found" });
+
+          console.error("[comfyui-poll] No output found. Full output:", JSON.stringify(out).slice(0, 500));
+          return res.status(200).json({ status: "error", error: "Job completed but no output could be extracted. The video may be too large." });
         }
 
         if (data.status === "FAILED" || data.status === "CANCELLED" || data.status === "TIMED_OUT") {
