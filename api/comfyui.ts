@@ -1435,9 +1435,13 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
         });
       } else if (workflowType === "qwen-edit") {
         // Qwen edit always uses the Qwen checkpoint — ignore client checkpoint
-        const qwenCkpt = process.env.COMFYUI_QWEN_MODEL || "Qwen-Rapid-AIO-v2.safetensors";
+        const qwenCkpt = process.env.COMFYUI_QWEN_MODEL || "qwnImageEdit_v16Fp8Scaled.safetensors";
+        // Auto-inject facial preservation hint for better likeness
+        const enhancedPrompt = prompt.trim().toLowerCase().includes("preserve facial")
+          ? prompt.trim()
+          : `${prompt.trim()}, preserve facial features, maintain high likeness`;
         workflow = buildQwenEditWorkflow({
-          prompt: prompt.trim(),
+          prompt: enhancedPrompt,
           negativePrompt: (negativePrompt || "").trim() || QWEN_DEFAULT_NEGATIVE,
           imageFilename: imageFilename!,
           width: clampW,
