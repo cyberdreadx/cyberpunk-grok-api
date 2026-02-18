@@ -103,8 +103,7 @@ const Index = () => {
   const [editEngine, setEditEngine] = useState<EditEngine>("grok");
   const [gltchHd, setGltchHd] = useState(false);
   const [grokPro, setGrokPro] = useState(false);
-  const [qwenLora, setQwenLora] = useState("none");
-  const [qwenLoraStrength, setQwenLoraStrength] = useState(0.8);
+  const [qwenLoraStack, setQwenLoraStack] = useState<{ name: string; strength: number }[]>([]);
 
   type ComfyEngine = "grok" | "comfy";
   const [genEngine, setGenEngine] = useState<ComfyEngine>("grok");
@@ -316,8 +315,7 @@ const Index = () => {
             height: comfyHeight,
             steps: comfySteps,
             cfg: comfyCfg,
-            lora: qwenLora !== "none" ? qwenLora : undefined,
-            loraStrength: qwenLoraStrength,
+            loras: qwenLoraStack.filter(l => l.name !== "none"),
           });
         } else if (isComfyGen) {
           comfyGenerate({
@@ -782,33 +780,74 @@ const Index = () => {
                       </span>
                     </div>
                     {comfyModels.qwenLoras.length > 0 && (
-                      <div className="space-y-1.5">
-                        <label className="font-mono-share text-[9px] text-muted-foreground">LORA</label>
-                        <select
-                          value={qwenLora}
-                          onChange={(e) => setQwenLora(e.target.value)}
-                          className="w-full bg-card/50 border border-border rounded px-2 py-1.5 font-mono-share text-[10px] text-foreground"
-                        >
-                          <option value="none">None</option>
-                          {comfyModels.qwenLoras.map(l => (
-                            <option key={l} value={l}>{l.replace(/\.(safetensors|ckpt|pt)$/i, "")}</option>
-                          ))}
-                        </select>
-                        {qwenLora !== "none" && (
-                          <div className="space-y-1">
-                            <div className="flex items-center justify-between">
-                              <label className="font-mono-share text-[9px] text-muted-foreground">STRENGTH</label>
-                              <span className="font-mono-share text-[9px] text-purple-400">{qwenLoraStrength.toFixed(2)}</span>
-                            </div>
-                            <input
-                              type="range"
-                              min="0" max="1.5" step="0.05"
-                              value={qwenLoraStrength}
-                              onChange={(e) => setQwenLoraStrength(Number(e.target.value))}
-                              className="w-full accent-purple-500"
-                            />
-                          </div>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <label className="font-mono-share text-[9px] text-muted-foreground">LORA STACK</label>
+                          {qwenLoraStack.length < comfyModels.qwenLoras.length && (
+                            <button
+                              type="button"
+                              onClick={() => setQwenLoraStack(prev => [...prev, { name: "none", strength: 0.8 }])}
+                              className="font-mono-share text-[9px] text-purple-400 hover:text-purple-300 transition-colors"
+                            >
+                              + ADD LORA
+                            </button>
+                          )}
+                        </div>
+                        {qwenLoraStack.length === 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setQwenLoraStack([{ name: "none", strength: 0.8 }])}
+                            className="w-full p-2 border border-dashed border-purple-500/30 rounded text-center font-mono-share text-[9px] text-purple-400/60 hover:border-purple-500/50 hover:text-purple-400 transition-colors"
+                          >
+                            + ADD LORA
+                          </button>
                         )}
+                        {qwenLoraStack.map((entry, idx) => {
+                          const usedNames = qwenLoraStack.filter((_, i) => i !== idx).map(l => l.name);
+                          const available = comfyModels.qwenLoras.filter(l => !usedNames.includes(l));
+                          return (
+                            <div key={idx} className="space-y-1 p-2 bg-card/30 border border-purple-500/10 rounded">
+                              <div className="flex items-center gap-1.5">
+                                <select
+                                  value={entry.name}
+                                  onChange={(e) => setQwenLoraStack(prev => prev.map((l, i) => i === idx ? { ...l, name: e.target.value } : l))}
+                                  className="flex-1 bg-card/50 border border-border rounded px-2 py-1 font-mono-share text-[10px] text-foreground"
+                                >
+                                  <option value="none">Select LoRA...</option>
+                                  {available.map(l => (
+                                    <option key={l} value={l}>{l.replace(/\.(safetensors|ckpt|pt)$/i, "")}</option>
+                                  ))}
+                                  {entry.name !== "none" && !available.includes(entry.name) && (
+                                    <option value={entry.name}>{entry.name.replace(/\.(safetensors|ckpt|pt)$/i, "")}</option>
+                                  )}
+                                </select>
+                                <button
+                                  type="button"
+                                  onClick={() => setQwenLoraStack(prev => prev.filter((_, i) => i !== idx))}
+                                  className="text-red-400/60 hover:text-red-400 transition-colors p-0.5"
+                                  title="Remove"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </div>
+                              {entry.name !== "none" && (
+                                <div className="space-y-0.5">
+                                  <div className="flex items-center justify-between">
+                                    <label className="font-mono-share text-[8px] text-muted-foreground">STRENGTH</label>
+                                    <span className="font-mono-share text-[8px] text-purple-400">{entry.strength.toFixed(2)}</span>
+                                  </div>
+                                  <input
+                                    type="range"
+                                    min="0" max="1.5" step="0.05"
+                                    value={entry.strength}
+                                    onChange={(e) => setQwenLoraStack(prev => prev.map((l, i) => i === idx ? { ...l, strength: Number(e.target.value) } : l))}
+                                    className="w-full accent-purple-500"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                   </>

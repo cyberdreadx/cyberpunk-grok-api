@@ -954,7 +954,7 @@ export function useGrokApi() {
     })();
   }, [comfySubmitAndPoll, persistNewResults]);
 
-  // ComfyUI Qwen Edit (fire-and-forget — uses qwen-edit workflow with optional LoRA)
+  // ComfyUI Qwen Edit (fire-and-forget — uses qwen-edit workflow with stacked LoRAs)
   const comfyEdit = useCallback((params: {
     prompt: string;
     negativePrompt?: string;
@@ -964,8 +964,7 @@ export function useGrokApi() {
     height?: number;
     steps?: number;
     cfg?: number;
-    lora?: string;
-    loraStrength?: number;
+    loras?: { name: string; strength: number }[];
     upscale?: boolean;
   }) => {
     const jobId = `cj-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
@@ -1000,8 +999,7 @@ export function useGrokApi() {
           height: params.height || 1024,
           steps: params.steps || 5,
           cfg: params.cfg || 4,
-          lora: params.lora,
-          loraStrength: params.loraStrength,
+          loras: params.loras?.filter(l => l.name !== "none"),
           upscale: params.upscale || false,
         });
 

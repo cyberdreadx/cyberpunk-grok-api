@@ -528,14 +528,14 @@ function buildLongLookWorkflow(p: {
     lowModelSource = ["17", 0];
   }
 
-  // ModelSamplingSD3 — noise scheduling (shift 5.0 per LightX2V recommendations)
+  // ModelSamplingSD3 — shift 12 matches the proven WAN Remix workflow
   workflow["22"] = {
     class_type: "ModelSamplingSD3",
-    inputs: { model: highModelSource, shift: 5.0 },
+    inputs: { model: highModelSource, shift: 12 },
   };
   workflow["23"] = {
     class_type: "ModelSamplingSD3",
-    inputs: { model: lowModelSource, shift: 5.0 },
+    inputs: { model: lowModelSource, shift: 12 },
   };
 
   // WanFreeLong — spectral blending for motion consistency (the core LongLook feature)
@@ -676,11 +676,23 @@ function buildLongLookWorkflow(p: {
         noise_seed: p.seed + i,
         steps: p.steps,
         cfg: p.cfg,
-        sampler_name: "euler",
-        scheduler: "simple",
+        sampler_name: "uni_pc",
+        scheduler: "beta",
         start_at_step: 0,
         end_at_step: halfSteps,
         return_with_leftover_noise: "enable",
+      },
+    };
+
+    // VRAM cleanup between passes
+    const vramNode = `${base + 10}`;
+    workflow[vramNode] = {
+      class_type: "VRAM_Debug",
+      inputs: {
+        any_input: [highSampler, 0],
+        empty_cache: true,
+        gc_collect: true,
+        unload_all_models: false,
       },
     };
 
@@ -692,13 +704,13 @@ function buildLongLookWorkflow(p: {
         model: lowFinal,
         positive: [condNode, 0],
         negative: [condNode, 1],
-        latent_image: [highSampler, 0],
+        latent_image: [vramNode, 0],
         add_noise: "disable",
         noise_seed: 0,
         steps: p.steps,
         cfg: p.cfg,
-        sampler_name: "euler",
-        scheduler: "simple",
+        sampler_name: "uni_pc",
+        scheduler: "beta",
         start_at_step: halfSteps,
         end_at_step: p.steps,
         return_with_leftover_noise: "disable",
@@ -712,8 +724,14 @@ function buildLongLookWorkflow(p: {
       inputs: { samples: [lowSampler, 0], vae: ["11", 0] },
     };
 
-    // Post-processing per sequence (RIFE/upscale) for final output
-    let seqLastNode = decodeNode;
+    // Sharpen after VAE decode (same as WAN video workflow)
+    const sharpenNode = `${base + 7}`;
+    workflow[sharpenNode] = {
+      class_type: "FastUnsharpSharpen",
+      inputs: { images: [decodeNode, 0], strength: 0.5, disable: false },
+    };
+
+    let seqLastNode = sharpenNode;
     let seqLastOut = 0;
 
     if (p.useRife) {
@@ -890,15 +908,19 @@ function buildQwenEditWorkflow(p: {
   steps: number;
   cfg: number;
   checkpoint: string;
+  vae?: string;
   upscale?: boolean;
-  lora?: string;
-  loraStrength?: number;
+  loras?: { name: string; strength: number }[];
 }): Record<string, any> {
-  const hasLora = !!p.lora && p.lora !== "none";
+  const activeLoras = (p.loras || []).filter(l => l.name && l.name !== "none");
 
-  // Model/clip sources — routed through LoraLoader when a LoRA is selected
-  const modelSource: [string, number] = hasLora ? ["10", 0] : ["125", 0];
-  const clipSource: [string, number] = hasLora ? ["10", 1] : ["125", 1];
+  // Chain LoraLoader nodes: checkpoint -> lora1 -> lora2 -> ... -> final model/clip
+  // Each LoraLoader gets a unique node ID starting at "10"
+  let modelSource: [string, number] = ["125", 0];
+  let clipSource: [string, number] = ["125", 1];
+
+  // Use explicit VAELoader — fp8 checkpoints often strip the VAE
+  const vaeSource: [string, number] = p.vae ? ["130", 0] : ["125", 2];
 
   const workflow: Record<string, any> = {
     "125": {
@@ -909,11 +931,38 @@ function buildQwenEditWorkflow(p: {
       class_type: "LoadImage",
       inputs: { image: p.imageFilename },
     },
+  };
+
+  if (p.vae) {
+    workflow["130"] = {
+      class_type: "VAELoader",
+      inputs: { vae_name: p.vae },
+    };
+  }
+
+  // Build LoRA chain
+  for (let i = 0; i < activeLoras.length; i++) {
+    const nodeId = String(10 + i);
+    workflow[nodeId] = {
+      class_type: "LoraLoader",
+      inputs: {
+        lora_name: activeLoras[i].name,
+        strength_model: activeLoras[i].strength,
+        strength_clip: activeLoras[i].strength,
+        model: modelSource,
+        clip: clipSource,
+      },
+    };
+    modelSource = [nodeId, 0];
+    clipSource = [nodeId, 1];
+  }
+
+  Object.assign(workflow, {
     "132": {
       class_type: "TextEncodeQwenImageEditPlus",
       inputs: {
         clip: clipSource,
-        vae: ["125", 2],
+        vae: vaeSource,
         image1: ["123", 0],
         prompt: p.prompt,
       },
@@ -922,7 +971,7 @@ function buildQwenEditWorkflow(p: {
       class_type: "TextEncodeQwenImageEditPlus",
       inputs: {
         clip: clipSource,
-        vae: ["125", 2],
+        vae: vaeSource,
         prompt: p.negativePrompt,
       },
     },
@@ -959,27 +1008,13 @@ function buildQwenEditWorkflow(p: {
     },
     "73": {
       class_type: "VAEDecode",
-      inputs: { samples: ["72", 0], vae: ["125", 2] },
+      inputs: { samples: ["72", 0], vae: vaeSource },
     },
     "77": {
       class_type: "SaveImage",
       inputs: { images: ["73", 0], filename_prefix: "GrokRunner" },
     },
-  };
-
-  if (hasLora) {
-    const strength = p.loraStrength ?? 0.8;
-    workflow["10"] = {
-      class_type: "LoraLoader",
-      inputs: {
-        lora_name: p.lora!,
-        strength_model: strength,
-        strength_clip: strength,
-        model: ["125", 0],
-        clip: ["125", 1],
-      },
-    };
-  }
+  });
 
   if (p.upscale) {
     workflow["128"] = {
@@ -993,7 +1028,7 @@ function buildQwenEditWorkflow(p: {
         model: modelSource,
         positive: ["132", 0],
         negative: ["133", 0],
-        vae: ["125", 2],
+        vae: vaeSource,
         upscale_model: ["128", 0],
         upscale_by: 1.5,
         seed: p.seed,
@@ -1197,6 +1232,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         cfg = 7,
         checkpoint,
         lora,
+        loras,
         loraStrength = 0.8,
         imageBase64,
         imageFilename: clientFilename,
@@ -1440,6 +1476,19 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
         const enhancedPrompt = prompt.trim().toLowerCase().includes("preserve facial")
           ? prompt.trim()
           : `${prompt.trim()}, preserve facial features, maintain high likeness`;
+        // Build LoRA list: support both legacy single `lora` param and new `loras` array
+        let qwenLoraList: { name: string; strength: number }[] = [];
+        if (Array.isArray(loras) && loras.length > 0) {
+          qwenLoraList = loras
+            .filter((l: any) => l.name && l.name !== "none")
+            .map((l: any) => ({ name: String(l.name), strength: Number(l.strength) || 0.8 }));
+        } else if (lora && lora !== "none") {
+          qwenLoraList = [{ name: lora, strength: Number(loraStrength) || 0.8 }];
+        }
+
+        // Explicit VAE for fp8 checkpoints that don't bundle one
+        const qwenVae = process.env.COMFYUI_QWEN_VAE || "ae.safetensors";
+
         workflow = buildQwenEditWorkflow({
           prompt: enhancedPrompt,
           negativePrompt: (negativePrompt || "").trim() || QWEN_DEFAULT_NEGATIVE,
@@ -1450,9 +1499,9 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           steps: clampSteps,
           cfg: clampCfg,
           checkpoint: qwenCkpt,
+          vae: qwenVae,
           upscale: !!upscale,
-          lora: lora || undefined,
-          loraStrength: Number(loraStrength) || 0.8,
+          loras: qwenLoraList,
         });
       } else {
         workflow = buildTxt2ImgWorkflow({
