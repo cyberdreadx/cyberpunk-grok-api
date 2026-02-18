@@ -119,3 +119,8 @@ RUN mkdir -p /comfyui/models/upscale_models && \
 # (mounted at /runpod-volume). This avoids baking the 10-20GB model
 # into the Docker image.
 RUN printf "\nrunpod_volume:\n    base_path: /runpod-volume/models\n    checkpoints: checkpoints\n    diffusion_models: diffusion_models\n    upscale_models: upscale_models\n    vae: vae\n    clip: text_encoders\n    loras: loras\n    unet: unet\n    gguf: gguf\n" >> /comfyui/extra_model_paths.yaml
+
+# ── Force highvram mode ───────────────────────────────────────────
+# L40S has 48GB — no reason to use lowvram module-by-module loading.
+# The base image start.sh doesn't support CLI_ARGS, so we patch it.
+RUN sed -i 's|python -u /comfyui/main.py --disable-auto-launch --disable-metadata|python -u /comfyui/main.py --disable-auto-launch --disable-metadata --highvram|g' /start.sh

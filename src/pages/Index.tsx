@@ -104,6 +104,7 @@ const Index = () => {
   const [gltchHd, setGltchHd] = useState(false);
   const [grokPro, setGrokPro] = useState(false);
   const [qwenLoraStack, setQwenLoraStack] = useState<{ name: string; strength: number }[]>([]);
+  const [comfyEditUpscale, setComfyEditUpscale] = useState(false);
 
   type ComfyEngine = "grok" | "comfy";
   const [genEngine, setGenEngine] = useState<ComfyEngine>("grok");
@@ -246,7 +247,7 @@ const Index = () => {
       } else if (isGltchEdit) {
         cost = calculateCreditCost(gltchHd ? "gltch-edit-hd" : "gltch-edit");
       } else if (isComfyEdit) {
-        cost = calculateCreditCost("comfy-image");
+        cost = calculateCreditCost(comfyEditUpscale ? "comfy-image-hd" : "comfy-image");
       } else if (isComfyGen) {
         cost = calculateCreditCost("comfy-image");
       } else if (isComfyLongLook) {
@@ -281,7 +282,8 @@ const Index = () => {
         let cost: number;
         if (isGrokEdit) cost = calculateCreditCost(grokPro ? "edit-image-pro" : "edit-image", settings.count);
         else if (isGltchEdit) cost = calculateCreditCost(gltchHd ? "gltch-edit-hd" : "gltch-edit");
-        else if (isComfyEdit || isComfyGen) cost = calculateCreditCost("comfy-image");
+        else if (isComfyEdit) cost = calculateCreditCost(comfyEditUpscale ? "comfy-image-hd" : "comfy-image");
+        else if (isComfyGen) cost = calculateCreditCost("comfy-image");
         else if (isComfyLongLook) cost = calculateCreditCost("comfy-longlook", longLookSeqCount);
         else cost = calculateCreditCost("comfy-video");
         creditsHook.deductCreditsLocally(cost);
@@ -327,6 +329,7 @@ const Index = () => {
             steps: comfySteps,
             cfg: comfyCfg,
             loras: qwenLoraStack.filter(l => l.name !== "none"),
+            upscale: comfyEditUpscale,
           });
         } else if (isComfyGen) {
           comfyGenerate({
@@ -797,7 +800,7 @@ const Index = () => {
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-green-500/5 border border-green-500/20 rounded">
                       <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
                       <span className="font-mono-share text-[9px] text-green-400/80">
-                        1 cr/edit — 50% cheaper than Grok edit + LoRA support
+                        {comfyEditUpscale ? "2" : "1"} cr/edit — {comfyEditUpscale ? "HD 2x upscale" : "50% cheaper than Grok edit"} + LoRA support
                       </span>
                     </div>
                     {comfyModels.qwenLoras.length > 0 && (
@@ -883,6 +886,27 @@ const Index = () => {
                         })}
                       </div>
                     )}
+                    <button
+                      type="button"
+                      onClick={() => setComfyEditUpscale(!comfyEditUpscale)}
+                      className={`w-full flex items-center justify-between px-3 py-2 border rounded font-mono-share text-[10px] transition-all duration-200 ${
+                        comfyEditUpscale
+                          ? "border-purple-500/50 bg-purple-500/5 text-purple-300"
+                          : "border-border bg-card/30 text-muted-foreground hover:border-purple-500/30"
+                      }`}
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <span className={`w-3 h-3 border rounded-sm flex items-center justify-center text-[8px] ${
+                          comfyEditUpscale ? "border-purple-500 bg-purple-500 text-white" : "border-muted-foreground/30"
+                        }`}>
+                          {comfyEditUpscale ? "✓" : ""}
+                        </span>
+                        HD UPSCALE (2x)
+                      </span>
+                      <span className={`text-[8px] ${comfyEditUpscale ? "text-yellow-400" : "text-muted-foreground/50"}`}>
+                        +1 cr
+                      </span>
+                    </button>
                   </>
                 )}
               </div>

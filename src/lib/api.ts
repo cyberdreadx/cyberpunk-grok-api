@@ -97,7 +97,7 @@ export type CreditMode =
   | "text-to-image" | "edit-image" | "text-to-image-pro" | "edit-image-pro"
   | "text-to-video" | "image-to-video" | "edit-video"
   | "gltch-edit" | "gltch-edit-hd"
-  | "comfy-image" | "comfy-edit" | "comfy-edit-hd" | "comfy-video" | "comfy-longlook";
+  | "comfy-image" | "comfy-image-hd" | "comfy-edit" | "comfy-edit-hd" | "comfy-video" | "comfy-longlook";
 
 /** Calculate credit cost for a given action. */
 export function calculateCreditCost(
@@ -124,6 +124,8 @@ export function calculateCreditCost(
       return CREDIT_COSTS.gltchEditHd;
     case "comfy-image":
       return CREDIT_COSTS.comfyImage;
+    case "comfy-image-hd":
+      return CREDIT_COSTS.comfyEditHd;
     case "comfy-edit":
       return CREDIT_COSTS.comfyEdit;
     case "comfy-edit-hd":
