@@ -1386,7 +1386,7 @@ const Index = () => {
                 return (
                   <div
                     key={job.id}
-                    className={`relative border rounded-lg p-3 transition-all ${
+                    className={`relative border rounded-lg p-3 transition-all overflow-hidden min-w-0 ${
                       isActive
                         ? "border-purple-500/40 bg-purple-500/5 shadow-[0_0_12px_rgba(168,85,247,0.1)]"
                         : isDone

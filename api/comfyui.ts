@@ -313,6 +313,7 @@ function buildWanVideoWorkflow(p: {
       inputs: {
         images: ["87", 0],
         strength: 0.5,
+        use_gpu: true,
         auto: false,
       },
     },
@@ -728,7 +729,7 @@ function buildLongLookWorkflow(p: {
     const sharpenNode = `${base + 7}`;
     workflow[sharpenNode] = {
       class_type: "FastUnsharpSharpen",
-      inputs: { images: [decodeNode, 0], strength: 0.5, disable: false },
+      inputs: { images: [decodeNode, 0], strength: 0.5, disable: false, use_gpu: true },
     };
 
     let seqLastNode = sharpenNode;
