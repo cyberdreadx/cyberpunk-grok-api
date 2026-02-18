@@ -1690,8 +1690,36 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
             return res.status(200).json({ status: "done", image: imageUri });
           }
 
-          console.error("[comfyui-poll] No output found. Full output:", JSON.stringify(out).slice(0, 500));
-          return res.status(200).json({ status: "error", error: "Job completed but no output could be extracted. The video may be too large." });
+          // Deep scan: some workers nest output under node IDs or unexpected keys
+          for (const key of Object.keys(out)) {
+            const node = out[key];
+            if (!node || typeof node !== "object") continue;
+            // Check node.gifs, node.videos, node.images
+            const files = node.gifs || node.videos || node.images;
+            if (Array.isArray(files) && files.length) {
+              const file = files[files.length - 1];
+              const d = file.data || file;
+              if (typeof d === "string" && d.length > 100) {
+                const uri = d.startsWith("data:") ? d
+                  : outputType === "video" ? `data:video/mp4;base64,${d}`
+                  : `data:image/png;base64,${d}`;
+                console.log(`[comfyui-poll] Found output in nested key "${key}"`);
+                return res.status(200).json({ status: "done", [outputType === "video" ? "video" : "image"]: uri });
+              }
+            }
+            // Check for direct string data on the node
+            if (typeof node === "string" && node.length > 100) {
+              const uri = node.startsWith("data:") ? node
+                : outputType === "video" ? `data:video/mp4;base64,${node}`
+                : `data:image/png;base64,${node}`;
+              return res.status(200).json({ status: "done", [outputType === "video" ? "video" : "image"]: uri });
+            }
+          }
+
+          // If output exists but has no extractable data, it may have been truncated
+          const outStr = JSON.stringify(out);
+          console.error("[comfyui-poll] No output found. Keys:", Object.keys(out), "Size:", outStr.length, "Preview:", outStr.slice(0, 1000));
+          return res.status(200).json({ status: "error", error: "Job completed but no output could be extracted. The video may be too large for the response." });
         }
 
         if (data.status === "FAILED" || data.status === "CANCELLED" || data.status === "TIMED_OUT") {
