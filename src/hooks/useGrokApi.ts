@@ -110,6 +110,16 @@ export async function urlToBase64(url: string): Promise<string> {
   }
 }
 
+/** Read natural dimensions of an image from a data-URL or object URL. */
+export function getImageDimensions(src: string): Promise<{ width: number; height: number }> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+    img.onerror = () => resolve({ width: 1024, height: 1024 });
+    img.src = src;
+  });
+}
+
 /** Make raw API error messages more user-friendly. */
 function friendlyError(msg: string): string {
   const lower = msg.toLowerCase();

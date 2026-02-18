@@ -16,7 +16,7 @@ import AuthDialog from "@/components/AuthDialog";
 import CreditDisplay from "@/components/CreditDisplay";
 import LegalDialog from "@/components/LegalDialog";
 import HowToUseDialog from "@/components/HowToUseDialog";
-import { useGrokApi, urlToBase64, type GrokMode, type GenerationSettings, type VideoSettings, type ApiMode, type VideoLoraEntry, type ComfyJob, DEFAULT_SETTINGS, DEFAULT_VIDEO_SETTINGS } from "@/hooks/useGrokApi";
+import { useGrokApi, urlToBase64, getImageDimensions, type GrokMode, type GenerationSettings, type VideoSettings, type ApiMode, type VideoLoraEntry, type ComfyJob, DEFAULT_SETTINGS, DEFAULT_VIDEO_SETTINGS } from "@/hooks/useGrokApi";
 import { useAuth } from "@/hooks/useAuth";
 import { useCredits } from "@/hooks/useCredits";
 import { useFolders } from "@/hooks/useFolders";
@@ -307,12 +307,23 @@ const Index = () => {
           const imageBase64 = data.imageUrl!.startsWith("data:")
             ? data.imageUrl!
             : await urlToBase64(data.imageUrl!);
+          // Auto-detect input image dimensions so the output matches (no cropping)
+          const dim = await getImageDimensions(imageBase64);
+          const round8 = (v: number) => Math.round(v / 8) * 8;
+          const maxDim = 2048;
+          let w = dim.width;
+          let h = dim.height;
+          if (w > maxDim || h > maxDim) {
+            const scale = maxDim / Math.max(w, h);
+            w = Math.round(w * scale);
+            h = Math.round(h * scale);
+          }
           comfyEdit({
             prompt: data.prompt,
             negativePrompt: comfyNegPrompt || undefined,
             imageBase64,
-            width: comfyWidth,
-            height: comfyHeight,
+            width: round8(Math.max(256, w)),
+            height: round8(Math.max(256, h)),
             steps: comfySteps,
             cfg: comfyCfg,
             loras: qwenLoraStack.filter(l => l.name !== "none"),
