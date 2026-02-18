@@ -410,6 +410,78 @@ export function useGrokApi() {
     }
   }, [apiMode, makeRequest, makeProxyRequest, persistNewResults]);
 
+  // Edit Image — fire-and-forget with queue (same UX as ComfyUI/GLTCH)
+  const grokEditQueued = useCallback((params: EditImageParams) => {
+    const jobId = `cj-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const label = params.prompt.length > 80 ? params.prompt.slice(0, 80) + "…" : params.prompt;
+
+    const newJob: ComfyJob = {
+      id: jobId, status: "submitting",
+      workflowType: params.pro ? "grok-edit-pro" : "grok-edit",
+      prompt: label, phase: "Editing image...", elapsed: 0, seed: null, error: null,
+    };
+    setComfyJobs(prev => [newJob, ...prev]);
+
+    const startTime = Date.now();
+    const timerIv = setInterval(() => {
+      setComfyJobs(prev => prev.map(j =>
+        j.id === jobId && (j.status === "submitting" || j.status === "generating")
+          ? { ...j, elapsed: Math.floor((Date.now() - startTime) / 1000) }
+          : j
+      ));
+    }, 1000);
+    comfyTimerRefs.current.set(jobId, timerIv);
+
+    (async () => {
+      try {
+        const safeImageUrl = params.image_url.startsWith("data:")
+          ? params.image_url
+          : await urlToBase64(params.image_url);
+
+        const body: Record<string, unknown> = {
+          model: params.pro ? "grok-imagine-image-pro" : "grok-imagine-image",
+          prompt: params.prompt,
+          image: { url: safeImageUrl },
+          n: params.settings.count,
+          response_format: "b64_json",
+        };
+
+        setComfyJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "generating" } : j));
+
+        let data: any;
+        if (apiMode === "credits") {
+          data = await makeProxyRequest("edit-image", body);
+        } else {
+          data = await makeRequest("/images/edits", body);
+        }
+
+        clearInterval(timerIv);
+        comfyTimerRefs.current.delete(jobId);
+
+        const newResults: GrokResult[] = data.data.map((item: any, i: number) => ({
+          id: `edit-${Date.now()}-${i}`,
+          url: item.b64_json
+            ? `data:image/png;base64,${item.b64_json}`
+            : item.url,
+          revised_prompt: item.revised_prompt,
+          type: "image" as const,
+          timestamp: Date.now(),
+        }));
+
+        setResults(prev => [...newResults, ...prev]);
+        persistNewResults(newResults);
+        setComfyJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "done", phase: null } : j));
+      } catch (err: any) {
+        clearInterval(timerIv);
+        comfyTimerRefs.current.delete(jobId);
+        setComfyJobs(prev => prev.map(j => j.id === jobId
+          ? { ...j, status: "error", error: friendlyError(err.message), phase: null }
+          : j
+        ));
+      }
+    })();
+  }, [apiMode, makeRequest, makeProxyRequest, persistNewResults]);
+
   // Video generation (text-to-video & image-to-video)
   const generateVideo = useCallback(async (params: GenerateVideoParams) => {
     setIsLoading(true);
@@ -965,6 +1037,8 @@ export function useGrokApi() {
     negativePrompt?: string;
     imageBase64: string;
     imageFilename?: string;
+    width?: number;
+    height?: number;
     frameCount?: number;
     steps?: number;
     cfg?: number;
@@ -1002,6 +1076,8 @@ export function useGrokApi() {
           negativePrompt: params.negativePrompt,
           imageBase64: params.imageBase64,
           imageFilename: params.imageFilename || "input.jpg",
+          width: params.width || 832,
+          height: params.height || 480,
           frameCount: params.frameCount || 81,
           steps: params.steps || 8,
           cfg: params.cfg || 1,
@@ -1105,6 +1181,8 @@ export function useGrokApi() {
           negativePrompt: params.negativePrompt,
           imageBase64: imgResult.image,
           imageFilename: "start_frame.png",
+          width: params.width || 832,
+          height: params.height || 480,
           frameCount: params.frameCount || 81,
           steps: params.steps || 8,
           cfg: params.cfg || 1,
@@ -1147,6 +1225,8 @@ export function useGrokApi() {
     prompt: string;
     negativePrompt?: string;
     imageBase64: string;
+    width?: number;
+    height?: number;
     sequenceCount?: number;
     frameCount?: number;
     steps?: number;
@@ -1187,6 +1267,8 @@ export function useGrokApi() {
           negativePrompt: params.negativePrompt,
           imageBase64: params.imageBase64,
           imageFilename: "input_longlook.jpg",
+          width: params.width || 832,
+          height: params.height || 480,
           sequenceCount: seqCount,
           frameCount: params.frameCount || 81,
           steps: params.steps || 8,
@@ -1244,6 +1326,7 @@ export function useGrokApi() {
     hasApiKey,
     generateImage,
     editImage,
+    grokEditQueued,
     generateVideo,
     editVideo,
     gltchEdit,

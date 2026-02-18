@@ -17,8 +17,10 @@ const XAI_API_BASE = "https://api.x.ai/v1";
 const ADMIN_EMAIL = "cyberdreadx@proton.me";
 
 const CREDIT_COSTS = {
-  image: 1,
-  imagePro: 3,
+  imageGen: 1,
+  imageEdit: 2,
+  imageGenPro: 3,
+  imageEditPro: 4,
   videoPerSecond: 1,
 };
 
@@ -30,8 +32,9 @@ type AllowedAction = (typeof ALLOWED_ACTIONS)[number];
 function calculateCost(action: AllowedAction, imageCount: number, videoDuration: number, isPro: boolean): number {
   switch (action) {
     case "generate-image":
+      return (isPro ? CREDIT_COSTS.imageGenPro : CREDIT_COSTS.imageGen) * imageCount;
     case "edit-image":
-      return (isPro ? CREDIT_COSTS.imagePro : CREDIT_COSTS.image) * imageCount;
+      return (isPro ? CREDIT_COSTS.imageEditPro : CREDIT_COSTS.imageEdit) * imageCount;
     case "generate-video":
     case "edit-video":
       return CREDIT_COSTS.videoPerSecond * videoDuration;

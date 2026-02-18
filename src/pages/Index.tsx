@@ -64,6 +64,7 @@ const Index = () => {
     hasApiKey,
     generateImage,
     editImage,
+    grokEditQueued,
     generateVideo,
     editVideo,
     gltchEdit,
@@ -115,8 +116,8 @@ const Index = () => {
   const [comfyLora, setComfyLora] = useState("none");
   const [comfyLoraStrength, setComfyLoraStrength] = useState(0.8);
   const [comfyNegPrompt, setComfyNegPrompt] = useState("");
-  const [comfyWidth, setComfyWidth] = useState(1024);
-  const [comfyHeight, setComfyHeight] = useState(1024);
+  const [comfyWidth, setComfyWidth] = useState(832);
+  const [comfyHeight, setComfyHeight] = useState(480);
   const [comfySteps, setComfySteps] = useState(5);
   const [comfyCfg, setComfyCfg] = useState(1);
   const [comfyFrameCount, setComfyFrameCount] = useState(81);
@@ -201,6 +202,7 @@ const Index = () => {
 
   const handleSubmit = async (data: { prompt: string; imageUrl?: string }) => {
     // Determine which engine pathway
+    const isGrokEdit = mode === "edit-image" && editEngine === "grok";
     const isGltchEdit = mode === "edit-image" && editEngine === "gltch";
     const isComfyEdit = mode === "edit-image" && editEngine === "comfy";
     const isComfyGen = mode === "text-to-image" && genEngine === "comfy";
@@ -208,9 +210,10 @@ const Index = () => {
     const isComfyAnimate = mode === "image-to-video" && animateEngine === "comfy" && !longLookEnabled;
     const isComfyLongLook = mode === "image-to-video" && animateEngine === "comfy" && longLookEnabled;
     const isComfy = isComfyGen || isComfyEdit || isComfyRender || isComfyAnimate || isComfyLongLook;
+    const isQueued = isGrokEdit || isGltchEdit || isComfy;
 
     // Check access: need either API key (BYOK) or credits
-    if (!isGltchEdit && !isComfy && effectiveApiMode === "byok" && !apiKeySet) {
+    if (!isQueued && effectiveApiMode === "byok" && !apiKeySet) {
       toast({
         title: "ACCESS DENIED",
         description: "Configure your xAI API key first, or switch to Credits mode.",
@@ -219,8 +222,8 @@ const Index = () => {
       return;
     }
 
-    // Comfy and GLTCH always require auth
-    if (isComfy || isGltchEdit) {
+    // Queued jobs always require auth (credits mode)
+    if (isQueued) {
       if (!auth.isAuthenticated) {
         toast({
           title: "ACCESS DENIED",
@@ -231,7 +234,7 @@ const Index = () => {
       }
     }
 
-    if ((effectiveApiMode === "credits" || isGltchEdit || isComfy) && !isAdmin) {
+    if ((effectiveApiMode === "credits" || isQueued) && !isAdmin) {
       if (!auth.isAuthenticated) {
         toast({ title: "ACCESS DENIED", description: "Sign in to use credits.", variant: "destructive" });
         return;
@@ -239,7 +242,9 @@ const Index = () => {
 
       // Calculate cost
       let cost: number;
-      if (isGltchEdit) {
+      if (isGrokEdit) {
+        cost = calculateCreditCost(grokPro ? "edit-image-pro" : "edit-image", settings.count);
+      } else if (isGltchEdit) {
         cost = calculateCreditCost(gltchHd ? "gltch-edit-hd" : "gltch-edit");
       } else if (isComfyEdit) {
         cost = calculateCreditCost("comfy-image");
@@ -270,12 +275,13 @@ const Index = () => {
     addEntry(data.prompt, mode);
     setActivePrompt("");
 
-    // ── ComfyUI + GLTCH (fire-and-forget with optimistic credit deduction) ──
-    if (isComfy || isGltchEdit) {
+    // ── Queued jobs (fire-and-forget with optimistic credit deduction) ──
+    if (isQueued) {
       // Deduct credits optimistically before firing the job
       if (!isAdmin) {
         let cost: number;
-        if (isGltchEdit) cost = calculateCreditCost(gltchHd ? "gltch-edit-hd" : "gltch-edit");
+        if (isGrokEdit) cost = calculateCreditCost(grokPro ? "edit-image-pro" : "edit-image", settings.count);
+        else if (isGltchEdit) cost = calculateCreditCost(gltchHd ? "gltch-edit-hd" : "gltch-edit");
         else if (isComfyEdit || isComfyGen) cost = calculateCreditCost("comfy-image");
         else if (isComfyLongLook) cost = calculateCreditCost("comfy-longlook", longLookSeqCount);
         else cost = calculateCreditCost("comfy-video");
@@ -284,7 +290,14 @@ const Index = () => {
       }
 
       try {
-        if (isGltchEdit) {
+        if (isGrokEdit) {
+          grokEditQueued({
+            prompt: data.prompt,
+            image_url: data.imageUrl!,
+            settings,
+            pro: grokPro,
+          });
+        } else if (isGltchEdit) {
           gltchEdit({
             prompt: data.prompt,
             image_url: data.imageUrl!,
@@ -342,6 +355,8 @@ const Index = () => {
             prompt: data.prompt,
             negativePrompt: comfyNegPrompt || undefined,
             imageBase64,
+            width: comfyWidth,
+            height: comfyHeight,
             sequenceCount: longLookSeqCount,
             frameCount: longLookFrameCount,
             steps: comfySteps,
@@ -362,6 +377,8 @@ const Index = () => {
             prompt: data.prompt,
             negativePrompt: comfyNegPrompt || undefined,
             imageBase64,
+            width: comfyWidth,
+            height: comfyHeight,
             frameCount: comfyFrameCount,
             steps: comfySteps,
             cfg: comfyCfg,
@@ -384,9 +401,6 @@ const Index = () => {
       switch (mode) {
         case "text-to-image":
           await generateImage({ prompt: data.prompt, settings, pro: grokPro });
-          break;
-        case "edit-image":
-          await editImage({ prompt: data.prompt, image_url: data.imageUrl!, settings, pro: grokPro });
           break;
         case "text-to-video":
           await generateVideo({ prompt: data.prompt, videoSettings });
@@ -628,7 +642,7 @@ const Index = () => {
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>xAI</span>
                       <span className={editEngine === "grok" ? "text-primary/70" : "text-muted-foreground/50"}>
-                        {grokPro ? `${settings.count * 3} cr` : `${settings.count} cr`}
+                        {grokPro ? `${settings.count * 4} cr` : `${settings.count * 2} cr`}
                       </span>
                     </div>
                   </button>
@@ -657,19 +671,22 @@ const Index = () => {
                     type="button"
                     onClick={() => { setEditEngine("comfy"); fetchComfyModels(); }}
                     className={`
-                      p-2.5 border rounded text-left transition-all duration-200
+                      p-2.5 border rounded text-left transition-all duration-200 relative overflow-hidden
                       ${editEngine === "comfy"
                         ? "border-purple-500 neon-border bg-purple-500/5"
                         : "border-border bg-card/30 hover:border-purple-500/40"
                       }
                     `}
                   >
+                    <div className="absolute -top-0.5 -right-0.5 bg-green-500 text-[6px] font-orbitron text-black px-1.5 py-0.5 rounded-bl font-bold tracking-wide">
+                      SAVE 50%
+                    </div>
                     <div className={`font-orbitron text-[11px] ${editEngine === "comfy" ? "text-purple-400" : "text-foreground"}`}>
                       COMFY
                     </div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>LoRA</span>
-                      <span className={editEngine === "comfy" ? "text-purple-400/70" : "text-muted-foreground/50"}>
+                      <span className={editEngine === "comfy" ? "text-green-400" : "text-green-400/70"}>
                         1 cr
                       </span>
                     </div>
@@ -737,18 +754,31 @@ const Index = () => {
                       PRO QUALITY (enhanced detail)
                     </span>
                     <span className="text-[9px]">
-                      {grokPro ? "3 cr/img" : "+2 cr/img"}
+                      {grokPro ? "4 cr/img" : "+2 cr/img"}
                     </span>
                   </button>
+                )}
+
+                {/* Comfy savings callout when Grok edit is selected */}
+                {editEngine === "grok" && (
+                  <div
+                    onClick={() => { setEditEngine("comfy"); fetchComfyModels(); }}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-green-500/5 border border-green-500/20 rounded cursor-pointer hover:bg-green-500/10 transition-colors"
+                  >
+                    <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
+                    <span className="font-mono-share text-[9px] text-green-400/80">
+                      Try COMFY edit — same quality, {grokPro ? "75%" : "50%"} cheaper
+                    </span>
+                  </div>
                 )}
 
                 {/* COMFY edit controls — LoRA selector + strength */}
                 {editEngine === "comfy" && (
                   <>
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-500/5 border border-purple-500/20 rounded">
-                      <div className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
-                      <span className="font-mono-share text-[9px] text-purple-400/70">
-                        ComfyUI Qwen Edit — LoRA support
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-green-500/5 border border-green-500/20 rounded">
+                      <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                      <span className="font-mono-share text-[9px] text-green-400/80">
+                        1 cr/edit — 50% cheaper than Grok edit + LoRA support
                       </span>
                     </div>
                     {comfyModels.qwenLoras.length > 0 && (
