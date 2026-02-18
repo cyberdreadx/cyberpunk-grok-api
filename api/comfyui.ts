@@ -594,7 +594,7 @@ function buildLongLookWorkflow(p: {
   if (p.useUpscale) {
     workflow["24"] = {
       class_type: "UpscaleModelLoader",
-      inputs: { model_name: "RealESRGAN_x2.pth" },
+      inputs: { model_name: "4x-UltraSharp.pth" },
     };
   }
 
