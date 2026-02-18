@@ -1471,7 +1471,7 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
         });
       } else if (workflowType === "qwen-edit") {
         // Qwen edit always uses the Qwen checkpoint — ignore client checkpoint
-        const qwenCkpt = process.env.COMFYUI_QWEN_MODEL || "qwnImageEdit_v16Fp8Scaled.safetensors";
+        const qwenCkpt = process.env.COMFYUI_QWEN_MODEL || "Qwen-Rapid-AIO-v2.safetensors";
         // Auto-inject facial preservation hint for better likeness
         const enhancedPrompt = prompt.trim().toLowerCase().includes("preserve facial")
           ? prompt.trim()
@@ -1486,8 +1486,8 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           qwenLoraList = [{ name: lora, strength: Number(loraStrength) || 0.8 }];
         }
 
-        // Explicit VAE for fp8 checkpoints that don't bundle one
-        const qwenVae = process.env.COMFYUI_QWEN_VAE || "ae.safetensors";
+        // Only use external VAE if explicitly set (fp8 checkpoints strip the VAE)
+        const qwenVae = process.env.COMFYUI_QWEN_VAE || "";
 
         workflow = buildQwenEditWorkflow({
           prompt: enhancedPrompt,
