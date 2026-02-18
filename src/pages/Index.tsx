@@ -819,15 +819,8 @@ const Index = () => {
                             <button
                               type="button"
                               onClick={() => {
-                                const find = (keyword: string) => comfyModels.qwenLoras.find(l => l.toLowerCase().includes(keyword));
-                                const skin = find("skin");
-                                const angles = find("angles");
-                                const unchained = find("unchained");
-                                const stack: { name: string; strength: number }[] = [];
-                                if (skin) stack.push({ name: skin, strength: 0.10 });
-                                if (angles) stack.push({ name: angles, strength: 1.25 });
-                                if (unchained) stack.push({ name: unchained, strength: 0.70 });
-                                if (stack.length > 0) setQwenLoraStack(stack);
+                                const skin = comfyModels.qwenLoras.find(l => l.toLowerCase().includes("skin"));
+                                if (skin) setQwenLoraStack([{ name: skin, strength: 0.55 }]);
                               }}
                               className="w-full p-2 border border-cyan-500/30 bg-cyan-500/5 rounded text-center font-mono-share text-[9px] text-cyan-400 hover:border-cyan-500/50 hover:bg-cyan-500/10 transition-all"
                             >
