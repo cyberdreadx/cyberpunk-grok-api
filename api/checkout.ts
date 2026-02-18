@@ -121,6 +121,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json({ url: session.url });
   } catch (err: any) {
     console.error("[checkout]", err.message, err.stack);
-    return res.status(500).json({ error: "Failed to create checkout session. Please try again." });
+    const detail = err?.type === "StripeInvalidRequestError"
+      ? err.message
+      : err.message || "Unknown error";
+    return res.status(500).json({ error: `Checkout failed: ${detail}` });
   }
 }
