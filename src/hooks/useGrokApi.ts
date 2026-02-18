@@ -498,7 +498,7 @@ export function useGrokApi() {
       };
 
       if (apiMode === "credits") {
-        const data = await makeProxyRequest("generate-video", body);
+        const data = await makeProxyRequest("edit-video", body);
         const videoUrl = data.video?.url || data.video_url || data.url || data.data?.[0]?.url;
         if (!videoUrl) {
           throw new Error("No video URL found in proxy result");
@@ -515,7 +515,7 @@ export function useGrokApi() {
         return newResults;
       }
 
-      const startData = await makeRequest("/videos/generations", body);
+      const startData = await makeRequest("/videos/edits", body);
       const requestId = startData.request_id || startData.id;
       if (!requestId) {
         throw new Error("No request_id returned. Response: " + JSON.stringify(startData).slice(0, 300));

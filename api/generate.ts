@@ -24,7 +24,7 @@ const CREDIT_COSTS = {
 
 const PRO_MODEL = "grok-imagine-image-pro";
 
-const ALLOWED_ACTIONS = ["generate-image", "edit-image", "generate-video"] as const;
+const ALLOWED_ACTIONS = ["generate-image", "edit-image", "generate-video", "edit-video"] as const;
 type AllowedAction = (typeof ALLOWED_ACTIONS)[number];
 
 function calculateCost(action: AllowedAction, imageCount: number, videoDuration: number, isPro: boolean): number {
@@ -33,6 +33,7 @@ function calculateCost(action: AllowedAction, imageCount: number, videoDuration:
     case "edit-image":
       return (isPro ? CREDIT_COSTS.imagePro : CREDIT_COSTS.image) * imageCount;
     case "generate-video":
+    case "edit-video":
       return CREDIT_COSTS.videoPerSecond * videoDuration;
   }
 }
@@ -68,6 +69,7 @@ function moderationMode(action: string): string {
     case "generate-image": return "moderation-image";
     case "edit-image": return "moderation-edit";
     case "generate-video": return "moderation-video";
+    case "edit-video": return "moderation-video-edit";
     default: return "moderation-unknown";
   }
 }
@@ -114,7 +116,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Validate action against whitelist
     if (!action || !ALLOWED_ACTIONS.includes(action as AllowedAction)) {
-      return res.status(400).json({ error: "Invalid action. Expected: generate-image, edit-image, or generate-video." });
+      return res.status(400).json({ error: "Invalid action. Expected: generate-image, edit-image, generate-video, or edit-video." });
     }
 
     // Validate and clamp numeric inputs
@@ -148,6 +150,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       case "generate-image": xaiEndpoint = "/images/generations"; break;
       case "edit-image": xaiEndpoint = "/images/edits"; break;
       case "generate-video": xaiEndpoint = "/videos/generations"; break;
+      case "edit-video": xaiEndpoint = "/videos/edits"; break;
       default: return res.status(400).json({ error: "Invalid action" }); // unreachable — whitelist above
     }
 
@@ -218,7 +221,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     let xaiData: any = await xaiResponse.json();
 
     // For video: poll until complete
-    if (action === "generate-video") {
+    if (action === "generate-video" || action === "edit-video") {
       const requestId = xaiData.request_id || xaiData.id;
       if (requestId) {
         for (let i = 0; i < 120; i++) {
