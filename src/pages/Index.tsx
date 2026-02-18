@@ -100,6 +100,7 @@ const Index = () => {
   type EditEngine = "grok" | "gltch";
   const [editEngine, setEditEngine] = useState<EditEngine>("grok");
   const [gltchHd, setGltchHd] = useState(false);
+  const [grokPro, setGrokPro] = useState(false);
 
   type ComfyEngine = "grok" | "comfy";
   const [genEngine, setGenEngine] = useState<ComfyEngine>("grok");
@@ -243,9 +244,11 @@ const Index = () => {
       } else if (isComfyRender || isComfyAnimate) {
         cost = calculateCreditCost("comfy-video");
       } else {
-        const imageCount = (mode === "text-to-image" || mode === "edit-image") ? settings.count : 1;
+        const isImageMode = mode === "text-to-image" || mode === "edit-image";
+        const imageCount = isImageMode ? settings.count : 1;
         const videoDuration = (mode === "text-to-video" || mode === "image-to-video" || mode === "edit-video") ? videoSettings.duration : 0;
-        cost = calculateCreditCost(mode, imageCount, videoDuration);
+        const creditMode = isImageMode && grokPro ? (mode === "text-to-image" ? "text-to-image-pro" : "edit-image-pro") as const : mode;
+        cost = calculateCreditCost(creditMode, imageCount, videoDuration);
       }
 
       if (!creditsHook.hasEnoughCredits(cost)) {
@@ -359,10 +362,10 @@ const Index = () => {
     try {
       switch (mode) {
         case "text-to-image":
-          await generateImage({ prompt: data.prompt, settings });
+          await generateImage({ prompt: data.prompt, settings, pro: grokPro });
           break;
         case "edit-image":
-          await editImage({ prompt: data.prompt, image_url: data.imageUrl!, settings });
+          await editImage({ prompt: data.prompt, image_url: data.imageUrl!, settings, pro: grokPro });
           break;
         case "text-to-video":
           await generateVideo({ prompt: data.prompt, videoSettings });
@@ -377,9 +380,11 @@ const Index = () => {
 
       // Optimistically deduct credits on success (admin is free on backend)
       if (effectiveApiMode === "credits" && !isAdmin) {
-        const imageCount = (mode === "text-to-image" || mode === "edit-image") ? settings.count : 1;
+        const isImageMode = mode === "text-to-image" || mode === "edit-image";
+        const imageCount = isImageMode ? settings.count : 1;
         const videoDuration = (mode === "text-to-video" || mode === "image-to-video" || mode === "edit-video") ? videoSettings.duration : 0;
-        const cost = calculateCreditCost(mode, imageCount, videoDuration);
+        const creditMode = isImageMode && grokPro ? (mode === "text-to-image" ? "text-to-image-pro" : "edit-image-pro") as const : mode;
+        const cost = calculateCreditCost(creditMode, imageCount, videoDuration);
         creditsHook.deductCreditsLocally(cost);
         setTimeout(() => creditsHook.refreshCredits(), 2000);
       }
@@ -602,7 +607,7 @@ const Index = () => {
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>xAI</span>
                       <span className={editEngine === "grok" ? "text-primary/70" : "text-muted-foreground/50"}>
-                        {settings.count} cr
+                        {grokPro ? `${settings.count * 3} cr` : `${settings.count} cr`}
                       </span>
                     </div>
                   </button>
@@ -666,6 +671,34 @@ const Index = () => {
                     </span>
                   </div>
                 )}
+
+                {/* PRO quality toggle — Grok edit */}
+                {editEngine === "grok" && (
+                  <button
+                    type="button"
+                    onClick={() => setGrokPro(!grokPro)}
+                    className={`
+                      w-full flex items-center justify-between px-3 py-2 border rounded
+                      font-mono-share text-[10px] transition-all duration-200
+                      ${grokPro
+                        ? "border-amber-500/50 bg-amber-500/5 text-amber-300"
+                        : "border-border bg-card/30 text-muted-foreground hover:border-amber-500/30"
+                      }
+                    `}
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <span className={`w-3 h-3 border rounded-sm flex items-center justify-center text-[8px]
+                        ${grokPro ? "border-amber-500 bg-amber-500 text-white" : "border-muted-foreground/30"}
+                      `}>
+                        {grokPro && "✓"}
+                      </span>
+                      PRO QUALITY (enhanced detail)
+                    </span>
+                    <span className="text-[9px]">
+                      {grokPro ? "3 cr/img" : "+2 cr/img"}
+                    </span>
+                  </button>
+                )}
               </div>
             )}
 
@@ -682,7 +715,7 @@ const Index = () => {
                     <div className={`font-orbitron text-[11px] ${genEngine === "grok" ? "text-primary" : "text-foreground"}`}>GROK</div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>xAI</span>
-                      <span className={genEngine === "grok" ? "text-primary/70" : "text-muted-foreground/50"}>{settings.count} cr</span>
+                      <span className={genEngine === "grok" ? "text-primary/70" : "text-muted-foreground/50"}>{grokPro ? settings.count * 3 : settings.count} cr</span>
                     </div>
                   </button>
                   <button type="button" onClick={() => setGenEngine("comfy")}
@@ -769,6 +802,34 @@ const Index = () => {
                       </span>
                     </div>
                   </div>
+                )}
+
+                {/* PRO quality toggle — Grok generate */}
+                {genEngine === "grok" && (
+                  <button
+                    type="button"
+                    onClick={() => setGrokPro(!grokPro)}
+                    className={`
+                      w-full flex items-center justify-between px-3 py-2 border rounded
+                      font-mono-share text-[10px] transition-all duration-200
+                      ${grokPro
+                        ? "border-amber-500/50 bg-amber-500/5 text-amber-300"
+                        : "border-border bg-card/30 text-muted-foreground hover:border-amber-500/30"
+                      }
+                    `}
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <span className={`w-3 h-3 border rounded-sm flex items-center justify-center text-[8px]
+                        ${grokPro ? "border-amber-500 bg-amber-500 text-white" : "border-muted-foreground/30"}
+                      `}>
+                        {grokPro && "✓"}
+                      </span>
+                      PRO QUALITY (enhanced detail)
+                    </span>
+                    <span className="text-[9px]">
+                      {grokPro ? "3 cr/img" : "+2 cr/img"}
+                    </span>
+                  </button>
                 )}
               </div>
             )}

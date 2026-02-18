@@ -67,12 +67,14 @@ export interface ComfyJob {
 interface GenerateImageParams {
   prompt: string;
   settings: GenerationSettings;
+  pro?: boolean;
 }
 
 interface EditImageParams {
   prompt: string;
   image_url: string;
   settings: GenerationSettings;
+  pro?: boolean;
 }
 
 interface GenerateVideoParams {
@@ -330,7 +332,7 @@ export function useGrokApi() {
     setError(null);
     try {
       const body: Record<string, unknown> = {
-        model: "grok-imagine-image",
+        model: params.pro ? "grok-imagine-image-pro" : "grok-imagine-image",
         prompt: params.prompt,
         n: params.settings.count,
         aspect_ratio: params.settings.aspectRatio,
@@ -373,7 +375,7 @@ export function useGrokApi() {
         : await urlToBase64(params.image_url);
 
       const body: Record<string, unknown> = {
-        model: "grok-imagine-image",
+        model: params.pro ? "grok-imagine-image-pro" : "grok-imagine-image",
         prompt: params.prompt,
         image: { url: safeImageUrl },
         n: params.settings.count,

@@ -18,17 +18,20 @@ const ADMIN_EMAIL = "cyberdreadx@proton.me";
 
 const CREDIT_COSTS = {
   image: 1,
+  imagePro: 3,
   videoPerSecond: 1,
 };
+
+const PRO_MODEL = "grok-imagine-image-pro";
 
 const ALLOWED_ACTIONS = ["generate-image", "edit-image", "generate-video"] as const;
 type AllowedAction = (typeof ALLOWED_ACTIONS)[number];
 
-function calculateCost(action: AllowedAction, imageCount: number, videoDuration: number): number {
+function calculateCost(action: AllowedAction, imageCount: number, videoDuration: number, isPro: boolean): number {
   switch (action) {
     case "generate-image":
     case "edit-image":
-      return CREDIT_COSTS.image * imageCount;
+      return (isPro ? CREDIT_COSTS.imagePro : CREDIT_COSTS.image) * imageCount;
     case "generate-video":
       return CREDIT_COSTS.videoPerSecond * videoDuration;
   }
@@ -122,7 +125,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: "Prompt too long (max 10,000 characters)." });
     }
 
-    const cost = calculateCost(action as AllowedAction, imageCount, videoDuration);
+    const isPro = params.model === PRO_MODEL;
+    const cost = calculateCost(action as AllowedAction, imageCount, videoDuration, isPro);
     const isAdminUser = auth.email === ADMIN_EMAIL;
 
     // Credit gate (admin is free)
