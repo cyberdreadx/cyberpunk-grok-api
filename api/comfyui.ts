@@ -385,13 +385,13 @@ function buildLongLookWorkflow(p: {
 
   // ── Shared nodes (built once) ──
 
-  // CLIPLoader
+  // CLIPLoader — offload to CPU to save ~8GB VRAM for the dual UNets
   workflow["10"] = {
     class_type: "CLIPLoader",
     inputs: {
       clip_name: "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
       type: "wan",
-      device: "default",
+      device: "cpu",
     },
   };
 
@@ -406,7 +406,7 @@ function buildLongLookWorkflow(p: {
     class_type: "UNETLoader",
     inputs: {
       unet_name: "wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors",
-      weight_dtype: "default",
+      weight_dtype: "fp8_e4m3fn",
     },
   };
 
@@ -415,7 +415,7 @@ function buildLongLookWorkflow(p: {
     class_type: "UNETLoader",
     inputs: {
       unet_name: "wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors",
-      weight_dtype: "default",
+      weight_dtype: "fp8_e4m3fn",
     },
   };
 
