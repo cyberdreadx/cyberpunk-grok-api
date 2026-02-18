@@ -307,10 +307,10 @@ const Index = () => {
           const imageBase64 = data.imageUrl!.startsWith("data:")
             ? data.imageUrl!
             : await urlToBase64(data.imageUrl!);
-          // Auto-detect input image dimensions so the output matches (no cropping)
+          // Auto-detect input image dimensions, cap at 1024 for speed
           const dim = await getImageDimensions(imageBase64);
           const round8 = (v: number) => Math.round(v / 8) * 8;
-          const maxDim = 2048;
+          const maxDim = 1024;
           let w = dim.width;
           let h = dim.height;
           if (w > maxDim || h > maxDim) {
