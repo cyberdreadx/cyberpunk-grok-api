@@ -360,12 +360,17 @@ const Index = () => {
             ? data.imageUrl
             : data.imageUrl ? await urlToBase64(data.imageUrl) : "";
           if (!imageBase64) throw new Error("Image is required for LongLook");
+          const dim = await getImageDimensions(imageBase64);
+          const round8 = (v: number) => Math.round(v / 8) * 8;
+          const maxDim = 1024;
+          let w = dim.width, h = dim.height;
+          if (w > maxDim || h > maxDim) { const s = maxDim / Math.max(w, h); w = Math.round(w * s); h = Math.round(h * s); }
           comfyLongLook({
             prompt: data.prompt,
             negativePrompt: comfyNegPrompt || undefined,
             imageBase64,
-            width: comfyWidth,
-            height: comfyHeight,
+            width: round8(Math.max(256, w)),
+            height: round8(Math.max(256, h)),
             sequenceCount: longLookSeqCount,
             frameCount: longLookFrameCount,
             steps: comfySteps,
@@ -382,12 +387,17 @@ const Index = () => {
             ? data.imageUrl
             : data.imageUrl ? await urlToBase64(data.imageUrl) : "";
           if (!imageBase64) throw new Error("Image is required for animation");
+          const dim = await getImageDimensions(imageBase64);
+          const round8 = (v: number) => Math.round(v / 8) * 8;
+          const maxDim = 1024;
+          let w = dim.width, h = dim.height;
+          if (w > maxDim || h > maxDim) { const s = maxDim / Math.max(w, h); w = Math.round(w * s); h = Math.round(h * s); }
           comfyVideo({
             prompt: data.prompt,
             negativePrompt: comfyNegPrompt || undefined,
             imageBase64,
-            width: comfyWidth,
-            height: comfyHeight,
+            width: round8(Math.max(256, w)),
+            height: round8(Math.max(256, h)),
             frameCount: comfyFrameCount,
             steps: comfySteps,
             cfg: comfyCfg,

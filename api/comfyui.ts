@@ -314,7 +314,7 @@ function buildWanVideoWorkflow(p: {
         images: ["87", 0],
         strength: 0.5,
         use_gpu: true,
-        auto: false,
+        disable: false,
       },
     },
   };

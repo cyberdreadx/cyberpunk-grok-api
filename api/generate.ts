@@ -220,8 +220,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       await refundCredits();
 
       // Translate xAI quota/billing errors so users don't confuse them with their own credits
-      const errLower = errText.toLowerCase();
-      if (xaiResponse.status === 429 || /monthly.*limit|rate.*limit|quota.*exceeded|too many/i.test(errText)) {
+      if (xaiResponse.status === 429 || /monthly.*limit|rate.*limit|quota.*exceeded/i.test(errText)) {
         return res.status(503).json({
           error: "The AI generation service is temporarily at capacity. Your credits were NOT deducted. Please try again in a few minutes.",
           retryable: true,
