@@ -131,12 +131,11 @@ const WAN_DEFAULT_NEGATIVE =
   "色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走";
 
 /**
- * WAN 2.2 Remix NSFW Image-to-Video workflow (API format).
+ * WAN 2.2 Remix NSFW Image-to-Video workflow — clean rebuild.
  *
- * Uses PainterI2VAdvanced for color-drift-free I2V conditioning that
- * automatically splits into high/low pairs, Remix NSFW models with
- * baked-in acceleration, uni_pc/beta sampler, VRAM cleanup between
- * passes, and FastUnsharpSharpen post-processing.
+ * Simple proven pipeline: WanImageToVideo conditioning → dual-pass
+ * KSamplerAdvanced (high/low noise models) → VAEDecode → VHS output.
+ * No experimental nodes (PainterI2V, FastUnsharpSharpen, VRAM_Debug).
  */
 function buildWanVideoWorkflow(p: {
   prompt: string;
@@ -165,70 +164,35 @@ function buildWanVideoWorkflow(p: {
   const clipModel = process.env.COMFYUI_WAN_CLIP
     || "nsfw_wan_umt5-xxl_bf16_fixed.safetensors";
 
+  // Model sources — may be overridden by LoRA nodes below
+  let highModelSource: [string, number] = ["95", 0];
+  let lowModelSource: [string, number] = ["96", 0];
+
   const workflow: Record<string, any> = {
-    // Text encoder (NSFW-uncensored)
+    // CLIP text encoder
     "84": {
       class_type: "CLIPLoader",
-      inputs: {
-        clip_name: clipModel,
-        type: "wan",
-        device: "cpu",
-      },
+      inputs: { clip_name: clipModel, type: "wan", device: "cpu" },
     },
     // VAE
     "90": {
       class_type: "VAELoader",
       inputs: { vae_name: "wan_2.1_vae.safetensors" },
     },
-    // High-noise Remix model
+    // High-noise model
     "95": {
       class_type: "UNETLoader",
-      inputs: {
-        unet_name: highModel,
-        weight_dtype: "fp8_e4m3fn",
-      },
+      inputs: { unet_name: highModel, weight_dtype: "fp8_e4m3fn" },
     },
-    // Low-noise Remix model
+    // Low-noise model
     "96": {
       class_type: "UNETLoader",
-      inputs: {
-        unet_name: lowModel,
-        weight_dtype: "fp8_e4m3fn",
-      },
+      inputs: { unet_name: lowModel, weight_dtype: "fp8_e4m3fn" },
     },
-    // Shift scheduling — high noise path
-    "104": {
-      class_type: "ModelSamplingSD3",
-      inputs: { model: ["95", 0], shift: 12 },
-    },
-    // Shift scheduling — low noise path
-    "103": {
-      class_type: "ModelSamplingSD3",
-      inputs: { model: ["96", 0], shift: 12 },
-    },
-    // Start image
+    // Load start image
     "97": {
       class_type: "LoadImage",
       inputs: { image: p.imageFilename },
-    },
-    // Resize input image to target resolution (aligned to 16px)
-    "111": {
-      class_type: "ImageResizeKJv2",
-      inputs: {
-        image: ["97", 0],
-        width: p.width,
-        height: p.height,
-        interpolation: "nearest-exact",
-        method: "resize",
-        pad_color: "0, 0, 0",
-        align: "center",
-        divisor: 16,
-        device: "cpu",
-        keep_proportion: "resize",
-        upscale_method: "nearest-exact",
-        crop_position: "center",
-        divisible_by: 16,
-      },
     },
     // Positive prompt
     "93": {
@@ -240,130 +204,104 @@ function buildWanVideoWorkflow(p: {
       class_type: "CLIPTextEncode",
       inputs: { clip: ["84", 0], text: p.negativePrompt },
     },
-    // PainterI2VAdvanced — splits conditioning into high/low pairs,
-    // fixes color drift at high motion
-    "113": {
-      class_type: "PainterI2VAdvanced",
-      inputs: {
-        positive: ["93", 0],
-        negative: ["89", 0],
-        vae: ["90", 0],
-        start_image: ["111", 0],
-        width: ["111", 1],
-        height: ["111", 2],
-        length: p.frameCount,
-        batch_size: 1,
-        cfg_guide: 1.4,
-        positive_conditioning: true,
-        negative_conditioning_weight: 0.01,
-        color_protect: true,
-        correct_strength: 0.1,
-        motion_amplitude: 1.0,
-      },
-    },
-    // Pass 1: high-noise sampler (steps 0 → splitStep)
-    "86": {
-      class_type: "KSamplerAdvanced",
-      inputs: {
-        model: ["104", 0],
-        positive: ["113", 0],  // high_positive
-        negative: ["113", 1],  // high_negative
-        latent_image: ["113", 4],  // latent
-        add_noise: "enable",
-        noise_seed: p.seed,
-        steps: p.steps,
-        cfg: p.cfg,
-        sampler_name: "uni_pc",
-        scheduler: "beta",
-        start_at_step: 0,
-        end_at_step: splitStep,
-        return_with_leftover_noise: "enable",
-      },
-    },
-    // VRAM cleanup between passes
-    "112": {
-      class_type: "VRAM_Debug",
-      inputs: {
-        any_input: ["86", 0],
-        empty_cache: true,
-        gc_collect: true,
-        unload_all_models: false,
-      },
-    },
-    // Pass 2: low-noise sampler (splitStep → end)
-    "85": {
-      class_type: "KSamplerAdvanced",
-      inputs: {
-        model: ["103", 0],
-        positive: ["113", 2],  // low_positive
-        negative: ["113", 3],  // low_negative
-        latent_image: ["112", 0],  // from VRAM_Debug passthrough
-        add_noise: "disable",
-        noise_seed: p.seed,
-        steps: p.steps,
-        cfg: p.cfg,
-        sampler_name: "uni_pc",
-        scheduler: "beta",
-        start_at_step: splitStep,
-        end_at_step: 10000,
-        return_with_leftover_noise: "disable",
-      },
-    },
-    // Decode latent → frames
-    "87": {
-      class_type: "VAEDecode",
-      inputs: { samples: ["85", 0], vae: ["90", 0] },
-    },
-    // Sharpen output frames
-    "130": {
-      class_type: "FastUnsharpSharpen",
-      inputs: {
-        images: ["87", 0],
-        strength: 0.5,
-        use_gpu: true,
-        disable: false,
-      },
-    },
   };
 
-  // Optional user video LoRA — applied directly on UNETLoader output (no accel LoRA layer).
-  // Paired LoRAs apply to both passes; single-file respects videoLoraPass.
+  // Optional user video LoRA — applied before ModelSamplingSD3
   const isPaired = !!(p.videoLoraHigh && p.videoLoraLow);
   const hasHigh = isPaired || p.videoLoraHigh || (p.videoLora && (p.videoLoraPass === "high" || p.videoLoraPass === "both"));
   const hasLow = isPaired || p.videoLoraLow || (p.videoLora && (p.videoLoraPass === "low" || p.videoLoraPass === "both"));
   const str = p.videoLoraStrength ?? 0.8;
 
   if (hasHigh) {
-    const loraFile = p.videoLoraHigh || p.videoLora!;
     workflow["110"] = {
       class_type: "LoraLoaderModelOnly",
-      inputs: {
-        model: ["95", 0],
-        lora_name: loraFile,
-        strength_model: str,
-      },
+      inputs: { model: highModelSource, lora_name: p.videoLoraHigh || p.videoLora!, strength_model: str },
     };
-    workflow["104"].inputs.model = ["110", 0];
+    highModelSource = ["110", 0];
   }
-
   if (hasLow) {
-    const loraFile = p.videoLoraLow || p.videoLora!;
     workflow["115"] = {
       class_type: "LoraLoaderModelOnly",
-      inputs: {
-        model: ["96", 0],
-        lora_name: loraFile,
-        strength_model: str,
-      },
+      inputs: { model: lowModelSource, lora_name: p.videoLoraLow || p.videoLora!, strength_model: str },
     };
-    workflow["103"].inputs.model = ["115", 0];
+    lowModelSource = ["115", 0];
   }
 
+  // ModelSamplingSD3 shift scheduling
+  workflow["104"] = {
+    class_type: "ModelSamplingSD3",
+    inputs: { model: highModelSource, shift: 12 },
+  };
+  workflow["103"] = {
+    class_type: "ModelSamplingSD3",
+    inputs: { model: lowModelSource, shift: 12 },
+  };
+
+  // WanImageToVideo — standard conditioning (no experimental nodes)
+  workflow["113"] = {
+    class_type: "WanImageToVideo",
+    inputs: {
+      positive: ["93", 0],
+      negative: ["89", 0],
+      vae: ["90", 0],
+      start_image: ["97", 0],
+      width: p.width,
+      height: p.height,
+      length: p.frameCount,
+      batch_size: 1,
+    },
+  };
+
+  // Pass 1: high-noise sampler
+  workflow["86"] = {
+    class_type: "KSamplerAdvanced",
+    inputs: {
+      model: ["104", 0],
+      positive: ["113", 0],
+      negative: ["113", 1],
+      latent_image: ["113", 2],
+      add_noise: "enable",
+      noise_seed: p.seed,
+      steps: p.steps,
+      cfg: p.cfg,
+      sampler_name: "uni_pc",
+      scheduler: "beta",
+      start_at_step: 0,
+      end_at_step: splitStep,
+      return_with_leftover_noise: "enable",
+    },
+  };
+
+  // Pass 2: low-noise sampler
+  workflow["85"] = {
+    class_type: "KSamplerAdvanced",
+    inputs: {
+      model: ["103", 0],
+      positive: ["113", 0],
+      negative: ["113", 1],
+      latent_image: ["86", 0],
+      add_noise: "disable",
+      noise_seed: p.seed,
+      steps: p.steps,
+      cfg: p.cfg,
+      sampler_name: "uni_pc",
+      scheduler: "beta",
+      start_at_step: splitStep,
+      end_at_step: 10000,
+      return_with_leftover_noise: "disable",
+    },
+  };
+
+  // VAEDecode → frames
+  workflow["87"] = {
+    class_type: "VAEDecode",
+    inputs: { samples: ["85", 0], vae: ["90", 0] },
+  };
+
   // Post-processing chain
-  let lastNode = "130";  // FastUnsharpSharpen output
+  let lastNode = "87";
   let lastOut = 0;
-  const baseFps = 24;
-  let fps = baseFps;
+  let fps = 24;
 
   if (p.useRife) {
     workflow["116"] = {
@@ -392,7 +330,7 @@ function buildWanVideoWorkflow(p: {
     lastOut = 0;
   }
 
-  // Encode frames → video → save
+  // Video output
   workflow["94"] = {
     class_type: "VHS_VideoCombine",
     inputs: {
