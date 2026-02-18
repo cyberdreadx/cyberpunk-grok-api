@@ -224,7 +224,7 @@ function buildWanVideoWorkflow(p: {
         align: "center",
         divisor: 16,
         device: "cpu",
-        keep_proportion: true,
+        keep_proportion: "resize",
         upscale_method: "nearest-exact",
         crop_position: "center",
         divisible_by: 16,
@@ -257,7 +257,7 @@ function buildWanVideoWorkflow(p: {
         positive_conditioning: true,
         negative_conditioning_weight: 0.01,
         color_protect: true,
-        correct_strength: 1.0,
+        correct_strength: 0.1,
         motion_amplitude: 1.0,
       },
     },
@@ -362,7 +362,8 @@ function buildWanVideoWorkflow(p: {
   // Post-processing chain
   let lastNode = "130";  // FastUnsharpSharpen output
   let lastOut = 0;
-  let fps = 21;
+  const baseFps = 24;
+  let fps = baseFps;
 
   if (p.useRife) {
     workflow["116"] = {
@@ -371,7 +372,7 @@ function buildWanVideoWorkflow(p: {
         frames: [lastNode, lastOut],
         ckpt_name: "rife47.pth",
         clear_cache_after_n_frames: 10,
-        multiplier: 2,
+        multiplier: 3,
         fast_mode: false,
         ensemble: true,
         scale_factor: 1,
@@ -379,7 +380,7 @@ function buildWanVideoWorkflow(p: {
     };
     lastNode = "116";
     lastOut = 0;
-    fps = 42;
+    fps = 60;
   }
 
   if (p.useUpscale) {
@@ -401,7 +402,7 @@ function buildWanVideoWorkflow(p: {
       filename_prefix: "GrokRunner",
       format: "video/h264-mp4",
       pix_fmt: "yuv420p",
-      crf: 19,
+      crf: 15,
       save_metadata: true,
       trim_to_audio: false,
       pingpong: false,
@@ -752,7 +753,7 @@ function buildLongLookWorkflow(p: {
           frames: [seqLastNode, seqLastOut],
           ckpt_name: "rife47.pth",
           clear_cache_after_n_frames: 10,
-          multiplier: 2,
+          multiplier: 3,
           fast_mode: false,
           ensemble: true,
           scale_factor: 1,
@@ -777,7 +778,7 @@ function buildLongLookWorkflow(p: {
 
   // ── Final output nodes (use same CreateVideo + SaveVideo as WAN video) ──
 
-  const fps = p.useRife ? 24 : 16;
+  const fps = p.useRife ? 60 : 24;
 
   let finalFrames: [string, number];
 
@@ -798,18 +799,21 @@ function buildLongLookWorkflow(p: {
     finalFrames = ["899", 0];
   }
 
-  // CreateVideo → SaveVideo (same proven nodes as WAN video workflow)
-  workflow["900"] = {
-    class_type: "CreateVideo",
-    inputs: { images: finalFrames, fps: fps },
-  };
+  // Encode frames → video with quality control
   workflow["901"] = {
-    class_type: "SaveVideo",
+    class_type: "VHS_VideoCombine",
     inputs: {
-      video: ["900", 0],
-      filename_prefix: "video/GrokRunner_LongLook",
-      codec: "auto",
-      format: "mp4",
+      images: finalFrames,
+      frame_rate: fps,
+      loop_count: 0,
+      filename_prefix: "GrokRunner_LongLook",
+      format: "video/h264-mp4",
+      pix_fmt: "yuv420p",
+      crf: 15,
+      save_metadata: true,
+      trim_to_audio: false,
+      pingpong: false,
+      save_output: true,
     },
   };
 
