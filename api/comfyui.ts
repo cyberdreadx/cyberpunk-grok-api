@@ -224,6 +224,10 @@ function buildWanVideoWorkflow(p: {
         align: "center",
         divisor: 16,
         device: "cpu",
+        keep_proportion: true,
+        upscale_method: "nearest-exact",
+        crop_position: "center",
+        divisible_by: 16,
       },
     },
     // Positive prompt
@@ -252,6 +256,9 @@ function buildWanVideoWorkflow(p: {
         cfg_guide: 1.4,
         positive_conditioning: true,
         negative_conditioning_weight: 0.01,
+        color_protect: true,
+        correct_strength: 1.0,
+        motion_amplitude: 1.0,
       },
     },
     // Pass 1: high-noise sampler (steps 0 → splitStep)
@@ -628,8 +635,8 @@ function buildLongLookWorkflow(p: {
           width: p.width,
           height: p.height,
           upscale_method: "lanczos",
-          keep_proportion: false,
-          divisible_by: 2,
+          keep_proportion: true,
+          divisible_by: 16,
         },
       };
 
@@ -640,8 +647,8 @@ function buildLongLookWorkflow(p: {
           negative: [negNode, 0],
           vae: ["11", 0],
           start_image: [resizeNode, 0],
-          width: p.width,
-          height: p.height,
+          width: [resizeNode, 1],
+          height: [resizeNode, 2],
           length: p.frameCount,
           batch_size: 1,
         },
@@ -649,7 +656,9 @@ function buildLongLookWorkflow(p: {
     } else {
       // Continuation: WanContinuationConditioning extracts last frame from previous
       // VAEDecode output, VAE-re-encodes it, and handles resizing internally.
+      // Use the first sequence's resize node for consistent dimensions.
       const prevDecodeNode = `${1000 + (i - 1) * 100 + 6}`;
+      const firstResizeNode = "1002";
       workflow[condNode] = {
         class_type: "WanContinuationConditioning",
         inputs: {
@@ -657,8 +666,8 @@ function buildLongLookWorkflow(p: {
           negative: [negNode, 0],
           anchor_images: [prevDecodeNode, 0],
           vae: ["11", 0],
-          width: p.width,
-          height: p.height,
+          width: [firstResizeNode, 1],
+          height: [firstResizeNode, 2],
           video_length: p.frameCount,
         },
       };
