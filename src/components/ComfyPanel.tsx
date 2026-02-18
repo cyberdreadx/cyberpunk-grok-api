@@ -917,7 +917,7 @@ export default function ComfyPanel({ onResultReady }: ComfyPanelProps) {
                   <input type="checkbox" checked={useVidUpscale} onChange={(e) => setUseVidUpscale(e.target.checked)} className="sr-only peer" />
                   <div className={toggleBaseClass} />
                   <span className="text-xs font-mono text-cyan-400/70 uppercase tracking-wider">
-                    4x UltraSharp upscale (much slower)
+                    2x Lanczos upscale
                   </span>
                 </label>
               </>

@@ -36,6 +36,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
   }, [initialImageUrl]);
 
   const needsImage = mode === "edit-image" || mode === "image-to-video";
+  const needsVideo = mode === "edit-video";
 
   const isHeicLike = (file: File): boolean => {
     const type = (file.type || "").toLowerCase();
@@ -95,6 +96,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
     e.preventDefault();
     if (!prompt.trim()) return;
     if (needsImage && !imageUrl.trim()) return;
+    if (needsVideo && !imageUrl.trim()) return;
 
     setUploadError(null);
     onSubmit({ prompt: prompt.trim(), imageUrl: imageUrl.trim() || undefined });
@@ -140,12 +142,29 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
     "edit-image": "Describe the modifications to apply...",
     "text-to-video": "Describe the video scene to render...",
     "image-to-video": "Describe the animation / motion to apply...",
+    "edit-video": "Describe the edits to apply to the video...",
   };
 
   const hasImage = imageSource === "upload" ? !!uploadPreview : !!imageUrl.trim();
 
   return (
     <form ref={formRef} onSubmit={handleSubmit} onPaste={handlePaste} className="space-y-4">
+      {needsVideo && (
+        <div className="space-y-2">
+          <label className="font-mono-share text-[10px] tracking-wider text-muted-foreground flex items-center gap-2">
+            <span className="text-primary/50">$</span>
+            <Upload className="w-3 h-3" />
+            source_video
+            <span className="text-muted-foreground/40 ml-auto">max 8.7s</span>
+          </label>
+          <Input
+            value={imageUrl}
+            onChange={(e) => setImageUrl(e.target.value)}
+            placeholder="https://example.com/video.mp4"
+            className="bg-input border-border font-mono-share text-sm text-foreground placeholder:text-muted-foreground focus:neon-border"
+          />
+        </div>
+      )}
       {needsImage && (
         <div className="space-y-2">
           <div className="flex items-center justify-between">
@@ -249,7 +268,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
           />
           <Button
             type="submit"
-            disabled={isLoading || !prompt.trim() || (needsImage && !imageUrl.trim())}
+            disabled={isLoading || !prompt.trim() || (needsImage && !imageUrl.trim()) || (needsVideo && !imageUrl.trim())}
             size="icon"
             className="absolute bottom-3 right-3 bg-primary text-primary-foreground hover:bg-primary/80 disabled:opacity-30 transition-all"
             title="Submit (Ctrl+Enter)"
@@ -271,7 +290,12 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
             {hasImage ? "◆ IMG_LOADED" : "○ IMG_REQUIRED"}
           </span>
         )}
-        {mode !== "text-to-video" && mode !== "image-to-video" && (
+        {needsVideo && (
+          <span className={imageUrl.trim() ? "text-primary/50" : "text-destructive/50"}>
+            {imageUrl.trim() ? "◆ VID_LOADED" : "○ VID_REQUIRED"}
+          </span>
+        )}
+        {mode !== "text-to-video" && mode !== "image-to-video" && mode !== "edit-video" && (
           <span className="hidden sm:inline">×{settings.count}</span>
         )}
         <span>{isLoading ? "⟳ PROCESSING..." : "● READY"}</span>

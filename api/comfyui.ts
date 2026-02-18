@@ -378,13 +378,9 @@ function buildWanVideoWorkflow(p: {
   }
 
   if (p.useUpscale) {
-    workflow["118"] = {
-      class_type: "UpscaleModelLoader",
-      inputs: { model_name: "4x-UltraSharp.pth" },
-    };
     workflow["117"] = {
-      class_type: "ImageUpscaleWithModel",
-      inputs: { upscale_model: ["118", 0], image: [lastNode, lastOut] },
+      class_type: "ImageScaleBy",
+      inputs: { image: [lastNode, lastOut], upscale_method: "lanczos", scale_by: 2.0 },
     };
     lastNode = "117";
     lastOut = 0;
@@ -590,13 +586,7 @@ function buildLongLookWorkflow(p: {
     lowFinal = ["33", 0];
   }
 
-  // UpscaleModelLoader (if needed)
-  if (p.useUpscale) {
-    workflow["24"] = {
-      class_type: "UpscaleModelLoader",
-      inputs: { model_name: "4x-UltraSharp.pth" },
-    };
-  }
+  // Upscale flag — we use built-in lanczos scaling (no external model needed)
 
   // Start image
   workflow["25"] = {
@@ -747,8 +737,8 @@ function buildLongLookWorkflow(p: {
     if (p.useUpscale) {
       const upscaleNode = `${base + 9}`;
       workflow[upscaleNode] = {
-        class_type: "ImageUpscaleWithModel",
-        inputs: { upscale_model: ["24", 0], image: [seqLastNode, seqLastOut] },
+        class_type: "ImageScaleBy",
+        inputs: { image: [seqLastNode, seqLastOut], upscale_method: "lanczos", scale_by: 2.0 },
       };
       seqLastNode = upscaleNode;
       seqLastOut = 0;

@@ -65,6 +65,7 @@ const Index = () => {
     generateImage,
     editImage,
     generateVideo,
+    editVideo,
     gltchEdit,
     comfyGenerate,
     comfyVideo,
@@ -243,7 +244,7 @@ const Index = () => {
         cost = calculateCreditCost("comfy-video");
       } else {
         const imageCount = (mode === "text-to-image" || mode === "edit-image") ? settings.count : 1;
-        const videoDuration = (mode === "text-to-video" || mode === "image-to-video") ? videoSettings.duration : 0;
+        const videoDuration = (mode === "text-to-video" || mode === "image-to-video" || mode === "edit-video") ? videoSettings.duration : 0;
         cost = calculateCreditCost(mode, imageCount, videoDuration);
       }
 
@@ -369,12 +370,15 @@ const Index = () => {
         case "image-to-video":
           await generateVideo({ prompt: data.prompt, image_url: data.imageUrl, videoSettings });
           break;
+        case "edit-video":
+          await editVideo({ prompt: data.prompt, video_url: data.imageUrl! });
+          break;
       }
 
       // Optimistically deduct credits on success (admin is free on backend)
       if (effectiveApiMode === "credits" && !isAdmin) {
         const imageCount = (mode === "text-to-image" || mode === "edit-image") ? settings.count : 1;
-        const videoDuration = (mode === "text-to-video" || mode === "image-to-video") ? videoSettings.duration : 0;
+        const videoDuration = (mode === "text-to-video" || mode === "image-to-video" || mode === "edit-video") ? videoSettings.duration : 0;
         const cost = calculateCreditCost(mode, imageCount, videoDuration);
         creditsHook.deductCreditsLocally(cost);
         setTimeout(() => creditsHook.refreshCredits(), 2000);
@@ -1035,7 +1039,7 @@ const Index = () => {
                         <span className={`w-3 h-3 border rounded-sm flex items-center justify-center text-[8px] ${comfyVidUpscale ? "border-purple-500 bg-purple-500 text-white" : "border-muted-foreground/30"}`}>
                           {comfyVidUpscale && "✓"}
                         </span>
-                        4x UltraSharp upscale (slower)
+                        2x Lanczos upscale
                       </span>
                     </button>
                     {comfyModels.videoLoras.length > 0 && (

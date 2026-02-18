@@ -1,5 +1,5 @@
 import React from "react";
-import { Image, Pencil, Video, Film } from "lucide-react";
+import { Image, Pencil, Video, Film, Scissors } from "lucide-react";
 import type { GrokMode } from "@/hooks/useGrokApi";
 
 interface ModeSelectorProps {
@@ -12,11 +12,12 @@ const modes: { id: GrokMode; label: string; icon: React.ElementType; description
   { id: "edit-image", label: "MODIFY", icon: Pencil, description: "Image Edit" },
   { id: "text-to-video", label: "RENDER", icon: Video, description: "Text → Video" },
   { id: "image-to-video", label: "ANIMATE", icon: Film, description: "Image → Video" },
+  { id: "edit-video", label: "REMIX", icon: Scissors, description: "Video Edit" },
 ];
 
 const ModeSelector: React.FC<ModeSelectorProps> = ({ activeMode, onModeChange }) => {
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
       {modes.map((mode) => {
         const isActive = activeMode === mode.id;
         const Icon = mode.icon;

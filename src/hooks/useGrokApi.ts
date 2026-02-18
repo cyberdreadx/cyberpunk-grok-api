@@ -8,7 +8,7 @@ import {
 } from "@/lib/storage";
 import { apiFetch, calculateCreditCost, backendEnabled } from "@/lib/api";
 
-export type GrokMode = "text-to-image" | "edit-image" | "text-to-video" | "image-to-video";
+export type GrokMode = "text-to-image" | "edit-image" | "text-to-video" | "image-to-video" | "edit-video";
 
 export type AspectRatio = "1:1" | "16:9" | "9:16" | "4:3" | "3:4" | "3:2" | "2:3" | "2:1" | "1:2";
 export type VideoAspectRatio = "16:9" | "4:3" | "1:1" | "9:16" | "3:4" | "3:2" | "2:3";
@@ -79,6 +79,11 @@ interface GenerateVideoParams {
   prompt: string;
   image_url?: string;
   videoSettings: VideoSettings;
+}
+
+interface EditVideoParams {
+  prompt: string;
+  video_url: string;
 }
 
 /** Generation mode: "byok" = user's own API key, "credits" = server proxy w/ credits */
@@ -413,6 +418,7 @@ export function useGrokApi() {
         model: "grok-imagine-video",
         prompt: params.prompt,
         duration: params.videoSettings.duration,
+        resolution: params.videoSettings.resolution,
       };
 
       if (params.image_url) {
@@ -461,6 +467,68 @@ export function useGrokApi() {
         id: `vid-${Date.now()}`,
         url: videoUrl,
         revised_prompt: data.revised_prompt || data.data?.[0]?.revised_prompt,
+        type: "video" as const,
+        timestamp: Date.now(),
+      }];
+
+      setResults(prev => [...newResults, ...prev]);
+      persistNewResults(newResults);
+      return newResults;
+    } catch (err: any) {
+      setError(friendlyError(err.message));
+      throw err;
+    } finally {
+      setIsLoading(false);
+      stopTimer();
+    }
+  }, [apiMode, makeRequest, makeProxyRequest, pollVideoResult, persistNewResults, startTimer, stopTimer]);
+
+  // Edit Video (video-to-video with text prompt)
+  const editVideo = useCallback(async (params: EditVideoParams) => {
+    setIsLoading(true);
+    setError(null);
+    startTimer();
+    try {
+      const body: Record<string, unknown> = {
+        model: "grok-imagine-video",
+        prompt: params.prompt,
+        video_url: params.video_url,
+      };
+
+      if (apiMode === "credits") {
+        const data = await makeProxyRequest("generate-video", body);
+        const videoUrl = data.video?.url || data.video_url || data.url || data.data?.[0]?.url;
+        if (!videoUrl) {
+          throw new Error("No video URL found in proxy result");
+        }
+        const newResults: GrokResult[] = [{
+          id: `vid-edit-${Date.now()}`,
+          url: videoUrl,
+          revised_prompt: data.revised_prompt || data.data?.[0]?.revised_prompt,
+          type: "video" as const,
+          timestamp: Date.now(),
+        }];
+        setResults(prev => [...newResults, ...prev]);
+        persistNewResults(newResults);
+        return newResults;
+      }
+
+      const startData = await makeRequest("/videos/generations", body);
+      const requestId = startData.request_id || startData.id;
+      if (!requestId) {
+        throw new Error("No request_id returned. Response: " + JSON.stringify(startData).slice(0, 300));
+      }
+
+      const data = await pollVideoResult(requestId);
+      const videoUrl = data.video?.url || data.video_url || data.url || data.data?.[0]?.url;
+      if (!videoUrl) {
+        throw new Error("No video URL found in result.");
+      }
+
+      const newResults: GrokResult[] = [{
+        id: `vid-edit-${Date.now()}`,
+        url: videoUrl,
+        revised_prompt: data.revised_prompt,
         type: "video" as const,
         timestamp: Date.now(),
       }];
@@ -1094,6 +1162,7 @@ export function useGrokApi() {
     generateImage,
     editImage,
     generateVideo,
+    editVideo,
     gltchEdit,
     comfyGenerate,
     comfyVideo,
