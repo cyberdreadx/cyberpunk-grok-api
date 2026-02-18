@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Send, Upload, Loader2, ImagePlus, Link, X } from "lucide-react";
+import { Send, Upload, Loader2, ImagePlus, Link, X, Film } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -20,7 +20,10 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
   const [imageSource, setImageSource] = useState<"url" | "upload">(initialImageUrl ? "url" : "upload");
   const [uploadPreview, setUploadPreview] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [videoSource, setVideoSource] = useState<"url" | "upload">("upload");
+  const [videoPreview, setVideoPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoFileInputRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
@@ -92,6 +95,31 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  const handleVideoFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("video/")) {
+      setUploadError("Please select a video file (MP4, WebM, etc.).");
+      return;
+    }
+    if (file.size > 50 * 1024 * 1024) {
+      setUploadError("Video file too large (max 50 MB).");
+      return;
+    }
+    setUploadError(null);
+    const dataUrl = await readBlobAsDataUrl(file);
+    setImageUrl(dataUrl);
+    setVideoPreview(dataUrl);
+    setVideoSource("upload");
+  };
+
+  const clearVideoUpload = () => {
+    setImageUrl("");
+    setVideoPreview(null);
+    setUploadError(null);
+    if (videoFileInputRef.current) videoFileInputRef.current.value = "";
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!prompt.trim()) return;
@@ -151,18 +179,89 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
     <form ref={formRef} onSubmit={handleSubmit} onPaste={handlePaste} className="space-y-4">
       {needsVideo && (
         <div className="space-y-2">
-          <label className="font-mono-share text-[10px] tracking-wider text-muted-foreground flex items-center gap-2">
-            <span className="text-primary/50">$</span>
-            <Upload className="w-3 h-3" />
-            source_video
-            <span className="text-muted-foreground/40 ml-auto">max 8.7s</span>
-          </label>
-          <Input
-            value={imageUrl}
-            onChange={(e) => setImageUrl(e.target.value)}
-            placeholder="https://example.com/video.mp4"
-            className="bg-input border-border font-mono-share text-sm text-foreground placeholder:text-muted-foreground focus:neon-border"
-          />
+          <div className="flex items-center justify-between">
+            <label className="font-mono-share text-[10px] tracking-wider text-muted-foreground flex items-center gap-2">
+              <span className="text-primary/50">$</span>
+              <Upload className="w-3 h-3" />
+              source_video
+            </label>
+            <div className="flex gap-1">
+              <button
+                type="button"
+                onClick={() => { setVideoSource("upload"); setImageUrl(""); }}
+                className={`font-mono-share text-[9px] px-2 py-0.5 rounded transition-colors ${
+                  videoSource === "upload"
+                    ? "bg-primary/20 text-primary border border-primary/30"
+                    : "text-muted-foreground hover:text-foreground border border-border/30"
+                }`}
+              >
+                <Film className="w-3 h-3 inline mr-1" />
+                UPLOAD
+              </button>
+              <button
+                type="button"
+                onClick={() => { setVideoSource("url"); clearVideoUpload(); }}
+                className={`font-mono-share text-[9px] px-2 py-0.5 rounded transition-colors ${
+                  videoSource === "url"
+                    ? "bg-primary/20 text-primary border border-primary/30"
+                    : "text-muted-foreground hover:text-foreground border border-border/30"
+                }`}
+              >
+                <Link className="w-3 h-3 inline mr-1" />
+                URL
+              </button>
+            </div>
+          </div>
+
+          {videoSource === "upload" ? (
+            <div className="relative">
+              {videoPreview ? (
+                <div className="relative group">
+                  <video
+                    src={videoPreview}
+                    className="w-full max-h-32 object-contain rounded border border-border bg-input"
+                    controls
+                    muted
+                  />
+                  <button
+                    type="button"
+                    onClick={clearVideoUpload}
+                    className="absolute top-1 right-1 p-1 rounded bg-background/80 text-muted-foreground hover:text-destructive transition-colors"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => videoFileInputRef.current?.click()}
+                  className="w-full h-20 border border-dashed border-border rounded flex flex-col items-center justify-center gap-1 bg-input/50 hover:bg-input hover:border-primary/30 transition-colors cursor-pointer"
+                >
+                  <Film className="w-5 h-5 text-muted-foreground" />
+                  <span className="font-mono-share text-[10px] text-muted-foreground">
+                    Click to upload video — MP4, WebM (max 50 MB)
+                  </span>
+                </button>
+              )}
+              <input
+                ref={videoFileInputRef}
+                type="file"
+                accept="video/*"
+                onChange={handleVideoFileChange}
+                className="hidden"
+              />
+              {uploadError && (
+                <p className="mt-1 font-mono-share text-[10px] text-destructive/80">{uploadError}</p>
+              )}
+            </div>
+          ) : (
+            <Input
+              value={imageUrl}
+              onChange={(e) => setImageUrl(e.target.value)}
+              placeholder="https://example.com/video.mp4"
+              className="bg-input border-border font-mono-share text-sm text-foreground placeholder:text-muted-foreground focus:neon-border"
+            />
+          )}
         </div>
       )}
       {needsImage && (

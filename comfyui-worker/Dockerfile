@@ -92,6 +92,11 @@ RUN cd /comfyui/custom_nodes/rgthree-comfy && \
 RUN cd /comfyui/custom_nodes/ComfyUI-MediaMixer && \
     if [ -f requirements.txt ]; then pip install -r requirements.txt --no-cache-dir; fi
 
+# ── Upscale model (baked in — only ~67 MB) ───────────────────────
+RUN mkdir -p /comfyui/models/upscale_models && \
+    wget -q -O /comfyui/models/upscale_models/4x-UltraSharp.pth \
+    https://huggingface.co/Kim2091/UltraSharp/resolve/main/4x-UltraSharp.pth
+
 # ── Network Volume Model Paths ───────────────────────────────────
 # Tell ComfyUI to also look for models on the RunPod Network Volume
 # (mounted at /runpod-volume). This avoids baking the 10-20GB model
