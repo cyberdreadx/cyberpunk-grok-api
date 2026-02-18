@@ -131,10 +131,12 @@ const WAN_DEFAULT_NEGATIVE =
   "色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走";
 
 /**
- * WAN 2.2 Image-to-Video workflow (API format).
+ * WAN 2.2 Remix NSFW Image-to-Video workflow (API format).
  *
- * Two-pass sampling (high noise → low noise) with optional Lightx2v 4-step LoRA,
- * optional RIFE frame interpolation, and optional 4x-UltraSharp upscale.
+ * Uses PainterI2VAdvanced for color-drift-free I2V conditioning that
+ * automatically splits into high/low pairs, Remix NSFW models with
+ * baked-in acceleration, uni_pc/beta sampler, VRAM cleanup between
+ * passes, and FastUnsharpSharpen post-processing.
  */
 function buildWanVideoWorkflow(p: {
   prompt: string;
@@ -154,16 +156,23 @@ function buildWanVideoWorkflow(p: {
   videoLoraStrength?: number;
   videoLoraPass?: "high" | "low" | "both";
 }): Record<string, any> {
-  const halfSteps = Math.max(1, Math.floor(p.steps / 2));
+  const splitStep = Math.max(1, Math.floor(p.steps / 2));
+
+  const highModel = process.env.COMFYUI_WAN_HIGH_MODEL
+    || "Wan2.2_Remix_NSFW_i2v_14b_high_lighting_fp8_e4m3fn_v2.1.safetensors";
+  const lowModel = process.env.COMFYUI_WAN_LOW_MODEL
+    || "Wan2.2_Remix_NSFW_i2v_14b_low_lighting_fp8_e4m3fn_v2.1.safetensors";
+  const clipModel = process.env.COMFYUI_WAN_CLIP
+    || "nsfw_wan_umt5-xxl_bf16_fixed.safetensors";
 
   const workflow: Record<string, any> = {
-    // Text encoder
+    // Text encoder (NSFW-uncensored)
     "84": {
       class_type: "CLIPLoader",
       inputs: {
-        clip_name: "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+        clip_name: clipModel,
         type: "wan",
-        device: "default",
+        device: "cpu",
       },
     },
     // VAE
@@ -171,54 +180,51 @@ function buildWanVideoWorkflow(p: {
       class_type: "VAELoader",
       inputs: { vae_name: "wan_2.1_vae.safetensors" },
     },
-    // High-noise diffusion model
+    // High-noise Remix model
     "95": {
       class_type: "UNETLoader",
       inputs: {
-        unet_name: "wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors",
-        weight_dtype: "default",
+        unet_name: highModel,
+        weight_dtype: "fp8_e4m3fn",
       },
     },
-    // Low-noise diffusion model
+    // Low-noise Remix model
     "96": {
       class_type: "UNETLoader",
       inputs: {
-        unet_name: "wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors",
-        weight_dtype: "default",
-      },
-    },
-    // High-noise LoRA (4-step acceleration)
-    "101": {
-      class_type: "LoraLoaderModelOnly",
-      inputs: {
-        model: ["95", 0],
-        lora_name: "wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise.safetensors",
-        strength_model: 1.0,
-      },
-    },
-    // Low-noise LoRA
-    "102": {
-      class_type: "LoraLoaderModelOnly",
-      inputs: {
-        model: ["96", 0],
-        lora_name: "wan2.2_i2v_lightx2v_4steps_lora_v1_low_noise.safetensors",
-        strength_model: 1.0,
+        unet_name: lowModel,
+        weight_dtype: "fp8_e4m3fn",
       },
     },
     // Shift scheduling — high noise path
     "104": {
       class_type: "ModelSamplingSD3",
-      inputs: { model: ["101", 0], shift: 5.0 },
+      inputs: { model: ["95", 0], shift: 12 },
     },
     // Shift scheduling — low noise path
     "103": {
       class_type: "ModelSamplingSD3",
-      inputs: { model: ["102", 0], shift: 5.0 },
+      inputs: { model: ["96", 0], shift: 12 },
     },
     // Start image
     "97": {
       class_type: "LoadImage",
       inputs: { image: p.imageFilename },
+    },
+    // Resize input image to target resolution (aligned to 16px)
+    "111": {
+      class_type: "ImageResizeKJv2",
+      inputs: {
+        image: ["97", 0],
+        width: p.width,
+        height: p.height,
+        interpolation: "nearest-exact",
+        method: "resize",
+        pad_color: "0, 0, 0",
+        align: "center",
+        divisor: 16,
+        device: "cpu",
+      },
     },
     // Positive prompt
     "93": {
@@ -230,55 +236,69 @@ function buildWanVideoWorkflow(p: {
       class_type: "CLIPTextEncode",
       inputs: { clip: ["84", 0], text: p.negativePrompt },
     },
-    // Image-to-Video conditioning
-    "98": {
-      class_type: "WanImageToVideo",
+    // PainterI2VAdvanced — splits conditioning into high/low pairs,
+    // fixes color drift at high motion
+    "113": {
+      class_type: "PainterI2VAdvanced",
       inputs: {
         positive: ["93", 0],
         negative: ["89", 0],
         vae: ["90", 0],
-        start_image: ["97", 0],
-        width: p.width,
-        height: p.height,
+        start_image: ["111", 0],
+        width: ["111", 1],
+        height: ["111", 2],
         length: p.frameCount,
         batch_size: 1,
+        cfg_guide: 1.4,
+        positive_conditioning: true,
+        negative_conditioning_weight: 0.01,
       },
     },
-    // Pass 1: high-noise sampler
+    // Pass 1: high-noise sampler (steps 0 → splitStep)
     "86": {
       class_type: "KSamplerAdvanced",
       inputs: {
         model: ["104", 0],
-        positive: ["98", 0],
-        negative: ["98", 1],
-        latent_image: ["98", 2],
+        positive: ["113", 0],  // high_positive
+        negative: ["113", 1],  // high_negative
+        latent_image: ["113", 4],  // latent
         add_noise: "enable",
         noise_seed: p.seed,
         steps: p.steps,
         cfg: p.cfg,
-        sampler_name: "euler",
-        scheduler: "simple",
+        sampler_name: "uni_pc",
+        scheduler: "beta",
         start_at_step: 0,
-        end_at_step: halfSteps,
+        end_at_step: splitStep,
         return_with_leftover_noise: "enable",
       },
     },
-    // Pass 2: low-noise sampler
+    // VRAM cleanup between passes
+    "112": {
+      class_type: "VRAM_Debug",
+      inputs: {
+        any_input: ["86", 0],
+        empty_cache: true,
+        gc_collect: true,
+        unload_all_models: false,
+      },
+    },
+    // Pass 2: low-noise sampler (splitStep → end)
     "85": {
       class_type: "KSamplerAdvanced",
       inputs: {
         model: ["103", 0],
-        positive: ["98", 0],
-        negative: ["98", 1],
-        latent_image: ["86", 0],
+        positive: ["113", 2],  // low_positive
+        negative: ["113", 3],  // low_negative
+        latent_image: ["112", 0],  // from VRAM_Debug passthrough
         add_noise: "disable",
-        noise_seed: 0,
+        noise_seed: p.seed,
         steps: p.steps,
         cfg: p.cfg,
-        sampler_name: "euler",
-        scheduler: "simple",
-        start_at_step: halfSteps,
-        end_at_step: p.steps,
+        sampler_name: "uni_pc",
+        scheduler: "beta",
+        start_at_step: splitStep,
+        end_at_step: 10000,
         return_with_leftover_noise: "disable",
       },
     },
@@ -287,12 +307,19 @@ function buildWanVideoWorkflow(p: {
       class_type: "VAEDecode",
       inputs: { samples: ["85", 0], vae: ["90", 0] },
     },
+    // Sharpen output frames
+    "130": {
+      class_type: "FastUnsharpSharpen",
+      inputs: {
+        images: ["87", 0],
+        strength: 0.5,
+        auto: false,
+      },
+    },
   };
 
-  // Optional user video LoRA — insert between accel LoRA and shift scheduling
-  // Paired LoRAs (separate high/low files) always apply to both passes since they're designed for it.
-  // Single-file LoRAs respect videoLoraPass (defaults to "high" — applying to low-noise pass
-  // with a non-paired LoRA causes wavy/underwater artifacts).
+  // Optional user video LoRA — applied directly on UNETLoader output (no accel LoRA layer).
+  // Paired LoRAs apply to both passes; single-file respects videoLoraPass.
   const isPaired = !!(p.videoLoraHigh && p.videoLoraLow);
   const hasHigh = isPaired || p.videoLoraHigh || (p.videoLora && (p.videoLoraPass === "high" || p.videoLoraPass === "both"));
   const hasLow = isPaired || p.videoLoraLow || (p.videoLora && (p.videoLoraPass === "low" || p.videoLoraPass === "both"));
@@ -303,7 +330,7 @@ function buildWanVideoWorkflow(p: {
     workflow["110"] = {
       class_type: "LoraLoaderModelOnly",
       inputs: {
-        model: ["101", 0],
+        model: ["95", 0],
         lora_name: loraFile,
         strength_model: str,
       },
@@ -313,51 +340,21 @@ function buildWanVideoWorkflow(p: {
 
   if (hasLow) {
     const loraFile = p.videoLoraLow || p.videoLora!;
-    workflow["111"] = {
+    workflow["115"] = {
       class_type: "LoraLoaderModelOnly",
       inputs: {
-        model: ["102", 0],
+        model: ["96", 0],
         lora_name: loraFile,
         strength_model: str,
       },
     };
-    workflow["103"].inputs.model = ["111", 0];
+    workflow["103"].inputs.model = ["115", 0];
   }
 
-  // WanFreeLong — spectral blending for improved motion consistency within 81 frames
-  workflow["120"] = {
-    class_type: "WanFreeLong",
-    inputs: {
-      model: ["104", 0],
-      enabled: true,
-      blend_strength: 0.8,
-      low_freq_ratio: 0.8,
-      local_window_frames: 33,
-      blend_start_block: 0,
-      blend_end_block: -1,
-    },
-  };
-  workflow["121"] = {
-    class_type: "WanFreeLong",
-    inputs: {
-      model: ["103", 0],
-      enabled: true,
-      blend_strength: 0.8,
-      low_freq_ratio: 0.8,
-      local_window_frames: 33,
-      blend_start_block: 0,
-      blend_end_block: -1,
-    },
-  };
-
-  // Point KSamplers at the FreeLong-patched models instead of raw ModelSamplingSD3
-  workflow["86"].inputs.model = ["120", 0];
-  workflow["85"].inputs.model = ["121", 0];
-
   // Post-processing chain
-  let lastNode = "87";
+  let lastNode = "130";  // FastUnsharpSharpen output
   let lastOut = 0;
-  let fps = 16;
+  let fps = 21;
 
   if (p.useRife) {
     workflow["116"] = {
@@ -374,7 +371,7 @@ function buildWanVideoWorkflow(p: {
     };
     lastNode = "116";
     lastOut = 0;
-    fps = 24;
+    fps = 42;
   }
 
   if (p.useUpscale) {
@@ -388,16 +385,19 @@ function buildWanVideoWorkflow(p: {
 
   // Encode frames → video → save
   workflow["94"] = {
-    class_type: "CreateVideo",
-    inputs: { images: [lastNode, lastOut], fps: fps },
-  };
-  workflow["108"] = {
-    class_type: "SaveVideo",
+    class_type: "VHS_VideoCombine",
     inputs: {
-      video: ["94", 0],
-      filename_prefix: "video/GrokRunner",
-      codec: "auto",
-      format: "mp4",
+      images: [lastNode, lastOut],
+      frame_rate: fps,
+      loop_count: 0,
+      filename_prefix: "GrokRunner",
+      format: "video/h264-mp4",
+      pix_fmt: "yuv420p",
+      crf: 19,
+      save_metadata: true,
+      trim_to_audio: false,
+      pingpong: false,
+      save_output: true,
     },
   };
 
@@ -891,8 +891,16 @@ function buildQwenEditWorkflow(p: {
   cfg: number;
   checkpoint: string;
   upscale?: boolean;
+  lora?: string;
+  loraStrength?: number;
 }): Record<string, any> {
-  return {
+  const hasLora = !!p.lora && p.lora !== "none";
+
+  // Model/clip sources — routed through LoraLoader when a LoRA is selected
+  const modelSource: [string, number] = hasLora ? ["10", 0] : ["125", 0];
+  const clipSource: [string, number] = hasLora ? ["10", 1] : ["125", 1];
+
+  const workflow: Record<string, any> = {
     "125": {
       class_type: "CheckpointLoaderSimple",
       inputs: { ckpt_name: p.checkpoint },
@@ -904,7 +912,7 @@ function buildQwenEditWorkflow(p: {
     "132": {
       class_type: "TextEncodeQwenImageEditPlus",
       inputs: {
-        clip: ["125", 1],
+        clip: clipSource,
         vae: ["125", 2],
         image1: ["123", 0],
         prompt: p.prompt,
@@ -913,14 +921,14 @@ function buildQwenEditWorkflow(p: {
     "133": {
       class_type: "TextEncodeQwenImageEditPlus",
       inputs: {
-        clip: ["125", 1],
+        clip: clipSource,
         vae: ["125", 2],
         prompt: p.negativePrompt,
       },
     },
     "64": {
       class_type: "ModelSamplingAuraFlow",
-      inputs: { model: ["125", 0], shift: 3 },
+      inputs: { model: modelSource, shift: 3 },
     },
     "65": {
       class_type: "CFGNorm",
@@ -957,47 +965,64 @@ function buildQwenEditWorkflow(p: {
       class_type: "SaveImage",
       inputs: { images: ["73", 0], filename_prefix: "GrokRunner" },
     },
-    ...(p.upscale ? {
-      "128": {
-        class_type: "UpscaleModelLoader",
-        inputs: { model_name: "4x_foolhardy_Remacri.pth" },
-      },
-      "126": {
-        class_type: "UltimateSDUpscale",
-        inputs: {
-          image: ["73", 0],
-          model: ["125", 0],
-          positive: ["132", 0],
-          negative: ["133", 0],
-          vae: ["125", 2],
-          upscale_model: ["128", 0],
-          upscale_by: 1.5,
-          seed: p.seed,
-          steps: 6,
-          cfg: p.cfg,
-          sampler_name: "sa_solver",
-          scheduler: "simple",
-          denoise: 0.2,
-          mode_type: "Linear",
-          tile_width: 1024,
-          tile_height: 1024,
-          mask_blur: 8,
-          tile_padding: 32,
-          seam_fix_mode: "None",
-          seam_fix_denoise: 1,
-          seam_fix_width: 64,
-          seam_fix_mask_blur: 8,
-          seam_fix_padding: 16,
-          force_uniform_tiles: true,
-          tiled_decode: false,
-        },
-      },
-      "200": {
-        class_type: "SaveImage",
-        inputs: { images: ["126", 0], filename_prefix: "GrokRunner_HD" },
-      },
-    } : {}),
   };
+
+  if (hasLora) {
+    const strength = p.loraStrength ?? 0.8;
+    workflow["10"] = {
+      class_type: "LoraLoader",
+      inputs: {
+        lora_name: p.lora!,
+        strength_model: strength,
+        strength_clip: strength,
+        model: ["125", 0],
+        clip: ["125", 1],
+      },
+    };
+  }
+
+  if (p.upscale) {
+    workflow["128"] = {
+      class_type: "UpscaleModelLoader",
+      inputs: { model_name: "4x_foolhardy_Remacri.pth" },
+    };
+    workflow["126"] = {
+      class_type: "UltimateSDUpscale",
+      inputs: {
+        image: ["73", 0],
+        model: modelSource,
+        positive: ["132", 0],
+        negative: ["133", 0],
+        vae: ["125", 2],
+        upscale_model: ["128", 0],
+        upscale_by: 1.5,
+        seed: p.seed,
+        steps: 6,
+        cfg: p.cfg,
+        sampler_name: "sa_solver",
+        scheduler: "simple",
+        denoise: 0.2,
+        mode_type: "Linear",
+        tile_width: 1024,
+        tile_height: 1024,
+        mask_blur: 8,
+        tile_padding: 32,
+        seam_fix_mode: "None",
+        seam_fix_denoise: 1,
+        seam_fix_width: 64,
+        seam_fix_mask_blur: 8,
+        seam_fix_padding: 16,
+        force_uniform_tiles: true,
+        tiled_decode: false,
+      },
+    };
+    workflow["200"] = {
+      class_type: "SaveImage",
+      inputs: { images: ["126", 0], filename_prefix: "GrokRunner_HD" },
+    };
+  }
+
+  return workflow;
 }
 
 // ---- RunPod helpers ----
@@ -1119,7 +1144,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           ? videoLorasEnv.split(",").map((m) => m.trim()).filter(Boolean)
           : [];
         const videoLoras = groupVideoLoras(videoLoraFiles);
-        return res.status(200).json({ checkpoints, loras, videoLoras });
+        const qwenLorasEnv = process.env.COMFYUI_QWEN_LORAS || "";
+        const qwenLoras = qwenLorasEnv
+          ? qwenLorasEnv.split(",").map((m) => m.trim()).filter(Boolean)
+          : [];
+        return res.status(200).json({ checkpoints, loras, videoLoras, qwenLoras });
       } else {
         const resp = await fetch(
           `${backend.comfyUrl}/object_info/CheckpointLoaderSimple`,
@@ -1147,7 +1176,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           ? videoLorasEnv.split(",").map((m) => m.trim()).filter(Boolean)
           : [];
         const videoLoras = groupVideoLoras(videoLoraFiles);
-        return res.status(200).json({ checkpoints, loras, videoLoras });
+        const qwenLorasEnv = process.env.COMFYUI_QWEN_LORAS || "";
+        const qwenLoras = qwenLorasEnv
+          ? qwenLorasEnv.split(",").map((m) => m.trim()).filter(Boolean)
+          : [];
+        return res.status(200).json({ checkpoints, loras, videoLoras, qwenLoras });
       }
     }
 
@@ -1414,6 +1447,8 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           cfg: clampCfg,
           checkpoint: qwenCkpt,
           upscale: !!upscale,
+          lora: lora || undefined,
+          loraStrength: Number(loraStrength) || 0.8,
         });
       } else {
         workflow = buildTxt2ImgWorkflow({

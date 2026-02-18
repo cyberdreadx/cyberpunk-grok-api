@@ -64,6 +64,17 @@ RUN cd /comfyui/custom_nodes && \
     wget -qO- https://github.com/shootthesound/comfyUI-LongLook/archive/refs/heads/main.tar.gz | tar xz && \
     mv comfyUI-LongLook-main comfyUI-LongLook
 
+# ComfyUI-PainterI2Vadvanced (PainterI2VAdvanced — drop-in WanImageToVideo replacement
+# that fixes color drift at high motion, splits conditioning into high/low pairs)
+RUN cd /comfyui/custom_nodes && \
+    wget -qO- https://github.com/princepainter/ComfyUI-PainterI2Vadvanced/archive/refs/heads/main.tar.gz | tar xz && \
+    mv ComfyUI-PainterI2Vadvanced-main ComfyUI-PainterI2Vadvanced
+
+# comfyui-vrgamedevgirl (FastUnsharpSharpen for post-process video sharpening)
+RUN cd /comfyui/custom_nodes && \
+    wget -qO- https://github.com/vrgamegirl19/comfyui-vrgamedevgirl/archive/refs/heads/main.tar.gz | tar xz && \
+    mv comfyui-vrgamedevgirl-main comfyui-vrgamedevgirl
+
 # ── Python Dependencies ──────────────────────────────────────────
 RUN cd /comfyui/custom_nodes/Comfyui-QwenEditUtils && \
     if [ -f requirements.txt ]; then pip install -r requirements.txt --no-cache-dir; fi
@@ -90,6 +101,12 @@ RUN cd /comfyui/custom_nodes/rgthree-comfy && \
     if [ -f requirements.txt ]; then pip install -r requirements.txt --no-cache-dir; fi
 
 RUN cd /comfyui/custom_nodes/ComfyUI-MediaMixer && \
+    if [ -f requirements.txt ]; then pip install -r requirements.txt --no-cache-dir; fi
+
+RUN cd /comfyui/custom_nodes/ComfyUI-PainterI2Vadvanced && \
+    if [ -f requirements.txt ]; then pip install -r requirements.txt --no-cache-dir; fi
+
+RUN cd /comfyui/custom_nodes/comfyui-vrgamedevgirl && \
     if [ -f requirements.txt ]; then pip install -r requirements.txt --no-cache-dir; fi
 
 # ── Upscale model (baked in — only ~67 MB) ───────────────────────

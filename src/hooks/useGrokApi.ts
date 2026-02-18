@@ -778,10 +778,12 @@ export function useGrokApi() {
     checkpoints: string[];
     loras: string[];
     videoLoras: VideoLoraEntry[];
+    qwenLoras: string[];
   }>({
     checkpoints: [],
     loras: [],
     videoLoras: [],
+    qwenLoras: [],
   });
 
   const fetchComfyModels = useCallback(async () => {
@@ -790,6 +792,7 @@ export function useGrokApi() {
         checkpoints: string[];
         loras?: string[];
         videoLoras?: VideoLoraEntry[];
+        qwenLoras?: string[];
       }>("/comfyui", {
         method: "POST",
         body: { action: "models" },
@@ -798,9 +801,10 @@ export function useGrokApi() {
         checkpoints: data.checkpoints || [],
         loras: data.loras || [],
         videoLoras: data.videoLoras || [],
+        qwenLoras: data.qwenLoras || [],
       });
     } catch {
-      setComfyModels({ checkpoints: [], loras: [], videoLoras: [] });
+      setComfyModels({ checkpoints: [], loras: [], videoLoras: [], qwenLoras: [] });
     }
   }, []);
 
@@ -872,6 +876,83 @@ export function useGrokApi() {
         comfyTimerRefs.current.delete(jobId);
         setComfyJobs(prev => prev.map(j => j.id === jobId
           ? { ...j, status: "error", error: err.message || "Generation failed", phase: null }
+          : j
+        ));
+      }
+    })();
+  }, [comfySubmitAndPoll, persistNewResults]);
+
+  // ComfyUI Qwen Edit (fire-and-forget — uses qwen-edit workflow with optional LoRA)
+  const comfyEdit = useCallback((params: {
+    prompt: string;
+    negativePrompt?: string;
+    imageBase64: string;
+    imageFilename?: string;
+    width?: number;
+    height?: number;
+    steps?: number;
+    cfg?: number;
+    lora?: string;
+    loraStrength?: number;
+    upscale?: boolean;
+  }) => {
+    const jobId = `cj-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const label = params.prompt.length > 80 ? params.prompt.slice(0, 80) + "…" : params.prompt;
+
+    const newJob: ComfyJob = {
+      id: jobId, status: "submitting", workflowType: params.upscale ? "qwen-edit-hd" : "qwen-edit",
+      prompt: label, phase: "Editing image...", elapsed: 0, seed: null, error: null,
+    };
+    setComfyJobs(prev => [newJob, ...prev]);
+
+    const startTime = Date.now();
+    const timerIv = setInterval(() => {
+      setComfyJobs(prev => prev.map(j =>
+        j.id === jobId && (j.status === "submitting" || j.status === "generating")
+          ? { ...j, elapsed: Math.floor((Date.now() - startTime) / 1000) }
+          : j
+      ));
+    }, 1000);
+    comfyTimerRefs.current.set(jobId, timerIv);
+
+    (async () => {
+      try {
+        setComfyJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "generating" } : j));
+        const result = await comfySubmitAndPoll({
+          workflow: "qwen-edit",
+          prompt: params.prompt,
+          negativePrompt: params.negativePrompt,
+          imageBase64: params.imageBase64,
+          imageFilename: params.imageFilename || "input.jpg",
+          width: params.width || 1024,
+          height: params.height || 1024,
+          steps: params.steps || 5,
+          cfg: params.cfg || 4,
+          lora: params.lora,
+          loraStrength: params.loraStrength,
+          upscale: params.upscale || false,
+        });
+
+        clearInterval(timerIv);
+        comfyTimerRefs.current.delete(jobId);
+
+        if (!result.image) throw new Error("No image returned from ComfyUI");
+
+        const newResults: GrokResult[] = [{
+          id: `comfy-edit-${Date.now()}`,
+          url: result.image,
+          revised_prompt: params.prompt,
+          type: "image" as const,
+          timestamp: Date.now(),
+        }];
+        setResults(prev => [...newResults, ...prev]);
+        persistNewResults(newResults);
+        setComfyJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "done", phase: null } : j));
+      } catch (err: any) {
+        clearInterval(timerIv);
+        comfyTimerRefs.current.delete(jobId);
+        setComfyJobs(prev => prev.map(j => j.id === jobId
+          ? { ...j, status: "error", error: err.message || "Edit failed", phase: null }
           : j
         ));
       }
@@ -1167,6 +1248,7 @@ export function useGrokApi() {
     editVideo,
     gltchEdit,
     comfyGenerate,
+    comfyEdit,
     comfyVideo,
     comfyTextToVideo,
     comfyLongLook,

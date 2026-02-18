@@ -68,6 +68,7 @@ const Index = () => {
     editVideo,
     gltchEdit,
     comfyGenerate,
+    comfyEdit,
     comfyVideo,
     comfyTextToVideo,
     comfyLongLook,
@@ -97,10 +98,12 @@ const Index = () => {
   const [activeImageUrl, setActiveImageUrl] = useState("");
 
   // Engine selectors per mode
-  type EditEngine = "grok" | "gltch";
+  type EditEngine = "grok" | "gltch" | "comfy";
   const [editEngine, setEditEngine] = useState<EditEngine>("grok");
   const [gltchHd, setGltchHd] = useState(false);
   const [grokPro, setGrokPro] = useState(false);
+  const [qwenLora, setQwenLora] = useState("none");
+  const [qwenLoraStrength, setQwenLoraStrength] = useState(0.8);
 
   type ComfyEngine = "grok" | "comfy";
   const [genEngine, setGenEngine] = useState<ComfyEngine>("grok");
@@ -199,11 +202,12 @@ const Index = () => {
   const handleSubmit = async (data: { prompt: string; imageUrl?: string }) => {
     // Determine which engine pathway
     const isGltchEdit = mode === "edit-image" && editEngine === "gltch";
+    const isComfyEdit = mode === "edit-image" && editEngine === "comfy";
     const isComfyGen = mode === "text-to-image" && genEngine === "comfy";
     const isComfyRender = mode === "text-to-video" && renderEngine === "comfy";
     const isComfyAnimate = mode === "image-to-video" && animateEngine === "comfy" && !longLookEnabled;
     const isComfyLongLook = mode === "image-to-video" && animateEngine === "comfy" && longLookEnabled;
-    const isComfy = isComfyGen || isComfyRender || isComfyAnimate || isComfyLongLook;
+    const isComfy = isComfyGen || isComfyEdit || isComfyRender || isComfyAnimate || isComfyLongLook;
 
     // Check access: need either API key (BYOK) or credits
     if (!isGltchEdit && !isComfy && effectiveApiMode === "byok" && !apiKeySet) {
@@ -237,6 +241,8 @@ const Index = () => {
       let cost: number;
       if (isGltchEdit) {
         cost = calculateCreditCost(gltchHd ? "gltch-edit-hd" : "gltch-edit");
+      } else if (isComfyEdit) {
+        cost = calculateCreditCost("comfy-image");
       } else if (isComfyGen) {
         cost = calculateCreditCost("comfy-image");
       } else if (isComfyLongLook) {
@@ -270,7 +276,7 @@ const Index = () => {
       if (!isAdmin) {
         let cost: number;
         if (isGltchEdit) cost = calculateCreditCost(gltchHd ? "gltch-edit-hd" : "gltch-edit");
-        else if (isComfyGen) cost = calculateCreditCost("comfy-image");
+        else if (isComfyEdit || isComfyGen) cost = calculateCreditCost("comfy-image");
         else if (isComfyLongLook) cost = calculateCreditCost("comfy-longlook", longLookSeqCount);
         else cost = calculateCreditCost("comfy-video");
         creditsHook.deductCreditsLocally(cost);
@@ -284,6 +290,21 @@ const Index = () => {
             image_url: data.imageUrl!,
             aspectRatio: settings.aspectRatio,
             hd: gltchHd,
+          });
+        } else if (isComfyEdit) {
+          const imageBase64 = data.imageUrl!.startsWith("data:")
+            ? data.imageUrl!
+            : await urlToBase64(data.imageUrl!);
+          comfyEdit({
+            prompt: data.prompt,
+            negativePrompt: comfyNegPrompt || undefined,
+            imageBase64,
+            width: comfyWidth,
+            height: comfyHeight,
+            steps: comfySteps,
+            cfg: comfyCfg,
+            lora: qwenLora !== "none" ? qwenLora : undefined,
+            loraStrength: qwenLoraStrength,
           });
         } else if (isComfyGen) {
           comfyGenerate({
@@ -589,7 +610,7 @@ const Index = () => {
                   <Zap className="w-3 h-3" />
                   ENGINE
                 </label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   <button
                     type="button"
                     onClick={() => setEditEngine("grok")}
@@ -629,6 +650,27 @@ const Index = () => {
                       <span>Qwen Edit</span>
                       <span className={editEngine === "gltch" ? "text-secondary/70" : "text-muted-foreground/50"}>
                         {gltchHd ? "2" : "1"} cr
+                      </span>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setEditEngine("comfy"); fetchComfyModels(); }}
+                    className={`
+                      p-2.5 border rounded text-left transition-all duration-200
+                      ${editEngine === "comfy"
+                        ? "border-purple-500 neon-border bg-purple-500/5"
+                        : "border-border bg-card/30 hover:border-purple-500/40"
+                      }
+                    `}
+                  >
+                    <div className={`font-orbitron text-[11px] ${editEngine === "comfy" ? "text-purple-400" : "text-foreground"}`}>
+                      COMFY
+                    </div>
+                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
+                      <span>LoRA</span>
+                      <span className={editEngine === "comfy" ? "text-purple-400/70" : "text-muted-foreground/50"}>
+                        1 cr
                       </span>
                     </div>
                   </button>
@@ -698,6 +740,48 @@ const Index = () => {
                       {grokPro ? "3 cr/img" : "+2 cr/img"}
                     </span>
                   </button>
+                )}
+
+                {/* COMFY edit controls — LoRA selector + strength */}
+                {editEngine === "comfy" && (
+                  <>
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-500/5 border border-purple-500/20 rounded">
+                      <div className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
+                      <span className="font-mono-share text-[9px] text-purple-400/70">
+                        ComfyUI Qwen Edit — LoRA support
+                      </span>
+                    </div>
+                    {comfyModels.qwenLoras.length > 0 && (
+                      <div className="space-y-1.5">
+                        <label className="font-mono-share text-[9px] text-muted-foreground">LORA</label>
+                        <select
+                          value={qwenLora}
+                          onChange={(e) => setQwenLora(e.target.value)}
+                          className="w-full bg-card/50 border border-border rounded px-2 py-1.5 font-mono-share text-[10px] text-foreground"
+                        >
+                          <option value="none">None</option>
+                          {comfyModels.qwenLoras.map(l => (
+                            <option key={l} value={l}>{l.replace(/\.(safetensors|ckpt|pt)$/i, "")}</option>
+                          ))}
+                        </select>
+                        {qwenLora !== "none" && (
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between">
+                              <label className="font-mono-share text-[9px] text-muted-foreground">STRENGTH</label>
+                              <span className="font-mono-share text-[9px] text-purple-400">{qwenLoraStrength.toFixed(2)}</span>
+                            </div>
+                            <input
+                              type="range"
+                              min="0" max="1.5" step="0.05"
+                              value={qwenLoraStrength}
+                              onChange={(e) => setQwenLoraStrength(Number(e.target.value))}
+                              className="w-full accent-purple-500"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             )}
