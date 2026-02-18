@@ -125,6 +125,8 @@ function friendlyError(msg: string): string {
   const lower = msg.toLowerCase();
   if (lower.includes("content moderation") || lower.includes("rejected by content"))
     return "Your prompt was flagged by content moderation. Please try rephrasing it.";
+  if (lower.includes("monthly") && lower.includes("limit"))
+    return "The AI service is temporarily at capacity. Your credits were not deducted. Please try again in a few minutes.";
   if (lower.includes("rate limit") || lower.includes("too many requests") || lower.includes("high demand"))
     return "Too many requests — xAI is rate-limiting. Please wait a moment and try again.";
   if (lower.includes("invalid api key") || lower.includes("unauthorized") || lower.includes("401"))
@@ -230,7 +232,9 @@ export function useGrokApi() {
       }
 
       // Detect billing / quota issues and add helpful context
-      if (response.status === 402 || response.status === 403 || /insufficient|billing|quota|balance|payment/i.test(msg)) {
+      if (/monthly.*limit|quota.*exceeded/i.test(msg)) {
+        msg = "Your xAI account has reached its monthly limit. Add or increase billing at https://console.x.ai";
+      } else if (response.status === 402 || response.status === 403 || /insufficient|billing|quota|balance|payment/i.test(msg)) {
         msg += "\n\nYour xAI account has no credits. Add billing at https://console.x.ai";
       } else if (response.status === 401 || /invalid.*key|unauthorized|authentication/i.test(msg)) {
         msg += "\n\nYour API key may be invalid. Check it at https://console.x.ai";

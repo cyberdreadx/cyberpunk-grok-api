@@ -805,13 +805,32 @@ const Index = () => {
                           )}
                         </div>
                         {qwenLoraStack.length === 0 && (
-                          <button
-                            type="button"
-                            onClick={() => setQwenLoraStack([{ name: "none", strength: 0.8 }])}
-                            className="w-full p-2 border border-dashed border-purple-500/30 rounded text-center font-mono-share text-[9px] text-purple-400/60 hover:border-purple-500/50 hover:text-purple-400 transition-colors"
-                          >
-                            + ADD LORA
-                          </button>
+                          <div className="space-y-1.5">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const find = (keyword: string) => comfyModels.qwenLoras.find(l => l.toLowerCase().includes(keyword));
+                                const skin = find("skin");
+                                const angles = find("angles");
+                                const unchained = find("unchained");
+                                const stack: { name: string; strength: number }[] = [];
+                                if (skin) stack.push({ name: skin, strength: 0.10 });
+                                if (angles) stack.push({ name: angles, strength: 1.25 });
+                                if (unchained) stack.push({ name: unchained, strength: 0.70 });
+                                if (stack.length > 0) setQwenLoraStack(stack);
+                              }}
+                              className="w-full p-2 border border-cyan-500/30 bg-cyan-500/5 rounded text-center font-mono-share text-[9px] text-cyan-400 hover:border-cyan-500/50 hover:bg-cyan-500/10 transition-all"
+                            >
+                              PERFECTION (BETA)
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setQwenLoraStack([{ name: "none", strength: 0.8 }])}
+                              className="w-full p-2 border border-dashed border-purple-500/30 rounded text-center font-mono-share text-[9px] text-purple-400/60 hover:border-purple-500/50 hover:text-purple-400 transition-colors"
+                            >
+                              + ADD LORA MANUALLY
+                            </button>
+                          </div>
                         )}
                         {qwenLoraStack.map((entry, idx) => {
                           const usedNames = qwenLoraStack.filter((_, i) => i !== idx).map(l => l.name);
