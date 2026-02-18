@@ -939,13 +939,17 @@ function buildQwenEditWorkflow(p: {
       class_type: "EmptyLatentImage",
       inputs: { width: p.width, height: p.height, batch_size: 1 },
     },
+    "149": {
+      class_type: "easy cleanGpuUsed",
+      inputs: { anything: ["148", 0] },
+    },
     "75": {
       class_type: "KSampler",
       inputs: {
         model: ["65", 0],
         positive: ["132", 0],
         negative: ["133", 0],
-        latent_image: ["148", 0],
+        latent_image: ["149", 0],
         seed: p.seed,
         steps: p.steps,
         cfg: p.cfg,
@@ -1441,12 +1445,21 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
         // Only use external VAE if explicitly set (fp8 checkpoints strip the VAE)
         const qwenVae = process.env.COMFYUI_QWEN_VAE || "";
 
+        // Cap Qwen Edit at 768px to avoid OOM when WAN models are cached
+        const qwenMaxDim = 768;
+        let qW = clampW, qH = clampH;
+        if (qW > qwenMaxDim || qH > qwenMaxDim) {
+          const s = qwenMaxDim / Math.max(qW, qH);
+          qW = Math.round((qW * s) / 8) * 8;
+          qH = Math.round((qH * s) / 8) * 8;
+        }
+
         workflow = buildQwenEditWorkflow({
           prompt: enhancedPrompt,
           negativePrompt: (negativePrompt || "").trim() || QWEN_DEFAULT_NEGATIVE,
           imageFilename: imageFilename!,
-          width: clampW,
-          height: clampH,
+          width: qW,
+          height: qH,
           seed: actualSeed,
           steps: clampSteps,
           cfg: clampCfg,
