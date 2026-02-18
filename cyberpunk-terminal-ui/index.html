@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cyberpunk Terminal UI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-container">
+
+    <!-- MODE SELECTOR -->
+    <div class="mode-selector">
+      <button class="mode-btn active">
+        <div class="mode-indicator"></div>
+        <div class="mode-header">
+          <span class="mode-cursor">&#10095;</span>
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+        </div>
+        <div class="mode-label neon-text-cyan">GENERATE</div>
+        <div class="mode-desc">Text &#8594; Image</div>
+      </button>
+      <button class="mode-btn">
+        <div class="mode-header">
+          <span class="mode-cursor">$</span>
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+        </div>
+        <div class="mode-label">MODIFY</div>
+        <div class="mode-desc">Image Edit</div>
+      </button>
+      <button class="mode-btn">
+        <div class="mode-header">
+          <span class="mode-cursor">$</span>
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+        </div>
+        <div class="mode-label">RENDER</div>
+        <div class="mode-desc">Text &#8594; Video</div>
+      </button>
+      <button class="mode-btn">
+        <div class="mode-header">
+          <span class="mode-cursor">$</span>
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
+        </div>
+        <div class="mode-label">ANIMATE</div>
+        <div class="mode-desc">Image &#8594; Video</div>
+      </button>
+    </div>
+
+    <!-- TERMINAL BLOCK -->
+    <section class="terminal slide-up">
+
+      <!-- Title bar -->
+      <div class="terminal-titlebar">
+        <div class="traffic-lights">
+          <div class="dot red"></div>
+          <div class="dot yellow"></div>
+          <div class="dot green"></div>
+        </div>
+        <div class="titlebar-center">
+          <div class="status-dot pulse-glow"></div>
+          <span class="titlebar-text glitch-target" data-text="INPUT_TERMINAL">INPUT_TERMINAL</span>
+        </div>
+        <span class="titlebar-pid">pid:4207</span>
+      </div>
+
+      <!-- Terminal body -->
+      <div class="terminal-body">
+
+        <!-- Boot messages -->
+        <div class="boot-messages">
+          <div><span class="ok-tag">[ok]</span> neural_link initialized</div>
+          <div><span class="ok-tag">[ok]</span> grok-2-image-gen loaded</div>
+          <div><span class="ok-tag">[ok]</span> awaiting input<span class="cursor-blink"></span></div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Settings -->
+        <details class="settings-panel">
+          <summary class="settings-trigger">
+            <span class="chevron">&#10095;</span>
+            <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+            <span class="settings-label">render_config</span>
+            <div class="settings-line"></div>
+            <span class="settings-summary">16:9 &#183; 720p &#183; 5s</span>
+          </summary>
+          <div class="settings-content">
+            <div class="control-group">
+              <label class="control-label">ASPECT_RATIO</label>
+              <div class="grid-4">
+                <button class="option-btn"><div class="option-value">1:1</div><div class="option-tag">SQUARE</div></button>
+                <button class="option-btn active"><div class="option-value">16:9</div><div class="option-tag">WIDE</div></button>
+                <button class="option-btn"><div class="option-value">9:16</div><div class="option-tag">TALL</div></button>
+                <button class="option-btn"><div class="option-value">4:3</div><div class="option-tag">CLASSIC</div></button>
+              </div>
+            </div>
+            <div class="control-group">
+              <label class="control-label">RESOLUTION</label>
+              <div class="grid-2">
+                <button class="option-btn active"><div class="option-value font-orbitron">720P</div><div class="option-tag">HD</div></button>
+                <button class="option-btn"><div class="option-value font-orbitron">480P</div><div class="option-tag">SD</div></button>
+              </div>
+            </div>
+            <div class="control-group">
+              <label class="control-label">DURATION <span class="label-value">5s</span></label>
+              <div class="slider-row">
+                <span class="slider-label">1s</span>
+                <input type="range" min="1" max="15" value="5" class="cyber-slider" />
+                <span class="slider-label">15s</span>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <div class="divider"></div>
+
+        <!-- Engine selector -->
+        <div class="control-group">
+          <label class="control-label">ENGINE</label>
+          <div class="grid-2">
+            <button class="engine-btn active">
+              <div class="engine-name">GROK</div>
+              <div class="engine-meta"><span>xAI</span><span class="engine-cost active">5 cr</span></div>
+            </button>
+            <button class="engine-btn">
+              <div class="engine-name">COMFY</div>
+              <div class="engine-meta"><span>WAN Video</span><span class="engine-cost">3 cr</span></div>
+            </button>
+          </div>
+        </div>
+
+        <!-- History -->
+        <details class="settings-panel">
+          <summary class="settings-trigger">
+            <span class="chevron">&#10095;</span>
+            <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <span class="settings-label">history --list</span>
+            <div class="settings-line"></div>
+            <span class="settings-summary">14 entries</span>
+          </summary>
+          <div class="settings-content">
+            <div class="history-item">cyberpunk cityscape neon rain...</div>
+            <div class="history-item">portrait of android with glowing eyes...</div>
+            <div class="history-item">futuristic motorcycle chase scene...</div>
+          </div>
+        </details>
+
+        <div class="divider"></div>
+
+        <!-- Source image -->
+        <div class="control-group">
+          <div class="source-header">
+            <label class="control-label mono"><span class="dollar">$</span> source_image</label>
+            <div class="source-tabs">
+              <button class="source-tab">UPLOAD</button>
+              <button class="source-tab active">URL</button>
+            </div>
+          </div>
+          <input type="text" class="cyber-input" value="blob:https://grokrunner.gltch.app/fa9d9e5c-f2c9-454d-88b0-dc4c1c4b425a" />
+        </div>
+
+        <!-- Prompt -->
+        <div class="control-group">
+          <label class="control-label mono"><span class="prompt-cursor">&#10095;</span> prompt <span class="cursor-blink"></span></label>
+          <div class="prompt-wrapper">
+            <textarea class="cyber-textarea" rows="4" placeholder="Describe the animation / motion to apply..."></textarea>
+            <button class="send-btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="send-icon"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Status bar -->
+        <div class="status-bar">
+          <span><span class="status-key">mode</span>=IMAGE_TO_VIDEO</span>
+          <span class="status-loaded">&#9670; IMG_LOADED</span>
+          <span>&#9679; READY</span>
+          <span>0 chars</span>
+          <span class="status-dim">Ctrl+Enter</span>
+        </div>
+
+      </div>
+    </section>
+
+  </div>
+
+  <script src="glitch.js"></script>
+</body>
+</html>
