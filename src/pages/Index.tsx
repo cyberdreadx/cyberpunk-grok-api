@@ -210,6 +210,8 @@ const Index = () => {
     const isComfyAnimate = mode === "image-to-video" && animateEngine === "comfy" && !longLookEnabled;
     const isComfyLongLook = mode === "image-to-video" && animateEngine === "comfy" && longLookEnabled;
     const isComfy = isComfyGen || isComfyEdit || isComfyRender || isComfyAnimate || isComfyLongLook;
+    // Grok edit in BYOK mode uses the user's own API key directly — no credits needed
+    const isGrokEditByok = isGrokEdit && effectiveApiMode === "byok" && apiKeySet;
     const isQueued = isGrokEdit || isGltchEdit || isComfy;
 
     // Check access: need either API key (BYOK) or credits
@@ -222,8 +224,11 @@ const Index = () => {
       return;
     }
 
-    // Queued jobs always require auth (credits mode)
-    if (isQueued) {
+    // Grok edit in BYOK mode — just need an API key, no auth/credits
+    if (isGrokEditByok) {
+      // Skip auth and credit checks — falls through to the queued job section below
+    } else if (isQueued) {
+      // All other queued jobs require auth (credits mode)
       if (!auth.isAuthenticated) {
         toast({
           title: "ACCESS DENIED",
@@ -234,7 +239,7 @@ const Index = () => {
       }
     }
 
-    if ((effectiveApiMode === "credits" || isQueued) && !isAdmin) {
+    if ((effectiveApiMode === "credits" || isQueued) && !isGrokEditByok && !isAdmin) {
       if (!auth.isAuthenticated) {
         toast({ title: "ACCESS DENIED", description: "Sign in to use credits.", variant: "destructive" });
         return;
@@ -277,8 +282,8 @@ const Index = () => {
 
     // ── Queued jobs (fire-and-forget with optimistic credit deduction) ──
     if (isQueued) {
-      // Deduct credits optimistically before firing the job
-      if (!isAdmin) {
+      // Deduct credits optimistically before firing the job (skip for BYOK grok edit)
+      if (!isAdmin && !isGrokEditByok) {
         let cost: number;
         if (isGrokEdit) cost = calculateCreditCost(grokPro ? "edit-image-pro" : "edit-image", settings.count);
         else if (isGltchEdit) cost = calculateCreditCost(gltchHd ? "gltch-edit-hd" : "gltch-edit");
