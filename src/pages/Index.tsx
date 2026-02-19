@@ -22,7 +22,7 @@ import { useCredits } from "@/hooks/useCredits";
 import { useFolders } from "@/hooks/useFolders";
 import { usePromptHistory } from "@/hooks/usePromptHistory";
 import { useToast } from "@/hooks/use-toast";
-import { calculateCreditCost } from "@/lib/api";
+import { calculateCreditCost, type CreditMode } from "@/lib/api";
 
 const Index = () => {
   const [mode, setMode] = useState<GrokMode>("text-to-image");
@@ -263,7 +263,7 @@ const Index = () => {
         const isImageMode = mode === "text-to-image" || mode === "edit-image";
         const imageCount = isImageMode ? settings.count : 1;
         const videoDuration = (mode === "text-to-video" || mode === "image-to-video" || mode === "edit-video") ? videoSettings.duration : 0;
-        const creditMode = isImageMode && grokPro ? (mode === "text-to-image" ? "text-to-image-pro" : "edit-image-pro") as const : mode;
+        const creditMode = isImageMode && grokPro ? (mode === "text-to-image" ? "text-to-image-pro" : "edit-image-pro") as CreditMode : mode;
         cost = calculateCreditCost(creditMode, imageCount, videoDuration);
       }
 
@@ -445,7 +445,7 @@ const Index = () => {
         const isImageMode = mode === "text-to-image" || mode === "edit-image";
         const imageCount = isImageMode ? settings.count : 1;
         const videoDuration = (mode === "text-to-video" || mode === "image-to-video" || mode === "edit-video") ? videoSettings.duration : 0;
-        const creditMode = isImageMode && grokPro ? (mode === "text-to-image" ? "text-to-image-pro" : "edit-image-pro") as const : mode;
+        const creditMode = isImageMode && grokPro ? (mode === "text-to-image" ? "text-to-image-pro" : "edit-image-pro") as CreditMode : mode;
         const cost = calculateCreditCost(creditMode, imageCount, videoDuration);
         creditsHook.deductCreditsLocally(cost);
         setTimeout(() => creditsHook.refreshCredits(), 2000);
@@ -506,20 +506,18 @@ const Index = () => {
               SYS_ONLINE
             </span>
             <span
-              className={`w-1.5 h-1.5 rounded-full transition-colors duration-500 ${
-                isLoading ? "bg-secondary animate-pulse" : "bg-primary animate-pulse-glow"
-              }`}
+              className={`w-1.5 h-1.5 rounded-full transition-colors duration-500 ${isLoading ? "bg-secondary animate-pulse" : "bg-primary animate-pulse-glow"
+                }`}
             />
 
             {/* API Mode toggle: BYOK vs Credits */}
             <div className="flex items-center bg-card/60 border border-border/50 rounded overflow-hidden">
               <button
                 onClick={() => setApiMode("byok")}
-                className={`flex items-center gap-1 px-2 py-1 text-[9px] sm:text-[10px] font-mono-share transition-colors ${
-                  effectiveApiMode === "byok"
-                    ? "bg-primary/20 text-primary"
-                    : "text-muted-foreground/50 hover:text-muted-foreground"
-                }`}
+                className={`flex items-center gap-1 px-2 py-1 text-[9px] sm:text-[10px] font-mono-share transition-colors ${effectiveApiMode === "byok"
+                  ? "bg-primary/20 text-primary"
+                  : "text-muted-foreground/50 hover:text-muted-foreground"
+                  }`}
               >
                 <Key className="w-2.5 h-2.5" />
                 BYOK
@@ -527,11 +525,10 @@ const Index = () => {
               {canUseCredits && (
                 <button
                   onClick={() => setApiMode("credits")}
-                  className={`flex items-center gap-1 px-2 py-1 text-[9px] sm:text-[10px] font-mono-share transition-colors ${
-                    effectiveApiMode === "credits"
-                      ? "bg-secondary/20 text-secondary"
-                      : "text-muted-foreground/50 hover:text-muted-foreground"
-                  }`}
+                  className={`flex items-center gap-1 px-2 py-1 text-[9px] sm:text-[10px] font-mono-share transition-colors ${effectiveApiMode === "credits"
+                    ? "bg-secondary/20 text-secondary"
+                    : "text-muted-foreground/50 hover:text-muted-foreground"
+                    }`}
                 >
                   <Coins className="w-2.5 h-2.5" />
                   CREDITS
@@ -617,9 +614,8 @@ const Index = () => {
               <div className="w-2 h-2 rounded-full bg-primary/60" />
             </div>
             <div className="flex-1 flex items-center gap-2">
-              <div className={`w-2 h-2 rounded-full transition-colors duration-500 ${
-                isLoading ? "bg-secondary animate-pulse" : "bg-primary animate-pulse-glow"
-              }`} />
+              <div className={`w-2 h-2 rounded-full transition-colors duration-500 ${isLoading ? "bg-secondary animate-pulse" : "bg-primary animate-pulse-glow"
+                }`} />
               <GlitchText
                 text="INPUT_TERMINAL"
                 className="font-orbitron text-[10px] tracking-wider text-muted-foreground"
@@ -894,16 +890,14 @@ const Index = () => {
                     <button
                       type="button"
                       onClick={() => setComfyEditUpscale(!comfyEditUpscale)}
-                      className={`w-full flex items-center justify-between px-3 py-2 border rounded font-mono-share text-[10px] transition-all duration-200 ${
-                        comfyEditUpscale
-                          ? "border-purple-500/50 bg-purple-500/5 text-purple-300"
-                          : "border-border bg-card/30 text-muted-foreground hover:border-purple-500/30"
-                      }`}
+                      className={`w-full flex items-center justify-between px-3 py-2 border rounded font-mono-share text-[10px] transition-all duration-200 ${comfyEditUpscale
+                        ? "border-purple-500/50 bg-purple-500/5 text-purple-300"
+                        : "border-border bg-card/30 text-muted-foreground hover:border-purple-500/30"
+                        }`}
                     >
                       <span className="flex items-center gap-1.5">
-                        <span className={`w-3 h-3 border rounded-sm flex items-center justify-center text-[8px] ${
-                          comfyEditUpscale ? "border-purple-500 bg-purple-500 text-white" : "border-muted-foreground/30"
-                        }`}>
+                        <span className={`w-3 h-3 border rounded-sm flex items-center justify-center text-[8px] ${comfyEditUpscale ? "border-purple-500 bg-purple-500 text-white" : "border-muted-foreground/30"
+                          }`}>
                           {comfyEditUpscale ? "✓" : ""}
                         </span>
                         HD UPSCALE (2x)
@@ -1437,13 +1431,12 @@ const Index = () => {
                 return (
                   <div
                     key={job.id}
-                    className={`relative border rounded-lg p-3 transition-all overflow-hidden min-w-0 ${
-                      isActive
-                        ? "border-purple-500/40 bg-purple-500/5 shadow-[0_0_12px_rgba(168,85,247,0.1)]"
-                        : isDone
+                    className={`relative border rounded-lg p-3 transition-all overflow-hidden min-w-0 ${isActive
+                      ? "border-purple-500/40 bg-purple-500/5 shadow-[0_0_12px_rgba(168,85,247,0.1)]"
+                      : isDone
                         ? "border-green-500/30 bg-green-500/5"
                         : "border-red-500/30 bg-red-500/5"
-                    }`}
+                      }`}
                   >
                     {/* Dismiss button */}
                     {!isActive && (
@@ -1461,16 +1454,14 @@ const Index = () => {
                       {isDone && <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />}
                       {isError && <AlertCircle className="w-3.5 h-3.5 text-red-400" />}
 
-                      <span className={`font-orbitron text-[9px] tracking-widest uppercase ${
-                        isActive ? "text-cyan-400" : isDone ? "text-green-400" : "text-red-400"
-                      }`}>
+                      <span className={`font-orbitron text-[9px] tracking-widest uppercase ${isActive ? "text-cyan-400" : isDone ? "text-green-400" : "text-red-400"
+                        }`}>
                         {job.status === "submitting" ? "SUBMITTING" : job.status.toUpperCase()}
                       </span>
 
                       {/* Timer */}
-                      <span className={`font-mono-share text-xs tabular-nums ml-auto ${
-                        isActive ? "text-purple-300" : "text-muted-foreground/50"
-                      }`}>
+                      <span className={`font-mono-share text-xs tabular-nums ml-auto ${isActive ? "text-purple-300" : "text-muted-foreground/50"
+                        }`}>
                         {mins}:{secs}
                       </span>
                     </div>
