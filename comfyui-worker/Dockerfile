@@ -120,16 +120,9 @@ RUN mkdir -p /comfyui/models/upscale_models && \
 # into the Docker image.
 RUN printf "\nrunpod_volume:\n    base_path: /runpod-volume/models\n    checkpoints: checkpoints\n    diffusion_models: diffusion_models\n    upscale_models: upscale_models\n    vae: vae\n    clip: text_encoders\n    loras: loras\n    unet: unet\n    gguf: gguf\n" >> /comfyui/extra_model_paths.yaml
 
-# ── Optional highvram mode via env var ─────────────────────────────
-# Set COMFY_EXTRA_FLAGS=--highvram on endpoints with 48GB+ VRAM.
-# The base start.sh doesn't support extra args, so we patch it to
-# read from the COMFY_EXTRA_FLAGS environment variable at runtime.
-RUN sed -i 's|python -u /comfyui/main.py --disable-auto-launch --disable-metadata|python -u /comfyui/main.py --disable-auto-launch --disable-metadata ${COMFY_EXTRA_FLAGS}|g' /start.sh
-
 # ── Patch handler.py to support video output (gifs/videos keys) ──
 # The base handler only processes "images" in node output, but
-# VHS_VideoCombine outputs under "gifs". This patch adds handling
-# for gifs and videos output keys so they get uploaded to S3 or
-# returned as base64 just like images.
+# VHS_VideoCombine outputs under "gifs". This patch merges gifs/videos
+# into the images list so they get processed by the existing handler.
 COPY handler_patch.py /handler_patch.py
 RUN python /handler_patch.py && rm /handler_patch.py
