@@ -272,6 +272,12 @@ function buildWanVideoWorkflow(p: {
     },
   };
 
+  // VRAM cleanup between passes — free high-noise model activations
+  workflow["120"] = {
+    class_type: "easy cleanGpuUsed",
+    inputs: { anything: ["86", 0] },
+  };
+
   // Pass 2: low-noise sampler
   workflow["85"] = {
     class_type: "KSamplerAdvanced",
@@ -279,7 +285,7 @@ function buildWanVideoWorkflow(p: {
       model: ["103", 0],
       positive: ["113", 0],
       negative: ["113", 1],
-      latent_image: ["86", 0],
+      latent_image: ["120", 0],
       add_noise: "disable",
       noise_seed: p.seed,
       steps: p.steps,
