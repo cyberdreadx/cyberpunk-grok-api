@@ -340,7 +340,7 @@ function buildWanVideoWorkflow(p: {
       filename_prefix: "GrokRunner",
       format: "video/h264-mp4",
       pix_fmt: "yuv420p",
-      crf: 26,
+      crf: 19,
       save_metadata: true,
       trim_to_audio: false,
       pingpong: false,
@@ -747,7 +747,7 @@ function buildLongLookWorkflow(p: {
       filename_prefix: "GrokRunner_LongLook",
       format: "video/h264-mp4",
       pix_fmt: "yuv420p",
-      crf: 26,
+      crf: 19,
       save_metadata: true,
       trim_to_audio: false,
       pingpong: false,
@@ -1602,72 +1602,72 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           const out = data.output || {};
           console.log("[comfyui-poll] COMPLETED output keys:", Object.keys(out));
 
-          // Check for video output — workers may use videos, gifs, or images
-          const videos = out.videos || out.gifs;
-          if (videos?.length) {
-            const vid = videos[videos.length - 1];
-            const base64Data = vid.data || vid;
-            const videoUri = typeof base64Data === "string" && base64Data.startsWith("data:")
-              ? base64Data
-              : `data:video/mp4;base64,${base64Data}`;
-            return res.status(200).json({ status: "done", video: videoUri });
-          }
-
-          // Image output (some workers put video data here too)
-          const images = out.images;
-          if (images?.length) {
-            const img = images[images.length - 1];
-            const base64Data = img.data || img;
-            if (outputType === "video") {
-              const videoUri = typeof base64Data === "string" && base64Data.startsWith("data:")
-                ? base64Data
-                : `data:video/mp4;base64,${base64Data}`;
-              return res.status(200).json({ status: "done", video: videoUri });
+          // Helper: detect S3/HTTP URLs vs base64, return appropriate URI
+          function resolveFileData(file: any, type: "video" | "image"): string | null {
+            const d = typeof file === "string" ? file : (file?.data || file?.url || null);
+            if (!d || typeof d !== "string") return null;
+            // S3 URL or any HTTP URL — return directly
+            if (d.startsWith("http://") || d.startsWith("https://")) return d;
+            // Already a data URI
+            if (d.startsWith("data:")) return d;
+            // S3 type indicator from RunPod worker
+            if (file?.type === "s3_url" || file?.type === "url") return d;
+            // Raw base64
+            if (d.length > 100) {
+              const mime = type === "video" ? "video/mp4" : "image/png";
+              return `data:${mime};base64,${d}`;
             }
-            const imageUri = typeof base64Data === "string" && base64Data.startsWith("data:")
-              ? base64Data
-              : `data:image/png;base64,${base64Data}`;
-            return res.status(200).json({ status: "done", image: imageUri });
+            return null;
           }
 
-          // Fallback: message field or any string-like output
-          const msg = out.message || (typeof out === "string" ? out : null);
-          if (msg) {
-            if (outputType === "video") {
-              const videoUri = msg.startsWith("data:") ? msg : `data:video/mp4;base64,${msg}`;
-              return res.status(200).json({ status: "done", video: videoUri });
+          // Scan all file arrays in output (videos, gifs, images) at top level and nested
+          function findOutput(obj: any): { uri: string; type: "video" | "image" } | null {
+            if (!obj || typeof obj !== "object") return null;
+
+            // Check standard arrays at this level
+            for (const arrKey of ["videos", "gifs", "images"]) {
+              const arr = obj[arrKey];
+              if (!Array.isArray(arr) || !arr.length) continue;
+              const file = arr[arr.length - 1];
+              const isVid = arrKey !== "images" || outputType === "video";
+              const uri = resolveFileData(file, isVid ? "video" : "image");
+              if (uri) return { uri, type: isVid ? "video" : "image" };
             }
-            const imageUri = msg.startsWith("data:") ? msg : `data:image/png;base64,${msg}`;
-            return res.status(200).json({ status: "done", image: imageUri });
+
+            // Check message field
+            if (typeof obj.message === "string" && obj.message.length > 50) {
+              const uri = resolveFileData(obj.message, outputType === "video" ? "video" : "image");
+              if (uri) return { uri, type: outputType === "video" ? "video" : "image" };
+            }
+
+            return null;
           }
 
-          // Deep scan: some workers nest output under node IDs or unexpected keys
+          // Try top-level output first
+          const topResult = findOutput(out);
+          if (topResult) {
+            return res.status(200).json({ status: "done", [topResult.type]: topResult.uri });
+          }
+
+          // Deep scan: check nested node objects
           for (const key of Object.keys(out)) {
             const node = out[key];
-            if (!node || typeof node !== "object") continue;
-            // Check node.gifs, node.videos, node.images
-            const files = node.gifs || node.videos || node.images;
-            if (Array.isArray(files) && files.length) {
-              const file = files[files.length - 1];
-              const d = file.data || file;
-              if (typeof d === "string" && d.length > 100) {
-                const uri = d.startsWith("data:") ? d
-                  : outputType === "video" ? `data:video/mp4;base64,${d}`
-                  : `data:image/png;base64,${d}`;
-                console.log(`[comfyui-poll] Found output in nested key "${key}"`);
-                return res.status(200).json({ status: "done", [outputType === "video" ? "video" : "image"]: uri });
+            if (!node || typeof node !== "object") {
+              // Direct string value
+              if (typeof node === "string" && node.length > 100) {
+                const uri = resolveFileData(node, outputType === "video" ? "video" : "image");
+                if (uri) return res.status(200).json({ status: "done", [outputType === "video" ? "video" : "image"]: uri });
               }
+              continue;
             }
-            // Check for direct string data on the node
-            if (typeof node === "string" && node.length > 100) {
-              const uri = node.startsWith("data:") ? node
-                : outputType === "video" ? `data:video/mp4;base64,${node}`
-                : `data:image/png;base64,${node}`;
-              return res.status(200).json({ status: "done", [outputType === "video" ? "video" : "image"]: uri });
+            const nested = findOutput(node);
+            if (nested) {
+              console.log(`[comfyui-poll] Found output in nested key "${key}"`);
+              return res.status(200).json({ status: "done", [nested.type]: nested.uri });
             }
           }
 
-          // If output exists but has no extractable data, it may have been truncated
+          // If output exists but has no extractable data
           const outStr = JSON.stringify(out);
           console.error("[comfyui-poll] No output found. Keys:", Object.keys(out), "Size:", outStr.length, "Preview:", outStr.slice(0, 1000));
           return res.status(200).json({ status: "error", error: "Job completed but no output could be extracted. The video may be too large for the response." });
