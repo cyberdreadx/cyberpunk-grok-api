@@ -124,3 +124,11 @@ RUN printf "\nrunpod_volume:\n    base_path: /runpod-volume/models\n    checkpoi
 # L40S has 48GB — no reason to use lowvram module-by-module loading.
 # The base image start.sh doesn't support CLI_ARGS, so we patch it.
 RUN sed -i 's|python -u /comfyui/main.py --disable-auto-launch --disable-metadata|python -u /comfyui/main.py --disable-auto-launch --disable-metadata --highvram|g' /start.sh
+
+# ── Patch handler.py to support video output (gifs/videos keys) ──
+# The base handler only processes "images" in node output, but
+# VHS_VideoCombine outputs under "gifs". This patch adds handling
+# for gifs and videos output keys so they get uploaded to S3 or
+# returned as base64 just like images.
+COPY handler_patch.py /handler_patch.py
+RUN python /handler_patch.py && rm /handler_patch.py
