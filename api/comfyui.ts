@@ -1445,21 +1445,12 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
         // Only use external VAE if explicitly set (fp8 checkpoints strip the VAE)
         const qwenVae = process.env.COMFYUI_QWEN_VAE || "";
 
-        // Cap Qwen Edit at 768px to avoid OOM when WAN models are cached
-        const qwenMaxDim = 768;
-        let qW = clampW, qH = clampH;
-        if (qW > qwenMaxDim || qH > qwenMaxDim) {
-          const s = qwenMaxDim / Math.max(qW, qH);
-          qW = Math.round((qW * s) / 8) * 8;
-          qH = Math.round((qH * s) / 8) * 8;
-        }
-
         workflow = buildQwenEditWorkflow({
           prompt: enhancedPrompt,
           negativePrompt: (negativePrompt || "").trim() || QWEN_DEFAULT_NEGATIVE,
           imageFilename: imageFilename!,
-          width: qW,
-          height: qH,
+          width: clampW,
+          height: clampH,
           seed: actualSeed,
           steps: clampSteps,
           cfg: clampCfg,
