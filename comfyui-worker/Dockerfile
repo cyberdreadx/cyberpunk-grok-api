@@ -33,7 +33,7 @@ RUN mkdir -p /comfyui/models/upscale_models && \
 # Models on RunPod Network Volume (mounted at /runpod-volume):
 #   checkpoints/ — Qwen-Rapid-AIO-v1.safetensors (~27 GB)
 #   loras/       — Unchained-XXX, qwen-edit-skin, qwen-multiple-angles
-RUN printf "\nrunpod_volume:\n    base_path: /runpod-volume/models\n    checkpoints: checkpoints\n    upscale_models: upscale_models\n    vae: vae\n    clip: text_encoders\n    loras: loras\n" >> /comfyui/extra_model_paths.yaml
+RUN printf "\nrunpod_volume:\n    base_path: /runpod-volume/runpod-slim/ComfyUI/models\n    checkpoints: checkpoints\n    upscale_models: upscale_models\n    vae: vae\n    clip: text_encoders\n    loras: loras\n    unet: unet\n    diffusion_models: unet\n" >> /comfyui/extra_model_paths.yaml
 
 # ── Patch handler.py to support image output ─────────────────────
 COPY handler_patch.py /handler_patch.py
