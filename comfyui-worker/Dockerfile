@@ -52,27 +52,17 @@ RUN cd /comfyui/custom_nodes && \
     wget -qO- https://github.com/SeanScripts/ComfyUI-Unload-Model/archive/refs/heads/main.tar.gz | tar xz && \
     mv ComfyUI-Unload-Model-main ComfyUI-Unload-Model
 
-# ── Build tools (needed by Triton/SageAttention for JIT compilation) ──
+# ── Build tools + CUDA linker stub (Triton/SageAttention JIT) ────
+# Triton JIT-compiles CUDA kernels with gcc at runtime. The gcc command
+# uses `-lcuda` which resolves to libcuda.so. The runtime CUDA image only
+# has libcuda.so.1 (bind-mounted by nvidia-docker), missing the dev symlink.
+# Solution: compile a tiny stub .so at build time. gcc links against it;
+# at runtime the real nvidia driver library is already loaded by PyTorch.
 RUN apt-get update && apt-get install -y --no-install-recommends gcc g++ && \
-    rm -rf /var/lib/apt/lists/*
-
-# Triton JIT compiles CUDA kernels with gcc at runtime. gcc needs `-lcuda`
-# which resolves to libcuda.so. nvidia-docker bind-mounts libcuda.so.1 at
-# container start, but the development symlink (libcuda.so -> libcuda.so.1)
-# is missing. We inject a fix into start.sh that creates it before ComfyUI.
-ENV LIBRARY_PATH="/usr/local/nvidia/lib64:${LIBRARY_PATH}"
-ENV LD_LIBRARY_PATH="/usr/local/nvidia/lib64:${LD_LIBRARY_PATH}"
-
-# Patch start.sh: after the shebang, find & symlink libcuda.so for gcc
-RUN sed -i '1a\\n# ── Fix libcuda.so for Triton/SageAttention JIT ──\n\
-for dir in /usr/lib/x86_64-linux-gnu /usr/local/nvidia/lib64 /usr/local/cuda/lib64; do\n\
-  if ls "$dir"/libcuda.so.* 1>/dev/null 2>&1; then\n\
-    REAL=$(ls "$dir"/libcuda.so.* 2>/dev/null | head -1)\n\
-    ln -sf "$REAL" /usr/lib/x86_64-linux-gnu/libcuda.so 2>/dev/null\n\
-    echo "worker: linked libcuda.so -> $REAL"\n\
-    break\n\
-  fi\n\
-done\n' /start.sh
+    rm -rf /var/lib/apt/lists/* && \
+    echo 'int cuInit(int f){return 0;}' | \
+      gcc -xc -shared -Wl,-soname,libcuda.so.1 \
+        -o /usr/lib/x86_64-linux-gnu/libcuda.so -
 
 # ── Python Dependencies ─────────────────────────────────────────
 RUN pip install --no-cache-dir gguf color-matcher sageattention triton && \
