@@ -106,3 +106,7 @@ RUN sed -i 's|python -u /comfyui/main.py|python -u /comfyui/main.py --gpu-only|g
 # ── Patch handler.py to support image output ─────────────────────
 COPY handler_patch.py /handler_patch.py
 RUN python /handler_patch.py && rm /handler_patch.py
+
+# ── Patch rp_upload.py to read BUCKET_NAME from env ─────────────
+COPY bucket_patch.py /bucket_patch.py
+RUN python /bucket_patch.py && rm /bucket_patch.py
