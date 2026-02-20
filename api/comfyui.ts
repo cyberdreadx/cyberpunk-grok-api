@@ -2169,17 +2169,14 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
             // S3 URL or any HTTP URL
             if (d.startsWith("http://") || d.startsWith("https://") || file?.type === "s3_url" || file?.type === "url") {
               const url = d.startsWith("http") ? d : (file?.url || d);
-              // Images: download via S3 SDK and return base64
-              if (type === "image") {
-                const s3Data = await downloadFromS3(url);
-                if (s3Data) {
-                  const base64 = s3Data.buffer.toString("base64");
-                  return `data:${s3Data.contentType};base64,${base64}`;
-                }
-                // Fallback: return URL as-is (will break in browser, but at least logs the error)
-                return url;
+              // Download via S3 SDK (RunPod S3 doesn't support presigned URL auth)
+              const s3Data = await downloadFromS3(url);
+              if (s3Data) {
+                const base64 = s3Data.buffer.toString("base64");
+                return `data:${s3Data.contentType};base64,${base64}`;
               }
-              // Videos: return URL for streaming proxy (too large for base64)
+              // Fallback: return URL as-is (logs the error in downloadFromS3)
+              console.error(`[comfyui-poll] S3 download failed for ${type}, returning URL as fallback`);
               return url;
             }
             // Raw base64
@@ -2356,6 +2353,50 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
 
       const fname = await uploadImageToLocal(backend.comfyUrl!, imageBase64, rawName);
       return res.status(200).json({ filename: fname, subfolder: "", type: "input" });
+    }
+
+    // ========== S3-TEST (diagnostic to verify S3 connectivity) ==========
+    if (action === "s3-test") {
+      const endpoint = process.env.RUNPOD_S3_ENDPOINT;
+      const accessKey = process.env.RUNPOD_S3_ACCESS_KEY;
+      const secretKey = process.env.RUNPOD_S3_SECRET_KEY;
+      const bucket = process.env.RUNPOD_S3_BUCKET;
+      const missingVars = [];
+      if (!endpoint) missingVars.push("RUNPOD_S3_ENDPOINT");
+      if (!accessKey) missingVars.push("RUNPOD_S3_ACCESS_KEY");
+      if (!secretKey) missingVars.push("RUNPOD_S3_SECRET_KEY");
+      if (!bucket) missingVars.push("RUNPOD_S3_BUCKET");
+
+      if (missingVars.length > 0) {
+        return res.status(200).json({
+          ok: false,
+          error: `Missing env vars: ${missingVars.join(", ")}`,
+          hint: "Set these in your Vercel/Netlify environment settings and redeploy.",
+        });
+      }
+
+      // Try listing the bucket
+      try {
+        const { ListObjectsV2Command } = await import("@aws-sdk/client-s3");
+        const client = getS3Client();
+        if (!client) return res.status(200).json({ ok: false, error: "S3 client creation failed" });
+        const list = await client.send(new ListObjectsV2Command({ Bucket: bucket, MaxKeys: 3 }));
+        return res.status(200).json({
+          ok: true,
+          endpoint,
+          bucket,
+          objectCount: list.KeyCount,
+          sampleKeys: list.Contents?.map(o => o.Key).slice(0, 3) || [],
+        });
+      } catch (err: any) {
+        return res.status(200).json({
+          ok: false,
+          error: err.message,
+          endpoint,
+          bucket,
+          accessKeyPrefix: accessKey?.slice(0, 10) + "...",
+        });
+      }
     }
 
     // ========== PROXY-S3 (download from S3 with proper auth for browser access) ==========
