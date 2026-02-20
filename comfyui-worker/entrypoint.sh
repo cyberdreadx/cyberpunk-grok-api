@@ -56,5 +56,6 @@ download_civitai() {
 
 download_civitai "wan_i2v_pov_blowjob_v1.2.safetensors" "2021249" "Wan POV Blowjob v1.2 I2V LoRA"
 download_civitai "genitals_helper_v1.0_e219.safetensors" "2012120" "NSFW Genitals Helper v1.0 I2V LoRA"
+download_civitai "mystic_xxx_wan22_i2v_high_v1.safetensors" "2435942" "Mystic XXX Wan 2.2 I2V High v1 LoRA"
 
 exec "$@"
