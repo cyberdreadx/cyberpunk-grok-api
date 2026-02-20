@@ -860,24 +860,26 @@ function buildQwenEditWorkflow(p: {
   prompt: string;
   negativePrompt: string;
   imageFilename: string;
+  imageFilename2?: string;
   width: number;
   height: number;
   seed: number;
   steps: number;
   cfg: number;
+  sampler?: string;
+  scheduler?: string;
   checkpoint: string;
   vae?: string;
   upscale?: boolean;
-  loras?: { name: string; strength: number }[];
+  loras?: { name: string; strengthModel: number; strengthClip: number }[];
 }): Record<string, any> {
   const activeLoras = (p.loras || []).filter(l => l.name && l.name !== "none");
 
-  // Chain LoraLoader nodes: checkpoint -> lora1 -> lora2 -> ... -> final model/clip
-  // Each LoraLoader gets a unique node ID starting at "10"
-  let modelSource: [string, number] = ["125", 0];
-  let clipSource: [string, number] = ["125", 1];
+  const ckptModel: [string, number] = ["125", 0];
+  const ckptClip: [string, number] = ["125", 1];
+  let modelSource: [string, number] = ckptModel;
+  let clipSource: [string, number] = ckptClip;
 
-  // Use explicit VAELoader — fp8 checkpoints often strip the VAE
   const vaeSource: [string, number] = p.vae ? ["130", 0] : ["125", 2];
 
   const workflow: Record<string, any> = {
@@ -891,6 +893,13 @@ function buildQwenEditWorkflow(p: {
     },
   };
 
+  if (p.imageFilename2) {
+    workflow["124"] = {
+      class_type: "LoadImage",
+      inputs: { image: p.imageFilename2 },
+    };
+  }
+
   if (p.vae) {
     workflow["130"] = {
       class_type: "VAELoader",
@@ -898,15 +907,14 @@ function buildQwenEditWorkflow(p: {
     };
   }
 
-  // Build LoRA chain
   for (let i = 0; i < activeLoras.length; i++) {
     const nodeId = String(10 + i);
     workflow[nodeId] = {
       class_type: "LoraLoader",
       inputs: {
         lora_name: activeLoras[i].name,
-        strength_model: activeLoras[i].strength,
-        strength_clip: activeLoras[i].strength,
+        strength_model: activeLoras[i].strengthModel,
+        strength_clip: activeLoras[i].strengthClip,
         model: modelSource,
         clip: clipSource,
       },
@@ -915,62 +923,52 @@ function buildQwenEditWorkflow(p: {
     clipSource = [nodeId, 1];
   }
 
+  // Primary image → image2, optional second image → image1 (matches GLTCH workflow)
+  const positiveInputs: Record<string, any> = {
+    clip: clipSource,
+    vae: vaeSource,
+    image2: ["123", 0],
+    prompt: p.prompt,
+  };
+  if (p.imageFilename2) {
+    positiveInputs.image1 = ["124", 0];
+  }
+
   Object.assign(workflow, {
     "132": {
       class_type: "TextEncodeQwenImageEditPlus",
-      inputs: {
-        clip: clipSource,
-        vae: vaeSource,
-        image1: ["123", 0],
-        prompt: p.prompt,
-      },
+      inputs: positiveInputs,
     },
     "133": {
       class_type: "TextEncodeQwenImageEditPlus",
       inputs: {
-        clip: clipSource,
+        clip: ckptClip,
         vae: vaeSource,
         prompt: p.negativePrompt,
       },
-    },
-    "64": {
-      class_type: "ModelSamplingAuraFlow",
-      inputs: { model: modelSource, shift: 3 },
-    },
-    "65": {
-      class_type: "CFGNorm",
-      inputs: { model: ["64", 0], strength: 1 },
     },
     "148": {
       class_type: "EmptyLatentImage",
       inputs: { width: p.width, height: p.height, batch_size: 1 },
     },
-    "149": {
-      class_type: "easy cleanGpuUsed",
-      inputs: { anything: ["148", 0] },
-    },
     "75": {
       class_type: "KSampler",
       inputs: {
-        model: ["65", 0],
+        model: modelSource,
         positive: ["132", 0],
         negative: ["133", 0],
-        latent_image: ["149", 0],
+        latent_image: ["148", 0],
         seed: p.seed,
         steps: p.steps,
         cfg: p.cfg,
-        sampler_name: "sa_solver",
-        scheduler: "beta",
+        sampler_name: p.sampler || "sa_solver",
+        scheduler: p.scheduler || "beta",
         denoise: 1,
       },
     },
-    "72": {
-      class_type: "easy cleanGpuUsed",
-      inputs: { anything: ["75", 0] },
-    },
     "73": {
       class_type: "VAEDecode",
-      inputs: { samples: ["72", 0], vae: vaeSource },
+      inputs: { samples: ["75", 0], vae: vaeSource },
     },
     "77": {
       class_type: "SaveImage",
@@ -981,7 +979,7 @@ function buildQwenEditWorkflow(p: {
   if (p.upscale) {
     workflow["128"] = {
       class_type: "UpscaleModelLoader",
-      inputs: { model_name: "4x_foolhardy_Remacri.pth" },
+      inputs: { model_name: "4x-UltraSharp.pth" },
     };
     workflow["126"] = {
       class_type: "UltimateSDUpscale",
@@ -1198,7 +1196,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         loraStrength = 0.8,
         imageBase64,
         imageFilename: clientFilename,
+        imageBase64_2,
+        imageFilename2: clientFilename2,
         upscale,
+        sampler,
+        scheduler,
         frameCount = 81,
         useRife = false,
         useUpscale: useVidUpscale = false,
@@ -1263,6 +1265,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // Determine image filename for workflow
       let imageFilename: string | undefined;
+      let imageFilename2: string | undefined;
 
       if (needsImage) {
         if (!imageBase64 && !clientFilename) {
@@ -1271,6 +1274,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         if (backend.mode === "runpod") {
           imageFilename = clientFilename || `input_${workflowType}_${Date.now()}.jpg`;
+          if (imageBase64_2 || clientFilename2) {
+            imageFilename2 = clientFilename2 || `input_${workflowType}_2_${Date.now()}.jpg`;
+          }
         } else {
           if (imageBase64) {
             imageFilename = await uploadImageToLocal(
@@ -1280,6 +1286,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             );
           } else {
             imageFilename = clientFilename;
+          }
+          if (imageBase64_2) {
+            imageFilename2 = await uploadImageToLocal(
+              backend.comfyUrl!,
+              imageBase64_2,
+              clientFilename2 || `input_${workflowType}_2_${Date.now()}.jpg`,
+            );
+          } else if (clientFilename2) {
+            imageFilename2 = clientFilename2;
           }
         }
       }
@@ -1438,14 +1453,18 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
         const enhancedPrompt = prompt.trim().toLowerCase().includes("preserve facial")
           ? prompt.trim()
           : `${prompt.trim()}, preserve facial features, maintain high likeness`;
-        // Build LoRA list: support both legacy single `lora` param and new `loras` array
-        let qwenLoraList: { name: string; strength: number }[] = [];
+        let qwenLoraList: { name: string; strengthModel: number; strengthClip: number }[] = [];
         if (Array.isArray(loras) && loras.length > 0) {
           qwenLoraList = loras
             .filter((l: any) => l.name && l.name !== "none")
-            .map((l: any) => ({ name: String(l.name), strength: Number(l.strength) || 0.8 }));
+            .map((l: any) => ({
+              name: String(l.name),
+              strengthModel: Number(l.strengthModel ?? l.strength) || 0.8,
+              strengthClip: Number(l.strengthClip ?? l.strength) || 0.8,
+            }));
         } else if (lora && lora !== "none") {
-          qwenLoraList = [{ name: lora, strength: Number(loraStrength) || 0.8 }];
+          const s = Number(loraStrength) || 0.8;
+          qwenLoraList = [{ name: lora, strengthModel: s, strengthClip: s }];
         }
 
         // Only use external VAE if explicitly set (fp8 checkpoints strip the VAE)
@@ -1455,11 +1474,14 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           prompt: enhancedPrompt,
           negativePrompt: (negativePrompt || "").trim() || QWEN_DEFAULT_NEGATIVE,
           imageFilename: imageFilename!,
+          imageFilename2: imageFilename2 || undefined,
           width: clampW,
           height: clampH,
           seed: actualSeed,
           steps: clampSteps,
           cfg: clampCfg,
+          sampler: sampler || undefined,
+          scheduler: scheduler || undefined,
           checkpoint: qwenCkpt,
           vae: qwenVae,
           upscale: !!upscale,
@@ -1497,6 +1519,12 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
               image: imageBase64,
             },
           ];
+          if (imageBase64_2 && imageFilename2) {
+            runpodInput.images.push({
+              name: imageFilename2,
+              image: imageBase64_2,
+            });
+          }
         }
 
         const resp = await runpodRequest(

@@ -12,14 +12,11 @@ import {
   Upload,
   X,
   Trash2,
-  Film,
 } from "lucide-react";
 import { apiFetch, CREDIT_COSTS } from "@/lib/api";
 import type { GrokResult } from "@/hooks/useGrokApi";
 
 /* ─── Job types ─── */
-type WorkflowMode = "txt2img" | "qwen-edit" | "wan-video";
-
 interface ComfyJob {
   id: string;
   promptId: string | null;
@@ -30,119 +27,76 @@ interface ComfyJob {
   seed: number | null;
   elapsed: number;
   label: string;
-  workflowMode: WorkflowMode;
   outputType: "image" | "video";
 }
 
 const SIZES = [512, 768, 1024, 1080, 1280, 1536, 1920];
-const VIDEO_SIZES = [480, 512, 640, 768, 832, 1024];
-const FRAME_PRESETS = [
-  { label: "~2s (33f)", value: 33 },
-  { label: "~3s (49f)", value: 49 },
-  { label: "~5s (81f)", value: 81 },
-  { label: "~7s (113f)", value: 113 },
-  { label: "~10s (161f)", value: 161 },
-];
 
 /* ─── Persistent job storage (survives page close / refresh) ─── */
 const PENDING_JOBS_KEY = "comfy-pending-jobs";
 const JOB_MAX_AGE_MS = 30 * 60 * 1000; // 30 min — RunPod jobs expire after this
 
-interface PendingJob {
-  id: string;
-  promptId: string;
-  outputType: "image" | "video";
-  workflowMode: WorkflowMode;
-  label: string;
-  prompt: string;
-  seed: number | null;
-  submittedAt: number;
+function savePendingJobs(jobs: { promptId: string; outputType: string; label: string; submittedAt: number }[]) {
+  try { localStorage.setItem(PENDING_JOBS_KEY, JSON.stringify(jobs)); } catch { /* best-effort */ }
 }
-
-function loadPendingJobs(): PendingJob[] {
+function loadPendingJobs(): { promptId: string; outputType: string; label: string; submittedAt: number }[] {
   try {
     const raw = localStorage.getItem(PENDING_JOBS_KEY);
     if (!raw) return [];
-    const jobs: PendingJob[] = JSON.parse(raw);
-    // Filter out expired jobs
-    const now = Date.now();
-    return jobs.filter((j) => now - j.submittedAt < JOB_MAX_AGE_MS);
-  } catch {
-    return [];
-  }
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr.filter((j: any) => Date.now() - j.submittedAt < JOB_MAX_AGE_MS) : [];
+  } catch { return []; }
 }
 
-function savePendingJobs(jobs: PendingJob[]) {
-  try {
-    localStorage.setItem(PENDING_JOBS_KEY, JSON.stringify(jobs));
-  } catch { /* quota exceeded — best effort */ }
-}
-
-function addPendingJob(job: PendingJob) {
-  const current = loadPendingJobs();
-  current.push(job);
-  savePendingJobs(current);
-}
-
-function removePendingJob(jobId: string) {
-  const current = loadPendingJobs();
-  savePendingJobs(current.filter((j) => j.id !== jobId));
-}
-
-interface ComfyPanelProps {
-  /** Called when a job finishes successfully, to persist the result in the main gallery. */
-  onResultReady?: (result: GrokResult) => void | Promise<void>;
-}
-
-export default function ComfyPanel({ onResultReady }: ComfyPanelProps) {
+export default function ComfyPanel({
+  connected,
+  checkStatus,
+  fetchModels,
+  checkpoints,
+  loras,
+  onNewResults,
+}: {
+  connected: boolean;
+  checkStatus: () => void;
+  fetchModels: () => void;
+  checkpoints: string[];
+  loras: string[];
+  onNewResults: (results: GrokResult[]) => void;
+}) {
   const [collapsed, setCollapsed] = useState(true);
-  const [connected, setConnected] = useState(false);
-  const [checkpoints, setCheckpoints] = useState<string[]>([]);
-  const [selectedCkpt, setSelectedCkpt] = useState("");
-  const [loras, setLoras] = useState<string[]>([]);
-  const [selectedLora, setSelectedLora] = useState("none");
-  const [loraStrength, setLoraStrength] = useState(0.8);
 
-  // Workflow mode
-  const [workflowMode, setWorkflowMode] = useState<WorkflowMode>("qwen-edit");
-
-  // Image upload (for qwen-edit & wan-video)
+  // Image upload
   const [inputImage, setInputImage] = useState<string | null>(null);
   const [inputImageName, setInputImageName] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Shared params
+  // Optional second image
+  const [inputImage2, setInputImage2] = useState<string | null>(null);
+  const [inputImageName2, setInputImageName2] = useState("");
+  const fileInputRef2 = useRef<HTMLInputElement>(null);
+
+  // Params
   const [prompt, setPrompt] = useState("");
   const [negPrompt, setNegPrompt] = useState("");
-  const [width, setWidth] = useState(1024);
-  const [height, setHeight] = useState(1536);
-  const [steps, setSteps] = useState(5);
+  const [width, setWidth] = useState(768);
+  const [height, setHeight] = useState(1024);
+  const [steps, setSteps] = useState(4);
   const [cfg, setCfg] = useState(1);
   const [seed, setSeed] = useState("");
   const [upscale, setUpscale] = useState(false);
-
-  // WAN video-specific params
-  const [frameCount, setFrameCount] = useState(81);
-  const [useRife, setUseRife] = useState(true);
-  const [useVidUpscale, setUseVidUpscale] = useState(false);
 
   /* ─── Job queue ─── */
   const [jobs, setJobs] = useState<ComfyJob[]>([]);
   const pollRefs = useRef<Map<string, ReturnType<typeof setInterval>>>(new Map());
   const timerRefs = useRef<Map<string, ReturnType<typeof setInterval>>>(new Map());
   const startRefs = useRef<Map<string, number>>(new Map());
-  const doneRefs = useRef<Set<string>>(new Set()); // guard against duplicate poll completions
+  const doneRefs = useRef<Set<string>>(new Set());
 
   const activeCount = jobs.filter(
     (j) => j.status === "submitting" || j.status === "generating"
   ).length;
 
   const lastSeed = [...jobs].reverse().find((j) => j.seed !== null)?.seed ?? null;
-
-  // Does this mode need a start image?
-  const needsImage = workflowMode === "qwen-edit" || workflowMode === "wan-video";
-  // Does this mode use checkpoint selection? (qwen-edit uses a fixed model, wan-video too)
-  const needsCheckpoint = workflowMode === "txt2img";
 
   /* ─── Cleanup all intervals on unmount ─── */
   useEffect(() => {
@@ -152,45 +106,46 @@ export default function ComfyPanel({ onResultReady }: ComfyPanelProps) {
     };
   }, []);
 
-  /* ─── Helpers ─── */
-  const clearJobIntervals = useCallback((jobId: string) => {
-    const poll = pollRefs.current.get(jobId);
-    if (poll) { clearInterval(poll); pollRefs.current.delete(jobId); }
-    const timer = timerRefs.current.get(jobId);
-    if (timer) { clearInterval(timer); timerRefs.current.delete(jobId); }
-    startRefs.current.delete(jobId);
-  }, []);
-
-  const updateJob = useCallback((jobId: string, patch: Partial<ComfyJob>) => {
-    setJobs((prev) => prev.map((j) => (j.id === jobId ? { ...j, ...patch } : j)));
-  }, []);
-
-  /* ─── Server connectivity ─── */
-  const checkStatus = useCallback(async () => {
-    try {
-      await apiFetch("/comfyui", { method: "POST", body: { action: "status" } });
-      setConnected(true);
-    } catch {
-      setConnected(false);
-    }
-  }, []);
-
-  const fetchModels = useCallback(async () => {
-    try {
-      const data = await apiFetch<{ checkpoints: string[]; loras?: string[] }>("/comfyui", {
-        method: "POST",
-        body: { action: "models" },
-      });
-      setCheckpoints(data.checkpoints || []);
-      if (data.checkpoints?.length && !selectedCkpt) {
-        setSelectedCkpt(data.checkpoints[0]);
-      }
-      setLoras(data.loras || []);
-    } catch {
-      setCheckpoints([]);
-      setLoras([]);
-    }
-  }, [selectedCkpt]);
+  /* ─── Resume pending jobs on mount ─── */
+  useEffect(() => {
+    if (collapsed) return;
+    const pending = loadPendingJobs();
+    if (pending.length === 0) return;
+    pending.forEach((pj) => {
+      if (jobs.some((j) => j.promptId === pj.promptId)) return;
+      const jobId = `resume-${pj.promptId}`;
+      const outType = (pj.outputType || "image") as "image" | "video";
+      setJobs((prev) => [
+        {
+          id: jobId,
+          promptId: pj.promptId,
+          status: "generating",
+          image: null,
+          video: null,
+          error: null,
+          seed: null,
+          elapsed: Math.floor((Date.now() - pj.submittedAt) / 1000),
+          label: pj.label || "Resumed job",
+          outputType: outType,
+        },
+        ...prev,
+      ]);
+      startRefs.current.set(jobId, pj.submittedAt);
+      const timerIv = setInterval(() => {
+        const start = startRefs.current.get(jobId);
+        if (start) {
+          setJobs((prev) =>
+            prev.map((j) =>
+              j.id === jobId ? { ...j, elapsed: Math.floor((Date.now() - start) / 1000) } : j
+            )
+          );
+        }
+      }, 1000);
+      timerRefs.current.set(jobId, timerIv);
+      startPolling(jobId, pj.promptId, outType, pj.label || "Resumed job");
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [collapsed]);
 
   useEffect(() => {
     if (!collapsed) { checkStatus(); fetchModels(); }
@@ -224,168 +179,150 @@ export default function ComfyPanel({ onResultReady }: ComfyPanelProps) {
     setInputImage(null);
     setInputImageName("");
     if (fileInputRef.current) fileInputRef.current.value = "";
+    clearImage2();
+  };
+
+  const handleImageSelect2 = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const baseName = file.name.replace(/\.[^.]+$/, "");
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.drawImage(img, 0, 0);
+        const jpeg = canvas.toDataURL("image/jpeg", 0.92);
+        setInputImage2(jpeg);
+        setInputImageName2(`${baseName}.jpg`);
+      }
+      URL.revokeObjectURL(url);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); };
+    img.src = url;
+  };
+
+  const clearImage2 = () => {
+    setInputImage2(null);
+    setInputImageName2("");
+    if (fileInputRef2.current) fileInputRef2.current.value = "";
   };
 
   /* ─── Polling for a specific job ─── */
   const startPolling = useCallback(
     (jobId: string, pid: string, outType: "image" | "video", promptText: string) => {
-      const existing = pollRefs.current.get(jobId);
-      if (existing) clearInterval(existing);
-
+      let attempts = 0;
+      const maxAttempts = 300;
       const iv = setInterval(async () => {
-        // Guard: if this job already completed, skip (prevents race with overlapping polls)
-        if (doneRefs.current.has(jobId)) return;
-
+        attempts++;
+        if (attempts > maxAttempts) {
+          clearInterval(iv);
+          pollRefs.current.delete(jobId);
+          const timerIv = timerRefs.current.get(jobId);
+          if (timerIv) { clearInterval(timerIv); timerRefs.current.delete(jobId); }
+          setJobs((prev) =>
+            prev.map((j) =>
+              j.id === jobId ? { ...j, status: "error", error: "Timed out waiting for result." } : j
+            )
+          );
+          return;
+        }
         try {
           const data = await apiFetch<{
             status: string;
             image?: string;
             video?: string;
+            seed?: number;
             error?: string;
           }>("/comfyui", {
             method: "POST",
             body: { action: "poll", promptId: pid, outputType: outType },
           });
 
-          // Double-check guard after async call
-          if (doneRefs.current.has(jobId)) return;
-
           if (data.status === "done") {
+            if (doneRefs.current.has(jobId)) return;
             doneRefs.current.add(jobId);
-            clearJobIntervals(jobId);
-            removePendingJob(jobId);
-            const imgSrc = data.image || null;
-            const vidSrc = data.video || null;
-            updateJob(jobId, {
-              status: "done",
-              image: imgSrc,
-              video: vidSrc,
-            });
-            // Persist to main gallery
-            const src = vidSrc || imgSrc;
-            if (src && onResultReady) {
-              try {
-                await onResultReady({
-                  id: `comfy-${jobId}-${Date.now()}`,
-                  url: src,
-                  type: vidSrc ? "video" : "image",
-                  revised_prompt: promptText,
-                  timestamp: Date.now(),
-                });
-                console.log("[ComfyPanel] Result saved to gallery:", jobId);
-              } catch (saveErr) {
-                console.error("[ComfyPanel] Failed to save result to gallery:", saveErr);
-              }
-            } else if (!src) {
-              console.warn("[ComfyPanel] Job done but no image/video in response:", data);
-            }
-          } else if (data.status === "error") {
-            doneRefs.current.add(jobId);
-            clearJobIntervals(jobId);
-            removePendingJob(jobId);
-            updateJob(jobId, {
-              status: "error",
-              error: data.error || "Generation failed",
-            });
-          }
-        } catch (err: any) {
-          // Only set error if job hasn't already been resolved
-          if (!doneRefs.current.has(jobId)) {
-            doneRefs.current.add(jobId);
-            clearJobIntervals(jobId);
-            removePendingJob(jobId);
-            updateJob(jobId, {
-              status: "error",
-              error: err.message || "Poll failed",
-            });
-          }
-        }
-      }, workflowMode === "wan-video" ? 5000 : 2000);
+            clearInterval(iv);
+            pollRefs.current.delete(jobId);
+            const timerIv = timerRefs.current.get(jobId);
+            if (timerIv) { clearInterval(timerIv); timerRefs.current.delete(jobId); }
 
+            setJobs((prev) =>
+              prev.map((j) =>
+                j.id === jobId
+                  ? { ...j, status: "done", image: data.image || null, video: data.video || null, seed: data.seed ?? null }
+                  : j
+              )
+            );
+
+            const pending = loadPendingJobs().filter((p) => p.promptId !== pid);
+            savePendingJobs(pending);
+
+            const newResults: GrokResult[] = [];
+            if (data.image) {
+              newResults.push({
+                id: `comfy-${Date.now()}`,
+                url: data.image,
+                revised_prompt: promptText,
+                type: "image",
+              });
+            }
+            if (data.video) {
+              newResults.push({
+                id: `comfy-vid-${Date.now()}`,
+                url: data.video,
+                revised_prompt: promptText,
+                type: "video",
+              });
+            }
+            if (newResults.length > 0) onNewResults(newResults);
+          } else if (data.status === "error" || data.status === "FAILED") {
+            clearInterval(iv);
+            pollRefs.current.delete(jobId);
+            const timerIv = timerRefs.current.get(jobId);
+            if (timerIv) { clearInterval(timerIv); timerRefs.current.delete(jobId); }
+
+            const pending = loadPendingJobs().filter((p) => p.promptId !== pid);
+            savePendingJobs(pending);
+
+            setJobs((prev) =>
+              prev.map((j) =>
+                j.id === jobId ? { ...j, status: "error", error: data.error || "Generation failed" } : j
+              )
+            );
+          }
+        } catch { /* network hiccup — keep polling */ }
+      }, 2000);
       pollRefs.current.set(jobId, iv);
     },
-    [clearJobIntervals, updateJob, workflowMode, onResultReady]
+    [onNewResults]
   );
 
-  /* ─── Resume pending jobs on mount (survives page close / refresh) ─── */
-  const resumedRef = useRef(false);
-  useEffect(() => {
-    if (resumedRef.current) return;
-    resumedRef.current = true;
-
-    const pending = loadPendingJobs();
-    if (pending.length === 0) return;
-
-    console.log(`[ComfyPanel] Resuming ${pending.length} pending job(s) from previous session`);
-
-    const restoredJobs: ComfyJob[] = pending.map((pj) => ({
-      id: pj.id,
-      promptId: pj.promptId,
-      status: "generating" as const,
-      image: null,
-      video: null,
-      error: null,
-      seed: pj.seed,
-      elapsed: Math.floor((Date.now() - pj.submittedAt) / 1000),
-      label: pj.label,
-      workflowMode: pj.workflowMode,
-      outputType: pj.outputType,
-    }));
-
-    setJobs((prev) => [...restoredJobs, ...prev]);
-
-    // Auto-expand the panel so the user sees their resumed jobs
-    if (restoredJobs.length > 0) setCollapsed(false);
-
-    // Start polling + elapsed timers for each restored job
-    for (const pj of pending) {
-      startRefs.current.set(pj.id, pj.submittedAt);
-      const timerIv = setInterval(() => {
-        const start = startRefs.current.get(pj.id);
-        if (start) {
-          setJobs((prev) =>
-            prev.map((j) =>
-              j.id === pj.id
-                ? { ...j, elapsed: Math.floor((Date.now() - start) / 1000) }
-                : j
-            )
-          );
-        }
-      }, 1000);
-      timerRefs.current.set(pj.id, timerIv);
-      startPolling(pj.id, pj.promptId, pj.outputType, pj.prompt);
-    }
-  }, [startPolling]);
-
-  /* ─── Generate ─── */
+  /* ─── Generate handler ─── */
   const handleGenerate = async () => {
-    if (!prompt.trim()) return;
-    if (needsCheckpoint && !selectedCkpt) return;
-    if (needsImage && !inputImage) return;
+    if (!prompt.trim() || !connected || !inputImage) return;
 
-    const jobId = `job-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    const label =
-      prompt.trim().length > 50
-        ? prompt.trim().slice(0, 50) + "…"
-        : prompt.trim();
+    const jobId = `cj-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const label = prompt.trim().length > 60 ? prompt.trim().slice(0, 60) + "…" : prompt.trim();
 
-    const outType = workflowMode === "wan-video" ? "video" as const : "image" as const;
-
-    const newJob: ComfyJob = {
-      id: jobId,
-      promptId: null,
-      status: "submitting",
-      image: null,
-      video: null,
-      error: null,
-      seed: null,
-      elapsed: 0,
-      label,
-      workflowMode,
-      outputType: outType,
-    };
-
-    setJobs((prev) => [newJob, ...prev]);
+    setJobs((prev) => [
+      {
+        id: jobId,
+        promptId: null,
+        status: "submitting",
+        image: null,
+        video: null,
+        error: null,
+        seed: null,
+        elapsed: 0,
+        label,
+        outputType: "image",
+      },
+      ...prev,
+    ]);
 
     startRefs.current.set(jobId, Date.now());
     const timerIv = setInterval(() => {
@@ -405,7 +342,7 @@ export default function ComfyPanel({ onResultReady }: ComfyPanelProps) {
     try {
       const body: Record<string, any> = {
         action: "generate",
-        workflow: workflowMode,
+        workflow: "qwen-edit",
         prompt: prompt.trim(),
         negativePrompt: negPrompt.trim() || undefined,
         width,
@@ -413,121 +350,87 @@ export default function ComfyPanel({ onResultReady }: ComfyPanelProps) {
         steps,
         cfg,
         seed: seed.trim() ? parseInt(seed, 10) : undefined,
+        imageBase64: inputImage,
+        imageFilename: inputImageName,
+        upscale: upscale || undefined,
       };
 
-      // Checkpoint: txt2img uses user-selected, qwen-edit is fixed server-side
-      if (needsCheckpoint) body.checkpoint = selectedCkpt;
-
-      // LoRA (txt2img only)
-      if (workflowMode === "txt2img" && selectedLora && selectedLora !== "none") {
-        body.lora = selectedLora;
-        body.loraStrength = loraStrength;
+      if (inputImage2) {
+        body.imageBase64_2 = inputImage2;
+        body.imageFilename2 = inputImageName2;
       }
 
-      // Image data (qwen-edit & wan-video)
-      if (needsImage) {
-        body.imageBase64 = inputImage;
-        body.imageFilename = inputImageName;
-      }
+      const data = await apiFetch<{ promptId: string; seed: number; outputType?: string }>("/comfyui", {
+        method: "POST",
+        body,
+      });
 
-      // Workflow-specific params
-      if (workflowMode === "qwen-edit") {
-        body.upscale = upscale || undefined;
-      }
-      if (workflowMode === "wan-video") {
-        body.frameCount = frameCount;
-        body.useRife = useRife;
-        body.useUpscale = useVidUpscale;
-      }
+      const outType = (data.outputType || "image") as "image" | "video";
 
-      const data = await apiFetch<{ promptId: string; seed: number; outputType?: string }>(
-        "/comfyui",
-        { method: "POST", body }
+      setJobs((prev) =>
+        prev.map((j) =>
+          j.id === jobId
+            ? { ...j, status: "generating", promptId: data.promptId, seed: data.seed, outputType: outType }
+            : j
+        )
       );
 
-      updateJob(jobId, {
-        promptId: data.promptId,
-        seed: data.seed,
-        status: "generating",
-      });
-
-      // Persist so the job survives page close / refresh
-      addPendingJob({
-        id: jobId,
-        promptId: data.promptId,
-        outputType: outType,
-        workflowMode,
-        label,
-        prompt: prompt.trim(),
-        seed: data.seed,
-        submittedAt: Date.now(),
-      });
+      const pending = loadPendingJobs();
+      pending.push({ promptId: data.promptId, outputType: outType, label, submittedAt: Date.now() });
+      savePendingJobs(pending);
 
       startPolling(jobId, data.promptId, outType, prompt.trim());
     } catch (err: any) {
-      clearJobIntervals(jobId);
-      updateJob(jobId, {
-        status: "error",
-        error: err.message || "Submission failed",
-      });
+      clearInterval(timerIv);
+      timerRefs.current.delete(jobId);
+      setJobs((prev) =>
+        prev.map((j) =>
+          j.id === jobId ? { ...j, status: "error", error: err?.message || "Failed to submit" } : j
+        )
+      );
     }
   };
 
-  /* ─── Per-job actions ─── */
+  /* ─── Job actions ─── */
   const handleDownload = (job: ComfyJob) => {
-    const src = job.video || job.image;
-    if (!src) return;
+    const url = job.video || job.image;
+    if (!url) return;
     const a = document.createElement("a");
-    a.href = src;
-    a.download = job.video
-      ? `comfy_${job.seed || "output"}.mp4`
-      : `comfy_${job.seed || "output"}.png`;
+    a.href = url;
+    a.download = job.video ? `comfy-video-${Date.now()}.mp4` : `comfy-image-${Date.now()}.png`;
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
   };
 
-  const dismissJob = (jobId: string) => {
-    clearJobIntervals(jobId);
-    doneRefs.current.delete(jobId);
-    removePendingJob(jobId);
-    setJobs((prev) => prev.filter((j) => j.id !== jobId));
-  };
-
-  const clearFinished = () => {
+  const dismissJob = (id: string) => {
     setJobs((prev) => {
-      const keep: ComfyJob[] = [];
-      for (const j of prev) {
-        if (j.status === "submitting" || j.status === "generating") {
-          keep.push(j);
-        } else {
-          doneRefs.current.delete(j.id);
-          removePendingJob(j.id);
-          clearJobIntervals(j.id);
-        }
+      const job = prev.find((j) => j.id === id);
+      if (job?.promptId) {
+        const pending = loadPendingJobs().filter((p) => p.promptId !== job.promptId);
+        savePendingJobs(pending);
       }
+      const keep = prev.filter((j) => j.id !== id);
+      const iv = pollRefs.current.get(id);
+      if (iv) { clearInterval(iv); pollRefs.current.delete(id); }
+      const tiv = timerRefs.current.get(id);
+      if (tiv) { clearInterval(tiv); timerRefs.current.delete(id); }
       return keep;
     });
   };
 
-  /* ─── Mode switch helper ─── */
-  const switchMode = (m: WorkflowMode) => {
-    setWorkflowMode(m);
-    if (m === "qwen-edit") {
-      setSteps(5); setCfg(1); setWidth(1024); setHeight(1536);
-    } else if (m === "wan-video") {
-      setSteps(4); setCfg(1); setWidth(480); setHeight(768);
-      setFrameCount(81); setUseRife(true); setUseVidUpscale(false);
-    } else {
-      setSteps(20); setCfg(7); setWidth(1024); setHeight(1024);
-    }
+  const clearFinished = () => {
+    setJobs((prev) => {
+      const keep = prev.filter((j) => j.status === "submitting" || j.status === "generating");
+      const pendingIds = new Set(keep.map((j) => j.promptId).filter(Boolean));
+      const stored = loadPendingJobs().filter((p) => pendingIds.has(p.promptId));
+      savePendingJobs(stored);
+      return keep;
+    });
   };
 
-  /* ─── Credit cost for current mode ─── */
-  const currentCost =
-    workflowMode === "wan-video"
-      ? CREDIT_COSTS.comfyVideo
-      : workflowMode === "qwen-edit"
-      ? upscale ? CREDIT_COSTS.comfyEditHd : CREDIT_COSTS.comfyEdit
-      : CREDIT_COSTS.comfyImage;
+  /* ─── Credit cost ─── */
+  const currentCost = upscale ? CREDIT_COSTS.comfyEditHd : CREDIT_COSTS.comfyEdit;
 
   /* ─── Styles ─── */
   const inputClass =
@@ -537,15 +440,7 @@ export default function ComfyPanel({ onResultReady }: ComfyPanelProps) {
   const toggleBaseClass =
     "w-9 h-5 bg-black/60 border border-cyan-500/30 rounded-full peer peer-checked:bg-purple-600/60 peer-checked:border-purple-400/60 relative after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:bg-gray-400 after:rounded-full after:transition-all peer-checked:after:translate-x-4 peer-checked:after:bg-white";
 
-  // Which sizes to show based on mode
-  const sizeOptions = workflowMode === "wan-video" ? VIDEO_SIZES : SIZES;
-
-  // Determine if generate button should be disabled
-  const generateDisabled =
-    !prompt.trim() ||
-    !connected ||
-    (needsCheckpoint && !selectedCkpt) ||
-    (needsImage && !inputImage);
+  const generateDisabled = !prompt.trim() || !connected || !inputImage;
 
   return (
     <div className="mb-6">
@@ -557,16 +452,8 @@ export default function ComfyPanel({ onResultReady }: ComfyPanelProps) {
         <div className="flex items-center gap-2.5">
           <Cpu className="w-4 h-4 text-purple-400" />
           <span className="text-sm font-mono font-semibold tracking-wider text-purple-300 uppercase">
-            Comfy_Lab
+            GLTCH Edit
           </span>
-          <span className="px-1.5 py-0.5 rounded text-[8px] font-mono font-bold uppercase tracking-widest bg-green-500/20 text-green-400 border border-green-500/30 animate-pulse">
-            New
-          </span>
-          {collapsed && (
-            <span className="hidden sm:inline text-[9px] font-mono text-purple-400/50">
-              AI Video &amp; Image Studio
-            </span>
-          )}
           {!collapsed && (
             <span
               className={`inline-flex items-center gap-1.5 text-xs font-mono ${
@@ -583,38 +470,16 @@ export default function ComfyPanel({ onResultReady }: ComfyPanelProps) {
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          {collapsed && (
-            <span className="hidden sm:inline text-[9px] font-mono text-indigo-400/60 border border-indigo-500/20 rounded px-1.5 py-0.5">
-              Video from 3 cr
-            </span>
-          )}
-          {collapsed ? (
-            <ChevronDown className="w-4 h-4 text-purple-400/60 group-hover:text-purple-300" />
-          ) : (
-            <ChevronUp className="w-4 h-4 text-purple-400/60 group-hover:text-purple-300" />
-          )}
-        </div>
+        {collapsed ? (
+          <ChevronDown className="w-4 h-4 text-purple-400/60 group-hover:text-purple-300" />
+        ) : (
+          <ChevronUp className="w-4 h-4 text-purple-400/60 group-hover:text-purple-300" />
+        )}
       </button>
 
       {/* Panel body */}
       {!collapsed && (
         <div className="mt-2 p-4 bg-black/40 border border-purple-500/20 rounded-lg space-y-4">
-          {/* Promo banner */}
-          <div className="flex items-center gap-3 px-3 py-2 bg-gradient-to-r from-purple-500/10 via-indigo-500/10 to-purple-500/10 border border-purple-500/20 rounded-lg">
-            <div className="flex-1">
-              <p className="text-[11px] font-mono font-bold text-purple-200">
-                GPU-Powered AI Studio
-              </p>
-              <p className="text-[9px] font-mono text-purple-400/60 mt-0.5">
-                Images from 1 cr &middot; Video from 3 cr &middot; Cheaper than Grok video (5 cr)
-              </p>
-            </div>
-            <div className="shrink-0 px-2 py-1 bg-green-500/10 border border-green-500/20 rounded text-[9px] font-mono font-bold text-green-400">
-              SAVE 40%
-            </div>
-          </div>
-
           {/* Offline warning */}
           {!connected && (
             <div className="flex items-center justify-between p-3 bg-red-500/10 border border-red-500/30 rounded text-red-300 text-xs font-mono">
@@ -625,134 +490,83 @@ export default function ComfyPanel({ onResultReady }: ComfyPanelProps) {
             </div>
           )}
 
-          {/* Workflow mode toggle */}
-          <div className="flex gap-2">
-            {(["txt2img", "qwen-edit", "wan-video"] as const).map((m) => (
+          {/* Image upload */}
+          <div>
+            <label className={labelClass}>Input Image</label>
+            {inputImage ? (
+              <div className="relative">
+                <img
+                  src={inputImage}
+                  alt="Input"
+                  className="w-full max-h-48 object-contain rounded border border-cyan-500/20 bg-black/60"
+                />
+                <button
+                  onClick={clearImage}
+                  className="absolute top-1 right-1 p-1 bg-black/80 rounded-full text-red-400 hover:text-red-300"
+                  title="Remove image"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+                <div className="mt-1 text-[10px] font-mono text-cyan-400/50 truncate">
+                  {inputImageName}
+                </div>
+              </div>
+            ) : (
               <button
-                key={m}
-                onClick={() => switchMode(m)}
-                className={`flex-1 px-3 py-2 rounded text-xs font-mono font-bold uppercase tracking-wider border transition-colors ${
-                  workflowMode === m
-                    ? m === "wan-video"
-                      ? "bg-indigo-600/60 border-indigo-400/60 text-white"
-                      : "bg-purple-600/60 border-purple-400/60 text-white"
-                    : "bg-black/40 border-purple-500/20 text-purple-400/60 hover:border-purple-400/40"
-                }`}
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full flex items-center justify-center gap-2 px-4 py-6 bg-black/60 border border-dashed border-cyan-500/30 rounded text-sm font-mono text-cyan-400/60 hover:border-cyan-400/50 hover:text-cyan-300 transition-colors"
               >
-                {m === "txt2img" ? "Txt2Img" : m === "qwen-edit" ? "Qwen Edit" : (
-                  <span className="inline-flex items-center gap-1">
-                    <Film className="w-3 h-3" />
-                    WAN Video
-                  </span>
-                )}
+                <Upload className="w-4 h-4" />
+                Upload image to edit
               </button>
-            ))}
+            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageSelect}
+              className="hidden"
+            />
           </div>
 
-          {/* Image upload (qwen-edit & wan-video) */}
-          {needsImage && (
+          {/* Optional second image */}
+          {inputImage && (
             <div>
-              <label className={labelClass}>
-                {workflowMode === "wan-video" ? "Start Image" : "Input Image"}
-              </label>
-              {inputImage ? (
+              <label className={labelClass}>Second Image (optional)</label>
+              {inputImage2 ? (
                 <div className="relative">
                   <img
-                    src={inputImage}
-                    alt="Input"
+                    src={inputImage2}
+                    alt="Input 2"
                     className="w-full max-h-48 object-contain rounded border border-cyan-500/20 bg-black/60"
                   />
                   <button
-                    onClick={clearImage}
+                    onClick={clearImage2}
                     className="absolute top-1 right-1 p-1 bg-black/80 rounded-full text-red-400 hover:text-red-300"
-                    title="Remove image"
+                    title="Remove second image"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
                   <div className="mt-1 text-[10px] font-mono text-cyan-400/50 truncate">
-                    {inputImageName}
+                    {inputImageName2}
                   </div>
                 </div>
               ) : (
                 <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-6 bg-black/60 border border-dashed border-cyan-500/30 rounded text-sm font-mono text-cyan-400/60 hover:border-cyan-400/50 hover:text-cyan-300 transition-colors"
+                  onClick={() => fileInputRef2.current?.click()}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-3 bg-black/60 border border-dashed border-purple-500/30 rounded text-xs font-mono text-purple-400/60 hover:border-purple-400/50 hover:text-purple-300 transition-colors"
                 >
-                  <Upload className="w-4 h-4" />
-                  {workflowMode === "wan-video"
-                    ? "Upload start frame"
-                    : "Upload image to edit"}
+                  <Upload className="w-3.5 h-3.5" />
+                  Add second reference image
                 </button>
               )}
               <input
-                ref={fileInputRef}
+                ref={fileInputRef2}
                 type="file"
                 accept="image/*"
-                onChange={handleImageSelect}
+                onChange={handleImageSelect2}
                 className="hidden"
               />
-            </div>
-          )}
-
-          {/* Checkpoint (not for wan-video — uses fixed models) */}
-          {needsCheckpoint && (
-            <div>
-              <label className={labelClass}>Checkpoint</label>
-              <select
-                value={selectedCkpt}
-                onChange={(e) => setSelectedCkpt(e.target.value)}
-                className={inputClass}
-              >
-                {checkpoints.length === 0 && <option value="">No models found</option>}
-                {checkpoints.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {/* LoRA (txt2img only) */}
-          {workflowMode === "txt2img" && loras.length > 0 && (
-            <div className="space-y-2">
-              <div>
-                <label className={labelClass}>LoRA (optional)</label>
-                <select
-                  value={selectedLora}
-                  onChange={(e) => setSelectedLora(e.target.value)}
-                  className={inputClass}
-                >
-                  <option value="none">None</option>
-                  {loras.map((l) => (
-                    <option key={l} value={l}>{l.replace(/\.[^.]+$/, "")}</option>
-                  ))}
-                </select>
-              </div>
-              {selectedLora !== "none" && (
-                <div>
-                  <label className={labelClass}>LoRA Strength: {loraStrength.toFixed(2)}</label>
-                  <input
-                    type="range"
-                    min={0}
-                    max={1.5}
-                    step={0.05}
-                    value={loraStrength}
-                    onChange={(e) => setLoraStrength(Number(e.target.value))}
-                    className="w-full accent-purple-500 mt-1"
-                  />
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* WAN Video fixed model info */}
-          {workflowMode === "wan-video" && (
-            <div className="px-3 py-2 bg-indigo-500/10 border border-indigo-500/20 rounded text-[10px] font-mono text-indigo-300/70 space-y-1">
-              <div>
-                <span className="text-indigo-400 font-bold">MODEL:</span> WAN 2.2 I2V 14B fp8 + Lightx2v 4-step LoRA
-              </div>
-              <div className="text-[9px] text-green-400/70">
-                3 credits per video vs 5 cr/5s with Grok Video
-              </div>
             </div>
           )}
 
@@ -763,13 +577,7 @@ export default function ComfyPanel({ onResultReady }: ComfyPanelProps) {
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               rows={3}
-              placeholder={
-                workflowMode === "wan-video"
-                  ? "describe the motion / action for the video..."
-                  : workflowMode === "qwen-edit"
-                  ? "describe how to edit the image..."
-                  : "describe your image..."
-              }
+              placeholder="describe how to edit the image..."
               className={`${inputClass} resize-none`}
             />
           </div>
@@ -781,13 +589,7 @@ export default function ComfyPanel({ onResultReady }: ComfyPanelProps) {
               type="text"
               value={negPrompt}
               onChange={(e) => setNegPrompt(e.target.value)}
-              placeholder={
-                workflowMode === "wan-video"
-                  ? "(uses WAN default if empty)"
-                  : workflowMode === "qwen-edit"
-                  ? "smooth skin, drawn, cgi, fake, cartoon, ugly, disfigured, sfx"
-                  : "bad quality, blurry..."
-              }
+              placeholder="smooth skin, drawn, cgi, fake, cartoon, ugly, disfigured, sfx"
               className={inputClass}
             />
           </div>
@@ -801,7 +603,7 @@ export default function ComfyPanel({ onResultReady }: ComfyPanelProps) {
                 onChange={(e) => setWidth(Number(e.target.value))}
                 className={inputClass}
               >
-                {sizeOptions.map((s) => (
+                {SIZES.map((s) => (
                   <option key={s} value={s}>{s}</option>
                 ))}
               </select>
@@ -813,7 +615,7 @@ export default function ComfyPanel({ onResultReady }: ComfyPanelProps) {
                 onChange={(e) => setHeight(Number(e.target.value))}
                 className={inputClass}
               >
-                {sizeOptions.map((s) => (
+                {SIZES.map((s) => (
                   <option key={s} value={s}>{s}</option>
                 ))}
               </select>
@@ -823,7 +625,7 @@ export default function ComfyPanel({ onResultReady }: ComfyPanelProps) {
               <input
                 type="range"
                 min={1}
-                max={workflowMode === "wan-video" ? 10 : 50}
+                max={50}
                 value={steps}
                 onChange={(e) => setSteps(Number(e.target.value))}
                 className="w-full accent-purple-500 mt-1"
@@ -842,30 +644,6 @@ export default function ComfyPanel({ onResultReady }: ComfyPanelProps) {
               />
             </div>
           </div>
-
-          {/* WAN Video: frame count */}
-          {workflowMode === "wan-video" && (
-            <div>
-              <label className={labelClass}>
-                Frames: {frameCount} (~{(frameCount / (useRife ? 24 : 16)).toFixed(1)}s)
-              </label>
-              <div className="flex gap-2 flex-wrap">
-                {FRAME_PRESETS.map((fp) => (
-                  <button
-                    key={fp.value}
-                    onClick={() => setFrameCount(fp.value)}
-                    className={`px-2.5 py-1.5 rounded text-[10px] font-mono border transition-colors ${
-                      frameCount === fp.value
-                        ? "bg-indigo-600/60 border-indigo-400/60 text-white"
-                        : "bg-black/40 border-indigo-500/20 text-indigo-400/60 hover:border-indigo-400/40"
-                    }`}
-                  >
-                    {fp.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
 
           {/* Seed */}
           <div className="flex items-end gap-2">
@@ -890,56 +668,23 @@ export default function ComfyPanel({ onResultReady }: ComfyPanelProps) {
             )}
           </div>
 
-          {/* Toggles — context-dependent */}
-          <div className="space-y-2.5">
-            {/* HD Upscale (qwen-edit) */}
-            {workflowMode === "qwen-edit" && (
-              <label className="flex items-center gap-2.5 cursor-pointer">
-                <input type="checkbox" checked={upscale} onChange={(e) => setUpscale(e.target.checked)} className="sr-only peer" />
-                <div className={toggleBaseClass} />
-                <span className="text-xs font-mono text-cyan-400/70 uppercase tracking-wider">
-                  HD Upscale (1.5x, slower)
-                </span>
-              </label>
-            )}
-
-            {/* RIFE interpolation (wan-video) */}
-            {workflowMode === "wan-video" && (
-              <>
-                <label className="flex items-center gap-2.5 cursor-pointer">
-                  <input type="checkbox" checked={useRife} onChange={(e) => setUseRife(e.target.checked)} className="sr-only peer" />
-                  <div className={toggleBaseClass} />
-                  <span className="text-xs font-mono text-cyan-400/70 uppercase tracking-wider">
-                    RIFE 2x interpolation (smoother, 24fps)
-                  </span>
-                </label>
-                <label className="flex items-center gap-2.5 cursor-pointer">
-                  <input type="checkbox" checked={useVidUpscale} onChange={(e) => setUseVidUpscale(e.target.checked)} className="sr-only peer" />
-                  <div className={toggleBaseClass} />
-                  <span className="text-xs font-mono text-cyan-400/70 uppercase tracking-wider">
-                    2x Lanczos upscale
-                  </span>
-                </label>
-              </>
-            )}
-          </div>
+          {/* HD Upscale toggle */}
+          <label className="flex items-center gap-2.5 cursor-pointer">
+            <input type="checkbox" checked={upscale} onChange={(e) => setUpscale(e.target.checked)} className="sr-only peer" />
+            <div className={toggleBaseClass} />
+            <span className="text-xs font-mono text-cyan-400/70 uppercase tracking-wider">
+              HD Upscale (1.5x, slower)
+            </span>
+          </label>
 
           {/* Generate button */}
           <button
             onClick={handleGenerate}
             disabled={generateDisabled}
-            className={`w-full flex items-center justify-center gap-2 px-4 py-3 ${
-              workflowMode === "wan-video"
-                ? "bg-indigo-600/80 hover:bg-indigo-500/80 border-indigo-500/40"
-                : "bg-purple-600/80 hover:bg-purple-500/80 border-purple-500/40"
-            } disabled:bg-gray-700/50 disabled:text-gray-500 border rounded-lg text-sm font-mono font-bold uppercase tracking-wider text-white transition-colors`}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-purple-600/80 hover:bg-purple-500/80 border-purple-500/40 disabled:bg-gray-700/50 disabled:text-gray-500 border rounded-lg text-sm font-mono font-bold uppercase tracking-wider text-white transition-colors"
           >
-            {workflowMode === "wan-video" ? <Film className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-            {activeCount > 0
-              ? `${workflowMode === "wan-video" ? "RENDER" : "GENERATE"} (${activeCount} running)`
-              : workflowMode === "wan-video"
-              ? "RENDER VIDEO"
-              : "GENERATE"}
+            <Play className="w-4 h-4" />
+            {activeCount > 0 ? `GENERATE (${activeCount} running)` : "GENERATE"}
             <span className="text-[10px] opacity-70 ml-1">({currentCost} cr)</span>
           </button>
 
@@ -1016,12 +761,6 @@ function JobCard({
     error: "border-red-500/30",
   }[job.status];
 
-  const modeLabel = {
-    "txt2img": "TXT2IMG",
-    "qwen-edit": "QWEN",
-    "wan-video": "WAN-VID",
-  }[job.workflowMode];
-
   return (
     <div className={`p-3 bg-black/50 border ${borderColor} rounded-lg space-y-2`}>
       {/* Header row */}
@@ -1033,11 +772,6 @@ function JobCard({
             )}
             <span className={`text-[10px] font-mono font-bold ${statusColor}`}>
               {statusLabel}
-            </span>
-            <span className={`text-[9px] font-mono uppercase ${
-              job.workflowMode === "wan-video" ? "text-indigo-400/50" : "text-purple-400/40"
-            }`}>
-              {modeLabel}
             </span>
           </div>
           <p className="text-xs font-mono text-cyan-100/60 truncate mt-0.5">
@@ -1081,24 +815,11 @@ function JobCard({
         </div>
       )}
 
-      {/* Result: video */}
-      {job.video && (
-        <video
-          src={job.video}
-          controls
-          autoPlay
-          loop
-          muted
-          playsInline
-          className="w-full max-h-[240px] object-contain rounded border border-indigo-500/20 bg-black/80"
-        />
-      )}
-
       {/* Result: image */}
-      {job.image && !job.video && (
+      {job.image && (
         <img
           src={job.image}
-          alt="ComfyUI output"
+          alt="Output"
           className="w-full max-h-[240px] object-contain rounded border border-cyan-500/20 bg-black/80"
         />
       )}

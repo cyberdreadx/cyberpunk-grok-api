@@ -974,11 +974,13 @@ export function useGrokApi() {
     negativePrompt?: string;
     imageBase64: string;
     imageFilename?: string;
+    imageBase64_2?: string;
+    imageFilename2?: string;
     width?: number;
     height?: number;
     steps?: number;
     cfg?: number;
-    loras?: { name: string; strength: number }[];
+    loras?: { name: string; strengthModel: number; strengthClip: number }[];
     upscale?: boolean;
   }) => {
     const jobId = `cj-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
@@ -1009,6 +1011,8 @@ export function useGrokApi() {
           negativePrompt: params.negativePrompt,
           imageBase64: params.imageBase64,
           imageFilename: params.imageFilename || "input.jpg",
+          imageBase64_2: params.imageBase64_2,
+          imageFilename2: params.imageFilename2,
           width: params.width || 1024,
           height: params.height || 1024,
           steps: params.steps || 5,

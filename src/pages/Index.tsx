@@ -103,7 +103,7 @@ const Index = () => {
   const [editEngine, setEditEngine] = useState<EditEngine>("grok");
   const [gltchHd, setGltchHd] = useState(false);
   const [grokPro, setGrokPro] = useState(false);
-  const [qwenLoraStack, setQwenLoraStack] = useState<{ name: string; strength: number }[]>([]);
+  const [qwenLoraStack, setQwenLoraStack] = useState<{ name: string; strengthModel: number; strengthClip: number }[]>([]);
   const [comfyEditUpscale, setComfyEditUpscale] = useState(false);
 
   type ComfyEngine = "grok" | "comfy";
@@ -705,10 +705,10 @@ const Index = () => {
                       SAVE 50%
                     </div>
                     <div className={`font-orbitron text-[11px] ${editEngine === "comfy" ? "text-purple-400" : "text-foreground"}`}>
-                      COMFY
+                      GLTCH
                     </div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
-                      <span>LoRA</span>
+                      <span>Edit + LoRA</span>
                       <span className={editEngine === "comfy" ? "text-green-400" : "text-green-400/70"}>
                         1 cr
                       </span>
@@ -790,7 +790,7 @@ const Index = () => {
                   >
                     <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
                     <span className="font-mono-share text-[9px] text-green-400/80">
-                      Try COMFY edit — same quality, {grokPro ? "75%" : "50%"} cheaper
+                      Try GLTCH edit — same quality, {grokPro ? "75%" : "50%"} cheaper
                     </span>
                   </div>
                 )}
@@ -801,7 +801,7 @@ const Index = () => {
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-green-500/5 border border-green-500/20 rounded">
                       <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
                       <span className="font-mono-share text-[9px] text-green-400/80">
-                        {comfyEditUpscale ? "2" : "1"} cr/edit — {comfyEditUpscale ? "HD 2x upscale" : "50% cheaper than Grok edit"} + LoRA support
+                        {comfyEditUpscale ? "2" : "1"} cr/edit — {comfyEditUpscale ? "HD 2x upscale" : "GLTCH Edit"} + LoRA support
                       </span>
                     </div>
                     {comfyModels.qwenLoras.length > 0 && (
@@ -811,7 +811,7 @@ const Index = () => {
                           {qwenLoraStack.length < comfyModels.qwenLoras.length && (
                             <button
                               type="button"
-                              onClick={() => setQwenLoraStack(prev => [...prev, { name: "none", strength: 0.8 }])}
+                              onClick={() => setQwenLoraStack(prev => [...prev, { name: "none", strengthModel: 0.8, strengthClip: 0.8 }])}
                               className="font-mono-share text-[9px] text-purple-400 hover:text-purple-300 transition-colors"
                             >
                               + ADD LORA
@@ -824,7 +824,7 @@ const Index = () => {
                               type="button"
                               onClick={() => {
                                 const skin = comfyModels.qwenLoras.find(l => l.toLowerCase().includes("skin"));
-                                if (skin) setQwenLoraStack([{ name: skin, strength: 0.55 }]);
+                                if (skin) setQwenLoraStack([{ name: skin, strengthModel: 1, strengthClip: 1 }]);
                               }}
                               className="w-full p-2 border border-cyan-500/30 bg-cyan-500/5 rounded text-center font-mono-share text-[9px] text-cyan-400 hover:border-cyan-500/50 hover:bg-cyan-500/10 transition-all"
                             >
@@ -832,7 +832,7 @@ const Index = () => {
                             </button>
                             <button
                               type="button"
-                              onClick={() => setQwenLoraStack([{ name: "none", strength: 0.8 }])}
+                              onClick={() => setQwenLoraStack([{ name: "none", strengthModel: 0.8, strengthClip: 0.8 }])}
                               className="w-full p-2 border border-dashed border-purple-500/30 rounded text-center font-mono-share text-[9px] text-purple-400/60 hover:border-purple-500/50 hover:text-purple-400 transition-colors"
                             >
                               + ADD LORA MANUALLY
@@ -868,18 +868,33 @@ const Index = () => {
                                 </button>
                               </div>
                               {entry.name !== "none" && (
-                                <div className="space-y-0.5">
-                                  <div className="flex items-center justify-between">
-                                    <label className="font-mono-share text-[8px] text-muted-foreground">STRENGTH</label>
-                                    <span className="font-mono-share text-[8px] text-purple-400">{entry.strength.toFixed(2)}</span>
+                                <div className="space-y-1">
+                                  <div className="space-y-0.5">
+                                    <div className="flex items-center justify-between">
+                                      <label className="font-mono-share text-[8px] text-muted-foreground">MODEL</label>
+                                      <span className="font-mono-share text-[8px] text-purple-400">{entry.strengthModel.toFixed(2)}</span>
+                                    </div>
+                                    <input
+                                      type="range"
+                                      min="0" max="1.5" step="0.05"
+                                      value={entry.strengthModel}
+                                      onChange={(e) => setQwenLoraStack(prev => prev.map((l, i) => i === idx ? { ...l, strengthModel: Number(e.target.value) } : l))}
+                                      className="w-full accent-purple-500"
+                                    />
                                   </div>
-                                  <input
-                                    type="range"
-                                    min="0" max="1.5" step="0.05"
-                                    value={entry.strength}
-                                    onChange={(e) => setQwenLoraStack(prev => prev.map((l, i) => i === idx ? { ...l, strength: Number(e.target.value) } : l))}
-                                    className="w-full accent-purple-500"
-                                  />
+                                  <div className="space-y-0.5">
+                                    <div className="flex items-center justify-between">
+                                      <label className="font-mono-share text-[8px] text-muted-foreground">CLIP</label>
+                                      <span className="font-mono-share text-[8px] text-cyan-400">{entry.strengthClip.toFixed(2)}</span>
+                                    </div>
+                                    <input
+                                      type="range"
+                                      min="0" max="1.5" step="0.01"
+                                      value={entry.strengthClip}
+                                      onChange={(e) => setQwenLoraStack(prev => prev.map((l, i) => i === idx ? { ...l, strengthClip: Number(e.target.value) } : l))}
+                                      className="w-full accent-cyan-500"
+                                    />
+                                  </div>
                                 </div>
                               )}
                             </div>
