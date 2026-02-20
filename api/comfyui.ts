@@ -1203,7 +1203,7 @@ function buildZimageTurboWorkflow(p: {
     },
     "2": {
       class_type: "CLIPLoader",
-      inputs: { clip_name: clip, type: "ltx" },
+      inputs: { clip_name: clip, type: "ltxv" },
     },
     "3": {
       class_type: "VAELoader",
