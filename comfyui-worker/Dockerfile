@@ -52,17 +52,20 @@ RUN cd /comfyui/custom_nodes && \
     wget -qO- https://github.com/SeanScripts/ComfyUI-Unload-Model/archive/refs/heads/main.tar.gz | tar xz && \
     mv ComfyUI-Unload-Model-main ComfyUI-Unload-Model
 
-# ── Build tools + CUDA linker stub (Triton/SageAttention JIT) ────
-# Triton JIT-compiles CUDA kernels with gcc at runtime. The gcc command
-# uses `-lcuda` which resolves to libcuda.so. The runtime CUDA image only
-# has libcuda.so.1 (bind-mounted by nvidia-docker), missing the dev symlink.
-# Solution: compile a tiny stub .so at build time. gcc links against it;
-# at runtime the real nvidia driver library is already loaded by PyTorch.
-RUN apt-get update && apt-get install -y --no-install-recommends gcc g++ && \
+# ── Build tools for Triton/SageAttention JIT compilation ─────────
+# Triton JIT-compiles driver.c (a Python C extension using CUDA driver API)
+# at first use. It needs:
+#   1. gcc                — C compiler
+#   2. python3.12-dev     — Python.h headers (driver.c includes <Python.h>)
+#   3. libcuda.so         — linker stub (gcc uses -lcuda; the runtime image
+#                           only has libcuda.so.1 bind-mounted by nvidia-docker)
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends gcc g++ python3.12-dev && \
     rm -rf /var/lib/apt/lists/* && \
     echo 'int cuInit(int f){return 0;}' | \
       gcc -xc -shared -Wl,-soname,libcuda.so.1 \
-        -o /usr/lib/x86_64-linux-gnu/libcuda.so -
+        -o /usr/lib/x86_64-linux-gnu/libcuda.so - && \
+    ldconfig
 
 # ── Python Dependencies ─────────────────────────────────────────
 RUN pip install --no-cache-dir gguf color-matcher sageattention triton && \
