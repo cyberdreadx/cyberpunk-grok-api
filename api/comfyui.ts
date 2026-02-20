@@ -14,9 +14,86 @@
  */
 
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getUserFromRequest } from "./_lib/auth";
 import { getDb } from "./_lib/db";
 import { checkRateLimit } from "./_lib/ratelimit";
+
+// ── RunPod S3 Helper ───────────────────────────────────────────────────
+// RunPod's S3 doesn't support presigned URL query-string auth, so we use
+// the AWS SDK with credentials to download files server-side.
+
+let _s3Client: S3Client | null = null;
+function getS3Client(): S3Client | null {
+  if (_s3Client) return _s3Client;
+  const endpoint = process.env.RUNPOD_S3_ENDPOINT;
+  const accessKey = process.env.RUNPOD_S3_ACCESS_KEY;
+  const secretKey = process.env.RUNPOD_S3_SECRET_KEY;
+  if (!endpoint || !accessKey || !secretKey) return null;
+  // Extract region from endpoint (e.g. "us-nc-1" from "https://s3api-us-nc-1.runpod.io")
+  const regionMatch = endpoint.match(/s3api-([\w-]+)\./)?.[1] || "us-east-1";
+  _s3Client = new S3Client({
+    endpoint,
+    region: regionMatch,
+    credentials: { accessKeyId: accessKey, secretAccessKey: secretKey },
+    forcePathStyle: true,
+  });
+  return _s3Client;
+}
+
+/**
+ * Parse an S3 presigned URL to extract bucket and key.
+ * URL format: https://s3api-us-nc-1.runpod.io/{bucket}/{key}?presigned-params
+ */
+function parseS3Url(url: string): { bucket: string; key: string } | null {
+  try {
+    const u = new URL(url);
+    // Strip query params and leading slash
+    const path = u.pathname.replace(/^\//, "");
+    const slashIdx = path.indexOf("/");
+    if (slashIdx < 1) return null;
+    return {
+      bucket: path.substring(0, slashIdx),
+      key: path.substring(slashIdx + 1),
+    };
+  } catch { return null; }
+}
+
+/** Download a file from RunPod S3 using authenticated SDK. Returns Buffer or null. */
+async function downloadFromS3(url: string): Promise<{ buffer: Buffer; contentType: string } | null> {
+  const client = getS3Client();
+  if (!client) {
+    console.error("[s3] No S3 credentials configured (RUNPOD_S3_ENDPOINT/ACCESS_KEY/SECRET_KEY)");
+    return null;
+  }
+  const parsed = parseS3Url(url);
+  const bucket = parsed?.bucket || process.env.RUNPOD_S3_BUCKET;
+  const key = parsed?.key;
+  if (!bucket || !key) {
+    console.error("[s3] Could not parse bucket/key from URL:", url.slice(0, 120));
+    return null;
+  }
+  try {
+    console.log(`[s3] Downloading s3://${bucket}/${key}`);
+    const cmd = new GetObjectCommand({ Bucket: bucket, Key: key });
+    const resp = await client.send(cmd);
+    const stream = resp.Body;
+    if (!stream) return null;
+    // Convert readable stream to buffer
+    const chunks: Uint8Array[] = [];
+    // @ts-ignore - stream is a Readable in Node.js
+    for await (const chunk of stream) {
+      chunks.push(chunk);
+    }
+    const buffer = Buffer.concat(chunks);
+    const contentType = resp.ContentType || "application/octet-stream";
+    console.log(`[s3] Downloaded ${Math.round(buffer.byteLength / 1024)}KB (${contentType})`);
+    return { buffer, contentType };
+  } catch (err: any) {
+    console.error(`[s3] Download failed: ${err.message}`);
+    return null;
+  }
+}
 
 export const config = {
   maxDuration: 120,
@@ -2081,10 +2158,9 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           const out = data.output || {};
           console.log("[comfyui-poll] COMPLETED output keys:", Object.keys(out));
 
-          // Helper: detect S3/HTTP URLs vs base64, return appropriate URI
-          // For images: fetches S3 URLs server-side and converts to base64 (images are small).
-          // For videos: returns the URL as-is (videos can be 50-200MB, too large for base64).
-          //   Videos are served through the /api/comfyui proxy-s3 action instead.
+          // Helper: detect S3/HTTP URLs vs base64, return appropriate URI.
+          // Uses AWS SDK with credentials (RunPod S3 doesn't support presigned URL auth).
+          // Images → base64 (small). Videos → S3 URL for streaming proxy.
           async function resolveFileData(file: any, type: "video" | "image"): Promise<string | null> {
             const d = typeof file === "string" ? file : (file?.data || file?.url || null);
             if (!d || typeof d !== "string") return null;
@@ -2093,26 +2169,17 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
             // S3 URL or any HTTP URL
             if (d.startsWith("http://") || d.startsWith("https://") || file?.type === "s3_url" || file?.type === "url") {
               const url = d.startsWith("http") ? d : (file?.url || d);
-              // Only proxy images to base64 — videos are too large
+              // Images: download via S3 SDK and return base64
               if (type === "image") {
-                try {
-                  console.log(`[comfyui-poll] Proxying image from S3: ${url.slice(0, 120)}...`);
-                  const s3Resp = await fetch(url, { signal: AbortSignal.timeout(30000) });
-                  if (!s3Resp.ok) {
-                    console.error(`[comfyui-poll] S3 fetch failed (${s3Resp.status}), returning URL as-is`);
-                    return url;
-                  }
-                  const buffer = await s3Resp.arrayBuffer();
-                  const base64 = Buffer.from(buffer).toString("base64");
-                  const ct = s3Resp.headers.get("content-type") || "image/png";
-                  console.log(`[comfyui-poll] Proxied image: ${Math.round(buffer.byteLength / 1024)}KB`);
-                  return `data:${ct};base64,${base64}`;
-                } catch (fetchErr: any) {
-                  console.error(`[comfyui-poll] S3 proxy failed: ${fetchErr.message}, returning URL as-is`);
-                  return url;
+                const s3Data = await downloadFromS3(url);
+                if (s3Data) {
+                  const base64 = s3Data.buffer.toString("base64");
+                  return `data:${s3Data.contentType};base64,${base64}`;
                 }
+                // Fallback: return URL as-is (will break in browser, but at least logs the error)
+                return url;
               }
-              // Videos: return URL for streaming proxy
+              // Videos: return URL for streaming proxy (too large for base64)
               return url;
             }
             // Raw base64
@@ -2291,7 +2358,7 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
       return res.status(200).json({ filename: fname, subfolder: "", type: "input" });
     }
 
-    // ========== PROXY-S3 (stream S3 content through backend for browser access) ==========
+    // ========== PROXY-S3 (download from S3 with proper auth for browser access) ==========
     if (action === "proxy-s3") {
       const { url } = req.body;
       if (!url || typeof url !== "string" || !url.startsWith("https://")) {
@@ -2299,37 +2366,16 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
       }
 
       try {
-        const headers: Record<string, string> = {};
-        // Forward range header for video seeking
-        if (req.headers.range) {
-          headers["Range"] = req.headers.range as string;
+        const s3Data = await downloadFromS3(url);
+        if (!s3Data) {
+          return res.status(502).json({ error: "Failed to download from S3. Check RUNPOD_S3_* env vars." });
         }
 
-        const s3Resp = await fetch(url, {
-          headers,
-          signal: AbortSignal.timeout(120000),
-        });
-
-        if (!s3Resp.ok && s3Resp.status !== 206) {
-          return res.status(s3Resp.status).json({ error: `S3 returned ${s3Resp.status}` });
-        }
-
-        // Forward relevant headers
-        const ct = s3Resp.headers.get("content-type") || "application/octet-stream";
-        const cl = s3Resp.headers.get("content-length");
-        const cr = s3Resp.headers.get("content-range");
-        const ar = s3Resp.headers.get("accept-ranges");
-
-        res.setHeader("Content-Type", ct);
+        res.setHeader("Content-Type", s3Data.contentType);
+        res.setHeader("Content-Length", s3Data.buffer.byteLength);
         res.setHeader("Access-Control-Allow-Origin", "*");
-        if (cl) res.setHeader("Content-Length", cl);
-        if (cr) res.setHeader("Content-Range", cr);
-        if (ar) res.setHeader("Accept-Ranges", ar);
-
-        res.status(s3Resp.status === 206 ? 206 : 200);
-
-        const buffer = await s3Resp.arrayBuffer();
-        res.end(Buffer.from(buffer));
+        res.status(200);
+        res.end(s3Data.buffer);
         return;
       } catch (err: any) {
         return res.status(502).json({ error: `S3 proxy failed: ${err.message}` });
