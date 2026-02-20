@@ -47,7 +47,7 @@ download_civitai() {
     return
   fi
 
-  echo "entrypoint: downloading $desc (~343MB)..."
+  echo "entrypoint: downloading $desc..."
   wget -q --show-progress -O "$TARGET_DIR/$filename" \
     "https://civitai.com/api/download/models/${version_id}?token=${CIVITAI_API_TOKEN}" \
     && echo "entrypoint: $desc downloaded" \
@@ -55,5 +55,6 @@ download_civitai() {
 }
 
 download_civitai "wan_i2v_pov_blowjob_v1.2.safetensors" "2021249" "Wan POV Blowjob v1.2 I2V LoRA"
+download_civitai "genitals_helper_v1.0_e219.safetensors" "2012120" "NSFW Genitals Helper v1.0 I2V LoRA"
 
 exec "$@"

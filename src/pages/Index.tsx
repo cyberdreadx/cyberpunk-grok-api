@@ -25,7 +25,7 @@ import { useToast } from "@/hooks/use-toast";
 import { calculateCreditCost, type CreditMode } from "@/lib/api";
 
 const ANNOUNCEMENTS: { id: string; message: string; type?: "info" | "warning" | "success" }[] = [
-  { id: "gltch-wan-launch", message: "GLTCH WAN 2.2 I2V is now live — 3-stage GGUF Lightning pipeline in ANIMATE mode.", type: "info" },
+  { id: "gltch-wan-launch", message: "GLTCH WAN 2.2 I2V — Lightx2v + Pusa enhanced motions pipeline in ANIMATE mode.", type: "info" },
 ];
 
 const Index = () => {
@@ -470,6 +470,9 @@ const Index = () => {
             useUpscale: comfyVidUpscale,
             workflow: "gltch-wan",
             resolution: 832,
+            videoLora: comfyVideoLora !== "none" ? comfyVideoLora : undefined,
+            videoLoraStrength: comfyVideoLoraStrength,
+            videoLoraPass: comfyVideoLoraPass,
             ...(adminTestCredits ? { testCredits: true } : {}),
           });
         } else if (isComfyAnimate) {
