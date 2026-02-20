@@ -52,14 +52,27 @@ RUN cd /comfyui/custom_nodes && \
     wget -qO- https://github.com/SeanScripts/ComfyUI-Unload-Model/archive/refs/heads/main.tar.gz | tar xz && \
     mv ComfyUI-Unload-Model-main ComfyUI-Unload-Model
 
-# ── Build tools + CUDA stubs (needed by Triton/SageAttention for JIT compilation) ──
+# ── Build tools (needed by Triton/SageAttention for JIT compilation) ──
 RUN apt-get update && apt-get install -y --no-install-recommends gcc g++ && \
-    rm -rf /var/lib/apt/lists/* && \
-    ln -sf /usr/local/cuda/targets/x86_64-linux/lib/stubs/libcuda.so \
-           /usr/lib/x86_64-linux-gnu/libcuda.so.1 && \
-    ln -sf /usr/lib/x86_64-linux-gnu/libcuda.so.1 \
-           /usr/lib/x86_64-linux-gnu/libcuda.so
-ENV LIBRARY_PATH="/usr/local/cuda/targets/x86_64-linux/lib/stubs:${LIBRARY_PATH}"
+    rm -rf /var/lib/apt/lists/*
+
+# Triton JIT compiles CUDA kernels with gcc at runtime. gcc needs `-lcuda`
+# which resolves to libcuda.so. nvidia-docker bind-mounts libcuda.so.1 at
+# container start, but the development symlink (libcuda.so -> libcuda.so.1)
+# is missing. We inject a fix into start.sh that creates it before ComfyUI.
+ENV LIBRARY_PATH="/usr/local/nvidia/lib64:${LIBRARY_PATH}"
+ENV LD_LIBRARY_PATH="/usr/local/nvidia/lib64:${LD_LIBRARY_PATH}"
+
+# Patch start.sh: after the shebang, find & symlink libcuda.so for gcc
+RUN sed -i '1a\\n# ── Fix libcuda.so for Triton/SageAttention JIT ──\n\
+for dir in /usr/lib/x86_64-linux-gnu /usr/local/nvidia/lib64 /usr/local/cuda/lib64; do\n\
+  if ls "$dir"/libcuda.so.* 1>/dev/null 2>&1; then\n\
+    REAL=$(ls "$dir"/libcuda.so.* 2>/dev/null | head -1)\n\
+    ln -sf "$REAL" /usr/lib/x86_64-linux-gnu/libcuda.so 2>/dev/null\n\
+    echo "worker: linked libcuda.so -> $REAL"\n\
+    break\n\
+  fi\n\
+done\n' /start.sh
 
 # ── Python Dependencies ─────────────────────────────────────────
 RUN pip install --no-cache-dir gguf color-matcher sageattention triton && \
@@ -84,11 +97,6 @@ RUN mkdir -p /comfyui/models/upscale_models && \
 RUN mkdir -p /comfyui/custom_nodes/ComfyUI-Frame-Interpolation/ckpts/rife && \
     wget -q -O /comfyui/custom_nodes/ComfyUI-Frame-Interpolation/ckpts/rife/rife49.pth \
     https://huggingface.co/hfmaster/models-moved/resolve/main/rife/rife49.pth
-
-# ── Upscale model (baked in — only ~67 MB) ───────────────────────
-RUN mkdir -p /comfyui/models/upscale_models && \
-    wget -q -O /comfyui/models/upscale_models/4x-UltraSharp.pth \
-    https://huggingface.co/Kim2091/UltraSharp/resolve/main/4x-UltraSharp.pth
 
 # ── Network Volume Model Paths ───────────────────────────────────
 # Models on RunPod Network Volume (mounted at /runpod-volume):
