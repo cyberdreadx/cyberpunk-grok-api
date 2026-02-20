@@ -52,8 +52,12 @@ RUN cd /comfyui/custom_nodes && \
     wget -qO- https://github.com/SeanScripts/ComfyUI-Unload-Model/archive/refs/heads/main.tar.gz | tar xz && \
     mv ComfyUI-Unload-Model-main ComfyUI-Unload-Model
 
+# ── Build tools (needed by Triton/SageAttention for JIT compilation) ──
+RUN apt-get update && apt-get install -y --no-install-recommends gcc g++ && \
+    rm -rf /var/lib/apt/lists/*
+
 # ── Python Dependencies ─────────────────────────────────────────
-RUN pip install --no-cache-dir gguf color-matcher sageattention && \
+RUN pip install --no-cache-dir gguf color-matcher sageattention triton && \
     cd /comfyui/custom_nodes/Comfyui-QwenEditUtils && \
     ([ -f requirements.txt ] && pip install -r requirements.txt --no-cache-dir || true) && \
     cd /comfyui/custom_nodes/ComfyUI-KJNodes && \
