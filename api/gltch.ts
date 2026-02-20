@@ -57,7 +57,10 @@ function friendlyError(msg: string): string {
   return "Edit failed. Please try again.";
 }
 
-export const config = { maxDuration: 60 };
+export const config = {
+  maxDuration: 60,
+  api: { bodyParser: { sizeLimit: "20mb" } },
+};
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === "OPTIONS") return res.status(200).end();
@@ -113,9 +116,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       const cost = hd ? GLTCH_HD_COST : GLTCH_COST;
       const isAdminUser = auth.email === ADMIN_EMAIL;
+      const adminTestCredits = isAdminUser && req.body.testCredits === true;
 
-      // Credit gate (admin is free)
-      if (!isAdminUser) {
+      // Credit gate (admin is free unless testCredits)
+      if (!isAdminUser || adminTestCredits) {
         const rows = await sql`SELECT sub_credits, pack_credits FROM users WHERE id = ${auth.userId}`;
         if (rows.length === 0) return res.status(404).json({ error: "User not found." });
 
@@ -132,7 +136,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       const refundCredits = async () => {
-        if (isAdminUser) return;
+        if (isAdminUser && !adminTestCredits) return;
         try { await sql`SELECT add_pack_credits(${auth.userId}::uuid, ${cost})`; }
         catch { /* best effort */ }
       };

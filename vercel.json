@@ -1,6 +1,18 @@
 {
   "framework": null,
   "functions": {
+    "api/comfyui.ts": {
+      "maxDuration": 120,
+      "memory": 1024
+    },
+    "api/generate.ts": {
+      "maxDuration": 300,
+      "memory": 1024
+    },
+    "api/gltch.ts": {
+      "maxDuration": 60,
+      "memory": 1024
+    },
     "api/**/*.ts": {
       "maxDuration": 30
     }

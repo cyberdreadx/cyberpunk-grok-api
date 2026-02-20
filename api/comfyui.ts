@@ -18,10 +18,16 @@ import { getUserFromRequest } from "./_lib/auth";
 import { getDb } from "./_lib/db";
 import { checkRateLimit } from "./_lib/ratelimit";
 
+export const config = {
+  maxDuration: 120,
+  api: { bodyParser: { sizeLimit: "20mb" } },
+};
+
 const ADMIN_EMAIL = "cyberdreadx@proton.me";
 
 const COMFY_COSTS: Record<string, number> = {
   "txt2img": 1,
+  "zimage": 1,
   "qwen-edit": 1,
   "qwen-edit-hd": 2,
   "wan-video": 2,
@@ -1179,6 +1185,74 @@ function buildTxt2ImgWorkflow(p: {
  * Flow: LoadImage -> TextEncodeQwenImageEditPlus (positive + negative)
  *       -> ModelSamplingAuraFlow -> CFGNorm -> KSampler -> cleanGpu -> VAEDecode -> SaveImage
  */
+/**
+ * Z-Image Turbo txt2img workflow.
+ * 6B param distilled model — 8 steps, CFG 1.0, sgm_uniform scheduler.
+ * Uses split loaders: UNETLoader + CLIPLoader + VAELoader.
+ */
+function buildZimageTurboWorkflow(p: {
+  prompt: string;
+  width: number;
+  height: number;
+  seed: number;
+  steps?: number;
+  cfg?: number;
+}): Record<string, any> {
+  const unet = process.env.COMFYUI_ZIMAGE_UNET || "z_image_turbo_bf16.safetensors";
+  const clip = process.env.COMFYUI_ZIMAGE_CLIP || "qwen_3_4b.safetensors";
+  const vae = process.env.COMFYUI_ZIMAGE_VAE || "ae.safetensors";
+
+  return {
+    "1": {
+      class_type: "UNETLoader",
+      inputs: { unet_name: unet, weight_dtype: "default" },
+    },
+    "2": {
+      class_type: "CLIPLoader",
+      inputs: { clip_name: clip, type: "ltx" },
+    },
+    "3": {
+      class_type: "VAELoader",
+      inputs: { vae_name: vae },
+    },
+    "4": {
+      class_type: "CLIPTextEncode",
+      inputs: { text: p.prompt, clip: ["2", 0] },
+    },
+    "5": {
+      class_type: "CLIPTextEncode",
+      inputs: { text: "", clip: ["2", 0] },
+    },
+    "6": {
+      class_type: "EmptyLatentImage",
+      inputs: { width: p.width, height: p.height, batch_size: 1 },
+    },
+    "7": {
+      class_type: "KSampler",
+      inputs: {
+        seed: p.seed,
+        steps: p.steps || 8,
+        cfg: p.cfg || 1.0,
+        sampler_name: "euler_ancestral",
+        scheduler: "sgm_uniform",
+        denoise: 1,
+        model: ["1", 0],
+        positive: ["4", 0],
+        negative: ["5", 0],
+        latent_image: ["6", 0],
+      },
+    },
+    "8": {
+      class_type: "VAEDecode",
+      inputs: { samples: ["7", 0], vae: ["3", 0] },
+    },
+    "9": {
+      class_type: "SaveImage",
+      inputs: { filename_prefix: "GLTCH-ZImage", images: ["8", 0] },
+    },
+  };
+}
+
 const TXT2IMG_DEFAULT_NEGATIVE =
   "cgi, 3d render, cartoon, anime, illustration, drawing, painting, sketch, plastic skin, smooth skin, airbrushed, doll-like, mannequin, blurry, low quality, worst quality, jpeg artifacts, deformed, bad anatomy, bad proportions, extra limbs, missing limbs, disfigured, ugly, watermark, text, signature, cropped";
 
@@ -1546,10 +1620,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (workflowType === "txt2img" && !checkpoint)
         return res.status(400).json({ error: "Checkpoint is required" });
 
-      // ── Credit gate (admin is free) ──
+      // ── Credit gate (admin is free unless testCredits is set) ──
       // skipCredits: client passes true for the first step of a chained workflow
       // (e.g. txt2img as part of text-to-video — the video step pays for both)
       const skipCredits = req.body.skipCredits === true;
+      const adminTestCredits = isAdminUser && req.body.testCredits === true;
       const costKey = workflowType === "qwen-edit" && upscale ? "qwen-edit-hd"
         : workflowType === "gltch-wan" && useVidUpscale ? "gltch-wan-hd"
         : workflowType;
@@ -1557,7 +1632,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const cost = skipCredits ? 0 : (workflowType === "longlook" ? baseCost * Math.min(4, Math.max(1, Number(sequenceCount))) : baseCost);
       let creditDeducted = false;
 
-      if (!isAdminUser) {
+      if (!isAdminUser || adminTestCredits) {
         // Rate limit: 20 comfy requests per 5 min
         const { allowed } = await checkRateLimit(auth.userId, "comfyui", { max: 20, windowSeconds: 300 });
         if (!allowed) {
@@ -1608,6 +1683,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           if (imageBase64_2 || clientFilename2) {
             imageFilename2 = clientFilename2 || `input_${workflowType}_2_${Date.now()}.jpg`;
           }
+          console.log(`[comfyui] images: primary=${imageFilename} (${imageBase64 ? Math.round(imageBase64.length / 1024) + 'KB' : 'none'}), second=${imageFilename2 || 'none'} (${imageBase64_2 ? Math.round(imageBase64_2.length / 1024) + 'KB' : 'none'})`);
         } else {
           if (imageBase64) {
             imageFilename = await uploadImageToLocal(
@@ -1838,6 +1914,15 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           upscale: !!upscale,
           loras: qwenLoraList,
         });
+      } else if (workflowType === "zimage") {
+        workflow = buildZimageTurboWorkflow({
+          prompt: prompt.trim(),
+          width: clampW,
+          height: clampH,
+          seed: actualSeed,
+          steps: clampSteps,
+          cfg: clampCfg,
+        });
       } else {
         workflow = buildTxt2ImgWorkflow({
           prompt: prompt.trim(),
@@ -1899,7 +1984,7 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
         const result = (await resp.json()) as any;
 
         // Log usage
-        if (!isAdminUser) {
+        if (!isAdminUser || adminTestCredits) {
           const sql = getDb();
           const logMode = `comfy-${workflowType}`;
           await sql`
@@ -1934,7 +2019,7 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
 
         const result = (await resp.json()) as any;
 
-        if (!isAdminUser) {
+        if (!isAdminUser || adminTestCredits) {
           const sql = getDb();
           const logMode = `comfy-${workflowType}`;
           await sql`

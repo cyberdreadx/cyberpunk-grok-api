@@ -68,6 +68,7 @@ interface GenerateImageParams {
   prompt: string;
   settings: GenerationSettings;
   pro?: boolean;
+  testCredits?: boolean;
 }
 
 interface EditImageParams {
@@ -75,17 +76,20 @@ interface EditImageParams {
   image_url: string;
   settings: GenerationSettings;
   pro?: boolean;
+  testCredits?: boolean;
 }
 
 interface GenerateVideoParams {
   prompt: string;
   image_url?: string;
   videoSettings: VideoSettings;
+  testCredits?: boolean;
 }
 
 interface EditVideoParams {
   prompt: string;
   video_url: string;
+  testCredits?: boolean;
 }
 
 /** Generation mode: "byok" = user's own API key, "credits" = server proxy w/ credits */
@@ -351,6 +355,7 @@ export function useGrokApi() {
         n: params.settings.count,
         aspect_ratio: params.settings.aspectRatio,
         response_format: "b64_json",
+        ...(params.testCredits ? { testCredits: true } : {}),
       };
 
       let data: any;
@@ -394,6 +399,7 @@ export function useGrokApi() {
         image: { url: safeImageUrl },
         n: params.settings.count,
         response_format: "b64_json",
+        ...(params.testCredits ? { testCredits: true } : {}),
       };
 
       let data: any;
@@ -458,6 +464,7 @@ export function useGrokApi() {
           image: { url: safeImageUrl },
           n: params.settings.count,
           response_format: "b64_json",
+          ...(params.testCredits ? { testCredits: true } : {}),
         };
 
         setComfyJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "generating" } : j));
@@ -507,6 +514,7 @@ export function useGrokApi() {
         prompt: params.prompt,
         duration: params.videoSettings.duration,
         resolution: params.videoSettings.resolution,
+        ...(params.testCredits ? { testCredits: true } : {}),
       };
 
       if (params.image_url) {
@@ -581,6 +589,7 @@ export function useGrokApi() {
         model: "grok-imagine-video",
         prompt: params.prompt,
         video_url: params.video_url,
+        ...(params.testCredits ? { testCredits: true } : {}),
       };
 
       if (apiMode === "credits") {
@@ -639,6 +648,7 @@ export function useGrokApi() {
     image_url: string;
     aspectRatio: string;
     hd?: boolean;
+    testCredits?: boolean;
   }) => {
     const jobId = `cj-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     const label = params.prompt.length > 80 ? params.prompt.slice(0, 80) + "…" : params.prompt;
@@ -679,6 +689,7 @@ export function useGrokApi() {
             imageBase64,
             aspectRatio: params.aspectRatio,
             hd: params.hd || false,
+            ...(params.testCredits ? { testCredits: true } : {}),
           },
         });
 
@@ -898,7 +909,7 @@ export function useGrokApi() {
   const comfyGenerate = useCallback((params: {
     prompt: string;
     negativePrompt?: string;
-    checkpoint: string;
+    checkpoint?: string;
     lora?: string;
     loraStrength?: number;
     width?: number;
@@ -906,12 +917,15 @@ export function useGrokApi() {
     steps?: number;
     cfg?: number;
     seed?: number;
+    workflow?: string;
+    testCredits?: boolean;
   }) => {
+    const wfType = params.workflow || "txt2img";
     const jobId = `cj-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     const label = params.prompt.length > 80 ? params.prompt.slice(0, 80) + "…" : params.prompt;
 
     const newJob: ComfyJob = {
-      id: jobId, status: "submitting", workflowType: "txt2img",
+      id: jobId, status: "submitting", workflowType: wfType,
       prompt: label, phase: "Generating image...", elapsed: 0, seed: null, error: null,
     };
     setComfyJobs(prev => [newJob, ...prev]);
@@ -929,7 +943,7 @@ export function useGrokApi() {
     (async () => {
       try {
         const result = await comfySubmitAndPoll({
-          workflow: "txt2img",
+          workflow: wfType,
           prompt: params.prompt,
           negativePrompt: params.negativePrompt,
           checkpoint: params.checkpoint,
@@ -937,9 +951,10 @@ export function useGrokApi() {
           loraStrength: params.loraStrength,
           width: params.width || 1024,
           height: params.height || 1024,
-          steps: params.steps || 5,
+          steps: params.steps || (wfType === "zimage" ? 8 : 5),
           cfg: params.cfg || 1,
           seed: params.seed,
+          ...(params.testCredits ? { testCredits: true } : {}),
         });
 
         clearInterval(timerIv);
@@ -982,6 +997,7 @@ export function useGrokApi() {
     cfg?: number;
     loras?: { name: string; strengthModel: number; strengthClip: number }[];
     upscale?: boolean;
+    testCredits?: boolean;
   }) => {
     const jobId = `cj-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     const label = params.prompt.length > 80 ? params.prompt.slice(0, 80) + "…" : params.prompt;
@@ -1019,6 +1035,7 @@ export function useGrokApi() {
           cfg: params.cfg || 4,
           loras: params.loras?.filter(l => l.name !== "none"),
           upscale: params.upscale || false,
+          ...(params.testCredits ? { testCredits: true } : {}),
         });
 
         clearInterval(timerIv);
@@ -1067,6 +1084,7 @@ export function useGrokApi() {
     resolution?: number;
     stage1End?: number;
     stage2End?: number;
+    testCredits?: boolean;
   }) => {
     const wfType = params.workflow || "wan-video";
     const jobId = `cj-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
@@ -1110,6 +1128,7 @@ export function useGrokApi() {
           resolution: params.resolution,
           stage1End: params.stage1End,
           stage2End: params.stage2End,
+          ...(params.testCredits ? { testCredits: true } : {}),
         }, { pollInterval: 5000, maxAttempts: 120 });
 
         clearInterval(timerIv);
@@ -1153,6 +1172,7 @@ export function useGrokApi() {
     videoLora?: string;
     videoLoraStrength?: number;
     videoLoraPass?: "high" | "low" | "both";
+    testCredits?: boolean;
   }) => {
     const jobId = `cj-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     const label = params.prompt.length > 80 ? params.prompt.slice(0, 80) + "…" : params.prompt;
@@ -1215,6 +1235,7 @@ export function useGrokApi() {
           videoLora: params.videoLora,
           videoLoraStrength: params.videoLoraStrength,
           videoLoraPass: params.videoLoraPass,
+          ...(params.testCredits ? { testCredits: true } : {}),
         }, { pollInterval: 5000, maxAttempts: 120 });
 
         clearInterval(timerIv);
@@ -1261,6 +1282,7 @@ export function useGrokApi() {
     videoLora?: string;
     videoLoraStrength?: number;
     videoLoraPass?: "high" | "low" | "both";
+    testCredits?: boolean;
   }) => {
     const seqCount = Math.min(4, Math.max(1, params.sequenceCount ?? 2));
     const jobId = `cj-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
@@ -1303,6 +1325,7 @@ export function useGrokApi() {
           videoLora: params.videoLora,
           videoLoraStrength: params.videoLoraStrength,
           videoLoraPass: params.videoLoraPass,
+          ...(params.testCredits ? { testCredits: true } : {}),
         }, { pollInterval: 5000, maxAttempts: 240 });
 
         clearInterval(timerIv);

@@ -106,6 +106,8 @@ const Index = () => {
   const auth = useAuth();
   const creditsHook = useCredits(auth.user);
   const isAdmin = auth.user?.email === "cyberdreadx@proton.me";
+  const [adminTestCredits, setAdminTestCredits] = useState(false);
+  const adminBypass = isAdmin && !adminTestCredits;
 
   // Folders
   const foldersHook = useFolders();
@@ -215,13 +217,20 @@ const Index = () => {
     reader.onload = () => {
       const img = new Image();
       img.onload = () => {
+        const maxDim = 1024;
+        let w = img.width, h = img.height;
+        if (w > maxDim || h > maxDim) {
+          const scale = maxDim / Math.max(w, h);
+          w = Math.round(w * scale);
+          h = Math.round(h * scale);
+        }
         const canvas = document.createElement("canvas");
-        canvas.width = img.width;
-        canvas.height = img.height;
+        canvas.width = w;
+        canvas.height = h;
         const ctx = canvas.getContext("2d");
-        ctx?.drawImage(img, 0, 0);
-        setGltchImage2(canvas.toDataURL("image/png"));
-        setGltchImage2Name(file.name.replace(/\.[^.]+$/, "") + ".png");
+        ctx?.drawImage(img, 0, 0, w, h);
+        setGltchImage2(canvas.toDataURL("image/jpeg", 0.9));
+        setGltchImage2Name(file.name.replace(/\.[^.]+$/, "") + ".jpg");
       };
       img.src = reader.result as string;
     };
@@ -248,12 +257,13 @@ const Index = () => {
     // Determine which engine pathway
     const isGrokEdit = mode === "edit-image" && editEngine === "grok";
     const isGltchEdit = mode === "edit-image" && editEngine === "gltch";
+    const isZimage = mode === "text-to-image" && genEngine === "gltch";
     const isComfyGen = mode === "text-to-image" && genEngine === "comfy";
     const isComfyRender = mode === "text-to-video" && renderEngine === "comfy";
     const isGltchWan = mode === "image-to-video" && animateEngine === "gltch";
     const isComfyAnimate = mode === "image-to-video" && animateEngine === "comfy" && !longLookEnabled;
     const isComfyLongLook = mode === "image-to-video" && animateEngine === "comfy" && longLookEnabled;
-    const isComfy = isComfyGen || isGltchEdit || isGltchWan || isComfyRender || isComfyAnimate || isComfyLongLook;
+    const isComfy = isZimage || isComfyGen || isGltchEdit || isGltchWan || isComfyRender || isComfyAnimate || isComfyLongLook;
     // Grok edit in BYOK mode uses the user's own API key directly — no credits needed
     const isGrokEditByok = isGrokEdit && effectiveApiMode === "byok" && apiKeySet;
     const isQueued = isGrokEdit || isGltchEdit || isComfy;
@@ -283,7 +293,7 @@ const Index = () => {
       }
     }
 
-    if ((effectiveApiMode === "credits" || isQueued) && !isGrokEditByok && !isAdmin) {
+    if ((effectiveApiMode === "credits" || isQueued) && !isGrokEditByok && !adminBypass) {
       if (!auth.isAuthenticated) {
         toast({ title: "ACCESS DENIED", description: "Sign in to use credits.", variant: "destructive" });
         return;
@@ -295,7 +305,7 @@ const Index = () => {
         cost = calculateCreditCost(grokPro ? "edit-image-pro" : "edit-image", settings.count);
       } else if (isGltchEdit) {
         cost = calculateCreditCost(comfyEditUpscale ? "comfy-image-hd" : "comfy-image");
-      } else if (isComfyGen) {
+      } else if (isZimage || isComfyGen) {
         cost = calculateCreditCost("comfy-image");
       } else if (isComfyLongLook) {
         cost = calculateCreditCost("comfy-longlook", longLookSeqCount);
@@ -327,12 +337,12 @@ const Index = () => {
     // ── Queued jobs (fire-and-forget with optimistic credit deduction) ──
     if (isQueued) {
       // Deduct credits optimistically before firing the job (skip for BYOK grok edit)
-      if (!isAdmin && !isGrokEditByok) {
+      if (!adminBypass && !isGrokEditByok) {
         let cost: number;
         if (isGrokEdit) cost = calculateCreditCost(grokPro ? "edit-image-pro" : "edit-image", settings.count);
         else if (isGltchEdit) cost = calculateCreditCost(comfyEditUpscale ? "comfy-image-hd" : "comfy-image");
         else if (isGltchWan) cost = calculateCreditCost("comfy-video");
-        else if (isComfyGen) cost = calculateCreditCost("comfy-image");
+        else if (isZimage || isComfyGen) cost = calculateCreditCost("comfy-image");
         else if (isComfyLongLook) cost = calculateCreditCost("comfy-longlook", longLookSeqCount);
         else cost = calculateCreditCost("comfy-video");
         creditsHook.deductCreditsLocally(cost);
@@ -346,6 +356,7 @@ const Index = () => {
             image_url: data.imageUrl!,
             settings,
             pro: grokPro,
+            ...(adminTestCredits ? { testCredits: true } : {}),
           });
         } else if (isGltchEdit) {
           const imageBase64 = data.imageUrl!.startsWith("data:")
@@ -373,6 +384,17 @@ const Index = () => {
             cfg: comfyCfg,
             loras: qwenLoraStack.filter(l => l.name !== "none"),
             upscale: comfyEditUpscale,
+            ...(adminTestCredits ? { testCredits: true } : {}),
+          });
+        } else if (isZimage) {
+          comfyGenerate({
+            prompt: data.prompt,
+            workflow: "zimage",
+            width: 1024,
+            height: 1024,
+            steps: 8,
+            cfg: 1,
+            ...(adminTestCredits ? { testCredits: true } : {}),
           });
         } else if (isComfyGen) {
           comfyGenerate({
@@ -385,6 +407,7 @@ const Index = () => {
             height: comfyHeight,
             steps: comfySteps,
             cfg: comfyCfg,
+            ...(adminTestCredits ? { testCredits: true } : {}),
           });
         } else if (isComfyRender) {
           comfyTextToVideo({
@@ -400,6 +423,7 @@ const Index = () => {
             videoLora: comfyVideoLora !== "none" ? comfyVideoLora : undefined,
             videoLoraStrength: comfyVideoLoraStrength,
             videoLoraPass: comfyVideoLoraPass,
+            ...(adminTestCredits ? { testCredits: true } : {}),
           });
         } else if (isComfyLongLook) {
           const imageBase64 = data.imageUrl?.startsWith("data:")
@@ -427,6 +451,7 @@ const Index = () => {
             videoLora: comfyVideoLora !== "none" ? comfyVideoLora : undefined,
             videoLoraStrength: comfyVideoLoraStrength,
             videoLoraPass: comfyVideoLoraPass,
+            ...(adminTestCredits ? { testCredits: true } : {}),
           });
         } else if (isGltchWan) {
           const imageBase64 = data.imageUrl?.startsWith("data:")
@@ -445,6 +470,7 @@ const Index = () => {
             useUpscale: comfyVidUpscale,
             workflow: "gltch-wan",
             resolution: 832,
+            ...(adminTestCredits ? { testCredits: true } : {}),
           });
         } else if (isComfyAnimate) {
           const imageBase64 = data.imageUrl?.startsWith("data:")
@@ -470,6 +496,7 @@ const Index = () => {
             videoLora: comfyVideoLora !== "none" ? comfyVideoLora : undefined,
             videoLoraStrength: comfyVideoLoraStrength,
             videoLoraPass: comfyVideoLoraPass,
+            ...(adminTestCredits ? { testCredits: true } : {}),
           });
         }
         toast({ title: "JOB QUEUED", description: "Generation started — you can queue more." });
@@ -483,21 +510,21 @@ const Index = () => {
     try {
       switch (mode) {
         case "text-to-image":
-          await generateImage({ prompt: data.prompt, settings, pro: grokPro });
+          await generateImage({ prompt: data.prompt, settings, pro: grokPro, ...(adminTestCredits ? { testCredits: true } : {}) });
           break;
         case "text-to-video":
-          await generateVideo({ prompt: data.prompt, videoSettings });
+          await generateVideo({ prompt: data.prompt, videoSettings, ...(adminTestCredits ? { testCredits: true } : {}) });
           break;
         case "image-to-video":
-          await generateVideo({ prompt: data.prompt, image_url: data.imageUrl, videoSettings });
+          await generateVideo({ prompt: data.prompt, image_url: data.imageUrl, videoSettings, ...(adminTestCredits ? { testCredits: true } : {}) });
           break;
         case "edit-video":
-          await editVideo({ prompt: data.prompt, video_url: data.imageUrl! });
+          await editVideo({ prompt: data.prompt, video_url: data.imageUrl!, ...(adminTestCredits ? { testCredits: true } : {}) });
           break;
       }
 
-      // Optimistically deduct credits on success (admin is free on backend)
-      if (effectiveApiMode === "credits" && !isAdmin) {
+      // Optimistically deduct credits on success (admin bypass skips deduction)
+      if (effectiveApiMode === "credits" && !adminBypass) {
         const isImageMode = mode === "text-to-image" || mode === "edit-image";
         const imageCount = isImageMode ? settings.count : 1;
         const videoDuration = (mode === "text-to-video" || mode === "image-to-video" || mode === "edit-video") ? videoSettings.duration : 0;
@@ -621,6 +648,21 @@ const Index = () => {
                 onManageSubscription={creditsHook.manageSubscription}
                 onPayPalSuccess={creditsHook.refreshCredits}
               />
+            )}
+
+            {/* Admin: test credit spending toggle */}
+            {isAdmin && (
+              <button
+                onClick={() => setAdminTestCredits(prev => !prev)}
+                className={`px-2 py-1 rounded text-[10px] font-mono border transition-colors ${
+                  adminTestCredits
+                    ? "border-yellow-500/60 bg-yellow-500/20 text-yellow-300"
+                    : "border-white/10 bg-white/5 text-white/40 hover:text-white/60"
+                }`}
+                title={adminTestCredits ? "Credits WILL be deducted (testing mode)" : "Credits are bypassed (admin mode)"}
+              >
+                {adminTestCredits ? "TEST CR: ON" : "TEST CR: OFF"}
+              </button>
             )}
 
             {/* Auth: login/logout */}
@@ -988,15 +1030,23 @@ const Index = () => {
                       <span className={genEngine === "grok" ? "text-primary/70" : "text-muted-foreground/50"}>{grokPro ? settings.count * 3 : settings.count} cr</span>
                     </div>
                   </button>
-                  <button type="button" onClick={() => setGenEngine("comfy")}
-                    className={`p-2.5 border rounded text-left transition-all duration-200 ${genEngine === "comfy" ? "border-purple-500 bg-purple-500/5 shadow-[0_0_8px_rgba(168,85,247,0.15)]" : "border-border bg-card/30 hover:border-purple-500/40"}`}>
-                    <div className={`font-orbitron text-[11px] ${genEngine === "comfy" ? "text-purple-400" : "text-foreground"}`}>COMFY</div>
+                  <button type="button" onClick={() => setGenEngine("gltch")}
+                    className={`p-2.5 border rounded text-left transition-all duration-200 ${genEngine === "gltch" ? "border-secondary neon-border bg-secondary/5" : "border-border bg-card/30 hover:border-secondary/40"}`}>
+                    <div className={`font-orbitron text-[11px] ${genEngine === "gltch" ? "text-secondary" : "text-foreground"}`}>GLTCH</div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
-                      <span>GPU Studio</span>
-                      <span className={genEngine === "comfy" ? "text-purple-400/70" : "text-muted-foreground/50"}>1 cr</span>
+                      <span>Z-Image Turbo</span>
+                      <span className={genEngine === "gltch" ? "text-secondary/70" : "text-muted-foreground/50"}>1 cr</span>
                     </div>
                   </button>
                 </div>
+                {genEngine === "gltch" && (
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-secondary/5 border border-secondary/20 rounded">
+                    <div className="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse" />
+                    <span className="font-mono-share text-[9px] text-secondary/70">
+                      1 cr/img — Z-Image Turbo 6B · 8 steps · 1024×1024
+                    </span>
+                  </div>
+                )}
                 {/* Comfy GENERATE settings */}
                 {genEngine === "comfy" && (
                   <div className="space-y-2">
@@ -1179,7 +1229,7 @@ const Index = () => {
                     <div>
                       <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Duration</label>
                       <div className="flex flex-wrap gap-1.5">
-                        {[{ label: "~2s", value: 33 }, { label: "~3s", value: 49 }, { label: "~5s", value: 81 }, { label: "~7s", value: 113 }].map((p) => (
+                        {[{ label: "~2s", value: 33 }, { label: "~3s", value: 49 }, { label: "~5s", value: 81 }, { label: "~7s", value: 113 }, { label: "~10s", value: 161 }, { label: "~15s", value: 241 }].map((p) => (
                           <button key={p.value} type="button" onClick={() => setComfyFrameCount(p.value)}
                             className={`px-2 py-1 rounded text-[9px] font-mono-share transition-all ${comfyFrameCount === p.value ? "bg-purple-500/20 border-purple-500/50 text-purple-300 border" : "bg-card/30 border border-border text-muted-foreground hover:border-purple-500/30"}`}>
                             {p.label}
@@ -1291,7 +1341,7 @@ const Index = () => {
                     <div>
                       <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Duration</label>
                       <div className="flex flex-wrap gap-1.5">
-                        {[{ label: "~2s", value: 33 }, { label: "~3s", value: 49 }, { label: "~5s", value: 81 }, { label: "~7s", value: 113 }].map((p) => (
+                        {[{ label: "~2s", value: 33 }, { label: "~3s", value: 49 }, { label: "~5s", value: 81 }, { label: "~7s", value: 113 }, { label: "~10s", value: 161 }, { label: "~15s", value: 241 }].map((p) => (
                           <button key={p.value} type="button" onClick={() => setComfyFrameCount(p.value)}
                             className={`px-2 py-1 rounded text-[9px] font-mono-share transition-all ${comfyFrameCount === p.value ? "bg-secondary/20 border-secondary/50 text-secondary border" : "bg-card/30 border border-border text-muted-foreground hover:border-secondary/30"}`}>
                             {p.label}
@@ -1376,7 +1426,7 @@ const Index = () => {
                       <div>
                         <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Duration</label>
                         <div className="flex flex-wrap gap-1.5">
-                          {[{ label: "~2s", value: 33 }, { label: "~3s", value: 49 }, { label: "~5s", value: 81 }, { label: "~7s", value: 113 }].map((p) => (
+                          {[{ label: "~2s", value: 33 }, { label: "~3s", value: 49 }, { label: "~5s", value: 81 }, { label: "~7s", value: 113 }, { label: "~10s", value: 161 }, { label: "~15s", value: 241 }].map((p) => (
                             <button key={p.value} type="button" onClick={() => setComfyFrameCount(p.value)}
                               className={`px-2 py-1 rounded text-[9px] font-mono-share transition-all ${comfyFrameCount === p.value ? "bg-purple-500/20 border-purple-500/50 text-purple-300 border" : "bg-card/30 border border-border text-muted-foreground hover:border-purple-500/30"}`}>
                               {p.label}

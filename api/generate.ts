@@ -78,7 +78,10 @@ function moderationMode(action: string): string {
 }
 
 // Video generation can take minutes — increase timeout
-export const config = { maxDuration: 300 };
+export const config = {
+  maxDuration: 300,
+  api: { bodyParser: { sizeLimit: "20mb" } },
+};
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === "OPTIONS") return res.status(200).end();
@@ -133,9 +136,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const isPro = params.model === PRO_MODEL;
     const cost = calculateCost(action as AllowedAction, imageCount, videoDuration, isPro);
     const isAdminUser = auth.email === ADMIN_EMAIL;
+    const adminTestCredits = isAdminUser && req.body.testCredits === true;
 
-    // Credit gate (admin is free)
-    if (!isAdminUser) {
+    // Credit gate (admin is free unless testCredits)
+    if (!isAdminUser || adminTestCredits) {
       const rows = await sql`
         SELECT sub_credits, pack_credits FROM users WHERE id = ${auth.userId}
       `;
@@ -157,8 +161,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       default: return res.status(400).json({ error: "Invalid action" }); // unreachable — whitelist above
     }
 
-    // Deduct credits BEFORE calling xAI (admin skips deduction)
-    if (!isAdminUser) {
+    // Deduct credits BEFORE calling xAI (admin skips deduction unless testing)
+    if (!isAdminUser || adminTestCredits) {
       try {
         await sql`SELECT deduct_credits(${auth.userId}::uuid, ${cost})`;
       } catch (err: any) {
@@ -169,7 +173,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Helper to refund credits on LEGITIMATE xAI failure (NOT moderation)
     const refundCredits = async () => {
-      if (isAdminUser) return; // nothing to refund
+      if (isAdminUser && !adminTestCredits) return;
       try {
         await sql`SELECT add_pack_credits(${auth.userId}::uuid, ${cost})`;
         console.log(`Refunded ${cost} credits to ${auth.userId}`);
