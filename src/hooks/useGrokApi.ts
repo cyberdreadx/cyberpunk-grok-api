@@ -299,7 +299,7 @@ export function useGrokApi() {
 
       // 202 Accepted means still processing — consume body and continue
       if (response.status === 202) {
-        await response.text().catch(() => {}); // drain response body
+        await response.text().catch(() => { }); // drain response body
         continue;
       }
 
@@ -855,7 +855,30 @@ export function useGrokApi() {
 
       if (pollData.status === "done") {
         localStorage.removeItem("comfy-active-job");
-        return { image: pollData.image, video: pollData.video };
+
+        // If video is an S3 URL (not base64/data URI), proxy through backend
+        let video = pollData.video;
+        if (video && video.startsWith("https://") && !video.startsWith("data:")) {
+          try {
+            console.log("[comfy-poll] Proxying S3 video through backend...");
+            const proxyResp = await fetch("/api/comfyui", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ action: "proxy-s3", url: video }),
+            });
+            if (proxyResp.ok) {
+              const blob = await proxyResp.blob();
+              video = URL.createObjectURL(blob);
+              console.log(`[comfy-poll] Video proxied: ${Math.round(blob.size / 1024)}KB`);
+            } else {
+              console.error("[comfy-poll] Video proxy failed, using S3 URL as fallback");
+            }
+          } catch (proxyErr) {
+            console.error("[comfy-poll] Video proxy error:", proxyErr);
+          }
+        }
+
+        return { image: pollData.image, video };
       }
       if (pollData.status === "error") {
         localStorage.removeItem("comfy-active-job");

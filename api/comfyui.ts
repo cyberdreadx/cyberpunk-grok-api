@@ -1621,7 +1621,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const adminTestCredits = isAdminUser && req.body.testCredits === true;
       const costKey = workflowType === "qwen-edit" && upscale ? "qwen-edit-hd"
         : workflowType === "gltch-wan" && useVidUpscale ? "gltch-wan-hd"
-        : workflowType;
+          : workflowType;
       const baseCost = COMFY_COSTS[costKey] ?? 1;
       const cost = skipCredits ? 0 : (workflowType === "longlook" ? baseCost * Math.min(4, Math.max(1, Number(sequenceCount))) : baseCost);
       let creditDeducted = false;
@@ -1994,7 +1994,7 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           // Refund credits on submission failure
           if (creditDeducted) {
             const sql = getDb();
-            await sql`SELECT add_pack_credits(${auth.userId}::uuid, ${cost})`.catch(() => {});
+            await sql`SELECT add_pack_credits(${auth.userId}::uuid, ${cost})`.catch(() => { });
           }
           throw new Error(`RunPod submit failed (${resp.status}): ${errText}`);
         }
@@ -2008,7 +2008,7 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           await sql`
             INSERT INTO usage_log (user_id, mode, credits_used, prompt)
             VALUES (${auth.userId}::uuid, ${logMode}, ${cost}, ${(prompt || "").slice(0, 500)})
-          `.catch(() => {});
+          `.catch(() => { });
         }
 
         return res.status(200).json({
@@ -2030,7 +2030,7 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           const errText = await resp.text().catch(() => "Unknown error");
           if (creditDeducted) {
             const sql = getDb();
-            await sql`SELECT add_pack_credits(${auth.userId}::uuid, ${cost})`.catch(() => {});
+            await sql`SELECT add_pack_credits(${auth.userId}::uuid, ${cost})`.catch(() => { });
           }
           throw new Error(`ComfyUI prompt failed (${resp.status}): ${errText}`);
         }
@@ -2043,7 +2043,7 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           await sql`
             INSERT INTO usage_log (user_id, mode, credits_used, prompt)
             VALUES (${auth.userId}::uuid, ${logMode}, ${cost}, ${(prompt || "").slice(0, 500)})
-          `.catch(() => {});
+          `.catch(() => { });
         }
 
         return res.status(200).json({
@@ -2082,15 +2082,39 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           console.log("[comfyui-poll] COMPLETED output keys:", Object.keys(out));
 
           // Helper: detect S3/HTTP URLs vs base64, return appropriate URI
-          function resolveFileData(file: any, type: "video" | "image"): string | null {
+          // For images: fetches S3 URLs server-side and converts to base64 (images are small).
+          // For videos: returns the URL as-is (videos can be 50-200MB, too large for base64).
+          //   Videos are served through the /api/comfyui proxy-s3 action instead.
+          async function resolveFileData(file: any, type: "video" | "image"): Promise<string | null> {
             const d = typeof file === "string" ? file : (file?.data || file?.url || null);
             if (!d || typeof d !== "string") return null;
-            // S3 URL or any HTTP URL — return directly
-            if (d.startsWith("http://") || d.startsWith("https://")) return d;
             // Already a data URI
             if (d.startsWith("data:")) return d;
-            // S3 type indicator from RunPod worker
-            if (file?.type === "s3_url" || file?.type === "url") return d;
+            // S3 URL or any HTTP URL
+            if (d.startsWith("http://") || d.startsWith("https://") || file?.type === "s3_url" || file?.type === "url") {
+              const url = d.startsWith("http") ? d : (file?.url || d);
+              // Only proxy images to base64 — videos are too large
+              if (type === "image") {
+                try {
+                  console.log(`[comfyui-poll] Proxying image from S3: ${url.slice(0, 120)}...`);
+                  const s3Resp = await fetch(url, { signal: AbortSignal.timeout(30000) });
+                  if (!s3Resp.ok) {
+                    console.error(`[comfyui-poll] S3 fetch failed (${s3Resp.status}), returning URL as-is`);
+                    return url;
+                  }
+                  const buffer = await s3Resp.arrayBuffer();
+                  const base64 = Buffer.from(buffer).toString("base64");
+                  const ct = s3Resp.headers.get("content-type") || "image/png";
+                  console.log(`[comfyui-poll] Proxied image: ${Math.round(buffer.byteLength / 1024)}KB`);
+                  return `data:${ct};base64,${base64}`;
+                } catch (fetchErr: any) {
+                  console.error(`[comfyui-poll] S3 proxy failed: ${fetchErr.message}, returning URL as-is`);
+                  return url;
+                }
+              }
+              // Videos: return URL for streaming proxy
+              return url;
+            }
             // Raw base64
             if (d.length > 100) {
               const mime = type === "video" ? "video/mp4" : "image/png";
@@ -2100,7 +2124,7 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           }
 
           // Scan all file arrays in output (videos, gifs, images) at top level and nested
-          function findOutput(obj: any): { uri: string; type: "video" | "image" } | null {
+          async function findOutput(obj: any): Promise<{ uri: string; type: "video" | "image" } | null> {
             if (!obj || typeof obj !== "object") return null;
 
             // Check standard arrays at this level
@@ -2109,13 +2133,13 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
               if (!Array.isArray(arr) || !arr.length) continue;
               const file = arr[arr.length - 1];
               const isVid = arrKey !== "images" || outputType === "video";
-              const uri = resolveFileData(file, isVid ? "video" : "image");
+              const uri = await resolveFileData(file, isVid ? "video" : "image");
               if (uri) return { uri, type: isVid ? "video" : "image" };
             }
 
             // Check message field
             if (typeof obj.message === "string" && obj.message.length > 50) {
-              const uri = resolveFileData(obj.message, outputType === "video" ? "video" : "image");
+              const uri = await resolveFileData(obj.message, outputType === "video" ? "video" : "image");
               if (uri) return { uri, type: outputType === "video" ? "video" : "image" };
             }
 
@@ -2123,7 +2147,7 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           }
 
           // Try top-level output first
-          const topResult = findOutput(out);
+          const topResult = await findOutput(out);
           if (topResult) {
             return res.status(200).json({ status: "done", [topResult.type]: topResult.uri });
           }
@@ -2134,12 +2158,12 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
             if (!node || typeof node !== "object") {
               // Direct string value
               if (typeof node === "string" && node.length > 100) {
-                const uri = resolveFileData(node, outputType === "video" ? "video" : "image");
+                const uri = await resolveFileData(node, outputType === "video" ? "video" : "image");
                 if (uri) return res.status(200).json({ status: "done", [outputType === "video" ? "video" : "image"]: uri });
               }
               continue;
             }
-            const nested = findOutput(node);
+            const nested = await findOutput(node);
             if (nested) {
               console.log(`[comfyui-poll] Found output in nested key "${key}"`);
               return res.status(200).json({ status: "done", [nested.type]: nested.uri });
@@ -2265,6 +2289,51 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
 
       const fname = await uploadImageToLocal(backend.comfyUrl!, imageBase64, rawName);
       return res.status(200).json({ filename: fname, subfolder: "", type: "input" });
+    }
+
+    // ========== PROXY-S3 (stream S3 content through backend for browser access) ==========
+    if (action === "proxy-s3") {
+      const { url } = req.body;
+      if (!url || typeof url !== "string" || !url.startsWith("https://")) {
+        return res.status(400).json({ error: "Valid HTTPS url is required" });
+      }
+
+      try {
+        const headers: Record<string, string> = {};
+        // Forward range header for video seeking
+        if (req.headers.range) {
+          headers["Range"] = req.headers.range as string;
+        }
+
+        const s3Resp = await fetch(url, {
+          headers,
+          signal: AbortSignal.timeout(120000),
+        });
+
+        if (!s3Resp.ok && s3Resp.status !== 206) {
+          return res.status(s3Resp.status).json({ error: `S3 returned ${s3Resp.status}` });
+        }
+
+        // Forward relevant headers
+        const ct = s3Resp.headers.get("content-type") || "application/octet-stream";
+        const cl = s3Resp.headers.get("content-length");
+        const cr = s3Resp.headers.get("content-range");
+        const ar = s3Resp.headers.get("accept-ranges");
+
+        res.setHeader("Content-Type", ct);
+        res.setHeader("Access-Control-Allow-Origin", "*");
+        if (cl) res.setHeader("Content-Length", cl);
+        if (cr) res.setHeader("Content-Range", cr);
+        if (ar) res.setHeader("Accept-Ranges", ar);
+
+        res.status(s3Resp.status === 206 ? 206 : 200);
+
+        const buffer = await s3Resp.arrayBuffer();
+        res.end(Buffer.from(buffer));
+        return;
+      } catch (err: any) {
+        return res.status(502).json({ error: `S3 proxy failed: ${err.message}` });
+      }
     }
 
     return res.status(400).json({ error: `Unknown action: ${action}` });
