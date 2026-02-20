@@ -53,6 +53,14 @@ RUN cd /comfyui/custom_nodes && \
     wget -qO- https://github.com/SeanScripts/ComfyUI-Unload-Model/archive/refs/heads/main.tar.gz | tar xz && \
     mv ComfyUI-Unload-Model-main ComfyUI-Unload-Model
 
+# MMAudio (video-to-audio ambient sound generation)
+RUN cd /comfyui/custom_nodes && \
+    git clone https://github.com/kijai/ComfyUI-MMAudio.git
+
+# F5-TTS (text-to-speech for dialogue)
+RUN cd /comfyui/custom_nodes && \
+    git clone --recursive https://github.com/niknah/ComfyUI-F5-TTS.git
+
 # ── Build tools for Triton/SageAttention JIT compilation ─────────
 # Triton JIT-compiles driver.c (a Python C extension using CUDA driver API)
 # at first use. It needs:
@@ -81,6 +89,11 @@ RUN pip install --no-cache-dir gguf color-matcher sageattention triton && \
     cd /comfyui/custom_nodes/ComfyUI-VideoHelperSuite && \
     ([ -f requirements.txt ] && pip install -r requirements.txt --no-cache-dir || true) && \
     cd /comfyui/custom_nodes/ComfyUI-Frame-Interpolation && \
+    ([ -f requirements.txt ] && pip install -r requirements.txt --no-cache-dir || true) && \
+    cd /comfyui/custom_nodes/ComfyUI-MMAudio && \
+    ([ -f requirements.txt ] && pip install -r requirements.txt --no-cache-dir || true) && \
+    cd /comfyui/custom_nodes/ComfyUI-F5-TTS && \
+    pip install -e . --no-cache-dir 2>/dev/null || \
     ([ -f requirements.txt ] && pip install -r requirements.txt --no-cache-dir || true)
 
 # ── Bake in small models ─────────────────────────────────────────
@@ -98,7 +111,7 @@ RUN mkdir -p /comfyui/custom_nodes/ComfyUI-Frame-Interpolation/ckpts/rife && \
 # Models on RunPod Network Volume (mounted at /runpod-volume):
 #   checkpoints/ — Qwen-Rapid-AIO-v1.safetensors (~27 GB)
 #   loras/       — Unchained-XXX, qwen-edit-skin, qwen-multiple-angles
-RUN printf "\nrunpod_volume:\n    base_path: /runpod-volume/runpod-slim/ComfyUI/models\n    checkpoints: checkpoints\n    upscale_models: upscale_models\n    vae: vae\n    clip: text_encoders\n    loras: loras\n    unet: unet\n    diffusion_models: diffusion_models\n\nrunpod_volume_unet_compat:\n    base_path: /runpod-volume/runpod-slim/ComfyUI/models\n    diffusion_models: unet\n" >> /comfyui/extra_model_paths.yaml
+RUN printf "\nrunpod_volume:\n    base_path: /runpod-volume/runpod-slim/ComfyUI/models\n    checkpoints: checkpoints\n    upscale_models: upscale_models\n    vae: vae\n    clip: text_encoders\n    loras: loras\n    unet: unet\n    diffusion_models: diffusion_models\n    mmaudio: mmaudio\n\nrunpod_volume_unet_compat:\n    base_path: /runpod-volume/runpod-slim/ComfyUI/models\n    diffusion_models: unet\n" >> /comfyui/extra_model_paths.yaml
 
 # ── Force full VRAM mode (H200 141GB — no need for lowvram) ──────
 RUN sed -i 's|python -u /comfyui/main.py|python -u /comfyui/main.py --gpu-only|g' /start.sh

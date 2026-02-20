@@ -1108,6 +1108,8 @@ export function useGrokApi() {
     stage1End?: number;
     stage2End?: number;
     testCredits?: boolean;
+    audioMode?: "none" | "ambient";
+    audioPrompt?: string;
   }) => {
     const wfType = params.workflow || "wan-video";
     const jobId = `cj-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
@@ -1151,6 +1153,8 @@ export function useGrokApi() {
           resolution: params.resolution,
           stage1End: params.stage1End,
           stage2End: params.stage2End,
+          audioMode: params.audioMode || "none",
+          audioPrompt: params.audioPrompt,
           ...(params.testCredits ? { testCredits: true } : {}),
         }, { pollInterval: 5000, maxAttempts: 120 });
 
@@ -1306,6 +1310,8 @@ export function useGrokApi() {
     videoLoraStrength?: number;
     videoLoraPass?: "high" | "low" | "both";
     testCredits?: boolean;
+    audioMode?: "none" | "ambient";
+    audioPrompt?: string;
   }) => {
     const seqCount = Math.min(4, Math.max(1, params.sequenceCount ?? 2));
     const jobId = `cj-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
@@ -1348,6 +1354,8 @@ export function useGrokApi() {
           videoLora: params.videoLora,
           videoLoraStrength: params.videoLoraStrength,
           videoLoraPass: params.videoLoraPass,
+          audioMode: params.audioMode || "none",
+          audioPrompt: params.audioPrompt,
           ...(params.testCredits ? { testCredits: true } : {}),
         }, { pollInterval: 5000, maxAttempts: 240 });
 

@@ -146,6 +146,8 @@ const Index = () => {
   const [comfyVideoLora, setComfyVideoLora] = useState("none");
   const [comfyVideoLoraStrength, setComfyVideoLoraStrength] = useState(0.8);
   const [comfyVideoLoraPass, setComfyVideoLoraPass] = useState<"high" | "low" | "both">("high");
+  const [comfyAudioMode, setComfyAudioMode] = useState<"none" | "ambient">("none");
+  const [comfyAudioPrompt, setComfyAudioPrompt] = useState("");
 
   // LongLook settings
   const [longLookEnabled, setLongLookEnabled] = useState(false);
@@ -451,6 +453,8 @@ const Index = () => {
             videoLora: comfyVideoLora !== "none" ? comfyVideoLora : undefined,
             videoLoraStrength: comfyVideoLoraStrength,
             videoLoraPass: comfyVideoLoraPass,
+            audioMode: comfyAudioMode,
+            audioPrompt: comfyAudioPrompt || undefined,
             ...(adminTestCredits ? { testCredits: true } : {}),
           });
         } else if (isGltchWan) {
@@ -473,6 +477,8 @@ const Index = () => {
             videoLora: comfyVideoLora !== "none" ? comfyVideoLora : undefined,
             videoLoraStrength: comfyVideoLoraStrength,
             videoLoraPass: comfyVideoLoraPass,
+            audioMode: comfyAudioMode,
+            audioPrompt: comfyAudioPrompt || undefined,
             ...(adminTestCredits ? { testCredits: true } : {}),
           });
         } else if (isComfyAnimate) {
@@ -499,6 +505,8 @@ const Index = () => {
             videoLora: comfyVideoLora !== "none" ? comfyVideoLora : undefined,
             videoLoraStrength: comfyVideoLoraStrength,
             videoLoraPass: comfyVideoLoraPass,
+            audioMode: comfyAudioMode,
+            audioPrompt: comfyAudioPrompt || undefined,
             ...(adminTestCredits ? { testCredits: true } : {}),
           });
         }
@@ -657,11 +665,10 @@ const Index = () => {
             {isAdmin && (
               <button
                 onClick={() => setAdminTestCredits(prev => !prev)}
-                className={`px-2 py-1 rounded text-[10px] font-mono border transition-colors ${
-                  adminTestCredits
-                    ? "border-yellow-500/60 bg-yellow-500/20 text-yellow-300"
-                    : "border-white/10 bg-white/5 text-white/40 hover:text-white/60"
-                }`}
+                className={`px-2 py-1 rounded text-[10px] font-mono border transition-colors ${adminTestCredits
+                  ? "border-yellow-500/60 bg-yellow-500/20 text-yellow-300"
+                  : "border-white/10 bg-white/5 text-white/40 hover:text-white/60"
+                  }`}
                 title={adminTestCredits ? "Credits WILL be deducted (testing mode)" : "Credits are bypassed (admin mode)"}
               >
                 {adminTestCredits ? "TEST CR: ON" : "TEST CR: OFF"}
@@ -694,13 +701,12 @@ const Index = () => {
             {visibleAnnouncements.map(a => (
               <div
                 key={a.id}
-                className={`flex items-center justify-between gap-3 px-4 py-2.5 rounded border font-mono-share text-[10px] ${
-                  a.type === "warning"
-                    ? "bg-amber-500/5 border-amber-500/30 text-amber-300"
-                    : a.type === "success"
+                className={`flex items-center justify-between gap-3 px-4 py-2.5 rounded border font-mono-share text-[10px] ${a.type === "warning"
+                  ? "bg-amber-500/5 border-amber-500/30 text-amber-300"
+                  : a.type === "success"
                     ? "bg-green-500/5 border-green-500/30 text-green-300"
                     : "bg-secondary/5 border-secondary/30 text-secondary"
-                }`}
+                  }`}
               >
                 <span className="flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse flex-shrink-0" />
@@ -1498,6 +1504,27 @@ const Index = () => {
                         2x Lanczos upscale
                       </span>
                     </button>
+                    <button type="button" onClick={() => setComfyAudioMode(comfyAudioMode === "ambient" ? "none" : "ambient")}
+                      className={`w-full flex items-center justify-between px-3 py-2 border rounded font-mono-share text-[10px] transition-all duration-200 ${comfyAudioMode === "ambient" ? "border-cyan-500/50 bg-cyan-500/5 text-cyan-300" : "border-border bg-card/30 text-muted-foreground hover:border-cyan-500/30"}`}>
+                      <span className="flex items-center gap-1.5">
+                        <span className={`w-3 h-3 border rounded-sm flex items-center justify-center text-[8px] ${comfyAudioMode === "ambient" ? "border-cyan-500 bg-cyan-500 text-white" : "border-muted-foreground/30"}`}>
+                          {comfyAudioMode === "ambient" && "✓"}
+                        </span>
+                        🔊 MMAudio (ambient sound)
+                      </span>
+                    </button>
+                    {comfyAudioMode === "ambient" && (
+                      <div>
+                        <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Audio prompt (optional — defaults to video prompt)</label>
+                        <textarea
+                          value={comfyAudioPrompt}
+                          onChange={(e) => setComfyAudioPrompt(e.target.value)}
+                          placeholder="e.g. city rain, birds chirping, footsteps..."
+                          rows={2}
+                          className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-[10px] font-mono-share text-foreground resize-none"
+                        />
+                      </div>
+                    )}
                     {comfyModels.videoLoras.length > 0 && (
                       <div>
                         <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Video LoRA (optional)</label>
@@ -1549,8 +1576,8 @@ const Index = () => {
                       <Film className="w-3 h-3 text-purple-400/70" />
                       <span className="font-mono-share text-[9px] text-purple-400/70">
                         {longLookEnabled
-                          ? `LongLook ${longLookSeqCount} x 2 = ${longLookSeqCount * 2} cr`
-                          : "WAN 2.2 I2V — 2 credits per video"}
+                          ? `LongLook ${longLookSeqCount} x 2${comfyAudioMode === "ambient" ? " + 1 audio" : ""} = ${longLookSeqCount * 2 + (comfyAudioMode === "ambient" ? 1 : 0)} cr`
+                          : `WAN 2.2 I2V — ${comfyAudioMode === "ambient" ? "3" : "2"} credits per video`}
                       </span>
                     </div>
                   </div>

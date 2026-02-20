@@ -14,7 +14,7 @@
  */
 
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, GetObjectCommand, DeleteObjectCommand, ListObjectsV2Command, DeleteObjectsCommand } from "@aws-sdk/client-s3";
 import { getUserFromRequest } from "./_lib/auth";
 import { getDb } from "./_lib/db";
 import { checkRateLimit } from "./_lib/ratelimit";
@@ -193,6 +193,57 @@ function groupVideoLoras(files: string[]): VideoLoraEntry[] {
   return result;
 }
 
+// ---- Audio helper ----
+
+/**
+ * Add MMAudio ambient audio nodes to a video workflow.
+ * Injects nodes 200-202 (model + features + sampler) and returns the audio node ID.
+ * The caller should pass the audio output to VHS_VideoCombine.
+ */
+function addMMAudioNodes(
+  workflow: Record<string, any>,
+  framesNodeId: string,
+  seed: number,
+  audioPrompt: string,
+): string {
+  // Load MMAudio model
+  workflow["200"] = {
+    class_type: "MMAudioModelLoader",
+    inputs: {
+      mmaudio_model: "mmaudio_large_44k_v2_fp16.safetensors",
+      base_precision: "fp16",
+    },
+  };
+  // Load feature utils (synchformer + VAE + CLIP)
+  workflow["201"] = {
+    class_type: "MMAudioFeatureUtilsLoader",
+    inputs: {
+      synchformer_model: "mmaudio_synchformer_fp16.safetensors",
+      vae_model: "mmaudio_vae_44k_fp16.safetensors",
+      clip_model: "apple_DFN5B-CLIP-ViT-H-14-384_fp16.safetensors",
+      precision: "fp16",
+    },
+  };
+  // Sample audio from video frames
+  workflow["202"] = {
+    class_type: "MMAudioSampler",
+    inputs: {
+      mmaudio_model: ["200", 0],
+      feature_utils: ["201", 0],
+      images: [framesNodeId, 0],
+      duration: 8,
+      steps: 25,
+      cfg: 4.5,
+      seed,
+      prompt: audioPrompt,
+      negative_prompt: "silence, static, distortion",
+      mask_away_clip: false,
+      force_offload: true,
+    },
+  };
+  return "202";
+}
+
 // ---- Backend detection ----
 
 type Backend = "runpod" | "local";
@@ -239,6 +290,8 @@ function buildWanVideoWorkflow(p: {
   videoLoraLow?: string;
   videoLoraStrength?: number;
   videoLoraPass?: "high" | "low" | "both";
+  audioMode?: "none" | "ambient";
+  audioPrompt?: string;
 }): Record<string, any> {
   const splitStep = Math.max(1, Math.floor(p.steps / 2));
 
@@ -421,6 +474,13 @@ function buildWanVideoWorkflow(p: {
     lastOut = 0;
   }
 
+  // MMAudio ambient sound generation (optional)
+  const audioMode = p.audioMode || "none";
+  let audioNodeId: string | undefined;
+  if (audioMode === "ambient") {
+    audioNodeId = addMMAudioNodes(workflow, "87", p.seed, p.audioPrompt || p.prompt);
+  }
+
   // Video output
   workflow["94"] = {
     class_type: "VHS_VideoCombine",
@@ -436,6 +496,7 @@ function buildWanVideoWorkflow(p: {
       trim_to_audio: false,
       pingpong: false,
       save_output: true,
+      ...(audioNodeId ? { audio: [audioNodeId, 0] } : {}),
     },
   };
 
@@ -471,6 +532,8 @@ function buildGltchWanWorkflow(p: {
   videoLoraLow?: string;
   videoLoraStrength?: number;
   videoLoraPass?: "high" | "low" | "both";
+  audioMode?: "none" | "ambient";
+  audioPrompt?: string;
 }): Record<string, any> {
   const splitStep = Math.max(1, Math.round(p.steps * 2 / 3));
 
@@ -692,6 +755,13 @@ function buildGltchWanWorkflow(p: {
     inputs: { samples: ["74", 0], vae: ["7", 0] },
   };
 
+  // MMAudio ambient sound generation (optional)
+  const audioMode = p.audioMode || "none";
+  let audioNodeId: string | undefined;
+  if (audioMode === "ambient") {
+    audioNodeId = addMMAudioNodes(workflow, "4", p.seed, p.audioPrompt || p.prompt);
+  }
+
   // ── Base video output (16fps) ──
   workflow["16"] = {
     class_type: "VHS_VideoCombine",
@@ -707,6 +777,7 @@ function buildGltchWanWorkflow(p: {
       trim_to_audio: false,
       pingpong: false,
       save_output: true,
+      ...(audioNodeId ? { audio: [audioNodeId, 0] } : {}),
     },
   };
 
@@ -756,6 +827,7 @@ function buildGltchWanWorkflow(p: {
         trim_to_audio: false,
         pingpong: false,
         save_output: true,
+        ...(audioNodeId ? { audio: [audioNodeId, 0] } : {}),
       },
     };
   }
@@ -789,6 +861,8 @@ function buildLongLookWorkflow(p: {
   videoLoraLow?: string;
   videoLoraStrength?: number;
   videoLoraPass?: "high" | "low" | "both";
+  audioMode?: "none" | "ambient";
+  audioPrompt?: string;
 }): Record<string, any> {
   const halfSteps = Math.max(1, Math.floor(p.steps / 2));
   const seqCount = Math.min(4, Math.max(1, p.prompts.length));
@@ -1149,6 +1223,13 @@ function buildLongLookWorkflow(p: {
     finalFrames = ["899", 0];
   }
 
+  // MMAudio ambient sound generation (optional)
+  const audioMode = p.audioMode || "none";
+  let audioNodeId: string | undefined;
+  if (audioMode === "ambient") {
+    audioNodeId = addMMAudioNodes(workflow, finalFrames[0], p.seed, p.audioPrompt || p.prompts[0]);
+  }
+
   // Encode frames → video with quality control
   workflow["901"] = {
     class_type: "VHS_VideoCombine",
@@ -1164,6 +1245,7 @@ function buildLongLookWorkflow(p: {
       trim_to_audio: false,
       pingpong: false,
       save_output: true,
+      ...(audioNodeId ? { audio: [audioNodeId, 0] } : {}),
     },
   };
 
@@ -1683,6 +1765,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         videoLoraPass = "both",
         sequenceCount = 2,
         motionScale,
+        audioMode = "none",
+        audioPrompt,
       } = req.body;
 
       if (!prompt)
@@ -1700,7 +1784,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         : workflowType === "gltch-wan" && useVidUpscale ? "gltch-wan-hd"
           : workflowType;
       const baseCost = COMFY_COSTS[costKey] ?? 1;
-      const cost = skipCredits ? 0 : (workflowType === "longlook" ? baseCost * Math.min(4, Math.max(1, Number(sequenceCount))) : baseCost);
+      const audioCost = audioMode === "ambient" ? 1 : 0;
+      const cost = skipCredits ? 0 : (workflowType === "longlook" ? baseCost * Math.min(4, Math.max(1, Number(sequenceCount))) + audioCost : baseCost + audioCost);
       let creditDeducted = false;
 
       if (!isAdminUser || adminTestCredits) {
@@ -1824,6 +1909,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           videoLoraLow: resolvedVideoLoraLow,
           videoLoraStrength: Number(videoLoraStrength),
           videoLoraPass: (["high", "low", "both"].includes(videoLoraPass) ? videoLoraPass : "both") as "high" | "low" | "both",
+          audioMode: (["none", "ambient"].includes(audioMode) ? audioMode : "none") as "none" | "ambient",
+          audioPrompt: audioPrompt || undefined,
         });
       } else if (workflowType === "gltch-wan") {
         const resolution = Math.min(1280, Math.max(480, Number(req.body.resolution) || 832));
@@ -1868,6 +1955,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           videoLoraLow: resolvedGltchLoraLow,
           videoLoraStrength: Number(videoLoraStrength),
           videoLoraPass: (["high", "low", "both"].includes(videoLoraPass) ? videoLoraPass : "both") as "high" | "low" | "both",
+          audioMode: (["none", "ambient"].includes(audioMode) ? audioMode : "none") as "none" | "ambient",
+          audioPrompt: audioPrompt || undefined,
         });
       } else if (workflowType === "longlook") {
         // LongLook multi-clip workflow — split prompt via Grok LLM
@@ -1967,6 +2056,8 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           videoLoraLow: resolvedVideoLoraLow2,
           videoLoraStrength: Number(videoLoraStrength),
           videoLoraPass: (["high", "low", "both"].includes(videoLoraPass) ? videoLoraPass : "both") as "high" | "low" | "both",
+          audioMode: (["none", "ambient"].includes(audioMode) ? audioMode : "none") as "none" | "ambient",
+          audioPrompt: audioPrompt || undefined,
         });
       } else if (workflowType === "qwen-edit") {
         // Qwen edit always uses the Qwen checkpoint — ignore client checkpoint
@@ -2417,6 +2508,38 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
         res.setHeader("Access-Control-Allow-Origin", "*");
         res.status(200);
         res.end(s3Data.buffer);
+
+        // Fire-and-forget: delete the S3 object + its parent folder after delivery
+        const parsed = parseS3Url(url);
+        const s3Bucket = parsed?.bucket || process.env.RUNPOD_S3_BUCKET;
+        const s3Key = parsed?.key;
+        if (s3Bucket && s3Key) {
+          const client = getS3Client();
+          if (client) {
+            (async () => {
+              try {
+                // Delete the specific file
+                await client.send(new DeleteObjectCommand({ Bucket: s3Bucket, Key: s3Key }));
+                console.log(`[s3-cleanup] Deleted s3://${s3Bucket}/${s3Key}`);
+
+                // Also delete the parent folder (RunPod creates UUID folders)
+                const folder = s3Key.split("/").slice(0, -1).join("/");
+                if (folder) {
+                  const list = await client.send(new ListObjectsV2Command({ Bucket: s3Bucket, Prefix: folder + "/" }));
+                  if (list.Contents && list.Contents.length > 0) {
+                    await client.send(new DeleteObjectsCommand({
+                      Bucket: s3Bucket,
+                      Delete: { Objects: list.Contents.map(o => ({ Key: o.Key! })) },
+                    }));
+                    console.log(`[s3-cleanup] Cleaned folder ${folder}/ (${list.Contents.length} objects)`);
+                  }
+                }
+              } catch (err: any) {
+                console.error(`[s3-cleanup] Failed: ${err.message}`);
+              }
+            })();
+          }
+        }
         return;
       } catch (err: any) {
         return res.status(502).json({ error: `S3 proxy failed: ${err.message}` });
