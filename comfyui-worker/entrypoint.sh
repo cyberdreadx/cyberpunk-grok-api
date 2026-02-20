@@ -18,7 +18,7 @@ rm -rf /root/.triton/cache 2>/dev/null
 # ── Auto-download missing models from CivitAI ───────────────────
 # Downloads to network volume so they persist across cold starts.
 # Requires CIVITAI_API_TOKEN env var on the serverless endpoint.
-LORA_DIR="/runpod-volume/runpod-slim/ComfyUI/models/loras"
+LORA_DIR="/workspace/runpod-slim/ComfyUI/models/loras"
 FALLBACK_LORA_DIR="/comfyui/models/loras"
 
 if [ -d "$LORA_DIR" ]; then

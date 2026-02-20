@@ -1338,7 +1338,7 @@ const Index = () => {
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-secondary/5 border border-secondary/20 rounded">
                       <div className="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse" />
                       <span className="font-mono-share text-[9px] text-secondary/70">
-                        WAN 2.2 GGUF Q6K — 3-stage Lightning + SageAttention
+                        WAN 2.2 GGUF — Lightx2v + Pusa enhanced motions
                       </span>
                     </div>
                     <div>
@@ -1362,6 +1362,47 @@ const Index = () => {
                       </span>
                       <span className="text-[8px]">+2 cr</span>
                     </button>
+                    {comfyModels.videoLoras.length > 0 && (
+                      <div>
+                        <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Video LoRA (optional)</label>
+                        <select value={comfyVideoLora} onChange={(e) => setComfyVideoLora(e.target.value)}
+                          className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-[10px] font-mono-share text-foreground">
+                          <option value="none">None</option>
+                          {comfyModels.videoLoras.map((entry) => (
+                            <option key={entry.name} value={entry.name}>
+                              {entry.name.replace(/_/g, " ")}{entry.high && entry.low ? " (paired)" : ""}
+                            </option>
+                          ))}
+                        </select>
+                        {comfyVideoLora !== "none" && (() => {
+                          const selected = comfyModels.videoLoras.find((e) => e.name === comfyVideoLora);
+                          const isPaired = selected?.high && selected?.low;
+                          return (
+                            <div className="mt-1.5 space-y-1.5">
+                              <div>
+                                <label className="font-mono-share text-[9px] text-muted-foreground/70">Strength: {comfyVideoLoraStrength.toFixed(2)}</label>
+                                <input type="range" min={0} max={2} step={0.05} value={comfyVideoLoraStrength}
+                                  onChange={(e) => setComfyVideoLoraStrength(Number(e.target.value))}
+                                  className="w-full accent-secondary mt-0.5" />
+                              </div>
+                              {!isPaired && (
+                                <div>
+                                  <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Apply to pass</label>
+                                  <div className="flex gap-1.5">
+                                    {(["high", "low", "both"] as const).map((p) => (
+                                      <button key={p} type="button" onClick={() => setComfyVideoLoraPass(p)}
+                                        className={`px-2 py-1 rounded text-[9px] font-mono-share transition-all ${comfyVideoLoraPass === p ? "bg-secondary/20 border-secondary/50 text-secondary border" : "bg-card/30 border border-border text-muted-foreground hover:border-secondary/30"}`}>
+                                        {p === "high" ? "High Noise" : p === "low" ? "Low Noise" : "Both"}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    )}
                   </div>
                 )}
                 {/* Old Comfy ANIMATE settings — hidden, GLTCH replaces this */}
