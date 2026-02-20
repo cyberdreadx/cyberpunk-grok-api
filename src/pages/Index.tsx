@@ -67,7 +67,6 @@ const Index = () => {
     grokEditQueued,
     generateVideo,
     editVideo,
-    gltchEdit,
     comfyGenerate,
     comfyEdit,
     comfyVideo,
@@ -99,9 +98,8 @@ const Index = () => {
   const [activeImageUrl, setActiveImageUrl] = useState("");
 
   // Engine selectors per mode
-  type EditEngine = "grok" | "gltch" | "comfy";
+  type EditEngine = "grok" | "gltch";
   const [editEngine, setEditEngine] = useState<EditEngine>("grok");
-  const [gltchHd, setGltchHd] = useState(false);
   const [grokPro, setGrokPro] = useState(false);
   const [qwenLoraStack, setQwenLoraStack] = useState<{ name: string; strengthModel: number; strengthClip: number }[]>([]);
   const [comfyEditUpscale, setComfyEditUpscale] = useState(false);
@@ -204,12 +202,11 @@ const Index = () => {
     // Determine which engine pathway
     const isGrokEdit = mode === "edit-image" && editEngine === "grok";
     const isGltchEdit = mode === "edit-image" && editEngine === "gltch";
-    const isComfyEdit = mode === "edit-image" && editEngine === "comfy";
     const isComfyGen = mode === "text-to-image" && genEngine === "comfy";
     const isComfyRender = mode === "text-to-video" && renderEngine === "comfy";
     const isComfyAnimate = mode === "image-to-video" && animateEngine === "comfy" && !longLookEnabled;
     const isComfyLongLook = mode === "image-to-video" && animateEngine === "comfy" && longLookEnabled;
-    const isComfy = isComfyGen || isComfyEdit || isComfyRender || isComfyAnimate || isComfyLongLook;
+    const isComfy = isComfyGen || isGltchEdit || isComfyRender || isComfyAnimate || isComfyLongLook;
     // Grok edit in BYOK mode uses the user's own API key directly — no credits needed
     const isGrokEditByok = isGrokEdit && effectiveApiMode === "byok" && apiKeySet;
     const isQueued = isGrokEdit || isGltchEdit || isComfy;
@@ -250,8 +247,6 @@ const Index = () => {
       if (isGrokEdit) {
         cost = calculateCreditCost(grokPro ? "edit-image-pro" : "edit-image", settings.count);
       } else if (isGltchEdit) {
-        cost = calculateCreditCost(gltchHd ? "gltch-edit-hd" : "gltch-edit");
-      } else if (isComfyEdit) {
         cost = calculateCreditCost(comfyEditUpscale ? "comfy-image-hd" : "comfy-image");
       } else if (isComfyGen) {
         cost = calculateCreditCost("comfy-image");
@@ -286,8 +281,7 @@ const Index = () => {
       if (!isAdmin && !isGrokEditByok) {
         let cost: number;
         if (isGrokEdit) cost = calculateCreditCost(grokPro ? "edit-image-pro" : "edit-image", settings.count);
-        else if (isGltchEdit) cost = calculateCreditCost(gltchHd ? "gltch-edit-hd" : "gltch-edit");
-        else if (isComfyEdit) cost = calculateCreditCost(comfyEditUpscale ? "comfy-image-hd" : "comfy-image");
+        else if (isGltchEdit) cost = calculateCreditCost(comfyEditUpscale ? "comfy-image-hd" : "comfy-image");
         else if (isComfyGen) cost = calculateCreditCost("comfy-image");
         else if (isComfyLongLook) cost = calculateCreditCost("comfy-longlook", longLookSeqCount);
         else cost = calculateCreditCost("comfy-video");
@@ -304,17 +298,9 @@ const Index = () => {
             pro: grokPro,
           });
         } else if (isGltchEdit) {
-          gltchEdit({
-            prompt: data.prompt,
-            image_url: data.imageUrl!,
-            aspectRatio: settings.aspectRatio,
-            hd: gltchHd,
-          });
-        } else if (isComfyEdit) {
           const imageBase64 = data.imageUrl!.startsWith("data:")
             ? data.imageUrl!
             : await urlToBase64(data.imageUrl!);
-          // Auto-detect input image dimensions, cap at 1024 for speed
           const dim = await getImageDimensions(imageBase64);
           const round8 = (v: number) => Math.round(v / 8) * 8;
           const maxDim = 1024;
@@ -647,7 +633,7 @@ const Index = () => {
                   <Zap className="w-3 h-3" />
                   ENGINE
                 </label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={() => setEditEngine("grok")}
@@ -671,7 +657,7 @@ const Index = () => {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setEditEngine("gltch")}
+                    onClick={() => { setEditEngine("gltch"); fetchComfyModels(); }}
                     className={`
                       p-2.5 border rounded text-left transition-all duration-200
                       ${editEngine === "gltch"
@@ -684,75 +670,13 @@ const Index = () => {
                       GLTCH
                     </div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
-                      <span>Qwen Edit</span>
-                      <span className={editEngine === "gltch" ? "text-secondary/70" : "text-muted-foreground/50"}>
-                        {gltchHd ? "2" : "1"} cr
-                      </span>
-                    </div>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setEditEngine("comfy"); fetchComfyModels(); }}
-                    className={`
-                      p-2.5 border rounded text-left transition-all duration-200 relative overflow-hidden
-                      ${editEngine === "comfy"
-                        ? "border-purple-500 neon-border bg-purple-500/5"
-                        : "border-border bg-card/30 hover:border-purple-500/40"
-                      }
-                    `}
-                  >
-                    <div className="absolute -top-0.5 -right-0.5 bg-green-500 text-[6px] font-orbitron text-black px-1.5 py-0.5 rounded-bl font-bold tracking-wide">
-                      SAVE 50%
-                    </div>
-                    <div className={`font-orbitron text-[11px] ${editEngine === "comfy" ? "text-purple-400" : "text-foreground"}`}>
-                      GLTCH
-                    </div>
-                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>Edit + LoRA</span>
-                      <span className={editEngine === "comfy" ? "text-green-400" : "text-green-400/70"}>
-                        1 cr
+                      <span className={editEngine === "gltch" ? "text-secondary/70" : "text-muted-foreground/50"}>
+                        {comfyEditUpscale ? "2" : "1"} cr
                       </span>
                     </div>
                   </button>
                 </div>
-
-                {/* GLTCH HD toggle */}
-                {editEngine === "gltch" && (
-                  <button
-                    type="button"
-                    onClick={() => setGltchHd(!gltchHd)}
-                    className={`
-                      w-full flex items-center justify-between px-3 py-2 border rounded
-                      font-mono-share text-[10px] transition-all duration-200
-                      ${gltchHd
-                        ? "border-secondary/50 bg-secondary/5 text-secondary"
-                        : "border-border bg-card/30 text-muted-foreground hover:border-secondary/30"
-                      }
-                    `}
-                  >
-                    <span className="flex items-center gap-1.5">
-                      <span className={`w-3 h-3 border rounded-sm flex items-center justify-center text-[8px]
-                        ${gltchHd ? "border-secondary bg-secondary text-secondary-foreground" : "border-muted-foreground/30"}
-                      `}>
-                        {gltchHd && "✓"}
-                      </span>
-                      HD UPSCALE (1.5x UltraSharp)
-                    </span>
-                    <span className="text-[9px]">
-                      {gltchHd ? "2 cr" : "+1 cr"}
-                    </span>
-                  </button>
-                )}
-
-                {/* GLTCH info badge */}
-                {editEngine === "gltch" && (
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-secondary/5 border border-secondary/20 rounded">
-                    <div className="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse" />
-                    <span className="font-mono-share text-[9px] text-secondary/70">
-                      Qwen2.5 VL Edit — 5 step, 1 image per job
-                    </span>
-                  </div>
-                )}
 
                 {/* PRO quality toggle — Grok edit */}
                 {editEngine === "grok" && (
@@ -782,26 +706,13 @@ const Index = () => {
                   </button>
                 )}
 
-                {/* Comfy savings callout when Grok edit is selected */}
-                {editEngine === "grok" && (
-                  <div
-                    onClick={() => { setEditEngine("comfy"); fetchComfyModels(); }}
-                    className="flex items-center gap-2 px-3 py-1.5 bg-green-500/5 border border-green-500/20 rounded cursor-pointer hover:bg-green-500/10 transition-colors"
-                  >
-                    <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
-                    <span className="font-mono-share text-[9px] text-green-400/80">
-                      Try GLTCH edit — same quality, {grokPro ? "75%" : "50%"} cheaper
-                    </span>
-                  </div>
-                )}
-
-                {/* COMFY edit controls — LoRA selector + strength */}
-                {editEngine === "comfy" && (
+                {/* GLTCH edit controls — LoRA selector + upscale */}
+                {editEngine === "gltch" && (
                   <>
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-green-500/5 border border-green-500/20 rounded">
-                      <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                      <span className="font-mono-share text-[9px] text-green-400/80">
-                        {comfyEditUpscale ? "2" : "1"} cr/edit — {comfyEditUpscale ? "HD 2x upscale" : "GLTCH Edit"} + LoRA support
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-secondary/5 border border-secondary/20 rounded">
+                      <div className="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse" />
+                      <span className="font-mono-share text-[9px] text-secondary/70">
+                        {comfyEditUpscale ? "2" : "1"} cr/edit — Qwen2.5 VL Edit + LoRA
                       </span>
                     </div>
                     {comfyModels.qwenLoras.length > 0 && (
