@@ -1,5 +1,5 @@
-import React, { useState, useCallback, Suspense } from "react";
-import { Terminal, Key, Coins, Shield, Eye, MessageCircle, HelpCircle, Server, Zap, Cpu, ChevronDown, Film, X, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
+import React, { useState, useCallback, useRef, Suspense } from "react";
+import { Terminal, Key, Coins, Shield, Eye, MessageCircle, HelpCircle, Server, Zap, Cpu, ChevronDown, Film, X, AlertCircle, CheckCircle2, Loader2, Upload } from "lucide-react";
 import { Link } from "react-router-dom";
 import CyberLayout from "@/components/CyberLayout";
 
@@ -120,6 +120,9 @@ const Index = () => {
   const [grokPro, setGrokPro] = useState(false);
   const [qwenLoraStack, setQwenLoraStack] = useState<{ name: string; strengthModel: number; strengthClip: number }[]>([]);
   const [comfyEditUpscale, setComfyEditUpscale] = useState(false);
+  const [gltchImage2, setGltchImage2] = useState<string | null>(null);
+  const [gltchImage2Name, setGltchImage2Name] = useState("");
+  const gltchImage2Ref = useRef<HTMLInputElement>(null);
 
   type ComfyEngine = "grok" | "comfy" | "gltch";
   const [genEngine, setGenEngine] = useState<ComfyEngine>("grok");
@@ -204,6 +207,32 @@ const Index = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
     toast({ title: "ANIMATE MODE", description: "Image loaded — describe the motion to apply." });
   }, [toast]);
+
+  const handleGltchImage2 = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext("2d");
+        ctx?.drawImage(img, 0, 0);
+        setGltchImage2(canvas.toDataURL("image/png"));
+        setGltchImage2Name(file.name.replace(/\.[^.]+$/, "") + ".png");
+      };
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+  }, []);
+
+  const clearGltchImage2 = useCallback(() => {
+    setGltchImage2(null);
+    setGltchImage2Name("");
+    if (gltchImage2Ref.current) gltchImage2Ref.current.value = "";
+  }, []);
 
   // When a result is moved to a folder, persist to IndexedDB + update React state
   const handleMoveToFolder = useCallback(async (resultId: string, folderId: string | null) => {
@@ -336,6 +365,8 @@ const Index = () => {
             prompt: data.prompt,
             negativePrompt: comfyNegPrompt || undefined,
             imageBase64,
+            imageBase64_2: gltchImage2 || undefined,
+            imageFilename2: gltchImage2Name || undefined,
             width: round8(Math.max(256, w)),
             height: round8(Math.max(256, h)),
             steps: comfySteps,
@@ -900,6 +931,42 @@ const Index = () => {
                         +1 cr
                       </span>
                     </button>
+                    <div>
+                      <label className="font-mono-share text-[9px] text-muted-foreground mb-1 block">SECOND IMAGE (OPTIONAL)</label>
+                      {gltchImage2 ? (
+                        <div className="relative">
+                          <img
+                            src={gltchImage2}
+                            alt="Reference 2"
+                            className="w-full max-h-36 object-contain rounded border border-purple-500/20 bg-black/60"
+                          />
+                          <button
+                            type="button"
+                            onClick={clearGltchImage2}
+                            className="absolute top-1 right-1 p-1 bg-black/80 rounded-full text-red-400 hover:text-red-300"
+                            title="Remove second image"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => gltchImage2Ref.current?.click()}
+                          className="w-full flex items-center justify-center gap-2 px-3 py-3 bg-black/60 border border-dashed border-purple-500/30 rounded text-xs font-mono-share text-purple-400/60 hover:border-purple-400/50 hover:text-purple-300 transition-colors"
+                        >
+                          <Upload className="w-3.5 h-3.5" />
+                          Add reference image
+                        </button>
+                      )}
+                      <input
+                        ref={gltchImage2Ref}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleGltchImage2}
+                        className="hidden"
+                      />
+                    </div>
                   </>
                 )}
               </div>
