@@ -1148,7 +1148,7 @@ const Index = () => {
                   <Zap className="w-3 h-3" />
                   ENGINE
                 </label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   <button type="button" onClick={() => setAnimateEngine("grok")}
                     className={`p-2.5 border rounded text-left transition-all duration-200 ${animateEngine === "grok" ? "border-primary neon-border bg-primary/5" : "border-border bg-card/30 hover:border-primary/40"}`}>
                     <div className={`font-orbitron text-[11px] ${animateEngine === "grok" ? "text-primary" : "text-foreground"}`}>GROK</div>
@@ -1161,16 +1161,8 @@ const Index = () => {
                     className={`p-2.5 border rounded text-left transition-all duration-200 ${animateEngine === "gltch" ? "border-secondary neon-border bg-secondary/5" : "border-border bg-card/30 hover:border-secondary/40"}`}>
                     <div className={`font-orbitron text-[11px] ${animateEngine === "gltch" ? "text-secondary" : "text-foreground"}`}>GLTCH</div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
-                      <span>GGUF I2V</span>
+                      <span>WAN 2.2 I2V</span>
                       <span className={animateEngine === "gltch" ? "text-secondary/70" : "text-muted-foreground/50"}>2 cr</span>
-                    </div>
-                  </button>
-                  <button type="button" onClick={() => setAnimateEngine("comfy")}
-                    className={`p-2.5 border rounded text-left transition-all duration-200 ${animateEngine === "comfy" ? "border-purple-500 bg-purple-500/5 shadow-[0_0_8px_rgba(168,85,247,0.15)]" : "border-border bg-card/30 hover:border-purple-500/40"}`}>
-                    <div className={`font-orbitron text-[11px] ${animateEngine === "comfy" ? "text-purple-400" : "text-foreground"}`}>COMFY</div>
-                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
-                      <span>WAN Video</span>
-                      <span className={animateEngine === "comfy" ? "text-purple-400/70" : "text-muted-foreground/50"}>3 cr</span>
                     </div>
                   </button>
                 </div>
@@ -1206,10 +1198,9 @@ const Index = () => {
                     </button>
                   </div>
                 )}
-                {/* Comfy ANIMATE settings */}
-                {animateEngine === "comfy" && (
+                {/* Old Comfy ANIMATE settings — hidden, GLTCH replaces this */}
+                {animateEngine === "comfy" && false && (
                   <div className="space-y-2">
-                    {/* LongLook toggle */}
                     <button type="button" onClick={() => setLongLookEnabled(!longLookEnabled)}
                       className={`w-full flex items-center justify-between px-3 py-2 border rounded font-mono-share text-[10px] transition-all duration-200 ${longLookEnabled ? "border-purple-500/50 bg-purple-500/10 text-purple-300" : "border-border bg-card/30 text-muted-foreground hover:border-purple-500/30"}`}>
                       <span className="flex items-center gap-1.5">
