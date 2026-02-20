@@ -25,6 +25,8 @@ const COMFY_COSTS: Record<string, number> = {
   "qwen-edit": 1,
   "qwen-edit-hd": 2,
   "wan-video": 2,
+  "gltch-wan": 2,
+  "gltch-wan-hd": 4,
   "longlook": 2, // per sequence — actual cost = sequenceCount * 2
 };
 
@@ -353,6 +355,333 @@ function buildWanVideoWorkflow(p: {
       save_output: true,
     },
   };
+
+  return workflow;
+}
+
+/**
+ * GLTCH WAN 2.2 I2V workflow — 3-stage GGUF pipeline with Lightning LoRAs.
+ *
+ * Three-stage KSamplerAdvanced:
+ *   Stage 1: High-noise GGUF (no LoRA), cfg=3.5, add_noise=enable
+ *   Stage 2: High-noise GGUF + Lightning LoRA, cfg=1
+ *   Stage 3: Low-noise GGUF + Lightning LoRA, cfg=1
+ *
+ * Each model path gets SageAttention + fp16 accumulation + PatchModelPatcherOrder.
+ * UnloadModel nodes free VRAM between stages.
+ * Post-processing: ColorMatch → RealESRGAN 2x → RIFE 4x interpolation (60fps).
+ */
+function buildGltchWanWorkflow(p: {
+  prompt: string;
+  negativePrompt: string;
+  imageFilename: string;
+  width: number;
+  height: number;
+  seed: number;
+  steps: number;
+  cfg: number;
+  frameCount: number;
+  resolution: number;
+  stage1End: number;
+  stage2End: number;
+  useUpscale: boolean;
+}): Record<string, any> {
+  const highGguf = process.env.COMFYUI_WAN_HIGH_GGUF || "wan2.2_i2v_high_noise_14B_Q6_K.gguf";
+  const lowGguf = process.env.COMFYUI_WAN_LOW_GGUF || "wan2.2_i2v_low_noise_14B_Q6_K.gguf";
+  const highLora = process.env.COMFYUI_WAN_HIGH_LORA || "wan2-2/Wan2.2-I2V-A14B-4steps-lora-rank64-Seko-V1-high-noise.safetensors";
+  const lowLora = process.env.COMFYUI_WAN_LOW_LORA || "wan2-2/Wan2.2-I2V-A14B-4steps-lora-rank64-Seko-V1-low-noise.safetensors";
+  const clipModel = process.env.COMFYUI_WAN_CLIP || "umt5_xxl_fp8_e4m3fn_scaled.safetensors";
+
+  const workflow: Record<string, any> = {
+    // CLIP
+    "1": {
+      class_type: "CLIPLoader",
+      inputs: { clip_name: clipModel, type: "wan", device: "default" },
+    },
+    // VAE
+    "7": {
+      class_type: "VAELoader",
+      inputs: { vae_name: "wan_2.1_vae.safetensors" },
+    },
+    // Input image
+    "129": {
+      class_type: "LoadImage",
+      inputs: { image: p.imageFilename },
+    },
+    // Resize image to target resolution (long side), divisible by 16
+    "94": {
+      class_type: "ImageResizeKJv2",
+      inputs: {
+        image: ["129", 0],
+        width: p.resolution,
+        height: p.resolution,
+        upscale_method: "lanczos",
+        keep_proportion: "resize",
+        pad_color: "0, 0, 0",
+        crop_position: "center",
+        divisible_by: 16,
+        device: "cpu",
+      },
+    },
+    // Clean GPU before conditioning
+    "128": {
+      class_type: "easy cleanGpuUsed",
+      inputs: { anything: ["94", 0] },
+    },
+    // Positive prompt
+    "13": {
+      class_type: "CLIPTextEncode",
+      inputs: { clip: ["1", 0], text: p.prompt },
+    },
+    // Negative prompt
+    "6": {
+      class_type: "CLIPTextEncode",
+      inputs: { clip: ["1", 0], text: p.negativePrompt },
+    },
+    // WanImageToVideo conditioning
+    "10": {
+      class_type: "WanImageToVideo",
+      inputs: {
+        positive: ["13", 0],
+        negative: ["6", 0],
+        vae: ["7", 0],
+        start_image: ["128", 0],
+        width: ["94", 1],
+        height: ["94", 2],
+        length: p.frameCount,
+        batch_size: 1,
+      },
+    },
+    // Seed
+    "121": {
+      class_type: "easy seed",
+      inputs: { seed: p.seed },
+    },
+
+    // ── GGUF Model Loading ──
+    "29": {
+      class_type: "UnetLoaderGGUF",
+      inputs: { unet_name: highGguf },
+    },
+    "30": {
+      class_type: "UnetLoaderGGUF",
+      inputs: { unet_name: lowGguf },
+    },
+
+    // ── Lightning LoRAs ──
+    "19": {
+      class_type: "LoraLoaderModelOnly",
+      inputs: { model: ["29", 0], lora_name: highLora, strength_model: 1 },
+    },
+    "20": {
+      class_type: "LoraLoaderModelOnly",
+      inputs: { model: ["30", 0], lora_name: lowLora, strength_model: 1 },
+    },
+
+    // ── SageAttention patches ──
+    // High + LoRA path
+    "21": {
+      class_type: "PathchSageAttentionKJ",
+      inputs: { model: ["19", 0], sage_attention: "auto", allow_compile: false },
+    },
+    "33": {
+      class_type: "ModelPatchTorchSettings",
+      inputs: { model: ["21", 0], enable_fp16_accumulation: true },
+    },
+    "32": {
+      class_type: "PatchModelPatcherOrder",
+      inputs: { model: ["33", 0], patch_order: "weight_patch_first", full_load: "auto" },
+    },
+    // Low + LoRA path
+    "36": {
+      class_type: "PathchSageAttentionKJ",
+      inputs: { model: ["20", 0], sage_attention: "auto", allow_compile: false },
+    },
+    "35": {
+      class_type: "ModelPatchTorchSettings",
+      inputs: { model: ["36", 0], enable_fp16_accumulation: true },
+    },
+    "34": {
+      class_type: "PatchModelPatcherOrder",
+      inputs: { model: ["35", 0], patch_order: "weight_patch_first", full_load: "auto" },
+    },
+    // High NO LoRA path (stage 1)
+    "39": {
+      class_type: "PathchSageAttentionKJ",
+      inputs: { model: ["29", 0], sage_attention: "auto", allow_compile: false },
+    },
+    "38": {
+      class_type: "ModelPatchTorchSettings",
+      inputs: { model: ["39", 0], enable_fp16_accumulation: true },
+    },
+    "37": {
+      class_type: "PatchModelPatcherOrder",
+      inputs: { model: ["38", 0], patch_order: "weight_patch_first", full_load: "auto" },
+    },
+
+    // ── ModelSamplingSD3 shift scheduling ──
+    "43": {
+      class_type: "ModelSamplingSD3",
+      inputs: { model: ["37", 0], shift: 8.000000000000002 },
+    },
+    "8": {
+      class_type: "ModelSamplingSD3",
+      inputs: { model: ["32", 0], shift: 8.000000000000002 },
+    },
+    "9": {
+      class_type: "ModelSamplingSD3",
+      inputs: { model: ["34", 0], shift: 8 },
+    },
+
+    // ── Stage 1: High noise, NO LoRA, add_noise=enable ──
+    "31": {
+      class_type: "KSamplerAdvanced",
+      inputs: {
+        model: ["43", 0],
+        positive: ["10", 0],
+        negative: ["10", 1],
+        latent_image: ["10", 2],
+        add_noise: "enable",
+        noise_seed: ["121", 0],
+        steps: p.steps,
+        cfg: p.cfg,
+        sampler_name: "euler",
+        scheduler: "beta",
+        start_at_step: 0,
+        end_at_step: p.stage1End,
+        return_with_leftover_noise: "enable",
+      },
+    },
+    // Unload stage 1 model
+    "72": {
+      class_type: "UnloadModel",
+      inputs: { value: ["31", 0], model: ["43", 0] },
+    },
+
+    // ── Stage 2: High noise + LoRA, cfg=1 ──
+    "3": {
+      class_type: "KSamplerAdvanced",
+      inputs: {
+        model: ["8", 0],
+        positive: ["10", 0],
+        negative: ["10", 1],
+        latent_image: ["72", 0],
+        add_noise: "disable",
+        noise_seed: ["121", 0],
+        steps: p.steps,
+        cfg: 1,
+        sampler_name: "euler",
+        scheduler: "beta",
+        start_at_step: p.stage1End,
+        end_at_step: p.stage2End,
+        return_with_leftover_noise: "enable",
+      },
+    },
+    // Unload stage 2 model
+    "73": {
+      class_type: "UnloadModel",
+      inputs: { value: ["3", 0], model: ["8", 0] },
+    },
+
+    // ── Stage 3: Low noise + LoRA, cfg=1 ──
+    "2": {
+      class_type: "KSamplerAdvanced",
+      inputs: {
+        model: ["9", 0],
+        positive: ["10", 0],
+        negative: ["10", 1],
+        latent_image: ["73", 0],
+        add_noise: "disable",
+        noise_seed: ["121", 0],
+        steps: p.steps,
+        cfg: 1,
+        sampler_name: "euler",
+        scheduler: "beta",
+        start_at_step: p.stage2End,
+        end_at_step: 10000,
+        return_with_leftover_noise: "disable",
+      },
+    },
+    // Unload stage 3 model
+    "74": {
+      class_type: "UnloadModel",
+      inputs: { value: ["2", 0], model: ["9", 0] },
+    },
+
+    // ── VAE Decode ──
+    "4": {
+      class_type: "VAEDecode",
+      inputs: { samples: ["74", 0], vae: ["7", 0] },
+    },
+
+    // ── Base video output (16fps, no post-processing) ──
+    "16": {
+      class_type: "VHS_VideoCombine",
+      inputs: {
+        images: ["4", 0],
+        frame_rate: 16,
+        loop_count: 0,
+        filename_prefix: "GltchWAN",
+        format: "video/h264-mp4",
+        pix_fmt: "yuv420p",
+        crf: 19,
+        save_metadata: true,
+        trim_to_audio: false,
+        pingpong: false,
+        save_output: true,
+      },
+    },
+  };
+
+  // ── Optional post-processing: ColorMatch → RealESRGAN 2x → RIFE 4x (60fps) ──
+  if (p.useUpscale) {
+    workflow["83"] = {
+      class_type: "ColorMatch",
+      inputs: {
+        image_ref: ["129", 0],
+        image_target: ["4", 0],
+        method: "reinhard",
+        strength: 0.4,
+        multithread: true,
+      },
+    };
+    workflow["84"] = {
+      class_type: "UpscaleModelLoader",
+      inputs: { model_name: "RealESRGAN_x2plus.pth" },
+    };
+    workflow["80"] = {
+      class_type: "ImageUpscaleWithModel",
+      inputs: { upscale_model: ["84", 0], image: ["83", 0] },
+    };
+    workflow["81"] = {
+      class_type: "RIFE VFI",
+      inputs: {
+        frames: ["80", 0],
+        ckpt_name: "rife49.pth",
+        clear_cache_after_n_frames: 16,
+        multiplier: 4,
+        fast_mode: false,
+        ensemble: true,
+        scale_factor: 1,
+      },
+    };
+    workflow["85"] = {
+      class_type: "VHS_VideoCombine",
+      inputs: {
+        images: ["81", 0],
+        frame_rate: 60,
+        loop_count: 0,
+        filename_prefix: "GltchWAN-HD",
+        format: "video/h264-mp4",
+        pix_fmt: "yuv420p",
+        crf: 19,
+        save_metadata: true,
+        trim_to_audio: false,
+        pingpong: false,
+        save_output: true,
+      },
+    };
+  }
 
   return workflow;
 }
@@ -1221,7 +1550,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // skipCredits: client passes true for the first step of a chained workflow
       // (e.g. txt2img as part of text-to-video — the video step pays for both)
       const skipCredits = req.body.skipCredits === true;
-      const costKey = workflowType === "qwen-edit" && upscale ? "qwen-edit-hd" : workflowType;
+      const costKey = workflowType === "qwen-edit" && upscale ? "qwen-edit-hd"
+        : workflowType === "gltch-wan" && useVidUpscale ? "gltch-wan-hd"
+        : workflowType;
       const baseCost = COMFY_COSTS[costKey] ?? 1;
       const cost = skipCredits ? 0 : (workflowType === "longlook" ? baseCost * Math.min(4, Math.max(1, Number(sequenceCount))) : baseCost);
       let creditDeducted = false;
@@ -1261,7 +1592,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const clampCfg = Math.min(30, Math.max(0.1, Number(cfg) || 1));
 
       // Workflows that need a start image
-      const needsImage = workflowType === "qwen-edit" || workflowType === "wan-video" || workflowType === "longlook";
+      const needsImage = workflowType === "qwen-edit" || workflowType === "wan-video" || workflowType === "gltch-wan" || workflowType === "longlook";
 
       // Determine image filename for workflow
       let imageFilename: string | undefined;
@@ -1346,6 +1677,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           videoLoraLow: resolvedVideoLoraLow,
           videoLoraStrength: Number(videoLoraStrength),
           videoLoraPass: (["high", "low", "both"].includes(videoLoraPass) ? videoLoraPass : "both") as "high" | "low" | "both",
+        });
+      } else if (workflowType === "gltch-wan") {
+        const resolution = Math.min(1280, Math.max(480, Number(req.body.resolution) || 832));
+        const stage1End = Math.max(1, Number(req.body.stage1End) || 2);
+        const stage2End = Math.max(stage1End + 1, Number(req.body.stage2End) || 4);
+
+        workflow = buildGltchWanWorkflow({
+          prompt: prompt.trim(),
+          negativePrompt: (negativePrompt || "").trim() || WAN_DEFAULT_NEGATIVE,
+          imageFilename: imageFilename!,
+          width: clampW,
+          height: clampH,
+          seed: actualSeed,
+          steps: clampSteps,
+          cfg: clampCfg,
+          frameCount: Math.min(241, Math.max(17, Number(frameCount))),
+          resolution,
+          stage1End,
+          stage2End,
+          useUpscale: !!useVidUpscale,
         });
       } else if (workflowType === "longlook") {
         // LongLook multi-clip workflow — split prompt via Grok LLM
@@ -1503,7 +1854,7 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
       }
 
       // Resolve which RunPod endpoint to use (WAN video may have its own)
-      const isVideoWorkflow = workflowType === "wan-video" || workflowType === "longlook";
+      const isVideoWorkflow = workflowType === "wan-video" || workflowType === "gltch-wan" || workflowType === "longlook";
       const runpodEndpoint = isVideoWorkflow
         ? (process.env.RUNPOD_WAN_ENDPOINT_ID || backend.runpodEndpoint)
         : backend.runpodEndpoint;

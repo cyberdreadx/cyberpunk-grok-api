@@ -104,7 +104,7 @@ const Index = () => {
   const [qwenLoraStack, setQwenLoraStack] = useState<{ name: string; strengthModel: number; strengthClip: number }[]>([]);
   const [comfyEditUpscale, setComfyEditUpscale] = useState(false);
 
-  type ComfyEngine = "grok" | "comfy";
+  type ComfyEngine = "grok" | "comfy" | "gltch";
   const [genEngine, setGenEngine] = useState<ComfyEngine>("grok");
   const [renderEngine, setRenderEngine] = useState<ComfyEngine>("grok");
   const [animateEngine, setAnimateEngine] = useState<ComfyEngine>("grok");
@@ -204,9 +204,10 @@ const Index = () => {
     const isGltchEdit = mode === "edit-image" && editEngine === "gltch";
     const isComfyGen = mode === "text-to-image" && genEngine === "comfy";
     const isComfyRender = mode === "text-to-video" && renderEngine === "comfy";
+    const isGltchWan = mode === "image-to-video" && animateEngine === "gltch";
     const isComfyAnimate = mode === "image-to-video" && animateEngine === "comfy" && !longLookEnabled;
     const isComfyLongLook = mode === "image-to-video" && animateEngine === "comfy" && longLookEnabled;
-    const isComfy = isComfyGen || isGltchEdit || isComfyRender || isComfyAnimate || isComfyLongLook;
+    const isComfy = isComfyGen || isGltchEdit || isGltchWan || isComfyRender || isComfyAnimate || isComfyLongLook;
     // Grok edit in BYOK mode uses the user's own API key directly — no credits needed
     const isGrokEditByok = isGrokEdit && effectiveApiMode === "byok" && apiKeySet;
     const isQueued = isGrokEdit || isGltchEdit || isComfy;
@@ -252,6 +253,8 @@ const Index = () => {
         cost = calculateCreditCost("comfy-image");
       } else if (isComfyLongLook) {
         cost = calculateCreditCost("comfy-longlook", longLookSeqCount);
+      } else if (isGltchWan) {
+        cost = calculateCreditCost(comfyVidUpscale ? "comfy-video" : "comfy-video");
       } else if (isComfyRender || isComfyAnimate) {
         cost = calculateCreditCost("comfy-video");
       } else {
@@ -282,6 +285,7 @@ const Index = () => {
         let cost: number;
         if (isGrokEdit) cost = calculateCreditCost(grokPro ? "edit-image-pro" : "edit-image", settings.count);
         else if (isGltchEdit) cost = calculateCreditCost(comfyEditUpscale ? "comfy-image-hd" : "comfy-image");
+        else if (isGltchWan) cost = calculateCreditCost("comfy-video");
         else if (isComfyGen) cost = calculateCreditCost("comfy-image");
         else if (isComfyLongLook) cost = calculateCreditCost("comfy-longlook", longLookSeqCount);
         else cost = calculateCreditCost("comfy-video");
@@ -375,6 +379,24 @@ const Index = () => {
             videoLora: comfyVideoLora !== "none" ? comfyVideoLora : undefined,
             videoLoraStrength: comfyVideoLoraStrength,
             videoLoraPass: comfyVideoLoraPass,
+          });
+        } else if (isGltchWan) {
+          const imageBase64 = data.imageUrl?.startsWith("data:")
+            ? data.imageUrl
+            : data.imageUrl ? await urlToBase64(data.imageUrl) : "";
+          if (!imageBase64) throw new Error("Image is required for GLTCH WAN");
+          comfyVideo({
+            prompt: data.prompt,
+            negativePrompt: comfyNegPrompt || undefined,
+            imageBase64,
+            width: 832,
+            height: 832,
+            frameCount: comfyFrameCount,
+            steps: comfySteps,
+            cfg: comfyCfg,
+            useUpscale: comfyVidUpscale,
+            workflow: "gltch-wan",
+            resolution: 832,
           });
         } else if (isComfyAnimate) {
           const imageBase64 = data.imageUrl?.startsWith("data:")
@@ -1126,13 +1148,21 @@ const Index = () => {
                   <Zap className="w-3 h-3" />
                   ENGINE
                 </label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   <button type="button" onClick={() => setAnimateEngine("grok")}
                     className={`p-2.5 border rounded text-left transition-all duration-200 ${animateEngine === "grok" ? "border-primary neon-border bg-primary/5" : "border-border bg-card/30 hover:border-primary/40"}`}>
                     <div className={`font-orbitron text-[11px] ${animateEngine === "grok" ? "text-primary" : "text-foreground"}`}>GROK</div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>xAI</span>
                       <span className={animateEngine === "grok" ? "text-primary/70" : "text-muted-foreground/50"}>5 cr</span>
+                    </div>
+                  </button>
+                  <button type="button" onClick={() => setAnimateEngine("gltch")}
+                    className={`p-2.5 border rounded text-left transition-all duration-200 ${animateEngine === "gltch" ? "border-secondary neon-border bg-secondary/5" : "border-border bg-card/30 hover:border-secondary/40"}`}>
+                    <div className={`font-orbitron text-[11px] ${animateEngine === "gltch" ? "text-secondary" : "text-foreground"}`}>GLTCH</div>
+                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
+                      <span>GGUF I2V</span>
+                      <span className={animateEngine === "gltch" ? "text-secondary/70" : "text-muted-foreground/50"}>2 cr</span>
                     </div>
                   </button>
                   <button type="button" onClick={() => setAnimateEngine("comfy")}
@@ -1144,6 +1174,38 @@ const Index = () => {
                     </div>
                   </button>
                 </div>
+                {/* GLTCH WAN settings */}
+                {animateEngine === "gltch" && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-secondary/5 border border-secondary/20 rounded">
+                      <div className="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse" />
+                      <span className="font-mono-share text-[9px] text-secondary/70">
+                        WAN 2.2 GGUF Q6K — 3-stage Lightning + SageAttention
+                      </span>
+                    </div>
+                    <div>
+                      <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Duration</label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {[{ label: "~2s", value: 33 }, { label: "~3s", value: 49 }, { label: "~5s", value: 81 }, { label: "~7s", value: 113 }].map((p) => (
+                          <button key={p.value} type="button" onClick={() => setComfyFrameCount(p.value)}
+                            className={`px-2 py-1 rounded text-[9px] font-mono-share transition-all ${comfyFrameCount === p.value ? "bg-secondary/20 border-secondary/50 text-secondary border" : "bg-card/30 border border-border text-muted-foreground hover:border-secondary/30"}`}>
+                            {p.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <button type="button" onClick={() => setComfyVidUpscale(!comfyVidUpscale)}
+                      className={`w-full flex items-center justify-between px-3 py-2 border rounded font-mono-share text-[10px] transition-all duration-200 ${comfyVidUpscale ? "border-secondary/50 bg-secondary/5 text-secondary" : "border-border bg-card/30 text-muted-foreground hover:border-secondary/30"}`}>
+                      <span className="flex items-center gap-1.5">
+                        <span className={`w-3 h-3 border rounded-sm flex items-center justify-center text-[8px] ${comfyVidUpscale ? "border-secondary bg-secondary text-secondary-foreground" : "border-muted-foreground/30"}`}>
+                          {comfyVidUpscale && "✓"}
+                        </span>
+                        HD (2x upscale + RIFE 4x @ 60fps)
+                      </span>
+                      <span className="text-[8px]">+2 cr</span>
+                    </button>
+                  </div>
+                )}
                 {/* Comfy ANIMATE settings */}
                 {animateEngine === "comfy" && (
                   <div className="space-y-2">

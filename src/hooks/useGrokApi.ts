@@ -1063,12 +1063,17 @@ export function useGrokApi() {
     videoLora?: string;
     videoLoraStrength?: number;
     videoLoraPass?: "high" | "low" | "both";
+    workflow?: string;
+    resolution?: number;
+    stage1End?: number;
+    stage2End?: number;
   }) => {
+    const wfType = params.workflow || "wan-video";
     const jobId = `cj-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     const label = params.prompt.length > 80 ? params.prompt.slice(0, 80) + "…" : params.prompt;
 
     const newJob: ComfyJob = {
-      id: jobId, status: "submitting", workflowType: "wan-video",
+      id: jobId, status: "submitting", workflowType: wfType,
       prompt: label, phase: "Rendering video...", elapsed: 0, seed: null, error: null,
     };
     setComfyJobs(prev => [newJob, ...prev]);
@@ -1087,7 +1092,7 @@ export function useGrokApi() {
       try {
         setComfyJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "generating" } : j));
         const result = await comfySubmitAndPoll({
-          workflow: "wan-video",
+          workflow: wfType,
           prompt: params.prompt,
           negativePrompt: params.negativePrompt,
           imageBase64: params.imageBase64,
@@ -1102,6 +1107,9 @@ export function useGrokApi() {
           videoLora: params.videoLora,
           videoLoraStrength: params.videoLoraStrength,
           videoLoraPass: params.videoLoraPass,
+          resolution: params.resolution,
+          stage1End: params.stage1End,
+          stage2End: params.stage2End,
         }, { pollInterval: 5000, maxAttempts: 120 });
 
         clearInterval(timerIv);
