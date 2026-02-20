@@ -478,41 +478,29 @@ function buildGltchWanWorkflow(p: {
       inputs: { model: ["30", 0], lora_name: lowLora, strength_model: 1 },
     },
 
-    // ── SageAttention patches ──
+    // ── Model patches (fp16 accumulation + patch order) ──
     // High + LoRA path
-    "21": {
-      class_type: "PathchSageAttentionKJ",
-      inputs: { model: ["19", 0], sage_attention: "auto", allow_compile: false },
-    },
     "33": {
       class_type: "ModelPatchTorchSettings",
-      inputs: { model: ["21", 0], enable_fp16_accumulation: true },
+      inputs: { model: ["19", 0], enable_fp16_accumulation: true },
     },
     "32": {
       class_type: "PatchModelPatcherOrder",
       inputs: { model: ["33", 0], patch_order: "weight_patch_first", full_load: "auto" },
     },
     // Low + LoRA path
-    "36": {
-      class_type: "PathchSageAttentionKJ",
-      inputs: { model: ["20", 0], sage_attention: "auto", allow_compile: false },
-    },
     "35": {
       class_type: "ModelPatchTorchSettings",
-      inputs: { model: ["36", 0], enable_fp16_accumulation: true },
+      inputs: { model: ["20", 0], enable_fp16_accumulation: true },
     },
     "34": {
       class_type: "PatchModelPatcherOrder",
       inputs: { model: ["35", 0], patch_order: "weight_patch_first", full_load: "auto" },
     },
     // High NO LoRA path (stage 1)
-    "39": {
-      class_type: "PathchSageAttentionKJ",
-      inputs: { model: ["29", 0], sage_attention: "auto", allow_compile: false },
-    },
     "38": {
       class_type: "ModelPatchTorchSettings",
-      inputs: { model: ["39", 0], enable_fp16_accumulation: true },
+      inputs: { model: ["29", 0], enable_fp16_accumulation: true },
     },
     "37": {
       class_type: "PatchModelPatcherOrder",
