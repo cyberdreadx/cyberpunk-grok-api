@@ -52,9 +52,14 @@ RUN cd /comfyui/custom_nodes && \
     wget -qO- https://github.com/SeanScripts/ComfyUI-Unload-Model/archive/refs/heads/main.tar.gz | tar xz && \
     mv ComfyUI-Unload-Model-main ComfyUI-Unload-Model
 
-# ── Build tools (needed by Triton/SageAttention for JIT compilation) ──
+# ── Build tools + CUDA stubs (needed by Triton/SageAttention for JIT compilation) ──
 RUN apt-get update && apt-get install -y --no-install-recommends gcc g++ && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* && \
+    ln -sf /usr/local/cuda/targets/x86_64-linux/lib/stubs/libcuda.so \
+           /usr/lib/x86_64-linux-gnu/libcuda.so.1 && \
+    ln -sf /usr/lib/x86_64-linux-gnu/libcuda.so.1 \
+           /usr/lib/x86_64-linux-gnu/libcuda.so
+ENV LIBRARY_PATH="/usr/local/cuda/targets/x86_64-linux/lib/stubs:${LIBRARY_PATH}"
 
 # ── Python Dependencies ─────────────────────────────────────────
 RUN pip install --no-cache-dir gguf color-matcher sageattention triton && \

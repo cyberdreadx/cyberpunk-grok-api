@@ -24,8 +24,25 @@ import { usePromptHistory } from "@/hooks/usePromptHistory";
 import { useToast } from "@/hooks/use-toast";
 import { calculateCreditCost, type CreditMode } from "@/lib/api";
 
+const ANNOUNCEMENTS: { id: string; message: string; type?: "info" | "warning" | "success" }[] = [
+  { id: "gltch-wan-launch", message: "GLTCH WAN 2.2 I2V is now live — 3-stage GGUF Lightning pipeline in ANIMATE mode.", type: "info" },
+];
+
 const Index = () => {
   const [mode, setMode] = useState<GrokMode>("text-to-image");
+  const [dismissedAnnouncements, setDismissedAnnouncements] = useState<string[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem("dismissed_announcements") || "[]");
+    } catch { return []; }
+  });
+  const dismissAnnouncement = useCallback((id: string) => {
+    setDismissedAnnouncements(prev => {
+      const next = [...prev, id];
+      localStorage.setItem("dismissed_announcements", JSON.stringify(next));
+      return next;
+    });
+  }, []);
+  const visibleAnnouncements = ANNOUNCEMENTS.filter(a => !dismissedAnnouncements.includes(a.id));
   const [settings, setSettings] = useState<GenerationSettings>(() => {
     try {
       const saved = localStorage.getItem("grok-settings");
@@ -594,6 +611,35 @@ const Index = () => {
             )}
           </div>
         </header>
+
+        {/* Announcements */}
+        {visibleAnnouncements.length > 0 && (
+          <div className="space-y-2 mb-4 animate-slide-up">
+            {visibleAnnouncements.map(a => (
+              <div
+                key={a.id}
+                className={`flex items-center justify-between gap-3 px-4 py-2.5 rounded border font-mono-share text-[10px] ${
+                  a.type === "warning"
+                    ? "bg-amber-500/5 border-amber-500/30 text-amber-300"
+                    : a.type === "success"
+                    ? "bg-green-500/5 border-green-500/30 text-green-300"
+                    : "bg-secondary/5 border-secondary/30 text-secondary"
+                }`}
+              >
+                <span className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse flex-shrink-0" />
+                  {a.message}
+                </span>
+                <button
+                  onClick={() => dismissAnnouncement(a.id)}
+                  className="text-current/50 hover:text-current transition-colors flex-shrink-0"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Mode selector */}
         <section className="animate-slide-up" style={{ animationDelay: "100ms" }}>
