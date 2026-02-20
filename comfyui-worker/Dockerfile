@@ -55,17 +55,19 @@ RUN cd /comfyui/custom_nodes && \
 # ── Build tools for Triton/SageAttention JIT compilation ─────────
 # Triton JIT-compiles driver.c (a Python C extension using CUDA driver API)
 # at first use. It needs:
-#   1. gcc                — C compiler
-#   2. python3.12-dev     — Python.h headers (driver.c includes <Python.h>)
-#   3. libcuda.so         — linker stub (gcc uses -lcuda; the runtime image
-#                           only has libcuda.so.1 bind-mounted by nvidia-docker)
+#   1. gcc          — C compiler
+#   2. python3.12-dev — Python.h headers (driver.c #includes <Python.h>)
+#   3. libcuda.so   — created at container start by entrypoint.sh (symlink
+#                     to the real libcuda.so.1 bind-mounted by nvidia-docker)
 RUN apt-get update && \
     apt-get install -y --no-install-recommends gcc g++ python3.12-dev && \
-    rm -rf /var/lib/apt/lists/* && \
-    echo 'int cuInit(int f){return 0;}' | \
-      gcc -xc -shared -Wl,-soname,libcuda.so.1 \
-        -o /usr/lib/x86_64-linux-gnu/libcuda.so - && \
-    ldconfig
+    rm -rf /var/lib/apt/lists/*
+
+# Entrypoint: symlinks libcuda.so from real driver, clears Triton cache
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["/start.sh"]
 
 # ── Python Dependencies ─────────────────────────────────────────
 RUN pip install --no-cache-dir gguf color-matcher sageattention triton && \
