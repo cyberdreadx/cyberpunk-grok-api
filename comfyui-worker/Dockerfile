@@ -18,6 +18,7 @@ RUN cd /comfyui/custom_nodes && \
     wget -qO- https://github.com/ssitu/ComfyUI_UltimateSDUpscale/archive/refs/heads/main.tar.gz | tar xz && \
     mv ComfyUI_UltimateSDUpscale-main ComfyUI_UltimateSDUpscale && \
     cd ComfyUI_UltimateSDUpscale/repositories && \
+    rm -rf ultimate_sd_upscale && \
     wget -qO- https://github.com/Coyote-A/ultimate-upscale-for-automatic1111/archive/refs/heads/master.tar.gz | tar xz && \
     mv ultimate-upscale-for-automatic1111-master ultimate_sd_upscale
 
