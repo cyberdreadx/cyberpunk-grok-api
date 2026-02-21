@@ -71,7 +71,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Verify on-chain
-    const config = getXrgeConfig();
+    const config = await getXrgeConfig();
     const transfer = await verifyXrgeTransfer(
       txHash,
       order.xrge_amount,
