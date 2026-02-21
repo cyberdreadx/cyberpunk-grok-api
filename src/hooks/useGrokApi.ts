@@ -51,6 +51,7 @@ export interface VideoLoraEntry {
   high?: string;
   low?: string;
   single?: string;
+  nsfw?: boolean;
 }
 
 export interface ComfyJob {
@@ -899,11 +900,13 @@ export function useGrokApi() {
     loras: string[];
     videoLoras: VideoLoraEntry[];
     qwenLoras: string[];
+    xrgeHolder: boolean;
   }>({
     checkpoints: [],
     loras: [],
     videoLoras: [],
     qwenLoras: [],
+    xrgeHolder: false,
   });
 
   const fetchComfyModels = useCallback(async () => {
@@ -913,6 +916,7 @@ export function useGrokApi() {
         loras?: string[];
         videoLoras?: VideoLoraEntry[];
         qwenLoras?: string[];
+        xrgeHolder?: boolean;
       }>("/comfyui", {
         method: "POST",
         body: { action: "models" },
@@ -922,9 +926,10 @@ export function useGrokApi() {
         loras: data.loras || [],
         videoLoras: data.videoLoras || [],
         qwenLoras: data.qwenLoras || [],
+        xrgeHolder: data.xrgeHolder ?? false,
       });
     } catch {
-      setComfyModels({ checkpoints: [], loras: [], videoLoras: [], qwenLoras: [] });
+      setComfyModels({ checkpoints: [], loras: [], videoLoras: [], qwenLoras: [], xrgeHolder: false });
     }
   }, []);
 

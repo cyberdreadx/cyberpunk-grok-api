@@ -120,7 +120,11 @@ interface VideoLoraEntry {
   high?: string;      // Filename for high noise pass
   low?: string;       // Filename for low noise pass
   single?: string;    // Filename if not paired (applied per user-selected pass)
+  nsfw?: boolean;     // True if NSFW-gated (requires XRGE holding)
 }
+
+/** SFW LoRA names — everything else is NSFW-gated. Case-insensitive substring match. */
+const SFW_LORA_KEYWORDS = ["skin"];
 
 /**
  * Group video LoRA filenames into paired entries.
@@ -183,12 +187,13 @@ function groupVideoLoras(files: string[]): VideoLoraEntry[] {
   }
 
   const result: VideoLoraEntry[] = [];
+  const isSfw = (n: string) => SFW_LORA_KEYWORDS.some(k => n.toLowerCase().includes(k));
   for (const [base, { high, low }] of pairs) {
-    result.push({ name: base, high, low });
+    result.push({ name: base, high, low, nsfw: !isSfw(base) });
   }
   for (const f of singles) {
     const name = f.replace(/\.[^.]+$/, "");
-    result.push({ name, single: f });
+    result.push({ name, single: f, nsfw: !isSfw(name) });
   }
   return result;
 }
@@ -1699,7 +1704,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const qwenLoras = qwenLorasEnv
           ? qwenLorasEnv.split(",").map((m) => m.trim()).filter(Boolean)
           : [];
-        return res.status(200).json({ checkpoints, loras, videoLoras, qwenLoras });
+
+        // Check if user is an XRGE holder (has any completed XRGE purchase)
+        let xrgeHolder = isAdminUser;
+        if (!xrgeHolder) {
+          try {
+            const sql = getDb();
+            const rows = await sql`SELECT 1 FROM xrge_orders WHERE user_id = ${auth.userId} AND status = 'completed' LIMIT 1`;
+            xrgeHolder = rows.length > 0;
+          } catch { /* If DB fails, default to non-holder */ }
+        }
+
+        return res.status(200).json({ checkpoints, loras, videoLoras, qwenLoras, xrgeHolder });
       } else {
         const resp = await fetch(
           `${backend.comfyUrl}/object_info/CheckpointLoaderSimple`,
@@ -1774,6 +1790,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Checkpoint is required for txt2img only; qwen-edit and wan-video use fixed models
       if (workflowType === "txt2img" && !checkpoint)
         return res.status(400).json({ error: "Checkpoint is required" });
+
+      // ── NSFW LoRA gate (XRGE holders only) ──
+      if (videoLora && !isAdminUser) {
+        const isNsfwLora = !SFW_LORA_KEYWORDS.some(k => videoLora.toLowerCase().includes(k));
+        if (isNsfwLora) {
+          try {
+            const sql = getDb();
+            const rows = await sql`SELECT 1 FROM xrge_orders WHERE user_id = ${auth.userId} AND status = 'completed' LIMIT 1`;
+            if (rows.length === 0) {
+              return res.status(403).json({ error: "NSFW LoRAs require $XRGE token holding. Purchase credits with $XRGE to unlock." });
+            }
+          } catch { /* If DB fails, allow through */ }
+        }
+      }
 
       // ── Credit gate (admin is free unless testCredits is set) ──
       // skipCredits: client passes true for the first step of a chained workflow

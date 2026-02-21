@@ -1258,15 +1258,26 @@ const Index = () => {
                     {comfyModels.videoLoras.length > 0 && (
                       <div>
                         <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Video LoRA (optional)</label>
-                        <select value={comfyVideoLora} onChange={(e) => setComfyVideoLora(e.target.value)}
+                        <select value={comfyVideoLora} onChange={(e) => {
+                          const entry = comfyModels.videoLoras.find(v => v.name === e.target.value);
+                          if (entry?.nsfw && !comfyModels.xrgeHolder) return;
+                          setComfyVideoLora(e.target.value);
+                        }}
                           className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-[10px] font-mono-share text-foreground">
                           <option value="none">None</option>
                           {comfyModels.videoLoras.map((entry) => (
-                            <option key={entry.name} value={entry.name}>
-                              {entry.name.replace(/_/g, " ")}{entry.high && entry.low ? " (paired)" : ""}
+                            <option key={entry.name} value={entry.name}
+                              disabled={!!entry.nsfw && !comfyModels.xrgeHolder}
+                              style={entry.nsfw && !comfyModels.xrgeHolder ? { color: '#666', fontStyle: 'italic' } : undefined}>
+                              {entry.nsfw && !comfyModels.xrgeHolder ? `🔒 ${entry.name.replace(/_/g, " ")}` : entry.name.replace(/_/g, " ")}{entry.high && entry.low ? " (paired)" : ""}
                             </option>
                           ))}
                         </select>
+                        {!comfyModels.xrgeHolder && comfyModels.videoLoras.some(v => v.nsfw) && (
+                          <p className="mt-1 font-mono-share text-[8px] text-pink-400/70">
+                            🔒 NSFW LoRAs unlocked for <span className="text-pink-400">$XRGE</span> holders — purchase credits with $XRGE to unlock
+                          </p>
+                        )}
                         {comfyVideoLora !== "none" && (() => {
                           const selected = comfyModels.videoLoras.find((e) => e.name === comfyVideoLora);
                           const isPaired = selected?.high && selected?.low;
