@@ -139,14 +139,17 @@ function groupVideoLoras(files: string[]): VideoLoraEntry[] {
   const singles: string[] = [];
 
   // Patterns: [regex to match, group 1 = base name, "high" or "low"]
+  // Index 1 patterns (two-capture) reconstruct base from both sides: "prefix" + "_" + "suffix"
   const highPatterns = [
     /^(.+)_high_noise$/,   // pornmaster_slow_twerk_high_noise
     /^(.+)-H-(.+)$/,      // NSFW-22-H-e8  (capture both sides as base)
+    /^(.+)_high_(.+)$/,   // mystic_xxx_wan22_i2v_high_v1
     /^(.+)_H$/,            // something_H
   ];
   const lowPatterns = [
     /^(.+)_low_noise$/,
     /^(.+)-L-(.+)$/,
+    /^(.+)_low_(.+)$/,    // mystic_xxx_wan22_i2v_low_v1
     /^(.+)_L$/,
   ];
 
@@ -158,8 +161,8 @@ function groupVideoLoras(files: string[]): VideoLoraEntry[] {
     for (let i = 0; i < highPatterns.length; i++) {
       const m = noExt.match(highPatterns[i]);
       if (m) {
-        // For -H-/-L- patterns, build base from both sides: "NSFW-22" + "-e8" → "NSFW-22-e8"
-        const base = i === 1 ? `${m[1]}-${m[2]}` : m[1];
+        // For two-capture patterns, reconstruct base from both sides
+        const base = i === 1 ? `${m[1]}-${m[2]}` : i === 2 ? `${m[1]}_${m[2]}` : m[1];
         const entry = pairs.get(base) || {};
         entry.high = f;
         pairs.set(base, entry);
@@ -173,7 +176,7 @@ function groupVideoLoras(files: string[]): VideoLoraEntry[] {
     for (let i = 0; i < lowPatterns.length; i++) {
       const m = noExt.match(lowPatterns[i]);
       if (m) {
-        const base = i === 1 ? `${m[1]}-${m[2]}` : m[1];
+        const base = i === 1 ? `${m[1]}-${m[2]}` : i === 2 ? `${m[1]}_${m[2]}` : m[1];
         const entry = pairs.get(base) || {};
         entry.low = f;
         pairs.set(base, entry);
