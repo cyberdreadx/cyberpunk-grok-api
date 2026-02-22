@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Send, Upload, Loader2, ImagePlus, Link, X, Film } from "lucide-react";
+import { Send, Upload, Loader2, ImagePlus, Link, X, Film, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import type { GrokMode, GenerationSettings } from "@/hooks/useGrokApi";
+import { apiFetch } from "@/lib/api";
 
 interface PromptFormProps {
   mode: GrokMode;
@@ -25,6 +26,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoFileInputRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  const [enhancing, setEnhancing] = useState(false);
 
   useEffect(() => {
     if (initialPrompt) setPrompt(initialPrompt);
@@ -165,6 +167,30 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
     }
   }, [needsImage]);
 
+  // ── Enhance prompt via Grok LLM ──
+  const enhancePrompt = useCallback(async () => {
+    if (!prompt.trim() || enhancing) return;
+    setEnhancing(true);
+    try {
+      const modeMap: Record<string, string> = {
+        "text-to-image": "image",
+        "edit-image": "edit",
+        "text-to-video": "video",
+        "image-to-video": "video",
+        "edit-video": "edit",
+      };
+      const data = await apiFetch<{ enhanced: string }>("/comfyui", {
+        method: "POST",
+        body: { action: "enhance-prompt", prompt: prompt.trim(), mode: modeMap[mode] || "image" },
+      });
+      if (data.enhanced) setPrompt(data.enhanced);
+    } catch (err: any) {
+      console.error("[PromptForm] Enhance failed:", err?.message || err);
+    } finally {
+      setEnhancing(false);
+    }
+  }, [prompt, mode, enhancing]);
+
   const placeholders: Record<GrokMode, string> = {
     "text-to-image": "Describe the image you want to generate...",
     "edit-image": "Describe the modifications to apply...",
@@ -189,11 +215,10 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
               <button
                 type="button"
                 onClick={() => { setVideoSource("upload"); setImageUrl(""); }}
-                className={`font-mono-share text-[9px] px-2 py-0.5 rounded transition-colors ${
-                  videoSource === "upload"
+                className={`font-mono-share text-[9px] px-2 py-0.5 rounded transition-colors ${videoSource === "upload"
                     ? "bg-primary/20 text-primary border border-primary/30"
                     : "text-muted-foreground hover:text-foreground border border-border/30"
-                }`}
+                  }`}
               >
                 <Film className="w-3 h-3 inline mr-1" />
                 UPLOAD
@@ -201,11 +226,10 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
               <button
                 type="button"
                 onClick={() => { setVideoSource("url"); clearVideoUpload(); }}
-                className={`font-mono-share text-[9px] px-2 py-0.5 rounded transition-colors ${
-                  videoSource === "url"
+                className={`font-mono-share text-[9px] px-2 py-0.5 rounded transition-colors ${videoSource === "url"
                     ? "bg-primary/20 text-primary border border-primary/30"
                     : "text-muted-foreground hover:text-foreground border border-border/30"
-                }`}
+                  }`}
               >
                 <Link className="w-3 h-3 inline mr-1" />
                 URL
@@ -276,11 +300,10 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
               <button
                 type="button"
                 onClick={() => { setImageSource("upload"); setImageUrl(""); }}
-                className={`font-mono-share text-[9px] px-2 py-0.5 rounded transition-colors ${
-                  imageSource === "upload"
+                className={`font-mono-share text-[9px] px-2 py-0.5 rounded transition-colors ${imageSource === "upload"
                     ? "bg-primary/20 text-primary border border-primary/30"
                     : "text-muted-foreground hover:text-foreground border border-border/30"
-                }`}
+                  }`}
               >
                 <ImagePlus className="w-3 h-3 inline mr-1" />
                 UPLOAD
@@ -288,11 +311,10 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
               <button
                 type="button"
                 onClick={() => { setImageSource("url"); clearUpload(); }}
-                className={`font-mono-share text-[9px] px-2 py-0.5 rounded transition-colors ${
-                  imageSource === "url"
+                className={`font-mono-share text-[9px] px-2 py-0.5 rounded transition-colors ${imageSource === "url"
                     ? "bg-primary/20 text-primary border border-primary/30"
                     : "text-muted-foreground hover:text-foreground border border-border/30"
-                }`}
+                  }`}
               >
                 <Link className="w-3 h-3 inline mr-1" />
                 URL
@@ -365,19 +387,35 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
             rows={4}
             className="bg-input border-border font-rajdhani text-base text-foreground placeholder:text-muted-foreground focus:neon-border resize-none pr-14"
           />
-          <Button
-            type="submit"
-            disabled={isLoading || !prompt.trim() || (needsImage && !imageUrl.trim()) || (needsVideo && !imageUrl.trim())}
-            size="icon"
-            className="absolute bottom-3 right-3 bg-primary text-primary-foreground hover:bg-primary/80 disabled:opacity-30 transition-all"
-            title="Submit (Ctrl+Enter)"
-          >
-            {isLoading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Send className="w-4 h-4" />
-            )}
-          </Button>
+          <div className="absolute bottom-3 right-3 flex items-center gap-1.5">
+            <Button
+              type="button"
+              onClick={enhancePrompt}
+              disabled={enhancing || !prompt.trim() || isLoading}
+              size="icon"
+              className="bg-cyan-600/80 text-white hover:bg-cyan-500 disabled:opacity-30 transition-all"
+              title="✨ Enhance prompt with Grok AI"
+            >
+              {enhancing ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Sparkles className="w-4 h-4" />
+              )}
+            </Button>
+            <Button
+              type="submit"
+              disabled={isLoading || !prompt.trim() || (needsImage && !imageUrl.trim()) || (needsVideo && !imageUrl.trim())}
+              size="icon"
+              className="bg-primary text-primary-foreground hover:bg-primary/80 disabled:opacity-30 transition-all"
+              title="Submit (Ctrl+Enter)"
+            >
+              {isLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
+            </Button>
+          </div>
         </div>
       </div>
 
