@@ -71,3 +71,7 @@ RUN python /handler_patch.py && rm /handler_patch.py
 # ── Patch rp_upload.py to read BUCKET_NAME from env ─────────────
 COPY bucket_patch.py /bucket_patch.py
 RUN python /bucket_patch.py && rm /bucket_patch.py
+
+# ── Patch handler.py to clean up after each job ─────────────────
+COPY cleanup_patch.py /cleanup_patch.py
+RUN python /cleanup_patch.py && rm /cleanup_patch.py

@@ -1384,12 +1384,17 @@ function buildZimageTurboWorkflow(p: {
   seed: number;
   steps?: number;
   cfg?: number;
+  lora?: string;
+  loraStrength?: number;
 }): Record<string, any> {
   const unet = process.env.COMFYUI_ZIMAGE_UNET || "z_image_turbo_bf16.safetensors";
   const clip = process.env.COMFYUI_ZIMAGE_CLIP || "qwen_3_4b.safetensors";
   const vae = process.env.COMFYUI_ZIMAGE_VAE || "ae.safetensors";
 
-  return {
+  const hasLora = !!p.lora && p.lora !== "none";
+  let modelSource: [string, number] = ["1", 0];
+
+  const workflow: Record<string, any> = {
     "1": {
       class_type: "UNETLoader",
       inputs: { unet_name: unet, weight_dtype: "default" },
@@ -1414,30 +1419,51 @@ function buildZimageTurboWorkflow(p: {
       class_type: "EmptyLatentImage",
       inputs: { width: p.width, height: p.height, batch_size: 1 },
     },
-    "7": {
-      class_type: "KSampler",
+  };
+
+  if (hasLora) {
+    workflow["10"] = {
+      class_type: "LoraLoader",
       inputs: {
-        seed: p.seed,
-        steps: p.steps || 8,
-        cfg: p.cfg || 1.0,
-        sampler_name: "euler_ancestral",
-        scheduler: "sgm_uniform",
-        denoise: 1,
+        lora_name: p.lora!,
+        strength_model: p.loraStrength ?? 1.0,
+        strength_clip: p.loraStrength ?? 1.0,
         model: ["1", 0],
-        positive: ["4", 0],
-        negative: ["5", 0],
-        latent_image: ["6", 0],
+        clip: ["2", 0],
       },
-    },
-    "8": {
-      class_type: "VAEDecode",
-      inputs: { samples: ["7", 0], vae: ["3", 0] },
-    },
-    "9": {
-      class_type: "SaveImage",
-      inputs: { filename_prefix: "GLTCH-ZImage", images: ["8", 0] },
+    };
+    modelSource = ["10", 0];
+    workflow["4"].inputs.clip = ["10", 1];
+    workflow["5"].inputs.clip = ["10", 1];
+  }
+
+  workflow["7"] = {
+    class_type: "KSampler",
+    inputs: {
+      seed: p.seed,
+      steps: p.steps || 8,
+      cfg: p.cfg || 1.0,
+      sampler_name: "euler_ancestral",
+      scheduler: "sgm_uniform",
+      denoise: 1,
+      model: modelSource,
+      positive: ["4", 0],
+      negative: ["5", 0],
+      latent_image: ["6", 0],
     },
   };
+
+  workflow["8"] = {
+    class_type: "VAEDecode",
+    inputs: { samples: ["7", 0], vae: ["3", 0] },
+  };
+
+  workflow["9"] = {
+    class_type: "SaveImage",
+    inputs: { filename_prefix: "GLTCH-ZImage", images: ["8", 0] },
+  };
+
+  return workflow;
 }
 
 const TXT2IMG_DEFAULT_NEGATIVE =
@@ -1513,15 +1539,16 @@ function buildQwenEditWorkflow(p: {
     clipSource = [nodeId, 1];
   }
 
-  // Primary image → image2, optional second image → image1 (matches GLTCH workflow)
+  // Primary image → image1 (the image being edited)
+  // Optional second image → image2 (style/pose reference)
   const positiveInputs: Record<string, any> = {
     clip: clipSource,
     vae: vaeSource,
-    image2: ["123", 0],
+    image1: ["123", 0],
     prompt: p.prompt,
   };
   if (p.imageFilename2) {
-    positiveInputs.image1 = ["124", 0];
+    positiveInputs.image2 = ["124", 0];
   }
 
   Object.assign(workflow, {
@@ -2232,6 +2259,8 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           seed: actualSeed,
           steps: clampSteps,
           cfg: clampCfg,
+          lora: lora || undefined,
+          loraStrength: Number(loraStrength) || 1.0,
         });
       } else {
         workflow = buildTxt2ImgWorkflow({
@@ -2378,9 +2407,42 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           const out = data.output || {};
           console.log("[comfyui-poll] COMPLETED output keys:", Object.keys(out));
 
+          // Track S3 URLs for cleanup after delivery
+          const s3UrlsToClean: string[] = [];
+
+          // Fire-and-forget cleanup of S3 objects after poll delivers data
+          function cleanupS3Urls() {
+            const client = getS3Client();
+            if (!client || s3UrlsToClean.length === 0) return;
+            for (const s3Url of s3UrlsToClean) {
+              const parsed = parseS3Url(s3Url);
+              const bucket = parsed?.bucket || process.env.RUNPOD_S3_BUCKET;
+              const key = parsed?.key;
+              if (!bucket || !key) continue;
+              (async () => {
+                try {
+                  await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));
+                  console.log(`[s3-cleanup] Deleted s3://${bucket}/${key}`);
+                  const folder = key.split("/").slice(0, -1).join("/");
+                  if (folder) {
+                    const list = await client.send(new ListObjectsV2Command({ Bucket: bucket, Prefix: folder + "/" }));
+                    if (list.Contents && list.Contents.length > 0) {
+                      await client.send(new DeleteObjectsCommand({
+                        Bucket: bucket,
+                        Delete: { Objects: list.Contents.map(o => ({ Key: o.Key! })) },
+                      }));
+                      console.log(`[s3-cleanup] Cleaned folder ${folder}/ (${list.Contents.length} objects)`);
+                    }
+                  }
+                } catch (err: any) {
+                  console.error(`[s3-cleanup] Failed: ${err.message}`);
+                }
+              })();
+            }
+          }
+
           // Helper: detect S3/HTTP URLs vs base64, return appropriate URI.
           // Uses AWS SDK with credentials (RunPod S3 doesn't support presigned URL auth).
-          // Images → base64 (small). Videos → S3 URL for streaming proxy.
           async function resolveFileData(file: any, type: "video" | "image"): Promise<string | null> {
             const d = typeof file === "string" ? file : (file?.data || file?.url || null);
             if (!d || typeof d !== "string") return null;
@@ -2389,13 +2451,12 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
             // S3 URL or any HTTP URL
             if (d.startsWith("http://") || d.startsWith("https://") || file?.type === "s3_url" || file?.type === "url") {
               const url = d.startsWith("http") ? d : (file?.url || d);
-              // Download via S3 SDK (RunPod S3 doesn't support presigned URL auth)
               const s3Data = await downloadFromS3(url);
               if (s3Data) {
+                s3UrlsToClean.push(url);
                 const base64 = s3Data.buffer.toString("base64");
                 return `data:${s3Data.contentType};base64,${base64}`;
               }
-              // Fallback: return URL as-is (logs the error in downloadFromS3)
               console.error(`[comfyui-poll] S3 download failed for ${type}, returning URL as fallback`);
               return url;
             }
@@ -2433,6 +2494,7 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           // Try top-level output first
           const topResult = await findOutput(out);
           if (topResult) {
+            cleanupS3Urls();
             return res.status(200).json({ status: "done", [topResult.type]: topResult.uri });
           }
 
@@ -2443,13 +2505,14 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
               // Direct string value
               if (typeof node === "string" && node.length > 100) {
                 const uri = await resolveFileData(node, outputType === "video" ? "video" : "image");
-                if (uri) return res.status(200).json({ status: "done", [outputType === "video" ? "video" : "image"]: uri });
+                if (uri) { cleanupS3Urls(); return res.status(200).json({ status: "done", [outputType === "video" ? "video" : "image"]: uri }); }
               }
               continue;
             }
             const nested = await findOutput(node);
             if (nested) {
               console.log(`[comfyui-poll] Found output in nested key "${key}"`);
+              cleanupS3Urls();
               return res.status(200).json({ status: "done", [nested.type]: nested.uri });
             }
           }

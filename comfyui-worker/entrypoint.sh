@@ -15,5 +15,25 @@ done
 
 rm -rf /root/.triton/cache 2>/dev/null
 
+# ── Clean stale job output from network volume ─────────────────
+# RunPod SDK leaves {job_id}-u{N} staging dirs in /workspace after
+# uploading to S3. Remove them on every worker start.
+WORKSPACE="/workspace"
+if [ -d "$WORKSPACE" ]; then
+  count=$(find "$WORKSPACE" -maxdepth 1 -mindepth 1 -type d -regextype posix-extended \
+    -regex '.*/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-u[0-9]+' 2>/dev/null | wc -l)
+  if [ "$count" -gt 0 ]; then
+    find "$WORKSPACE" -maxdepth 1 -mindepth 1 -type d -regextype posix-extended \
+      -regex '.*/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-u[0-9]+' \
+      -exec rm -rf {} + 2>/dev/null
+    echo "entrypoint: removed $count stale job dirs from $WORKSPACE"
+  fi
+fi
+
+# Clean accumulated ComfyUI output files
+rm -rf /comfyui/output/*.png /comfyui/output/*.jpg 2>/dev/null
+rm -rf /comfyui/output/video/* /comfyui/output/wan2-2/* 2>/dev/null
+echo "entrypoint: cleared ComfyUI output cache"
+
 exec "$@"
 

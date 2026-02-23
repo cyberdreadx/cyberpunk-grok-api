@@ -149,6 +149,12 @@ const Index = () => {
   const [comfyAudioMode, setComfyAudioMode] = useState<"none" | "ambient">("none");
   const [comfyAudioPrompt, setComfyAudioPrompt] = useState("");
 
+  // Z-Image settings
+  const [zimageWidth, setZimageWidth] = useState(1024);
+  const [zimageHeight, setZimageHeight] = useState(1024);
+  const [zimageLora, setZimageLora] = useState("none");
+  const [zimageLoraStrength, setZimageLoraStrength] = useState(1.0);
+
   // LongLook settings
   const [longLookEnabled, setLongLookEnabled] = useState(false);
   const [longLookSeqCount, setLongLookSeqCount] = useState(2);
@@ -364,15 +370,21 @@ const Index = () => {
           const imageBase64 = data.imageUrl!.startsWith("data:")
             ? data.imageUrl!
             : await urlToBase64(data.imageUrl!);
-          const dim = await getImageDimensions(imageBase64);
           const round8 = (v: number) => Math.round(v / 8) * 8;
-          const maxDim = 1024;
-          let w = dim.width;
-          let h = dim.height;
-          if (w > maxDim || h > maxDim) {
-            const scale = maxDim / Math.max(w, h);
-            w = Math.round(w * scale);
-            h = Math.round(h * scale);
+          let w: number, h: number;
+          if (comfyWidth > 0 && comfyHeight > 0) {
+            w = comfyWidth;
+            h = comfyHeight;
+          } else {
+            const dim = await getImageDimensions(imageBase64);
+            const maxDim = 1024;
+            w = dim.width;
+            h = dim.height;
+            if (w > maxDim || h > maxDim) {
+              const scale = maxDim / Math.max(w, h);
+              w = Math.round(w * scale);
+              h = Math.round(h * scale);
+            }
           }
           comfyEdit({
             prompt: data.prompt,
@@ -392,10 +404,12 @@ const Index = () => {
           comfyGenerate({
             prompt: data.prompt,
             workflow: "zimage",
-            width: 1024,
-            height: 1024,
+            width: zimageWidth,
+            height: zimageHeight,
             steps: 8,
             cfg: 1,
+            lora: zimageLora !== "none" ? zimageLora : undefined,
+            loraStrength: zimageLoraStrength,
             ...(adminTestCredits ? { testCredits: true } : {}),
           });
         } else if (isComfyGen) {
@@ -865,6 +879,33 @@ const Index = () => {
                         {comfyEditUpscale ? "2" : "1"} cr/edit — Qwen2.5 VL Edit + LoRA
                       </span>
                     </div>
+                    <div>
+                      <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">OUTPUT SIZE</label>
+                      <div className="grid grid-cols-4 gap-1">
+                        {([
+                          [0, 0, "AUTO"],
+                          [1024, 1024, "1:1"],
+                          [768, 1024, "3:4"],
+                          [1024, 768, "4:3"],
+                          [768, 1360, "9:16"],
+                          [1360, 768, "16:9"],
+                          [832, 1216, "2:3"],
+                          [1216, 832, "3:2"],
+                        ] as [number, number, string][]).map(([w, h, label]) => (
+                          <button key={`qe-${w}x${h}`} type="button"
+                            onClick={() => { setComfyWidth(w); setComfyHeight(h); }}
+                            className={`px-1.5 py-1 rounded text-center font-mono-share text-[9px] border transition-all
+                              ${comfyWidth === w && comfyHeight === h
+                                ? "border-purple-500 bg-purple-500/10 text-purple-400"
+                                : "border-border bg-card/30 text-muted-foreground hover:border-purple-500/40"
+                              }`}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="font-mono-share text-[8px] text-muted-foreground/50 mt-1">AUTO = match input image</p>
+                    </div>
                     {comfyModels.qwenLoras.length > 0 && (
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
@@ -1049,11 +1090,57 @@ const Index = () => {
                   </button>
                 </div>
                 {genEngine === "gltch" && (
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-secondary/5 border border-secondary/20 rounded">
-                    <div className="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse" />
-                    <span className="font-mono-share text-[9px] text-secondary/70">
-                      1 cr/img — Z-Image Turbo 6B · 8 steps · 1024×1024
-                    </span>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-secondary/5 border border-secondary/20 rounded">
+                      <div className="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse" />
+                      <span className="font-mono-share text-[9px] text-secondary/70">
+                        1 cr/img — Z-Image Turbo 6B · 8 steps · {zimageWidth}×{zimageHeight}
+                      </span>
+                    </div>
+                    <div>
+                      <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">DIMENSIONS</label>
+                      <div className="grid grid-cols-4 gap-1">
+                        {([
+                          [1024, 1024, "1:1"],
+                          [768, 1024, "3:4"],
+                          [1024, 768, "4:3"],
+                          [768, 1360, "9:16"],
+                          [1360, 768, "16:9"],
+                          [832, 1216, "2:3"],
+                          [1216, 832, "3:2"],
+                          [512, 512, "SM"],
+                        ] as [number, number, string][]).map(([w, h, label]) => (
+                          <button key={`${w}x${h}`} type="button"
+                            onClick={() => { setZimageWidth(w); setZimageHeight(h); }}
+                            className={`px-1.5 py-1 rounded text-center font-mono-share text-[9px] border transition-all
+                              ${zimageWidth === w && zimageHeight === h
+                                ? "border-secondary bg-secondary/10 text-secondary"
+                                : "border-border bg-card/30 text-muted-foreground hover:border-secondary/40"
+                              }`}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    {comfyModels.loras.length > 0 && (
+                      <div>
+                        <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">LORA</label>
+                        <select value={zimageLora} onChange={(e) => setZimageLora(e.target.value)}
+                          className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-[10px] font-mono-share text-foreground">
+                          <option value="none">None</option>
+                          {comfyModels.loras.map((l) => <option key={l} value={l}>{l.replace(/\.[^.]+$/, "")}</option>)}
+                        </select>
+                        {zimageLora !== "none" && (
+                          <div className="mt-1">
+                            <label className="font-mono-share text-[9px] text-muted-foreground/70">Strength: {zimageLoraStrength.toFixed(2)}</label>
+                            <input type="range" min={0} max={2} step={0.05} value={zimageLoraStrength}
+                              onChange={(e) => setZimageLoraStrength(parseFloat(e.target.value))}
+                              className="w-full accent-secondary h-1" />
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
                 {/* Comfy GENERATE settings */}
