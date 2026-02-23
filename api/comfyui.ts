@@ -2249,6 +2249,7 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
       }
 
       // Resolve which RunPod endpoint to use (split by workflow type for better scaling)
+      const isVideoWorkflow = workflowType === "wan-video" || workflowType === "gltch-wan" || workflowType === "longlook";
       const runpodEndpoint = getRunPodEndpointForWorkflow(workflowType, {
         upscale: !!upscale,
         useVidUpscale: !!useVidUpscale,
