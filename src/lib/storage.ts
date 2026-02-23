@@ -21,9 +21,10 @@
 import type { GrokResult } from "@/hooks/useGrokApi";
 
 const DB_NAME = "grok-media-db";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const STORE_NAME = "results";
 const FOLDERS_STORE_NAME = "folders";
+const CHAT_STORE_NAME = "chat_messages";
 const OLD_STORAGE_KEY = "grok-results";
 
 // ── Types ────────────────────────────────────────────────────────────────
@@ -70,6 +71,14 @@ function openDB(): Promise<IDBDatabase> {
         const resultsStore = request.transaction!.objectStore(STORE_NAME);
         if (!resultsStore.indexNames.contains("folderId")) {
           resultsStore.createIndex("folderId", "folderId", { unique: false });
+        }
+      }
+
+      // v2 → v3: Create chat messages store for AI companion mode
+      if (oldVersion < 3) {
+        if (!db.objectStoreNames.contains(CHAT_STORE_NAME)) {
+          const chatStore = db.createObjectStore(CHAT_STORE_NAME, { keyPath: "id", autoIncrement: true });
+          chatStore.createIndex("characterId", "characterId", { unique: false });
         }
       }
     };
@@ -469,4 +478,61 @@ export async function migrateFromLocalStorage(): Promise<GrokResult[]> {
   } catch {
     return [];
   }
+}
+
+// ── Chat Messages (AI Companion) ─────────────────────────────────────────
+
+export interface ChatMessage {
+  id?: number;
+  characterId: string;
+  role: "user" | "assistant";
+  content: string;
+  mediaUrl?: string;
+  mediaType?: "image" | "video";
+  timestamp: number;
+}
+
+export async function saveChatMessage(msg: ChatMessage): Promise<void> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(CHAT_STORE_NAME, "readwrite");
+    tx.objectStore(CHAT_STORE_NAME).add(msg);
+    tx.oncomplete = () => { db.close(); resolve(); };
+    tx.onerror = () => { db.close(); reject(tx.error); };
+  });
+}
+
+export async function getChatHistory(characterId: string, limit = 100): Promise<ChatMessage[]> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(CHAT_STORE_NAME, "readonly");
+    const idx = tx.objectStore(CHAT_STORE_NAME).index("characterId");
+    const request = idx.getAll(characterId);
+    request.onsuccess = () => {
+      db.close();
+      const all = request.result as ChatMessage[];
+      all.sort((a, b) => a.timestamp - b.timestamp);
+      resolve(all.slice(-limit));
+    };
+    request.onerror = () => { db.close(); reject(request.error); };
+  });
+}
+
+export async function clearChatHistory(characterId: string): Promise<void> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(CHAT_STORE_NAME, "readwrite");
+    const store = tx.objectStore(CHAT_STORE_NAME);
+    const idx = store.index("characterId");
+    const request = idx.openCursor(characterId);
+    request.onsuccess = () => {
+      const cursor = request.result;
+      if (cursor) {
+        cursor.delete();
+        cursor.continue();
+      }
+    };
+    tx.oncomplete = () => { db.close(); resolve(); };
+    tx.onerror = () => { db.close(); reject(tx.error); };
+  });
 }

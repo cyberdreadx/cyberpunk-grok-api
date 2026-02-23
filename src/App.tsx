@@ -8,8 +8,9 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 
-// Lazy-load admin — recharts (~400 KB) only fetched when visiting /admin
+// Lazy-load heavy pages to keep initial bundle small
 const Admin = React.lazy(() => import("./pages/Admin"));
+const Characters = React.lazy(() => import("./pages/Characters"));
 import AgeGateDialog from "@/components/AgeGateDialog";
 
 const queryClient = new QueryClient();
@@ -24,6 +25,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/admin" element={<Suspense fallback={<div className="min-h-screen bg-background" />}><Admin /></Suspense>} />
+          <Route path="/characters" element={<Suspense fallback={<div className="min-h-screen bg-background" />}><Characters /></Suspense>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

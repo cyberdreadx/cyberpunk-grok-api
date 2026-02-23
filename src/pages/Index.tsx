@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, Suspense } from "react";
-import { Terminal, Key, Coins, Shield, Eye, MessageCircle, HelpCircle, Server, Zap, Cpu, ChevronDown, Film, X, AlertCircle, CheckCircle2, Loader2, Upload } from "lucide-react";
+import { Terminal, Key, Coins, Shield, Eye, MessageCircle, HelpCircle, Server, Zap, Cpu, ChevronDown, Film, X, AlertCircle, CheckCircle2, Loader2, Upload, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 import CyberLayout from "@/components/CyberLayout";
 
@@ -1952,6 +1952,18 @@ const Index = () => {
               <span className="text-[8px] font-bold leading-none border border-current rounded-sm px-0.5">$</span>
               GROKRUN
             </a>
+            {auth.isAuthenticated && (
+              <>
+                <span className="text-border/50">|</span>
+                <Link
+                  to="/characters"
+                  className="flex items-center gap-1 text-muted-foreground/40 hover:text-purple-400 transition-colors"
+                >
+                  <Users className="w-3 h-3" />
+                  CHARACTERS
+                </Link>
+              </>
+            )}
             {auth.user?.email === "cyberdreadx@proton.me" && (
               <>
                 <span className="text-border/50">|</span>
