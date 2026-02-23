@@ -93,7 +93,7 @@ RUN cd /comfyui/custom_nodes/ComfyUI-VideoHelperSuite && \
     pip install --no-cache-dir -r requirements.txt
 
 RUN cd /comfyui/custom_nodes/ComfyUI-Frame-Interpolation && \
-    pip install --no-cache-dir -r requirements.txt
+    pip install --no-cache-dir -r requirements-no-cupy.txt
 
 # ── Bake in small models ─────────────────────────────────────────
 # 4x-UltraSharp for Qwen edit upscale (~67 MB)
