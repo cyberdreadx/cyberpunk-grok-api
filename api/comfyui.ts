@@ -257,8 +257,12 @@ function addMMAudioNodes(
 type Backend = "runpod" | "local";
 
 function getBackend(): { mode: Backend; runpodEndpoint?: string; runpodKey?: string; comfyUrl?: string } {
-  const runpodEndpoint = process.env.RUNPOD_ENDPOINT_ID;
   const runpodKey = process.env.RUNPOD_API_KEY;
+  const runpodEndpoint = process.env.RUNPOD_ENDPOINT_ID
+    || process.env.RUNPOD_WAN_ENDPOINT_ID
+    || process.env.RUNPOD_ZIMAGE_ENDPOINT_ID
+    || process.env.RUNPOD_QWEN_EDIT_ENDPOINT_ID
+    || process.env.RUNPOD_UPSCALE_ENDPOINT_ID;
   if (runpodEndpoint && runpodKey) {
     return { mode: "runpod", runpodEndpoint, runpodKey };
   }
