@@ -763,7 +763,7 @@ const Index = () => {
             />
             <div className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
           </div>
-          <ModeSelector activeMode={mode} onModeChange={(m) => { setMode(m); setActiveImageUrl(""); }} />
+          <ModeSelector activeMode={mode} onModeChange={(m) => { setMode(m); setActiveImageUrl(""); }} isAuthenticated={auth.isAuthenticated} />
         </section>
 
         {/* Prompt form — Terminal block */}
