@@ -827,9 +827,10 @@ export function useGrokApi() {
       promptId: string;
       seed: number;
       outputType?: string;
+      runpodEndpointId?: string;
     }>("/comfyui", { method: "POST", body: { action: "generate", ...body } });
 
-    const { promptId, outputType } = submitData;
+    const { promptId, outputType, runpodEndpointId } = submitData;
     const outType = outputType || (body.workflow === "wan-video" || body.workflow === "longlook" ? "video" : "image");
 
     // Save to localStorage so we can resume if page closes
@@ -838,6 +839,7 @@ export function useGrokApi() {
         promptId,
         outputType: outType,
         submittedAt: Date.now(),
+        ...(runpodEndpointId && { runpodEndpointId }),
       }));
     } catch { /* best-effort */ }
 
@@ -851,7 +853,7 @@ export function useGrokApi() {
         error?: string;
       }>("/comfyui", {
         method: "POST",
-        body: { action: "poll", promptId, outputType: outType },
+        body: { action: "poll", promptId, outputType: outType, ...(runpodEndpointId && { runpodEndpointId }) },
       });
 
       if (pollData.status === "done") {

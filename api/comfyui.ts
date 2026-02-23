@@ -269,6 +269,28 @@ function getBackend(): { mode: Backend; runpodEndpoint?: string; runpodKey?: str
   return { mode: "local" };
 }
 
+/**
+ * Resolve RunPod endpoint ID by workflow type.
+ * Split endpoints keep heavy WAN i2v, Z turbo, Qwen edit, and upscale jobs on dedicated workers
+ * to reduce queue pressure and failures.
+ */
+function getRunPodEndpointForWorkflow(
+  workflowType: string,
+  options: { upscale?: boolean; useVidUpscale?: boolean } = {},
+): string {
+  const fallback = process.env.RUNPOD_ENDPOINT_ID || "";
+  const wan = process.env.RUNPOD_WAN_ENDPOINT_ID || fallback;
+  const zimage = process.env.RUNPOD_ZIMAGE_ENDPOINT_ID || fallback;
+  const qwen = process.env.RUNPOD_QWEN_EDIT_ENDPOINT_ID || fallback;
+  const upscale = process.env.RUNPOD_UPSCALE_ENDPOINT_ID || fallback;
+
+  if (workflowType === "wan-video" || workflowType === "longlook") return wan;
+  if (workflowType === "gltch-wan") return options.useVidUpscale ? (upscale || wan) : wan;
+  if (workflowType === "qwen-edit") return options.upscale ? (upscale || qwen) : qwen;
+  if (workflowType === "zimage") return zimage;
+  return fallback;
+}
+
 // ---- Workflow builders ----
 
 const WAN_DEFAULT_NEGATIVE =
@@ -2222,11 +2244,11 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
         });
       }
 
-      // Resolve which RunPod endpoint to use (WAN video may have its own)
-      const isVideoWorkflow = workflowType === "wan-video" || workflowType === "gltch-wan" || workflowType === "longlook";
-      const runpodEndpoint = isVideoWorkflow
-        ? (process.env.RUNPOD_WAN_ENDPOINT_ID || backend.runpodEndpoint)
-        : backend.runpodEndpoint;
+      // Resolve which RunPod endpoint to use (split by workflow type for better scaling)
+      const runpodEndpoint = getRunPodEndpointForWorkflow(workflowType, {
+        upscale: !!upscale,
+        useVidUpscale: !!useVidUpscale,
+      }) || backend.runpodEndpoint;
 
       // Submit to the appropriate backend
       if (backend.mode === "runpod") {
@@ -2282,6 +2304,7 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           seed: actualSeed,
           backend: "runpod",
           outputType: isVideoWorkflow ? "video" : "image",
+          runpodEndpointId: runpodEndpoint,
         });
       } else {
         // Local ComfyUI
@@ -2323,14 +2346,17 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
 
     // ========== POLL ==========
     if (action === "poll") {
-      const { promptId, outputType } = req.body;
+      const { promptId, outputType, runpodEndpointId } = req.body;
       if (!promptId)
         return res.status(400).json({ error: "promptId is required" });
 
-      // Resolve which RunPod endpoint to poll (WAN video may have its own)
-      const pollEndpoint = process.env.RUNPOD_WAN_ENDPOINT_ID && outputType === "video"
-        ? process.env.RUNPOD_WAN_ENDPOINT_ID
-        : backend.runpodEndpoint;
+      // Use the endpoint from generate if provided (required for split endpoints).
+      // Fallback: video → WAN, else default (for legacy clients / resumed jobs).
+      const pollEndpoint = runpodEndpointId
+        ? runpodEndpointId
+        : (outputType === "video" && process.env.RUNPOD_WAN_ENDPOINT_ID)
+          ? process.env.RUNPOD_WAN_ENDPOINT_ID
+          : backend.runpodEndpoint;
 
       if (backend.mode === "runpod") {
         const resp = await runpodRequest(

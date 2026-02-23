@@ -36,10 +36,10 @@ const SIZES = [512, 768, 1024, 1080, 1280, 1536, 1920];
 const PENDING_JOBS_KEY = "comfy-pending-jobs";
 const JOB_MAX_AGE_MS = 30 * 60 * 1000; // 30 min — RunPod jobs expire after this
 
-function savePendingJobs(jobs: { promptId: string; outputType: string; label: string; submittedAt: number }[]) {
+function savePendingJobs(jobs: { promptId: string; outputType: string; label: string; submittedAt: number; runpodEndpointId?: string }[]) {
   try { localStorage.setItem(PENDING_JOBS_KEY, JSON.stringify(jobs)); } catch { /* best-effort */ }
 }
-function loadPendingJobs(): { promptId: string; outputType: string; label: string; submittedAt: number }[] {
+function loadPendingJobs(): { promptId: string; outputType: string; label: string; submittedAt: number; runpodEndpointId?: string }[] {
   try {
     const raw = localStorage.getItem(PENDING_JOBS_KEY);
     if (!raw) return [];
@@ -142,7 +142,7 @@ export default function ComfyPanel({
         }
       }, 1000);
       timerRefs.current.set(jobId, timerIv);
-      startPolling(jobId, pj.promptId, outType, pj.label || "Resumed job");
+      startPolling(jobId, pj.promptId, outType, pj.label || "Resumed job", pj.runpodEndpointId);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [collapsed]);
@@ -213,7 +213,7 @@ export default function ComfyPanel({
 
   /* ─── Polling for a specific job ─── */
   const startPolling = useCallback(
-    (jobId: string, pid: string, outType: "image" | "video", promptText: string) => {
+    (jobId: string, pid: string, outType: "image" | "video", promptText: string, runpodEndpointId?: string) => {
       let attempts = 0;
       const maxAttempts = 300;
       const iv = setInterval(async () => {
@@ -239,7 +239,7 @@ export default function ComfyPanel({
             error?: string;
           }>("/comfyui", {
             method: "POST",
-            body: { action: "poll", promptId: pid, outputType: outType },
+            body: { action: "poll", promptId: pid, outputType: outType, ...(runpodEndpointId && { runpodEndpointId }) },
           });
 
           if (data.status === "done") {
@@ -360,7 +360,7 @@ export default function ComfyPanel({
         body.imageFilename2 = inputImageName2;
       }
 
-      const data = await apiFetch<{ promptId: string; seed: number; outputType?: string }>("/comfyui", {
+      const data = await apiFetch<{ promptId: string; seed: number; outputType?: string; runpodEndpointId?: string }>("/comfyui", {
         method: "POST",
         body,
       });
@@ -376,10 +376,16 @@ export default function ComfyPanel({
       );
 
       const pending = loadPendingJobs();
-      pending.push({ promptId: data.promptId, outputType: outType, label, submittedAt: Date.now() });
+      pending.push({
+        promptId: data.promptId,
+        outputType: outType,
+        label,
+        submittedAt: Date.now(),
+        ...(data.runpodEndpointId && { runpodEndpointId: data.runpodEndpointId }),
+      });
       savePendingJobs(pending);
 
-      startPolling(jobId, data.promptId, outType, prompt.trim());
+      startPolling(jobId, data.promptId, outType, prompt.trim(), data.runpodEndpointId);
     } catch (err: any) {
       clearInterval(timerIv);
       timerRefs.current.delete(jobId);
