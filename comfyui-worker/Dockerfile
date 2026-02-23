@@ -73,18 +73,27 @@ RUN chmod +x /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["/start.sh"]
 
+# ── System Dependencies (ffmpeg required by VideoHelperSuite) ──
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ffmpeg && \
+    rm -rf /var/lib/apt/lists/*
+
 # ── Python Dependencies ─────────────────────────────────────────
+# VHS + Frame-Interpolation deps installed explicitly (no || true) so
+# build fails loudly if something is missing.
 RUN pip install --no-cache-dir gguf color-matcher sageattention triton && \
     cd /comfyui/custom_nodes/Comfyui-QwenEditUtils && \
     ([ -f requirements.txt ] && pip install -r requirements.txt --no-cache-dir || true) && \
     cd /comfyui/custom_nodes/ComfyUI-KJNodes && \
     ([ -f requirements.txt ] && pip install -r requirements.txt --no-cache-dir || true) && \
     cd /comfyui/custom_nodes/ComfyUI-Easy-Use && \
-    ([ -f requirements.txt ] && pip install -r requirements.txt --no-cache-dir || true) && \
-    cd /comfyui/custom_nodes/ComfyUI-VideoHelperSuite && \
-    ([ -f requirements.txt ] && pip install -r requirements.txt --no-cache-dir || true) && \
-    cd /comfyui/custom_nodes/ComfyUI-Frame-Interpolation && \
     ([ -f requirements.txt ] && pip install -r requirements.txt --no-cache-dir || true)
+
+RUN cd /comfyui/custom_nodes/ComfyUI-VideoHelperSuite && \
+    pip install --no-cache-dir -r requirements.txt
+
+RUN cd /comfyui/custom_nodes/ComfyUI-Frame-Interpolation && \
+    pip install --no-cache-dir -r requirements.txt
 
 # ── Bake in small models ─────────────────────────────────────────
 # 4x-UltraSharp for Qwen edit upscale (~67 MB)
