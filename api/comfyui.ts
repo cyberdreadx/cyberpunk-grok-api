@@ -2431,8 +2431,11 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
                         Bucket: bucket,
                         Delete: { Objects: list.Contents.map(o => ({ Key: o.Key! })) },
                       }));
-                      console.log(`[s3-cleanup] Cleaned folder ${folder}/ (${list.Contents.length} objects)`);
                     }
+                    // Delete the folder marker objects themselves
+                    await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: folder })).catch(() => {});
+                    await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: folder + "/" })).catch(() => {});
+                    console.log(`[s3-cleanup] Cleaned folder ${folder}/`);
                   }
                 } catch (err: any) {
                   console.error(`[s3-cleanup] Failed: ${err.message}`);
@@ -2723,8 +2726,11 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
                       Bucket: s3Bucket,
                       Delete: { Objects: list.Contents.map(o => ({ Key: o.Key! })) },
                     }));
-                    console.log(`[s3-cleanup] Cleaned folder ${folder}/ (${list.Contents.length} objects)`);
                   }
+                  // Delete the folder marker objects themselves
+                  await client.send(new DeleteObjectCommand({ Bucket: s3Bucket, Key: folder })).catch(() => {});
+                  await client.send(new DeleteObjectCommand({ Bucket: s3Bucket, Key: folder + "/" })).catch(() => {});
+                  console.log(`[s3-cleanup] Cleaned folder ${folder}/`);
                 }
               } catch (err: any) {
                 console.error(`[s3-cleanup] Failed: ${err.message}`);

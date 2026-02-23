@@ -1025,6 +1025,7 @@ export function useGrokApi() {
     height?: number;
     steps?: number;
     cfg?: number;
+    seed?: number;
     loras?: { name: string; strengthModel: number; strengthClip: number }[];
     upscale?: boolean;
     testCredits?: boolean;
@@ -1063,6 +1064,7 @@ export function useGrokApi() {
           height: params.height || 1024,
           steps: params.steps || 5,
           cfg: params.cfg || 4,
+          seed: params.seed,
           loras: params.loras?.filter(l => l.name !== "none"),
           upscale: params.upscale || false,
           ...(params.testCredits ? { testCredits: true } : {}),
@@ -1105,6 +1107,7 @@ export function useGrokApi() {
     frameCount?: number;
     steps?: number;
     cfg?: number;
+    seed?: number;
     useRife?: boolean;
     useUpscale?: boolean;
     videoLora?: string;
@@ -1152,6 +1155,7 @@ export function useGrokApi() {
           frameCount: params.frameCount || 81,
           steps: params.steps || 8,
           cfg: params.cfg || 1,
+          seed: params.seed,
           useRife: params.useRife ?? true,
           useUpscale: params.useUpscale ?? false,
           videoLora: params.videoLora,
@@ -1310,6 +1314,7 @@ export function useGrokApi() {
     frameCount?: number;
     steps?: number;
     cfg?: number;
+    seed?: number;
     motionScale?: number;
     useRife?: boolean;
     useUpscale?: boolean;
@@ -1355,6 +1360,7 @@ export function useGrokApi() {
           frameCount: params.frameCount || 81,
           steps: params.steps || 8,
           cfg: params.cfg || 1,
+          seed: params.seed,
           motionScale: params.motionScale ?? 1.5,
           useRife: params.useRife ?? true,
           useUpscale: params.useUpscale ?? false,

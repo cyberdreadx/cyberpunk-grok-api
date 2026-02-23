@@ -149,6 +149,9 @@ const Index = () => {
   const [comfyAudioMode, setComfyAudioMode] = useState<"none" | "ambient">("none");
   const [comfyAudioPrompt, setComfyAudioPrompt] = useState("");
 
+  // Shared seed (empty = random)
+  const [globalSeed, setGlobalSeed] = useState("");
+
   // Z-Image settings
   const [zimageWidth, setZimageWidth] = useState(1024);
   const [zimageHeight, setZimageHeight] = useState(1024);
@@ -386,6 +389,7 @@ const Index = () => {
               h = Math.round(h * scale);
             }
           }
+          const parsedSeed = globalSeed ? Number(globalSeed) : undefined;
           comfyEdit({
             prompt: data.prompt,
             negativePrompt: comfyNegPrompt || undefined,
@@ -396,11 +400,13 @@ const Index = () => {
             height: round8(Math.max(256, h)),
             steps: comfySteps,
             cfg: comfyCfg,
+            seed: parsedSeed,
             loras: qwenLoraStack.filter(l => l.name !== "none"),
             upscale: comfyEditUpscale,
             ...(adminTestCredits ? { testCredits: true } : {}),
           });
         } else if (isZimage) {
+          const parsedSeed = globalSeed ? Number(globalSeed) : undefined;
           comfyGenerate({
             prompt: data.prompt,
             workflow: "zimage",
@@ -408,11 +414,13 @@ const Index = () => {
             height: zimageHeight,
             steps: 8,
             cfg: 1,
+            seed: parsedSeed,
             lora: zimageLora !== "none" ? zimageLora : undefined,
             loraStrength: zimageLoraStrength,
             ...(adminTestCredits ? { testCredits: true } : {}),
           });
         } else if (isComfyGen) {
+          const parsedSeed = globalSeed ? Number(globalSeed) : undefined;
           comfyGenerate({
             prompt: data.prompt,
             negativePrompt: comfyNegPrompt || undefined,
@@ -423,6 +431,7 @@ const Index = () => {
             height: comfyHeight,
             steps: comfySteps,
             cfg: comfyCfg,
+            seed: parsedSeed,
             ...(adminTestCredits ? { testCredits: true } : {}),
           });
         } else if (isComfyRender) {
@@ -451,6 +460,7 @@ const Index = () => {
           const maxDim = 1024;
           let w = dim.width, h = dim.height;
           if (w > maxDim || h > maxDim) { const s = maxDim / Math.max(w, h); w = Math.round(w * s); h = Math.round(h * s); }
+          const parsedSeedLL = globalSeed ? Number(globalSeed) : undefined;
           comfyLongLook({
             prompt: data.prompt,
             negativePrompt: comfyNegPrompt || undefined,
@@ -461,6 +471,7 @@ const Index = () => {
             frameCount: longLookFrameCount,
             steps: comfySteps,
             cfg: comfyCfg,
+            seed: parsedSeedLL,
             motionScale: longLookMotionScale,
             useRife: comfyRife,
             useUpscale: comfyVidUpscale,
@@ -476,6 +487,7 @@ const Index = () => {
             ? data.imageUrl
             : data.imageUrl ? await urlToBase64(data.imageUrl) : "";
           if (!imageBase64) throw new Error("Image is required for GLTCH WAN");
+          const parsedSeedWan = globalSeed ? Number(globalSeed) : undefined;
           comfyVideo({
             prompt: data.prompt,
             negativePrompt: comfyNegPrompt || undefined,
@@ -485,6 +497,7 @@ const Index = () => {
             frameCount: comfyFrameCount,
             steps: comfySteps,
             cfg: comfyCfg,
+            seed: parsedSeedWan,
             useUpscale: comfyVidUpscale,
             workflow: "gltch-wan",
             resolution: 832,
@@ -505,6 +518,7 @@ const Index = () => {
           const maxDim = 1024;
           let w = dim.width, h = dim.height;
           if (w > maxDim || h > maxDim) { const s = maxDim / Math.max(w, h); w = Math.round(w * s); h = Math.round(h * s); }
+          const parsedSeedAnim = globalSeed ? Number(globalSeed) : undefined;
           comfyVideo({
             prompt: data.prompt,
             negativePrompt: comfyNegPrompt || undefined,
@@ -514,6 +528,7 @@ const Index = () => {
             frameCount: comfyFrameCount,
             steps: comfySteps,
             cfg: comfyCfg,
+            seed: parsedSeedAnim,
             useRife: comfyRife,
             useUpscale: comfyVidUpscale,
             videoLora: comfyVideoLora !== "none" ? comfyVideoLora : undefined,
@@ -1679,6 +1694,34 @@ const Index = () => {
                       </span>
                     </div>
                   </div>
+                )}
+              </div>
+            )}
+
+            {/* Seed control — shared across all GLTCH/Comfy engine modes */}
+            {auth.isAuthenticated && (
+              (mode === "edit-image" && editEngine === "gltch") ||
+              (mode === "text-to-image" && (genEngine === "comfy" || genEngine === "gltch")) ||
+              mode === "animate" ||
+              (mode === "image-to-video" && animateEngine === "gltch")
+            ) && (
+              <div className="flex items-center gap-2">
+                <label className="font-mono-share text-[9px] text-muted-foreground/70 whitespace-nowrap">SEED</label>
+                <input
+                  type="text"
+                  value={globalSeed}
+                  onChange={(e) => setGlobalSeed(e.target.value.replace(/[^0-9]/g, ""))}
+                  placeholder="random"
+                  className="flex-1 bg-card/60 border border-border rounded px-2 py-1 text-[10px] font-mono-share text-foreground placeholder-muted-foreground/40 max-w-[140px]"
+                />
+                {globalSeed && (
+                  <button
+                    type="button"
+                    onClick={() => setGlobalSeed("")}
+                    className="font-mono-share text-[8px] text-muted-foreground/50 hover:text-foreground transition-colors"
+                  >
+                    CLEAR
+                  </button>
                 )}
               </div>
             )}
