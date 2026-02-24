@@ -124,7 +124,7 @@ interface VideoLoraEntry {
 }
 
 /** SFW LoRA names — everything else is NSFW-gated. Case-insensitive substring match. */
-const SFW_LORA_KEYWORDS = ["skin"];
+const SFW_LORA_KEYWORDS = ["skin", "angle"];
 
 /**
  * Group video LoRA filenames into paired entries.

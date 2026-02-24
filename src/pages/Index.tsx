@@ -28,7 +28,7 @@ const ANNOUNCEMENTS: { id: string; message: string; type?: "info" | "warning" | 
   { id: "gltch-wan-launch", message: "GLTCH WAN 2.2 I2V — Lightx2v + Pusa enhanced motions pipeline in ANIMATE mode.", type: "info" },
 ];
 
-const SFW_LORA_KEYWORDS = ["skin"];
+const SFW_LORA_KEYWORDS = ["skin", "angle"];
 const isNsfwLora = (name: string) => !SFW_LORA_KEYWORDS.some(k => name.toLowerCase().includes(k));
 
 const Index = () => {
