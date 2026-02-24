@@ -108,9 +108,12 @@ RUN python -c "import cv2; print(f'cv2 OK: {cv2.__version__}')" && \
 
 # ── Bake in small models ─────────────────────────────────────────
 # 4x-UltraSharp for Qwen edit upscale (~67 MB)
+# RealESRGAN_x2plus for video upscale (~67 MB)
 RUN mkdir -p /comfyui/models/upscale_models && \
     wget -q -O /comfyui/models/upscale_models/4x-UltraSharp.pth \
-    https://huggingface.co/Kim2091/UltraSharp/resolve/main/4x-UltraSharp.pth
+    https://huggingface.co/Kim2091/UltraSharp/resolve/main/4x-UltraSharp.pth && \
+    wget -q -O /comfyui/models/upscale_models/RealESRGAN_x2plus.pth \
+    https://huggingface.co/xingren23/comfyflow-models/resolve/main/upscale_models/RealESRGAN_x2plus.pth
 
 # RIFE model for frame interpolation (~21 MB)
 RUN mkdir -p /comfyui/custom_nodes/ComfyUI-Frame-Interpolation/ckpts/rife && \

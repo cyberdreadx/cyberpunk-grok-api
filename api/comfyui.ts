@@ -500,12 +500,34 @@ function buildWanVideoWorkflow(p: {
   }
 
   if (p.useUpscale) {
+    workflow["118"] = {
+      class_type: "UpscaleModelLoader",
+      inputs: { model_name: "RealESRGAN_x2plus.pth" },
+    };
     workflow["117"] = {
-      class_type: "ImageScaleBy",
-      inputs: { image: [lastNode, lastOut], upscale_method: "lanczos", scale_by: 2.0 },
+      class_type: "ImageUpscaleWithModel",
+      inputs: { upscale_model: ["118", 0], image: [lastNode, lastOut] },
     };
     lastNode = "117";
     lastOut = 0;
+
+    if (!p.useRife) {
+      workflow["119"] = {
+        class_type: "RIFE VFI",
+        inputs: {
+          frames: [lastNode, lastOut],
+          ckpt_name: "rife49.pth",
+          clear_cache_after_n_frames: 16,
+          multiplier: 2,
+          fast_mode: false,
+          ensemble: true,
+          scale_factor: 1,
+        },
+      };
+      lastNode = "119";
+      lastOut = 0;
+      fps = 48;
+    }
   }
 
   // MMAudio ambient sound generation (optional)
@@ -1222,10 +1244,15 @@ function buildLongLookWorkflow(p: {
     }
 
     if (p.useUpscale) {
-      const upscaleNode = `${base + 9}`;
+      const upscaleLoaderNode = `${base + 9}`;
+      const upscaleNode = `${base + 10}`;
+      workflow[upscaleLoaderNode] = {
+        class_type: "UpscaleModelLoader",
+        inputs: { model_name: "RealESRGAN_x2plus.pth" },
+      };
       workflow[upscaleNode] = {
-        class_type: "ImageScaleBy",
-        inputs: { image: [seqLastNode, seqLastOut], upscale_method: "lanczos", scale_by: 2.0 },
+        class_type: "ImageUpscaleWithModel",
+        inputs: { upscale_model: [upscaleLoaderNode, 0], image: [seqLastNode, seqLastOut] },
       };
       seqLastNode = upscaleNode;
       seqLastOut = 0;
@@ -1607,20 +1634,20 @@ function buildQwenEditWorkflow(p: {
         negative: ["133", 0],
         vae: vaeSource,
         upscale_model: ["128", 0],
-        upscale_by: 1.5,
+        upscale_by: 2.0,
         seed: p.seed,
-        steps: 6,
+        steps: 12,
         cfg: p.cfg,
         sampler_name: "sa_solver",
         scheduler: "simple",
-        denoise: 0.2,
+        denoise: 0.35,
         mode_type: "Linear",
         tile_width: 1024,
         tile_height: 1024,
-        mask_blur: 8,
-        tile_padding: 32,
-        seam_fix_mode: "None",
-        seam_fix_denoise: 1,
+        mask_blur: 12,
+        tile_padding: 48,
+        seam_fix_mode: "Band Pass",
+        seam_fix_denoise: 0.3,
         seam_fix_width: 64,
         seam_fix_mask_blur: 8,
         seam_fix_padding: 16,
