@@ -1282,7 +1282,7 @@ const Index = () => {
                     <div className={`font-orbitron text-[11px] ${renderEngine === "grok" ? "text-primary" : "text-foreground"}`}>GROK</div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>xAI</span>
-                      <span className={renderEngine === "grok" ? "text-primary/70" : "text-muted-foreground/50"}>5 cr</span>
+                      <span className={renderEngine === "grok" ? "text-primary/70" : "text-muted-foreground/50"}>{videoSettings.duration * 2} cr</span>
                     </div>
                   </button>
                   <button type="button" onClick={() => setRenderEngine("comfy")}
@@ -1443,7 +1443,7 @@ const Index = () => {
                     <div className={`font-orbitron text-[11px] ${animateEngine === "grok" ? "text-primary" : "text-foreground"}`}>GROK</div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>xAI</span>
-                      <span className={animateEngine === "grok" ? "text-primary/70" : "text-muted-foreground/50"}>5 cr</span>
+                      <span className={animateEngine === "grok" ? "text-primary/70" : "text-muted-foreground/50"}>{videoSettings.duration * 2} cr</span>
                     </div>
                   </button>
                   <button type="button" onClick={() => setAnimateEngine("gltch")}

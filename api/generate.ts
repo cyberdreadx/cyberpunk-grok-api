@@ -21,7 +21,7 @@ const CREDIT_COSTS = {
   imageEdit: 2,
   imageGenPro: 3,
   imageEditPro: 4,
-  videoPerSecond: 1,
+  videoPerSecond: 2,
 };
 
 const PRO_MODEL = "grok-imagine-image-pro";
