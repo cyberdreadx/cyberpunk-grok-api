@@ -6,9 +6,18 @@
 
 FROM runpod/worker-comfyui:5.7.1-base
 
-# ── Custom Nodes ─────────────────────────────────────────────────
+# ── Custom Nodes (via comfy-cli registry) ────────────────────────
+# comfy-node-install uses comfy-cli which handles cloning, deps,
+# and installs into the correct venv at /opt/venv.
+RUN comfy-node-install \
+    comfyui-videohelpersuite \
+    comfyui-frame-interpolation \
+    comfyui-gguf \
+    comfyui-kjnodes \
+    comfyui-easy-use
 
-# QwenEditUtils (TextEncodeQwenImageEditPlus node)
+# Nodes not in the registry — manual install
+# QwenEditUtils
 RUN cd /comfyui/custom_nodes && \
     wget -qO- https://github.com/lrzjason/Comfyui-QwenEditUtils/archive/refs/heads/master.tar.gz | tar xz && \
     mv Comfyui-QwenEditUtils-master Comfyui-QwenEditUtils
@@ -22,48 +31,12 @@ RUN cd /comfyui/custom_nodes && \
     wget -qO- https://github.com/Coyote-A/ultimate-upscale-for-automatic1111/archive/refs/heads/master.tar.gz | tar xz && \
     mv ultimate-upscale-for-automatic1111-master ultimate_sd_upscale
 
-# ComfyUI-GGUF (UnetLoaderGGUF for WAN GGUF models)
-RUN cd /comfyui/custom_nodes && \
-    wget -qO- https://github.com/city96/ComfyUI-GGUF/archive/refs/heads/main.tar.gz | tar xz && \
-    mv ComfyUI-GGUF-main ComfyUI-GGUF
-
-# KJNodes (SageAttention, PatchModelPatcherOrder, ModelPatchTorchSettings,
-#   ColorMatch, ImageResizeKJv2, INTConstant)
-RUN cd /comfyui/custom_nodes && \
-    wget -qO- https://github.com/kijai/ComfyUI-KJNodes/archive/refs/heads/main.tar.gz | tar xz && \
-    mv ComfyUI-KJNodes-main ComfyUI-KJNodes
-
-# ComfyUI-Easy-Use (easy seed, easy cleanGpuUsed)
-RUN cd /comfyui/custom_nodes && \
-    wget -qO- https://github.com/yolain/ComfyUI-Easy-Use/archive/refs/heads/main.tar.gz | tar xz && \
-    mv ComfyUI-Easy-Use-main ComfyUI-Easy-Use
-
-# VideoHelperSuite (VHS_VideoCombine for video output)
-# Pinned to v1.7.8 (4f804bb) — stable WAN 2.2 support, metadata fix
-RUN cd /comfyui/custom_nodes && \
-    wget -qO- https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite/archive/4f804bb.tar.gz | tar xz && \
-    mv ComfyUI-VideoHelperSuite-4f804bb* ComfyUI-VideoHelperSuite
-
-# Frame Interpolation (RIFE VFI for temporal upscale)
-RUN cd /comfyui/custom_nodes && \
-    wget -qO- https://github.com/Fannovel16/ComfyUI-Frame-Interpolation/archive/refs/heads/main.tar.gz | tar xz && \
-    mv ComfyUI-Frame-Interpolation-main ComfyUI-Frame-Interpolation
-
 # Unload Model (free VRAM between sampler stages)
 RUN cd /comfyui/custom_nodes && \
     wget -qO- https://github.com/SeanScripts/ComfyUI-Unload-Model/archive/refs/heads/main.tar.gz | tar xz && \
     mv ComfyUI-Unload-Model-main ComfyUI-Unload-Model
 
-# NOTE: MMAudio + F5-TTS removed — Docker image exceeded container disk.
-# Re-add when RunPod supports larger container volumes or move models to network vol.
-
 # ── Build tools for Triton/SageAttention JIT compilation ─────────
-# Triton JIT-compiles driver.c (a Python C extension using CUDA driver API)
-# at first use. It needs:
-#   1. gcc          — C compiler
-#   2. python3.12-dev — Python.h headers (driver.c #includes <Python.h>)
-#   3. libcuda.so   — created at container start by entrypoint.sh (symlink
-#                     to the real libcuda.so.1 bind-mounted by nvidia-docker)
 RUN apt-get update && \
     apt-get install -y --no-install-recommends gcc g++ python3.12-dev && \
     rm -rf /var/lib/apt/lists/*
@@ -74,37 +47,10 @@ RUN chmod +x /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["/start.sh"]
 
-# ── System Dependencies (ffmpeg required by VideoHelperSuite) ──
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends ffmpeg && \
-    rm -rf /var/lib/apt/lists/*
-
-# ── Python Dependencies ─────────────────────────────────────────
-# VHS + Frame-Interpolation deps installed explicitly (no || true) so
-# build fails loudly if something is missing.
-RUN pip install --no-cache-dir gguf color-matcher sageattention triton && \
+# ── Python Dependencies (use uv to match base image venv) ────────
+RUN uv pip install gguf color-matcher sageattention triton && \
     cd /comfyui/custom_nodes/Comfyui-QwenEditUtils && \
-    ([ -f requirements.txt ] && pip install -r requirements.txt --no-cache-dir || true) && \
-    cd /comfyui/custom_nodes/ComfyUI-KJNodes && \
-    ([ -f requirements.txt ] && pip install -r requirements.txt --no-cache-dir || true) && \
-    cd /comfyui/custom_nodes/ComfyUI-Easy-Use && \
-    ([ -f requirements.txt ] && pip install -r requirements.txt --no-cache-dir || true)
-
-# VHS needs opencv + imageio; install explicitly before requirements.txt
-# in case the base image has a broken or missing cv2.
-RUN pip install --no-cache-dir opencv-python-headless imageio imageio-ffmpeg numba && \
-    cd /comfyui/custom_nodes/ComfyUI-VideoHelperSuite && \
-    pip install --no-cache-dir -r requirements.txt
-
-RUN cd /comfyui/custom_nodes/ComfyUI-Frame-Interpolation && \
-    pip install --no-cache-dir -r requirements-no-cupy.txt
-
-# ── Verify VHS deps + files exist at build time ──────────────────
-RUN python -c "import cv2; print(f'cv2 OK: {cv2.__version__}')" && \
-    python -c "import imageio; print(f'imageio OK: {imageio.__version__}')" && \
-    python -c "import numpy; print(f'numpy OK: {numpy.__version__}')" && \
-    ls /comfyui/custom_nodes/ComfyUI-VideoHelperSuite/__init__.py && \
-    echo "VHS directory and deps verified OK"
+    ([ -f requirements.txt ] && uv pip install -r requirements.txt || true)
 
 # ── Bake in small models ─────────────────────────────────────────
 # 4x-UltraSharp for Qwen edit upscale (~67 MB)
@@ -121,9 +67,6 @@ RUN mkdir -p /comfyui/custom_nodes/ComfyUI-Frame-Interpolation/ckpts/rife && \
     https://huggingface.co/hfmaster/models-moved/resolve/main/rife/rife49.pth
 
 # ── Network Volume Model Paths ───────────────────────────────────
-# Models on RunPod Network Volume (mounted at /runpod-volume):
-#   checkpoints/ — Qwen-Rapid-AIO-v1.safetensors (~27 GB)
-#   loras/       — Unchained-XXX, qwen-edit-skin, qwen-multiple-angles
 RUN printf "\nrunpod_volume:\n    base_path: /runpod-volume/runpod-slim/ComfyUI/models\n    checkpoints: checkpoints\n    upscale_models: upscale_models\n    vae: vae\n    clip: text_encoders\n    loras: loras\n    unet: unet\n    diffusion_models: diffusion_models\n\nrunpod_volume_unet_compat:\n    base_path: /runpod-volume/runpod-slim/ComfyUI/models\n    diffusion_models: unet\n" >> /comfyui/extra_model_paths.yaml
 
 # ── Force full VRAM mode (H200 141GB — no need for lowvram) ──────
