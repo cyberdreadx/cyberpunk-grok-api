@@ -240,13 +240,20 @@ export default function Characters() {
       const portrait64 = activeChar.portrait_url;
 
       if (trigger.type === "image") {
-        const charDesc = `${activeChar.name}, ${activeChar.personality}`.slice(0, 200);
-        const fullPrompt = `${charDesc}. ${trigger.prompt}`;
-        const result = await submitAndPoll({
-          workflow: "zimage",
-          prompt: fullPrompt,
-          width: 832, height: 1216, steps: 8, cfg: 3.5,
-        });
+        const hasPortrait = portrait64 && portrait64.length > 100;
+        const result = hasPortrait
+          ? await submitAndPoll({
+              workflow: "qwen-edit",
+              prompt: trigger.prompt,
+              imageBase64: portrait64,
+              imageFilename: "portrait.jpg",
+              width: 832, height: 1216, steps: 8, cfg: 2.5,
+            })
+          : await submitAndPoll({
+              workflow: "zimage",
+              prompt: `${activeChar.name}. ${trigger.prompt}`,
+              width: 832, height: 1216, steps: 8, cfg: 3.5,
+            });
         if (result.image) {
           const mediaMsg: ChatMessage = {
             characterId: activeChar.id, role: "assistant", content: "",
