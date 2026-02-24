@@ -7,45 +7,38 @@
 
 FROM runpod/worker-comfyui:5.7.1-base
 
-# ── Custom Nodes (image-only) ────────────────────────────────────
+# ── Custom Nodes (git clone → uv pip install into /opt/venv) ─────
+# Base image uses Python venv at /opt/venv. Must use uv pip install.
+
+WORKDIR /comfyui/custom_nodes
 
 # QwenEditUtils (TextEncodeQwenImageEditPlus node)
-RUN cd /comfyui/custom_nodes && \
-    wget -qO- https://github.com/lrzjason/Comfyui-QwenEditUtils/archive/refs/heads/master.tar.gz | tar xz && \
-    mv Comfyui-QwenEditUtils-master Comfyui-QwenEditUtils
+RUN git clone https://github.com/lrzjason/Comfyui-QwenEditUtils.git && \
+    ([ -f Comfyui-QwenEditUtils/requirements.txt ] && cd Comfyui-QwenEditUtils && uv pip install -r requirements.txt || true)
 
 # UltimateSDUpscale (HD upscale for Qwen edit)
-RUN cd /comfyui/custom_nodes && \
-    wget -qO- https://github.com/ssitu/ComfyUI_UltimateSDUpscale/archive/refs/heads/main.tar.gz | tar xz && \
-    mv ComfyUI_UltimateSDUpscale-main ComfyUI_UltimateSDUpscale && \
+RUN git clone https://github.com/ssitu/ComfyUI_UltimateSDUpscale.git && \
     cd ComfyUI_UltimateSDUpscale/repositories && \
     rm -rf ultimate_sd_upscale && \
-    wget -qO- https://github.com/Coyote-A/ultimate-upscale-for-automatic1111/archive/refs/heads/master.tar.gz | tar xz && \
-    mv ultimate-upscale-for-automatic1111-master ultimate_sd_upscale
+    git clone https://github.com/Coyote-A/ultimate-upscale-for-automatic1111.git ultimate_sd_upscale
 
 # KJNodes (utility nodes)
-RUN cd /comfyui/custom_nodes && \
-    wget -qO- https://github.com/kijai/ComfyUI-KJNodes/archive/refs/heads/main.tar.gz | tar xz && \
-    mv ComfyUI-KJNodes-main ComfyUI-KJNodes
+RUN git clone https://github.com/kijai/ComfyUI-KJNodes.git && \
+    cd ComfyUI-KJNodes && \
+    ([ -f requirements.txt ] && uv pip install -r requirements.txt || true)
 
 # ComfyUI-Easy-Use (easy seed, easy cleanGpuUsed)
-RUN cd /comfyui/custom_nodes && \
-    wget -qO- https://github.com/yolain/ComfyUI-Easy-Use/archive/refs/heads/main.tar.gz | tar xz && \
-    mv ComfyUI-Easy-Use-main ComfyUI-Easy-Use
+RUN git clone https://github.com/yolain/ComfyUI-Easy-Use.git && \
+    cd ComfyUI-Easy-Use && \
+    ([ -f requirements.txt ] && uv pip install -r requirements.txt || true)
+
+WORKDIR /
 
 # ── Entrypoint ───────────────────────────────────────────────────
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["/start.sh"]
-
-# ── Python Dependencies ─────────────────────────────────────────
-RUN cd /comfyui/custom_nodes/Comfyui-QwenEditUtils && \
-    ([ -f requirements.txt ] && pip install -r requirements.txt --no-cache-dir || true) && \
-    cd /comfyui/custom_nodes/ComfyUI-KJNodes && \
-    ([ -f requirements.txt ] && pip install -r requirements.txt --no-cache-dir || true) && \
-    cd /comfyui/custom_nodes/ComfyUI-Easy-Use && \
-    ([ -f requirements.txt ] && pip install -r requirements.txt --no-cache-dir || true)
 
 # ── Bake in small models ─────────────────────────────────────────
 # 4x-UltraSharp for Qwen edit upscale (~67 MB)
@@ -54,15 +47,7 @@ RUN mkdir -p /comfyui/models/upscale_models && \
     https://huggingface.co/Kim2091/UltraSharp/resolve/main/4x-UltraSharp.pth
 
 # ── Network Volume Model Paths ───────────────────────────────────
-# Models on RunPod Network Volume (mounted at /runpod-volume):
-#   checkpoints/ — Qwen-Rapid-AIO, SDXL, Flux, etc.
-#   loras/       — qwen-edit-skin, etc.
 RUN printf "\nrunpod_volume:\n    base_path: /runpod-volume/runpod-slim/ComfyUI/models\n    checkpoints: checkpoints\n    upscale_models: upscale_models\n    vae: vae\n    clip: text_encoders\n    loras: loras\n    unet: unet\n    diffusion_models: diffusion_models\n\nrunpod_volume_unet_compat:\n    base_path: /runpod-volume/runpod-slim/ComfyUI/models\n    diffusion_models: unet\n" >> /comfyui/extra_model_paths.yaml
-
-# ── Default VRAM management (24 GB — let ComfyUI auto-manage) ────
-# Do NOT use --gpu-only on 24 GB cards. ComfyUI's default mode
-# keeps models on GPU when they fit and offloads intelligently.
-# No sed override here = normal VRAM mode.
 
 # ── Patch handler.py to support image output ─────────────────────
 COPY handler_patch.py /handler_patch.py
