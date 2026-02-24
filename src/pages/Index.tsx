@@ -28,6 +28,9 @@ const ANNOUNCEMENTS: { id: string; message: string; type?: "info" | "warning" | 
   { id: "gltch-wan-launch", message: "GLTCH WAN 2.2 I2V — Lightx2v + Pusa enhanced motions pipeline in ANIMATE mode.", type: "info" },
 ];
 
+const SFW_LORA_KEYWORDS = ["skin"];
+const isNsfwLora = (name: string) => !SFW_LORA_KEYWORDS.some(k => name.toLowerCase().includes(k));
+
 const Index = () => {
   const [mode, setMode] = useState<GrokMode>("text-to-image");
   const [dismissedAnnouncements, setDismissedAnnouncements] = useState<string[]>(() => {
@@ -965,12 +968,19 @@ const Index = () => {
                               <div className="flex items-center gap-1.5">
                                 <select
                                   value={entry.name}
-                                  onChange={(e) => setQwenLoraStack(prev => prev.map((l, i) => i === idx ? { ...l, name: e.target.value } : l))}
+                                  onChange={(e) => {
+                                    if (isNsfwLora(e.target.value) && !comfyModels.xrgeHolder && e.target.value !== "none") return;
+                                    setQwenLoraStack(prev => prev.map((l, i) => i === idx ? { ...l, name: e.target.value } : l));
+                                  }}
                                   className="flex-1 bg-card/50 border border-border rounded px-2 py-1 font-mono-share text-[10px] text-foreground"
                                 >
                                   <option value="none">Select LoRA...</option>
                                   {available.map(l => (
-                                    <option key={l} value={l}>{l.replace(/\.(safetensors|ckpt|pt)$/i, "")}</option>
+                                    <option key={l} value={l}
+                                      disabled={isNsfwLora(l) && !comfyModels.xrgeHolder}
+                                      style={isNsfwLora(l) && !comfyModels.xrgeHolder ? { color: '#666', fontStyle: 'italic' } : undefined}>
+                                      {isNsfwLora(l) && !comfyModels.xrgeHolder ? "🔒 " : ""}{l.replace(/\.(safetensors|ckpt|pt)$/i, "")}
+                                    </option>
                                   ))}
                                   {entry.name !== "none" && !available.includes(entry.name) && (
                                     <option value={entry.name}>{entry.name.replace(/\.(safetensors|ckpt|pt)$/i, "")}</option>
@@ -1018,6 +1028,11 @@ const Index = () => {
                             </div>
                           );
                         })}
+                        {!comfyModels.xrgeHolder && comfyModels.qwenLoras.some(isNsfwLora) && (
+                          <p className="mt-1 font-mono-share text-[8px] text-pink-400/70">
+                            🔒 NSFW LoRAs unlocked for <span className="text-pink-400">$XRGE</span> holders
+                          </p>
+                        )}
                       </div>
                     )}
                     <button
@@ -1145,11 +1160,25 @@ const Index = () => {
                     {comfyModels.loras.length > 0 && (
                       <div>
                         <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">LORA</label>
-                        <select value={zimageLora} onChange={(e) => setZimageLora(e.target.value)}
+                        <select value={zimageLora} onChange={(e) => {
+                          if (isNsfwLora(e.target.value) && !comfyModels.xrgeHolder && e.target.value !== "none") return;
+                          setZimageLora(e.target.value);
+                        }}
                           className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-[10px] font-mono-share text-foreground">
                           <option value="none">None</option>
-                          {comfyModels.loras.map((l) => <option key={l} value={l}>{l.replace(/\.[^.]+$/, "")}</option>)}
+                          {comfyModels.loras.map((l) => (
+                            <option key={l} value={l}
+                              disabled={isNsfwLora(l) && !comfyModels.xrgeHolder}
+                              style={isNsfwLora(l) && !comfyModels.xrgeHolder ? { color: '#666', fontStyle: 'italic' } : undefined}>
+                              {isNsfwLora(l) && !comfyModels.xrgeHolder ? "🔒 " : ""}{l.replace(/\.[^.]+$/, "")}
+                            </option>
+                          ))}
                         </select>
+                        {!comfyModels.xrgeHolder && comfyModels.loras.some(isNsfwLora) && (
+                          <p className="mt-1 font-mono-share text-[8px] text-pink-400/70">
+                            🔒 NSFW LoRAs unlocked for <span className="text-pink-400">$XRGE</span> holders
+                          </p>
+                        )}
                         {zimageLora !== "none" && (
                           <div className="mt-1">
                             <label className="font-mono-share text-[9px] text-muted-foreground/70">Strength: {zimageLoraStrength.toFixed(2)}</label>
@@ -1176,10 +1205,19 @@ const Index = () => {
                     {comfyModels.loras.length > 0 && (
                       <div>
                         <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">LoRA (optional)</label>
-                        <select value={comfyLora} onChange={(e) => setComfyLora(e.target.value)}
+                        <select value={comfyLora} onChange={(e) => {
+                          if (isNsfwLora(e.target.value) && !comfyModels.xrgeHolder && e.target.value !== "none") return;
+                          setComfyLora(e.target.value);
+                        }}
                           className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-[10px] font-mono-share text-foreground">
                           <option value="none">None</option>
-                          {comfyModels.loras.map((l) => <option key={l} value={l}>{l.replace(/\.[^.]+$/, "")}</option>)}
+                          {comfyModels.loras.map((l) => (
+                            <option key={l} value={l}
+                              disabled={isNsfwLora(l) && !comfyModels.xrgeHolder}
+                              style={isNsfwLora(l) && !comfyModels.xrgeHolder ? { color: '#666', fontStyle: 'italic' } : undefined}>
+                              {isNsfwLora(l) && !comfyModels.xrgeHolder ? "🔒 " : ""}{l.replace(/\.[^.]+$/, "")}
+                            </option>
+                          ))}
                         </select>
                         {comfyLora !== "none" && (
                           <div className="mt-1">
