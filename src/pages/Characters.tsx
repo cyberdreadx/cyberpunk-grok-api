@@ -240,20 +240,13 @@ export default function Characters() {
       const portrait64 = activeChar.portrait_url;
 
       if (trigger.type === "image") {
-        const submitBody: Record<string, unknown> = {
+        const charDesc = `${activeChar.name}, ${activeChar.personality}`.slice(0, 200);
+        const fullPrompt = `${charDesc}. ${trigger.prompt}`;
+        const result = await submitAndPoll({
           workflow: "zimage",
-          prompt: trigger.prompt,
+          prompt: fullPrompt,
           width: 832, height: 1216, steps: 8, cfg: 3.5,
-        };
-        if (portrait64) {
-          submitBody.workflow = "qwen-edit";
-          submitBody.imageBase64 = portrait64;
-          submitBody.imageFilename = "portrait.jpg";
-          submitBody.prompt = `Keep the subject's face, identity, and body exactly the same. Only change the scene/pose: ${trigger.prompt}`;
-          submitBody.steps = 12;
-          submitBody.cfg = 2.5;
-        }
-        const result = await submitAndPoll(submitBody);
+        });
         if (result.image) {
           const mediaMsg: ChatMessage = {
             characterId: activeChar.id, role: "assistant", content: "",
