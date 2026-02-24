@@ -47,9 +47,6 @@ RUN git clone https://github.com/ssitu/ComfyUI_UltimateSDUpscale.git && \
     rm -rf ultimate_sd_upscale && \
     git clone https://github.com/Coyote-A/ultimate-upscale-for-automatic1111.git ultimate_sd_upscale
 
-# Unload Model (free VRAM between sampler stages)
-RUN git clone https://github.com/SeanScripts/ComfyUI-Unload-Model.git
-
 WORKDIR /
 
 # ── Build tools for Triton/SageAttention JIT compilation ─────────

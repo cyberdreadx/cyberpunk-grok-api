@@ -568,7 +568,7 @@ function buildWanVideoWorkflow(p: {
  *
  * Split defaults to ~66% high-noise steps, 33% low-noise.
  * Each model path gets SageAttention + fp16 accumulation + PatchModelPatcherOrder.
- * UnloadModel nodes free VRAM between stages.
+ * H200 141GB — no UnloadModel needed, samplers wired directly.
  * Post-processing: ColorMatch → RealESRGAN 2x → RIFE 4x interpolation (60fps).
  */
 function buildGltchWanWorkflow(p: {
@@ -776,11 +776,6 @@ function buildGltchWanWorkflow(p: {
       return_with_leftover_noise: "enable",
     },
   };
-  workflow["72"] = {
-    class_type: "UnloadModel",
-    inputs: { value: ["31", 0], model: ["8", 0] },
-  };
-
   // ── Stage 2: Low noise + Lightx2v + Pusa ──
   workflow["2"] = {
     class_type: "KSamplerAdvanced",
@@ -788,7 +783,7 @@ function buildGltchWanWorkflow(p: {
       model: ["9", 0],
       positive: ["10", 0],
       negative: ["10", 1],
-      latent_image: ["72", 0],
+      latent_image: ["31", 0],
       add_noise: "disable",
       noise_seed: ["121", 0],
       steps: p.steps,
@@ -800,15 +795,10 @@ function buildGltchWanWorkflow(p: {
       return_with_leftover_noise: "disable",
     },
   };
-  workflow["74"] = {
-    class_type: "UnloadModel",
-    inputs: { value: ["2", 0], model: ["9", 0] },
-  };
-
   // ── VAE Decode ──
   workflow["4"] = {
     class_type: "VAEDecode",
-    inputs: { samples: ["74", 0], vae: ["7", 0] },
+    inputs: { samples: ["2", 0], vae: ["7", 0] },
   };
 
   // MMAudio ambient sound generation (optional)
