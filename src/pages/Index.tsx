@@ -845,8 +845,9 @@ const Index = () => {
                       }
                     `}
                   >
-                    <div className={`font-orbitron text-[11px] ${editEngine === "gltch" ? "text-secondary" : "text-foreground"}`}>
+                    <div className={`font-orbitron text-[11px] flex items-center gap-1.5 ${editEngine === "gltch" ? "text-secondary" : "text-foreground"}`}>
                       GLTCH
+                      <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-red-400/80 border-red-500/30 bg-red-500/10 animate-pulse">RAW</span>
                     </div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>Edit + LoRA</span>
@@ -1097,7 +1098,10 @@ const Index = () => {
                   </button>
                   <button type="button" onClick={() => setGenEngine("gltch")}
                     className={`p-2.5 border rounded text-left transition-all duration-200 ${genEngine === "gltch" ? "border-secondary neon-border bg-secondary/5" : "border-border bg-card/30 hover:border-secondary/40"}`}>
-                    <div className={`font-orbitron text-[11px] ${genEngine === "gltch" ? "text-secondary" : "text-foreground"}`}>GLTCH</div>
+                    <div className={`font-orbitron text-[11px] flex items-center gap-1.5 ${genEngine === "gltch" ? "text-secondary" : "text-foreground"}`}>
+                      GLTCH
+                      <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-red-400/80 border-red-500/30 bg-red-500/10 animate-pulse">RAW</span>
+                    </div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>Z-Image Turbo</span>
                       <span className={genEngine === "gltch" ? "text-secondary/70" : "text-muted-foreground/50"}>1 cr</span>
@@ -1444,7 +1448,10 @@ const Index = () => {
                   </button>
                   <button type="button" onClick={() => setAnimateEngine("gltch")}
                     className={`p-2.5 border rounded text-left transition-all duration-200 ${animateEngine === "gltch" ? "border-secondary neon-border bg-secondary/5" : "border-border bg-card/30 hover:border-secondary/40"}`}>
-                    <div className={`font-orbitron text-[11px] ${animateEngine === "gltch" ? "text-secondary" : "text-foreground"}`}>GLTCH</div>
+                    <div className={`font-orbitron text-[11px] flex items-center gap-1.5 ${animateEngine === "gltch" ? "text-secondary" : "text-foreground"}`}>
+                      GLTCH
+                      <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-red-400/80 border-red-500/30 bg-red-500/10 animate-pulse">RAW</span>
+                    </div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>WAN 2.2 I2V</span>
                       <span className={animateEngine === "gltch" ? "text-secondary/70" : "text-muted-foreground/50"}>2 cr</span>
