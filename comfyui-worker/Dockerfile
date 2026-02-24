@@ -39,9 +39,10 @@ RUN cd /comfyui/custom_nodes && \
     mv ComfyUI-Easy-Use-main ComfyUI-Easy-Use
 
 # VideoHelperSuite (VHS_VideoCombine for video output)
+# Pinned to v1.7.8 (4f804bb) — stable WAN 2.2 support, metadata fix
 RUN cd /comfyui/custom_nodes && \
-    wget -qO- https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite/archive/refs/heads/main.tar.gz | tar xz && \
-    mv ComfyUI-VideoHelperSuite-main ComfyUI-VideoHelperSuite
+    wget -qO- https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite/archive/4f804bb.tar.gz | tar xz && \
+    mv ComfyUI-VideoHelperSuite-4f804bb* ComfyUI-VideoHelperSuite
 
 # Frame Interpolation (RIFE VFI for temporal upscale)
 RUN cd /comfyui/custom_nodes && \
@@ -97,6 +98,19 @@ RUN pip install --no-cache-dir opencv-python-headless imageio imageio-ffmpeg num
 
 RUN cd /comfyui/custom_nodes/ComfyUI-Frame-Interpolation && \
     pip install --no-cache-dir -r requirements-no-cupy.txt
+
+# ── Verify VHS imports at build time (fail fast if broken) ───────
+RUN cd /comfyui && python -c "\
+import sys; sys.path.insert(0, '.'); \
+from custom_nodes.ComfyUI_VideoHelperSuite import NODE_CLASS_MAPPINGS; \
+assert 'VHS_VideoCombine' in NODE_CLASS_MAPPINGS, 'VHS_VideoCombine not found!'; \
+print(f'VHS OK: {len(NODE_CLASS_MAPPINGS)} nodes registered')" \
+    || (echo '=== VHS IMPORT FAILED ===' && cd /comfyui && python -c "\
+import traceback; \
+try: \
+    import sys; sys.path.insert(0, '.'); \
+    from custom_nodes.ComfyUI_VideoHelperSuite import NODE_CLASS_MAPPINGS; \
+except Exception: traceback.print_exc()" && exit 1)
 
 # ── Bake in small models ─────────────────────────────────────────
 # 4x-UltraSharp for Qwen edit upscale (~67 MB)
