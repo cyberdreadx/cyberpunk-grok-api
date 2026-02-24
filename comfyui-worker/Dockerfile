@@ -89,7 +89,10 @@ RUN pip install --no-cache-dir gguf color-matcher sageattention triton && \
     cd /comfyui/custom_nodes/ComfyUI-Easy-Use && \
     ([ -f requirements.txt ] && pip install -r requirements.txt --no-cache-dir || true)
 
-RUN cd /comfyui/custom_nodes/ComfyUI-VideoHelperSuite && \
+# VHS needs opencv + imageio; install explicitly before requirements.txt
+# in case the base image has a broken or missing cv2.
+RUN pip install --no-cache-dir opencv-python-headless imageio imageio-ffmpeg numba && \
+    cd /comfyui/custom_nodes/ComfyUI-VideoHelperSuite && \
     pip install --no-cache-dir -r requirements.txt
 
 RUN cd /comfyui/custom_nodes/ComfyUI-Frame-Interpolation && \
