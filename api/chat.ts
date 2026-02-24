@@ -115,13 +115,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (chars.length === 0) return res.status(404).json({ error: "Character not found" });
       const char = chars[0];
 
-      // Check credits (1 credit per 10 messages, tracked via usage_log count)
+      // Deduct 1 credit per message (DB requires integers)
       const testCredits = req.body.testCredits && isAdmin;
       if (!isAdmin || testCredits) {
-        const creditCheck = await sql`SELECT deduct_credits(${auth.userId}, 0.1)`;
-        if (!creditCheck[0].deduct_credits) {
-          return res.status(402).json({ error: "Insufficient credits. Each chat message costs ~0.1 credits." });
+        const rows = await sql`SELECT sub_credits, pack_credits FROM users WHERE id = ${auth.userId}`;
+        if (rows.length === 0) return res.status(404).json({ error: "User not found" });
+        const total = (rows[0].sub_credits || 0) + (rows[0].pack_credits || 0);
+        if (total < 1) {
+          return res.status(402).json({ error: "Insufficient credits. Each chat message costs 1 credit." });
         }
+        await sql`SELECT deduct_credits(${auth.userId}::uuid, 1)`;
       }
 
       // Build conversation
@@ -152,7 +155,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       } catch { /* best effort */ }
 
       return res.status(200).json({
-        reply: cleanText || response,
+        reply: cleanText,
         mediaTrigger,
         characterName: char.name,
       });
