@@ -15,17 +15,22 @@ done
 
 rm -rf /root/.triton/cache 2>/dev/null
 
-# ── Runtime safety net: ensure VHS is loadable ─────────────────
-# If VHS directory is missing or broken, re-install via comfy-cli.
-# This adds ~20s to first cold start but guarantees the node exists.
-VHS_DIR="/comfyui/custom_nodes/ComfyUI-VideoHelperSuite"
-if [ ! -f "$VHS_DIR/__init__.py" ]; then
-  echo "entrypoint: VHS not found — installing via comfy-cli..."
-  comfy --workspace /comfyui node install comfyui-videohelpersuite 2>&1 || true
-  echo "entrypoint: VHS install complete"
-else
-  echo "entrypoint: VHS found at $VHS_DIR"
-fi
+# ── Runtime safety net: ensure critical custom nodes exist ──────
+# If any are missing, clone + install deps at startup (~30s penalty).
+for node_entry in \
+  "ComfyUI-VideoHelperSuite|https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite.git|requirements.txt" \
+  "ComfyUI-GGUF|https://github.com/city96/ComfyUI-GGUF.git|requirements.txt" \
+  "ComfyUI-Frame-Interpolation|https://github.com/Fannovel16/ComfyUI-Frame-Interpolation.git|requirements-no-cupy.txt"; do
+  IFS='|' read -r dir url reqs <<< "$node_entry"
+  if [ ! -f "/comfyui/custom_nodes/$dir/__init__.py" ]; then
+    echo "entrypoint: $dir missing — cloning..."
+    cd /comfyui/custom_nodes && git clone "$url" "$dir" 2>&1
+    [ -f "/comfyui/custom_nodes/$dir/$reqs" ] && uv pip install -r "/comfyui/custom_nodes/$dir/$reqs" 2>&1
+    echo "entrypoint: $dir installed"
+  else
+    echo "entrypoint: $dir OK"
+  fi
+done
 
 # ── Clean stale job output from network volume ─────────────────
 # RunPod SDK leaves {job_id}-u{N} staging dirs in /workspace after

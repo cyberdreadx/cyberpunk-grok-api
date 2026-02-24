@@ -6,35 +6,51 @@
 
 FROM runpod/worker-comfyui:5.7.1-base
 
-# ── Custom Nodes (via comfy-cli registry) ────────────────────────
-# comfy-node-install uses comfy-cli which handles cloning, deps,
-# and installs into the correct venv at /opt/venv.
-RUN comfy-node-install \
-    comfyui-videohelpersuite \
-    comfyui-frame-interpolation \
-    comfyui-gguf \
-    comfyui-kjnodes \
-    comfyui-easy-use
+# ── Custom Nodes (git clone → uv pip install into /opt/venv) ─────
+# IMPORTANT: base image uses a Python venv at /opt/venv via uv.
+# All pip installs MUST use `uv pip install` to target the correct env.
 
-# Nodes not in the registry — manual install
-# QwenEditUtils
-RUN cd /comfyui/custom_nodes && \
-    wget -qO- https://github.com/lrzjason/Comfyui-QwenEditUtils/archive/refs/heads/master.tar.gz | tar xz && \
-    mv Comfyui-QwenEditUtils-master Comfyui-QwenEditUtils
+WORKDIR /comfyui/custom_nodes
+
+# VideoHelperSuite (VHS_VideoCombine — video output)
+RUN git clone https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite.git && \
+    cd ComfyUI-VideoHelperSuite && \
+    uv pip install -r requirements.txt
+
+# ComfyUI-GGUF (UnetLoaderGGUF for WAN GGUF models)
+RUN git clone https://github.com/city96/ComfyUI-GGUF.git && \
+    cd ComfyUI-GGUF && \
+    uv pip install -r requirements.txt
+
+# Frame Interpolation (RIFE VFI for temporal upscale)
+RUN git clone https://github.com/Fannovel16/ComfyUI-Frame-Interpolation.git && \
+    cd ComfyUI-Frame-Interpolation && \
+    uv pip install -r requirements-no-cupy.txt
+
+# KJNodes (SageAttention, PatchModelPatcherOrder, etc.)
+RUN git clone https://github.com/kijai/ComfyUI-KJNodes.git && \
+    cd ComfyUI-KJNodes && \
+    ([ -f requirements.txt ] && uv pip install -r requirements.txt || true)
+
+# ComfyUI-Easy-Use (easy seed, easy cleanGpuUsed)
+RUN git clone https://github.com/yolain/ComfyUI-Easy-Use.git && \
+    cd ComfyUI-Easy-Use && \
+    ([ -f requirements.txt ] && uv pip install -r requirements.txt || true)
+
+# QwenEditUtils (TextEncodeQwenImageEditPlus node)
+RUN git clone https://github.com/lrzjason/Comfyui-QwenEditUtils.git && \
+    ([ -f Comfyui-QwenEditUtils/requirements.txt ] && cd Comfyui-QwenEditUtils && uv pip install -r requirements.txt || true)
 
 # UltimateSDUpscale (HD upscale for Qwen edit)
-RUN cd /comfyui/custom_nodes && \
-    wget -qO- https://github.com/ssitu/ComfyUI_UltimateSDUpscale/archive/refs/heads/main.tar.gz | tar xz && \
-    mv ComfyUI_UltimateSDUpscale-main ComfyUI_UltimateSDUpscale && \
+RUN git clone https://github.com/ssitu/ComfyUI_UltimateSDUpscale.git && \
     cd ComfyUI_UltimateSDUpscale/repositories && \
     rm -rf ultimate_sd_upscale && \
-    wget -qO- https://github.com/Coyote-A/ultimate-upscale-for-automatic1111/archive/refs/heads/master.tar.gz | tar xz && \
-    mv ultimate-upscale-for-automatic1111-master ultimate_sd_upscale
+    git clone https://github.com/Coyote-A/ultimate-upscale-for-automatic1111.git ultimate_sd_upscale
 
 # Unload Model (free VRAM between sampler stages)
-RUN cd /comfyui/custom_nodes && \
-    wget -qO- https://github.com/SeanScripts/ComfyUI-Unload-Model/archive/refs/heads/main.tar.gz | tar xz && \
-    mv ComfyUI-Unload-Model-main ComfyUI-Unload-Model
+RUN git clone https://github.com/SeanScripts/ComfyUI-Unload-Model.git
+
+WORKDIR /
 
 # ── Build tools for Triton/SageAttention JIT compilation ─────────
 RUN apt-get update && \
@@ -47,14 +63,17 @@ RUN chmod +x /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["/start.sh"]
 
-# ── Python Dependencies (use uv to match base image venv) ────────
-RUN uv pip install gguf color-matcher sageattention triton && \
-    cd /comfyui/custom_nodes/Comfyui-QwenEditUtils && \
-    ([ -f requirements.txt ] && uv pip install -r requirements.txt || true)
+# ── Extra Python Dependencies ────────────────────────────────────
+RUN uv pip install gguf color-matcher sageattention triton
+
+# ── Verify critical nodes exist at build time ────────────────────
+RUN python -c "import sys; sys.path.insert(0,'/comfyui'); \
+    assert __import__('os').path.isfile('/comfyui/custom_nodes/ComfyUI-VideoHelperSuite/__init__.py'), 'VHS missing'; \
+    assert __import__('os').path.isfile('/comfyui/custom_nodes/ComfyUI-GGUF/__init__.py'), 'GGUF missing'; \
+    assert __import__('os').path.isfile('/comfyui/custom_nodes/ComfyUI-Frame-Interpolation/__init__.py'), 'Frame-Interp missing'; \
+    print('All critical custom nodes verified OK')"
 
 # ── Bake in small models ─────────────────────────────────────────
-# 4x-UltraSharp for Qwen edit upscale (~67 MB)
-# RealESRGAN_x2plus for video upscale (~67 MB)
 RUN mkdir -p /comfyui/models/upscale_models && \
     wget -q -O /comfyui/models/upscale_models/4x-UltraSharp.pth \
     https://huggingface.co/Kim2091/UltraSharp/resolve/main/4x-UltraSharp.pth && \
