@@ -15,6 +15,18 @@ done
 
 rm -rf /root/.triton/cache 2>/dev/null
 
+# ── Runtime safety net: ensure VHS is loadable ─────────────────
+# If VHS directory is missing or broken, re-install via comfy-cli.
+# This adds ~20s to first cold start but guarantees the node exists.
+VHS_DIR="/comfyui/custom_nodes/ComfyUI-VideoHelperSuite"
+if [ ! -f "$VHS_DIR/__init__.py" ]; then
+  echo "entrypoint: VHS not found — installing via comfy-cli..."
+  comfy --workspace /comfyui node install comfyui-videohelpersuite 2>&1 || true
+  echo "entrypoint: VHS install complete"
+else
+  echo "entrypoint: VHS found at $VHS_DIR"
+fi
+
 # ── Clean stale job output from network volume ─────────────────
 # RunPod SDK leaves {job_id}-u{N} staging dirs in /workspace after
 # uploading to S3. Remove them on every worker start.
