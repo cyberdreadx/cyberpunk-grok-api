@@ -115,9 +115,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         ? (portrait && typeof portrait === "string" && portrait.length <= MAX_PORTRAIT_SIZE ? portrait : null)
         : cur.portrait_url;
       const newBackend = llmBackend ? (llmBackend === "grok" ? "grok" : "deepseek") : cur.llm_backend;
+      const personalityChanged = newName !== cur.name || newPersonality !== cur.personality || newTraits !== JSON.stringify(cur.traits || []);
       const newSysPrompt = systemPrompt !== undefined
         ? (systemPrompt ? String(systemPrompt).slice(0, 3000) : buildSystemPrompt(newName, newPersonality, JSON.parse(newTraits)))
-        : cur.system_prompt;
+        : personalityChanged
+          ? buildSystemPrompt(newName, newPersonality, JSON.parse(newTraits))
+          : cur.system_prompt;
 
       const rows = await sql`
         UPDATE characters SET
