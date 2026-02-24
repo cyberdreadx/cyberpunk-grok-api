@@ -289,7 +289,7 @@ function getRunPodEndpointForWorkflow(
   const upscale = process.env.RUNPOD_UPSCALE_ENDPOINT_ID || fallback;
 
   if (workflowType === "wan-video" || workflowType === "longlook") return wan;
-  if (workflowType === "gltch-wan") return options.useVidUpscale ? (upscale || wan) : wan;
+  if (workflowType === "gltch-wan") return wan;
   if (workflowType === "qwen-edit") return options.upscale ? (upscale || qwen) : qwen;
   if (workflowType === "zimage") return zimage;
   return fallback;
