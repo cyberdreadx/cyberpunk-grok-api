@@ -176,6 +176,116 @@ export function useGrokApi() {
     };
   }, []);
 
+  // ── Resume interrupted ComfyUI jobs on mount ──
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const raw = localStorage.getItem("comfy-active-job");
+        if (!raw) return;
+        const saved = JSON.parse(raw) as {
+          promptId: string;
+          outputType: string;
+          submittedAt: number;
+          runpodEndpointId?: string;
+          pollEndpoint?: string;
+        };
+        if (Date.now() - saved.submittedAt > 15 * 60 * 1000) {
+          localStorage.removeItem("comfy-active-job");
+          return;
+        }
+
+        const resumeJob: ComfyJob = {
+          id: `resume-${saved.promptId}`,
+          status: "generating",
+          workflowType: saved.outputType === "video" ? "wan-video" : "comfy",
+          prompt: "Resuming generation...",
+          phase: "Reconnecting to job...",
+          elapsed: Math.floor((Date.now() - saved.submittedAt) / 1000),
+          seed: null,
+          error: null,
+        };
+        setComfyJobs(prev => [resumeJob, ...prev]);
+
+        const timerIv = setInterval(() => {
+          if (cancelled) return;
+          setComfyJobs(prev => prev.map(j =>
+            j.id === resumeJob.id && j.status === "generating"
+              ? { ...j, elapsed: Math.floor((Date.now() - saved.submittedAt) / 1000) }
+              : j
+          ));
+        }, 1000);
+
+        for (let i = 0; i < 300; i++) {
+          if (cancelled) { clearInterval(timerIv); return; }
+          await new Promise(r => setTimeout(r, 2000));
+          const pollPath = saved.pollEndpoint === "gltch" ? "/gltch" : "/comfyui";
+          const pollBody = saved.pollEndpoint === "gltch"
+            ? { action: "poll", promptId: saved.promptId }
+            : {
+                action: "poll",
+                promptId: saved.promptId,
+                outputType: saved.outputType,
+                ...(saved.runpodEndpointId && { runpodEndpointId: saved.runpodEndpointId }),
+              };
+          const poll = await apiFetch<{ status: string; image?: string; video?: string; error?: string }>(pollPath, {
+            method: "POST",
+            body: pollBody,
+          });
+          if (poll.status === "done") {
+            clearInterval(timerIv);
+            localStorage.removeItem("comfy-active-job");
+
+            let video = poll.video;
+            if (video && video.startsWith("https://") && !video.startsWith("data:")) {
+              try {
+                const proxyResp = await fetch("/api/comfyui", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ action: "proxy-s3", url: video }),
+                });
+                if (proxyResp.ok) {
+                  const blob = await proxyResp.blob();
+                  video = URL.createObjectURL(blob);
+                }
+              } catch { /* use original URL */ }
+            }
+
+            const resultType = video ? "video" : "image";
+            const url = video || poll.image || "";
+            const newResult: GrokResult = {
+              id: `resume-${Date.now()}`,
+              url,
+              type: resultType as any,
+              timestamp: Date.now(),
+            };
+            if (!cancelled) {
+              setResults(prev => [newResult, ...prev]);
+              try { await saveResult(newResult); } catch { /* best effort */ }
+              setComfyJobs(prev => prev.map(j =>
+                j.id === resumeJob.id ? { ...j, status: "done", phase: null } : j
+              ));
+            }
+            return;
+          }
+          if (poll.status === "error") {
+            clearInterval(timerIv);
+            localStorage.removeItem("comfy-active-job");
+            if (!cancelled) {
+              setComfyJobs(prev => prev.map(j =>
+                j.id === resumeJob.id ? { ...j, status: "error", error: poll.error || "Generation failed", phase: null } : j
+              ));
+            }
+            return;
+          }
+        }
+        clearInterval(timerIv);
+        localStorage.removeItem("comfy-active-job");
+      } catch { localStorage.removeItem("comfy-active-job"); }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   // ── Timer for video polling elapsed seconds ──
   const startTimer = useCallback(() => {
     setElapsedSeconds(0);
@@ -694,8 +804,18 @@ export function useGrokApi() {
           },
         });
 
+        try {
+          localStorage.setItem("comfy-active-job", JSON.stringify({
+            promptId: submitData.promptId,
+            outputType: "image",
+            submittedAt: Date.now(),
+            pollEndpoint: "gltch",
+          }));
+        } catch { /* best-effort */ }
+
         // runsync may return result directly
         if (submitData.syncResult?.status === "done" && submitData.syncResult.image) {
+          localStorage.removeItem("comfy-active-job");
           clearInterval(timerIv);
           comfyTimerRefs.current.delete(jobId);
           const newResults: GrokResult[] = [{
@@ -732,6 +852,7 @@ export function useGrokApi() {
           if (pollData.status === "done" && pollData.image) {
             clearInterval(timerIv);
             comfyTimerRefs.current.delete(jobId);
+            localStorage.removeItem("comfy-active-job");
             const newResults: GrokResult[] = [{
               id: `gltch-${Date.now()}`,
               url: pollData.image,
@@ -746,10 +867,12 @@ export function useGrokApi() {
           }
 
           if (pollData.status === "error") {
+            localStorage.removeItem("comfy-active-job");
             throw new Error(pollData.error || "GLTCH edit failed");
           }
         }
 
+        localStorage.removeItem("comfy-active-job");
         throw new Error("GLTCH edit timed out after 4 minutes");
       } catch (err: any) {
         clearInterval(timerIv);
