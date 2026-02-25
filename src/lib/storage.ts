@@ -18,7 +18,15 @@
  * On read, blobs are surfaced as object URLs via URL.createObjectURL().
  */
 
-import type { GrokResult } from "@/hooks/useGrokApi";
+/** Local copy of GrokResult to avoid circular import with useGrokApi.ts */
+interface GrokResult {
+  id: string;
+  url: string;
+  revised_prompt?: string;
+  type: "image" | "video";
+  timestamp: number;
+  folderId?: string | null;
+}
 
 const DB_NAME = "grok-media-db";
 const DB_VERSION = 3;
