@@ -1,5 +1,6 @@
 {
-  "framework": null,
+  "framework": "vite",
+  "outputDirectory": "dist",
   "functions": {
     "api/comfyui.ts": {
       "maxDuration": 120,
