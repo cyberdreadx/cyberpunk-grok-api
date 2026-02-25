@@ -158,8 +158,10 @@ export default function Characters() {
     }
   };
 
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this character and all chat history?")) return;
+    if (confirmDeleteId !== id) { setConfirmDeleteId(id); return; }
+    setConfirmDeleteId(null);
     try {
       await apiFetch("/characters", { method: "POST", body: { action: "delete", characterId: id } });
       await clearChatHistory(id);
@@ -331,10 +333,12 @@ export default function Characters() {
     }
   };
 
+  const [confirmClear, setConfirmClear] = useState(false);
   const handleClearChat = async () => {
-    if (!activeChar || !confirm("Clear all chat history with this character?")) return;
+    if (!activeChar) return;
     await clearChatHistory(activeChar.id);
     setMessages([]);
+    setConfirmClear(false);
     toast({ title: "Cleared", description: "Chat history deleted" });
   };
 
@@ -366,10 +370,25 @@ export default function Characters() {
           )}
           {view === "chat" && (
             <div className="ml-auto flex items-center gap-2">
-              <button onClick={handleClearChat}
-                className="px-2 py-1 bg-card/60 border border-border rounded font-mono-share text-[9px] text-muted-foreground hover:text-red-400 hover:border-red-400/30 transition-colors">
-                CLEAR HISTORY
-              </button>
+              {confirmClear ? (
+                <div className="flex items-center gap-1.5 animate-in fade-in">
+                  <span className="font-mono-share text-[9px] text-red-400">Delete all messages?</span>
+                  <button onClick={handleClearChat}
+                    className="px-2 py-1 bg-red-500/20 border border-red-500/50 rounded font-mono-share text-[9px] text-red-400 hover:bg-red-500/30 transition-colors">
+                    YES
+                  </button>
+                  <button onClick={() => setConfirmClear(false)}
+                    className="px-2 py-1 bg-card/60 border border-border rounded font-mono-share text-[9px] text-muted-foreground hover:text-foreground transition-colors">
+                    NO
+                  </button>
+                </div>
+              ) : (
+                <button onClick={() => setConfirmClear(true)}
+                  className="p-1.5 bg-card/60 border border-border rounded hover:text-red-400 hover:border-red-400/30 transition-colors"
+                  title="Clear chat history">
+                  <Trash2 className="w-3 h-3 text-muted-foreground" />
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -414,14 +433,29 @@ export default function Characters() {
                     </div>
                     {/* Action buttons on hover */}
                     <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={(e) => { e.stopPropagation(); openCreator(c); }}
-                        className="p-1.5 bg-black/70 rounded border border-border hover:border-purple-400/50 transition-colors">
-                        <Edit className="w-3 h-3 text-purple-400" />
-                      </button>
-                      <button onClick={(e) => { e.stopPropagation(); handleDelete(c.id); }}
-                        className="p-1.5 bg-black/70 rounded border border-border hover:border-red-400/50 transition-colors">
-                        <Trash2 className="w-3 h-3 text-red-400" />
-                      </button>
+                      {confirmDeleteId === c.id ? (
+                        <>
+                          <button onClick={(e) => { e.stopPropagation(); handleDelete(c.id); }}
+                            className="px-2 py-1 bg-red-500/30 rounded border border-red-500/50 font-mono-share text-[9px] text-red-400 hover:bg-red-500/40 transition-colors">
+                            DELETE
+                          </button>
+                          <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(null); }}
+                            className="px-2 py-1 bg-black/70 rounded border border-border font-mono-share text-[9px] text-muted-foreground hover:text-foreground transition-colors">
+                            CANCEL
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button onClick={(e) => { e.stopPropagation(); openCreator(c); }}
+                            className="p-1.5 bg-black/70 rounded border border-border hover:border-purple-400/50 transition-colors">
+                            <Edit className="w-3 h-3 text-purple-400" />
+                          </button>
+                          <button onClick={(e) => { e.stopPropagation(); handleDelete(c.id); }}
+                            className="p-1.5 bg-black/70 rounded border border-border hover:border-red-400/50 transition-colors">
+                            <Trash2 className="w-3 h-3 text-red-400" />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                 ))}
