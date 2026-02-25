@@ -22,7 +22,7 @@ function getActiveJobs(): ActiveJob[] {
     if (raw) return JSON.parse(raw);
     const legacy = localStorage.getItem("comfy-active-job");
     if (legacy) { localStorage.removeItem("comfy-active-job"); return [JSON.parse(legacy)]; }
-  } catch {}
+  } catch { }
   return [];
 }
 
@@ -31,7 +31,7 @@ function saveActiveJob(job: ActiveJob) {
     const jobs = getActiveJobs().filter(j => j.promptId !== job.promptId);
     jobs.push(job);
     localStorage.setItem("comfy-active-jobs", JSON.stringify(jobs));
-  } catch {}
+  } catch { }
 }
 
 function removeActiveJob(promptId: string) {
@@ -39,7 +39,7 @@ function removeActiveJob(promptId: string) {
     const jobs = getActiveJobs().filter(j => j.promptId !== promptId);
     if (jobs.length) localStorage.setItem("comfy-active-jobs", JSON.stringify(jobs));
     else localStorage.removeItem("comfy-active-jobs");
-  } catch {}
+  } catch { }
 }
 
 export type GrokMode = "text-to-image" | "edit-image" | "text-to-video" | "image-to-video" | "edit-video";
@@ -188,6 +188,8 @@ export function useGrokApi() {
   const [apiMode, setApiMode] = useState<ApiMode>("byok");
   const revokeAllRef = useRef<(() => void) | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [comfyJobs, setComfyJobs] = useState<ComfyJob[]>([]);
+  const comfyTimerRefs = useRef<Map<string, ReturnType<typeof setInterval>>>(new Map());
 
   // ── Load persisted results from IndexedDB on mount ──
   useEffect(() => {
@@ -254,13 +256,13 @@ export function useGrokApi() {
               try {
                 const proxyResp = await fetch("/api/comfyui", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "proxy-s3", url: video }) });
                 if (proxyResp.ok) { const blob = await proxyResp.blob(); video = URL.createObjectURL(blob); }
-              } catch {}
+              } catch { }
             }
             const url = video || poll.image || "";
             const newResult: GrokResult = { id: `resume-${Date.now()}-${saved.promptId.slice(0, 8)}`, url, type: (video ? "video" : "image") as any, timestamp: Date.now() };
             if (!cancelled) {
               setResults(prev => [newResult, ...prev]);
-              try { await saveResult(newResult); } catch {}
+              try { await saveResult(newResult); } catch { }
               setComfyJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "done", phase: null } : j));
             }
             return;
@@ -910,9 +912,6 @@ export function useGrokApi() {
   }, []);
 
   // ── ComfyUI Job Queue ─────────────────────────────────────────────────────
-
-  const [comfyJobs, setComfyJobs] = useState<ComfyJob[]>([]);
-  const comfyTimerRefs = useRef<Map<string, ReturnType<typeof setInterval>>>(new Map());
 
   // Clean up intervals on unmount
   useEffect(() => {
