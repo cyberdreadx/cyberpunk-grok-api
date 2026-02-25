@@ -397,7 +397,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 status: s.status,
                 cancel_at_period_end: s.cancel_at_period_end,
                 cancel_at: s.cancel_at,
-                current_period_end: s.current_period_end,
+                current_period_end: (s as any).current_period_end,
                 meta_user_id: s.metadata?.user_id,
               })),
             };
@@ -411,7 +411,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               const cancelTimestamp = activeSub.cancel_at
                 ? new Date(activeSub.cancel_at * 1000).toISOString()
                 : activeSub.cancel_at_period_end
-                  ? new Date(activeSub.current_period_end * 1000).toISOString()
+                  ? new Date((activeSub as any).current_period_end * 1000).toISOString()
                   : null;
 
               if (isCancelling && !user.subscription_cancel_at) {
