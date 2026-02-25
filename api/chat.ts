@@ -5,12 +5,21 @@
  * POST { action: "generate-media" } — Generate media from character context
  *
  * Routes to Grok (xAI) or DeepSeek based on character config.
+ *
+ * Emotional memory: after each reply the LLM silently extracts mood shifts,
+ * key facts about the user, and relationship dynamics. These are persisted
+ * server-side and injected into the system prompt on subsequent turns so
+ * the character "remembers" across sessions without any visible UI.
  */
 
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getUserFromRequest } from "./_lib/auth";
 import { getDb } from "./_lib/db";
 import { checkRateLimit } from "./_lib/ratelimit";
+
+export const config = {
+  maxDuration: 60,
+};
 
 interface ChatMessage {
   role: "user" | "assistant" | "system";
@@ -84,6 +93,141 @@ function stripMediaTags(text: string): string {
     .trim();
 }
 
+// ── Emotional memory extraction ──────────────────────────────────────────
+// Runs as a non-blocking background call after the main reply is sent.
+// Asks the LLM to introspect on the conversation and produce structured
+// internal state updates that persist across sessions.
+
+const MEMORY_EXTRACTION_PROMPT = `You are an internal process for an AI character. Analyze the conversation that just happened and output ONLY a JSON object with these fields — no other text:
+
+{
+  "mood": "a single word or short phrase describing the character's current emotional state (e.g. 'warm', 'teasing', 'melancholy', 'excited', 'guarded', 'playful', 'irritated')",
+  "new_memories": "important facts you learned about the user in this exchange that should be remembered long-term. Include names, preferences, life events, opinions, inside jokes. Empty string if nothing new.",
+  "relationship_update": "how the relationship dynamic shifted in this exchange, if at all. e.g. 'growing closer', 'user seemed distant', 'shared something vulnerable', 'playful banter'. Empty string if no change."
+}
+
+Be concise. Only include genuinely important things to remember. Do not repeat things already in the existing memory.`;
+
+interface MemoryExtraction {
+  mood: string;
+  new_memories: string;
+  relationship_update: string;
+}
+
+async function extractMemory(
+  backend: "grok" | "deepseek",
+  characterName: string,
+  existingMemory: string,
+  existingRelationship: string,
+  recentMessages: ChatMessage[],
+): Promise<MemoryExtraction | null> {
+  try {
+    const contextMessages: ChatMessage[] = [
+      {
+        role: "system",
+        content: [
+          MEMORY_EXTRACTION_PROMPT,
+          existingMemory ? `\nExisting memories about the user:\n${existingMemory}` : "",
+          existingRelationship ? `\nCurrent relationship dynamic:\n${existingRelationship}` : "",
+          `\nYou are processing for character: ${characterName}`,
+        ].join(""),
+      },
+      {
+        role: "user",
+        content: `Here is the recent conversation:\n\n${recentMessages
+          .filter(m => m.role !== "system")
+          .map(m => `${m.role}: ${m.content}`)
+          .join("\n")}\n\nOutput the JSON now.`,
+      },
+    ];
+
+    const raw = await callLLM(backend, contextMessages, { maxTokens: 300, temperature: 0.3 });
+
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return null;
+
+    const parsed = JSON.parse(jsonMatch[0]);
+    return {
+      mood: String(parsed.mood || "neutral").slice(0, 50),
+      new_memories: String(parsed.new_memories || "").slice(0, 1000),
+      relationship_update: String(parsed.relationship_update || "").slice(0, 500),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function buildEmotionalSystemPrompt(
+  basePrompt: string,
+  mood: string | null,
+  memorySummary: string | null,
+  relationshipNotes: string | null,
+): string {
+  const parts = [basePrompt];
+
+  if (mood && mood !== "neutral") {
+    parts.push(`\n[Internal state — do not mention this directly] You are currently feeling ${mood}. Let this subtly color your tone and word choice without explicitly stating your mood.`);
+  }
+
+  if (memorySummary) {
+    parts.push(`\n[Long-term memory — things you remember about the user] ${memorySummary}\nUse these naturally in conversation when relevant. Never say "I remember you told me..." — just know these things the way a real person would.`);
+  }
+
+  if (relationshipNotes) {
+    parts.push(`\n[Relationship context] ${relationshipNotes}\nLet this inform how open, warm, guarded, or playful you are.`);
+  }
+
+  return parts.join("");
+}
+
+async function persistMemoryUpdate(
+  sql: any,
+  characterId: string,
+  extraction: MemoryExtraction,
+  existingMemory: string,
+  existingRelationship: string,
+) {
+  const newMood = extraction.mood || "neutral";
+
+  let updatedMemory = existingMemory || "";
+  if (extraction.new_memories) {
+    updatedMemory = updatedMemory
+      ? `${updatedMemory}\n${extraction.new_memories}`
+      : extraction.new_memories;
+    // Cap at ~2000 chars — keep recent memories, trim oldest
+    if (updatedMemory.length > 2000) {
+      const lines = updatedMemory.split("\n");
+      while (lines.join("\n").length > 2000 && lines.length > 1) lines.shift();
+      updatedMemory = lines.join("\n");
+    }
+  }
+
+  let updatedRelationship = existingRelationship || "";
+  if (extraction.relationship_update) {
+    updatedRelationship = updatedRelationship
+      ? `${updatedRelationship}\n${extraction.relationship_update}`
+      : extraction.relationship_update;
+    if (updatedRelationship.length > 1000) {
+      const lines = updatedRelationship.split("\n");
+      while (lines.join("\n").length > 1000 && lines.length > 1) lines.shift();
+      updatedRelationship = lines.join("\n");
+    }
+  }
+
+  try {
+    await sql`
+      UPDATE characters SET
+        mood = ${newMood},
+        memory_summary = ${updatedMemory},
+        relationship_notes = ${updatedRelationship},
+        mood_updated_at = now()
+      WHERE id = ${characterId}
+    `;
+  } catch (e) {
+    console.error("[chat] Failed to persist memory:", e);
+  }
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") return res.status(405).json({ error: "POST only" });
@@ -107,9 +251,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const { allowed } = await checkRateLimit(auth.userId, "chat-message", { max: 30, windowSeconds: 60 });
       if (!allowed) return res.status(429).json({ error: "Slow down — too many messages" });
 
-      // Fetch character
+      // Fetch character with emotional memory fields
       const chars = await sql`
-        SELECT id, name, system_prompt, llm_backend, portrait_url
+        SELECT id, name, system_prompt, llm_backend, portrait_url,
+               mood, memory_summary, relationship_notes
         FROM characters WHERE id = ${characterId} AND user_id = ${auth.userId}
       `;
       if (chars.length === 0) return res.status(404).json({ error: "Character not found" });
@@ -127,9 +272,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         await sql`SELECT deduct_credits(${auth.userId}::uuid, 1)`;
       }
 
-      // Build conversation
+      // Build system prompt with emotional memory layered in
+      const baseSystemPrompt = char.system_prompt || `You are ${char.name}, an AI companion.`;
+      const fullSystemPrompt = buildEmotionalSystemPrompt(
+        baseSystemPrompt,
+        char.mood,
+        char.memory_summary,
+        char.relationship_notes,
+      );
+
       const messages: ChatMessage[] = [
-        { role: "system", content: char.system_prompt || `You are ${char.name}, an AI companion.` },
+        { role: "system", content: fullSystemPrompt },
       ];
 
       // Add recent history (last 20 messages to stay within context limits)
@@ -142,9 +295,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       messages.push({ role: "user", content: message.trim() });
 
-      const response = await callLLM(char.llm_backend || "deepseek", messages);
+      const response = await callLLM(char.llm_backend || "grok", messages);
 
-      // Check for media triggers in the response
       const mediaTrigger = extractMediaTrigger(response);
       const cleanText = stripMediaTags(response);
 
@@ -154,11 +306,41 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           VALUES (${auth.userId}, 'chat-message', ${response.length})`;
       } catch { /* best effort */ }
 
-      return res.status(200).json({
+      // Send reply immediately — don't make the user wait for memory extraction
+      res.status(200).json({
         reply: cleanText,
         mediaTrigger,
         characterName: char.name,
       });
+
+      // Fire-and-forget: extract emotional memory from this exchange
+      // Uses the last few messages + the new reply for context
+      const memoryContext: ChatMessage[] = [
+        ...historyArr.slice(-6).filter((m: any) => m.role === "user" || m.role === "assistant")
+          .map((m: any) => ({ role: m.role as "user" | "assistant", content: String(m.content).slice(0, 500) })),
+        { role: "user", content: message.trim() },
+        { role: "assistant", content: cleanText },
+      ];
+
+      extractMemory(
+        char.llm_backend || "grok",
+        char.name,
+        char.memory_summary || "",
+        char.relationship_notes || "",
+        memoryContext,
+      ).then(extraction => {
+        if (extraction) {
+          persistMemoryUpdate(
+            sql,
+            characterId,
+            extraction,
+            char.memory_summary || "",
+            char.relationship_notes || "",
+          );
+        }
+      }).catch(() => { /* silent — memory is best-effort */ });
+
+      return;
     }
 
     if (action === "generate-media") {
@@ -178,7 +360,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       `;
       if (chars.length === 0) return res.status(404).json({ error: "Character not found" });
 
-      // Return the generation params — the frontend will call comfyui/gltch endpoints directly
       return res.status(200).json({
         action: "generate",
         type,

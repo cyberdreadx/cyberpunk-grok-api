@@ -224,32 +224,35 @@ const Index = () => {
     toast({ title: "ANIMATE MODE", description: "Image loaded — describe the motion to apply." });
   }, [toast]);
 
-  const handleGltchImage2 = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleGltchImage2 = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const img = new Image();
-      img.onload = () => {
-        const maxDim = 1024;
-        let w = img.width, h = img.height;
-        if (w > maxDim || h > maxDim) {
-          const scale = maxDim / Math.max(w, h);
-          w = Math.round(w * scale);
-          h = Math.round(h * scale);
-        }
-        const canvas = document.createElement("canvas");
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext("2d");
-        ctx?.drawImage(img, 0, 0, w, h);
-        setGltchImage2(canvas.toDataURL("image/jpeg", 0.9));
-        setGltchImage2Name(file.name.replace(/\.[^.]+$/, "") + ".jpg");
-      };
-      img.src = reader.result as string;
-    };
-    reader.readAsDataURL(file);
-  }, []);
+    try {
+      let sourceBlob: Blob = file;
+      const t = (file.type || "").toLowerCase();
+      const n = (file.name || "").toLowerCase();
+      if (t === "image/heic" || t === "image/heif" || n.endsWith(".heic") || n.endsWith(".heif")) {
+        const { default: heic2any } = await import("heic2any");
+        const converted = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.9 });
+        sourceBlob = Array.isArray(converted) ? converted[0] : converted;
+      }
+      const bitmap = await createImageBitmap(sourceBlob);
+      const maxDim = 1024;
+      let w = bitmap.width, h = bitmap.height;
+      if (w > maxDim || h > maxDim) {
+        const scale = maxDim / Math.max(w, h);
+        w = Math.round(w * scale); h = Math.round(h * scale);
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      canvas.getContext("2d")?.drawImage(bitmap, 0, 0, w, h);
+      bitmap.close();
+      setGltchImage2(canvas.toDataURL("image/jpeg", 0.9));
+      setGltchImage2Name(file.name.replace(/\.[^.]+$/, "") + ".jpg");
+    } catch {
+      toast({ title: "Image error", description: "Could not process image. Try JPG or PNG.", variant: "destructive" });
+    }
+  }, [toast]);
 
   const clearGltchImage2 = useCallback(() => {
     setGltchImage2(null);

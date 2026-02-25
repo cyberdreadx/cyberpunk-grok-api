@@ -46,7 +46,7 @@ export default function Characters() {
   const [personality, setPersonality] = useState("");
   const [traits, setTraits] = useState<string[]>([]);
   const [portrait, setPortrait] = useState<string | null>(null);
-  const [llmBackend, setLlmBackend] = useState("deepseek");
+  const [llmBackend, setLlmBackend] = useState("grok");
   const [saving, setSaving] = useState(false);
   const portraitRef = useRef<HTMLInputElement>(null);
 
@@ -77,7 +77,7 @@ export default function Characters() {
 
   const resetCreator = () => {
     setName(""); setPersonality(""); setTraits([]); setPortrait(null);
-    setLlmBackend("deepseek"); setEditingChar(null);
+    setLlmBackend("grok"); setEditingChar(null);
   };
 
   const openCreator = (char?: Character) => {
@@ -87,7 +87,7 @@ export default function Characters() {
       setPersonality(char.personality);
       setTraits(char.traits || []);
       setPortrait(char.portrait_url);
-      setLlmBackend(char.llm_backend || "deepseek");
+      setLlmBackend(char.llm_backend || "grok");
     } else {
       resetCreator();
     }
@@ -101,27 +101,40 @@ export default function Characters() {
     setView("chat");
   };
 
-  const handlePortrait = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePortrait = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const img = new window.Image();
-      img.onload = () => {
-        const maxDim = 512;
-        let w = img.width, h = img.height;
-        if (w > maxDim || h > maxDim) {
-          const s = maxDim / Math.max(w, h);
-          w = Math.round(w * s); h = Math.round(h * s);
-        }
-        const canvas = document.createElement("canvas");
-        canvas.width = w; canvas.height = h;
-        canvas.getContext("2d")?.drawImage(img, 0, 0, w, h);
-        setPortrait(canvas.toDataURL("image/jpeg", 0.85));
-      };
-      img.src = reader.result as string;
+
+    const maxDim = 512;
+
+    const isHeic = (f: File) => {
+      const t = (f.type || "").toLowerCase();
+      const n = (f.name || "").toLowerCase();
+      return t === "image/heic" || t === "image/heif" || n.endsWith(".heic") || n.endsWith(".heif");
     };
-    reader.readAsDataURL(file);
+
+    try {
+      let sourceBlob: Blob = file;
+      if (isHeic(file)) {
+        const { default: heic2any } = await import("heic2any");
+        const converted = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.85 });
+        sourceBlob = Array.isArray(converted) ? converted[0] : converted;
+      }
+
+      const bitmap = await createImageBitmap(sourceBlob);
+      let w = bitmap.width, h = bitmap.height;
+      if (w > maxDim || h > maxDim) {
+        const s = maxDim / Math.max(w, h);
+        w = Math.round(w * s); h = Math.round(h * s);
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      canvas.getContext("2d")?.drawImage(bitmap, 0, 0, w, h);
+      bitmap.close();
+      setPortrait(canvas.toDataURL("image/jpeg", 0.85));
+    } catch {
+      toast({ title: "Unsupported format", description: "Could not process image. Try JPG or PNG." });
+    }
   };
 
   const toggleTrait = (t: string) => {
@@ -249,12 +262,12 @@ export default function Characters() {
               prompt: trigger.prompt,
               imageBase64: portrait64,
               imageFilename: "portrait.jpg",
-              width: 832, height: 1216, steps: 8, cfg: 2.5,
+              width: 832, height: 1216, steps: 5, cfg: 4,
             })
           : await submitAndPoll({
               workflow: "zimage",
               prompt: `${activeChar.name}. ${trigger.prompt}`,
-              width: 832, height: 1216, steps: 8, cfg: 3.5,
+              width: 832, height: 1216, steps: 8, cfg: 1,
             });
         if (result.image) {
           const mediaMsg: ChatMessage = {
@@ -337,6 +350,8 @@ export default function Characters() {
   const handleClearChat = async () => {
     if (!activeChar) return;
     await clearChatHistory(activeChar.id);
+    // Reset server-side emotional memory so the character starts fresh
+    try { await apiFetch("/characters", { method: "POST", body: { action: "reset-memory", characterId: activeChar.id } }); } catch { /* best effort */ }
     setMessages([]);
     setConfirmClear(false);
     toast({ title: "Cleared", description: "Chat history deleted" });

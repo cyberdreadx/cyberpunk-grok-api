@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS characters (
   traits JSONB DEFAULT '[]',
   system_prompt TEXT,
   voice_style TEXT DEFAULT 'default',
-  llm_backend TEXT DEFAULT 'deepseek',
+  llm_backend TEXT DEFAULT 'grok',
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
