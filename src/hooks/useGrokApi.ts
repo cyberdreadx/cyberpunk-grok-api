@@ -8,6 +8,40 @@ import {
 } from "@/lib/storage";
 import { apiFetch, calculateCreditCost, backendEnabled } from "@/lib/api";
 
+interface ActiveJob {
+  promptId: string;
+  outputType: string;
+  submittedAt: number;
+  runpodEndpointId?: string;
+  pollEndpoint?: string;
+}
+
+function getActiveJobs(): ActiveJob[] {
+  try {
+    const raw = localStorage.getItem("comfy-active-jobs");
+    if (raw) return JSON.parse(raw);
+    const legacy = localStorage.getItem("comfy-active-job");
+    if (legacy) { localStorage.removeItem("comfy-active-job"); return [JSON.parse(legacy)]; }
+  } catch {}
+  return [];
+}
+
+function saveActiveJob(job: ActiveJob) {
+  try {
+    const jobs = getActiveJobs().filter(j => j.promptId !== job.promptId);
+    jobs.push(job);
+    localStorage.setItem("comfy-active-jobs", JSON.stringify(jobs));
+  } catch {}
+}
+
+function removeActiveJob(promptId: string) {
+  try {
+    const jobs = getActiveJobs().filter(j => j.promptId !== promptId);
+    if (jobs.length) localStorage.setItem("comfy-active-jobs", JSON.stringify(jobs));
+    else localStorage.removeItem("comfy-active-jobs");
+  } catch {}
+}
+
 export type GrokMode = "text-to-image" | "edit-image" | "text-to-video" | "image-to-video" | "edit-video";
 
 export type AspectRatio = "1:1" | "16:9" | "9:16" | "4:3" | "3:4" | "3:2" | "2:3" | "2:1" | "1:2";
@@ -176,115 +210,89 @@ export function useGrokApi() {
     };
   }, []);
 
-  // ── Resume interrupted ComfyUI jobs on mount ──
+  // ── Resume interrupted ComfyUI jobs on mount (supports multiple) ──
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+    const activeJobs = getActiveJobs().filter(j => Date.now() - j.submittedAt < 15 * 60 * 1000);
+    if (!activeJobs.length) { localStorage.removeItem("comfy-active-jobs"); localStorage.removeItem("comfy-active-job"); return; }
+
+    const resumeOne = async (saved: ActiveJob) => {
+      const jobId = `resume-${saved.promptId}`;
+      const resumeJob: ComfyJob = {
+        id: jobId, status: "generating",
+        workflowType: saved.outputType === "video" ? "wan-video" : "comfy",
+        prompt: "Resuming generation...", phase: "Reconnecting to job...",
+        elapsed: Math.floor((Date.now() - saved.submittedAt) / 1000),
+        seed: null, error: null,
+      };
+      setComfyJobs(prev => [resumeJob, ...prev]);
+
+      const timerIv = setInterval(() => {
+        if (cancelled) return;
+        setComfyJobs(prev => prev.map(j =>
+          j.id === jobId && j.status === "generating"
+            ? { ...j, elapsed: Math.floor((Date.now() - saved.submittedAt) / 1000) }
+            : j
+        ));
+      }, 1000);
+
       try {
-        const raw = localStorage.getItem("comfy-active-job");
-        if (!raw) return;
-        const saved = JSON.parse(raw) as {
-          promptId: string;
-          outputType: string;
-          submittedAt: number;
-          runpodEndpointId?: string;
-          pollEndpoint?: string;
-        };
-        if (Date.now() - saved.submittedAt > 15 * 60 * 1000) {
-          localStorage.removeItem("comfy-active-job");
-          return;
-        }
-
-        const resumeJob: ComfyJob = {
-          id: `resume-${saved.promptId}`,
-          status: "generating",
-          workflowType: saved.outputType === "video" ? "wan-video" : "comfy",
-          prompt: "Resuming generation...",
-          phase: "Reconnecting to job...",
-          elapsed: Math.floor((Date.now() - saved.submittedAt) / 1000),
-          seed: null,
-          error: null,
-        };
-        setComfyJobs(prev => [resumeJob, ...prev]);
-
-        const timerIv = setInterval(() => {
-          if (cancelled) return;
-          setComfyJobs(prev => prev.map(j =>
-            j.id === resumeJob.id && j.status === "generating"
-              ? { ...j, elapsed: Math.floor((Date.now() - saved.submittedAt) / 1000) }
-              : j
-          ));
-        }, 1000);
-
         for (let i = 0; i < 300; i++) {
           if (cancelled) { clearInterval(timerIv); return; }
           await new Promise(r => setTimeout(r, 2000));
           const pollPath = saved.pollEndpoint === "gltch" ? "/gltch" : "/comfyui";
           const pollBody = saved.pollEndpoint === "gltch"
             ? { action: "poll", promptId: saved.promptId }
-            : {
-                action: "poll",
-                promptId: saved.promptId,
-                outputType: saved.outputType,
-                ...(saved.runpodEndpointId && { runpodEndpointId: saved.runpodEndpointId }),
-              };
-          const poll = await apiFetch<{ status: string; image?: string; video?: string; error?: string }>(pollPath, {
-            method: "POST",
-            body: pollBody,
-          });
+            : { action: "poll", promptId: saved.promptId, outputType: saved.outputType, ...(saved.runpodEndpointId && { runpodEndpointId: saved.runpodEndpointId }) };
+          const poll = await apiFetch<{ status: string; image?: string; video?: string; error?: string }>(pollPath, { method: "POST", body: pollBody });
+
           if (poll.status === "done") {
             clearInterval(timerIv);
-            localStorage.removeItem("comfy-active-job");
-
+            removeActiveJob(saved.promptId);
             let video = poll.video;
             if (video && video.startsWith("https://") && !video.startsWith("data:")) {
               try {
-                const proxyResp = await fetch("/api/comfyui", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ action: "proxy-s3", url: video }),
-                });
-                if (proxyResp.ok) {
-                  const blob = await proxyResp.blob();
-                  video = URL.createObjectURL(blob);
-                }
-              } catch { /* use original URL */ }
+                const proxyResp = await fetch("/api/comfyui", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "proxy-s3", url: video }) });
+                if (proxyResp.ok) { const blob = await proxyResp.blob(); video = URL.createObjectURL(blob); }
+              } catch {}
             }
-
-            const resultType = video ? "video" : "image";
             const url = video || poll.image || "";
-            const newResult: GrokResult = {
-              id: `resume-${Date.now()}`,
-              url,
-              type: resultType as any,
-              timestamp: Date.now(),
-            };
+            const newResult: GrokResult = { id: `resume-${Date.now()}-${saved.promptId.slice(0, 8)}`, url, type: (video ? "video" : "image") as any, timestamp: Date.now() };
             if (!cancelled) {
               setResults(prev => [newResult, ...prev]);
-              try { await saveResult(newResult); } catch { /* best effort */ }
-              setComfyJobs(prev => prev.map(j =>
-                j.id === resumeJob.id ? { ...j, status: "done", phase: null } : j
-              ));
+              try { await saveResult(newResult); } catch {}
+              setComfyJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "done", phase: null } : j));
             }
             return;
           }
           if (poll.status === "error") {
             clearInterval(timerIv);
-            localStorage.removeItem("comfy-active-job");
-            if (!cancelled) {
-              setComfyJobs(prev => prev.map(j =>
-                j.id === resumeJob.id ? { ...j, status: "error", error: poll.error || "Generation failed", phase: null } : j
-              ));
-            }
+            removeActiveJob(saved.promptId);
+            if (!cancelled) setComfyJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "error", error: poll.error || "Generation failed", phase: null } : j));
             return;
           }
         }
         clearInterval(timerIv);
-        localStorage.removeItem("comfy-active-job");
-      } catch { localStorage.removeItem("comfy-active-job"); }
-    })();
+        removeActiveJob(saved.promptId);
+      } catch { clearInterval(timerIv); removeActiveJob(saved.promptId); }
+    };
+
+    activeJobs.forEach(j => resumeOne(j));
     return () => { cancelled = true; };
   }, []);
+
+  // ── Warn before closing tab if generations are in progress ──
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      const hasActiveComfy = comfyJobs.some(j => j.status === "submitting" || j.status === "generating");
+      const hasActiveGrok = isLoading;
+      if (hasActiveComfy || hasActiveGrok) {
+        e.preventDefault();
+      }
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [comfyJobs, isLoading]);
 
   // ── Timer for video polling elapsed seconds ──
   const startTimer = useCallback(() => {
@@ -804,18 +812,11 @@ export function useGrokApi() {
           },
         });
 
-        try {
-          localStorage.setItem("comfy-active-job", JSON.stringify({
-            promptId: submitData.promptId,
-            outputType: "image",
-            submittedAt: Date.now(),
-            pollEndpoint: "gltch",
-          }));
-        } catch { /* best-effort */ }
+        saveActiveJob({ promptId: submitData.promptId, outputType: "image", submittedAt: Date.now(), pollEndpoint: "gltch" });
 
         // runsync may return result directly
         if (submitData.syncResult?.status === "done" && submitData.syncResult.image) {
-          localStorage.removeItem("comfy-active-job");
+          removeActiveJob(submitData.promptId);
           clearInterval(timerIv);
           comfyTimerRefs.current.delete(jobId);
           const newResults: GrokResult[] = [{
@@ -852,7 +853,7 @@ export function useGrokApi() {
           if (pollData.status === "done" && pollData.image) {
             clearInterval(timerIv);
             comfyTimerRefs.current.delete(jobId);
-            localStorage.removeItem("comfy-active-job");
+            removeActiveJob(submitData.promptId);
             const newResults: GrokResult[] = [{
               id: `gltch-${Date.now()}`,
               url: pollData.image,
@@ -867,12 +868,12 @@ export function useGrokApi() {
           }
 
           if (pollData.status === "error") {
-            localStorage.removeItem("comfy-active-job");
+            removeActiveJob(submitData.promptId);
             throw new Error(pollData.error || "GLTCH edit failed");
           }
         }
 
-        localStorage.removeItem("comfy-active-job");
+        removeActiveJob(submitData.promptId);
         throw new Error("GLTCH edit timed out after 4 minutes");
       } catch (err: any) {
         clearInterval(timerIv);
@@ -956,15 +957,7 @@ export function useGrokApi() {
     const { promptId, outputType, runpodEndpointId } = submitData;
     const outType = outputType || (body.workflow === "wan-video" || body.workflow === "longlook" ? "video" : "image");
 
-    // Save to localStorage so we can resume if page closes
-    try {
-      localStorage.setItem("comfy-active-job", JSON.stringify({
-        promptId,
-        outputType: outType,
-        submittedAt: Date.now(),
-        ...(runpodEndpointId && { runpodEndpointId }),
-      }));
-    } catch { /* best-effort */ }
+    saveActiveJob({ promptId, outputType: outType, submittedAt: Date.now(), ...(runpodEndpointId && { runpodEndpointId }) });
 
     for (let i = 0; i < maxAttempts; i++) {
       await new Promise((r) => setTimeout(r, pollInterval));
@@ -980,7 +973,7 @@ export function useGrokApi() {
       });
 
       if (pollData.status === "done") {
-        localStorage.removeItem("comfy-active-job");
+        removeActiveJob(promptId);
 
         // If video is an S3 URL (not base64/data URI), proxy through backend
         let video = pollData.video;
@@ -1007,12 +1000,12 @@ export function useGrokApi() {
         return { image: pollData.image, video };
       }
       if (pollData.status === "error") {
-        localStorage.removeItem("comfy-active-job");
+        removeActiveJob(promptId);
         throw new Error(pollData.error || "ComfyUI generation failed");
       }
     }
 
-    localStorage.removeItem("comfy-active-job");
+    removeActiveJob(promptId);
     throw new Error("ComfyUI generation timed out");
   }, []);
 
