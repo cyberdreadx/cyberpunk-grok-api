@@ -289,8 +289,8 @@ const Index = () => {
     // Check access: need either API key (BYOK) or credits
     if (!isQueued && effectiveApiMode === "byok" && !apiKeySet) {
       toast({
-        title: "ACCESS DENIED",
-        description: "Configure your xAI API key first, or switch to Credits mode.",
+        title: "API KEY REQUIRED",
+        description: "Grok credit-mode is under maintenance. To use Grok, enter your own xAI API key in Settings. Or switch to GLTCH / COMFY engine.",
         variant: "destructive",
       });
       return;
