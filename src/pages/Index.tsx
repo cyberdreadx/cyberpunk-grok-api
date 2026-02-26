@@ -25,6 +25,7 @@ import { useToast } from "@/hooks/use-toast";
 import { calculateCreditCost, type CreditMode } from "@/lib/api";
 
 const ANNOUNCEMENTS: { id: string; message: string; type?: "info" | "warning" | "success" }[] = [
+  { id: "grok-maintenance", message: "⚠ GROK ENGINE MAINTENANCE — Grok is temporarily offline. Use GLTCH / COMFY engines in the meantime.", type: "warning" },
   { id: "gltch-wan-launch", message: "GLTCH WAN 2.2 I2V — Lightx2v + Pusa enhanced motions pipeline in ANIMATE mode.", type: "info" },
 ];
 
@@ -121,7 +122,7 @@ const Index = () => {
 
   // Engine selectors per mode
   type EditEngine = "grok" | "gltch";
-  const [editEngine, setEditEngine] = useState<EditEngine>("grok");
+  const [editEngine, setEditEngine] = useState<EditEngine>("gltch");
   const [grokPro, setGrokPro] = useState(false);
   const [qwenLoraStack, setQwenLoraStack] = useState<{ name: string; strengthModel: number; strengthClip: number }[]>([]);
   const [comfyEditUpscale, setComfyEditUpscale] = useState(false);
@@ -130,9 +131,9 @@ const Index = () => {
   const gltchImage2Ref = useRef<HTMLInputElement>(null);
 
   type ComfyEngine = "grok" | "comfy" | "gltch";
-  const [genEngine, setGenEngine] = useState<ComfyEngine>("grok");
-  const [renderEngine, setRenderEngine] = useState<ComfyEngine>("grok");
-  const [animateEngine, setAnimateEngine] = useState<ComfyEngine>("grok");
+  const [genEngine, setGenEngine] = useState<ComfyEngine>("gltch");
+  const [renderEngine, setRenderEngine] = useState<ComfyEngine>("comfy");
+  const [animateEngine, setAnimateEngine] = useState<ComfyEngine>("gltch");
 
   // ComfyUI settings
   const [comfyCheckpoint, setComfyCheckpoint] = useState("");
@@ -552,7 +553,9 @@ const Index = () => {
       return;
     }
 
-    // ── Grok (blocking) ─────────────────────────────────────────────────
+    // ── Grok (blocking) — DISABLED DURING MAINTENANCE ──────────────────
+    toast({ title: "MAINTENANCE", description: "Grok is currently under maintenance. Please switch to the GLTCH engine.", variant: "destructive" });
+    return;
     try {
       switch (mode) {
         case "text-to-image":
@@ -821,23 +824,15 @@ const Index = () => {
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
-                    onClick={() => setEditEngine("grok")}
-                    className={`
-                      p-2.5 border rounded text-left transition-all duration-200
-                      ${editEngine === "grok"
-                        ? "border-primary neon-border bg-primary/5"
-                        : "border-border bg-card/30 hover:border-primary/40"
-                      }
-                    `}
+                    disabled
+                    className="p-2.5 border rounded text-left transition-all duration-200 border-border bg-card/30 opacity-40 cursor-not-allowed"
                   >
-                    <div className={`font-orbitron text-[11px] ${editEngine === "grok" ? "text-primary" : "text-foreground"}`}>
+                    <div className="font-orbitron text-[11px] text-foreground/50 flex items-center gap-1.5">
                       GROK
+                      <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-amber-400/80 border-amber-500/30 bg-amber-500/10">MAINTENANCE</span>
                     </div>
-                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
-                      <span>xAI</span>
-                      <span className={editEngine === "grok" ? "text-primary/70" : "text-muted-foreground/50"}>
-                        {grokPro ? `${settings.count * 4} cr` : `${settings.count * 2} cr`}
-                      </span>
+                    <div className="font-mono-share text-[9px] text-muted-foreground/30 mt-0.5">
+                      xAI — temporarily offline
                     </div>
                   </button>
                   <button
@@ -1106,12 +1101,14 @@ const Index = () => {
                   ENGINE
                 </label>
                 <div className="grid grid-cols-2 gap-2">
-                  <button type="button" onClick={() => setGenEngine("grok")}
-                    className={`p-2.5 border rounded text-left transition-all duration-200 ${genEngine === "grok" ? "border-primary neon-border bg-primary/5" : "border-border bg-card/30 hover:border-primary/40"}`}>
-                    <div className={`font-orbitron text-[11px] ${genEngine === "grok" ? "text-primary" : "text-foreground"}`}>GROK</div>
-                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
-                      <span>xAI</span>
-                      <span className={genEngine === "grok" ? "text-primary/70" : "text-muted-foreground/50"}>{grokPro ? settings.count * 3 : settings.count} cr</span>
+                  <button type="button" disabled
+                    className="p-2.5 border rounded text-left transition-all duration-200 border-border bg-card/30 opacity-40 cursor-not-allowed">
+                    <div className="font-orbitron text-[11px] text-foreground/50 flex items-center gap-1.5">
+                      GROK
+                      <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-amber-400/80 border-amber-500/30 bg-amber-500/10">MAINTENANCE</span>
+                    </div>
+                    <div className="font-mono-share text-[9px] text-muted-foreground/30 mt-0.5">
+                      xAI — temporarily offline
                     </div>
                   </button>
                   <button type="button" onClick={() => setGenEngine("gltch")}
@@ -1318,12 +1315,14 @@ const Index = () => {
                   ENGINE
                 </label>
                 <div className="grid grid-cols-2 gap-2">
-                  <button type="button" onClick={() => setRenderEngine("grok")}
-                    className={`p-2.5 border rounded text-left transition-all duration-200 ${renderEngine === "grok" ? "border-primary neon-border bg-primary/5" : "border-border bg-card/30 hover:border-primary/40"}`}>
-                    <div className={`font-orbitron text-[11px] ${renderEngine === "grok" ? "text-primary" : "text-foreground"}`}>GROK</div>
-                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
-                      <span>xAI</span>
-                      <span className={renderEngine === "grok" ? "text-primary/70" : "text-muted-foreground/50"}>{videoSettings.duration * 2} cr</span>
+                  <button type="button" disabled
+                    className="p-2.5 border rounded text-left transition-all duration-200 border-border bg-card/30 opacity-40 cursor-not-allowed">
+                    <div className="font-orbitron text-[11px] text-foreground/50 flex items-center gap-1.5">
+                      GROK
+                      <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-amber-400/80 border-amber-500/30 bg-amber-500/10">MAINTENANCE</span>
+                    </div>
+                    <div className="font-mono-share text-[9px] text-muted-foreground/30 mt-0.5">
+                      xAI — temporarily offline
                     </div>
                   </button>
                   <button type="button" onClick={() => setRenderEngine("comfy")}
@@ -1479,12 +1478,14 @@ const Index = () => {
                   ENGINE
                 </label>
                 <div className="grid grid-cols-2 gap-2">
-                  <button type="button" onClick={() => setAnimateEngine("grok")}
-                    className={`p-2.5 border rounded text-left transition-all duration-200 ${animateEngine === "grok" ? "border-primary neon-border bg-primary/5" : "border-border bg-card/30 hover:border-primary/40"}`}>
-                    <div className={`font-orbitron text-[11px] ${animateEngine === "grok" ? "text-primary" : "text-foreground"}`}>GROK</div>
-                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
-                      <span>xAI</span>
-                      <span className={animateEngine === "grok" ? "text-primary/70" : "text-muted-foreground/50"}>{videoSettings.duration * 2} cr</span>
+                  <button type="button" disabled
+                    className="p-2.5 border rounded text-left transition-all duration-200 border-border bg-card/30 opacity-40 cursor-not-allowed">
+                    <div className="font-orbitron text-[11px] text-foreground/50 flex items-center gap-1.5">
+                      GROK
+                      <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-amber-400/80 border-amber-500/30 bg-amber-500/10">MAINTENANCE</span>
+                    </div>
+                    <div className="font-mono-share text-[9px] text-muted-foreground/30 mt-0.5">
+                      xAI — temporarily offline
                     </div>
                   </button>
                   <button type="button" onClick={() => setAnimateEngine("gltch")}
@@ -1775,26 +1776,26 @@ const Index = () => {
               mode === "animate" ||
               (mode === "image-to-video" && animateEngine === "gltch")
             ) && (
-              <div className="flex items-center gap-2">
-                <label className="font-mono-share text-[9px] text-muted-foreground/70 whitespace-nowrap">SEED</label>
-                <input
-                  type="text"
-                  value={globalSeed}
-                  onChange={(e) => setGlobalSeed(e.target.value.replace(/[^0-9]/g, ""))}
-                  placeholder="random"
-                  className="flex-1 bg-card/60 border border-border rounded px-2 py-1 text-[10px] font-mono-share text-foreground placeholder-muted-foreground/40 max-w-[140px]"
-                />
-                {globalSeed && (
-                  <button
-                    type="button"
-                    onClick={() => setGlobalSeed("")}
-                    className="font-mono-share text-[8px] text-muted-foreground/50 hover:text-foreground transition-colors"
-                  >
-                    CLEAR
-                  </button>
-                )}
-              </div>
-            )}
+                <div className="flex items-center gap-2">
+                  <label className="font-mono-share text-[9px] text-muted-foreground/70 whitespace-nowrap">SEED</label>
+                  <input
+                    type="text"
+                    value={globalSeed}
+                    onChange={(e) => setGlobalSeed(e.target.value.replace(/[^0-9]/g, ""))}
+                    placeholder="random"
+                    className="flex-1 bg-card/60 border border-border rounded px-2 py-1 text-[10px] font-mono-share text-foreground placeholder-muted-foreground/40 max-w-[140px]"
+                  />
+                  {globalSeed && (
+                    <button
+                      type="button"
+                      onClick={() => setGlobalSeed("")}
+                      className="font-mono-share text-[8px] text-muted-foreground/50 hover:text-foreground transition-colors"
+                    >
+                      CLEAR
+                    </button>
+                  )}
+                </div>
+              )}
 
             <PromptHistory history={history} onSelect={handleSelectPrompt} onRemove={removeEntry} onClear={clearHistory} />
             <PromptForm mode={mode} isLoading={isLoading} onSubmit={handleSubmit} settings={settings} initialPrompt={activePrompt} initialImageUrl={activeImageUrl} />
