@@ -264,7 +264,7 @@ export default function Characters() {
             imageBase64: portrait64,
             imageFilename: "portrait.jpg",
             width: 832, height: 1216, steps: 20, cfg: 3.5,
-            loras: [{ name: "multiple_angles.safetensors", strengthModel: 0.8, strengthClip: 0.8 }],
+            loras: [{ name: "qwen-multiple-angles.safetensors", strengthModel: 0.8, strengthClip: 0.8 }],
           })
           : await submitAndPoll({
             workflow: "zimage",
