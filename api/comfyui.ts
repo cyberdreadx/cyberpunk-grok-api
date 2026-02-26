@@ -1783,7 +1783,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (!xrgeHolder) {
           try {
             const sql = getDb();
-            const rows = await sql`SELECT 1 FROM xrge_orders WHERE user_id = ${auth.userId} AND status = 'completed' LIMIT 1`;
+            const rows = await sql`SELECT 1 FROM xrge_orders WHERE user_id = ${auth.userId} AND status = 'verified' LIMIT 1`;
             xrgeHolder = rows.length > 0;
           } catch { /* If DB fails, default to non-holder */ }
         }
@@ -1935,7 +1935,7 @@ Rules:
         if (isNsfwLora) {
           try {
             const sql = getDb();
-            const rows = await sql`SELECT 1 FROM xrge_orders WHERE user_id = ${auth.userId} AND status = 'completed' LIMIT 1`;
+            const rows = await sql`SELECT 1 FROM xrge_orders WHERE user_id = ${auth.userId} AND status = 'verified' LIMIT 1`;
             if (rows.length === 0) {
               return res.status(403).json({ error: "NSFW LoRAs require $XRGE token holding. Purchase credits with $XRGE to unlock." });
             }
@@ -2450,8 +2450,8 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
                       }));
                     }
                     // Delete the folder marker objects themselves
-                    await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: folder })).catch(() => {});
-                    await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: folder + "/" })).catch(() => {});
+                    await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: folder })).catch(() => { });
+                    await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: folder + "/" })).catch(() => { });
                     console.log(`[s3-cleanup] Cleaned folder ${folder}/`);
                   }
                 } catch (err: any) {
@@ -2745,8 +2745,8 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
                     }));
                   }
                   // Delete the folder marker objects themselves
-                  await client.send(new DeleteObjectCommand({ Bucket: s3Bucket, Key: folder })).catch(() => {});
-                  await client.send(new DeleteObjectCommand({ Bucket: s3Bucket, Key: folder + "/" })).catch(() => {});
+                  await client.send(new DeleteObjectCommand({ Bucket: s3Bucket, Key: folder })).catch(() => { });
+                  await client.send(new DeleteObjectCommand({ Bucket: s3Bucket, Key: folder + "/" })).catch(() => { });
                   console.log(`[s3-cleanup] Cleaned folder ${folder}/`);
                 }
               } catch (err: any) {
