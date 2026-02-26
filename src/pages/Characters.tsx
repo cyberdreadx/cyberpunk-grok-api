@@ -256,13 +256,15 @@ export default function Characters() {
 
       if (trigger.type === "image") {
         const hasPortrait = portrait64 && portrait64.length > 100;
+        const facePrompt = `keep the face exactly the same. ${trigger.prompt}`;
         const result = hasPortrait
           ? await submitAndPoll({
             workflow: "qwen-edit",
-            prompt: trigger.prompt,
+            prompt: facePrompt,
             imageBase64: portrait64,
             imageFilename: "portrait.jpg",
             width: 832, height: 1216, steps: 20, cfg: 3.5,
+            loras: [{ name: "multiple_angles.safetensors", strengthModel: 0.8, strengthClip: 0.8 }],
           })
           : await submitAndPoll({
             workflow: "zimage",
@@ -525,8 +527,8 @@ export default function Characters() {
                 {TRAIT_OPTIONS.map(t => (
                   <button key={t} onClick={() => toggleTrait(t)}
                     className={`px-2.5 py-1 rounded-full font-mono-share text-[9px] border transition-all ${traits.includes(t)
-                        ? "bg-secondary/20 border-secondary/50 text-secondary"
-                        : "bg-card/40 border-border text-muted-foreground/60 hover:border-muted-foreground/40"
+                      ? "bg-secondary/20 border-secondary/50 text-secondary"
+                      : "bg-card/40 border-border text-muted-foreground/60 hover:border-muted-foreground/40"
                       }`}>
                     {t}
                   </button>
@@ -541,8 +543,8 @@ export default function Characters() {
                 {LLM_OPTIONS.map(opt => (
                   <button key={opt.value} onClick={() => setLlmBackend(opt.value)}
                     className={`w-full flex items-center justify-between px-3 py-2 rounded border font-mono-share text-[10px] transition-all ${llmBackend === opt.value
-                        ? "border-secondary/50 bg-secondary/10 text-foreground"
-                        : "border-border bg-card/40 text-muted-foreground hover:border-muted-foreground/40"
+                      ? "border-secondary/50 bg-secondary/10 text-foreground"
+                      : "border-border bg-card/40 text-muted-foreground hover:border-muted-foreground/40"
                       }`}>
                     <span>{opt.label}</span>
                     <span className="text-muted-foreground/50">{opt.cost}</span>
@@ -587,8 +589,8 @@ export default function Characters() {
               {messages.map((msg, i) => (
                 <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                   <div className={`max-w-[80%] px-3 py-2 rounded-lg ${msg.role === "user"
-                      ? "bg-secondary/20 border border-secondary/30 text-foreground"
-                      : "bg-card/80 border border-border text-foreground"
+                    ? "bg-secondary/20 border border-secondary/30 text-foreground"
+                    : "bg-card/80 border border-border text-foreground"
                     }`}>
                     {msg.mediaUrl && msg.mediaType === "image" && (
                       <img src={msg.mediaUrl} alt="From character" className="max-w-full rounded mb-2 max-h-64 object-contain" />
