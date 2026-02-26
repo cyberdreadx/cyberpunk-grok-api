@@ -25,7 +25,7 @@ import { useToast } from "@/hooks/use-toast";
 import { calculateCreditCost, type CreditMode } from "@/lib/api";
 
 const ANNOUNCEMENTS: { id: string; message: string; type?: "info" | "warning" | "success" }[] = [
-  { id: "grok-maintenance", message: "⚠ GROK ENGINE MAINTENANCE — Grok is temporarily offline. Use GLTCH / COMFY engines in the meantime.", type: "warning" },
+  { id: "grok-maintenance", message: "⚠ GROK CREDITS MAINTENANCE — Grok credit-mode is temporarily offline. BYOK (bring your own key) still works. Use GLTCH / COMFY engines with credits.", type: "warning" },
   { id: "gltch-wan-launch", message: "GLTCH WAN 2.2 I2V — Lightx2v + Pusa enhanced motions pipeline in ANIMATE mode.", type: "info" },
 ];
 
@@ -553,9 +553,11 @@ const Index = () => {
       return;
     }
 
-    // ── Grok (blocking) — DISABLED DURING MAINTENANCE ──────────────────
-    toast({ title: "MAINTENANCE", description: "Grok is currently under maintenance. Please switch to the GLTCH engine.", variant: "destructive" });
-    return;
+    // ── Grok (blocking) — CREDITS DISABLED DURING MAINTENANCE ──────────
+    if (effectiveApiMode === "credits") {
+      toast({ title: "MAINTENANCE", description: "Grok credit-mode is under maintenance. Use BYOK with your own API key, or switch to the GLTCH engine.", variant: "destructive" });
+      return;
+    }
     try {
       switch (mode) {
         case "text-to-image":
@@ -824,15 +826,24 @@ const Index = () => {
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
-                    disabled
-                    className="p-2.5 border rounded text-left transition-all duration-200 border-border bg-card/30 opacity-40 cursor-not-allowed"
+                    onClick={() => setEditEngine("grok")}
+                    className={`
+                      p-2.5 border rounded text-left transition-all duration-200
+                      ${editEngine === "grok"
+                        ? "border-primary neon-border bg-primary/5"
+                        : "border-border bg-card/30 hover:border-primary/40"
+                      }
+                    `}
                   >
-                    <div className="font-orbitron text-[11px] text-foreground/50 flex items-center gap-1.5">
+                    <div className={`font-orbitron text-[11px] flex items-center gap-1.5 ${editEngine === "grok" ? "text-primary" : "text-foreground"}`}>
                       GROK
-                      <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-amber-400/80 border-amber-500/30 bg-amber-500/10">MAINTENANCE</span>
+                      <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-amber-400/80 border-amber-500/30 bg-amber-500/10">BYOK ONLY</span>
                     </div>
-                    <div className="font-mono-share text-[9px] text-muted-foreground/30 mt-0.5">
-                      xAI — temporarily offline
+                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
+                      <span>xAI</span>
+                      <span className={editEngine === "grok" ? "text-primary/70" : "text-muted-foreground/50"}>
+                        {grokPro ? `${settings.count * 4} cr` : `${settings.count * 2} cr`}
+                      </span>
                     </div>
                   </button>
                   <button
@@ -1101,14 +1112,15 @@ const Index = () => {
                   ENGINE
                 </label>
                 <div className="grid grid-cols-2 gap-2">
-                  <button type="button" disabled
-                    className="p-2.5 border rounded text-left transition-all duration-200 border-border bg-card/30 opacity-40 cursor-not-allowed">
-                    <div className="font-orbitron text-[11px] text-foreground/50 flex items-center gap-1.5">
+                  <button type="button" onClick={() => setGenEngine("grok")}
+                    className={`p-2.5 border rounded text-left transition-all duration-200 ${genEngine === "grok" ? "border-primary neon-border bg-primary/5" : "border-border bg-card/30 hover:border-primary/40"}`}>
+                    <div className={`font-orbitron text-[11px] flex items-center gap-1.5 ${genEngine === "grok" ? "text-primary" : "text-foreground"}`}>
                       GROK
-                      <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-amber-400/80 border-amber-500/30 bg-amber-500/10">MAINTENANCE</span>
+                      <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-amber-400/80 border-amber-500/30 bg-amber-500/10">BYOK ONLY</span>
                     </div>
-                    <div className="font-mono-share text-[9px] text-muted-foreground/30 mt-0.5">
-                      xAI — temporarily offline
+                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
+                      <span>xAI</span>
+                      <span className={genEngine === "grok" ? "text-primary/70" : "text-muted-foreground/50"}>{grokPro ? settings.count * 3 : settings.count} cr</span>
                     </div>
                   </button>
                   <button type="button" onClick={() => setGenEngine("gltch")}
@@ -1315,14 +1327,15 @@ const Index = () => {
                   ENGINE
                 </label>
                 <div className="grid grid-cols-2 gap-2">
-                  <button type="button" disabled
-                    className="p-2.5 border rounded text-left transition-all duration-200 border-border bg-card/30 opacity-40 cursor-not-allowed">
-                    <div className="font-orbitron text-[11px] text-foreground/50 flex items-center gap-1.5">
+                  <button type="button" onClick={() => setRenderEngine("grok")}
+                    className={`p-2.5 border rounded text-left transition-all duration-200 ${renderEngine === "grok" ? "border-primary neon-border bg-primary/5" : "border-border bg-card/30 hover:border-primary/40"}`}>
+                    <div className={`font-orbitron text-[11px] flex items-center gap-1.5 ${renderEngine === "grok" ? "text-primary" : "text-foreground"}`}>
                       GROK
-                      <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-amber-400/80 border-amber-500/30 bg-amber-500/10">MAINTENANCE</span>
+                      <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-amber-400/80 border-amber-500/30 bg-amber-500/10">BYOK ONLY</span>
                     </div>
-                    <div className="font-mono-share text-[9px] text-muted-foreground/30 mt-0.5">
-                      xAI — temporarily offline
+                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
+                      <span>xAI</span>
+                      <span className={renderEngine === "grok" ? "text-primary/70" : "text-muted-foreground/50"}>{videoSettings.duration * 2} cr</span>
                     </div>
                   </button>
                   <button type="button" onClick={() => setRenderEngine("comfy")}
@@ -1478,14 +1491,15 @@ const Index = () => {
                   ENGINE
                 </label>
                 <div className="grid grid-cols-2 gap-2">
-                  <button type="button" disabled
-                    className="p-2.5 border rounded text-left transition-all duration-200 border-border bg-card/30 opacity-40 cursor-not-allowed">
-                    <div className="font-orbitron text-[11px] text-foreground/50 flex items-center gap-1.5">
+                  <button type="button" onClick={() => setAnimateEngine("grok")}
+                    className={`p-2.5 border rounded text-left transition-all duration-200 ${animateEngine === "grok" ? "border-primary neon-border bg-primary/5" : "border-border bg-card/30 hover:border-primary/40"}`}>
+                    <div className={`font-orbitron text-[11px] flex items-center gap-1.5 ${animateEngine === "grok" ? "text-primary" : "text-foreground"}`}>
                       GROK
-                      <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-amber-400/80 border-amber-500/30 bg-amber-500/10">MAINTENANCE</span>
+                      <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-amber-400/80 border-amber-500/30 bg-amber-500/10">BYOK ONLY</span>
                     </div>
-                    <div className="font-mono-share text-[9px] text-muted-foreground/30 mt-0.5">
-                      xAI — temporarily offline
+                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
+                      <span>xAI</span>
+                      <span className={animateEngine === "grok" ? "text-primary/70" : "text-muted-foreground/50"}>{videoSettings.duration * 2} cr</span>
                     </div>
                   </button>
                   <button type="button" onClick={() => setAnimateEngine("gltch")}
