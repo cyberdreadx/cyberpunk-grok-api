@@ -71,16 +71,16 @@ export async function apiFetch<T = any>(path: string, options: ApiOptions = {}):
 // ── Credit cost configuration ────────────────────────────────────────────
 
 export const CREDIT_COSTS = {
-  /** 1 credit per image generated (Grok standard) */
-  imageGen: 1,
-  /** 2 credits per image edited (Grok standard — higher than gen) */
-  imageEdit: 2,
-  /** 3 credits per image generated (Grok Pro — higher quality) */
-  imageGenPro: 3,
-  /** 4 credits per image edited (Grok Pro — higher quality) */
-  imageEditPro: 4,
-  /** 2 credits per second of video (xAI charges $0.05/sec) */
-  videoPerSecond: 2,
+  /** 2 credits per image generated (Grok standard) */
+  imageGen: 2,
+  /** 3 credits per image edited (Grok standard — higher than gen) */
+  imageEdit: 3,
+  /** 5 credits per image generated (Grok Pro — higher quality) */
+  imageGenPro: 5,
+  /** 6 credits per image edited (Grok Pro — higher quality) */
+  imageEditPro: 6,
+  /** 3 credits per second of video (xAI charges $0.05/sec) */
+  videoPerSecond: 3,
   /** 1 credit per GLTCH edit (integer — DB requires whole numbers) */
   gltchEdit: 1,
   /** 2 credits per GLTCH edit with HD upscale */

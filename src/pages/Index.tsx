@@ -25,7 +25,6 @@ import { useToast } from "@/hooks/use-toast";
 import { calculateCreditCost, type CreditMode } from "@/lib/api";
 
 const ANNOUNCEMENTS: { id: string; message: string; type?: "info" | "warning" | "success" }[] = [
-  { id: "grok-maintenance", message: "⚠ GROK CREDITS MAINTENANCE — Grok credit-mode is temporarily offline. BYOK (bring your own key) still works. Use GLTCH / COMFY engines with credits.", type: "warning" },
   { id: "gltch-wan-launch", message: "GLTCH WAN 2.2 I2V — Lightx2v + Pusa enhanced motions pipeline in ANIMATE mode.", type: "info" },
 ];
 
@@ -290,7 +289,7 @@ const Index = () => {
     if (!isQueued && effectiveApiMode === "byok" && !apiKeySet) {
       toast({
         title: "API KEY REQUIRED",
-        description: "Grok credit-mode is under maintenance. To use Grok, enter your own xAI API key in Settings. Or switch to GLTCH / COMFY engine.",
+        description: "Enter your xAI API key in Settings, or switch to CREDITS mode.",
         variant: "destructive",
       });
       return;
@@ -553,11 +552,7 @@ const Index = () => {
       return;
     }
 
-    // ── Grok (blocking) — CREDITS DISABLED DURING MAINTENANCE ──────────
-    if (effectiveApiMode === "credits") {
-      toast({ title: "MAINTENANCE", description: "Grok credit-mode is under maintenance. Use BYOK with your own API key, or switch to the GLTCH engine.", variant: "destructive" });
-      return;
-    }
+    // ── Grok (blocking) ────────────────────────────────────────────────
     try {
       switch (mode) {
         case "text-to-image":
