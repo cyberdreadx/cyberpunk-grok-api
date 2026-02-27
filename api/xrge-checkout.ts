@@ -10,14 +10,14 @@ import { getUserFromRequest } from "./_lib/auth";
 import { getXrgeConfig, centsToXrge } from "./_lib/xrge";
 
 const PACKAGES: Record<string, { credits: number; priceCents: number }> = {
-  starter:    { credits: 50,   priceCents: 500 },
-  pro:        { credits: 175,  priceCents: 1500 },
-  mega:       { credits: 450,  priceCents: 3500 },
-  ultra:      { credits: 1800, priceCents: 15000 },
+  starter: { credits: 50, priceCents: 500 },
+  pro: { credits: 175, priceCents: 1500 },
+  mega: { credits: 450, priceCents: 3500 },
+  ultra: { credits: 1800, priceCents: 15000 },
   enterprise: { credits: 4000, priceCents: 30000 },
 };
 
-const BONUS_MULTIPLIER = 0.15; // 15% bonus for XRGE payments
+const BONUS_MULTIPLIER = 0.30; // 30% bonus for XRGE payments
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS
@@ -77,7 +77,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       bonusCredits,
       totalCredits,
       packageName: packageId.toUpperCase(),
-      bonusPercent: 15,
+      bonusPercent: 30,
     });
   } catch (err: any) {
     console.error("[xrge-checkout]", err.message);
