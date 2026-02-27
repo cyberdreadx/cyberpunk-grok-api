@@ -544,3 +544,123 @@ export async function clearChatHistory(characterId: string): Promise<void> {
     tx.onerror = () => { db.close(); reject(tx.error); };
   });
 }
+
+// ── Library Export (ZIP) ─────────────────────────────────────────────────
+
+/**
+ * Export the entire library (or a filtered set of results) as a .zip file.
+ * Images stored as blobs are included directly; external URLs (videos) are
+ * fetched via the download proxy to avoid CORS issues.
+ *
+ * Files are organized into folders matching the user's folder structure.
+ * A manifest.json is included with prompts and metadata.
+ */
+export async function exportLibraryAsZip(
+  /** Results to include (already filtered by the caller). */
+  results: GrokResult[],
+  /** Folder map: id → name. Used to create subdirectories. */
+  folderMap: Record<string, string>,
+  /** Optional progress callback: (completed, total) */
+  onProgress?: (completed: number, total: number) => void,
+): Promise<void> {
+  const JSZip = (await import("jszip")).default;
+  const zip = new JSZip();
+
+  // Build folder name lookup (sanitised for filesystem)
+  const sanitize = (s: string) => s.replace(/[<>:"/\\|?*]/g, "_").trim() || "unnamed";
+  const folderNames: Record<string, string> = {};
+  for (const [id, name] of Object.entries(folderMap)) {
+    folderNames[id] = sanitize(name);
+  }
+
+  // Read all raw records from IDB so we can access blobs directly
+  const db = await openDB();
+  const allRecords = await new Promise<StoredResult[]>((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readonly");
+    const req = tx.objectStore(STORE_NAME).getAll();
+    req.onsuccess = () => { db.close(); resolve(req.result); };
+    req.onerror = () => { db.close(); reject(req.error); };
+  });
+
+  const recordMap = new Map<string, StoredResult>();
+  for (const rec of allRecords) recordMap.set(rec.id, rec);
+
+  // Manifest entries
+  const manifest: { filename: string; type: string; prompt?: string; folder?: string; timestamp: number }[] = [];
+
+  const total = results.length;
+  let completed = 0;
+
+  for (const result of results) {
+    const rec = recordMap.get(result.id);
+    const ext = result.type === "image" ? "png" : "mp4";
+    const prefix = result.type === "image" ? "img" : "vid";
+    const filename = `${prefix}_${result.id.slice(0, 8)}.${ext}`;
+    const folderName = result.folderId && folderNames[result.folderId]
+      ? folderNames[result.folderId]
+      : "unfiled";
+    const path = `${folderName}/${filename}`;
+
+    let blob: Blob | null = null;
+
+    // Try to get blob from IndexedDB record
+    if (rec?.blob && rec.blob instanceof Blob && rec.blob.size > 0) {
+      blob = rec.blob;
+    }
+    // For data URLs in the result itself
+    else if (result.url.startsWith("data:")) {
+      blob = dataUrlToBlob(result.url);
+    }
+    // For blob: URLs, fetch them
+    else if (result.url.startsWith("blob:")) {
+      try {
+        const res = await fetch(result.url);
+        if (res.ok) blob = await res.blob();
+      } catch { /* skip */ }
+    }
+    // External URLs (videos, etc.) — fetch via proxy
+    else if (result.url) {
+      try {
+        const proxyUrl = getExportProxyUrl(result.url, filename);
+        const res = await fetch(proxyUrl);
+        if (res.ok) blob = await res.blob();
+      } catch { /* skip — will be noted in manifest */ }
+    }
+
+    if (blob && blob.size > 0) {
+      zip.file(path, blob);
+    }
+
+    manifest.push({
+      filename: path,
+      type: result.type,
+      prompt: result.revised_prompt || undefined,
+      folder: folderName,
+      timestamp: result.timestamp,
+    });
+
+    completed++;
+    onProgress?.(completed, total);
+  }
+
+  // Add manifest
+  zip.file("manifest.json", JSON.stringify(manifest, null, 2));
+
+  // Generate and trigger download
+  const content = await zip.generateAsync({ type: "blob", compression: "DEFLATE", compressionOptions: { level: 6 } });
+  const url = URL.createObjectURL(content);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `grok-library-${new Date().toISOString().slice(0, 10)}.zip`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 30_000);
+}
+
+/** Build a proxy URL for exporting external media (same pattern as ResultsGrid). */
+function getExportProxyUrl(url: string, filename: string): string {
+  // Use the same proxy as the download function in ResultsGrid
+  const base = "/api/download";
+  return `${base}?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(filename)}`;
+}

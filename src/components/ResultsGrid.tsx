@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import { Download, Maximize2, X, Trash2, ExternalLink, ChevronLeft, ChevronRight, Pencil, Film, Copy, Check, FolderPlus, FolderOpen, MoreVertical, FolderInput, Lock, LockOpen, ShieldCheck, Eye, EyeOff, ChevronDown, Sparkles } from "lucide-react";
+import { Download, Maximize2, X, Trash2, ExternalLink, ChevronLeft, ChevronRight, Pencil, Film, Copy, Check, FolderPlus, FolderOpen, MoreVertical, FolderInput, Lock, LockOpen, ShieldCheck, Eye, EyeOff, ChevronDown, Sparkles, Archive, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import type { GrokResult } from "@/hooks/useGrokApi";
 import type { Folder } from "@/lib/storage";
+import { exportLibraryAsZip } from "@/lib/storage";
 import type { FolderFilter } from "@/hooks/useFolders";
 import { useSwipe } from "@/hooks/useSwipe";
 
@@ -128,13 +129,13 @@ function PinDialog({
 
   const title =
     mode === "set" ? "SET_SECURITY_PIN" :
-    mode === "remove" ? "REMOVE_SECURITY_PIN" :
-    "ENTER_ACCESS_CODE";
+      mode === "remove" ? "REMOVE_SECURITY_PIN" :
+        "ENTER_ACCESS_CODE";
 
   const subtitle =
     mode === "set" ? `Arm folder "${folderName}" with a 4-digit lock` :
-    mode === "remove" ? `Enter current PIN to disarm "${folderName}"` :
-    `Folder "${folderName}" is locked — enter PIN to decrypt`;
+      mode === "remove" ? `Enter current PIN to disarm "${folderName}"` :
+        `Folder "${folderName}" is locked — enter PIN to decrypt`;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm" onClick={onCancel}>
@@ -390,10 +391,9 @@ function FolderBar({
   };
 
   const tabClass = (active: boolean) =>
-    `px-3 py-2 sm:px-2.5 sm:py-1.5 min-h-[44px] sm:min-h-0 text-[11px] sm:text-[10px] font-mono-share tracking-wider whitespace-nowrap transition-colors rounded-t border-b-2 flex items-center ${
-      active
-        ? "border-primary text-primary bg-primary/10"
-        : "border-transparent text-muted-foreground/60 hover:text-muted-foreground hover:bg-muted/30"
+    `px-3 py-2 sm:px-2.5 sm:py-1.5 min-h-[44px] sm:min-h-0 text-[11px] sm:text-[10px] font-mono-share tracking-wider whitespace-nowrap transition-colors rounded-t border-b-2 flex items-center ${active
+      ? "border-primary text-primary bg-primary/10"
+      : "border-transparent text-muted-foreground/60 hover:text-muted-foreground hover:bg-muted/30"
     }`;
 
   // Built-in tabs (UNFILED, ALL) with Radix DropdownMenu - reliable, no custom event handling
@@ -468,227 +468,227 @@ function FolderBar({
 
   return (
     <>
-    <div className="flex items-center gap-0.5 overflow-x-auto scrollbar-hide pb-px border-b border-border/50 -mb-px">
-      {/* UNFILED tab (first) */}
-      {renderBuiltInTab("unfiled", "UNFILED", "__unfiled")}
+      <div className="flex items-center gap-0.5 overflow-x-auto scrollbar-hide pb-px border-b border-border/50 -mb-px">
+        {/* UNFILED tab (first) */}
+        {renderBuiltInTab("unfiled", "UNFILED", "__unfiled")}
 
-      {/* Custom folder tabs (visible only) */}
-      {visibleFolders.map((folder) => {
-        const hasPin = folderHasPin(folder.id);
-        const isUnlocked = unlockedFolders.has(folder.id);
-        const isLocked = hasPin && !isUnlocked;
+        {/* Custom folder tabs (visible only) */}
+        {visibleFolders.map((folder) => {
+          const hasPin = folderHasPin(folder.id);
+          const isUnlocked = unlockedFolders.has(folder.id);
+          const isLocked = hasPin && !isUnlocked;
 
-        return (
-        <div key={folder.id} className="relative flex items-center">
-          {editingId === folder.id ? (
-            <input
-              ref={editInputRef}
-              value={editingName}
-              onChange={(e) => setEditingName(e.target.value)}
-              onBlur={() => handleRename(folder.id)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleRename(folder.id);
-                if (e.key === "Escape") setEditingId(null);
-              }}
-              className="bg-input border border-primary/50 rounded px-1.5 py-1 text-[9px] sm:text-[10px] font-mono-share w-20 outline-none text-primary"
-            />
-          ) : (
-            <button
-              className={tabClass(selectedFilter === folder.id)}
-              onClick={() => {
-                if (isLocked) {
-                  onRequestUnlock(folder.id);
-                } else {
-                  onSelectFilter(folder.id);
-                }
-              }}
-              onDoubleClick={() => {
-                if (!isLocked) {
-                  setEditingId(folder.id);
-                  setEditingName(folder.name);
-                }
-              }}
-            >
-              {hasPin && (
-                isLocked
-                  ? <Lock className="w-3 h-3 inline-block mr-1 -mt-0.5 text-secondary" />
-                  : <LockOpen className="w-3 h-3 inline-block mr-1 -mt-0.5 text-primary/50" />
+          return (
+            <div key={folder.id} className="relative flex items-center">
+              {editingId === folder.id ? (
+                <input
+                  ref={editInputRef}
+                  value={editingName}
+                  onChange={(e) => setEditingName(e.target.value)}
+                  onBlur={() => handleRename(folder.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleRename(folder.id);
+                    if (e.key === "Escape") setEditingId(null);
+                  }}
+                  className="bg-input border border-primary/50 rounded px-1.5 py-1 text-[9px] sm:text-[10px] font-mono-share w-20 outline-none text-primary"
+                />
+              ) : (
+                <button
+                  className={tabClass(selectedFilter === folder.id)}
+                  onClick={() => {
+                    if (isLocked) {
+                      onRequestUnlock(folder.id);
+                    } else {
+                      onSelectFilter(folder.id);
+                    }
+                  }}
+                  onDoubleClick={() => {
+                    if (!isLocked) {
+                      setEditingId(folder.id);
+                      setEditingName(folder.name);
+                    }
+                  }}
+                >
+                  {hasPin && (
+                    isLocked
+                      ? <Lock className="w-3 h-3 inline-block mr-1 -mt-0.5 text-secondary" />
+                      : <LockOpen className="w-3 h-3 inline-block mr-1 -mt-0.5 text-primary/50" />
+                  )}
+                  {!hasPin && <FolderOpen className="w-3 h-3 inline-block mr-1 -mt-0.5" />}
+                  {folder.name.toUpperCase()}
+                  <span className="ml-1 text-muted-foreground/40">
+                    {isLocked ? "***" : (resultCounts[folder.id] ?? 0)}
+                  </span>
+                </button>
               )}
-              {!hasPin && <FolderOpen className="w-3 h-3 inline-block mr-1 -mt-0.5" />}
-              {folder.name.toUpperCase()}
-              <span className="ml-1 text-muted-foreground/40">
-                {isLocked ? "***" : (resultCounts[folder.id] ?? 0)}
-              </span>
-            </button>
-          )}
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="p-2 sm:p-0.5 min-w-[44px] sm:min-w-0 min-h-[44px] sm:min-h-0 flex items-center justify-center text-muted-foreground/30 hover:text-muted-foreground transition-colors">
-                <MoreVertical className="w-3.5 h-3.5 sm:w-3 sm:h-3" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="min-w-[160px] sm:min-w-[120px] bg-card border-border">
-              <DropdownMenuItem
-                className="text-[11px] sm:text-[10px] min-h-[44px] sm:min-h-0 py-2.5 sm:py-1.5 font-mono-share cursor-pointer"
-                onSelect={() => {
-                  setEditingId(folder.id);
-                  setEditingName(folder.name);
-                }}
-              >
-                <Pencil className="w-3.5 h-3.5 sm:w-3 sm:h-3 mr-1.5" />
-                RENAME
-              </DropdownMenuItem>
-              {hasPin ? (
-                <>
-                  {isUnlocked && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="p-2 sm:p-0.5 min-w-[44px] sm:min-w-0 min-h-[44px] sm:min-h-0 flex items-center justify-center text-muted-foreground/30 hover:text-muted-foreground transition-colors">
+                    <MoreVertical className="w-3.5 h-3.5 sm:w-3 sm:h-3" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="min-w-[160px] sm:min-w-[120px] bg-card border-border">
+                  <DropdownMenuItem
+                    className="text-[11px] sm:text-[10px] min-h-[44px] sm:min-h-0 py-2.5 sm:py-1.5 font-mono-share cursor-pointer"
+                    onSelect={() => {
+                      setEditingId(folder.id);
+                      setEditingName(folder.name);
+                    }}
+                  >
+                    <Pencil className="w-3.5 h-3.5 sm:w-3 sm:h-3 mr-1.5" />
+                    RENAME
+                  </DropdownMenuItem>
+                  {hasPin ? (
+                    <>
+                      {isUnlocked && (
+                        <DropdownMenuItem
+                          className="text-[11px] sm:text-[10px] min-h-[44px] sm:min-h-0 py-2.5 sm:py-1.5 font-mono-share text-muted-foreground focus:bg-muted/50 cursor-pointer"
+                          onSelect={() => onLockFolder(folder.id)}
+                        >
+                          <Lock className="w-3.5 h-3.5 sm:w-3 sm:h-3 mr-1.5" />
+                          LOCK
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuItem
+                        className="text-[11px] sm:text-[10px] min-h-[44px] sm:min-h-0 py-2.5 sm:py-1.5 font-mono-share text-secondary focus:bg-secondary/10 cursor-pointer"
+                        onSelect={() => onRemovePin(folder.id)}
+                      >
+                        <LockOpen className="w-3.5 h-3.5 sm:w-3 sm:h-3 mr-1.5" />
+                        REMOVE PIN
+                      </DropdownMenuItem>
+                    </>
+                  ) : (
                     <DropdownMenuItem
-                      className="text-[11px] sm:text-[10px] min-h-[44px] sm:min-h-0 py-2.5 sm:py-1.5 font-mono-share text-muted-foreground focus:bg-muted/50 cursor-pointer"
-                      onSelect={() => onLockFolder(folder.id)}
+                      className="text-[11px] sm:text-[10px] min-h-[44px] sm:min-h-0 py-2.5 sm:py-1.5 font-mono-share text-primary focus:bg-primary/10 cursor-pointer"
+                      onSelect={() => onSetPin(folder.id)}
                     >
                       <Lock className="w-3.5 h-3.5 sm:w-3 sm:h-3 mr-1.5" />
-                      LOCK
+                      SET PIN
                     </DropdownMenuItem>
                   )}
-                  <DropdownMenuItem
-                    className="text-[11px] sm:text-[10px] min-h-[44px] sm:min-h-0 py-2.5 sm:py-1.5 font-mono-share text-secondary focus:bg-secondary/10 cursor-pointer"
-                    onSelect={() => onRemovePin(folder.id)}
-                  >
-                    <LockOpen className="w-3.5 h-3.5 sm:w-3 sm:h-3 mr-1.5" />
-                    REMOVE PIN
-                  </DropdownMenuItem>
-                </>
-              ) : (
+                  {onToggleFolderHidden && (
+                    <DropdownMenuItem
+                      className="text-[11px] sm:text-[10px] min-h-[44px] sm:min-h-0 py-2.5 sm:py-1.5 font-mono-share text-muted-foreground focus:bg-muted/50 cursor-pointer"
+                      onSelect={() => onToggleFolderHidden(folder.id)}
+                    >
+                      <ShieldCheck className="w-3.5 h-3.5 sm:w-3 sm:h-3 mr-1.5" />
+                      VAULT
+                    </DropdownMenuItem>
+                  )}
+                  {onDeleteFolder && (
+                    <DropdownMenuItem
+                      className="text-[11px] sm:text-[10px] min-h-[44px] sm:min-h-0 py-2.5 sm:py-1.5 font-mono-share text-destructive focus:bg-destructive/10 cursor-pointer"
+                      onSelect={() =>
+                        setDeleteConfirm({
+                          id: folder.id,
+                          name: folder.name,
+                          count: resultCounts[folder.id] ?? 0,
+                        })
+                      }
+                    >
+                      <Trash2 className="w-3.5 h-3.5 sm:w-3 sm:h-3 mr-1.5" />
+                      DELETE
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          );
+        })}
+
+        {/* Vault — discreet access to hidden folders */}
+        {hiddenFolders.length > 0 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className="px-2 py-2 sm:py-1.5 min-h-[44px] sm:min-h-0 flex items-center gap-1 text-muted-foreground/30 hover:text-muted-foreground/60 transition-colors"
+                title="Vault"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 sm:w-3 sm:h-3" />
+                <span className="text-[8px] font-mono-share opacity-50">{hiddenFolders.length}</span>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-[180px] sm:min-w-[140px] bg-card border-border">
+              <div className="px-3 py-1.5 text-[9px] font-orbitron tracking-wider text-muted-foreground/40 border-b border-border/50 mb-1">
+                VAULT
+              </div>
+              {hiddenFolders.map((folder) => (
                 <DropdownMenuItem
-                  className="text-[11px] sm:text-[10px] min-h-[44px] sm:min-h-0 py-2.5 sm:py-1.5 font-mono-share text-primary focus:bg-primary/10 cursor-pointer"
-                  onSelect={() => onSetPin(folder.id)}
-                >
-                  <Lock className="w-3.5 h-3.5 sm:w-3 sm:h-3 mr-1.5" />
-                  SET PIN
-                </DropdownMenuItem>
-              )}
-              {onToggleFolderHidden && (
-                <DropdownMenuItem
+                  key={folder.id}
                   className="text-[11px] sm:text-[10px] min-h-[44px] sm:min-h-0 py-2.5 sm:py-1.5 font-mono-share text-muted-foreground focus:bg-muted/50 cursor-pointer"
-                  onSelect={() => onToggleFolderHidden(folder.id)}
+                  onSelect={() => onToggleFolderHidden?.(folder.id)}
                 >
-                  <ShieldCheck className="w-3.5 h-3.5 sm:w-3 sm:h-3 mr-1.5" />
-                  VAULT
+                  <Eye className="w-3.5 h-3.5 sm:w-3 sm:h-3 mr-1.5" />
+                  {folder.name.toUpperCase()} — RESTORE
                 </DropdownMenuItem>
-              )}
-              {onDeleteFolder && (
-                <DropdownMenuItem
-                  className="text-[11px] sm:text-[10px] min-h-[44px] sm:min-h-0 py-2.5 sm:py-1.5 font-mono-share text-destructive focus:bg-destructive/10 cursor-pointer"
-                  onSelect={() =>
-                    setDeleteConfirm({
-                      id: folder.id,
-                      name: folder.name,
-                      count: resultCounts[folder.id] ?? 0,
-                    })
-                  }
-                >
-                  <Trash2 className="w-3.5 h-3.5 sm:w-3 sm:h-3 mr-1.5" />
-                  DELETE
-                </DropdownMenuItem>
-              )}
+              ))}
             </DropdownMenuContent>
           </DropdownMenu>
-        </div>
-        );
-      })}
+        )}
 
-      {/* Vault — discreet access to hidden folders */}
-      {hiddenFolders.length > 0 && (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              className="px-2 py-2 sm:py-1.5 min-h-[44px] sm:min-h-0 flex items-center gap-1 text-muted-foreground/30 hover:text-muted-foreground/60 transition-colors"
-              title="Vault"
-            >
-              <ShieldCheck className="w-3.5 h-3.5 sm:w-3 sm:h-3" />
-              <span className="text-[8px] font-mono-share opacity-50">{hiddenFolders.length}</span>
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="min-w-[180px] sm:min-w-[140px] bg-card border-border">
-            <div className="px-3 py-1.5 text-[9px] font-orbitron tracking-wider text-muted-foreground/40 border-b border-border/50 mb-1">
-              VAULT
-            </div>
-            {hiddenFolders.map((folder) => (
-              <DropdownMenuItem
-                key={folder.id}
-                className="text-[11px] sm:text-[10px] min-h-[44px] sm:min-h-0 py-2.5 sm:py-1.5 font-mono-share text-muted-foreground focus:bg-muted/50 cursor-pointer"
-                onSelect={() => onToggleFolderHidden?.(folder.id)}
-              >
-                <Eye className="w-3.5 h-3.5 sm:w-3 sm:h-3 mr-1.5" />
-                {folder.name.toUpperCase()} — RESTORE
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )}
+        {/* ALL tab (last) */}
+        {renderBuiltInTab("all", "ALL", "__total")}
 
-      {/* ALL tab (last) */}
-      {renderBuiltInTab("all", "ALL", "__total")}
-
-      {/* Create folder button / input */}
-      {isCreating ? (
-        <input
-          ref={createInputRef}
-          value={newFolderName}
-          onChange={(e) => setNewFolderName(e.target.value)}
-          onBlur={handleCreate}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") handleCreate();
-            if (e.key === "Escape") { setIsCreating(false); setNewFolderName(""); }
-          }}
-          placeholder="folder name..."
-          className="bg-input border border-primary/50 rounded px-1.5 py-1 text-[9px] sm:text-[10px] font-mono-share w-24 outline-none text-primary placeholder:text-muted-foreground/30"
-        />
-      ) : (
-        <button
-          className="px-3 py-2 sm:px-2 sm:py-1.5 min-w-[44px] sm:min-w-0 min-h-[44px] sm:min-h-0 flex items-center justify-center text-muted-foreground/40 hover:text-primary transition-colors"
-          onClick={() => setIsCreating(true)}
-          title="Create folder"
-        >
-          <FolderPlus className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-        </button>
-      )}
-    </div>
-
-    <AlertDialog open={!!deleteConfirm} onOpenChange={(open) => !open && setDeleteConfirm(null)}>
-      <AlertDialogContent className="bg-card border-border sm:max-w-md">
-        <AlertDialogHeader>
-          <AlertDialogTitle className="font-orbitron text-sm tracking-wider text-destructive">
-            DISMANTLE_FOLDER?
-          </AlertDialogTitle>
-          <AlertDialogDescription asChild>
-            <div className="font-mono-share text-[11px] text-muted-foreground space-y-2">
-              <p>This will permanently deallocate the folder <span className="text-foreground font-semibold">&quot;{deleteConfirm?.name}&quot;</span> from the grid.</p>
-              <p className="text-primary/90">
-                {deleteConfirm && deleteConfirm.count > 0
-                  ? `WARNING: ${deleteConfirm.count} asset(s) currently in this folder will be REASSIGNED to UNFILED. They are not deleted.`
-                  : "No assets in this folder. Safe to proceed."}
-              </p>
-              <p className="text-destructive/80">This operation cannot be undone. Confirm to proceed.</p>
-            </div>
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel className="font-orbitron text-[10px]">CANCEL</AlertDialogCancel>
-          <AlertDialogAction
-            className="font-orbitron text-[10px] bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            onClick={async () => {
-              if (deleteConfirm && onDeleteFolder) {
-                await onDeleteFolder(deleteConfirm.id);
-                setDeleteConfirm(null);
-              }
+        {/* Create folder button / input */}
+        {isCreating ? (
+          <input
+            ref={createInputRef}
+            value={newFolderName}
+            onChange={(e) => setNewFolderName(e.target.value)}
+            onBlur={handleCreate}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleCreate();
+              if (e.key === "Escape") { setIsCreating(false); setNewFolderName(""); }
             }}
+            placeholder="folder name..."
+            className="bg-input border border-primary/50 rounded px-1.5 py-1 text-[9px] sm:text-[10px] font-mono-share w-24 outline-none text-primary placeholder:text-muted-foreground/30"
+          />
+        ) : (
+          <button
+            className="px-3 py-2 sm:px-2 sm:py-1.5 min-w-[44px] sm:min-w-0 min-h-[44px] sm:min-h-0 flex items-center justify-center text-muted-foreground/40 hover:text-primary transition-colors"
+            onClick={() => setIsCreating(true)}
+            title="Create folder"
           >
-            DISMANTLE
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+            <FolderPlus className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+          </button>
+        )}
+      </div>
+
+      <AlertDialog open={!!deleteConfirm} onOpenChange={(open) => !open && setDeleteConfirm(null)}>
+        <AlertDialogContent className="bg-card border-border sm:max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-orbitron text-sm tracking-wider text-destructive">
+              DISMANTLE_FOLDER?
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="font-mono-share text-[11px] text-muted-foreground space-y-2">
+                <p>This will permanently deallocate the folder <span className="text-foreground font-semibold">&quot;{deleteConfirm?.name}&quot;</span> from the grid.</p>
+                <p className="text-primary/90">
+                  {deleteConfirm && deleteConfirm.count > 0
+                    ? `WARNING: ${deleteConfirm.count} asset(s) currently in this folder will be REASSIGNED to UNFILED. They are not deleted.`
+                    : "No assets in this folder. Safe to proceed."}
+                </p>
+                <p className="text-destructive/80">This operation cannot be undone. Confirm to proceed.</p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="font-orbitron text-[10px]">CANCEL</AlertDialogCancel>
+            <AlertDialogAction
+              className="font-orbitron text-[10px] bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async () => {
+                if (deleteConfirm && onDeleteFolder) {
+                  await onDeleteFolder(deleteConfirm.id);
+                  setDeleteConfirm(null);
+                }
+              }}
+            >
+              DISMANTLE
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
@@ -737,11 +737,10 @@ function MoveToFolderMenu({
 
       {/* Unfiled option */}
       <button
-        className={`w-full text-left px-3 py-2.5 sm:py-1.5 text-[10px] font-mono-share transition-colors flex items-center gap-1.5 min-h-[44px] sm:min-h-0 ${
-          !currentFolderId
+        className={`w-full text-left px-3 py-2.5 sm:py-1.5 text-[10px] font-mono-share transition-colors flex items-center gap-1.5 min-h-[44px] sm:min-h-0 ${!currentFolderId
             ? "text-primary bg-primary/10"
             : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-        }`}
+          }`}
         onClick={() => { onMove(null); onClose(); }}
       >
         UNFILED
@@ -751,11 +750,10 @@ function MoveToFolderMenu({
       {folders.map((folder) => (
         <button
           key={folder.id}
-          className={`w-full text-left px-3 py-2.5 sm:py-1.5 text-[10px] font-mono-share transition-colors flex items-center gap-1.5 min-h-[44px] sm:min-h-0 ${
-            currentFolderId === folder.id
+          className={`w-full text-left px-3 py-2.5 sm:py-1.5 text-[10px] font-mono-share transition-colors flex items-center gap-1.5 min-h-[44px] sm:min-h-0 ${currentFolderId === folder.id
               ? "text-primary bg-primary/10"
               : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-          }`}
+            }`}
           onClick={() => { onMove(folder.id); onClose(); }}
         >
           <FolderOpen className="w-3 h-3 flex-shrink-0" />
@@ -796,6 +794,10 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
   const [mobileIndex, setMobileIndex] = useState(0);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [moveMenuId, setMoveMenuId] = useState<string | null>(null);
+
+  // ZIP export state
+  const [zipExporting, setZipExporting] = useState(false);
+  const [zipProgress, setZipProgress] = useState({ completed: 0, total: 0 });
 
   // PIN lock state
   const [unlockedFolders, setUnlockedFolders] = useState<Set<string>>(new Set());
@@ -1077,15 +1079,48 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
           OUTPUT [{filteredResults.length}]
         </div>
         {filteredResults.length > 0 && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClear}
-            className="text-destructive hover:text-destructive/80 font-mono-share text-xs"
-          >
-            <Trash2 className="w-3 h-3 mr-1" />
-            PURGE
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={zipExporting}
+              onClick={async () => {
+                setZipExporting(true);
+                setZipProgress({ completed: 0, total: filteredResults.length });
+                try {
+                  const folderMap: Record<string, string> = {};
+                  for (const f of folders) folderMap[f.id] = f.name;
+                  await exportLibraryAsZip(filteredResults, folderMap, (c, t) =>
+                    setZipProgress({ completed: c, total: t })
+                  );
+                } finally {
+                  setZipExporting(false);
+                }
+              }}
+              className="text-primary hover:text-primary/80 font-mono-share text-xs"
+            >
+              {zipExporting ? (
+                <>
+                  <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                  {zipProgress.total > 0 ? `${Math.round((zipProgress.completed / zipProgress.total) * 100)}%` : "ZIP"}
+                </>
+              ) : (
+                <>
+                  <Archive className="w-3 h-3 mr-1" />
+                  EXPORT
+                </>
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClear}
+              className="text-destructive hover:text-destructive/80 font-mono-share text-xs"
+            >
+              <Trash2 className="w-3 h-3 mr-1" />
+              PURGE
+            </Button>
+          </div>
         )}
       </div>
 
@@ -1265,11 +1300,10 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
                 <button
                   key={i}
                   onClick={() => setMobileIndex(i)}
-                  className={`w-1.5 h-1.5 rounded-full transition-all ${
-                    i === clampedIndex
+                  className={`w-1.5 h-1.5 rounded-full transition-all ${i === clampedIndex
                       ? "bg-primary w-4"
                       : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
-                  }`}
+                    }`}
                 />
               ))}
             </div>
@@ -1306,9 +1340,8 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
             )}
 
             {/* Overlay — desktop hover (stays visible when move menu is open) */}
-            <div className={`absolute inset-0 bg-background/80 transition-opacity flex items-center justify-center gap-2 ${
-              moveMenuId === result.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-            }`}>
+            <div className={`absolute inset-0 bg-background/80 transition-opacity flex items-center justify-center gap-2 ${moveMenuId === result.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+              }`}>
               <Button
                 size="icon"
                 variant="ghost"
