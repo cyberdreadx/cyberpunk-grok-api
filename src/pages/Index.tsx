@@ -319,7 +319,13 @@ const Index = () => {
       // Calculate cost
       let cost: number;
       if (isGrokEdit) {
-        cost = calculateCreditCost(grokPro ? "edit-image-pro" : "edit-image", settings.count);
+        const is2k = (settings.resolution || "1k") === "2k";
+        let editMode: CreditMode;
+        if (grokPro && is2k) editMode = "edit-image-pro-2k";
+        else if (grokPro) editMode = "edit-image-pro";
+        else if (is2k) editMode = "edit-image-2k";
+        else editMode = "edit-image";
+        cost = calculateCreditCost(editMode, settings.count);
       } else if (isGltchEdit) {
         cost = calculateCreditCost(comfyEditUpscale ? "comfy-image-hd" : "comfy-image");
       } else if (isZimage || isComfyGen) {
@@ -334,7 +340,12 @@ const Index = () => {
         const isImageMode = mode === "text-to-image" || mode === "edit-image";
         const imageCount = isImageMode ? settings.count : 1;
         const videoDuration = (mode === "text-to-video" || mode === "image-to-video" || mode === "edit-video") ? videoSettings.duration : 0;
-        const creditMode = isImageMode && grokPro ? (mode === "text-to-image" ? "text-to-image-pro" : "edit-image-pro") as CreditMode : mode;
+        const is2k = (settings.resolution || "1k") === "2k";
+        let creditMode: CreditMode;
+        if (isImageMode && grokPro && is2k) creditMode = (mode === "text-to-image" ? "text-to-image-pro-2k" : "edit-image-pro-2k") as CreditMode;
+        else if (isImageMode && grokPro) creditMode = (mode === "text-to-image" ? "text-to-image-pro" : "edit-image-pro") as CreditMode;
+        else if (isImageMode && is2k) creditMode = (mode === "text-to-image" ? "text-to-image-2k" : "edit-image-2k") as CreditMode;
+        else creditMode = mode;
         cost = calculateCreditCost(creditMode, imageCount, videoDuration);
       }
 
@@ -574,7 +585,12 @@ const Index = () => {
         const isImageMode = mode === "text-to-image" || mode === "edit-image";
         const imageCount = isImageMode ? settings.count : 1;
         const videoDuration = (mode === "text-to-video" || mode === "image-to-video" || mode === "edit-video") ? videoSettings.duration : 0;
-        const creditMode = isImageMode && grokPro ? (mode === "text-to-image" ? "text-to-image-pro" : "edit-image-pro") as CreditMode : mode;
+        const is2k = (settings.resolution || "1k") === "2k";
+        let creditMode: CreditMode;
+        if (isImageMode && grokPro && is2k) creditMode = (mode === "text-to-image" ? "text-to-image-pro-2k" : "edit-image-pro-2k") as CreditMode;
+        else if (isImageMode && grokPro) creditMode = (mode === "text-to-image" ? "text-to-image-pro" : "edit-image-pro") as CreditMode;
+        else if (isImageMode && is2k) creditMode = (mode === "text-to-image" ? "text-to-image-2k" : "edit-image-2k") as CreditMode;
+        else creditMode = mode;
         const cost = calculateCreditCost(creditMode, imageCount, videoDuration);
         creditsHook.deductCreditsLocally(cost);
         setTimeout(() => creditsHook.refreshCredits(), 2000);

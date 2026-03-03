@@ -29,12 +29,18 @@ const PRO_MODEL = "grok-imagine-image-pro";
 const ALLOWED_ACTIONS = ["generate-image", "edit-image", "generate-video", "edit-video"] as const;
 type AllowedAction = (typeof ALLOWED_ACTIONS)[number];
 
-function calculateCost(action: AllowedAction, imageCount: number, videoDuration: number, isPro: boolean): number {
+function calculateCost(action: AllowedAction, imageCount: number, videoDuration: number, isPro: boolean, is2k: boolean): number {
   switch (action) {
     case "generate-image":
-      return (isPro ? CREDIT_COSTS.imageGenPro : CREDIT_COSTS.imageGen) * imageCount;
+      if (isPro && is2k) return CREDIT_COSTS.imageGenPro * 2 * imageCount;
+      if (isPro) return CREDIT_COSTS.imageGenPro * imageCount;
+      if (is2k) return CREDIT_COSTS.imageGen * 2 * imageCount;
+      return CREDIT_COSTS.imageGen * imageCount;
     case "edit-image":
-      return (isPro ? CREDIT_COSTS.imageEditPro : CREDIT_COSTS.imageEdit) * imageCount;
+      if (isPro && is2k) return CREDIT_COSTS.imageEditPro * 2 * imageCount;
+      if (isPro) return CREDIT_COSTS.imageEditPro * imageCount;
+      if (is2k) return CREDIT_COSTS.imageEdit * 2 * imageCount;
+      return CREDIT_COSTS.imageEdit * imageCount;
     case "generate-video":
     case "edit-video":
       return CREDIT_COSTS.videoPerSecond * videoDuration;
@@ -126,7 +132,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Validate and clamp numeric inputs
-    const imageCount = Math.max(1, Math.min(4, Math.floor(Number(params.n) || 1)));
+    const imageCount = Math.max(1, Math.min(10, Math.floor(Number(params.n) || 1)));
     const videoDuration = Math.max(1, Math.min(60, Math.floor(Number(params.duration) || 5)));
     // Sanitize prompt length (DB column accepts 500 chars max)
     if (params.prompt && typeof params.prompt === "string" && params.prompt.length > 10000) {
@@ -134,7 +140,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const isPro = params.model === PRO_MODEL;
-    const cost = calculateCost(action as AllowedAction, imageCount, videoDuration, isPro);
+    const is2k = params.resolution === "2k";
+    const cost = calculateCost(action as AllowedAction, imageCount, videoDuration, isPro, is2k);
     const isAdminUser = auth.email === ADMIN_EMAIL;
     const adminTestCredits = isAdminUser && req.body.testCredits === true;
 
@@ -197,6 +204,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     };
 
+    // Transform video edit body: REST API expects "video": {"url": "..."} not flat video_url
+    const forwardParams = { ...params };
+    if (action === "edit-video" && forwardParams.video_url && !forwardParams.video) {
+      forwardParams.video = { url: forwardParams.video_url };
+      delete forwardParams.video_url;
+    }
+
     // Forward to xAI
     const xaiResponse = await fetch(`${XAI_API_BASE}${xaiEndpoint}`, {
       method: "POST",
@@ -204,7 +218,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         "Content-Type": "application/json",
         Authorization: `Bearer ${XAI_API_KEY}`,
       },
-      body: JSON.stringify(params),
+      body: JSON.stringify(forwardParams),
     });
 
     if (!xaiResponse.ok) {
@@ -259,7 +273,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           }
 
           if (pollRes.status === 202) {
-            await pollRes.text().catch(() => {});
+            await pollRes.text().catch(() => { });
             continue;
           }
 
@@ -292,6 +306,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
             await refundCredits();
             return res.status(500).json({ error: failMsg });
+          }
+
+          if (status === "expired") {
+            await refundCredits();
+            return res.status(500).json({ error: "Video generation request expired. Please try again." });
           }
 
           const url = pollData.video?.url || pollData.video_url || pollData.url;

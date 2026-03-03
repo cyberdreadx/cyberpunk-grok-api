@@ -79,6 +79,11 @@ export const CREDIT_COSTS = {
   imageGenPro: 5,
   /** 6 credits per image edited (Grok Pro — higher quality) */
   imageEditPro: 6,
+  /** 2K resolution surcharge: double the base rate */
+  imageGen2k: 4,
+  imageEdit2k: 6,
+  imageGenPro2k: 10,
+  imageEditPro2k: 12,
   /** 3 credits per second of video (xAI charges $0.05/sec) */
   videoPerSecond: 3,
   /** 2 credits per GLTCH edit */
@@ -95,6 +100,7 @@ export const CREDIT_COSTS = {
 
 export type CreditMode =
   | "text-to-image" | "edit-image" | "text-to-image-pro" | "edit-image-pro"
+  | "text-to-image-2k" | "edit-image-2k" | "text-to-image-pro-2k" | "edit-image-pro-2k"
   | "text-to-video" | "image-to-video" | "edit-video"
   | "gltch-edit" | "gltch-edit-hd"
   | "comfy-image" | "comfy-image-hd" | "comfy-edit" | "comfy-edit-hd" | "comfy-video" | "comfy-longlook";
@@ -114,6 +120,14 @@ export function calculateCreditCost(
       return CREDIT_COSTS.imageGenPro * imageCount;
     case "edit-image-pro":
       return CREDIT_COSTS.imageEditPro * imageCount;
+    case "text-to-image-2k":
+      return CREDIT_COSTS.imageGen2k * imageCount;
+    case "edit-image-2k":
+      return CREDIT_COSTS.imageEdit2k * imageCount;
+    case "text-to-image-pro-2k":
+      return CREDIT_COSTS.imageGenPro2k * imageCount;
+    case "edit-image-pro-2k":
+      return CREDIT_COSTS.imageEditPro2k * imageCount;
     case "text-to-video":
     case "image-to-video":
     case "edit-video":

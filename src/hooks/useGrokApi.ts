@@ -44,14 +44,16 @@ function removeActiveJob(promptId: string) {
 
 export type GrokMode = "text-to-image" | "edit-image" | "text-to-video" | "image-to-video" | "edit-video";
 
-export type AspectRatio = "1:1" | "16:9" | "9:16" | "4:3" | "3:4" | "3:2" | "2:3" | "2:1" | "1:2";
+export type AspectRatio = "1:1" | "16:9" | "9:16" | "4:3" | "3:4" | "3:2" | "2:3" | "2:1" | "1:2" | "19.5:9" | "9:19.5" | "20:9" | "9:20" | "auto";
 export type VideoAspectRatio = "16:9" | "4:3" | "1:1" | "9:16" | "3:4" | "3:2" | "2:3";
 export type VideoResolution = "720p" | "480p";
-export type ImageCount = 1 | 2 | 3 | 4;
+export type ImageResolution = "1k" | "2k";
+export type ImageCount = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
 
 export interface GenerationSettings {
   aspectRatio: AspectRatio;
   count: ImageCount;
+  resolution: ImageResolution;
 }
 
 export interface VideoSettings {
@@ -63,6 +65,7 @@ export interface VideoSettings {
 export const DEFAULT_SETTINGS: GenerationSettings = {
   aspectRatio: "1:1",
   count: 1,
+  resolution: "1k",
 };
 
 export const DEFAULT_VIDEO_SETTINGS: VideoSettings = {
@@ -375,7 +378,7 @@ export function useGrokApi() {
 
   /** Call our Vercel API proxy instead of xAI directly. */
   const makeProxyRequest = useCallback(async (
-    action: "generate-image" | "edit-image" | "generate-video",
+    action: "generate-image" | "edit-image" | "generate-video" | "edit-video",
     params: Record<string, unknown>,
   ) => {
     const data = await apiFetch("/generate", {
@@ -445,6 +448,10 @@ export function useGrokApi() {
         return data;
       }
 
+      if (currentStatus === "expired") {
+        throw new Error("Video generation request expired. Please try again.");
+      }
+
       if (currentStatus === "failed" || currentStatus === "error") {
         throw new Error(data.error?.message || data.message || "Video generation failed");
       }
@@ -475,6 +482,7 @@ export function useGrokApi() {
         prompt: params.prompt,
         n: params.settings.count,
         aspect_ratio: params.settings.aspectRatio,
+        resolution: params.settings.resolution || "1k",
         response_format: "b64_json",
         ...(params.testCredits ? { testCredits: true } : {}),
       };
@@ -709,7 +717,7 @@ export function useGrokApi() {
       const body: Record<string, unknown> = {
         model: "grok-imagine-video",
         prompt: params.prompt,
-        video_url: params.video_url,
+        video: { url: params.video_url },
         ...(params.testCredits ? { testCredits: true } : {}),
       };
 

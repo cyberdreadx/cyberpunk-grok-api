@@ -11,6 +11,7 @@ import type {
   AspectRatio,
   VideoAspectRatio,
   VideoResolution,
+  ImageResolution,
   ImageCount,
   GrokMode,
 } from "@/hooks/useGrokApi";
@@ -32,6 +33,11 @@ const aspectRatios: { value: AspectRatio; label: string; tag: string }[] = [
   { value: "3:2", label: "3:2", tag: "PHOTO" },
   { value: "2:3", label: "2:3", tag: "PHOTO-V" },
   { value: "2:1", label: "2:1", tag: "BANNER" },
+  { value: "20:9", label: "20:9", tag: "CINEMA" },
+  { value: "9:20", label: "9:20", tag: "CINEMA-V" },
+  { value: "19.5:9", label: "19.5:9", tag: "ULTRA-W" },
+  { value: "9:19.5", label: "9:19.5", tag: "ULTRA-T" },
+  { value: "auto", label: "AUTO", tag: "AUTO" },
 ];
 
 const videoAspectRatios: { value: VideoAspectRatio; label: string; tag: string }[] = [
@@ -49,14 +55,17 @@ const videoResolutions: { value: VideoResolution; label: string; desc: string }[
   { value: "480p", label: "480P", desc: "SD" },
 ];
 
-const counts: ImageCount[] = [1, 2, 3, 4];
+const imageResolutions: { value: ImageResolution; label: string; desc: string }[] = [
+  { value: "1k", label: "1K", desc: "Standard" },
+  { value: "2k", label: "2K", desc: "High-Res" },
+];
 
 const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, videoSettings, onChange, onVideoChange, mode }) => {
   const isVideoMode = mode === "text-to-video" || mode === "image-to-video";
 
   const summaryText = isVideoMode
     ? `${videoSettings.aspectRatio} • ${videoSettings.resolution} • ${videoSettings.duration}s`
-    : `${settings.aspectRatio} • ×${settings.count}`;
+    : `${settings.aspectRatio} • ×${settings.count} • ${(settings.resolution || "1k").toUpperCase()}`;
 
   return (
     <Collapsible>
@@ -169,25 +178,56 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, videoSettings, 
                 <Maximize className="w-3 h-3" />
                 ASPECT_RATIO
               </label>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
                 {aspectRatios.map((ar) => (
                   <button
                     key={ar.value}
                     type="button"
                     onClick={() => onChange({ ...settings, aspectRatio: ar.value })}
                     className={`
-                      p-2.5 border rounded text-center transition-all duration-200
+                      p-2 border rounded text-center transition-all duration-200
                       ${settings.aspectRatio === ar.value
                         ? "border-primary neon-border bg-primary/5"
                         : "border-border bg-card/30 hover:border-primary/40"
                       }
                     `}
                   >
-                    <div className={`font-mono-share text-xs ${settings.aspectRatio === ar.value ? "text-primary" : "text-foreground"}`}>
+                    <div className={`font-mono-share text-[10px] ${settings.aspectRatio === ar.value ? "text-primary" : "text-foreground"}`}>
                       {ar.label}
                     </div>
-                    <div className="font-orbitron text-[8px] text-muted-foreground mt-0.5">
+                    <div className="font-orbitron text-[7px] text-muted-foreground mt-0.5">
                       {ar.tag}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Image Resolution */}
+            <div className="space-y-2">
+              <label className="font-orbitron text-[10px] tracking-wider text-muted-foreground flex items-center gap-1.5">
+                <Monitor className="w-3 h-3" />
+                RESOLUTION
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {imageResolutions.map((r) => (
+                  <button
+                    key={r.value}
+                    type="button"
+                    onClick={() => onChange({ ...settings, resolution: r.value })}
+                    className={`
+                      p-2.5 border rounded text-left transition-all duration-200
+                      ${(settings.resolution || "1k") === r.value
+                        ? "border-primary neon-border bg-primary/5"
+                        : "border-border bg-card/30 hover:border-primary/40"
+                      }
+                    `}
+                  >
+                    <div className={`font-orbitron text-xs ${(settings.resolution || "1k") === r.value ? "text-primary" : "text-foreground"}`}>
+                      {r.label}
+                    </div>
+                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5">
+                      {r.desc}
                     </div>
                   </button>
                 ))}
@@ -199,24 +239,22 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, videoSettings, 
               <label className="font-orbitron text-[10px] tracking-wider text-muted-foreground flex items-center gap-1.5">
                 <Hash className="w-3 h-3" />
                 BATCH_COUNT
+                <span className="font-mono-share text-[9px] text-muted-foreground/50 ml-auto">
+                  ×{settings.count}
+                </span>
               </label>
-              <div className="flex gap-2">
-                {counts.map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => onChange({ ...settings, count: c })}
-                    className={`
-                      flex-1 py-2 border rounded font-mono-share text-sm transition-all duration-200
-                      ${settings.count === c
-                        ? "border-primary neon-border bg-primary/5 text-primary"
-                        : "border-border bg-card/30 text-foreground hover:border-primary/40"
-                      }
-                    `}
-                  >
-                    ×{c}
-                  </button>
-                ))}
+              <div className="flex items-center gap-3">
+                <span className="font-mono-share text-[9px] text-muted-foreground">1</span>
+                <input
+                  type="range"
+                  min={1}
+                  max={10}
+                  step={1}
+                  value={settings.count}
+                  onChange={(e) => onChange({ ...settings, count: Number(e.target.value) as ImageCount })}
+                  className="flex-1 accent-[hsl(var(--primary))] h-1 bg-border rounded-full cursor-pointer"
+                />
+                <span className="font-mono-share text-[9px] text-muted-foreground">10</span>
               </div>
             </div>
 
