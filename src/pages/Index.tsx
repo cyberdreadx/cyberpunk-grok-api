@@ -16,6 +16,7 @@ import AuthDialog from "@/components/AuthDialog";
 import CreditDisplay from "@/components/CreditDisplay";
 import LegalDialog from "@/components/LegalDialog";
 import HowToUseDialog from "@/components/HowToUseDialog";
+import ChangelogDialog, { hasUnseenChangelog } from "@/components/ChangelogDialog";
 import { useGrokApi, urlToBase64, getImageDimensions, type GrokMode, type GenerationSettings, type VideoSettings, type ApiMode, type VideoLoraEntry, type ComfyJob, DEFAULT_SETTINGS, DEFAULT_VIDEO_SETTINGS } from "@/hooks/useGrokApi";
 import { useAuth } from "@/hooks/useAuth";
 import { useCredits } from "@/hooks/useCredits";
@@ -183,6 +184,11 @@ const Index = () => {
   const [tosOpen, setTosOpen] = useState(false);
   const [privacyOpen, setPrivacyOpen] = useState(false);
   const [guideOpen, setGuideOpen] = useState(() => !localStorage.getItem("how-to-use-seen"));
+  const [changelogOpen, setChangelogOpen] = useState(() => {
+    // Auto-show changelog only if the user has already seen the guide (not first visit)
+    if (!localStorage.getItem("how-to-use-seen")) return false;
+    return hasUnseenChangelog();
+  });
   const [apiKeySet, setApiKeySet] = useState(() => hasApiKey());
 
   // Auto-switch to credits mode when user logs in without a BYOK key
@@ -2015,6 +2021,14 @@ const Index = () => {
             </button>
             <span className="text-border/50">|</span>
             <button
+              onClick={() => setChangelogOpen(true)}
+              className="flex items-center gap-1 text-muted-foreground/40 hover:text-accent transition-colors"
+            >
+              <Zap className="w-3 h-3" />
+              CHANGELOG
+            </button>
+            <span className="text-border/50">|</span>
+            <button
               onClick={() => setTosOpen(true)}
               className="flex items-center gap-1 text-muted-foreground/40 hover:text-primary transition-colors"
             >
@@ -2078,6 +2092,7 @@ const Index = () => {
 
         {/* Dialogs */}
         <HowToUseDialog open={guideOpen} onOpenChange={setGuideOpen} />
+        <ChangelogDialog open={changelogOpen} onOpenChange={setChangelogOpen} />
         <LegalDialog type="tos" open={tosOpen} onOpenChange={setTosOpen} />
         <LegalDialog type="privacy" open={privacyOpen} onOpenChange={setPrivacyOpen} />
       </div>
