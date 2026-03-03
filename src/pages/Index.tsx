@@ -121,7 +121,7 @@ const Index = () => {
 
   // Engine selectors per mode
   type EditEngine = "grok" | "gltch";
-  const [editEngine, setEditEngine] = useState<EditEngine>("gltch");
+  const [editEngine, setEditEngine] = useState<EditEngine>("grok");
   const [grokPro, setGrokPro] = useState(false);
   const [qwenLoraStack, setQwenLoraStack] = useState<{ name: string; strengthModel: number; strengthClip: number }[]>([]);
   const [comfyEditUpscale, setComfyEditUpscale] = useState(false);
@@ -130,9 +130,9 @@ const Index = () => {
   const gltchImage2Ref = useRef<HTMLInputElement>(null);
 
   type ComfyEngine = "grok" | "comfy" | "gltch";
-  const [genEngine, setGenEngine] = useState<ComfyEngine>("gltch");
+  const [genEngine, setGenEngine] = useState<ComfyEngine>("grok");
   const [renderEngine, setRenderEngine] = useState<ComfyEngine>("comfy");
-  const [animateEngine, setAnimateEngine] = useState<ComfyEngine>("gltch");
+  const [animateEngine, setAnimateEngine] = useState<ComfyEngine>("grok");
 
   // ComfyUI settings
   const [comfyCheckpoint, setComfyCheckpoint] = useState("");
@@ -299,11 +299,11 @@ const Index = () => {
     if (isGrokEditByok) {
       // Skip auth and credit checks — falls through to the queued job section below
     } else if (isQueued) {
-      // All other queued jobs require auth (credits mode)
+      // All other queued jobs require auth (server-side processing)
       if (!auth.isAuthenticated) {
         toast({
-          title: "ACCESS DENIED",
-          description: "Sign in to use credits.",
+          title: "ACCOUNT REQUIRED",
+          description: "GLTCH & ComfyUI engines run on our servers and require an account. Sign in or switch to the GROK engine for BYOK mode.",
           variant: "destructive",
         });
         return;
@@ -811,8 +811,8 @@ const Index = () => {
 
             <SettingsPanel settings={settings} videoSettings={videoSettings} onChange={handleSettingsChange} onVideoChange={handleVideoSettingsChange} mode={mode} />
 
-            {/* Engine selector — shows in edit-image when user is logged in */}
-            {mode === "edit-image" && auth.isAuthenticated && (
+            {/* Engine selector — shows in edit-image mode */}
+            {mode === "edit-image" && (
               <div className="space-y-2">
                 <label className="font-orbitron text-[10px] tracking-wider text-muted-foreground flex items-center gap-1.5">
                   <Zap className="w-3 h-3" />
@@ -1100,7 +1100,7 @@ const Index = () => {
             )}
 
             {/* Engine selector — GENERATE mode */}
-            {mode === "text-to-image" && auth.isAuthenticated && (
+            {mode === "text-to-image" && (
               <div className="space-y-2">
                 <label className="font-orbitron text-[10px] tracking-wider text-muted-foreground flex items-center gap-1.5">
                   <Zap className="w-3 h-3" />
@@ -1315,7 +1315,7 @@ const Index = () => {
             )}
 
             {/* Engine selector — RENDER (text-to-video) mode */}
-            {mode === "text-to-video" && auth.isAuthenticated && (
+            {mode === "text-to-video" && (
               <div className="space-y-2">
                 <label className="font-orbitron text-[10px] tracking-wider text-muted-foreground flex items-center gap-1.5">
                   <Zap className="w-3 h-3" />
@@ -1479,7 +1479,7 @@ const Index = () => {
             )}
 
             {/* Engine selector — ANIMATE (image-to-video) mode */}
-            {mode === "image-to-video" && auth.isAuthenticated && (
+            {mode === "image-to-video" && (
               <div className="space-y-2">
                 <label className="font-orbitron text-[10px] tracking-wider text-muted-foreground flex items-center gap-1.5">
                   <Zap className="w-3 h-3" />
