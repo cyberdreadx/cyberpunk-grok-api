@@ -603,28 +603,45 @@ export async function exportLibraryAsZip(
 
     let blob: Blob | null = null;
 
-    // Try to get blob from IndexedDB record
+    // 1. Try to get blob from IndexedDB record (best source — local, no network)
     if (rec?.blob && rec.blob instanceof Blob && rec.blob.size > 0) {
       blob = rec.blob;
     }
-    // For data URLs in the result itself
+    // 2. Data URLs in the result itself → convert
     else if (result.url.startsWith("data:")) {
       blob = dataUrlToBlob(result.url);
     }
-    // For blob: URLs, fetch them
+    // 3. blob: URLs → fetch the in-memory blob
     else if (result.url.startsWith("blob:")) {
       try {
         const res = await fetch(result.url);
         if (res.ok) blob = await res.blob();
-      } catch { /* skip */ }
+      } catch { /* blob may have been revoked */ }
+      // If the blob: URL failed, try the original stored URL from IndexedDB
+      if ((!blob || blob.size === 0) && rec?.url && !rec.url.startsWith("blob:")) {
+        try {
+          const res = await fetch(rec.url);
+          if (res.ok) blob = await res.blob();
+        } catch { /* skip */ }
+      }
     }
-    // External URLs (videos, etc.) — fetch via proxy
+    // 4. External URLs — try direct fetch first (works for same-origin, R2, most CDNs)
+    //    then fall back to download proxy for CORS-restricted URLs
     else if (result.url) {
+      // Direct fetch (no CORS proxy)
       try {
-        const proxyUrl = getExportProxyUrl(result.url, filename);
-        const res = await fetch(proxyUrl);
+        const res = await fetch(result.url);
         if (res.ok) blob = await res.blob();
-      } catch { /* skip — will be noted in manifest */ }
+      } catch { /* CORS or network error — try proxy */ }
+
+      // Proxy fallback
+      if (!blob || blob.size === 0) {
+        try {
+          const proxyUrl = getExportProxyUrl(result.url, filename);
+          const res = await fetch(proxyUrl);
+          if (res.ok) blob = await res.blob();
+        } catch { /* skip */ }
+      }
     }
 
     if (blob && blob.size > 0) {
@@ -660,7 +677,6 @@ export async function exportLibraryAsZip(
 
 /** Build a proxy URL for exporting external media (same pattern as ResultsGrid). */
 function getExportProxyUrl(url: string, filename: string): string {
-  // Use the same proxy as the download function in ResultsGrid
   const base = "/api/download";
   return `${base}?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(filename)}`;
 }

@@ -10,8 +10,13 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 // Allow up to 60s for large video downloads
 export const config = { maxDuration: 60 };
 
-// Only allow proxying from trusted xAI domains
-const ALLOWED_HOSTS = ["vidgen.x.ai", "api.x.ai", "cdn.x.ai"];
+// Allow proxying from trusted domains (xAI + our media CDNs)
+const ALLOWED_HOSTS = [
+  "vidgen.x.ai", "api.x.ai", "cdn.x.ai",
+  "r2.cloudflarestorage.com", "pub-", // R2 public buckets
+  "runpod.io",                        // RunPod serverless
+  "gltch.app", "cloud.gltch.app",     // our own domains
+];
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === "OPTIONS") return res.status(200).end();
@@ -36,7 +41,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: "Invalid URL" });
     }
 
-    if (!ALLOWED_HOSTS.some((h) => parsedUrl.hostname === h || parsedUrl.hostname.endsWith(`.${h}`))) {
+    if (!ALLOWED_HOSTS.some((h) =>
+      parsedUrl.hostname === h || parsedUrl.hostname.endsWith(`.${h}`) || parsedUrl.hostname.startsWith(h)
+    )) {
       return res.status(403).json({ error: "Domain not allowed" });
     }
 
