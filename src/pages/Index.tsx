@@ -270,7 +270,7 @@ const Index = () => {
     }
   }, [foldersHook, updateResultFolder, toast]);
 
-  const handleSubmit = async (data: { prompt: string; imageUrl?: string }) => {
+  const handleSubmit = async (data: { prompt: string; imageUrl?: string; extraImageUrls?: string[] }) => {
     // Determine which engine pathway
     const isGrokEdit = mode === "edit-image" && editEngine === "grok";
     const isGltchEdit = mode === "edit-image" && editEngine === "gltch";
@@ -382,6 +382,7 @@ const Index = () => {
           grokEditQueued({
             prompt: data.prompt,
             image_url: data.imageUrl!,
+            extra_image_urls: data.extraImageUrls,
             settings,
             pro: grokPro,
             ...(adminTestCredits ? { testCredits: true } : {}),

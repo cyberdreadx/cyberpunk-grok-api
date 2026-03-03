@@ -112,6 +112,7 @@ interface GenerateImageParams {
 interface EditImageParams {
   prompt: string;
   image_url: string;
+  extra_image_urls?: string[];
   settings: GenerationSettings;
   pro?: boolean;
   testCredits?: boolean;
@@ -522,10 +523,26 @@ export function useGrokApi() {
         ? params.image_url
         : await urlToBase64(params.image_url);
 
+      // Build multi-image array if extra images provided
+      const hasExtras = params.extra_image_urls && params.extra_image_urls.length > 0;
+      let imageField: Record<string, unknown> = {};
+      if (hasExtras) {
+        const allImages = [safeImageUrl, ...params.extra_image_urls!];
+        const imageObjects = await Promise.all(
+          allImages.map(async (url) => ({
+            url: url.startsWith("data:") ? url : await urlToBase64(url),
+            type: "image_url" as const,
+          }))
+        );
+        imageField = { images: imageObjects };
+      } else {
+        imageField = { image: { url: safeImageUrl } };
+      }
+
       const body: Record<string, unknown> = {
         model: params.pro ? "grok-imagine-image-pro" : "grok-imagine-image",
         prompt: params.prompt,
-        image: { url: safeImageUrl },
+        ...imageField,
         n: params.settings.count,
         response_format: "b64_json",
         ...(params.testCredits ? { testCredits: true } : {}),
@@ -587,10 +604,26 @@ export function useGrokApi() {
           ? params.image_url
           : await urlToBase64(params.image_url);
 
+        // Build multi-image array if extra images provided
+        const hasExtras = params.extra_image_urls && params.extra_image_urls.length > 0;
+        let imageField: Record<string, unknown> = {};
+        if (hasExtras) {
+          const allImages = [safeImageUrl, ...params.extra_image_urls!];
+          const imageObjects = await Promise.all(
+            allImages.map(async (url) => ({
+              url: url.startsWith("data:") ? url : await urlToBase64(url),
+              type: "image_url" as const,
+            }))
+          );
+          imageField = { images: imageObjects };
+        } else {
+          imageField = { image: { url: safeImageUrl } };
+        }
+
         const body: Record<string, unknown> = {
           model: params.pro ? "grok-imagine-image-pro" : "grok-imagine-image",
           prompt: params.prompt,
-          image: { url: safeImageUrl },
+          ...imageField,
           n: params.settings.count,
           response_format: "b64_json",
           ...(params.testCredits ? { testCredits: true } : {}),
