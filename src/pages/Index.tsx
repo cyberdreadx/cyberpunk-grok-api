@@ -1805,7 +1805,6 @@ const Index = () => {
             {auth.isAuthenticated && (
               (mode === "edit-image" && editEngine === "gltch") ||
               (mode === "text-to-image" && (genEngine === "comfy" || genEngine === "gltch")) ||
-              mode === "animate" ||
               (mode === "image-to-video" && animateEngine === "gltch")
             ) && (
                 <div className="flex items-center gap-2">

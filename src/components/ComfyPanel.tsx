@@ -268,6 +268,7 @@ export default function ComfyPanel({
                 url: data.image,
                 revised_prompt: promptText,
                 type: "image",
+                timestamp: Date.now(),
               });
             }
             if (data.video) {
@@ -276,6 +277,7 @@ export default function ComfyPanel({
                 url: data.video,
                 revised_prompt: promptText,
                 type: "video",
+                timestamp: Date.now(),
               });
             }
             if (newResults.length > 0) onNewResults(newResults);
