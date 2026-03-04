@@ -211,11 +211,11 @@ export default function Admin() {
 
   // Pivot usage data into { day, generate-image, edit-image, generate-video }
   const usagePivot = React.useMemo(() => {
-    const map = new Map<string, Record<string, number>>();
+    const map = new Map<string, { day: string } & Record<string, number>>();
     for (const row of usage) {
       const d = fmtDate(row.day);
-      const entry = map.get(d) || { day: d };
-      entry[row.mode] = (entry[row.mode] || 0) + row.count;
+      const entry = map.get(d) ?? ({ day: d } as { day: string } & Record<string, number>);
+      (entry as Record<string, number>)[row.mode] = ((entry as Record<string, number>)[row.mode] || 0) + row.count;
       map.set(d, entry);
     }
     return Array.from(map.values());
