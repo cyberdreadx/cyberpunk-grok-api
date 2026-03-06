@@ -668,7 +668,7 @@ export function useGrokApi() {
       setIsLoading(false);
       stopTimer();
     }
-  }, [apiMode, makeRequest, makeProxyRequest, pollVideoResult, persistNewResults, startTimer, stopTimer]);
+  }, [apiMode, makeRequest, makeProxyRequest, persistNewResults, startTimer, stopTimer]);
 
   // Edit Video (video-to-video with text prompt)
   const editVideo = useCallback(async (params: EditVideoParams) => {
@@ -701,13 +701,8 @@ export function useGrokApi() {
         return newResults;
       }
 
-      const startData = await makeRequest("/videos/edits", body);
-      const requestId = startData.request_id || startData.id;
-      if (!requestId) {
-        throw new Error("No request_id returned. Response: " + JSON.stringify(startData).slice(0, 300));
-      }
-
-      const data = await pollVideoResult(requestId);
+      // BYOK mode: proxy handles polling server-side
+      const data = await makeRequest("/videos/edits", body);
       const videoUrl = data.video?.url || data.video_url || data.url || data.data?.[0]?.url;
       if (!videoUrl) {
         throw new Error("No video URL found in result.");
@@ -731,7 +726,7 @@ export function useGrokApi() {
       setIsLoading(false);
       stopTimer();
     }
-  }, [apiMode, makeRequest, makeProxyRequest, pollVideoResult, persistNewResults, startTimer, stopTimer]);
+  }, [apiMode, makeRequest, makeProxyRequest, persistNewResults, startTimer, stopTimer]);
 
   // GLTCH Edit (Qwen model via /api/gltch) — fire-and-forget with queue
   const gltchEdit = useCallback((params: {
