@@ -134,7 +134,8 @@ interface EditVideoParams {
 /** Generation mode: "byok" = user's own API key, "credits" = server proxy w/ credits */
 export type ApiMode = "byok" | "credits";
 
-const API_BASE = "https://api.x.ai/v1";
+// NOTE: All xAI API calls go through /api/generate proxy — never directly from the browser.
+// Direct calls to api.x.ai are blocked by CORS in browsers.
 
 /** Convert an external URL to a base64 data-URL (used for user-provided URLs). */
 export async function urlToBase64(url: string): Promise<string> {
