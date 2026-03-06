@@ -332,49 +332,53 @@ export function useGrokApi() {
     return !!localStorage.getItem("xai-api-key");
   }, []);
 
-  const makeRequest = useCallback(async (endpoint: string, body: Record<string, unknown>, method: "POST" | "GET" = "POST") => {
+  /**
+   * BYOK mode: routes through our /api/generate proxy (passes byokKey server-side)
+   * so the browser never calls api.x.ai directly — avoids CORS blocks.
+   */
+  const makeRequest = useCallback(async (
+    endpoint: string,
+    body: Record<string, unknown>,
+    _method: "POST" | "GET" = "POST",
+  ) => {
     const apiKey = getApiKey();
     if (!apiKey) throw new Error("API key not configured");
 
-    const options: RequestInit = {
-      method,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
+    // Map xAI endpoint path → action name expected by /api/generate
+    const endpointActionMap: Record<string, string> = {
+      "/images/generations": "generate-image",
+      "/images/edits": "edit-image",
+      "/videos/generations": "generate-video",
+      "/videos/edits": "edit-video",
     };
+    const action = endpointActionMap[endpoint];
+    if (!action) throw new Error(`Unknown xAI endpoint: ${endpoint}`);
 
-    if (method === "POST") {
-      options.body = JSON.stringify(body);
-    }
+    const data = await apiFetch("/generate", {
+      method: "POST",
+      body: { action, byokKey: apiKey, ...body },
+      auth: false, // no JWT needed for BYOK
+    });
 
-    const response = await fetch(`${API_BASE}${endpoint}`, options);
-
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => "");
-      let msg = `xAI API error (${response.status})`;
-      try {
-        const errorData = JSON.parse(errorText);
-        msg = errorData.error?.message || errorData.message || errorData.error || msg;
-      } catch {
-        if (errorText) msg = errorText.slice(0, 300);
+    if (data?.error) {
+      let msg = typeof data.error === "string" ? data.error : data.error?.message || "Generation failed";
+      if (typeof msg === "string" && msg.startsWith("{")) {
+        try { const p = JSON.parse(msg); msg = p.error?.message || p.message || msg; } catch { /* keep */ }
       }
-
       // Detect billing / quota issues and add helpful context
       if (/monthly.*limit|quota.*exceeded/i.test(msg)) {
         msg = "Your xAI account has reached its monthly limit. Add or increase billing at https://console.x.ai";
-      } else if (response.status === 402 || response.status === 403 || /insufficient|billing|quota|balance|payment/i.test(msg)) {
+      } else if (/insufficient|billing|quota|balance|payment/i.test(msg)) {
         msg += "\n\nYour xAI account has no credits. Add billing at https://console.x.ai";
-      } else if (response.status === 401 || /invalid.*key|unauthorized|authentication/i.test(msg)) {
+      } else if (/invalid.*key|unauthorized|authentication/i.test(msg)) {
         msg += "\n\nYour API key may be invalid. Check it at https://console.x.ai";
-      } else if (response.status === 429) {
+      } else if (/rate.?limit|too many/i.test(msg)) {
         msg += "\n\nRate limit hit. Wait a moment and try again, or add billing at https://console.x.ai";
       }
-
       throw new Error(msg);
     }
 
-    return response.json();
+    return data;
   }, [getApiKey]);
 
   /** Call our Vercel API proxy instead of xAI directly. */
