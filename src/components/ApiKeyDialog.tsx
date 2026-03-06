@@ -144,7 +144,7 @@ const ApiKeyDialog: React.FC<ApiKeyDialogProps> = ({ hasKey, onSave, onClear }) 
 
           <div className="border-t border-border pt-3">
             <p className="text-[10px] font-mono-share text-muted-foreground/60 leading-relaxed">
-              ⚠ Your key is stored in localStorage and never sent to any server except api.x.ai.
+⚠ Your key is stored in localStorage and proxied server-side to xAI — never sent directly from your browser.
               Clear browser data to remove it.
             </p>
           </div>
