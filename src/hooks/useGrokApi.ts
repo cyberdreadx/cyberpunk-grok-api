@@ -332,49 +332,53 @@ export function useGrokApi() {
     return !!localStorage.getItem("xai-api-key");
   }, []);
 
-  const makeRequest = useCallback(async (endpoint: string, body: Record<string, unknown>, method: "POST" | "GET" = "POST") => {
+  /**
+   * BYOK mode: routes through our /api/generate proxy (passes byokKey server-side)
+   * so the browser never calls api.x.ai directly — avoids CORS blocks.
+   */
+  const makeRequest = useCallback(async (
+    endpoint: string,
+    body: Record<string, unknown>,
+    _method: "POST" | "GET" = "POST",
+  ) => {
     const apiKey = getApiKey();
     if (!apiKey) throw new Error("API key not configured");
 
-    const options: RequestInit = {
-      method,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
+    // Map xAI endpoint path → action name expected by /api/generate
+    const endpointActionMap: Record<string, string> = {
+      "/images/generations": "generate-image",
+      "/images/edits": "edit-image",
+      "/videos/generations": "generate-video",
+      "/videos/edits": "edit-video",
     };
+    const action = endpointActionMap[endpoint];
+    if (!action) throw new Error(`Unknown xAI endpoint: ${endpoint}`);
 
-    if (method === "POST") {
-      options.body = JSON.stringify(body);
-    }
+    const data = await apiFetch("/generate", {
+      method: "POST",
+      body: { action, byokKey: apiKey, ...body },
+      auth: false, // no JWT needed for BYOK
+    });
 
-    const response = await fetch(`${API_BASE}${endpoint}`, options);
-
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => "");
-      let msg = `xAI API error (${response.status})`;
-      try {
-        const errorData = JSON.parse(errorText);
-        msg = errorData.error?.message || errorData.message || errorData.error || msg;
-      } catch {
-        if (errorText) msg = errorText.slice(0, 300);
+    if (data?.error) {
+      let msg = typeof data.error === "string" ? data.error : data.error?.message || "Generation failed";
+      if (typeof msg === "string" && msg.startsWith("{")) {
+        try { const p = JSON.parse(msg); msg = p.error?.message || p.message || msg; } catch { /* keep */ }
       }
-
       // Detect billing / quota issues and add helpful context
       if (/monthly.*limit|quota.*exceeded/i.test(msg)) {
         msg = "Your xAI account has reached its monthly limit. Add or increase billing at https://console.x.ai";
-      } else if (response.status === 402 || response.status === 403 || /insufficient|billing|quota|balance|payment/i.test(msg)) {
+      } else if (/insufficient|billing|quota|balance|payment/i.test(msg)) {
         msg += "\n\nYour xAI account has no credits. Add billing at https://console.x.ai";
-      } else if (response.status === 401 || /invalid.*key|unauthorized|authentication/i.test(msg)) {
+      } else if (/invalid.*key|unauthorized|authentication/i.test(msg)) {
         msg += "\n\nYour API key may be invalid. Check it at https://console.x.ai";
-      } else if (response.status === 429) {
+      } else if (/rate.?limit|too many/i.test(msg)) {
         msg += "\n\nRate limit hit. Wait a moment and try again, or add billing at https://console.x.ai";
       }
-
       throw new Error(msg);
     }
 
-    return response.json();
+    return data;
   }, [getApiKey]);
 
   /** Call our Vercel API proxy instead of xAI directly. */
@@ -399,72 +403,6 @@ export function useGrokApi() {
     }
     return data;
   }, []);
-
-  const pollVideoResult = useCallback(async (requestId: string): Promise<any> => {
-    const apiKey = getApiKey();
-    if (!apiKey) throw new Error("API key not configured");
-
-    const maxAttempts = 120;
-    for (let i = 0; i < maxAttempts; i++) {
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-
-      let response: Response;
-      try {
-        response = await fetch(`${API_BASE}/videos/${requestId}`, {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-          },
-        });
-      } catch (fetchErr: any) {
-        // Network error — retry instead of crashing
-        console.warn(`[pollVideo] Network error on attempt ${i + 1}:`, fetchErr.message);
-        continue;
-      }
-
-      // 202 Accepted means still processing — consume body and continue
-      if (response.status === 202) {
-        await response.text().catch(() => { }); // drain response body
-        continue;
-      }
-
-      if (!response.ok) {
-        const errorText = await response.text().catch(() => "");
-        let errorMsg = `Video polling failed (HTTP ${response.status})`;
-        try {
-          const errorData = JSON.parse(errorText);
-          if (errorData.error?.message) errorMsg = errorData.error.message;
-          else if (errorData.message) errorMsg = errorData.message;
-        } catch {
-          if (errorText) errorMsg += `: ${errorText.slice(0, 200)}`;
-        }
-        console.warn(`[pollVideo] Error on attempt ${i + 1}:`, response.status, errorText.slice(0, 300));
-        throw new Error(errorMsg);
-      }
-
-      const data = await response.json();
-      const currentStatus = data.status || data.state || "unknown";
-
-      if (currentStatus === "done" || currentStatus === "completed" || currentStatus === "succeeded") {
-        return data;
-      }
-
-      if (currentStatus === "expired") {
-        throw new Error("Video generation request expired. Please try again.");
-      }
-
-      if (currentStatus === "failed" || currentStatus === "error") {
-        throw new Error(data.error?.message || data.message || "Video generation failed");
-      }
-
-      const earlyUrl = data.video?.url || data.video_url || data.url;
-      if (earlyUrl) {
-        return data;
-      }
-    }
-
-    throw new Error("Video generation timed out after 6 minutes");
-  }, [getApiKey]);
 
   // ── Persist a batch of new results to IndexedDB ──
   const persistNewResults = useCallback(async (newResults: GrokResult[]) => {
@@ -704,17 +642,8 @@ export function useGrokApi() {
         return newResults;
       }
 
-      // BYOK mode: direct xAI calls with client-side polling
-      const submitData = await makeRequest("/videos/generations", body);
-      console.info("[generateVideo] Submit response keys:", Object.keys(submitData));
-      const requestId = submitData.request_id || submitData.id;
-
-      if (!requestId) {
-        throw new Error("No request ID returned from video generation. Response: " + JSON.stringify(submitData).slice(0, 500));
-      }
-      console.info("[generateVideo] Polling requestId:", requestId);
-
-      const data = await pollVideoResult(requestId);
+      // BYOK mode: proxy handles polling server-side
+      const data = await makeRequest("/videos/generations", body);
 
       const videoUrl = data.video?.url || data.video_url || data.url || data.data?.[0]?.url;
       if (!videoUrl) {
@@ -739,7 +668,7 @@ export function useGrokApi() {
       setIsLoading(false);
       stopTimer();
     }
-  }, [apiMode, makeRequest, makeProxyRequest, pollVideoResult, persistNewResults, startTimer, stopTimer]);
+  }, [apiMode, makeRequest, makeProxyRequest, persistNewResults, startTimer, stopTimer]);
 
   // Edit Video (video-to-video with text prompt)
   const editVideo = useCallback(async (params: EditVideoParams) => {
@@ -772,13 +701,8 @@ export function useGrokApi() {
         return newResults;
       }
 
-      const startData = await makeRequest("/videos/edits", body);
-      const requestId = startData.request_id || startData.id;
-      if (!requestId) {
-        throw new Error("No request_id returned. Response: " + JSON.stringify(startData).slice(0, 300));
-      }
-
-      const data = await pollVideoResult(requestId);
+      // BYOK mode: proxy handles polling server-side
+      const data = await makeRequest("/videos/edits", body);
       const videoUrl = data.video?.url || data.video_url || data.url || data.data?.[0]?.url;
       if (!videoUrl) {
         throw new Error("No video URL found in result.");
@@ -802,7 +726,7 @@ export function useGrokApi() {
       setIsLoading(false);
       stopTimer();
     }
-  }, [apiMode, makeRequest, makeProxyRequest, pollVideoResult, persistNewResults, startTimer, stopTimer]);
+  }, [apiMode, makeRequest, makeProxyRequest, persistNewResults, startTimer, stopTimer]);
 
   // GLTCH Edit (Qwen model via /api/gltch) — fire-and-forget with queue
   const gltchEdit = useCallback((params: {

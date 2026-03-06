@@ -94,6 +94,81 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   try {
+    // ── BYOK (Bring Your Own Key) mode ──────────────────────────────────────
+    // If the client sends a byokKey, skip auth/credits entirely and proxy as-is.
+    const byokKey = typeof req.body?.byokKey === "string" ? req.body.byokKey.trim() : null;
+    if (byokKey) {
+      const { action, byokKey: _omit, ...params } = req.body || {};
+      if (!action || !ALLOWED_ACTIONS.includes(action as AllowedAction)) {
+        return res.status(400).json({ error: "Invalid action." });
+      }
+
+      // Validate prompt length
+      if (params.prompt && typeof params.prompt === "string" && params.prompt.length > 10000) {
+        return res.status(400).json({ error: "Prompt too long (max 10,000 characters)." });
+      }
+
+      let xaiEndpoint: string;
+      switch (action as AllowedAction) {
+        case "generate-image": xaiEndpoint = "/images/generations"; break;
+        case "edit-image": xaiEndpoint = "/images/edits"; break;
+        case "generate-video": xaiEndpoint = "/videos/generations"; break;
+        case "edit-video": xaiEndpoint = "/videos/edits"; break;
+        default: return res.status(400).json({ error: "Invalid action" });
+      }
+
+      // Transform video edit body
+      const byokParams = { ...params };
+      if (action === "edit-video" && byokParams.video_url && !byokParams.video) {
+        byokParams.video = { url: byokParams.video_url };
+        delete byokParams.video_url;
+      }
+
+      const byokResp = await fetch(`${XAI_API_BASE}${xaiEndpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${byokKey}` },
+        body: JSON.stringify(byokParams),
+      });
+
+      if (!byokResp.ok) {
+        const errText = await byokResp.text();
+        return res.status(byokResp.status).json({ error: errText });
+      }
+
+      let byokData: any = await byokResp.json();
+
+      // Video polling for BYOK
+      if (action === "generate-video" || action === "edit-video") {
+        const requestId = byokData.request_id || byokData.id;
+        if (requestId) {
+          for (let i = 0; i < 120; i++) {
+            await new Promise((r) => setTimeout(r, 3000));
+            let pollRes: Response;
+            try {
+              pollRes = await fetch(`${XAI_API_BASE}/videos/${requestId}`, {
+                method: "GET",
+                headers: { Authorization: `Bearer ${byokKey}` },
+              });
+            } catch { continue; }
+            if (pollRes.status === 202) { await pollRes.text().catch(() => {}); continue; }
+            if (!pollRes.ok) {
+              const errText = await pollRes.text();
+              return res.status(pollRes.status).json({ error: errText });
+            }
+            const pollData: any = await pollRes.json();
+            const status = pollData.status || pollData.state;
+            if (status === "failed" || status === "error") return res.status(500).json({ error: pollData.error?.message || "Video generation failed" });
+            if (status === "expired") return res.status(500).json({ error: "Video generation request expired. Please try again." });
+            const url = pollData.video?.url || pollData.video_url || pollData.url;
+            if (status === "done" || status === "completed" || status === "succeeded" || url) { byokData = pollData; break; }
+          }
+        }
+      }
+
+      return res.status(200).json(byokData);
+    }
+
+    // ── Credit-based (authenticated) mode ────────────────────────────────────
     const XAI_API_KEY = process.env.XAI_API_KEY;
     if (!XAI_API_KEY) return res.status(500).json({ error: "Server API key not configured" });
 
