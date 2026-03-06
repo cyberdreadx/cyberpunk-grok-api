@@ -642,17 +642,8 @@ export function useGrokApi() {
         return newResults;
       }
 
-      // BYOK mode: direct xAI calls with client-side polling
-      const submitData = await makeRequest("/videos/generations", body);
-      console.info("[generateVideo] Submit response keys:", Object.keys(submitData));
-      const requestId = submitData.request_id || submitData.id;
-
-      if (!requestId) {
-        throw new Error("No request ID returned from video generation. Response: " + JSON.stringify(submitData).slice(0, 500));
-      }
-      console.info("[generateVideo] Polling requestId:", requestId);
-
-      const data = await pollVideoResult(requestId);
+      // BYOK mode: proxy handles polling server-side
+      const data = await makeRequest("/videos/generations", body);
 
       const videoUrl = data.video?.url || data.video_url || data.url || data.data?.[0]?.url;
       if (!videoUrl) {
