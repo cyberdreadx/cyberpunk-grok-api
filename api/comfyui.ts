@@ -851,13 +851,13 @@ function buildGltchWanWorkflow(p: {
     // Clean GPU before RIFE
     workflow["76"] = {
       class_type: "easy cleanGpuUsed",
-      inputs: { anything: ["74", 0] },
+      inputs: { anything: ["83", 0] },
     };
     // RIFE 2x frame interpolation (16fps → 32fps)
     workflow["75"] = {
       class_type: "RIFE VFI",
       inputs: {
-        frames: ["76", 0],
+        frames: ["83", 0],
         ckpt_name: "rife49.pth",
         clear_cache_after_n_frames: 10,
         multiplier: 2,
