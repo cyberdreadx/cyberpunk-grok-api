@@ -229,14 +229,33 @@ export default function Characters() {
     const submit = await apiFetch<{ promptId: string; runpodEndpointId?: string; outputType?: string }>("/comfyui", {
       method: "POST", body: { action: "generate", ...body },
     });
-    const isVideo = body.workflow === "wan-video";
+    const { promptId, runpodEndpointId } = submit;
+    const outType = submit.outputType || (body.workflow === "wan-video" || body.workflow === "gltch-wan" || body.workflow === "longlook" ? "video" : "image");
+
     for (let i = 0; i < 300; i++) {
       await new Promise(r => setTimeout(r, 2000));
       const poll = await apiFetch<{ status: string; image?: string; video?: string; error?: string }>("/comfyui", {
         method: "POST",
-        body: { action: "poll", promptId: submit.promptId, runpodEndpointId: submit.runpodEndpointId },
+        body: { action: "poll", promptId, outputType: outType, ...(runpodEndpointId && { runpodEndpointId }) },
       });
-      if (poll.status === "done") return { image: poll.image, video: poll.video };
+      if (poll.status === "done") {
+        // Proxy S3 video URLs through backend (CORS)
+        let video = poll.video;
+        if (video && video.startsWith("https://") && !video.startsWith("data:")) {
+          try {
+            const proxyResp = await fetch("/api/comfyui", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ action: "proxy-s3", url: video }),
+            });
+            if (proxyResp.ok) {
+              const blob = await proxyResp.blob();
+              video = URL.createObjectURL(blob);
+            }
+          } catch { /* fallback to direct URL */ }
+        }
+        return { image: poll.image, video };
+      }
       if (poll.status === "error") throw new Error(poll.error || "Generation failed");
     }
     throw new Error("Generation timed out");
