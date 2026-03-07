@@ -146,7 +146,7 @@ const Index = () => {
   const [comfyCfg, setComfyCfg] = useState(1);
   const [comfyFrameCount, setComfyFrameCount] = useState(81);
   const [comfyRife, setComfyRife] = useState(true);
-  const [comfyVidUpscale, setComfyVidUpscale] = useState(false);
+  const [comfyVidUpscale, setComfyVidUpscale] = useState(true);
   const [comfyVideoLora, setComfyVideoLora] = useState("none");
   const [comfyVideoLoraStrength, setComfyVideoLoraStrength] = useState(0.8);
   const [comfyVideoLoraPass, setComfyVideoLoraPass] = useState<"high" | "low" | "both">("high");

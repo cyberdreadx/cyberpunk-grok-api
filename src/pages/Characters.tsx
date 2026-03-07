@@ -323,6 +323,7 @@ export default function Characters() {
           frameCount: 81,
           resolution: 832,
           shift: 8,
+          useVidUpscale: true,
         });
 
         if (vidResult.video) {
