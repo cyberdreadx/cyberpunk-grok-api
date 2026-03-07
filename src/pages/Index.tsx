@@ -26,7 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 import { calculateCreditCost, type CreditMode } from "@/lib/api";
 
 const ANNOUNCEMENTS: { id: string; message: string; type?: "info" | "warning" | "success" }[] = [
-  { id: "gltch-wan-launch", message: "GLTCH WAN 2.2 I2V — Lightx2v + Pusa enhanced motions pipeline in ANIMATE mode.", type: "info" },
+  { id: "gltch-wan-launch", message: "GLTCH WAN 2.2 I2V — SmoothMix Enhanced NSFW Lightning Edition in ANIMATE mode.", type: "info" },
 ];
 
 const SFW_LORA_KEYWORDS = ["skin", "angle"];
@@ -152,6 +152,7 @@ const Index = () => {
   const [comfyVideoLoraPass, setComfyVideoLoraPass] = useState<"high" | "low" | "both">("high");
   const [comfyAudioMode, setComfyAudioMode] = useState<"none" | "ambient">("none");
   const [comfyAudioPrompt, setComfyAudioPrompt] = useState("");
+  const [comfyShift, setComfyShift] = useState(8);
 
   // Shared seed (empty = random)
   const [globalSeed, setGlobalSeed] = useState("");
@@ -525,6 +526,7 @@ const Index = () => {
             useUpscale: comfyVidUpscale,
             workflow: "gltch-wan",
             resolution: 832,
+            shift: comfyShift,
             videoLora: comfyVideoLora !== "none" ? comfyVideoLora : undefined,
             videoLoraStrength: comfyVideoLoraStrength,
             videoLoraPass: comfyVideoLoraPass,
@@ -1538,7 +1540,7 @@ const Index = () => {
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-secondary/5 border border-secondary/20 rounded">
                       <div className="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse" />
                       <span className="font-mono-share text-[9px] text-secondary/70">
-                        WAN 2.2 GGUF — Lightx2v + Pusa enhanced motions
+                        WAN 2.2 SmoothMix — Enhanced NSFW Lightning Edition
                       </span>
                     </div>
                     <div>
@@ -1552,13 +1554,24 @@ const Index = () => {
                         ))}
                       </div>
                     </div>
+                    <div>
+                      <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Shift: {comfyShift}</label>
+                      <input type="range" min={1} max={15} step={0.5} value={comfyShift}
+                        onChange={(e) => setComfyShift(Number(e.target.value))}
+                        className="w-full accent-secondary" />
+                      <div className="flex justify-between text-[8px] text-muted-foreground/40 font-mono-share mt-0.5">
+                        <span>1</span>
+                        <span>8 (default)</span>
+                        <span>15</span>
+                      </div>
+                    </div>
                     <button type="button" onClick={() => setComfyVidUpscale(!comfyVidUpscale)}
                       className={`w-full flex items-center justify-between px-3 py-2 border rounded font-mono-share text-[10px] transition-all duration-200 ${comfyVidUpscale ? "border-secondary/50 bg-secondary/5 text-secondary" : "border-border bg-card/30 text-muted-foreground hover:border-secondary/30"}`}>
                       <span className="flex items-center gap-1.5">
                         <span className={`w-3 h-3 border rounded-sm flex items-center justify-center text-[8px] ${comfyVidUpscale ? "border-secondary bg-secondary text-secondary-foreground" : "border-muted-foreground/30"}`}>
                           {comfyVidUpscale && "✓"}
                         </span>
-                        HD (2x upscale + RIFE 4x @ 60fps)
+                        HD (2x lanczos + RIFE 2x @ 32fps)
                       </span>
                       <span className="text-[8px]">+2 cr</span>
                     </button>
@@ -1616,188 +1629,7 @@ const Index = () => {
                     )}
                   </div>
                 )}
-                {/* Old Comfy ANIMATE settings — hidden, GLTCH replaces this */}
-                {animateEngine === "comfy" && false && (
-                  <div className="space-y-2">
-                    <button type="button" onClick={() => setLongLookEnabled(!longLookEnabled)}
-                      className={`w-full flex items-center justify-between px-3 py-2 border rounded font-mono-share text-[10px] transition-all duration-200 ${longLookEnabled ? "border-purple-500/50 bg-purple-500/10 text-purple-300" : "border-border bg-card/30 text-muted-foreground hover:border-purple-500/30"}`}>
-                      <span className="flex items-center gap-1.5">
-                        <span className={`w-3 h-3 border rounded-sm flex items-center justify-center text-[8px] ${longLookEnabled ? "border-purple-500 bg-purple-500 text-white" : "border-muted-foreground/30"}`}>
-                          {longLookEnabled && "✓"}
-                        </span>
-                        LONGLOOK (Multi-Clip)
-                      </span>
-                      <span className="font-mono-share text-[8px] text-purple-400/50">GGUF</span>
-                    </button>
 
-                    {/* LongLook settings */}
-                    {longLookEnabled && (
-                      <div className="space-y-2 pl-2 border-l-2 border-purple-500/20">
-                        <div>
-                          <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Sequences</label>
-                          <div className="flex gap-1.5">
-                            {[1, 2, 3, 4].map((n) => (
-                              <button key={n} type="button" onClick={() => setLongLookSeqCount(n)}
-                                className={`px-3 py-1 rounded text-[10px] font-mono-share transition-all ${longLookSeqCount === n ? "bg-purple-500/20 border-purple-500/50 text-purple-300 border" : "bg-card/30 border border-border text-muted-foreground hover:border-purple-500/30"}`}>
-                                {n}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                        <div>
-                          <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Duration per sequence</label>
-                          <div className="flex flex-wrap gap-1.5">
-                            {[{ label: "~2s", value: 33 }, { label: "~3s", value: 49 }, { label: "~5s", value: 81 }, { label: "~7s", value: 113 }].map((p) => (
-                              <button key={p.value} type="button" onClick={() => setLongLookFrameCount(p.value)}
-                                className={`px-2 py-1 rounded text-[9px] font-mono-share transition-all ${longLookFrameCount === p.value ? "bg-purple-500/20 border-purple-500/50 text-purple-300 border" : "bg-card/30 border border-border text-muted-foreground hover:border-purple-500/30"}`}>
-                                {p.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                        <div>
-                          <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Motion Scale: {longLookMotionScale.toFixed(1)}x</label>
-                          <input type="range" min={0.5} max={3.0} step={0.1} value={longLookMotionScale}
-                            onChange={(e) => setLongLookMotionScale(Number(e.target.value))}
-                            className="w-full accent-purple-500" />
-                          <div className="flex justify-between text-[8px] text-muted-foreground/40 font-mono-share mt-0.5">
-                            <span>Slower</span>
-                            <span>1.5x optimal</span>
-                            <span>Faster</span>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Negative Prompt */}
-                    <div>
-                      <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Negative Prompt</label>
-                      <input type="text" value={comfyNegPrompt} onChange={(e) => setComfyNegPrompt(e.target.value)}
-                        placeholder="(uses WAN default if empty)"
-                        className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-[10px] font-mono-share text-foreground placeholder-muted-foreground/40" />
-                    </div>
-                    {/* Standard duration (only when LongLook is off) */}
-                    {!longLookEnabled && (
-                      <div>
-                        <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Duration</label>
-                        <div className="flex flex-wrap gap-1.5">
-                          {[{ label: "~2s", value: 33 }, { label: "~3s", value: 49 }, { label: "~5s", value: 81 }, { label: "~7s", value: 113 }, { label: "~10s", value: 161 }, { label: "~15s", value: 241 }].map((p) => (
-                            <button key={p.value} type="button" onClick={() => setComfyFrameCount(p.value)}
-                              className={`px-2 py-1 rounded text-[9px] font-mono-share transition-all ${comfyFrameCount === p.value ? "bg-purple-500/20 border-purple-500/50 text-purple-300 border" : "bg-card/30 border border-border text-muted-foreground hover:border-purple-500/30"}`}>
-                              {p.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    <button type="button" onClick={() => setComfyRife(!comfyRife)}
-                      className={`w-full flex items-center justify-between px-3 py-2 border rounded font-mono-share text-[10px] transition-all duration-200 ${comfyRife ? "border-purple-500/50 bg-purple-500/5 text-purple-300" : "border-border bg-card/30 text-muted-foreground hover:border-purple-500/30"}`}>
-                      <span className="flex items-center gap-1.5">
-                        <span className={`w-3 h-3 border rounded-sm flex items-center justify-center text-[8px] ${comfyRife ? "border-purple-500 bg-purple-500 text-white" : "border-muted-foreground/30"}`}>
-                          {comfyRife && "✓"}
-                        </span>
-                        RIFE 2x interpolation (smoother)
-                      </span>
-                    </button>
-                    <button type="button" onClick={() => setComfyVidUpscale(!comfyVidUpscale)}
-                      className={`w-full flex items-center justify-between px-3 py-2 border rounded font-mono-share text-[10px] transition-all duration-200 ${comfyVidUpscale ? "border-purple-500/50 bg-purple-500/5 text-purple-300" : "border-border bg-card/30 text-muted-foreground hover:border-purple-500/30"}`}>
-                      <span className="flex items-center gap-1.5">
-                        <span className={`w-3 h-3 border rounded-sm flex items-center justify-center text-[8px] ${comfyVidUpscale ? "border-purple-500 bg-purple-500 text-white" : "border-muted-foreground/30"}`}>
-                          {comfyVidUpscale && "✓"}
-                        </span>
-                        2x Lanczos upscale
-                      </span>
-                    </button>
-                    <button type="button" onClick={() => setComfyAudioMode(comfyAudioMode === "ambient" ? "none" : "ambient")}
-                      className={`w-full flex items-center justify-between px-3 py-2 border rounded font-mono-share text-[10px] transition-all duration-200 ${comfyAudioMode === "ambient" ? "border-cyan-500/50 bg-cyan-500/5 text-cyan-300" : "border-border bg-card/30 text-muted-foreground hover:border-cyan-500/30"}`}>
-                      <span className="flex items-center gap-1.5">
-                        <span className={`w-3 h-3 border rounded-sm flex items-center justify-center text-[8px] ${comfyAudioMode === "ambient" ? "border-cyan-500 bg-cyan-500 text-white" : "border-muted-foreground/30"}`}>
-                          {comfyAudioMode === "ambient" && "✓"}
-                        </span>
-                        🔊 MMAudio (ambient sound)
-                      </span>
-                    </button>
-                    {comfyAudioMode === "ambient" && (
-                      <div>
-                        <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Audio prompt (optional — defaults to video prompt)</label>
-                        <textarea
-                          value={comfyAudioPrompt}
-                          onChange={(e) => setComfyAudioPrompt(e.target.value)}
-                          placeholder="e.g. city rain, birds chirping, footsteps..."
-                          rows={2}
-                          className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-[10px] font-mono-share text-foreground resize-none"
-                        />
-                      </div>
-                    )}
-                    {comfyModels.videoLoras.length > 0 && (
-                      <div>
-                        <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Video LoRA (optional)</label>
-                        <select value={comfyVideoLora} onChange={(e) => {
-                          const entry = comfyModels.videoLoras.find(v => v.name === e.target.value);
-                          if (entry?.nsfw && !comfyModels.xrgeHolder) return;
-                          setComfyVideoLora(e.target.value);
-                        }}
-                          className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-[10px] font-mono-share text-foreground">
-                          <option value="none">None</option>
-                          {comfyModels.videoLoras.map((entry) => (
-                            <option key={entry.name} value={entry.name}
-                              disabled={!!entry.nsfw && !comfyModels.xrgeHolder}
-                              style={entry.nsfw && !comfyModels.xrgeHolder ? { color: '#666', fontStyle: 'italic' } : undefined}>
-                              {entry.nsfw && !comfyModels.xrgeHolder ? "🔒 " : ""}{entry.name.replace(/_/g, " ")}{entry.high && entry.low ? " (paired)" : ""}
-                            </option>
-                          ))}
-                        </select>
-                        {!comfyModels.xrgeHolder && comfyModels.videoLoras.some(v => v.nsfw) && (
-                          <p className="mt-1 font-mono-share text-[8px] text-pink-400/70">
-                            🔒 NSFW LoRAs unlocked for <span className="text-pink-400">$XRGE</span> holders
-                          </p>
-                        )}
-                        {comfyVideoLora !== "none" && (() => {
-                          const selected = comfyModels.videoLoras.find((e) => e.name === comfyVideoLora);
-                          const isPaired = selected?.high && selected?.low;
-                          return (
-                            <div className="mt-1.5 space-y-1.5">
-                              <div>
-                                <label className="font-mono-share text-[9px] text-muted-foreground/70">Strength: {comfyVideoLoraStrength.toFixed(2)}</label>
-                                <input type="range" min={0} max={2} step={0.05} value={comfyVideoLoraStrength}
-                                  onChange={(e) => setComfyVideoLoraStrength(Number(e.target.value))}
-                                  className="w-full accent-purple-500 mt-0.5" />
-                              </div>
-                              {isPaired ? (
-                                <div className="flex items-center gap-2 px-2 py-1 bg-purple-500/5 border border-purple-500/20 rounded">
-                                  <span className="font-mono-share text-[9px] text-purple-400/70">
-                                    Auto-paired: high + low noise files detected
-                                  </span>
-                                </div>
-                              ) : (
-                                <div>
-                                  <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Apply to pass</label>
-                                  <div className="flex gap-1.5">
-                                    {(["high", "low", "both"] as const).map((p) => (
-                                      <button key={p} type="button" onClick={() => setComfyVideoLoraPass(p)}
-                                        className={`px-2 py-1 rounded text-[9px] font-mono-share transition-all ${comfyVideoLoraPass === p ? "bg-purple-500/20 border-purple-500/50 text-purple-300 border" : "bg-card/30 border border-border text-muted-foreground hover:border-purple-500/30"}`}>
-                                        {p === "high" ? "High Noise" : p === "low" ? "Low Noise" : "Both"}
-                                      </button>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })()}
-                      </div>
-                    )}
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-500/5 border border-purple-500/20 rounded">
-                      <Film className="w-3 h-3 text-purple-400/70" />
-                      <span className="font-mono-share text-[9px] text-purple-400/70">
-                        {longLookEnabled
-                          ? `LongLook ${longLookSeqCount} x 2${comfyAudioMode === "ambient" ? " + 1 audio" : ""} = ${longLookSeqCount * 2 + (comfyAudioMode === "ambient" ? 1 : 0)} cr`
-                          : `WAN 2.2 I2V — ${comfyAudioMode === "ambient" ? "3" : "2"} credits per video`}
-                      </span>
-                    </div>
-                  </div>
-                )}
               </div>
             )}
 

@@ -560,16 +560,18 @@ function buildWanVideoWorkflow(p: {
 }
 
 /**
- * GLTCH WAN 2.2 I2V workflow — 2-stage GGUF pipeline with Lightx2v + Pusa LoRAs.
+ * GLTCH WAN 2.2 I2V workflow — SmoothMix Enhanced NSFW Lightning Edition.
  *
- * Two-stage KSamplerAdvanced (euler / simple):
- *   Stage 1: High-noise GGUF + Lightx2v (str 5.6) + Pusa HIGH (str 1.5), cfg=1
- *   Stage 2: Low-noise GGUF + Lightx2v (str 2.0) + Pusa LOW (str 1.4), cfg=1
+ * Uses SmoothMix_High / SmoothMix_Low safetensor checkpoints which have
+ * Lightning LoRAs already baked in. Do NOT add extra Lightning LoRAs.
  *
- * Split defaults to ~66% high-noise steps, 33% low-noise.
- * Each model path gets SageAttention + fp16 accumulation + PatchModelPatcherOrder.
- * H200 141GB — no UnloadModel needed, samplers wired directly.
- * Post-processing: ColorMatch → RealESRGAN 2x → RIFE 4x interpolation (60fps).
+ * Two-stage KSamplerAdvanced (euler_ancestral / simple):
+ *   Stage 1: SmoothMix_High, cfg=1, steps 0→split
+ *   Stage 2: SmoothMix_Low,  cfg=1, steps split→end
+ *
+ * Default 6 steps split 50/50 (3+3).
+ * CLIPVision encoding for I2V conditioning (clip_vision_h.safetensors).
+ * Post-processing: lanczos 2x → ColorMatch (mkl) → RIFE 2x (32fps).
  */
 function buildGltchWanWorkflow(p: {
   prompt: string;
@@ -582,6 +584,7 @@ function buildGltchWanWorkflow(p: {
   cfg: number;
   frameCount: number;
   resolution: number;
+  shift?: number;
   useUpscale: boolean;
   videoLora?: string;
   videoLoraHigh?: string;
@@ -591,40 +594,41 @@ function buildGltchWanWorkflow(p: {
   audioMode?: "none" | "ambient";
   audioPrompt?: string;
 }): Record<string, any> {
-  const splitStep = Math.max(1, Math.round(p.steps * 2 / 3));
+  const splitStep = Math.max(1, Math.floor(p.steps / 2));
+  const shift = p.shift ?? 8;
 
-  const highGguf = process.env.COMFYUI_WAN_HIGH_GGUF || "wan2.2_i2v_high_noise_14B_Q6_K.gguf";
-  const lowGguf = process.env.COMFYUI_WAN_LOW_GGUF || "wan2.2_i2v_low_noise_14B_Q6_K.gguf";
+  const highModel = process.env.COMFYUI_GLTCH_HIGH_MODEL || "wan22EnhancedNSFWSVICamera_nsfwFASTMOVEV2Q8H.gguf";
+  const lowModel = process.env.COMFYUI_GLTCH_LOW_MODEL || "wan22EnhancedNSFWSVICamera_nsfwFASTMOVEV2Q8L.gguf";
+  const isGguf = highModel.endsWith(".gguf") || lowModel.endsWith(".gguf");
   const clipModel = process.env.COMFYUI_WAN_CLIP || "umt5_xxl_fp8_e4m3fn_scaled.safetensors";
+  const clipVisionModel = process.env.COMFYUI_WAN_CLIP_VISION || "clip_vision_h.safetensors";
 
-  const lx2vLora = process.env.COMFYUI_GLTCH_LX2V_LORA
-    || "wan_loras/lightx2v_I2V_14B_480p_cfg_step_distill_rank128_bf16.safetensors";
-  const lx2vHighStr = Number(process.env.COMFYUI_GLTCH_LX2V_HIGH_STR) || 5.6;
-  const lx2vLowStr = Number(process.env.COMFYUI_GLTCH_LX2V_LOW_STR) || 2.0;
-
-  const pusaHighLora = process.env.COMFYUI_GLTCH_PUSA_HIGH_LORA
-    || "wan_loras/Wan22_PusaV1_lora_HIGH_resized_dynamic_avg_rank_98_bf16.safetensors";
-  const pusaLowLora = process.env.COMFYUI_GLTCH_PUSA_LOW_LORA
-    || "wan_loras/Wan22_PusaV1_lora_LOW_resized_dynamic_avg_rank_98_bf16.safetensors";
-  const pusaHighStr = Number(process.env.COMFYUI_GLTCH_PUSA_HIGH_STR) || 1.5;
-  const pusaLowStr = Number(process.env.COMFYUI_GLTCH_PUSA_LOW_STR) || 1.4;
-
-  let highModelSource: [string, number] = ["40", 0];
-  let lowModelSource: [string, number] = ["41", 0];
+  // Model sources — may be overridden by optional user LoRA nodes below
+  let highModelSource: [string, number] = ["29", 0];
+  let lowModelSource: [string, number] = ["30", 0];
 
   const workflow: Record<string, any> = {
+    // ── CLIP text encoder ──
     "1": {
       class_type: "CLIPLoader",
-      inputs: { clip_name: clipModel, type: "wan", device: "default" },
+      inputs: { clip_name: clipModel, type: "wan", device: "cpu" },
     },
+    // ── VAE ──
     "7": {
       class_type: "VAELoader",
       inputs: { vae_name: "wan_2.1_vae.safetensors" },
     },
+    // ── CLIPVision for I2V conditioning ──
+    "50": {
+      class_type: "CLIPVisionLoader",
+      inputs: { clip_name: clipVisionModel },
+    },
+    // ── Load start image ──
     "129": {
       class_type: "LoadImage",
       inputs: { image: p.imageFilename },
     },
+    // ── Resize image to target resolution ──
     "94": {
       class_type: "ImageResizeKJv2",
       inputs: {
@@ -639,25 +643,34 @@ function buildGltchWanWorkflow(p: {
         device: "cpu",
       },
     },
-    "128": {
-      class_type: "easy cleanGpuUsed",
-      inputs: { anything: ["94", 0] },
+    // ── CLIPVision encode (on original image for best quality) ──
+    "51": {
+      class_type: "CLIPVisionEncode",
+      inputs: {
+        clip_vision: ["50", 0],
+        image: ["129", 0],
+        crop: "none",
+      },
     },
+    // ── Positive prompt ──
     "13": {
       class_type: "CLIPTextEncode",
       inputs: { clip: ["1", 0], text: p.prompt },
     },
+    // ── Negative prompt ──
     "6": {
       class_type: "CLIPTextEncode",
       inputs: { clip: ["1", 0], text: p.negativePrompt },
     },
+    // ── WanImageToVideo conditioning (with CLIPVision) ──
     "10": {
       class_type: "WanImageToVideo",
       inputs: {
         positive: ["13", 0],
         negative: ["6", 0],
         vae: ["7", 0],
-        start_image: ["128", 0],
+        clip_vision_output: ["51", 0],
+        start_image: ["94", 0],
         width: ["94", 1],
         height: ["94", 2],
         length: p.frameCount,
@@ -669,38 +682,18 @@ function buildGltchWanWorkflow(p: {
       inputs: { seed: p.seed },
     },
 
-    // ── GGUF Model Loading ──
+    // ── Model Loading (Lightning already baked in) ──
     "29": {
-      class_type: "UnetLoaderGGUF",
-      inputs: { unet_name: highGguf },
+      class_type: isGguf ? "UnetLoaderGGUF" : "UNETLoader",
+      inputs: isGguf ? { unet_name: highModel } : { unet_name: highModel, weight_dtype: "default" },
     },
     "30": {
-      class_type: "UnetLoaderGGUF",
-      inputs: { unet_name: lowGguf },
-    },
-
-    // ── Lightx2v acceleration LoRAs ──
-    "19": {
-      class_type: "LoraLoaderModelOnly",
-      inputs: { model: ["29", 0], lora_name: lx2vLora, strength_model: lx2vHighStr },
-    },
-    "20": {
-      class_type: "LoraLoaderModelOnly",
-      inputs: { model: ["30", 0], lora_name: lx2vLora, strength_model: lx2vLowStr },
-    },
-
-    // ── Pusa enhanced motions LoRAs ──
-    "40": {
-      class_type: "LoraLoaderModelOnly",
-      inputs: { model: ["19", 0], lora_name: pusaHighLora, strength_model: pusaHighStr },
-    },
-    "41": {
-      class_type: "LoraLoaderModelOnly",
-      inputs: { model: ["20", 0], lora_name: pusaLowLora, strength_model: pusaLowStr },
+      class_type: isGguf ? "UnetLoaderGGUF" : "UNETLoader",
+      inputs: isGguf ? { unet_name: lowModel } : { unet_name: lowModel, weight_dtype: "default" },
     },
   };
 
-  // ── Optional user video LoRA ──
+  // ── Optional user video LoRA (NOT Lightning — those are baked in) ──
   const isPaired = !!(p.videoLoraHigh && p.videoLoraLow);
   const hasHigh = isPaired || p.videoLoraHigh || (p.videoLora && (p.videoLoraPass === "high" || p.videoLoraPass === "both"));
   const hasLow = isPaired || p.videoLoraLow || (p.videoLora && (p.videoLoraPass === "low" || p.videoLoraPass === "both"));
@@ -721,43 +714,17 @@ function buildGltchWanWorkflow(p: {
     lowModelSource = ["44", 0];
   }
 
-  // ── SageAttention + model patches ──
-  workflow["21"] = {
-    class_type: "PathchSageAttentionKJ",
-    inputs: { model: highModelSource, sage_attention: "auto", allow_compile: false },
-  };
-  workflow["33"] = {
-    class_type: "ModelPatchTorchSettings",
-    inputs: { model: ["21", 0], enable_fp16_accumulation: true },
-  };
-  workflow["32"] = {
-    class_type: "PatchModelPatcherOrder",
-    inputs: { model: ["33", 0], patch_order: "weight_patch_first", full_load: "auto" },
-  };
-  workflow["36"] = {
-    class_type: "PathchSageAttentionKJ",
-    inputs: { model: lowModelSource, sage_attention: "auto", allow_compile: false },
-  };
-  workflow["35"] = {
-    class_type: "ModelPatchTorchSettings",
-    inputs: { model: ["36", 0], enable_fp16_accumulation: true },
-  };
-  workflow["34"] = {
-    class_type: "PatchModelPatcherOrder",
-    inputs: { model: ["35", 0], patch_order: "weight_patch_first", full_load: "auto" },
-  };
-
   // ── ModelSamplingSD3 shift scheduling ──
   workflow["8"] = {
     class_type: "ModelSamplingSD3",
-    inputs: { model: ["32", 0], shift: 8 },
+    inputs: { model: highModelSource, shift },
   };
   workflow["9"] = {
     class_type: "ModelSamplingSD3",
-    inputs: { model: ["34", 0], shift: 8 },
+    inputs: { model: lowModelSource, shift },
   };
 
-  // ── Stage 1: High noise + Lightx2v + Pusa ──
+  // ── Stage 1: High noise (SmoothMix_High) ──
   workflow["31"] = {
     class_type: "KSamplerAdvanced",
     inputs: {
@@ -769,32 +736,40 @@ function buildGltchWanWorkflow(p: {
       noise_seed: ["121", 0],
       steps: p.steps,
       cfg: p.cfg,
-      sampler_name: "euler",
+      sampler_name: "euler_ancestral",
       scheduler: "simple",
       start_at_step: 0,
       end_at_step: splitStep,
       return_with_leftover_noise: "enable",
     },
   };
-  // ── Stage 2: Low noise + Lightx2v + Pusa ──
+
+  // ── VRAM cleanup between passes ──
+  workflow["120"] = {
+    class_type: "easy cleanGpuUsed",
+    inputs: { anything: ["31", 0] },
+  };
+
+  // ── Stage 2: Low noise (SmoothMix_Low) ──
   workflow["2"] = {
     class_type: "KSamplerAdvanced",
     inputs: {
       model: ["9", 0],
       positive: ["10", 0],
       negative: ["10", 1],
-      latent_image: ["31", 0],
+      latent_image: ["120", 0],
       add_noise: "disable",
       noise_seed: ["121", 0],
       steps: p.steps,
       cfg: p.cfg,
-      sampler_name: "euler",
+      sampler_name: "euler_ancestral",
       scheduler: "simple",
       start_at_step: splitStep,
       end_at_step: 10000,
       return_with_leftover_noise: "disable",
     },
   };
+
   // ── VAE Decode ──
   workflow["4"] = {
     class_type: "VAEDecode",
@@ -827,48 +802,75 @@ function buildGltchWanWorkflow(p: {
     },
   };
 
-  // ── Optional post-processing: ColorMatch → RealESRGAN 2x → RIFE 4x (60fps) ──
+  // ── Optional HD post-processing: lanczos 2x → ColorMatch → RIFE 2x (32fps) ──
   if (p.useUpscale) {
+    // Upscale frames with lanczos 2x
+    workflow["74"] = {
+      class_type: "ImageScaleBy",
+      inputs: {
+        image: ["4", 0],
+        upscale_method: "lanczos",
+        scale_by: 2.0,
+      },
+    };
+    // Pick last frame from decoded batch for ColorMatch reference
+    workflow["78"] = {
+      class_type: "Pick From Batch (mtb)",
+      inputs: {
+        image: ["4", 0],
+        from_direction: "end",
+        count: 1,
+      },
+    };
+    // Color-match upscaled frames to original input image
     workflow["83"] = {
       class_type: "ColorMatch",
       inputs: {
         image_ref: ["129", 0],
-        image_target: ["4", 0],
-        method: "reinhard",
+        image_target: ["78", 0],
+        method: "mkl",
         strength: 0.4,
         multithread: true,
       },
     };
-    workflow["84"] = {
-      class_type: "UpscaleModelLoader",
-      inputs: { model_name: "RealESRGAN_x2plus.pth" },
+    // Scale color-matched last frame
+    workflow["79"] = {
+      class_type: "ImageScaleBy",
+      inputs: {
+        image: ["83", 0],
+        upscale_method: "lanczos",
+        scale_by: 2.0,
+      },
     };
-    workflow["80"] = {
-      class_type: "ImageUpscaleWithModel",
-      inputs: { upscale_model: ["84", 0], image: ["83", 0] },
+    // Clean GPU before RIFE
+    workflow["76"] = {
+      class_type: "easy cleanGpuUsed",
+      inputs: { anything: ["74", 0] },
     };
-    workflow["81"] = {
+    // RIFE 2x frame interpolation (16fps → 32fps)
+    workflow["75"] = {
       class_type: "RIFE VFI",
       inputs: {
-        frames: ["80", 0],
+        frames: ["76", 0],
         ckpt_name: "rife49.pth",
-        clear_cache_after_n_frames: 16,
-        multiplier: 4,
+        clear_cache_after_n_frames: 10,
+        multiplier: 2,
         fast_mode: false,
         ensemble: true,
         scale_factor: 1,
       },
     };
+    // HD video output (32fps after RIFE 2x)
     workflow["85"] = {
       class_type: "VHS_VideoCombine",
       inputs: {
-        images: ["81", 0],
-        frame_rate: 60,
+        images: ["75", 0],
+        frame_rate: 32,
         loop_count: 0,
         filename_prefix: "GltchWAN-HD",
         format: "video/h264-mp4",
         pix_fmt: "yuv420p",
-        crf: 19,
+        crf: 15,
         save_metadata: true,
         trim_to_audio: false,
         pingpong: false,
@@ -2117,6 +2119,7 @@ Rules:
           cfg: clampCfg,
           frameCount: Math.min(241, Math.max(17, Number(frameCount))),
           resolution,
+          shift: req.body.shift ? Math.min(15, Math.max(1, Number(req.body.shift))) : undefined,
           useUpscale: !!useVidUpscale,
           videoLora: resolvedGltchLora,
           videoLoraHigh: resolvedGltchLoraHigh,

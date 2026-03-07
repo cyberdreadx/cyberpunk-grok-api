@@ -1225,6 +1225,7 @@ export function useGrokApi() {
     videoLoraPass?: "high" | "low" | "both";
     workflow?: string;
     resolution?: number;
+    shift?: number;
     stage1End?: number;
     stage2End?: number;
     testCredits?: boolean;
@@ -1272,6 +1273,7 @@ export function useGrokApi() {
           videoLoraStrength: params.videoLoraStrength,
           videoLoraPass: params.videoLoraPass,
           resolution: params.resolution,
+          shift: params.shift,
           stage1End: params.stage1End,
           stage2End: params.stage2End,
           audioMode: params.audioMode || "none",
