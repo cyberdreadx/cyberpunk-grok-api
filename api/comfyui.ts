@@ -813,33 +813,15 @@ function buildGltchWanWorkflow(p: {
         scale_by: 2.0,
       },
     };
-    // Pick last frame from decoded batch for ColorMatch reference
-    workflow["78"] = {
-      class_type: "Pick From Batch (mtb)",
-      inputs: {
-        image: ["4", 0],
-        from_direction: "end",
-        count: 1,
-      },
-    };
     // Color-match upscaled frames to original input image
     workflow["83"] = {
       class_type: "ColorMatch",
       inputs: {
         image_ref: ["129", 0],
-        image_target: ["78", 0],
+        image_target: ["74", 0],
         method: "mkl",
         strength: 0.4,
         multithread: true,
-      },
-    };
-    // Scale color-matched last frame
-    workflow["79"] = {
-      class_type: "ImageScaleBy",
-      inputs: {
-        image: ["83", 0],
-        upscale_method: "lanczos",
-        scale_by: 2.0,
       },
     };
     // Clean GPU before RIFE
