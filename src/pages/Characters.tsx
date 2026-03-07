@@ -348,7 +348,7 @@ export default function Characters() {
           frameCount: 81,
           resolution: 832,
           shift: 8,
-          useVidUpscale: true,
+          useUpscale: true,
         });
 
         console.log("[char-video] vidResult keys:", Object.keys(vidResult), "video?", !!vidResult.video, "image?", !!vidResult.image);

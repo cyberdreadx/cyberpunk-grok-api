@@ -90,6 +90,11 @@ function stripMediaTags(text: string): string {
   return text
     .replace(/\[MEDIA_IMAGE\].*?\[\/MEDIA_IMAGE\]/gs, "")
     .replace(/\[MEDIA_VIDEO\].*?\[\/MEDIA_VIDEO\]/gs, "")
+    // Strip unclosed/orphan tags the LLM sometimes emits
+    .replace(/\[MEDIA_IMAGE\][^[]*$/gs, "")
+    .replace(/\[MEDIA_VIDEO\][^[]*$/gs, "")
+    .replace(/\[\/?MEDIA_IMAGE\]/g, "")
+    .replace(/\[\/?MEDIA_VIDEO\]/g, "")
     .trim();
 }
 
