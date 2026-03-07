@@ -244,12 +244,20 @@ export default function Characters() {
 
   const handleMediaTrigger = async (trigger: { type: "image" | "video"; prompt: string }) => {
     if (!activeChar) return;
+    const placeholderTs = Date.now();
     const placeholderMsg: ChatMessage = {
       characterId: activeChar.id, role: "assistant",
       content: `*generating ${trigger.type}...*`,
-      timestamp: Date.now(),
+      timestamp: placeholderTs,
     };
     setMessages(prev => [...prev, placeholderMsg]);
+
+    // Helper: find placeholder by timestamp (stable across state updates)
+    const isPlaceholder = (m: ChatMessage) => m.role === "assistant" && m.timestamp === placeholderTs;
+    const updatePlaceholder = (content: string) =>
+      setMessages(prev => prev.map(m => isPlaceholder(m) ? { ...m, content } : m));
+    const replacePlaceholder = (msg: ChatMessage) =>
+      setMessages(prev => prev.filter(m => !isPlaceholder(m)).concat(msg));
 
     try {
       const portrait64 = activeChar.portrait_url;
@@ -275,7 +283,7 @@ export default function Characters() {
             characterId: activeChar.id, role: "assistant", content: "",
             mediaUrl: result.image, mediaType: "image", timestamp: Date.now(),
           };
-          setMessages(prev => prev.filter(m => m !== placeholderMsg).concat(mediaMsg));
+          replacePlaceholder(mediaMsg);
           await saveChatMessage(mediaMsg);
           return;
         }
@@ -283,8 +291,7 @@ export default function Characters() {
 
       if (trigger.type === "video") {
         // Phase 1: Generate start frame image (same as send pic)
-        setMessages(prev => prev.map(m => m === placeholderMsg
-          ? { ...m, content: `*generating start frame...*` } : m));
+        updatePlaceholder(`*generating start frame...*`);
 
         const hasPortrait = portrait64 && portrait64.length > 100;
         const imgPrompt = hasPortrait
@@ -310,8 +317,7 @@ export default function Characters() {
         if (!imgResult.image) throw new Error("Failed to generate start frame");
 
         // Phase 2: Animate with GLTCH WAN I2V
-        setMessages(prev => prev.map(m => m === placeholderMsg
-          ? { ...m, content: `*rendering video...*` } : m));
+        updatePlaceholder(`*rendering video (this may take a few minutes)...*`);
 
         const vidResult = await submitAndPoll({
           workflow: "gltch-wan",
@@ -331,18 +337,16 @@ export default function Characters() {
             characterId: activeChar.id, role: "assistant", content: "",
             mediaUrl: vidResult.video, mediaType: "video", timestamp: Date.now(),
           };
-          setMessages(prev => prev.filter(m => m !== placeholderMsg).concat(mediaMsg));
+          replacePlaceholder(mediaMsg);
           await saveChatMessage(mediaMsg);
           return;
         }
       }
 
-      // Fallback for no portrait or unsupported type
-      setMessages(prev => prev.map(m => m === placeholderMsg
-        ? { ...m, content: `*[${trigger.type}] ${trigger.prompt}*` } : m));
+      // Fallback for unsupported type
+      updatePlaceholder(`*[${trigger.type}] ${trigger.prompt}*`);
     } catch (err: any) {
-      setMessages(prev => prev.map(m => m === placeholderMsg
-        ? { ...m, content: `*media generation failed: ${err.message || "unknown error"}*` } : m));
+      updatePlaceholder(`*media generation failed: ${err.message || "unknown error"}*`);
     }
   };
 
