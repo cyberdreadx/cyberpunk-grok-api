@@ -351,15 +351,22 @@ export default function Characters() {
           useVidUpscale: true,
         });
 
-        if (vidResult.video) {
+        console.log("[char-video] vidResult keys:", Object.keys(vidResult), "video?", !!vidResult.video, "image?", !!vidResult.image);
+
+        const mediaData = vidResult.video || vidResult.image;
+        if (mediaData) {
+          const isVideo = !!vidResult.video;
           const mediaMsg: ChatMessage = {
             characterId: activeChar.id, role: "assistant", content: "",
-            mediaUrl: vidResult.video, mediaType: "video", timestamp: Date.now(),
+            mediaUrl: mediaData, mediaType: isVideo ? "video" : "image", timestamp: Date.now(),
           };
           replacePlaceholder(mediaMsg);
           await saveChatMessage(mediaMsg);
           return;
         }
+
+        // No output at all
+        throw new Error("No video or image returned from WAN");
       }
 
       // Fallback for unsupported type
