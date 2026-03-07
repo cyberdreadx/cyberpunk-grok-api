@@ -137,18 +137,47 @@ export type ApiMode = "byok" | "credits";
 // NOTE: All xAI API calls go through /api/generate proxy — never directly from the browser.
 // Direct calls to api.x.ai are blocked by CORS in browsers.
 
-/** Convert an external URL to a base64 data-URL (used for user-provided URLs). */
+/** Convert an external URL to a base64 data-URL (used for user-provided URLs).
+ *  Large images (4K+) are resized via canvas to avoid 413 payload errors. */
 export async function urlToBase64(url: string): Promise<string> {
   if (!url || url.startsWith("data:")) return url;
   try {
     const res = await fetch(url);
     const blob = await res.blob();
-    return await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
+    // Only compress image blobs; pass other types through directly
+    if (!blob.type.startsWith("image/")) {
+      return await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    }
+    const MAX_DIM = 4096;
+    const bitmap = await createImageBitmap(blob);
+    let w = bitmap.width, h = bitmap.height;
+    // Small images pass through untouched (preserves PNG transparency)
+    if (w <= MAX_DIM && h <= MAX_DIM && blob.size < 4 * 1024 * 1024) {
+      bitmap.close();
+      return await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    }
+    // Downscale + compress
+    if (w > MAX_DIM || h > MAX_DIM) {
+      const scale = MAX_DIM / Math.max(w, h);
+      w = Math.round(w * scale);
+      h = Math.round(h * scale);
+    }
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    canvas.getContext("2d")!.drawImage(bitmap, 0, 0, w, h);
+    bitmap.close();
+    return canvas.toDataURL("image/jpeg", 0.92);
   } catch {
     return url;
   }

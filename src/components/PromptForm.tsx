@@ -61,19 +61,49 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
       reader.readAsDataURL(blob);
     });
 
-  const fileToDataUrl = async (file: File): Promise<string> => {
-    if (!isHeicLike(file)) {
-      return readBlobAsDataUrl(file);
+  /**
+   * Resize + compress an image blob so the payload stays small enough for the
+   * API proxy (≤ 50 MB body).  4K screenshots / camera photos are 20-40MB raw
+   * and ~30-55MB as base64, which blows past the limit.
+   *
+   * Strategy:
+   *  - Cap the longest edge at MAX_DIM (4096 px — plenty for xAI's 2K output)
+   *  - Re-encode as JPEG at 0.92 quality → typically 1-5 MB
+   *  - Small images that are already under the cap pass through untouched
+   */
+  const MAX_DIM = 4096;
+  const compressBlob = async (blob: Blob): Promise<string> => {
+    const bitmap = await createImageBitmap(blob);
+    let w = bitmap.width, h = bitmap.height;
+    // If already small enough, just read as-is (preserves PNG transparency etc.)
+    if (w <= MAX_DIM && h <= MAX_DIM && blob.size < 4 * 1024 * 1024) {
+      bitmap.close();
+      return readBlobAsDataUrl(blob);
     }
-    // HEIC/HEIF is often unsupported in browser decoders; convert to JPEG first.
-    const { default: heic2any } = await import("heic2any");
-    const converted = await heic2any({
-      blob: file,
-      toType: "image/jpeg",
-      quality: 0.92,
-    });
-    const convertedBlob = Array.isArray(converted) ? converted[0] : converted;
-    return readBlobAsDataUrl(convertedBlob as Blob);
+    // Downscale to fit within MAX_DIM × MAX_DIM
+    if (w > MAX_DIM || h > MAX_DIM) {
+      const scale = MAX_DIM / Math.max(w, h);
+      w = Math.round(w * scale);
+      h = Math.round(h * scale);
+    }
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d")!;
+    ctx.drawImage(bitmap, 0, 0, w, h);
+    bitmap.close();
+    return canvas.toDataURL("image/jpeg", 0.92);
+  };
+
+  const fileToDataUrl = async (file: File): Promise<string> => {
+    let blob: Blob = file;
+    if (isHeicLike(file)) {
+      // HEIC/HEIF is often unsupported in browser decoders; convert to JPEG first.
+      const { default: heic2any } = await import("heic2any");
+      const converted = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.92 });
+      blob = Array.isArray(converted) ? converted[0] : converted;
+    }
+    return compressBlob(blob);
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
