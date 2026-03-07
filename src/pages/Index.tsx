@@ -471,9 +471,12 @@ const Index = () => {
             frameCount: comfyFrameCount,
             resolution: 832,
             shift: comfyShift,
+            useUpscale: comfyVidUpscale,
             videoLora: comfyVideoLora !== "none" ? comfyVideoLora : undefined,
             videoLoraStrength: comfyVideoLoraStrength,
             videoLoraPass: comfyVideoLoraPass,
+            audioMode: comfyAudioMode,
+            audioPrompt: comfyAudioPrompt || undefined,
             ...(adminTestCredits ? { testCredits: true } : {}),
           });
         } else if (isComfyLongLook) {

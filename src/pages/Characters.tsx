@@ -281,18 +281,54 @@ export default function Characters() {
         }
       }
 
-      if (trigger.type === "video" && portrait64) {
-        const result = await submitAndPoll({
-          workflow: "wan-video",
+      if (trigger.type === "video") {
+        // Phase 1: Generate start frame image (same as send pic)
+        setMessages(prev => prev.map(m => m === placeholderMsg
+          ? { ...m, content: `*generating start frame...*` } : m));
+
+        const hasPortrait = portrait64 && portrait64.length > 100;
+        const imgPrompt = hasPortrait
+          ? `keep the face exactly the same. ${trigger.prompt}`
+          : `${activeChar.name}. ${trigger.prompt}`;
+
+        const imgResult = hasPortrait
+          ? await submitAndPoll({
+            workflow: "qwen-edit",
+            prompt: imgPrompt,
+            imageBase64: portrait64,
+            imageFilename: "portrait.jpg",
+            width: 768, height: 1024, steps: 4, cfg: 1,
+            skipCredits: true,
+          })
+          : await submitAndPoll({
+            workflow: "zimage",
+            prompt: imgPrompt,
+            width: 832, height: 480, steps: 8, cfg: 1,
+            skipCredits: true,
+          });
+
+        if (!imgResult.image) throw new Error("Failed to generate start frame");
+
+        // Phase 2: Animate with GLTCH WAN I2V
+        setMessages(prev => prev.map(m => m === placeholderMsg
+          ? { ...m, content: `*rendering video...*` } : m));
+
+        const vidResult = await submitAndPoll({
+          workflow: "gltch-wan",
           prompt: trigger.prompt,
-          imageBase64: portrait64,
-          imageFilename: "portrait.jpg",
-          width: 832, height: 480, steps: 20,
+          imageBase64: imgResult.image,
+          imageFilename: "start_frame.png",
+          width: 832, height: 480,
+          steps: 4, cfg: 1,
+          frameCount: 81,
+          resolution: 832,
+          shift: 8,
         });
-        if (result.video) {
+
+        if (vidResult.video) {
           const mediaMsg: ChatMessage = {
             characterId: activeChar.id, role: "assistant", content: "",
-            mediaUrl: result.video, mediaType: "video", timestamp: Date.now(),
+            mediaUrl: vidResult.video, mediaType: "video", timestamp: Date.now(),
           };
           setMessages(prev => prev.filter(m => m !== placeholderMsg).concat(mediaMsg));
           await saveChatMessage(mediaMsg);
