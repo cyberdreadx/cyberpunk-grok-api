@@ -142,7 +142,7 @@ const Index = () => {
   const [comfyNegPrompt, setComfyNegPrompt] = useState("");
   const [comfyWidth, setComfyWidth] = useState(832);
   const [comfyHeight, setComfyHeight] = useState(480);
-  const [comfySteps, setComfySteps] = useState(5);
+  const [comfySteps, setComfySteps] = useState(4);
   const [comfyCfg, setComfyCfg] = useState(1);
   const [comfyFrameCount, setComfyFrameCount] = useState(81);
   const [comfyRife, setComfyRife] = useState(true);
