@@ -6,12 +6,12 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Zap, ImagePlus, Film, Download, Sparkles, Bug } from "lucide-react";
+import { Zap, ImagePlus, Film, Download, Sparkles, Bug, FolderOpen } from "lucide-react";
 
 /* ─── Changelog entries ─── */
 // Add new entries at the TOP. Bump LATEST_VERSION when deploying.
 
-export const LATEST_VERSION = "2025.03.07";
+export const LATEST_VERSION = "2025.03.07b";
 
 interface ChangelogEntry {
     version: string;
@@ -21,6 +21,17 @@ interface ChangelogEntry {
 }
 
 const CHANGELOG: ChangelogEntry[] = [
+    {
+        version: "2025.03.07b",
+        date: "March 7, 2025",
+        title: "Mobile Library Overhaul & Character Video Fix",
+        items: [
+            { icon: <FolderOpen className="w-3.5 h-3.5" />, text: "Mobile folder navigation — collapsible dropdown replaces cramped horizontal tab bar for easier browsing", tag: "new" },
+            { icon: <Film className="w-3.5 h-3.5" />, text: "Character video HD — fixed upscale parameter so HD rendering (lanczos 2x + RIFE) now activates correctly", tag: "fix" },
+            { icon: <Bug className="w-3.5 h-3.5" />, text: "Fixed [MEDIA_IMAGE] tags occasionally leaking into character chat text", tag: "fix" },
+            { icon: <Zap className="w-3.5 h-3.5" />, text: "Folder management actions (rename, PIN, vault, delete) now easier to reach on mobile", tag: "improve" },
+        ],
+    },
     {
         version: "2025.03.07",
         date: "March 7, 2025",

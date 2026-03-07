@@ -676,7 +676,6 @@ function buildGltchWanWorkflow(p: {
         height: ["94", 2],
         length: p.frameCount,
         batch_size: 1,
-        ...(p.endImageFilename ? { end_image: ["95", 0] } : {}),
       },
     },
     "121": {
