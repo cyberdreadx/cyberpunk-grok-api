@@ -108,8 +108,8 @@ const COMFY_COSTS: Record<string, number> = {
   "qwen-edit": 1,
   "qwen-edit-hd": 2,
   "wan-video": 2,
-  "gltch-wan": 2,
-  "gltch-wan-hd": 4,
+  "gltch-wan": 3,
+  "gltch-wan-hd": 5,
   "longlook": 2, // per sequence — actual cost = sequenceCount * 2
 };
 
@@ -577,6 +577,7 @@ function buildGltchWanWorkflow(p: {
   prompt: string;
   negativePrompt: string;
   imageFilename: string;
+  endImageFilename?: string;
   width: number;
   height: number;
   seed: number;
@@ -675,6 +676,7 @@ function buildGltchWanWorkflow(p: {
         height: ["94", 2],
         length: p.frameCount,
         batch_size: 1,
+        ...(p.endImageFilename ? { end_image: ["95", 0] } : {}),
       },
     },
     "121": {
@@ -692,6 +694,28 @@ function buildGltchWanWorkflow(p: {
       inputs: isGguf ? { unet_name: lowModel } : { unet_name: lowModel, weight_dtype: "default" },
     },
   };
+
+  // ── Optional end frame (last frame) for start→end interpolation ──
+  if (p.endImageFilename) {
+    workflow["130"] = {
+      class_type: "LoadImage",
+      inputs: { image: p.endImageFilename },
+    };
+    workflow["95"] = {
+      class_type: "ImageResizeKJv2",
+      inputs: {
+        image: ["130", 0],
+        width: p.resolution,
+        height: p.resolution,
+        upscale_method: "lanczos",
+        keep_proportion: "resize",
+        pad_color: "0, 0, 0",
+        crop_position: "center",
+        divisible_by: 16,
+        device: "cpu",
+      },
+    };
+  }
 
   // ── Optional user video LoRA (NOT Lightning — those are baked in) ──
   const isPaired = !!(p.videoLoraHigh && p.videoLoraLow);
@@ -2094,6 +2118,7 @@ Rules:
           prompt: prompt.trim(),
           negativePrompt: (negativePrompt || "").trim() || WAN_DEFAULT_NEGATIVE,
           imageFilename: imageFilename!,
+          endImageFilename: imageFilename2 || undefined,
           width: clampW,
           height: clampH,
           seed: actualSeed,

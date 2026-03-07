@@ -11,7 +11,7 @@ import { Zap, ImagePlus, Film, Download, Sparkles, Bug } from "lucide-react";
 /* ─── Changelog entries ─── */
 // Add new entries at the TOP. Bump LATEST_VERSION when deploying.
 
-export const LATEST_VERSION = "2025.03.03";
+export const LATEST_VERSION = "2025.03.07";
 
 interface ChangelogEntry {
     version: string;
@@ -21,6 +21,19 @@ interface ChangelogEntry {
 }
 
 const CHANGELOG: ChangelogEntry[] = [
+    {
+        version: "2025.03.07",
+        date: "March 7, 2025",
+        title: "GLTCH Animate v2 — SmoothMix Lightning Edition",
+        items: [
+            { icon: <Film className="w-3.5 h-3.5" />, text: "WAN 2.2 SmoothMix Enhanced NSFW Lightning I2V — dual-pass pipeline with baked-in Lightning LoRAs for ultra-fast 4-step generation", tag: "new" },
+            { icon: <Sparkles className="w-3.5 h-3.5" />, text: "Text-to-Video — type a prompt with no image, Z-Image Turbo generates start frame → WAN I2V animates it", tag: "new" },
+            { icon: <ImagePlus className="w-3.5 h-3.5" />, text: "Start + End frame interpolation — upload two images and WAN generates the motion between them", tag: "new" },
+            { icon: <Zap className="w-3.5 h-3.5" />, text: "CLIPVision conditioning for enhanced image-to-video quality", tag: "improve" },
+            { icon: <Zap className="w-3.5 h-3.5" />, text: "Tuned sampler (euler/simple), shift control, and optimized defaults per model creator recommendations", tag: "improve" },
+            { icon: <Film className="w-3.5 h-3.5" />, text: "HD upscale: lanczos 2x + ColorMatch + RIFE 2x @ 32fps post-processing", tag: "improve" },
+        ],
+    },
     {
         version: "2025.03.03",
         date: "March 3, 2025",

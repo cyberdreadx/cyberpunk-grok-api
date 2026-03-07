@@ -26,7 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 import { calculateCreditCost, type CreditMode } from "@/lib/api";
 
 const ANNOUNCEMENTS: { id: string; message: string; type?: "info" | "warning" | "success" }[] = [
-  { id: "gltch-wan-launch", message: "GLTCH WAN 2.2 I2V — SmoothMix Enhanced NSFW Lightning Edition in ANIMATE mode.", type: "info" },
+  { id: "gltch-wan-launch", message: "NEW: GLTCH Animate v2 — WAN 2.2 SmoothMix Lightning I2V + Text-to-Video + Start/End Frame interpolation.", type: "info" },
 ];
 
 const SFW_LORA_KEYWORDS = ["skin", "angle"];
@@ -153,6 +153,7 @@ const Index = () => {
   const [comfyAudioMode, setComfyAudioMode] = useState<"none" | "ambient">("none");
   const [comfyAudioPrompt, setComfyAudioPrompt] = useState("");
   const [comfyShift, setComfyShift] = useState(8);
+  const [comfyEndFrameUrl, setComfyEndFrameUrl] = useState<string>("");
 
   // Shared seed (empty = random)
   const [globalSeed, setGlobalSeed] = useState("");
@@ -463,13 +464,13 @@ const Index = () => {
           comfyTextToVideo({
             prompt: data.prompt,
             negativePrompt: comfyNegPrompt || undefined,
-            checkpoint: comfyCheckpoint,
             width: comfyWidth,
             height: comfyHeight,
             steps: comfySteps,
             cfg: comfyCfg,
             frameCount: comfyFrameCount,
-            useRife: comfyRife,
+            resolution: 832,
+            shift: comfyShift,
             videoLora: comfyVideoLora !== "none" ? comfyVideoLora : undefined,
             videoLoraStrength: comfyVideoLoraStrength,
             videoLoraPass: comfyVideoLoraPass,
@@ -511,29 +512,58 @@ const Index = () => {
           const imageBase64 = data.imageUrl?.startsWith("data:")
             ? data.imageUrl
             : data.imageUrl ? await urlToBase64(data.imageUrl) : "";
-          if (!imageBase64) throw new Error("Image is required for GLTCH WAN");
           const parsedSeedWan = globalSeed ? Number(globalSeed) : undefined;
-          comfyVideo({
-            prompt: data.prompt,
-            negativePrompt: comfyNegPrompt || undefined,
-            imageBase64,
-            width: 832,
-            height: 832,
-            frameCount: comfyFrameCount,
-            steps: comfySteps,
-            cfg: comfyCfg,
-            seed: parsedSeedWan,
-            useUpscale: comfyVidUpscale,
-            workflow: "gltch-wan",
-            resolution: 832,
-            shift: comfyShift,
-            videoLora: comfyVideoLora !== "none" ? comfyVideoLora : undefined,
-            videoLoraStrength: comfyVideoLoraStrength,
-            videoLoraPass: comfyVideoLoraPass,
-            audioMode: comfyAudioMode,
-            audioPrompt: comfyAudioPrompt || undefined,
-            ...(adminTestCredits ? { testCredits: true } : {}),
-          });
+
+          if (imageBase64) {
+            // Process optional end frame
+            const endFrameBase64 = comfyEndFrameUrl?.startsWith("data:")
+              ? comfyEndFrameUrl
+              : comfyEndFrameUrl ? await urlToBase64(comfyEndFrameUrl) : "";
+
+            // Image-to-Video: direct WAN I2V
+            comfyVideo({
+              prompt: data.prompt,
+              negativePrompt: comfyNegPrompt || undefined,
+              imageBase64,
+              ...(endFrameBase64 ? { imageBase64_2: endFrameBase64, imageFilename2: "end_frame.png" } : {}),
+              width: 832,
+              height: 832,
+              frameCount: comfyFrameCount,
+              steps: comfySteps,
+              cfg: comfyCfg,
+              seed: parsedSeedWan,
+              useUpscale: comfyVidUpscale,
+              workflow: "gltch-wan",
+              resolution: 832,
+              shift: comfyShift,
+              videoLora: comfyVideoLora !== "none" ? comfyVideoLora : undefined,
+              videoLoraStrength: comfyVideoLoraStrength,
+              videoLoraPass: comfyVideoLoraPass,
+              audioMode: comfyAudioMode,
+              audioPrompt: comfyAudioPrompt || undefined,
+              ...(adminTestCredits ? { testCredits: true } : {}),
+            });
+          } else {
+            // Text-to-Video: Z-Image Turbo → GLTCH WAN I2V
+            comfyTextToVideo({
+              prompt: data.prompt,
+              negativePrompt: comfyNegPrompt || undefined,
+              width: 832,
+              height: 480,
+              frameCount: comfyFrameCount,
+              steps: comfySteps,
+              cfg: comfyCfg,
+              resolution: 832,
+              shift: comfyShift,
+              useUpscale: comfyVidUpscale,
+              videoLora: comfyVideoLora !== "none" ? comfyVideoLora : undefined,
+              videoLoraStrength: comfyVideoLoraStrength,
+              videoLoraPass: comfyVideoLoraPass,
+              audioMode: comfyAudioMode,
+              audioPrompt: comfyAudioPrompt || undefined,
+              ...(adminTestCredits ? { testCredits: true } : {}),
+            });
+          }
         } else if (isComfyAnimate) {
           const imageBase64 = data.imageUrl?.startsWith("data:")
             ? data.imageUrl
@@ -1529,8 +1559,8 @@ const Index = () => {
                       <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-red-400/80 border-red-500/30 bg-red-500/10 animate-pulse">RAW</span>
                     </div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
-                      <span>WAN 2.2 I2V</span>
-                      <span className={animateEngine === "gltch" ? "text-secondary/70" : "text-muted-foreground/50"}>2 cr</span>
+                      <span>WAN 2.2 SmoothMix I2V / T2V</span>
+                      <span className={animateEngine === "gltch" ? "text-secondary/70" : "text-muted-foreground/50"}>3 cr</span>
                     </div>
                   </button>
                 </div>
@@ -1564,6 +1594,29 @@ const Index = () => {
                         <span>8 (default)</span>
                         <span>15</span>
                       </div>
+                    </div>
+                    <div>
+                      <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">End Frame (optional — interpolates start→end)</label>
+                      {comfyEndFrameUrl ? (
+                        <div className="relative">
+                          <img src={comfyEndFrameUrl} alt="End frame" className="w-full h-20 object-cover rounded border border-secondary/30" />
+                          <button type="button" onClick={() => setComfyEndFrameUrl("")}
+                            className="absolute top-1 right-1 w-5 h-5 bg-destructive/80 rounded-full flex items-center justify-center text-[10px] text-white hover:bg-destructive">✕</button>
+                        </div>
+                      ) : (
+                        <label className="w-full flex items-center justify-center px-3 py-2 border border-dashed border-border rounded cursor-pointer hover:border-secondary/30 transition-colors">
+                          <span className="font-mono-share text-[9px] text-muted-foreground">+ Upload end frame</span>
+                          <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onload = () => setComfyEndFrameUrl(reader.result as string);
+                              reader.readAsDataURL(file);
+                            }
+                            e.target.value = "";
+                          }} />
+                        </label>
+                      )}
                     </div>
                     <button type="button" onClick={() => setComfyVidUpscale(!comfyVidUpscale)}
                       className={`w-full flex items-center justify-between px-3 py-2 border rounded font-mono-share text-[10px] transition-all duration-200 ${comfyVidUpscale ? "border-secondary/50 bg-secondary/5 text-secondary" : "border-border bg-card/30 text-muted-foreground hover:border-secondary/30"}`}>

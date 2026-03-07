@@ -1212,6 +1212,8 @@ export function useGrokApi() {
     negativePrompt?: string;
     imageBase64: string;
     imageFilename?: string;
+    imageBase64_2?: string;
+    imageFilename2?: string;
     width?: number;
     height?: number;
     frameCount?: number;
@@ -1261,6 +1263,8 @@ export function useGrokApi() {
           negativePrompt: params.negativePrompt,
           imageBase64: params.imageBase64,
           imageFilename: params.imageFilename || "input.jpg",
+          imageBase64_2: params.imageBase64_2,
+          imageFilename2: params.imageFilename2,
           width: params.width || 832,
           height: params.height || 480,
           frameCount: params.frameCount || 81,
@@ -1308,20 +1312,23 @@ export function useGrokApi() {
     })();
   }, [comfySubmitAndPoll, persistNewResults]);
 
-  // ComfyUI Chained Text-to-Video (txt2img → wan-video) — fire-and-forget
+  // ComfyUI Chained Text-to-Video (zimage → gltch-wan) — fire-and-forget
   const comfyTextToVideo = useCallback((params: {
     prompt: string;
     negativePrompt?: string;
-    checkpoint: string;
     width?: number;
     height?: number;
     steps?: number;
     cfg?: number;
     frameCount?: number;
-    useRife?: boolean;
+    resolution?: number;
+    shift?: number;
+    useUpscale?: boolean;
     videoLora?: string;
     videoLoraStrength?: number;
     videoLoraPass?: "high" | "low" | "both";
+    audioMode?: "none" | "ambient";
+    audioPrompt?: string;
     testCredits?: boolean;
   }) => {
     const jobId = `cj-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
@@ -1329,7 +1336,7 @@ export function useGrokApi() {
 
     const newJob: ComfyJob = {
       id: jobId, status: "submitting", workflowType: "txt2video",
-      prompt: label, phase: "Generating start frame...", elapsed: 0, seed: null, error: null,
+      prompt: label, phase: "Generating start frame (Z-Image Turbo)...", elapsed: 0, seed: null, error: null,
     };
     setComfyJobs(prev => [newJob, ...prev]);
 
@@ -1345,32 +1352,30 @@ export function useGrokApi() {
 
     (async () => {
       try {
-        // Phase 1: Generate start frame (skipCredits — video step pays for both)
+        // Phase 1: Generate start frame via Z-Image Turbo (skipCredits — video step pays for both)
         setComfyJobs(prev => prev.map(j => j.id === jobId
-          ? { ...j, status: "generating", phase: "Generating start frame..." }
+          ? { ...j, status: "generating", phase: "Generating start frame (Z-Image Turbo)..." }
           : j
         ));
         const imgResult = await comfySubmitAndPoll({
-          workflow: "txt2img",
+          workflow: "zimage",
           prompt: params.prompt,
-          negativePrompt: params.negativePrompt,
-          checkpoint: params.checkpoint,
           width: params.width || 832,
           height: params.height || 480,
-          steps: params.steps || 5,
-          cfg: params.cfg || 1,
+          steps: 8,
+          cfg: 1,
           skipCredits: true,
         });
 
         if (!imgResult.image) throw new Error("Failed to generate start frame");
 
-        // Phase 2: Animate with WAN Video
+        // Phase 2: Animate with GLTCH WAN I2V
         setComfyJobs(prev => prev.map(j => j.id === jobId
-          ? { ...j, phase: "Rendering video..." }
+          ? { ...j, phase: "Rendering video (WAN 2.2 SmoothMix)..." }
           : j
         ));
         const vidResult = await comfySubmitAndPoll({
-          workflow: "wan-video",
+          workflow: "gltch-wan",
           prompt: params.prompt,
           negativePrompt: params.negativePrompt,
           imageBase64: imgResult.image,
@@ -1378,13 +1383,16 @@ export function useGrokApi() {
           width: params.width || 832,
           height: params.height || 480,
           frameCount: params.frameCount || 81,
-          steps: params.steps || 8,
+          steps: params.steps || 4,
           cfg: params.cfg || 1,
-          useRife: params.useRife ?? true,
-          useUpscale: false,
+          resolution: params.resolution || 832,
+          shift: params.shift,
+          useUpscale: params.useUpscale ?? false,
           videoLora: params.videoLora,
           videoLoraStrength: params.videoLoraStrength,
           videoLoraPass: params.videoLoraPass,
+          audioMode: params.audioMode,
+          audioPrompt: params.audioPrompt,
           ...(params.testCredits ? { testCredits: true } : {}),
         }, { pollInterval: 5000, maxAttempts: 120 });
 
@@ -1408,7 +1416,7 @@ export function useGrokApi() {
         clearInterval(timerIv);
         comfyTimerRefs.current.delete(jobId);
         setComfyJobs(prev => prev.map(j => j.id === jobId
-          ? { ...j, status: "error", error: err.message || "Chained render failed", phase: null }
+          ? { ...j, status: "error", error: err.message || "Text-to-video render failed", phase: null }
           : j
         ));
       }
