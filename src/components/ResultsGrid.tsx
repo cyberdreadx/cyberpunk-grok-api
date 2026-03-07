@@ -738,8 +738,8 @@ function MoveToFolderMenu({
       {/* Unfiled option */}
       <button
         className={`w-full text-left px-3 py-2.5 sm:py-1.5 text-[10px] font-mono-share transition-colors flex items-center gap-1.5 min-h-[44px] sm:min-h-0 ${!currentFolderId
-            ? "text-primary bg-primary/10"
-            : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+          ? "text-primary bg-primary/10"
+          : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
           }`}
         onClick={() => { onMove(null); onClose(); }}
       >
@@ -751,8 +751,8 @@ function MoveToFolderMenu({
         <button
           key={folder.id}
           className={`w-full text-left px-3 py-2.5 sm:py-1.5 text-[10px] font-mono-share transition-colors flex items-center gap-1.5 min-h-[44px] sm:min-h-0 ${currentFolderId === folder.id
-              ? "text-primary bg-primary/10"
-              : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+            ? "text-primary bg-primary/10"
+            : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
             }`}
           onClick={() => { onMove(folder.id); onClose(); }}
         >
@@ -798,6 +798,9 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
   // ZIP export state
   const [zipExporting, setZipExporting] = useState(false);
   const [zipProgress, setZipProgress] = useState({ completed: 0, total: 0 });
+
+  // Purge confirmation state
+  const [purgeConfirmOpen, setPurgeConfirmOpen] = useState(false);
 
   // PIN lock state
   const [unlockedFolders, setUnlockedFolders] = useState<Set<string>>(new Set());
@@ -1080,17 +1083,18 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
         </div>
         {filteredResults.length > 0 && (
           <div className="flex items-center gap-1">
+            {/* Download All — exports entire library regardless of filter */}
             <Button
               variant="ghost"
               size="sm"
               disabled={zipExporting}
               onClick={async () => {
                 setZipExporting(true);
-                setZipProgress({ completed: 0, total: filteredResults.length });
+                setZipProgress({ completed: 0, total: results.length });
                 try {
                   const folderMap: Record<string, string> = {};
                   for (const f of folders) folderMap[f.id] = f.name;
-                  await exportLibraryAsZip(filteredResults, folderMap, (c, t) =>
+                  await exportLibraryAsZip(results, folderMap, (c, t) =>
                     setZipProgress({ completed: c, total: t })
                   );
                 } finally {
@@ -1106,15 +1110,40 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
                 </>
               ) : (
                 <>
-                  <Archive className="w-3 h-3 mr-1" />
-                  EXPORT
+                  <Download className="w-3 h-3 mr-1" />
+                  DOWNLOAD ALL
                 </>
               )}
             </Button>
+            {/* Export current view */}
+            {selectedFilter !== "all" && (
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={zipExporting}
+                onClick={async () => {
+                  setZipExporting(true);
+                  setZipProgress({ completed: 0, total: filteredResults.length });
+                  try {
+                    const folderMap: Record<string, string> = {};
+                    for (const f of folders) folderMap[f.id] = f.name;
+                    await exportLibraryAsZip(filteredResults, folderMap, (c, t) =>
+                      setZipProgress({ completed: c, total: t })
+                    );
+                  } finally {
+                    setZipExporting(false);
+                  }
+                }}
+                className="text-primary/60 hover:text-primary/80 font-mono-share text-xs"
+              >
+                <Archive className="w-3 h-3 mr-1" />
+                EXPORT VIEW
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="sm"
-              onClick={onClear}
+              onClick={() => setPurgeConfirmOpen(true)}
               className="text-destructive hover:text-destructive/80 font-mono-share text-xs"
             >
               <Trash2 className="w-3 h-3 mr-1" />
@@ -1122,6 +1151,45 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
             </Button>
           </div>
         )}
+
+        {/* Purge confirmation dialog */}
+        <AlertDialog open={purgeConfirmOpen} onOpenChange={setPurgeConfirmOpen}>
+          <AlertDialogContent className="bg-card border-destructive/40 sm:max-w-md shadow-[0_0_30px_rgba(255,0,0,0.15)]">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="font-orbitron text-sm tracking-wider text-destructive flex items-center gap-2">
+                <Trash2 className="w-4 h-4" />
+                CONFIRM_PURGE_OPERATION
+              </AlertDialogTitle>
+              <AlertDialogDescription asChild>
+                <div className="font-mono-share text-[11px] text-muted-foreground space-y-3">
+                  <p className="text-destructive font-semibold text-xs">
+                    ⚠ WARNING: This action is IRREVERSIBLE
+                  </p>
+                  <p>
+                    You are about to permanently delete{" "}
+                    <span className="text-foreground font-bold">{results.length} generation{results.length !== 1 ? "s" : ""}</span>{" "}
+                    from your library. All images and videos will be erased from local storage.
+                  </p>
+                  <p className="text-primary/90">
+                    💡 TIP: Use <span className="font-semibold">DOWNLOAD ALL</span> to back up your library before purging.
+                  </p>
+                </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel className="font-orbitron text-[10px]">ABORT</AlertDialogCancel>
+              <AlertDialogAction
+                className="font-orbitron text-[10px] bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                onClick={() => {
+                  setPurgeConfirmOpen(false);
+                  onClear();
+                }}
+              >
+                PURGE ALL DATA
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
 
       {/* Loading skeleton with elapsed timer — ComfyUI-style polished status */}
@@ -1301,8 +1369,8 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
                   key={i}
                   onClick={() => setMobileIndex(i)}
                   className={`w-1.5 h-1.5 rounded-full transition-all ${i === clampedIndex
-                      ? "bg-primary w-4"
-                      : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
+                    ? "bg-primary w-4"
+                    : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
                     }`}
                 />
               ))}
