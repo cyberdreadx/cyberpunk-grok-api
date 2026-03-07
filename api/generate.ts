@@ -84,12 +84,18 @@ function moderationMode(action: string): string {
 }
 
 // Video generation can take minutes — increase timeout
+// Body limit raised to 50 MB to accommodate large base64 image payloads (edits, multi-image)
 export const config = {
   maxDuration: 300,
-  api: { bodyParser: { sizeLimit: "20mb" } },
+  api: { bodyParser: { sizeLimit: "50mb" } },
 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // ── CORS ──
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
@@ -150,7 +156,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 headers: { Authorization: `Bearer ${byokKey}` },
               });
             } catch { continue; }
-            if (pollRes.status === 202) { await pollRes.text().catch(() => {}); continue; }
+            if (pollRes.status === 202) { await pollRes.text().catch(() => { }); continue; }
             if (!pollRes.ok) {
               const errText = await pollRes.text();
               return res.status(pollRes.status).json({ error: errText });
