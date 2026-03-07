@@ -665,7 +665,14 @@ export default function Characters() {
                       <video src={msg.mediaUrl} controls className="max-w-full rounded mb-2 max-h-64" />
                     )}
                     {msg.content && (
-                      <p className="font-mono-share text-[11px] leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                      <p className="font-mono-share text-[11px] leading-relaxed whitespace-pre-wrap">
+                        {msg.content
+                          .replace(/\[MEDIA_IMAGE\].*?\[\/MEDIA_IMAGE\]/gs, "")
+                          .replace(/\[MEDIA_VIDEO\].*?\[\/MEDIA_VIDEO\]/gs, "")
+                          .replace(/\[MEDIA_IMAGE\]/g, "")
+                          .replace(/\[MEDIA_VIDEO\]/g, "")
+                          .trim()}
+                      </p>
                     )}
                   </div>
                 </div>
