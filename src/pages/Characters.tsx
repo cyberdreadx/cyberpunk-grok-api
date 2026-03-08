@@ -226,7 +226,9 @@ export default function Characters() {
           role: m.role,
           content: m.content?.trim()
             ? m.content
-            : m.mediaType === "video" ? "[sent a video]" : m.mediaUrl ? "[sent an image]" : "",
+            : m.mediaType === "video" ? "[MEDIA_VIDEO]previous generation[/MEDIA_VIDEO]"
+            : m.mediaUrl ? "[MEDIA_IMAGE]previous generation[/MEDIA_IMAGE]"
+            : "",
         }))
         .filter(m => m.content);
       const data = await apiFetch<{ reply: string; mediaTrigger?: { type: "image" | "video"; prompt: string } }>("/chat", {
