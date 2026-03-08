@@ -6,12 +6,12 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Zap, ImagePlus, Film, Download, Sparkles, Bug, FolderOpen } from "lucide-react";
+import { Zap, ImagePlus, Film, Download, Sparkles, Bug, FolderOpen, Smartphone, Share2, Users, Clock } from "lucide-react";
 
 /* ─── Changelog entries ─── */
 // Add new entries at the TOP. Bump LATEST_VERSION when deploying.
 
-export const LATEST_VERSION = "2025.03.07b";
+export const LATEST_VERSION = "2025.03.08";
 
 interface ChangelogEntry {
     version: string;
@@ -21,6 +21,20 @@ interface ChangelogEntry {
 }
 
 const CHANGELOG: ChangelogEntry[] = [
+    {
+        version: "2025.03.08",
+        date: "March 8, 2025",
+        title: "v3.0 — Mobile App Experience & Character Upgrades",
+        items: [
+            { icon: <Smartphone className="w-3.5 h-3.5" />, text: "Mobile bottom navigation bar — 5-tab app-style nav (Create, Library, Characters, Store, More)", tag: "new" },
+            { icon: <Zap className="w-3.5 h-3.5" />, text: "Compact mobile mode selector — horizontal scroll pills replace large card grid", tag: "improve" },
+            { icon: <Share2 className="w-3.5 h-3.5" />, text: "Post-generation share CTA — one-click copy Reddit post with your referral link", tag: "new" },
+            { icon: <Users className="w-3.5 h-3.5" />, text: "Character chat LoRA settings — gear icon to manually select & adjust LoRA strengths", tag: "new" },
+            { icon: <Clock className="w-3.5 h-3.5" />, text: "Characters now have real-time awareness — time of day, day of week, date context", tag: "new" },
+            { icon: <ImagePlus className="w-3.5 h-3.5" />, text: "Character images: dual LoRA stack (skin + angles) and face structure preservation", tag: "improve" },
+            { icon: <Sparkles className="w-3.5 h-3.5" />, text: "Updated pricing: WAN video 5 cr, HD upscale 7 cr — reflected across store & UI", tag: "improve" },
+        ],
+    },
     {
         version: "2025.03.07b",
         date: "March 7, 2025",
