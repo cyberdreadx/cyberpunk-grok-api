@@ -226,8 +226,8 @@ export default function Characters() {
           role: m.role,
           content: m.content?.trim()
             ? m.content
-            : m.mediaType === "video" ? "[MEDIA_VIDEO]previous generation[/MEDIA_VIDEO]"
-            : m.mediaUrl ? "[MEDIA_IMAGE]previous generation[/MEDIA_IMAGE]"
+            : m.mediaType === "video" ? "(sent a video)"
+            : m.mediaUrl ? "(sent a photo)"
             : "",
         }))
         .filter(m => m.content);
@@ -428,7 +428,18 @@ export default function Characters() {
 
     setChatLoading(true);
     try {
-      const historyForApi = messages.slice(-18).map(m => ({ role: m.role, content: m.content }));
+      const historyForApi = messages
+        .filter(m => !m.content?.startsWith("*generating ") && !m.content?.startsWith("*media generation failed"))
+        .slice(-18)
+        .map(m => ({
+          role: m.role,
+          content: m.content?.trim()
+            ? m.content
+            : m.mediaType === "video" ? "(sent a video)"
+            : m.mediaUrl ? "(sent a photo)"
+            : "",
+        }))
+        .filter(m => m.content);
       const data = await apiFetch<{ reply: string; mediaTrigger?: { type: "image" | "video"; prompt: string } }>("/chat", {
         method: "POST",
         body: { action: "message", characterId: activeChar.id, message: prompt, history: historyForApi },
