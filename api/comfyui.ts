@@ -2258,12 +2258,17 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           qwenLoraList = [{ name: lora, strengthModel: s, strengthClip: s }];
         }
 
-        // Auto-inject skin LoRA for character pictures when flag is set and no other LoRA specified
+        // Auto-inject skin + angles LoRAs for character pictures when flag is set and no other LoRA specified
         if (useSkinLora && qwenLoraList.length === 0) {
           const qwenLorasEnv = process.env.COMFYUI_QWEN_LORAS || "";
-          const skinLora = qwenLorasEnv.split(",").map(m => m.trim()).find(m => m.toLowerCase().includes("skin"));
+          const allLoras = qwenLorasEnv.split(",").map(m => m.trim()).filter(Boolean);
+          const skinLora = allLoras.find(m => m.toLowerCase().includes("skin"));
+          const angleLora = allLoras.find(m => m.toLowerCase().includes("angle"));
           if (skinLora) {
-            qwenLoraList = [{ name: skinLora, strengthModel: 0.3, strengthClip: 0.3 }];
+            qwenLoraList.push({ name: skinLora, strengthModel: 0.3, strengthClip: 0.3 });
+          }
+          if (angleLora) {
+            qwenLoraList.push({ name: angleLora, strengthModel: 0.3, strengthClip: 0.3 });
           }
         }
 

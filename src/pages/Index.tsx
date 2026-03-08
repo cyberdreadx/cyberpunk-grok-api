@@ -2,6 +2,7 @@ import React, { useState, useCallback, useRef, Suspense } from "react";
 import { Terminal, Key, Coins, Shield, Eye, MessageCircle, HelpCircle, Server, Zap, Cpu, ChevronDown, Film, X, AlertCircle, CheckCircle2, Loader2, Upload, Users } from "lucide-react";
 import { Link } from "react-router-dom";
 import CyberLayout from "@/components/CyberLayout";
+import MobileBottomNav from "@/components/MobileBottomNav";
 
 // Lazy-load the 3D orb — Three.js is ~800 KB and not needed for initial render
 const GrokOrb = React.lazy(() => import("@/components/GrokOrb"));
@@ -191,6 +192,7 @@ const Index = () => {
     if (!localStorage.getItem("how-to-use-seen")) return false;
     return hasUnseenChangelog();
   });
+  const [storeOpen, setStoreOpen] = useState(false);
   const [apiKeySet, setApiKeySet] = useState(() => hasApiKey());
 
   // Auto-switch to credits mode when user logs in without a BYOK key
@@ -665,11 +667,11 @@ const Index = () => {
 
   return (
     <CyberLayout>
-      <div className="max-w-5xl mx-auto px-3 sm:px-4 py-4 sm:py-8 space-y-4 sm:space-y-6">
+      <div className="max-w-5xl mx-auto px-3 sm:px-4 py-4 sm:py-8 pb-20 sm:pb-8 space-y-4 sm:space-y-6">
         {/* Header with Orb */}
         <header className="text-center space-y-2 animate-slide-up">
           {/* Grok Orb — lazy-loaded (Three.js) */}
-          <div className="w-32 h-32 sm:w-48 sm:h-48 md:w-64 md:h-64 mx-auto">
+          <div className="w-20 h-20 sm:w-48 sm:h-48 md:w-64 md:h-64 mx-auto">
             <Suspense fallback={<div className="w-full h-full rounded-full bg-primary/5 animate-pulse" />}>
               <GrokOrb isGenerating={isLoading} />
             </Suspense>
@@ -751,6 +753,8 @@ const Index = () => {
                 onSubscribe={creditsHook.subscribeToPlan}
                 onManageSubscription={creditsHook.manageSubscription}
                 onPayPalSuccess={creditsHook.refreshCredits}
+                externalOpen={storeOpen}
+                onExternalOpenChange={setStoreOpen}
               />
             )}
 
@@ -1862,7 +1866,7 @@ const Index = () => {
         )}
 
         {/* Results */}
-        <section className="animate-slide-up" style={{ animationDelay: "300ms" }}>
+        <section id="results-section" className="animate-slide-up" style={{ animationDelay: "300ms" }}>
           <div className="flex items-center gap-2 mb-4">
             <span className="font-mono-share text-secondary/40 text-xs">❯</span>
             <GlitchText
@@ -1983,6 +1987,16 @@ const Index = () => {
         <LegalDialog type="tos" open={tosOpen} onOpenChange={setTosOpen} />
         <LegalDialog type="privacy" open={privacyOpen} onOpenChange={setPrivacyOpen} />
       </div>
+
+      {/* Mobile bottom navigation */}
+      <MobileBottomNav
+        isAuthenticated={auth.isAuthenticated}
+        onOpenStore={() => setStoreOpen(true)}
+        onOpenGuide={() => setGuideOpen(true)}
+        onOpenChangelog={() => setChangelogOpen(true)}
+        onOpenTos={() => setTosOpen(true)}
+        onOpenPrivacy={() => setPrivacyOpen(true)}
+      />
     </CyberLayout>
   );
 };

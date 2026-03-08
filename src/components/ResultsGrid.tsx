@@ -22,6 +22,7 @@ import type { Folder } from "@/lib/storage";
 import { exportLibraryAsZip } from "@/lib/storage";
 import type { FolderFilter } from "@/hooks/useFolders";
 import { useSwipe } from "@/hooks/useSwipe";
+import ShareCTA from "@/components/ShareCTA";
 
 // ── PIN Utilities ────────────────────────────────────────────────────────
 
@@ -727,6 +728,16 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
   const [zipExporting, setZipExporting] = useState(false);
   const [zipProgress, setZipProgress] = useState({ completed: 0, total: 0 });
 
+  // Share CTA state — show after results appear
+  const [shareCTADismissed, setShareCTADismissed] = useState(false);
+  const showShareCTA = !isLoading && results.length > 0 && !shareCTADismissed;
+  // Reset dismissed state when new results come in
+  const prevResultsCount = useRef(results.length);
+  useEffect(() => {
+    if (results.length > prevResultsCount.current) setShareCTADismissed(false);
+    prevResultsCount.current = results.length;
+  }, [results.length]);
+
   // Purge confirmation state
   const [purgeConfirmOpen, setPurgeConfirmOpen] = useState(false);
 
@@ -1119,6 +1130,9 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
           </AlertDialogContent>
         </AlertDialog>
       </div>
+
+      {/* Share CTA — shown after generation */}
+      <ShareCTA visible={showShareCTA} onDismiss={() => setShareCTADismissed(true)} />
 
       {/* Loading skeleton with elapsed timer — ComfyUI-style polished status */}
       {isLoading && (

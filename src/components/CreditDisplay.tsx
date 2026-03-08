@@ -32,6 +32,8 @@ interface CreditDisplayProps {
   onSubscribe: (tierId: SubscriptionTier["id"]) => Promise<void>;
   onManageSubscription: () => Promise<void>;
   onPayPalSuccess?: () => void;
+  externalOpen?: boolean;
+  onExternalOpenChange?: (open: boolean) => void;
 }
 
 const paypalClientId = import.meta.env.VITE_PAYPAL_CLIENT_ID as string | undefined;
@@ -53,8 +55,15 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
   onSubscribe,
   onManageSubscription,
   onPayPalSuccess,
+  externalOpen,
+  onExternalOpenChange,
 }) => {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = externalOpen !== undefined ? externalOpen : internalOpen;
+  const setOpen = (v: boolean) => {
+    if (onExternalOpenChange) onExternalOpenChange(v);
+    else setInternalOpen(v);
+  };
   const [xrgeOpen, setXrgeOpen] = useState(false);
   const [xrgePackageId, setXrgePackageId] = useState<string | null>(null);
 

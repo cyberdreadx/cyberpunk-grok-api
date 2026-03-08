@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { apiFetch } from "@/lib/api";
 import { saveChatMessage, getChatHistory, clearChatHistory, type ChatMessage } from "@/lib/storage";
 import CyberLayout from "@/components/CyberLayout";
-import { ArrowLeft, Plus, Trash2, Send, Image, Film, Edit, X, MessageSquare, Sparkles } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Send, Image, Film, Edit, X, MessageSquare, Sparkles, Settings, ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Character {
@@ -55,6 +55,26 @@ export default function Characters() {
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // LoRA settings for character image gen
+  const [chatSettingsOpen, setChatSettingsOpen] = useState(false);
+  const [availableQwenLoras, setAvailableQwenLoras] = useState<string[]>([]);
+  const [charLoraStack, setCharLoraStack] = useState<{ name: string; strength: number }[]>([]);
+  const [lorasFetched, setLorasFetched] = useState(false);
+
+  // Fetch available Qwen LoRAs when entering chat
+  useEffect(() => {
+    if (view !== "chat" || lorasFetched) return;
+    (async () => {
+      try {
+        const data = await apiFetch<{ qwenLoras?: string[] }>("/comfyui", {
+          method: "POST", body: { action: "models" },
+        });
+        if (data.qwenLoras) setAvailableQwenLoras(data.qwenLoras);
+        setLorasFetched(true);
+      } catch { /* ignore */ }
+    })();
+  }, [view, lorasFetched]);
 
   const fetchCharacters = useCallback(async () => {
     try {
@@ -283,7 +303,7 @@ export default function Characters() {
 
       if (trigger.type === "image") {
         const hasPortrait = portrait64 && portrait64.length > 100;
-        const facePrompt = `keep the face exactly the same. ${trigger.prompt}`;
+        const facePrompt = `keep the face exactly the same, do not change face structure. ${trigger.prompt}`;
         const result = hasPortrait
           ? await submitAndPoll({
             workflow: "qwen-edit",
@@ -291,7 +311,9 @@ export default function Characters() {
             imageBase64: portrait64,
             imageFilename: "portrait.jpg",
             width: 768, height: 1024, steps: 4, cfg: 1,
-            useSkinLora: true,
+            ...(charLoraStack.length > 0
+              ? { loras: charLoraStack.map(l => ({ name: l.name, strengthModel: l.strength, strengthClip: l.strength })) }
+              : { useSkinLora: true }),
           })
           : await submitAndPoll({
             workflow: "zimage",
@@ -315,7 +337,7 @@ export default function Characters() {
 
         const hasPortrait = portrait64 && portrait64.length > 100;
         const imgPrompt = hasPortrait
-          ? `keep the face exactly the same. ${trigger.prompt}`
+          ? `keep the face exactly the same, do not change face structure. ${trigger.prompt}`
           : `${activeChar.name}. ${trigger.prompt}`;
 
         const imgResult = hasPortrait
@@ -325,7 +347,9 @@ export default function Characters() {
             imageBase64: portrait64,
             imageFilename: "portrait.jpg",
             width: 768, height: 1024, steps: 4, cfg: 1,
-            useSkinLora: true,
+            ...(charLoraStack.length > 0
+              ? { loras: charLoraStack.map(l => ({ name: l.name, strengthModel: l.strength, strengthClip: l.strength })) }
+              : { useSkinLora: true }),
             skipCredits: true,
           })
           : await submitAndPoll({
@@ -645,7 +669,72 @@ export default function Characters() {
                 <h3 className="font-orbitron text-xs tracking-wider">{activeChar.name}</h3>
                 <p className="font-mono-share text-[8px] text-muted-foreground/60 capitalize">{activeChar.llm_backend} model</p>
               </div>
+              <button
+                onClick={() => setChatSettingsOpen(!chatSettingsOpen)}
+                className={`ml-auto p-1.5 rounded transition-colors ${chatSettingsOpen ? "bg-secondary/20 text-secondary" : "text-muted-foreground/40 hover:text-muted-foreground/70"}`}
+                title="LoRA Settings"
+              >
+                <Settings className="w-4 h-4" />
+              </button>
             </div>
+
+            {/* LoRA Settings Panel */}
+            {chatSettingsOpen && (
+              <div className="border border-border/50 rounded bg-card/60 p-3 mb-3 space-y-2 shrink-0 animate-slide-up">
+                <div className="flex items-center justify-between">
+                  <span className="font-orbitron text-[9px] tracking-wider text-muted-foreground">IMAGE_LORAS</span>
+                  <span className="font-mono-share text-[8px] text-muted-foreground/40">
+                    {charLoraStack.length === 0 ? "AUTO (skin+angles)" : `${charLoraStack.length} selected`}
+                  </span>
+                </div>
+                {availableQwenLoras.length === 0 ? (
+                  <p className="font-mono-share text-[10px] text-muted-foreground/50">No LoRAs available</p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {availableQwenLoras.map((lora) => {
+                      const active = charLoraStack.find(l => l.name === lora);
+                      return (
+                        <div key={lora} className="flex items-center gap-2">
+                          <button
+                            onClick={() => {
+                              if (active) setCharLoraStack(prev => prev.filter(l => l.name !== lora));
+                              else setCharLoraStack(prev => [...prev, { name: lora, strength: 0.3 }]);
+                            }}
+                            className={`flex-1 text-left px-2 py-1.5 rounded border font-mono-share text-[10px] truncate transition-all ${
+                              active
+                                ? "border-secondary/50 bg-secondary/10 text-secondary"
+                                : "border-border/40 bg-card/30 text-muted-foreground/60 hover:border-border"
+                            }`}
+                          >
+                            {lora.replace(/\.safetensors$/, "").replace(/-/g, " ").slice(0, 30)}
+                          </button>
+                          {active && (
+                            <input
+                              type="range"
+                              min={0.1} max={1.0} step={0.05}
+                              value={active.strength}
+                              onChange={e => setCharLoraStack(prev => prev.map(l => l.name === lora ? { ...l, strength: parseFloat(e.target.value) } : l))}
+                              className="w-16 h-1 accent-secondary"
+                            />
+                          )}
+                          {active && (
+                            <span className="font-mono-share text-[9px] text-secondary/70 w-6 text-right">{active.strength.toFixed(2)}</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                    {charLoraStack.length > 0 && (
+                      <button
+                        onClick={() => setCharLoraStack([])}
+                        className="w-full text-center font-mono-share text-[9px] text-muted-foreground/40 hover:text-muted-foreground/60 py-1 transition-colors"
+                      >
+                        RESET TO AUTO
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto space-y-3 pb-3 min-h-0">
