@@ -291,6 +291,7 @@ export default function Characters() {
             imageBase64: portrait64,
             imageFilename: "portrait.jpg",
             width: 768, height: 1024, steps: 4, cfg: 1,
+            useSkinLora: true,
           })
           : await submitAndPoll({
             workflow: "zimage",
@@ -324,6 +325,7 @@ export default function Characters() {
             imageBase64: portrait64,
             imageFilename: "portrait.jpg",
             width: 768, height: 1024, steps: 4, cfg: 1,
+            useSkinLora: true,
             skipCredits: true,
           })
           : await submitAndPoll({

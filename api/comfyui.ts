@@ -1928,6 +1928,7 @@ Rules:
         motionScale,
         audioMode = "none",
         audioPrompt,
+        useSkinLora,
       } = req.body;
 
       if (!prompt)
@@ -2255,6 +2256,15 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
         } else if (lora && lora !== "none") {
           const s = Number(loraStrength) || 0.8;
           qwenLoraList = [{ name: lora, strengthModel: s, strengthClip: s }];
+        }
+
+        // Auto-inject skin LoRA for character pictures when flag is set and no other LoRA specified
+        if (useSkinLora && qwenLoraList.length === 0) {
+          const qwenLorasEnv = process.env.COMFYUI_QWEN_LORAS || "";
+          const skinLora = qwenLorasEnv.split(",").map(m => m.trim()).find(m => m.toLowerCase().includes("skin"));
+          if (skinLora) {
+            qwenLoraList = [{ name: skinLora, strengthModel: 0.3, strengthClip: 0.3 }];
+          }
         }
 
         // Only use external VAE if explicitly set (fp8 checkpoints strip the VAE)
