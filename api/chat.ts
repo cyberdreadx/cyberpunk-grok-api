@@ -182,6 +182,15 @@ function buildEmotionalSystemPrompt(
     parts.push(`\n[Relationship context] ${relationshipNotes}\nLet this inform how open, warm, guarded, or playful you are.`);
   }
 
+  // Real-time awareness — inject current time context
+  const now = new Date();
+  const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  const hour = now.getHours();
+  const timeOfDay = hour < 6 ? "late night" : hour < 12 ? "morning" : hour < 17 ? "afternoon" : hour < 21 ? "evening" : "night";
+  const timeStr = now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+  parts.push(`\n[Current context — use naturally, do not announce] It is ${dayNames[now.getDay()]}, ${monthNames[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}, ${timeStr} (${timeOfDay}). React to the time naturally — for example greetings, commenting if it's late, weekend vibes, etc.`);
+
   return parts.join("");
 }
 

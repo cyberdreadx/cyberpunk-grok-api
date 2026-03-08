@@ -44,6 +44,15 @@ const ModeSelector: React.FC<ModeSelectorProps> = ({ activeMode, onModeChange, i
             </button>
           );
         })}
+        {isAuthenticated && (
+          <a
+            href="/characters"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-full border whitespace-nowrap transition-all duration-200 shrink-0 border-purple-500/40 bg-card/50 active:bg-purple-500/10"
+          >
+            <Users className={`w-3.5 h-3.5 text-purple-400/70`} />
+            <span className="font-orbitron text-[9px] tracking-wider text-purple-400/80">CHARS</span>
+          </a>
+        )}
       </div>
 
       {/* ── Desktop: card grid ── */}
