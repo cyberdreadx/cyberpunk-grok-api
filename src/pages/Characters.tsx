@@ -243,19 +243,17 @@ export default function Characters() {
       const hasPortrait = portrait64 && portrait64.length > 100;
 
       if (trigger.type === "image") {
-        const result = hasPortrait
-          ? await comfySubmitAndPollStandalone({
-              workflow: "qwen-edit",
-              prompt: trigger.prompt,
-              imageBase64: portrait64,
-              imageFilename: "portrait.jpg",
-              width: 768, height: 1024, steps: 5, cfg: 4,
-            })
-          : await comfySubmitAndPollStandalone({
-              workflow: "zimage",
-              prompt: `${char.name}. ${trigger.prompt}`,
-              width: 832, height: 1216, steps: 8, cfg: 1,
-            });
+        if (!hasPortrait) {
+          failPlaceholder("Image generation requires a character portrait. Edit the character and add one.");
+          return;
+        }
+        const result = await comfySubmitAndPollStandalone({
+          workflow: "qwen-edit",
+          prompt: trigger.prompt,
+          imageBase64: portrait64,
+          imageFilename: "portrait.jpg",
+          width: 768, height: 1024, steps: 5, cfg: 4,
+        });
 
         if (result.image) {
           const mediaMsg: ChatMessage = {

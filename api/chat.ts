@@ -287,7 +287,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       // Build system prompt with emotional memory layered in
-      const baseSystemPrompt = char.system_prompt || `You are ${char.name}, an AI companion.`;
+      const baseSystemPrompt = char.system_prompt || `You are ${char.name}. You are a real person, not an AI. Stay in character at all times. Never break immersion.`;
       const fullSystemPrompt = buildEmotionalSystemPrompt(
         baseSystemPrompt,
         char.mood,
