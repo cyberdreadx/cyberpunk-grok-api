@@ -83,6 +83,29 @@ function extractMediaTrigger(text: string): { type: "image" | "video"; prompt: s
   if (imgMatch) return { type: "image", prompt: imgMatch[1].trim() };
   const vidMatch = text.match(/\[MEDIA_VIDEO\](.*?)\[\/MEDIA_VIDEO\]/s);
   if (vidMatch) return { type: "video", prompt: vidMatch[1].trim() };
+
+  // Fallback: LLM said it sent a photo/video without using proper tags
+  const sentPhotoPattern = /\b(?:sent? (?:you )?a (?:photo|pic|picture|selfie|image)|sends? (?:a )?(?:photo|pic|picture|selfie|image)|here(?:'s| is) (?:a |my )?(?:photo|pic|picture|selfie|image)|takes? a (?:photo|pic|picture|selfie|image)|snaps? a (?:photo|pic|picture|selfie|image))\b/i;
+  const sentVideoPattern = /\b(?:sent? (?:you )?a (?:video|clip|vid)|sends? (?:a )?(?:video|clip|vid)|here(?:'s| is) (?:a |my )?(?:video|clip|vid))\b/i;
+
+  if (sentVideoPattern.test(text)) {
+    const description = text
+      .replace(/\*[^*]*\*/g, " ")
+      .replace(/[()]/g, "")
+      .trim()
+      .slice(0, 200);
+    return { type: "video", prompt: description || "casual selfie video, smiling at camera" };
+  }
+
+  if (sentPhotoPattern.test(text)) {
+    const description = text
+      .replace(/\*[^*]*\*/g, " ")
+      .replace(/[()]/g, "")
+      .trim()
+      .slice(0, 200);
+    return { type: "image", prompt: description || "casual selfie, looking at camera, natural lighting" };
+  }
+
   return null;
 }
 
