@@ -19,6 +19,53 @@ import { getUserFromRequest } from "./_lib/auth";
 import { getDb } from "./_lib/db";
 import { checkRateLimit } from "./_lib/ratelimit";
 
+// ── Image dimension parser (from base64 PNG/JPEG header) ───────────────
+function getImageDimensionsFromBase64(b64: string): { width: number; height: number } | null {
+  try {
+    // Strip data URI prefix if present
+    const raw = b64.replace(/^data:image\/\w+;base64,/, "");
+    const buf = Buffer.from(raw, "base64");
+    // PNG: bytes 16-23 contain width (4B) and height (4B) as big-endian uint32
+    if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) {
+      const width = buf.readUInt32BE(16);
+      const height = buf.readUInt32BE(20);
+      return { width, height };
+    }
+    // JPEG: scan for SOF0 (0xFFC0) or SOF2 (0xFFC2) marker
+    if (buf[0] === 0xff && buf[1] === 0xd8) {
+      let offset = 2;
+      while (offset < buf.length - 8) {
+        if (buf[offset] !== 0xff) break;
+        const marker = buf[offset + 1];
+        if (marker === 0xc0 || marker === 0xc2) {
+          const height = buf.readUInt16BE(offset + 5);
+          const width = buf.readUInt16BE(offset + 7);
+          return { width, height };
+        }
+        const segLen = buf.readUInt16BE(offset + 2);
+        offset += 2 + segLen;
+      }
+    }
+    // WebP: RIFF header, "WEBP" at offset 8, VP8 at offset 12
+    if (buf[0] === 0x52 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x46) {
+      // VP8 lossy
+      if (buf[12] === 0x56 && buf[13] === 0x50 && buf[14] === 0x38 && buf[15] === 0x20) {
+        const width = buf.readUInt16LE(26) & 0x3fff;
+        const height = buf.readUInt16LE(28) & 0x3fff;
+        return { width, height };
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/** Snap a dimension to the nearest multiple of 64 (ComfyUI requirement) */
+function snap64(v: number): number {
+  return Math.round(v / 64) * 64 || 64;
+}
+
 // ── RunPod S3 Helper ───────────────────────────────────────────────────
 // RunPod's S3 doesn't support presigned URL query-string auth, so we use
 // the AWS SDK with credentials to download files server-side.
@@ -2275,13 +2322,28 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
         // Only use external VAE if explicitly set (fp8 checkpoints strip the VAE)
         const qwenVae = process.env.COMFYUI_QWEN_VAE || "";
 
+        // Auto-detect input image dimensions for qwen-edit
+        let editW = clampW;
+        let editH = clampH;
+        if (imageBase64) {
+          const detected = getImageDimensionsFromBase64(imageBase64);
+          if (detected && detected.width > 0 && detected.height > 0) {
+            // Scale to fit within max dimension while preserving aspect ratio, snap to 64px
+            const maxDim = Math.max(clampW, clampH, 1024);
+            const scale = Math.min(maxDim / detected.width, maxDim / detected.height, 1);
+            editW = snap64(Math.round(detected.width * scale));
+            editH = snap64(Math.round(detected.height * scale));
+            console.log(`[qwen-edit] auto-detected input ${detected.width}x${detected.height} → output ${editW}x${editH}`);
+          }
+        }
+
         workflow = buildQwenEditWorkflow({
           prompt: enhancedPrompt,
           negativePrompt: (negativePrompt || "").trim() || QWEN_DEFAULT_NEGATIVE,
           imageFilename: imageFilename!,
           imageFilename2: imageFilename2 || undefined,
-          width: clampW,
-          height: clampH,
+          width: editW,
+          height: editH,
           seed: actualSeed,
           steps: clampSteps,
           cfg: clampCfg,
