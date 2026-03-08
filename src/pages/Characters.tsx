@@ -2,8 +2,9 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiFetch } from "@/lib/api";
 import { saveChatMessage, getChatHistory, clearChatHistory, type ChatMessage } from "@/lib/storage";
+import { comfySubmitAndPollStandalone } from "@/hooks/useGrokApi";
 import CyberLayout from "@/components/CyberLayout";
-import { ArrowLeft, Plus, Trash2, Send, Image, Film, Edit, X, MessageSquare, Sparkles, Settings, ChevronDown } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Send, Edit, X, MessageSquare, Sparkles, Image } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Character {
@@ -27,8 +28,8 @@ const TRAIT_OPTIONS = [
 ];
 
 const LLM_OPTIONS = [
-  { value: "deepseek", label: "DeepSeek (cheap, uncensored)", cost: "~0.1 cr/msg" },
-  { value: "grok", label: "Grok (high quality)", cost: "~0.1 cr/msg" },
+  { value: "grok", label: "Grok (recommended)", cost: "1 cr/msg" },
+  { value: "deepseek", label: "DeepSeek", cost: "1 cr/msg" },
 ];
 
 export default function Characters() {
@@ -41,7 +42,6 @@ export default function Characters() {
   const [activeChar, setActiveChar] = useState<Character | null>(null);
   const [editingChar, setEditingChar] = useState<Character | null>(null);
 
-  // Creator state
   const [name, setName] = useState("");
   const [personality, setPersonality] = useState("");
   const [traits, setTraits] = useState<string[]>([]);
@@ -50,31 +50,18 @@ export default function Characters() {
   const [saving, setSaving] = useState(false);
   const portraitRef = useRef<HTMLInputElement>(null);
 
-  // Chat state
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [confirmClear, setConfirmClear] = useState(false);
 
-  // LoRA settings for character image gen
-  const [chatSettingsOpen, setChatSettingsOpen] = useState(false);
-  const [availableQwenLoras, setAvailableQwenLoras] = useState<string[]>([]);
-  const [charLoraStack, setCharLoraStack] = useState<{ name: string; strength: number }[]>([]);
-  const [lorasFetched, setLorasFetched] = useState(false);
+  // Keep a ref to activeChar so async callbacks always see the latest value
+  const activeCharRef = useRef(activeChar);
+  activeCharRef.current = activeChar;
 
-  // Fetch available Qwen LoRAs when entering chat
-  useEffect(() => {
-    if (view !== "chat" || lorasFetched) return;
-    (async () => {
-      try {
-        const data = await apiFetch<{ qwenLoras?: string[] }>("/comfyui", {
-          method: "POST", body: { action: "models" },
-        });
-        if (data.qwenLoras) setAvailableQwenLoras(data.qwenLoras);
-        setLorasFetched(true);
-      } catch { /* ignore */ }
-    })();
-  }, [view, lorasFetched]);
+  // ── Data fetching ──
 
   const fetchCharacters = useCallback(async () => {
     try {
@@ -94,6 +81,8 @@ export default function Characters() {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // ── Creator helpers ──
 
   const resetCreator = () => {
     setName(""); setPersonality(""); setTraits([]); setPortrait(null);
@@ -124,15 +113,12 @@ export default function Characters() {
   const handlePortrait = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     const maxDim = 512;
-
     const isHeic = (f: File) => {
       const t = (f.type || "").toLowerCase();
       const n = (f.name || "").toLowerCase();
       return t === "image/heic" || t === "image/heif" || n.endsWith(".heic") || n.endsWith(".heif");
     };
-
     try {
       let sourceBlob: Blob = file;
       if (isHeic(file)) {
@@ -140,7 +126,6 @@ export default function Characters() {
         const converted = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.85 });
         sourceBlob = Array.isArray(converted) ? converted[0] : converted;
       }
-
       const bitmap = await createImageBitmap(sourceBlob);
       let w = bitmap.width, h = bitmap.height;
       if (w > maxDim || h > maxDim) {
@@ -191,7 +176,6 @@ export default function Characters() {
     }
   };
 
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const handleDelete = async (id: string) => {
     if (confirmDeleteId !== id) { setConfirmDeleteId(id); return; }
     setConfirmDeleteId(null);
@@ -206,271 +190,163 @@ export default function Characters() {
     }
   };
 
-  const sendMessage = async () => {
-    if (!chatInput.trim() || !activeChar || chatLoading) return;
-    const text = chatInput.trim();
-    setChatInput("");
-
-    const userMsg: ChatMessage = {
-      characterId: activeChar.id, role: "user", content: text, timestamp: Date.now(),
-    };
-    setMessages(prev => [...prev, userMsg]);
-    await saveChatMessage(userMsg);
-
-    setChatLoading(true);
-    try {
-      const historyForApi = messages
-        .filter(m => !m.content?.startsWith("*generating ") && !m.content?.startsWith("*media generation failed"))
-        .slice(-18)
-        .map(m => ({
-          role: m.role,
-          content: m.content?.trim()
-            ? m.content
-            : m.mediaType === "video" ? "(sent a video)"
-            : m.mediaUrl ? "(sent a photo)"
-            : "",
-        }))
-        .filter(m => m.content);
-      const data = await apiFetch<{ reply: string; mediaTrigger?: { type: "image" | "video"; prompt: string } }>("/chat", {
-        method: "POST",
-        body: { action: "message", characterId: activeChar.id, message: text, history: historyForApi },
-      });
-
-      const assistantMsg: ChatMessage = {
-        characterId: activeChar.id, role: "assistant", content: data.reply, timestamp: Date.now(),
-      };
-      setMessages(prev => [...prev, assistantMsg]);
-      await saveChatMessage(assistantMsg);
-
-      if (data.mediaTrigger) {
-        handleMediaTrigger(data.mediaTrigger);
-      }
-    } catch (err: any) {
-      const errMsg: ChatMessage = {
-        characterId: activeChar.id, role: "assistant",
-        content: `*${err.message || "Failed to respond"}*`, timestamp: Date.now(),
-      };
-      setMessages(prev => [...prev, errMsg]);
-    } finally {
-      setChatLoading(false);
-    }
-  };
-
-  const submitAndPoll = async (body: Record<string, any>): Promise<{ image?: string; video?: string }> => {
-    const submit = await apiFetch<{ promptId: string; runpodEndpointId?: string; outputType?: string }>("/comfyui", {
-      method: "POST", body: { action: "generate", ...body },
-    });
-    const { promptId, runpodEndpointId } = submit;
-    const outType = submit.outputType || (body.workflow === "wan-video" || body.workflow === "gltch-wan" || body.workflow === "longlook" ? "video" : "image");
-
-    for (let i = 0; i < 300; i++) {
-      await new Promise(r => setTimeout(r, 2000));
-      const poll = await apiFetch<{ status: string; image?: string; video?: string; error?: string }>("/comfyui", {
-        method: "POST",
-        body: { action: "poll", promptId, outputType: outType, ...(runpodEndpointId && { runpodEndpointId }) },
-      });
-      if (poll.status === "done") {
-        // Proxy S3 video URLs through backend (CORS)
-        let video = poll.video;
-        if (video && video.startsWith("https://") && !video.startsWith("data:")) {
-          try {
-            const proxyResp = await fetch("/api/comfyui", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ action: "proxy-s3", url: video }),
-            });
-            if (proxyResp.ok) {
-              const blob = await proxyResp.blob();
-              video = URL.createObjectURL(blob);
-            }
-          } catch { /* fallback to direct URL */ }
-        }
-        return { image: poll.image, video };
-      }
-      if (poll.status === "error") throw new Error(poll.error || "Generation failed");
-    }
-    throw new Error("Generation timed out");
-  };
-
-  const handleMediaTrigger = async (trigger: { type: "image" | "video"; prompt: string }) => {
+  const handleClearChat = async () => {
     if (!activeChar) return;
-    const placeholderTs = Date.now();
-    const placeholderMsg: ChatMessage = {
-      characterId: activeChar.id, role: "assistant",
-      content: `*generating ${trigger.type}...*`,
-      timestamp: placeholderTs,
-    };
-    setMessages(prev => [...prev, placeholderMsg]);
+    await clearChatHistory(activeChar.id);
+    try { await apiFetch("/characters", { method: "POST", body: { action: "reset-memory", characterId: activeChar.id } }); } catch { /* best effort */ }
+    setMessages([]);
+    setConfirmClear(false);
+    toast({ title: "Cleared", description: "Chat history deleted" });
+  };
 
-    // Helper: find placeholder by timestamp (stable across state updates)
-    const isPlaceholder = (m: ChatMessage) => m.role === "assistant" && m.timestamp === placeholderTs;
-    const updatePlaceholder = (content: string) =>
-      setMessages(prev => prev.map(m => isPlaceholder(m) ? { ...m, content } : m));
+  // ── Build history for API (avoids stale closure by accepting messages as arg) ──
+
+  function buildHistoryForApi(msgs: ChatMessage[]) {
+    return msgs
+      .filter(m => !m.content?.startsWith("*generating ") && !m.content?.startsWith("*media generation failed"))
+      .slice(-18)
+      .map(m => ({
+        role: m.role,
+        content: m.content?.trim()
+          ? m.content
+          : m.mediaType === "video" ? "(sent a video)"
+          : m.mediaUrl ? "(sent a photo)"
+          : "",
+      }))
+      .filter(m => m.content);
+  }
+
+  // ── Media generation (uses standalone comfySubmitAndPoll — no LoRAs, simple paths) ──
+
+  const handleMediaTrigger = useCallback(async (
+    trigger: { type: "image" | "video"; prompt: string },
+    char: Character,
+  ) => {
+    const placeholderId = `placeholder-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const placeholderMsg: ChatMessage = {
+      characterId: char.id, role: "assistant",
+      content: `*generating ${trigger.type}...*`,
+      timestamp: Date.now(),
+    };
+    // Tag placeholder with id via content so we can find it later
+    (placeholderMsg as any)._pid = placeholderId;
+
+    setMessages(prev => [...prev, { ...placeholderMsg }]);
+
     const replacePlaceholder = (msg: ChatMessage) =>
-      setMessages(prev => prev.filter(m => !isPlaceholder(m)).concat(msg));
+      setMessages(prev => prev.map(m => (m as any)._pid === placeholderId ? msg : m));
+    const failPlaceholder = (errMsg: string) =>
+      setMessages(prev => prev.map(m => (m as any)._pid === placeholderId ? { ...m, content: `*media generation failed: ${errMsg}*`, _pid: undefined } as any : m));
 
     try {
-      const portrait64 = activeChar.portrait_url;
+      const portrait64 = char.portrait_url;
+      const hasPortrait = portrait64 && portrait64.length > 100;
 
       if (trigger.type === "image") {
-        const hasPortrait = portrait64 && portrait64.length > 100;
-        const facePrompt = `${activeChar.name}, ${trigger.prompt}`;
         const result = hasPortrait
-          ? await submitAndPoll({
-            workflow: "qwen-edit",
-            prompt: facePrompt,
-            imageBase64: portrait64,
-            imageFilename: "portrait.jpg",
-            width: 768, height: 1024, steps: 4, cfg: 1,
-            ...(charLoraStack.length > 0
-              ? { loras: charLoraStack.map(l => ({ name: l.name, strengthModel: l.strength, strengthClip: l.strength })) }
-              : { useSkinLora: true }),
-          })
-          : await submitAndPoll({
-            workflow: "zimage",
-            prompt: `${activeChar.name}. ${trigger.prompt}`,
-            width: 832, height: 1216, steps: 8, cfg: 1,
-          });
+          ? await comfySubmitAndPollStandalone({
+              workflow: "qwen-edit",
+              prompt: trigger.prompt,
+              imageBase64: portrait64,
+              imageFilename: "portrait.jpg",
+              width: 768, height: 1024, steps: 5, cfg: 4,
+            })
+          : await comfySubmitAndPollStandalone({
+              workflow: "zimage",
+              prompt: `${char.name}. ${trigger.prompt}`,
+              width: 832, height: 1216, steps: 8, cfg: 1,
+            });
+
         if (result.image) {
           const mediaMsg: ChatMessage = {
-            characterId: activeChar.id, role: "assistant", content: "",
+            characterId: char.id, role: "assistant", content: "",
             mediaUrl: result.image, mediaType: "image", timestamp: Date.now(),
           };
           replacePlaceholder(mediaMsg);
           await saveChatMessage(mediaMsg);
           return;
         }
+        throw new Error("No image returned");
       }
 
       if (trigger.type === "video") {
-        // Phase 1: Generate start frame image (same as send pic)
-        updatePlaceholder(`*generating start frame...*`);
-
-        const hasPortrait = portrait64 && portrait64.length > 100;
-        const imgPrompt = hasPortrait
-          ? `${activeChar.name}, ${trigger.prompt}`
-          : `${activeChar.name}. ${trigger.prompt}`;
-
-        const imgResult = hasPortrait
-          ? await submitAndPoll({
-            workflow: "qwen-edit",
-            prompt: imgPrompt,
-            imageBase64: portrait64,
-            imageFilename: "portrait.jpg",
-            width: 768, height: 1024, steps: 4, cfg: 1,
-            ...(charLoraStack.length > 0
-              ? { loras: charLoraStack.map(l => ({ name: l.name, strengthModel: l.strength, strengthClip: l.strength })) }
-              : { useSkinLora: true }),
-            skipCredits: true,
-          })
-          : await submitAndPoll({
-            workflow: "zimage",
-            prompt: imgPrompt,
-            width: 832, height: 480, steps: 8, cfg: 1,
-            skipCredits: true,
-          });
-
-        if (!imgResult.image) throw new Error("Failed to generate start frame");
-
-        // Phase 2: Animate with GLTCH WAN I2V
-        updatePlaceholder(`*rendering video (this may take a few minutes)...*`);
-
-        const vidResult = await submitAndPoll({
-          workflow: "gltch-wan",
+        if (!hasPortrait) {
+          failPlaceholder("Video requires a character portrait. Edit the character and add one.");
+          return;
+        }
+        const result = await comfySubmitAndPollStandalone({
+          workflow: "wan-video",
           prompt: trigger.prompt,
-          imageBase64: imgResult.image,
-          imageFilename: "start_frame.png",
-          width: 832, height: 480,
-          steps: 4, cfg: 1,
-          frameCount: 81,
-          resolution: 832,
-          shift: 8,
-          useUpscale: true,
-        });
+          imageBase64: portrait64,
+          imageFilename: "portrait.jpg",
+          width: 832, height: 480, steps: 20,
+        }, { pollInterval: 3000, maxAttempts: 200 });
 
-        console.log("[char-video] vidResult keys:", Object.keys(vidResult), "video?", !!vidResult.video, "image?", !!vidResult.image);
-
-        const mediaData = vidResult.video || vidResult.image;
+        const mediaData = result.video || result.image;
         if (mediaData) {
-          const isVideo = !!vidResult.video;
           const mediaMsg: ChatMessage = {
-            characterId: activeChar.id, role: "assistant", content: "",
-            mediaUrl: mediaData, mediaType: isVideo ? "video" : "image", timestamp: Date.now(),
+            characterId: char.id, role: "assistant", content: "",
+            mediaUrl: mediaData, mediaType: result.video ? "video" : "image", timestamp: Date.now(),
           };
           replacePlaceholder(mediaMsg);
           await saveChatMessage(mediaMsg);
           return;
         }
-
-        // No output at all
-        throw new Error("No video or image returned from WAN");
+        throw new Error("No video returned");
       }
 
-      // Fallback for unsupported type
-      updatePlaceholder(`*[${trigger.type}] ${trigger.prompt}*`);
+      failPlaceholder(`Unsupported media type: ${trigger.type}`);
     } catch (err: any) {
-      updatePlaceholder(`*media generation failed: ${err.message || "unknown error"}*`);
+      failPlaceholder(err.message || "unknown error");
     }
-  };
+  }, []);
 
-  const requestMedia = async (type: "image" | "video") => {
-    if (!activeChar || chatLoading) return;
-    const prompt = type === "image"
-      ? `Send me a picture of yourself right now`
-      : `Send me a short video of yourself`;
-    setChatInput(prompt);
-    // Auto-send
+  // ── Send message ──
+
+  const sendMessage = async () => {
+    if (!chatInput.trim() || !activeChar || chatLoading) return;
+    const text = chatInput.trim();
+    const char = activeChar;
+    setChatInput("");
+
     const userMsg: ChatMessage = {
-      characterId: activeChar.id, role: "user", content: prompt, timestamp: Date.now(),
+      characterId: char.id, role: "user", content: text, timestamp: Date.now(),
     };
-    setMessages(prev => [...prev, userMsg]);
+
+    // Use functional updater to get latest messages for API history
+    let historyForApi: { role: string; content: string }[] = [];
+    setMessages(prev => {
+      const updated = [...prev, userMsg];
+      historyForApi = buildHistoryForApi(updated);
+      return updated;
+    });
     await saveChatMessage(userMsg);
 
     setChatLoading(true);
     try {
-      const historyForApi = messages
-        .filter(m => !m.content?.startsWith("*generating ") && !m.content?.startsWith("*media generation failed"))
-        .slice(-18)
-        .map(m => ({
-          role: m.role,
-          content: m.content?.trim()
-            ? m.content
-            : m.mediaType === "video" ? "(sent a video)"
-            : m.mediaUrl ? "(sent a photo)"
-            : "",
-        }))
-        .filter(m => m.content);
       const data = await apiFetch<{ reply: string; mediaTrigger?: { type: "image" | "video"; prompt: string } }>("/chat", {
         method: "POST",
-        body: { action: "message", characterId: activeChar.id, message: prompt, history: historyForApi },
+        body: { action: "message", characterId: char.id, message: text, history: historyForApi },
       });
+
       const assistantMsg: ChatMessage = {
-        characterId: activeChar.id, role: "assistant", content: data.reply, timestamp: Date.now(),
+        characterId: char.id, role: "assistant", content: data.reply, timestamp: Date.now(),
       };
       setMessages(prev => [...prev, assistantMsg]);
       await saveChatMessage(assistantMsg);
-      if (data.mediaTrigger) handleMediaTrigger(data.mediaTrigger);
+
+      if (data.mediaTrigger) {
+        handleMediaTrigger(data.mediaTrigger, char);
+      }
     } catch (err: any) {
       const errMsg: ChatMessage = {
-        characterId: activeChar.id, role: "assistant",
-        content: `*${err.message || "Failed"}*`, timestamp: Date.now(),
+        characterId: char.id, role: "assistant",
+        content: `*${err.message || "Failed to respond"}*`, timestamp: Date.now(),
       };
       setMessages(prev => [...prev, errMsg]);
     } finally {
       setChatLoading(false);
-      setChatInput("");
     }
-  };
-
-  const [confirmClear, setConfirmClear] = useState(false);
-  const handleClearChat = async () => {
-    if (!activeChar) return;
-    await clearChatHistory(activeChar.id);
-    // Reset server-side emotional memory so the character starts fresh
-    try { await apiFetch("/characters", { method: "POST", body: { action: "reset-memory", characterId: activeChar.id } }); } catch { /* best effort */ }
-    setMessages([]);
-    setConfirmClear(false);
-    toast({ title: "Cleared", description: "Chat history deleted" });
   };
 
   // ── Render ──
@@ -560,7 +436,6 @@ export default function Characters() {
                           </span>
                         ))}
                       </div>
-                      <p className="font-mono-share text-[8px] text-muted-foreground/60 mt-1 capitalize">{c.llm_backend}</p>
                     </div>
                     {/* Action buttons on hover */}
                     <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -691,72 +566,7 @@ export default function Characters() {
                 <h3 className="font-orbitron text-xs tracking-wider">{activeChar.name}</h3>
                 <p className="font-mono-share text-[8px] text-muted-foreground/60 capitalize">{activeChar.llm_backend} model</p>
               </div>
-              <button
-                onClick={() => setChatSettingsOpen(!chatSettingsOpen)}
-                className={`ml-auto p-1.5 rounded transition-colors ${chatSettingsOpen ? "bg-secondary/20 text-secondary" : "text-muted-foreground/40 hover:text-muted-foreground/70"}`}
-                title="LoRA Settings"
-              >
-                <Settings className="w-4 h-4" />
-              </button>
             </div>
-
-            {/* LoRA Settings Panel */}
-            {chatSettingsOpen && (
-              <div className="border border-border/50 rounded bg-card/60 p-3 mb-3 space-y-2 shrink-0 animate-slide-up">
-                <div className="flex items-center justify-between">
-                  <span className="font-orbitron text-[9px] tracking-wider text-muted-foreground">IMAGE_LORAS</span>
-                  <span className="font-mono-share text-[8px] text-muted-foreground/40">
-                    {charLoraStack.length === 0 ? "AUTO (skin+angles)" : `${charLoraStack.length} selected`}
-                  </span>
-                </div>
-                {availableQwenLoras.length === 0 ? (
-                  <p className="font-mono-share text-[10px] text-muted-foreground/50">No LoRAs available</p>
-                ) : (
-                  <div className="space-y-1.5">
-                    {availableQwenLoras.map((lora) => {
-                      const active = charLoraStack.find(l => l.name === lora);
-                      return (
-                        <div key={lora} className="flex items-center gap-2">
-                          <button
-                            onClick={() => {
-                              if (active) setCharLoraStack(prev => prev.filter(l => l.name !== lora));
-                              else setCharLoraStack(prev => [...prev, { name: lora, strength: 0.85 }]);
-                            }}
-                            className={`flex-1 text-left px-2 py-1.5 rounded border font-mono-share text-[10px] truncate transition-all ${
-                              active
-                                ? "border-secondary/50 bg-secondary/10 text-secondary"
-                                : "border-border/40 bg-card/30 text-muted-foreground/60 hover:border-border"
-                            }`}
-                          >
-                            {lora.replace(/\.safetensors$/, "").replace(/-/g, " ").slice(0, 30)}
-                          </button>
-                          {active && (
-                            <input
-                              type="range"
-                              min={0.1} max={1.0} step={0.05}
-                              value={active.strength}
-                              onChange={e => setCharLoraStack(prev => prev.map(l => l.name === lora ? { ...l, strength: parseFloat(e.target.value) } : l))}
-                              className="w-16 h-1 accent-secondary"
-                            />
-                          )}
-                          {active && (
-                            <span className="font-mono-share text-[9px] text-secondary/70 w-6 text-right">{active.strength.toFixed(2)}</span>
-                          )}
-                        </div>
-                      );
-                    })}
-                    {charLoraStack.length > 0 && (
-                      <button
-                        onClick={() => setCharLoraStack([])}
-                        className="w-full text-center font-mono-share text-[9px] text-muted-foreground/40 hover:text-muted-foreground/60 py-1 transition-colors"
-                      >
-                        RESET TO AUTO
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto space-y-3 pb-3 min-h-0">
@@ -802,18 +612,6 @@ export default function Characters() {
                 </div>
               )}
               <div ref={chatEndRef} />
-            </div>
-
-            {/* Media request buttons */}
-            <div className="flex gap-2 pb-2 shrink-0">
-              <button onClick={() => requestMedia("image")} disabled={chatLoading}
-                className="flex items-center gap-1 px-3 py-1.5 bg-purple-500/10 border border-purple-500/30 rounded font-mono-share text-[9px] text-purple-400 hover:bg-purple-500/20 transition-colors disabled:opacity-50">
-                <Image className="w-3 h-3" /> Send pic
-              </button>
-              <button onClick={() => requestMedia("video")} disabled={chatLoading}
-                className="flex items-center gap-1 px-3 py-1.5 bg-cyan-500/10 border border-cyan-500/30 rounded font-mono-share text-[9px] text-cyan-400 hover:bg-cyan-500/20 transition-colors disabled:opacity-50">
-                <Film className="w-3 h-3" /> Send video
-              </button>
             </div>
 
             {/* Input */}

@@ -42,6 +42,52 @@ function removeActiveJob(promptId: string) {
   } catch { }
 }
 
+/** Standalone submit + poll for ComfyUI workflows. Usable outside the hook. */
+export async function comfySubmitAndPollStandalone(
+  body: Record<string, any>,
+  opts: { pollInterval?: number; maxAttempts?: number } = {},
+): Promise<{ image?: string; video?: string }> {
+  const { pollInterval = 2000, maxAttempts = 300 } = opts;
+
+  const submitData = await apiFetch<{
+    promptId: string;
+    seed: number;
+    outputType?: string;
+    runpodEndpointId?: string;
+  }>("/comfyui", { method: "POST", body: { action: "generate", ...body } });
+
+  const { promptId, outputType, runpodEndpointId } = submitData;
+  const outType = outputType || (body.workflow === "wan-video" || body.workflow === "longlook" ? "video" : "image");
+
+  saveActiveJob({ promptId, outputType: outType, submittedAt: Date.now(), ...(runpodEndpointId && { runpodEndpointId }) });
+
+  for (let i = 0; i < maxAttempts; i++) {
+    await new Promise((r) => setTimeout(r, pollInterval));
+
+    const pollData = await apiFetch<{
+      status: string;
+      image?: string;
+      video?: string;
+      error?: string;
+    }>("/comfyui", {
+      method: "POST",
+      body: { action: "poll", promptId, outputType: outType, ...(runpodEndpointId && { runpodEndpointId }) },
+    });
+
+    if (pollData.status === "done") {
+      removeActiveJob(promptId);
+      return { image: pollData.image, video: pollData.video };
+    }
+    if (pollData.status === "error") {
+      removeActiveJob(promptId);
+      throw new Error(pollData.error || "ComfyUI generation failed");
+    }
+  }
+
+  removeActiveJob(promptId);
+  throw new Error("ComfyUI generation timed out");
+}
+
 export type GrokMode = "text-to-image" | "edit-image" | "text-to-video" | "image-to-video" | "edit-video";
 
 export type AspectRatio = "1:1" | "16:9" | "9:16" | "4:3" | "3:4" | "3:2" | "2:3" | "2:1" | "1:2" | "19.5:9" | "9:19.5" | "20:9" | "9:20" | "auto";
