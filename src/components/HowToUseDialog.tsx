@@ -79,7 +79,7 @@ const steps: Step[] = [
             <span className="font-semibold text-sm">Option B: Use Credits</span>
           </div>
           <p className="text-sm text-muted-foreground">
-            Create an account, buy credits or subscribe, and generate without needing an API key. 1 credit = 1 image or 1 second of video.
+            Create an account, buy credits or subscribe, and generate without needing an API key. Images: 1-2 cr · Videos: 5 cr.
           </p>
         </div>
       </div>

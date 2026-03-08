@@ -114,7 +114,7 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
               CREDIT_STORE
             </DialogTitle>
             <DialogDescription className="font-rajdhani text-muted-foreground">
-              Subscribe monthly or buy one-time packs. 1 credit = 1 image or 1 second of video.
+              Subscribe monthly or buy one-time packs. Images: 1-2 cr · Videos: 5 cr · HD upscale: 7 cr.
             </DialogDescription>
           </DialogHeader>
 

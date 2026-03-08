@@ -682,7 +682,7 @@ const Index = () => {
             glitchIntensity="medium"
           />
           <p className="font-mono-share text-xs sm:text-sm text-muted-foreground animate-flicker">
-            <span className="text-primary/50">$</span> xAI Neural Rendering Interface // v2.0
+            <span className="text-primary/50">$</span> xAI Neural Rendering Interface // v3.0
             <span className="inline-block w-2 h-4 bg-primary/70 ml-1 animate-pulse align-middle" />
           </p>
 
