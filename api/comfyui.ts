@@ -2312,10 +2312,10 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           const skinLora = allLoras.find(m => m.toLowerCase().includes("skin"));
           const angleLora = allLoras.find(m => m.toLowerCase().includes("angle"));
           if (skinLora) {
-            qwenLoraList.push({ name: skinLora, strengthModel: 0.3, strengthClip: 0.3 });
+            qwenLoraList.push({ name: skinLora, strengthModel: 0.8, strengthClip: 0.8 });
           }
           if (angleLora) {
-            qwenLoraList.push({ name: angleLora, strengthModel: 0.3, strengthClip: 0.3 });
+            qwenLoraList.push({ name: angleLora, strengthModel: 0.8, strengthClip: 0.8 });
           }
         }
 
@@ -2392,16 +2392,18 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
         const runpodInput: any = { workflow };
 
         if (needsImage && imageBase64) {
+          const b64clean = imageBase64.replace(/^data:[^;]+;base64,/, "");
           runpodInput.images = [
             {
               name: imageFilename!,
-              image: imageBase64,
+              image: b64clean,
             },
           ];
           if (imageBase64_2 && imageFilename2) {
+            const b64clean2 = imageBase64_2.replace(/^data:[^;]+;base64,/, "");
             runpodInput.images.push({
               name: imageFilename2,
-              image: imageBase64_2,
+              image: b64clean2,
             });
           }
         }

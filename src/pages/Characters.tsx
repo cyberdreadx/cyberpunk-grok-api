@@ -314,7 +314,7 @@ export default function Characters() {
 
       if (trigger.type === "image") {
         const hasPortrait = portrait64 && portrait64.length > 100;
-        const facePrompt = `keep the face exactly the same, do not change face structure. ${trigger.prompt}`;
+        const facePrompt = `${activeChar.name}, ${trigger.prompt}`;
         const result = hasPortrait
           ? await submitAndPoll({
             workflow: "qwen-edit",
@@ -348,7 +348,7 @@ export default function Characters() {
 
         const hasPortrait = portrait64 && portrait64.length > 100;
         const imgPrompt = hasPortrait
-          ? `keep the face exactly the same, do not change face structure. ${trigger.prompt}`
+          ? `${activeChar.name}, ${trigger.prompt}`
           : `${activeChar.name}. ${trigger.prompt}`;
 
         const imgResult = hasPortrait
@@ -720,7 +720,7 @@ export default function Characters() {
                           <button
                             onClick={() => {
                               if (active) setCharLoraStack(prev => prev.filter(l => l.name !== lora));
-                              else setCharLoraStack(prev => [...prev, { name: lora, strength: 0.3 }]);
+                              else setCharLoraStack(prev => [...prev, { name: lora, strength: 0.85 }]);
                             }}
                             className={`flex-1 text-left px-2 py-1.5 rounded border font-mono-share text-[10px] truncate transition-all ${
                               active
