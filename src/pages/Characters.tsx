@@ -219,7 +219,16 @@ export default function Characters() {
 
     setChatLoading(true);
     try {
-      const historyForApi = messages.slice(-18).map(m => ({ role: m.role, content: m.content }));
+      const historyForApi = messages
+        .filter(m => !m.content?.startsWith("*generating ") && !m.content?.startsWith("*media generation failed"))
+        .slice(-18)
+        .map(m => ({
+          role: m.role,
+          content: m.content?.trim()
+            ? m.content
+            : m.mediaType === "video" ? "[sent a video]" : m.mediaUrl ? "[sent an image]" : "",
+        }))
+        .filter(m => m.content);
       const data = await apiFetch<{ reply: string; mediaTrigger?: { type: "image" | "video"; prompt: string } }>("/chat", {
         method: "POST",
         body: { action: "message", characterId: activeChar.id, message: text, history: historyForApi },
