@@ -209,8 +209,8 @@ export default function Characters() {
         role: m.role,
         content: m.content?.trim()
           ? m.content
-          : m.mediaType === "video" ? "(sent a video)"
-          : m.mediaUrl ? "(sent a photo)"
+          : m.mediaType === "video" ? "[attached video]"
+          : m.mediaUrl ? "[attached image]"
           : "",
       }))
       .filter(m => m.content);
@@ -562,7 +562,7 @@ export default function Characters() {
               )}
               <div>
                 <h3 className="font-orbitron text-xs tracking-wider">{activeChar.name}</h3>
-                <p className="font-mono-share text-[8px] text-muted-foreground/60 capitalize">{activeChar.llm_backend} model</p>
+                <p className="font-mono-share text-[8px] text-muted-foreground/60 capitalize">{activeChar.llm_backend === "deepseek" ? "grok" : activeChar.llm_backend} model</p>
               </div>
             </div>
 

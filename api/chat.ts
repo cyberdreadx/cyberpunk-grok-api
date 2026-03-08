@@ -90,11 +90,12 @@ function stripMediaTags(text: string): string {
   return text
     .replace(/\[MEDIA_IMAGE\].*?\[\/MEDIA_IMAGE\]/gs, "")
     .replace(/\[MEDIA_VIDEO\].*?\[\/MEDIA_VIDEO\]/gs, "")
-    // Strip unclosed/orphan tags the LLM sometimes emits
     .replace(/\[MEDIA_IMAGE\][^[]*$/gs, "")
     .replace(/\[MEDIA_VIDEO\][^[]*$/gs, "")
     .replace(/\[\/?MEDIA_IMAGE\]/g, "")
     .replace(/\[\/?MEDIA_VIDEO\]/g, "")
+    .replace(/\(sent a (?:photo|video|pic|picture|image)\)/gi, "")
+    .replace(/\[attached (?:image|video)\]/gi, "")
     .trim();
 }
 
@@ -273,6 +274,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       `;
       if (chars.length === 0) return res.status(404).json({ error: "Character not found" });
       const char = chars[0];
+
+      if (char.llm_backend === "deepseek") {
+        char.llm_backend = "grok";
+        sql`UPDATE characters SET llm_backend = 'grok' WHERE id = ${characterId}`.catch(() => {});
+      }
 
       // Deduct 1 credit per message (DB requires integers)
       const testCredits = req.body.testCredits && isAdmin;
