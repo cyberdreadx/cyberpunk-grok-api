@@ -108,8 +108,8 @@ const COMFY_COSTS: Record<string, number> = {
   "qwen-edit": 1,
   "qwen-edit-hd": 2,
   "wan-video": 2,
-  "gltch-wan": 3,
-  "gltch-wan-hd": 5,
+  "gltch-wan": 5,
+  "gltch-wan-hd": 7,
   "longlook": 2, // per sequence — actual cost = sequenceCount * 2
 };
 
