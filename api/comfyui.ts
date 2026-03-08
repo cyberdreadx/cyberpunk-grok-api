@@ -2285,12 +2285,7 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           audioPrompt: audioPrompt || undefined,
         });
       } else if (workflowType === "qwen-edit") {
-        // Qwen edit always uses the Qwen checkpoint — ignore client checkpoint
         const qwenCkpt = process.env.COMFYUI_QWEN_MODEL || "Qwen-Rapid-AIO-v2.safetensors";
-        // Auto-inject composition preservation hints
-        const enhancedPrompt = prompt.trim().toLowerCase().includes("preserve facial")
-          ? prompt.trim()
-          : `${prompt.trim()}, preserve facial features, maintain high likeness, maintain same framing and composition, do not zoom in or crop`;
         let qwenLoraList: { name: string; strengthModel: number; strengthClip: number }[] = [];
         if (Array.isArray(loras) && loras.length > 0) {
           qwenLoraList = loras
@@ -2338,7 +2333,7 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
         }
 
         workflow = buildQwenEditWorkflow({
-          prompt: enhancedPrompt,
+          prompt: prompt.trim(),
           negativePrompt: (negativePrompt || "").trim() || QWEN_DEFAULT_NEGATIVE,
           imageFilename: imageFilename!,
           imageFilename2: imageFilename2 || undefined,
