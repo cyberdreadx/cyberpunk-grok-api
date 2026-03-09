@@ -296,7 +296,7 @@ export default function Characters() {
           frameCount: 81, shift: 8,
           useRife: true,
           useUpscale: true,
-          videoLora: "mystic_xxx_wan22_i2v",
+          videoLora: "mystic_xxx_wan22_i2v_v1",
           videoLoraStrength: 0.4,
           videoLoraPass: "both",
         }, { pollInterval: 3000, maxAttempts: 200 });
