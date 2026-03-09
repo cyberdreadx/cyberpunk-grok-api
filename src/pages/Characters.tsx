@@ -295,7 +295,6 @@ export default function Characters() {
           width: 832, height: 832, steps: 4, cfg: 1,
           frameCount: 81, shift: 8,
           useRife: true,
-          useUpscale: true,
           videoLora: "mystic_xxx_wan22_i2v_v1",
           videoLoraStrength: 0.4,
           videoLoraPass: "both",
