@@ -318,6 +318,7 @@ export default function Characters() {
           imageBase64: portrait64,
           imageFilename: "portrait.jpg",
           width: 768, height: 1024, steps: 4, cfg: 1, upscale: true,
+          loras: [{ name: "qwen-edit-skin.safetensors", strengthModel: 0.1, strengthClip: 0.1 }],
         });
 
         if (result.image) {
@@ -345,6 +346,7 @@ export default function Characters() {
           imageBase64: portrait64,
           imageFilename: "portrait.jpg",
           width: 768, height: 1024, steps: 4, cfg: 1,
+          loras: [{ name: "qwen-edit-skin.safetensors", strengthModel: 0.1, strengthClip: 0.1 }],
         });
 
         if (!imgResult.image) throw new Error("Failed to generate source image for video");
