@@ -872,43 +872,14 @@ function buildGltchWanWorkflow(p: {
     },
   };
 
-  // ── Optional HD post-processing (matches WAN 2.2 Smooth Workflow v2.0) ──
-  // Chain: lanczos 2x upscale → ColorMatch (mkl 0.4) → cleanGPU → RIFE 2x → 32fps output
+  // ── Optional HD post-processing (based on WAN 2.2 Smooth Workflow v2.0) ──
+  // Chain: lanczos 2x upscale → GPU cleanup → RIFE 2x (ensemble) → 32fps output
   if (p.useUpscale) {
     // Upscale decoded frames with lanczos 2x
     workflow["509"] = {
       class_type: "ImageScaleBy",
       inputs: {
         image: ["4", 0],
-        upscale_method: "lanczos",
-        scale_by: 2,
-      },
-    };
-    // Pick last frame from decoded video for ColorMatch reference
-    workflow["78"] = {
-      class_type: "Pick From Batch (mtb)",
-      inputs: {
-        image: ["4", 0],
-        from_direction: "end",
-        count: 1,
-      },
-    };
-    // ColorMatch: fix color shifts from upscaling (reference=original input, target=last decoded frame)
-    workflow["112"] = {
-      class_type: "ColorMatch",
-      inputs: {
-        image_ref: ["129", 0],
-        image_target: ["78", 0],
-        method: "mkl",
-        strength: 0.4,
-        multithread: true,
-      },
-    };
-    // Scale the color-matched result to match upscaled frames
-    workflow["79"] = {
-      class_type: "ImageScaleBy",
-      inputs: {
-        image: ["112", 0],
         upscale_method: "lanczos",
         scale_by: 2,
       },
