@@ -203,7 +203,7 @@ export default function Characters() {
 
   function buildHistoryForApi(msgs: ChatMessage[]) {
     return msgs
-      .filter(m => !m.content?.startsWith("*generating ") && !m.content?.startsWith("*media generation failed"))
+      .filter(m => !(m.content && /^\*(?:generating|animating)/.test(m.content)) && !m.content?.startsWith("*media generation failed"))
       .slice(-18)
       .map(m => ({
         role: m.role,
@@ -235,6 +235,8 @@ export default function Characters() {
 
     const replacePlaceholder = (msg: ChatMessage) =>
       setMessages(prev => prev.map(m => (m as any)._pid === placeholderId ? msg : m));
+    const updatePlaceholder = (phase: string) =>
+      setMessages(prev => prev.map(m => (m as any)._pid === placeholderId ? { ...m, content: `*${phase}*` } : m));
     const failPlaceholder = (errMsg: string) =>
       setMessages(prev => prev.map(m => (m as any)._pid === placeholderId ? { ...m, content: `*media generation failed: ${errMsg}*`, _pid: undefined } as any : m));
 
@@ -272,19 +274,38 @@ export default function Characters() {
           failPlaceholder("Video requires a character portrait. Edit the character and add one.");
           return;
         }
-        const result = await comfySubmitAndPollStandalone({
-          workflow: "wan-video",
+
+        updatePlaceholder("generating image from portrait...");
+        const imgResult = await comfySubmitAndPollStandalone({
+          workflow: "qwen-edit",
           prompt: trigger.prompt,
           imageBase64: portrait64,
           imageFilename: "portrait.jpg",
-          width: 832, height: 480, steps: 20,
+          width: 768, height: 1024, steps: 4, cfg: 1,
+        });
+
+        if (!imgResult.image) throw new Error("Failed to generate source image for video");
+
+        updatePlaceholder("animating video...");
+        const videoResult = await comfySubmitAndPollStandalone({
+          workflow: "wan-video",
+          prompt: trigger.prompt,
+          imageBase64: imgResult.image,
+          imageFilename: "character_frame.jpg",
+          width: 832, height: 832, steps: 4, cfg: 1,
+          frameCount: 81, shift: 8,
+          useRife: true,
+          useUpscale: true,
+          videoLora: "mystic_xxx_wan22_i2v",
+          videoLoraStrength: 0.4,
+          videoLoraPass: "both",
         }, { pollInterval: 3000, maxAttempts: 200 });
 
-        const mediaData = result.video || result.image;
+        const mediaData = videoResult.video || videoResult.image;
         if (mediaData) {
           const mediaMsg: ChatMessage = {
             characterId: char.id, role: "assistant", content: "",
-            mediaUrl: mediaData, mediaType: result.video ? "video" : "image", timestamp: Date.now(),
+            mediaUrl: mediaData, mediaType: videoResult.video ? "video" : "image", timestamp: Date.now(),
           };
           replacePlaceholder(mediaMsg);
           await saveChatMessage(mediaMsg);
@@ -573,31 +594,44 @@ export default function Characters() {
                   <p className="font-mono-share text-xs text-muted-foreground/50">Say hello to {activeChar.name}</p>
                 </div>
               )}
-              {messages.map((msg, i) => (
-                <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                  <div className={`max-w-[80%] px-3 py-2 rounded-lg ${msg.role === "user"
-                    ? "bg-secondary/20 border border-secondary/30 text-foreground"
-                    : "bg-card/80 border border-border text-foreground"
-                    }`}>
-                    {msg.mediaUrl && msg.mediaType === "image" && (
-                      <img src={msg.mediaUrl} alt="From character" className="max-w-full rounded mb-2 max-h-64 object-contain" />
-                    )}
-                    {msg.mediaUrl && msg.mediaType === "video" && (
-                      <video src={msg.mediaUrl} controls className="max-w-full rounded mb-2 max-h-64" />
-                    )}
-                    {msg.content && (
-                      <p className="font-mono-share text-[11px] leading-relaxed whitespace-pre-wrap">
-                        {msg.content
-                          .replace(/\[MEDIA_IMAGE\].*?\[\/MEDIA_IMAGE\]/gs, "")
-                          .replace(/\[MEDIA_VIDEO\].*?\[\/MEDIA_VIDEO\]/gs, "")
-                          .replace(/\[MEDIA_IMAGE\]/g, "")
-                          .replace(/\[MEDIA_VIDEO\]/g, "")
-                          .trim()}
-                      </p>
-                    )}
+              {messages.map((msg, i) => {
+                const isGenerating = !!(msg.content && /^\*(?:generating|animating)/.test(msg.content) && msg.content.endsWith("*"));
+                const genPhase = isGenerating ? msg.content!.replace(/^\*|\*$/g, "") : "";
+
+                return (
+                  <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                    <div className={`max-w-[80%] px-3 py-2 rounded-lg ${msg.role === "user"
+                      ? "bg-secondary/20 border border-secondary/30 text-foreground"
+                      : "bg-card/80 border border-border text-foreground"
+                      }`}>
+                      {msg.mediaUrl && msg.mediaType === "image" && (
+                        <img src={msg.mediaUrl} alt="From character" className="max-w-full rounded mb-2 max-h-64 object-contain" />
+                      )}
+                      {msg.mediaUrl && msg.mediaType === "video" && (
+                        <video src={msg.mediaUrl} controls className="max-w-full rounded mb-2 max-h-64" />
+                      )}
+                      {isGenerating ? (
+                        <div className="flex items-center gap-2 py-1">
+                          <div className="relative w-5 h-5">
+                            <div className="absolute inset-0 border-2 border-secondary/20 rounded-full" />
+                            <div className="absolute inset-0 border-2 border-secondary border-t-transparent rounded-full animate-spin" />
+                          </div>
+                          <span className="font-mono-share text-[10px] text-secondary/70 animate-pulse">{genPhase}</span>
+                        </div>
+                      ) : msg.content ? (
+                        <p className="font-mono-share text-[11px] leading-relaxed whitespace-pre-wrap">
+                          {msg.content
+                            .replace(/\[MEDIA_IMAGE\].*?\[\/MEDIA_IMAGE\]/gs, "")
+                            .replace(/\[MEDIA_VIDEO\].*?\[\/MEDIA_VIDEO\]/gs, "")
+                            .replace(/\[MEDIA_IMAGE\]/g, "")
+                            .replace(/\[MEDIA_VIDEO\]/g, "")
+                            .trim()}
+                        </p>
+                      ) : null}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
               {chatLoading && (
                 <div className="flex justify-start">
                   <div className="bg-card/80 border border-border px-4 py-2 rounded-lg">
