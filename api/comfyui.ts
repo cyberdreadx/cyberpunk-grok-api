@@ -761,6 +761,8 @@ function buildGltchWanWorkflow(p: {
         device: "cpu",
       },
     };
+    // Wire the resized end frame into WanImageToVideo conditioning
+    (workflow["10"].inputs as any).end_image = ["95", 0];
   }
 
   // ── Optional user video LoRA (NOT Lightning — those are baked in) ──
