@@ -6,12 +6,12 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Zap, ImagePlus, Film, Download, Sparkles, Bug, FolderOpen, Smartphone, Share2, Users, Clock } from "lucide-react";
+import { Zap, ImagePlus, Film, Download, Sparkles, Bug, FolderOpen, Smartphone, Share2, Users, Clock, Link2, ExternalLink } from "lucide-react";
 
 /* ─── Changelog entries ─── */
 // Add new entries at the TOP. Bump LATEST_VERSION when deploying.
 
-export const LATEST_VERSION = "2025.03.08";
+export const LATEST_VERSION = "2025.03.09";
 
 interface ChangelogEntry {
     version: string;
@@ -21,6 +21,18 @@ interface ChangelogEntry {
 }
 
 const CHANGELOG: ChangelogEntry[] = [
+    {
+        version: "2025.03.09",
+        date: "March 9, 2025",
+        title: "Share Links, HD Smoothness & Grokker is LIVE 🚀",
+        items: [
+            { icon: <Sparkles className="w-3.5 h-3.5" />, text: "Grokker is now live! Post your AI creations directly to grokker.gltch.app — discover, share, and subscribe to creators", tag: "new" },
+            { icon: <Link2 className="w-3.5 h-3.5" />, text: "Share links — click the link icon on any result to upload & copy a permanent shareable URL", tag: "new" },
+            { icon: <ExternalLink className="w-3.5 h-3.5" />, text: "Post to Grokker now transfers your media — images and videos upload automatically instead of just the caption", tag: "fix" },
+            { icon: <Film className="w-3.5 h-3.5" />, text: "HD video smoothness — RIFE ensemble mode + lanczos 2x upscale for buttery smooth 32fps output", tag: "improve" },
+            { icon: <ImagePlus className="w-3.5 h-3.5" />, text: "Image HD upscale reliability — GPU cleanup prevents VRAM fragmentation on consecutive generations", tag: "fix" },
+        ],
+    },
     {
         version: "2025.03.08",
         date: "March 8, 2025",
