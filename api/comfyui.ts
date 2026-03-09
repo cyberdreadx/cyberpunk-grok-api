@@ -337,7 +337,7 @@ function getRunPodEndpointForWorkflow(
 
   if (workflowType === "wan-video" || workflowType === "longlook") return wan;
   if (workflowType === "gltch-wan") return wan;
-  if (workflowType === "qwen-edit") return options.upscale ? (upscale || qwen) : qwen;
+  if (workflowType === "qwen-edit") return qwen;
   if (workflowType === "zimage") return zimage;
   return fallback;
 }
