@@ -624,7 +624,6 @@ function buildGltchWanWorkflow(p: {
   prompt: string;
   negativePrompt: string;
   imageFilename: string;
-  endImageFilename?: string;
   width: number;
   height: number;
   seed: number;
@@ -741,27 +740,6 @@ function buildGltchWanWorkflow(p: {
     },
   };
 
-  // ── Optional end frame (last frame) for start→end interpolation ──
-  if (p.endImageFilename) {
-    workflow["130"] = {
-      class_type: "LoadImage",
-      inputs: { image: p.endImageFilename },
-    };
-    workflow["95"] = {
-      class_type: "ImageResizeKJv2",
-      inputs: {
-        image: ["130", 0],
-        width: p.resolution,
-        height: p.resolution,
-        upscale_method: "lanczos",
-        keep_proportion: "resize",
-        pad_color: "0, 0, 0",
-        crop_position: "center",
-        divisible_by: 16,
-        device: "cpu",
-      },
-    };
-  }
 
   // ── Optional user video LoRA (NOT Lightning — those are baked in) ──
   const isPaired = !!(p.videoLoraHigh && p.videoLoraLow);
@@ -2160,7 +2138,6 @@ Rules:
           prompt: prompt.trim(),
           negativePrompt: (negativePrompt || "").trim() || WAN_DEFAULT_NEGATIVE,
           imageFilename: imageFilename!,
-          endImageFilename: imageFilename2 || undefined,
           width: clampW,
           height: clampH,
           seed: actualSeed,
