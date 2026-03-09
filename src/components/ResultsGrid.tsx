@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import { Download, Maximize2, X, Trash2, ExternalLink, ChevronLeft, ChevronRight, Pencil, Film, Copy, Check, FolderPlus, FolderOpen, MoreVertical, FolderInput, Lock, LockOpen, ShieldCheck, Eye, EyeOff, ChevronDown, Sparkles, Archive, Loader2 } from "lucide-react";
+import { Download, Maximize2, X, Trash2, ExternalLink, ChevronLeft, ChevronRight, Pencil, Film, Copy, Check, FolderPlus, FolderOpen, MoreVertical, FolderInput, Lock, LockOpen, ShieldCheck, Eye, EyeOff, ChevronDown, Sparkles, Archive, Loader2, Link2 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -879,6 +880,77 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
     }
   }, [onMoveToFolder]);
 
+  const [sharingId, setSharingId] = useState<string | null>(null);
+
+  /** Upload media to R2 and copy share link to clipboard */
+  const handleShare = useCallback(async (result: GrokResult) => {
+    setSharingId(result.id);
+    try {
+      // Convert URL to base64 if needed
+      let mediaBase64 = result.url;
+      if (result.url.startsWith("http")) {
+        const resp = await fetch(result.url);
+        const blob = await resp.blob();
+        mediaBase64 = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(blob);
+        });
+      }
+      const res = await fetch("/api/share", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mediaBase64,
+          mediaType: result.type,
+          prompt: result.revised_prompt || "",
+        }),
+      });
+      if (!res.ok) throw new Error("Upload failed");
+      const data = await res.json();
+      await navigator.clipboard.writeText(data.shareUrl);
+      toast.success("Share link copied to clipboard!");
+    } catch {
+      toast.error("Failed to create share link");
+    } finally {
+      setSharingId(null);
+    }
+  }, []);
+
+  /** Upload to R2 first, then open Grokker with the R2 URL */
+  const handleGrokkerPost = useCallback(async (result: GrokResult) => {
+    setSharingId(result.id);
+    try {
+      let mediaBase64 = result.url;
+      if (result.url.startsWith("http")) {
+        const resp = await fetch(result.url);
+        const blob = await resp.blob();
+        mediaBase64 = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(blob);
+        });
+      }
+      const res = await fetch("/api/share", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mediaBase64,
+          mediaType: result.type,
+          prompt: result.revised_prompt || "",
+        }),
+      });
+      if (!res.ok) throw new Error("Upload failed");
+      const data = await res.json();
+      const grokkerUrl = "https://grokker.gltch.app";
+      window.open(`${grokkerUrl}/dashboard/new-post?media=${encodeURIComponent(data.r2Url)}&caption=${encodeURIComponent(result.revised_prompt || "")}`, "_blank");
+    } catch {
+      toast.error("Failed to upload media for Grokker");
+    } finally {
+      setSharingId(null);
+    }
+  }, []);
+
   const hasFolders = folders.length > 0 || !!onCreateFolder;
 
   if (filteredResults.length === 0 && !isLoading) {
@@ -1280,6 +1352,26 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
               <Button
                 size="icon"
                 variant="ghost"
+                className="text-cyan-400 h-7 w-7"
+                onClick={() => currentResult && handleShare(currentResult)}
+                disabled={!!currentResult && sharingId === currentResult.id}
+                title="Share link"
+              >
+                {currentResult && sharingId === currentResult.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Link2 className="w-3 h-3" />}
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="text-secondary h-7 w-7"
+                onClick={() => currentResult && handleGrokkerPost(currentResult)}
+                disabled={!!currentResult && sharingId === currentResult.id}
+                title="Post to Grokker"
+              >
+                <Sparkles className="w-3 h-3" />
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
                 className="text-primary h-7 w-7"
                 onClick={() => currentResult && downloadMedia(currentResult.url, currentResult.type)}
                 title="Download / Save"
@@ -1389,11 +1481,19 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
               <Button
                 size="icon"
                 variant="ghost"
+                className="text-cyan-400 hover:bg-cyan-400/20"
+                onClick={() => handleShare(result)}
+                disabled={sharingId === result.id}
+                title="Share link"
+              >
+                {sharingId === result.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Link2 className="w-4 h-4" />}
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
                 className="text-secondary hover:bg-secondary/20"
-                onClick={() => {
-                  const grokkerUrl = "https://grokker.gltch.app";
-                  window.open(`${grokkerUrl}/dashboard/new-post?media=${encodeURIComponent(result.url)}&caption=${encodeURIComponent(result.revised_prompt || "")}`, "_blank");
-                }}
+                onClick={() => handleGrokkerPost(result)}
+                disabled={sharingId === result.id}
                 title="Post to Grokker"
               >
                 <Sparkles className="w-4 h-4" />
@@ -1514,11 +1614,19 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
                 <Button
                   size="sm"
                   variant="outline"
+                  className="text-cyan-400 border-cyan-400/30 hover:bg-cyan-400/10 text-xs gap-1.5"
+                  onClick={() => handleShare(expandedResult)}
+                  disabled={sharingId === expandedResult.id}
+                >
+                  {sharingId === expandedResult.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Link2 className="w-3 h-3" />}
+                  Share
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
                   className="text-secondary border-secondary/30 hover:bg-secondary/10 text-xs gap-1.5"
-                  onClick={() => {
-                    const grokkerUrl = "https://grokker.gltch.app";
-                    window.open(`${grokkerUrl}/dashboard/new-post?media=${encodeURIComponent(expandedResult.url)}&caption=${encodeURIComponent(expandedResult.revised_prompt || "")}`, "_blank");
-                  }}
+                  onClick={() => handleGrokkerPost(expandedResult)}
+                  disabled={sharingId === expandedResult.id}
                 >
                   <Sparkles className="w-3 h-3" />
                   Grokker

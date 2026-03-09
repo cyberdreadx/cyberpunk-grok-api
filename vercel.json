@@ -14,6 +14,10 @@
       "maxDuration": 60,
       "memory": 1024
     },
+    "api/share.ts": {
+      "maxDuration": 60,
+      "memory": 1024
+    },
     "api/**/*.ts": {
       "maxDuration": 30
     }

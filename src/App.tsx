@@ -11,6 +11,7 @@ import NotFound from "./pages/NotFound";
 // Lazy-load heavy pages to keep initial bundle small
 const Admin = React.lazy(() => import("./pages/Admin"));
 const Characters = React.lazy(() => import("./pages/Characters"));
+const ShareView = React.lazy(() => import("./pages/ShareView"));
 import AgeGateDialog from "@/components/AgeGateDialog";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/admin" element={<Suspense fallback={<div className="min-h-screen bg-background" />}><Admin /></Suspense>} />
           <Route path="/characters" element={<Suspense fallback={<div className="min-h-screen bg-background" />}><Characters /></Suspense>} />
+          <Route path="/s/:shareId" element={<Suspense fallback={<div className="min-h-screen bg-background" />}><ShareView /></Suspense>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
