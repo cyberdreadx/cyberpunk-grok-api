@@ -853,24 +853,28 @@ function buildGltchWanWorkflow(p: {
     audioNodeId = addMMAudioNodes(workflow, "4", p.seed, p.audioPrompt || p.prompt);
   }
 
-  // ── Base video output (16fps) ──
-  workflow["16"] = {
-    class_type: "VHS_VideoCombine",
-    inputs: {
-      images: ["4", 0],
-      frame_rate: 16,
-      loop_count: 0,
-      filename_prefix: "GltchWAN",
-      format: "video/h264-mp4",
-      pix_fmt: "yuv420p",
-      crf: 19,
-      save_metadata: true,
-      trim_to_audio: false,
-      pingpong: false,
-      save_output: true,
-      ...(audioNodeId ? { audio: [audioNodeId, 0] } : {}),
-    },
-  };
+  // ── Base video output (16fps) — only when HD upscale is OFF ──
+  // When HD is enabled, skip this node so only the RIFE-interpolated HD output is saved.
+  // Otherwise the RunPod worker returns this 16fps output before RIFE finishes.
+  if (!p.useUpscale) {
+    workflow["16"] = {
+      class_type: "VHS_VideoCombine",
+      inputs: {
+        images: ["4", 0],
+        frame_rate: 16,
+        loop_count: 0,
+        filename_prefix: "GltchWAN",
+        format: "video/h264-mp4",
+        pix_fmt: "yuv420p",
+        crf: 19,
+        save_metadata: true,
+        trim_to_audio: false,
+        pingpong: false,
+        save_output: true,
+        ...(audioNodeId ? { audio: [audioNodeId, 0] } : {}),
+      },
+    };
+  }
 
   // ── Optional HD post-processing: 4x upscale → 0.5x scale → RIFE 4x (64fps) ──
   if (p.useUpscale) {
