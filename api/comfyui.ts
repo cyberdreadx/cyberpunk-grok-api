@@ -872,52 +872,29 @@ function buildGltchWanWorkflow(p: {
     },
   };
 
-  // ── Optional HD post-processing: lanczos 2x → ColorMatch → RIFE 2x (32fps) ──
+  // ── Optional smooth post-processing: RIFE 2x on raw frames (16fps → 32fps) ──
   if (p.useUpscale) {
-    // Upscale frames with lanczos 2x
-    workflow["74"] = {
-      class_type: "ImageScaleBy",
-      inputs: {
-        image: ["4", 0],
-        upscale_method: "lanczos",
-        scale_by: 2.0,
-      },
-    };
-    // Color-match upscaled frames to original input image
-    workflow["83"] = {
-      class_type: "ColorMatch",
-      inputs: {
-        image_ref: ["129", 0],
-        image_target: ["74", 0],
-        method: "mkl",
-        strength: 0.4,
-        multithread: true,
-      },
-    };
-    // Clean GPU before RIFE
     workflow["76"] = {
       class_type: "easy cleanGpuUsed",
-      inputs: { anything: ["83", 0] },
+      inputs: { anything: ["4", 0] },
     };
-    // RIFE 4x frame interpolation (16fps → 64fps)
     workflow["75"] = {
       class_type: "RIFE VFI",
       inputs: {
-        frames: ["83", 0],
+        frames: ["4", 0],
         ckpt_name: "rife49.pth",
         clear_cache_after_n_frames: 10,
-        multiplier: 4,
-        fast_mode: false,
-        ensemble: true,
+        multiplier: 2,
+        fast_mode: true,
+        ensemble: false,
         scale_factor: 1,
       },
     };
-    // HD video output (64fps after RIFE 4x)
     workflow["85"] = {
       class_type: "VHS_VideoCombine",
       inputs: {
         images: ["75", 0],
-        frame_rate: 64,
+        frame_rate: 32,
         loop_count: 0,
         filename_prefix: "GltchWAN-HD",
         format: "video/h264-mp4",
