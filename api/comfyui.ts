@@ -2605,8 +2605,15 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           const allKeys = Object.keys(out);
 
           // For video: find video outputs first (VHS_VideoCombine nodes have videos/gifs arrays)
+          // Prefer highest node ID (HD output nodes have higher IDs than base outputs)
           if (outputType === "video") {
-            for (const key of allKeys) {
+            const videoKeys = allKeys.sort((a, b) => {
+              const na = parseInt(a, 10);
+              const nb = parseInt(b, 10);
+              if (!isNaN(na) && !isNaN(nb)) return nb - na;
+              return 0;
+            });
+            for (const key of videoKeys) {
               const node = out[key];
               if (!node || typeof node !== "object") continue;
               for (const arrKey of ["videos", "gifs"]) {
