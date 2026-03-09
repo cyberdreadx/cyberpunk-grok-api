@@ -853,69 +853,67 @@ function buildGltchWanWorkflow(p: {
     audioNodeId = addMMAudioNodes(workflow, "4", p.seed, p.audioPrompt || p.prompt);
   }
 
-  // ── Base video output (16fps) — only when HD upscale is OFF ──
-  // When HD is enabled, skip this node so only the RIFE-interpolated HD output is saved.
-  // Otherwise the RunPod worker returns this 16fps output before RIFE finishes.
-  if (!p.useUpscale) {
-    workflow["16"] = {
-      class_type: "VHS_VideoCombine",
+  // ── Base video output (16fps) — always created as fallback ──
+  workflow["16"] = {
+    class_type: "VHS_VideoCombine",
+    inputs: {
+      images: ["4", 0],
+      frame_rate: 16,
+      loop_count: 0,
+      filename_prefix: "GltchWAN",
+      format: "video/h264-mp4",
+      pix_fmt: "yuv420p",
+      crf: 19,
+      save_metadata: true,
+      trim_to_audio: false,
+      pingpong: false,
+      save_output: true,
+      ...(audioNodeId ? { audio: [audioNodeId, 0] } : {}),
+    },
+  };
+
+  // ── Optional HD post-processing: lanczos 1.5x sharpen → GPU cleanup → RIFE 2x (32fps) ──
+  // Uses lightweight lanczos upscale instead of RealESRGAN to avoid OOM on video frames.
+  // RIFE 2x is much more GPU-friendly than 4x while still doubling smoothness.
+  if (p.useUpscale) {
+    // Upscale frames with lanczos 1.5x
+    workflow["509"] = {
+      class_type: "ImageScaleBy",
       inputs: {
-        images: ["4", 0],
-        frame_rate: 16,
-        loop_count: 0,
-        filename_prefix: "GltchWAN",
-        format: "video/h264-mp4",
-        pix_fmt: "yuv420p",
-        crf: 19,
-        save_metadata: true,
-        trim_to_audio: false,
-        pingpong: false,
-        save_output: true,
-        ...(audioNodeId ? { audio: [audioNodeId, 0] } : {}),
+        image: ["4", 0],
+        upscale_method: "lanczos",
+        scale_by: 1.5,
       },
     };
-  }
-
-  // ── Optional HD post-processing: 4x upscale → 0.5x scale → RIFE 4x (64fps) ──
-  if (p.useUpscale) {
-    workflow["510"] = {
-      class_type: "UpscaleModelLoader",
-      inputs: { model_name: process.env.COMFYUI_WAN_UPSCALE_MODEL || "RealESRGAN_x2plus.pth" },
-    };
-    workflow["509"] = {
-      class_type: "ImageUpscaleWithModel",
-      inputs: { upscale_model: ["510", 0], image: ["4", 0] },
-    };
-    workflow["511"] = {
-      class_type: "ImageScaleBy",
-      inputs: { image: ["509", 0], upscale_method: "lanczos", scale_by: 0.5 },
-    };
+    // Clean GPU before RIFE
     workflow["76"] = {
       class_type: "easy cleanGpuUsed",
-      inputs: { anything: ["511", 0] },
+      inputs: { anything: ["509", 0] },
     };
+    // RIFE 2x frame interpolation (16fps → 32fps)
     workflow["75"] = {
       class_type: "RIFE VFI",
       inputs: {
-        frames: ["511", 0],
+        frames: ["509", 0],
         ckpt_name: "rife49.pth",
         clear_cache_after_n_frames: 10,
-        multiplier: 4,
-        fast_mode: false,
+        multiplier: 2,
+        fast_mode: true,
         ensemble: false,
         scale_factor: 1,
       },
     };
+    // HD video output (32fps after RIFE 2x)
     workflow["85"] = {
       class_type: "VHS_VideoCombine",
       inputs: {
         images: ["75", 0],
-        frame_rate: 64,
+        frame_rate: 32,
         loop_count: 0,
         filename_prefix: "GltchWAN-HD",
         format: "video/h264-mp4",
         pix_fmt: "yuv420p",
-        crf: 15,
+        crf: 17,
         save_metadata: true,
         trim_to_audio: false,
         pingpong: false,
