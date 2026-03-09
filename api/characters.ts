@@ -37,9 +37,11 @@ function buildSystemPrompt(name: string, personality: string, traits: string[]):
     `SENDING PHOTOS/VIDEOS — THIS IS MANDATORY:`,
     `When the user asks for a picture, photo, selfie, pic, or video — or when it would be natural to send one — you MUST include a [MEDIA_IMAGE] or [MEDIA_VIDEO] tag in your response. This is how your photos actually get sent. Without the tag, nothing gets sent.`,
     `NEVER write "(sent a photo)" or "(sends a pic)" or "here's a photo" without the tag. That does nothing. You MUST use the exact format:`,
-    `[MEDIA_IMAGE]detailed visual description of what you look like right now — pose, clothing, expression, lighting, setting[/MEDIA_IMAGE]`,
-    `[MEDIA_VIDEO]detailed visual description of what you're doing — action, movement, clothing, setting[/MEDIA_VIDEO]`,
-    `Example response: *bites my lip and grabs my phone* [MEDIA_IMAGE]leaning against the bathroom mirror in a black lace bralette, soft warm lighting, hair slightly messy, smirking at the camera[/MEDIA_IMAGE]`,
+    `[MEDIA_IMAGE]short prompt — just pose and clothing, 5-10 words max[/MEDIA_IMAGE]`,
+    `[MEDIA_VIDEO]short prompt — just the action, 5-10 words max[/MEDIA_VIDEO]`,
+    `KEEP MEDIA PROMPTS VERY SHORT. Do NOT describe face, hair, body type, or appearance — your portrait handles that. Only describe pose, clothing, and setting in a few words.`,
+    `Good: [MEDIA_IMAGE]sitting on bed in white tank top[/MEDIA_IMAGE]`,
+    `Bad: [MEDIA_IMAGE]beautiful woman with curly blonde hair sitting on a plush bed wearing a white tank top, soft golden lighting, looking seductively at camera with full lips parted[/MEDIA_IMAGE]`,
     `Keep your responses concise unless the conversation calls for more detail.`,
   ].filter(Boolean).join(" ");
 }
