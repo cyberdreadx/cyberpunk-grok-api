@@ -872,21 +872,39 @@ function buildGltchWanWorkflow(p: {
     },
   };
 
-  // ── Optional smooth post-processing: RIFE 2x on raw frames (16fps → 32fps) ──
+  // ── Optional HD post-processing: upscale 2x → ColorMatch → RIFE 2x (32fps) ──
   if (p.useUpscale) {
+    workflow["74"] = {
+      class_type: "ImageScaleBy",
+      inputs: {
+        image: ["4", 0],
+        upscale_method: "lanczos",
+        scale_by: 2.0,
+      },
+    };
+    workflow["83"] = {
+      class_type: "ColorMatch",
+      inputs: {
+        image_ref: ["129", 0],
+        image_target: ["74", 0],
+        method: "mkl",
+        strength: 0.4,
+        multithread: true,
+      },
+    };
     workflow["76"] = {
       class_type: "easy cleanGpuUsed",
-      inputs: { anything: ["4", 0] },
+      inputs: { anything: ["83", 0] },
     };
     workflow["75"] = {
       class_type: "RIFE VFI",
       inputs: {
-        frames: ["4", 0],
+        frames: ["83", 0],
         ckpt_name: "rife49.pth",
         clear_cache_after_n_frames: 10,
         multiplier: 2,
-        fast_mode: true,
-        ensemble: false,
+        fast_mode: false,
+        ensemble: true,
         scale_factor: 1,
       },
     };
