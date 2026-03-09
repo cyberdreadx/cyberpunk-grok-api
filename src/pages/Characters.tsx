@@ -252,7 +252,7 @@ export default function Characters() {
           prompt: trigger.prompt,
           imageBase64: portrait64,
           imageFilename: "portrait.jpg",
-          width: 768, height: 1024, steps: 4, cfg: 1,
+          width: 768, height: 1024, steps: 4, cfg: 1, upscale: true,
         });
 
         if (result.image) {
