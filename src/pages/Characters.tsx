@@ -2,10 +2,33 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiFetch } from "@/lib/api";
 import { saveChatMessage, getChatHistory, clearChatHistory, type ChatMessage } from "@/lib/storage";
-import { comfySubmitAndPollStandalone } from "@/hooks/useGrokApi";
+import { comfySubmitAndPollStandalone, comfyPollUntilDone } from "@/hooks/useGrokApi";
 import CyberLayout from "@/components/CyberLayout";
 import { ArrowLeft, Plus, Trash2, Send, Edit, X, MessageSquare, Sparkles, Image } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+
+interface PendingCharJob {
+  characterId: string;
+  promptId: string;
+  outputType: "image" | "video";
+  runpodEndpointId?: string;
+  submittedAt: number;
+}
+
+const CHAR_JOBS_KEY = "char-media-jobs";
+
+function getPendingCharJobs(): PendingCharJob[] {
+  try { const raw = localStorage.getItem(CHAR_JOBS_KEY); return raw ? JSON.parse(raw) : []; } catch { return []; }
+}
+function savePendingCharJob(job: PendingCharJob) {
+  const jobs = getPendingCharJobs().filter(j => j.promptId !== job.promptId);
+  jobs.push(job);
+  try { localStorage.setItem(CHAR_JOBS_KEY, JSON.stringify(jobs)); } catch {}
+}
+function removePendingCharJob(promptId: string) {
+  const jobs = getPendingCharJobs().filter(j => j.promptId !== promptId);
+  try { if (jobs.length) localStorage.setItem(CHAR_JOBS_KEY, JSON.stringify(jobs)); else localStorage.removeItem(CHAR_JOBS_KEY); } catch {}
+}
 
 interface Character {
   id: string;
@@ -108,6 +131,46 @@ export default function Characters() {
     const history = await getChatHistory(char.id);
     setMessages(history);
     setView("chat");
+
+    const pendingJobs = getPendingCharJobs().filter(j => j.characterId === char.id);
+    for (const job of pendingJobs) {
+      if (Date.now() - job.submittedAt > 15 * 60 * 1000) {
+        removePendingCharJob(job.promptId);
+        continue;
+      }
+
+      const pid = `resume-${job.promptId}`;
+      const placeholder: ChatMessage = {
+        characterId: char.id, role: "assistant",
+        content: `*generating ${job.outputType}...*`, timestamp: Date.now(),
+      };
+      (placeholder as any)._pid = pid;
+      setMessages(prev => [...prev, placeholder]);
+
+      (async () => {
+        try {
+          const result = await comfyPollUntilDone(
+            job.promptId, job.outputType,
+            { runpodEndpointId: job.runpodEndpointId, pollInterval: 3000, maxAttempts: 200 },
+          );
+          removePendingCharJob(job.promptId);
+          const mediaData = result.video || result.image;
+          if (mediaData) {
+            const mediaMsg: ChatMessage = {
+              characterId: char.id, role: "assistant", content: "",
+              mediaUrl: mediaData, mediaType: result.video ? "video" : "image", timestamp: Date.now(),
+            };
+            setMessages(prev => prev.map(m => (m as any)._pid === pid ? mediaMsg : m));
+            await saveChatMessage(mediaMsg);
+          } else {
+            setMessages(prev => prev.map(m => (m as any)._pid === pid ? { ...m, content: "*media generation failed: no output*", _pid: undefined } as any : m));
+          }
+        } catch (err: any) {
+          removePendingCharJob(job.promptId);
+          setMessages(prev => prev.map(m => (m as any)._pid === pid ? { ...m, content: `*media generation failed: ${err.message}*`, _pid: undefined } as any : m));
+        }
+      })();
+    }
   };
 
   const handlePortrait = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -287,18 +350,35 @@ export default function Characters() {
         if (!imgResult.image) throw new Error("Failed to generate source image for video");
 
         updatePlaceholder("animating video...");
-        const videoResult = await comfySubmitAndPollStandalone({
-          workflow: "wan-video",
-          prompt: trigger.prompt,
-          imageBase64: imgResult.image,
-          imageFilename: "character_frame.jpg",
-          width: 832, height: 832, steps: 4, cfg: 1,
-          frameCount: 81, shift: 8,
-          useRife: true,
-          videoLora: "mystic_xxx_wan22_i2v_v1",
-          videoLoraStrength: 0.4,
-          videoLoraPass: "both",
-        }, { pollInterval: 3000, maxAttempts: 200 });
+
+        const submitData = await apiFetch<{ promptId: string; seed: number; outputType?: string; runpodEndpointId?: string }>(
+          "/comfyui", {
+            method: "POST",
+            body: {
+              action: "generate", workflow: "wan-video",
+              prompt: trigger.prompt, imageBase64: imgResult.image, imageFilename: "character_frame.jpg",
+              width: 832, height: 832, steps: 4, cfg: 1,
+              frameCount: 81, shift: 8, useRife: true,
+              videoLora: "mystic_xxx_wan22_i2v_v1", videoLoraStrength: 0.4, videoLoraPass: "both",
+            },
+          },
+        );
+
+        savePendingCharJob({
+          characterId: char.id,
+          promptId: submitData.promptId,
+          outputType: "video",
+          runpodEndpointId: submitData.runpodEndpointId,
+          submittedAt: Date.now(),
+        });
+
+        const videoResult = await comfyPollUntilDone(
+          submitData.promptId,
+          submitData.outputType || "video",
+          { runpodEndpointId: submitData.runpodEndpointId, pollInterval: 3000, maxAttempts: 200 },
+        );
+
+        removePendingCharJob(submitData.promptId);
 
         const mediaData = videoResult.video || videoResult.image;
         if (mediaData) {

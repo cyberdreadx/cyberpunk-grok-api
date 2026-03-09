@@ -88,6 +88,33 @@ export async function comfySubmitAndPollStandalone(
   throw new Error("ComfyUI generation timed out");
 }
 
+/** Poll an already-submitted ComfyUI job by promptId. Used to resume jobs after navigation. */
+export async function comfyPollUntilDone(
+  promptId: string,
+  outputType: string,
+  opts: { runpodEndpointId?: string; pollInterval?: number; maxAttempts?: number } = {},
+): Promise<{ image?: string; video?: string }> {
+  const { runpodEndpointId, pollInterval = 3000, maxAttempts = 200 } = opts;
+
+  for (let i = 0; i < maxAttempts; i++) {
+    await new Promise((r) => setTimeout(r, pollInterval));
+    const pollData = await apiFetch<{ status: string; image?: string; video?: string; error?: string }>("/comfyui", {
+      method: "POST",
+      body: { action: "poll", promptId, outputType, ...(runpodEndpointId && { runpodEndpointId }) },
+    });
+    if (pollData.status === "done") {
+      removeActiveJob(promptId);
+      return { image: pollData.image, video: pollData.video };
+    }
+    if (pollData.status === "error") {
+      removeActiveJob(promptId);
+      throw new Error(pollData.error || "Generation failed");
+    }
+  }
+  removeActiveJob(promptId);
+  throw new Error("Generation timed out");
+}
+
 export type GrokMode = "text-to-image" | "edit-image" | "text-to-video" | "image-to-video" | "edit-video";
 
 export type AspectRatio = "1:1" | "16:9" | "9:16" | "4:3" | "3:4" | "3:2" | "2:3" | "2:1" | "1:2" | "19.5:9" | "9:19.5" | "20:9" | "9:20" | "auto";
