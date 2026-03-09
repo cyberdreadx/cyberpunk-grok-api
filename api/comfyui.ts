@@ -381,7 +381,7 @@ function buildWanVideoWorkflow(p: {
   const lowModel = process.env.COMFYUI_WAN_LOW_MODEL
     || "Wan2.2_Remix_NSFW_i2v_14b_low_lighting_fp8_e4m3fn_v2.1.safetensors";
   const clipModel = process.env.COMFYUI_WAN_CLIP
-    || "nsfw_wan_umt5-xxl_bf16_fixed.safetensors";
+    || "umt5_xxl_fp8_e4m3fn_scaled.safetensors";
 
   // Model sources — may be overridden by LoRA nodes below
   let highModelSource: [string, number] = ["95", 0];
