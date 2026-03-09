@@ -2601,11 +2601,17 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
             return res.status(200).json({ status: "done", [topResult.type]: topResult.uri });
           }
 
-          // Deep scan: check nested node objects
-          for (const key of Object.keys(out)) {
+          // Deep scan: check nested node objects — prefer highest node ID
+          // (upscale/HD output nodes always have higher IDs than base outputs)
+          const nodeKeys = Object.keys(out).sort((a, b) => {
+            const na = parseInt(a, 10);
+            const nb = parseInt(b, 10);
+            if (!isNaN(na) && !isNaN(nb)) return nb - na;
+            return 0;
+          });
+          for (const key of nodeKeys) {
             const node = out[key];
             if (!node || typeof node !== "object") {
-              // Direct string value
               if (typeof node === "string" && node.length > 100) {
                 const uri = await resolveFileData(node, outputType === "video" ? "video" : "image");
                 if (uri) { cleanupS3Urls(); return res.status(200).json({ status: "done", [outputType === "video" ? "video" : "image"]: uri }); }
