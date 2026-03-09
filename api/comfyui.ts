@@ -2601,9 +2601,30 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
             return res.status(200).json({ status: "done", [topResult.type]: topResult.uri });
           }
 
-          // Deep scan: check nested node objects — prefer highest node ID
-          // (upscale/HD output nodes always have higher IDs than base outputs)
-          const nodeKeys = Object.keys(out).sort((a, b) => {
+          // Deep scan: check nested node objects
+          const allKeys = Object.keys(out);
+
+          // For video: find video outputs first (VHS_VideoCombine nodes have videos/gifs arrays)
+          if (outputType === "video") {
+            for (const key of allKeys) {
+              const node = out[key];
+              if (!node || typeof node !== "object") continue;
+              for (const arrKey of ["videos", "gifs"]) {
+                const arr = node[arrKey];
+                if (!Array.isArray(arr) || !arr.length) continue;
+                const file = arr[arr.length - 1];
+                const uri = await resolveFileData(file, "video");
+                if (uri) {
+                  console.log(`[comfyui-poll] Found video in nested key "${key}".${arrKey}`);
+                  cleanupS3Urls();
+                  return res.status(200).json({ status: "done", video: uri });
+                }
+              }
+            }
+          }
+
+          // For images: prefer highest node ID (HD upscale nodes have higher IDs)
+          const nodeKeys = allKeys.sort((a, b) => {
             const na = parseInt(a, 10);
             const nb = parseInt(b, 10);
             if (!isNaN(na) && !isNaN(nb)) return nb - na;
