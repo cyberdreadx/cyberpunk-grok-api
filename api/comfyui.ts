@@ -899,25 +899,25 @@ function buildGltchWanWorkflow(p: {
       class_type: "easy cleanGpuUsed",
       inputs: { anything: ["83", 0] },
     };
-    // RIFE 2x frame interpolation (16fps → 32fps)
+    // RIFE 4x frame interpolation (16fps → 64fps)
     workflow["75"] = {
       class_type: "RIFE VFI",
       inputs: {
         frames: ["83", 0],
         ckpt_name: "rife49.pth",
         clear_cache_after_n_frames: 10,
-        multiplier: 2,
+        multiplier: 4,
         fast_mode: false,
         ensemble: true,
         scale_factor: 1,
       },
     };
-    // HD video output (32fps after RIFE 2x)
+    // HD video output (64fps after RIFE 4x)
     workflow["85"] = {
       class_type: "VHS_VideoCombine",
       inputs: {
         images: ["75", 0],
-        frame_rate: 32,
+        frame_rate: 64,
         loop_count: 0,
         filename_prefix: "GltchWAN-HD",
         format: "video/h264-mp4",
