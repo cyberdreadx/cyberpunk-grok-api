@@ -1655,6 +1655,11 @@ function buildQwenEditWorkflow(p: {
   });
 
   if (p.upscale) {
+    // Clean GPU before heavy upscale to prevent VRAM fragmentation between runs
+    workflow["199"] = {
+      class_type: "easy cleanGpuUsed",
+      inputs: { anything: ["73", 0] },
+    };
     workflow["128"] = {
       class_type: "UpscaleModelLoader",
       inputs: { model_name: "4x-UltraSharp.pth" },
@@ -1662,7 +1667,7 @@ function buildQwenEditWorkflow(p: {
     workflow["126"] = {
       class_type: "UltimateSDUpscale",
       inputs: {
-        image: ["73", 0],
+        image: ["199", 0],
         model: modelSource,
         positive: ["132", 0],
         negative: ["133", 0],
