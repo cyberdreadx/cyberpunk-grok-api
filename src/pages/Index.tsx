@@ -667,7 +667,7 @@ const Index = () => {
 
   return (
     <CyberLayout>
-      <div className="max-w-5xl mx-auto px-3 sm:px-4 py-4 sm:py-8 pb-20 sm:pb-8 space-y-4 sm:space-y-6">
+      <div className="max-w-5xl mx-auto px-3 sm:px-4 py-4 sm:py-8 pb-24 sm:pb-8 space-y-4 sm:space-y-6">
         {/* Header with Orb */}
         <header className="text-center space-y-2 animate-slide-up">
           {/* Grok Orb — lazy-loaded (Three.js) */}

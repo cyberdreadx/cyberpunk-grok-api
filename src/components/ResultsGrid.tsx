@@ -1312,32 +1312,55 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
             <PromptDisplay result={currentResult} className="p-2.5 border border-t-0 border-border/50 rounded-b" />
           )}
 
-          {/* Mobile action bar */}
-          <div className="flex items-center justify-between px-2 py-1.5 border border-t-0 border-border/30 rounded-b flex-wrap gap-1">
-            <div className="flex gap-1">
+          {/* Mobile action bar — two rows to prevent overflow */}
+          <div className="border border-t-0 border-border/30 rounded-b">
+            {/* Row 1: View / Edit / Animate */}
+            <div className="flex items-center gap-1 px-2 py-1.5 border-b border-border/20">
               <Button
                 size="sm"
                 variant="ghost"
-                className="text-primary text-xs gap-1 h-7 px-2"
+                className="text-primary text-xs gap-1 h-8 px-2.5 flex-1"
                 onClick={() => currentResult && setExpandedId(currentResult.id)}
               >
-                <Maximize2 className="w-3 h-3" />
+                <Maximize2 className="w-3.5 h-3.5" />
                 View
               </Button>
-              {currentResult && <ImageActions result={currentResult} size="sm" />}
+              {currentResult?.type === "image" && onEditImage && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-primary text-xs gap-1 h-8 px-2.5 flex-1"
+                  onClick={(e) => { e.stopPropagation(); onEditImage(currentResult.url); }}
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                  Edit
+                </Button>
+              )}
+              {currentResult?.type === "image" && onAnimateImage && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-secondary text-xs gap-1 h-8 px-2.5 flex-1"
+                  onClick={(e) => { e.stopPropagation(); onAnimateImage(currentResult.url); }}
+                >
+                  <Film className="w-3.5 h-3.5" />
+                  Animate
+                </Button>
+              )}
             </div>
-            <div className="flex gap-1">
-              {/* Move to folder button (mobile) */}
+            {/* Row 2: utility actions */}
+            <div className="flex items-center justify-around px-1 py-1">
+              {/* Move to folder */}
               {onMoveToFolder && currentResult && (
                 <div className="relative">
                   <Button
                     size="icon"
                     variant="ghost"
-                    className="text-primary h-7 w-7"
+                    className="text-primary h-9 w-9"
                     onClick={() => setMoveMenuId(moveMenuId === currentResult.id ? null : currentResult.id)}
                     title="Move to folder"
                   >
-                    <FolderInput className="w-3 h-3" />
+                    <FolderInput className="w-4 h-4" />
                   </Button>
                   {moveMenuId === currentResult.id && (
                     <MoveToFolderMenu
@@ -1352,45 +1375,45 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
               <Button
                 size="icon"
                 variant="ghost"
-                className="text-cyan-400 h-7 w-7"
+                className="text-cyan-400 h-9 w-9"
                 onClick={() => currentResult && handleShare(currentResult)}
                 disabled={!!currentResult && sharingId === currentResult.id}
                 title="Share link"
               >
-                {currentResult && sharingId === currentResult.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Link2 className="w-3 h-3" />}
+                {currentResult && sharingId === currentResult.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Link2 className="w-4 h-4" />}
               </Button>
               <Button
                 size="icon"
                 variant="ghost"
-                className="text-secondary h-7 w-7"
+                className="text-secondary h-9 w-9"
                 onClick={() => currentResult && handleGrokkerPost(currentResult)}
                 disabled={!!currentResult && sharingId === currentResult.id}
                 title="Post to Grokker"
               >
-                <Sparkles className="w-3 h-3" />
+                <Sparkles className="w-4 h-4" />
               </Button>
               <Button
                 size="icon"
                 variant="ghost"
-                className="text-primary h-7 w-7"
+                className="text-primary h-9 w-9"
                 onClick={() => currentResult && downloadMedia(currentResult.url, currentResult.type)}
                 title="Download / Save"
               >
-                <Download className="w-3 h-3" />
+                <Download className="w-4 h-4" />
               </Button>
-              <Button size="icon" variant="ghost" className="text-primary h-7 w-7" asChild>
+              <Button size="icon" variant="ghost" className="text-primary h-9 w-9" asChild>
                 <a href={currentResult?.url} target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="w-3 h-3" />
+                  <ExternalLink className="w-4 h-4" />
                 </a>
               </Button>
               <Button
                 size="icon"
                 variant="ghost"
-                className="text-destructive hover:bg-destructive/20 h-7 w-7"
+                className="text-destructive hover:bg-destructive/20 h-9 w-9"
                 onClick={() => currentResult && onDelete(currentResult.id)}
                 title="Delete this item"
               >
-                <Trash2 className="w-3 h-3" />
+                <Trash2 className="w-4 h-4" />
               </Button>
             </div>
           </div>
