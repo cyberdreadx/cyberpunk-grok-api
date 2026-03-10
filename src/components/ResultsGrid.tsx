@@ -654,49 +654,91 @@ function MoveToFolderMenu({
     };
   }, [onClose]);
 
-  return (
+  // Mobile: fixed bottom sheet overlay
+  const mobileSheet = (
+    <div className="sm:hidden fixed inset-0 z-[200]" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div
+        className="absolute bottom-0 left-0 right-0 bg-card border-t border-border/60 rounded-t-xl shadow-2xl animate-slide-up"
+        onClick={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        {/* Handle bar */}
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
+        </div>
+        <div className="px-4 py-2 text-[10px] font-orbitron tracking-wider text-muted-foreground/50 border-b border-border/40">
+          MOVE_TO_FOLDER
+        </div>
+        <div className="overflow-y-auto max-h-[50vh] pb-[env(safe-area-inset-bottom,16px)]">
+          <button
+            className={`w-full text-left px-4 py-3.5 text-[12px] font-mono-share transition-colors flex items-center gap-2 ${!currentFolderId ? "text-primary bg-primary/10" : "text-muted-foreground"}`}
+            onClick={() => { onMove(null); onClose(); }}
+          >
+            UNFILED
+          </button>
+          {folders.map((folder) => (
+            <button
+              key={folder.id}
+              className={`w-full text-left px-4 py-3.5 text-[12px] font-mono-share transition-colors flex items-center gap-2 ${currentFolderId === folder.id ? "text-primary bg-primary/10" : "text-muted-foreground"}`}
+              onClick={() => { onMove(folder.id); onClose(); }}
+            >
+              <FolderOpen className="w-3.5 h-3.5 flex-shrink-0" />
+              {folder.name.toUpperCase()}
+            </button>
+          ))}
+          {folders.length === 0 && (
+            <div className="px-4 py-4 text-[11px] font-mono-share text-muted-foreground/40">
+              No folders yet
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  // Desktop: absolute dropdown anchored to trigger button
+  const desktopMenu = (
     <div
       ref={menuRef}
-      className="absolute right-0 top-full mt-1 max-sm:top-auto max-sm:bottom-full max-sm:mt-0 max-sm:mb-1 z-[60] bg-card border border-border rounded shadow-lg py-1 min-w-[140px] max-h-[min(60vh,280px)] overflow-y-auto"
+      className="hidden sm:block absolute right-0 top-full mt-1 z-[60] bg-card border border-border rounded shadow-lg py-1 min-w-[140px] max-h-[280px] overflow-y-auto"
       onClick={(e) => e.stopPropagation()}
       onMouseDown={(e) => e.stopPropagation()}
     >
       <div className="px-3 py-1.5 text-[9px] font-orbitron tracking-wider text-muted-foreground/50 border-b border-border/50 mb-1 sticky top-0 bg-card z-10">
         MOVE_TO
       </div>
-
-      {/* Unfiled option */}
       <button
-        className={`w-full text-left px-3 py-2.5 sm:py-1.5 text-[10px] font-mono-share transition-colors flex items-center gap-1.5 min-h-[44px] sm:min-h-0 ${!currentFolderId
-          ? "text-primary bg-primary/10"
-          : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-          }`}
+        className={`w-full text-left px-3 py-1.5 text-[10px] font-mono-share transition-colors flex items-center gap-1.5 ${!currentFolderId ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"}`}
         onClick={() => { onMove(null); onClose(); }}
       >
         UNFILED
       </button>
-
-      {/* Folder options */}
       {folders.map((folder) => (
         <button
           key={folder.id}
-          className={`w-full text-left px-3 py-2.5 sm:py-1.5 text-[10px] font-mono-share transition-colors flex items-center gap-1.5 min-h-[44px] sm:min-h-0 ${currentFolderId === folder.id
-            ? "text-primary bg-primary/10"
-            : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-            }`}
+          className={`w-full text-left px-3 py-1.5 text-[10px] font-mono-share transition-colors flex items-center gap-1.5 ${currentFolderId === folder.id ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"}`}
           onClick={() => { onMove(folder.id); onClose(); }}
         >
           <FolderOpen className="w-3 h-3 flex-shrink-0" />
           {folder.name.toUpperCase()}
         </button>
       ))}
-
       {folders.length === 0 && (
         <div className="px-3 py-1.5 text-[10px] font-mono-share text-muted-foreground/40">
           No folders yet
         </div>
       )}
     </div>
+  );
+
+  return (
+    <>
+      {/* Mobile bottom sheet — rendered at document level via portal feel */}
+      {mobileSheet}
+      {/* Desktop dropdown */}
+      {desktopMenu}
+    </>
   );
 }
 
