@@ -116,15 +116,15 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
 
       {/* Bottom nav bar */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 sm:hidden">
-        <div className="bg-card/90 backdrop-blur-md border-t border-border/50 shadow-[0_-2px_20px_rgba(0,0,0,0.3)]">
-          <div className="flex items-center justify-around px-1 py-1.5">
+        <div className="bg-card/95 backdrop-blur-md border-t border-border/50 shadow-[0_-2px_20px_rgba(0,0,0,0.3)]">
+          <div className="flex items-center justify-around px-1 py-1">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               return (
                 <button
                   key={tab.id}
                   onClick={tab.onClick}
-                  className={`flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-lg transition-all min-w-[52px] ${
+                  className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-lg transition-all min-w-[56px] active:scale-95 ${
                     tab.active
                       ? "text-primary"
                       : "text-muted-foreground/50 active:text-primary/70"
@@ -146,7 +146,7 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
             })}
           </div>
           {/* Safe area for notched phones */}
-          <div className="h-[env(safe-area-inset-bottom,0px)] bg-card/90" />
+          <div className="h-[env(safe-area-inset-bottom,0px)] bg-card/95" />
         </div>
       </nav>
     </>
