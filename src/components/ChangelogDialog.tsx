@@ -6,12 +6,12 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Zap, ImagePlus, Film, Download, Sparkles, Bug, FolderOpen, Smartphone, Share2, Users, Clock, Link2, ExternalLink } from "lucide-react";
+import { Zap, ImagePlus, Film, Download, Sparkles, Bug, FolderOpen, Smartphone, Share2, Users, Clock, Link2, ExternalLink, ShieldAlert } from "lucide-react";
 
 /* ─── Changelog entries ─── */
 // Add new entries at the TOP. Bump LATEST_VERSION when deploying.
 
-export const LATEST_VERSION = "2025.03.09";
+export const LATEST_VERSION = "2025.03.10";
 
 interface ChangelogEntry {
     version: string;
@@ -21,6 +21,15 @@ interface ChangelogEntry {
 }
 
 const CHANGELOG: ChangelogEntry[] = [
+    {
+        version: "2025.03.10",
+        date: "March 10, 2025",
+        title: "⚠️ Grok Image Model Notice",
+        items: [
+            { icon: <ShieldAlert className="w-3.5 h-3.5" />, text: "Grok grok-2-image (omodel) is now heavily moderated by xAI — many prompts may be blocked or filtered", tag: "fix" },
+            { icon: <Sparkles className="w-3.5 h-3.5" />, text: "Use GLTCH (cloud.gltch.app) for best results — unrestricted generation via local ComfyUI pipelines with no content filters", tag: "improve" },
+        ],
+    },
     {
         version: "2025.03.09",
         date: "March 9, 2025",
