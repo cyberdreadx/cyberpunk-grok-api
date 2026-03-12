@@ -1396,6 +1396,7 @@ export function useGrokApi() {
     frameCount?: number;
     resolution?: number;
     shift?: number;
+    useRife?: boolean;
     useUpscale?: boolean;
     videoLora?: string;
     videoLoraStrength?: number;
@@ -1460,6 +1461,7 @@ export function useGrokApi() {
           cfg: params.cfg || 1,
           resolution: params.resolution || 832,
           shift: params.shift,
+          useRife: params.useRife ?? true,
           useUpscale: params.useUpscale ?? false,
           videoLora: params.videoLora,
           videoLoraStrength: params.videoLoraStrength,

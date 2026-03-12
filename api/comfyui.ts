@@ -345,7 +345,7 @@ function getRunPodEndpointForWorkflow(
 // ---- Workflow builders ----
 
 const WAN_DEFAULT_NEGATIVE =
-  "色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走";
+  "色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走, twerking, dancing, gyrating, bouncing, jiggling, shaking hips, grinding, repetitive motion, exaggerated body movement, sexual movement, rhythmic swaying";
 
 /**
  * WAN 2.2 Remix NSFW Image-to-Video workflow — clean rebuild.
@@ -632,6 +632,7 @@ function buildGltchWanWorkflow(p: {
   frameCount: number;
   resolution: number;
   shift?: number;
+  useRife: boolean;
   useUpscale: boolean;
   videoLora?: string;
   videoLoraHigh?: string;
@@ -831,17 +832,62 @@ function buildGltchWanWorkflow(p: {
     audioNodeId = addMMAudioNodes(workflow, "4", p.seed, p.audioPrompt || p.prompt);
   }
 
-  // ── Base video output (16fps) — always created as fallback ──
-  workflow["16"] = {
+  // ── Post-processing: RIFE and/or HD upscale ──
+  // useRife alone  → RIFE 2x (16→32fps)   — smooth with no spatial upscale
+  // useUpscale     → lanczos 2x + RIFE 2x — full HD smooth
+  // neither        → raw 16fps base output
+
+  let lastFrames: [string, number] = ["4", 0];
+  let outputFps = 16;
+  let outputPrefix = "GltchWAN";
+  let outputCrf = 19;
+
+  if (p.useUpscale) {
+    // Lanczos 2x spatial upscale
+    workflow["509"] = {
+      class_type: "ImageScaleBy",
+      inputs: { image: ["4", 0], upscale_method: "lanczos", scale_by: 2 },
+    };
+    // Clean GPU before RIFE
+    workflow["76"] = {
+      class_type: "easy cleanGpuUsed",
+      inputs: { anything: ["509", 0] },
+    };
+    lastFrames = ["509", 0];
+    outputPrefix = "GltchWAN-HD";
+    outputCrf = 15;
+  }
+
+  if (p.useRife || p.useUpscale) {
+    // RIFE 2x frame interpolation (16fps → 32fps)
+    workflow["75"] = {
+      class_type: "RIFE VFI",
+      inputs: {
+        frames: lastFrames,
+        ckpt_name: "rife49.pth",
+        clear_cache_after_n_frames: 10,
+        multiplier: 2,
+        fast_mode: !p.useUpscale,   // fast mode when RIFE-only, ensemble when HD
+        ensemble: !!p.useUpscale,
+        scale_factor: 1,
+      },
+    };
+    lastFrames = ["75", 0];
+    outputFps = 32;
+    if (!p.useUpscale) outputPrefix = "GltchWAN-Smooth";
+  }
+
+  // Video output (highest node ID = preferred by output parser)
+  workflow["85"] = {
     class_type: "VHS_VideoCombine",
     inputs: {
-      images: ["4", 0],
-      frame_rate: 16,
+      images: lastFrames,
+      frame_rate: outputFps,
       loop_count: 0,
-      filename_prefix: "GltchWAN",
+      filename_prefix: outputPrefix,
       format: "video/h264-mp4",
       pix_fmt: "yuv420p",
-      crf: 19,
+      crf: outputCrf,
       save_metadata: true,
       trim_to_audio: false,
       pingpong: false,
@@ -849,56 +895,6 @@ function buildGltchWanWorkflow(p: {
       ...(audioNodeId ? { audio: [audioNodeId, 0] } : {}),
     },
   };
-
-  // ── Optional HD post-processing (based on WAN 2.2 Smooth Workflow v2.0) ──
-  // Chain: lanczos 2x upscale → GPU cleanup → RIFE 2x (ensemble) → 32fps output
-  if (p.useUpscale) {
-    // Upscale decoded frames with lanczos 2x
-    workflow["509"] = {
-      class_type: "ImageScaleBy",
-      inputs: {
-        image: ["4", 0],
-        upscale_method: "lanczos",
-        scale_by: 2,
-      },
-    };
-    // Clean GPU before RIFE
-    workflow["76"] = {
-      class_type: "easy cleanGpuUsed",
-      inputs: { anything: ["509", 0] },
-    };
-    // RIFE 2x frame interpolation (16fps → 32fps) — ensemble=true for quality
-    workflow["75"] = {
-      class_type: "RIFE VFI",
-      inputs: {
-        frames: ["509", 0],
-        ckpt_name: "rife49.pth",
-        clear_cache_after_n_frames: 10,
-        multiplier: 2,
-        fast_mode: false,
-        ensemble: true,
-        scale_factor: 1,
-      },
-    };
-    // HD video output (32fps, crf 15 for quality)
-    workflow["85"] = {
-      class_type: "VHS_VideoCombine",
-      inputs: {
-        images: ["75", 0],
-        frame_rate: 32,
-        loop_count: 0,
-        filename_prefix: "GltchWAN-HD",
-        format: "video/h264-mp4",
-        pix_fmt: "yuv420p",
-        crf: 15,
-        save_metadata: true,
-        trim_to_audio: false,
-        pingpong: false,
-        save_output: true,
-        ...(audioNodeId ? { audio: [audioNodeId, 0] } : {}),
-      },
-    };
-  }
 
   return workflow;
 }
@@ -2146,6 +2142,7 @@ Rules:
           frameCount: Math.min(241, Math.max(17, Number(frameCount))),
           resolution,
           shift: req.body.shift ? Math.min(15, Math.max(1, Number(req.body.shift))) : undefined,
+          useRife: !!useRife,
           useUpscale: !!useVidUpscale,
           videoLora: resolvedGltchLora,
           videoLoraHigh: resolvedGltchLoraHigh,
