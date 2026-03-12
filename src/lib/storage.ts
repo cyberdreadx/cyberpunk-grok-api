@@ -545,6 +545,16 @@ export async function clearChatHistory(characterId: string): Promise<void> {
   });
 }
 
+export async function deleteChatMessage(id: number): Promise<void> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(CHAT_STORE_NAME, "readwrite");
+    tx.objectStore(CHAT_STORE_NAME).delete(id);
+    tx.oncomplete = () => { db.close(); resolve(); };
+    tx.onerror = () => { db.close(); reject(tx.error); };
+  });
+}
+
 // ── Library Export (ZIP) ─────────────────────────────────────────────────
 
 /**

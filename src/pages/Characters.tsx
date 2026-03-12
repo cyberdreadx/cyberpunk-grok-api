@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiFetch } from "@/lib/api";
-import { saveChatMessage, getChatHistory, clearChatHistory, type ChatMessage } from "@/lib/storage";
+import { saveChatMessage, getChatHistory, clearChatHistory, deleteChatMessage, type ChatMessage } from "@/lib/storage";
 import { comfySubmitAndPollStandalone, comfyPollUntilDone } from "@/hooks/useGrokApi";
 import CyberLayout from "@/components/CyberLayout";
-import { ArrowLeft, Plus, Trash2, Send, Edit, X, MessageSquare, Sparkles, Image } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Send, Edit, X, MessageSquare, Sparkles, Image, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface PendingCharJob {
@@ -79,6 +79,7 @@ export default function Characters() {
   const chatEndRef = useRef<HTMLDivElement>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
+  const [selectedMsgIdx, setSelectedMsgIdx] = useState<number | null>(null);
 
   // Keep a ref to activeChar so async callbacks always see the latest value
   const activeCharRef = useRef(activeChar);
@@ -260,6 +261,26 @@ export default function Characters() {
     setMessages([]);
     setConfirmClear(false);
     toast({ title: "Cleared", description: "Chat history deleted" });
+  };
+
+  const handleDeleteMessage = async (idx: number) => {
+    const msg = messages[idx];
+    if (msg?.id) {
+      await deleteChatMessage(msg.id);
+    }
+    setMessages(prev => prev.filter((_, i) => i !== idx));
+    setSelectedMsgIdx(null);
+  };
+
+  const handleSaveMedia = (msg: ChatMessage) => {
+    if (!msg.mediaUrl) return;
+    const a = document.createElement("a");
+    a.href = msg.mediaUrl;
+    a.download = `character-${msg.mediaType || "media"}-${Date.now()}.${msg.mediaType === "video" ? "mp4" : "png"}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setSelectedMsgIdx(null);
   };
 
   // ── Build history for API (avoids stale closure by accepting messages as arg) ──
@@ -687,11 +708,33 @@ export default function Characters() {
                 const genPhase = isGenerating ? msg.content!.replace(/^\*|\*$/g, "") : "";
 
                 return (
-                  <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                    <div className={`max-w-[80%] px-3 py-2 rounded-lg ${msg.role === "user"
-                      ? "bg-secondary/20 border border-secondary/30 text-foreground"
-                      : "bg-card/80 border border-border text-foreground"
-                      }`}>
+                  <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} group relative`}>
+                    <div
+                      className={`max-w-[80%] px-3 py-2 rounded-lg cursor-pointer transition-all ${msg.role === "user"
+                        ? "bg-secondary/20 border border-secondary/30 text-foreground"
+                        : "bg-card/80 border border-border text-foreground"
+                        } ${selectedMsgIdx === i ? "ring-1 ring-secondary/50" : ""}`}
+                      onClick={() => setSelectedMsgIdx(selectedMsgIdx === i ? null : i)}
+                    >
+                      {/* Per-message action bar */}
+                      {selectedMsgIdx === i && !isGenerating && (
+                        <div className={`absolute ${msg.role === "user" ? "right-0" : "left-0"} -top-8 flex items-center gap-1 bg-card/95 border border-border rounded-md px-1.5 py-1 shadow-lg z-10 animate-in fade-in slide-in-from-bottom-1 duration-150`}>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDeleteMessage(i); }}
+                            className="flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-mono-share text-red-400 hover:bg-red-500/20 transition-colors"
+                          >
+                            <Trash2 className="w-3 h-3" /> DEL
+                          </button>
+                          {msg.mediaUrl && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleSaveMedia(msg); }}
+                              className="flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-mono-share text-secondary hover:bg-secondary/20 transition-colors"
+                            >
+                              <Download className="w-3 h-3" /> SAVE
+                            </button>
+                          )}
+                        </div>
+                      )}
                       {msg.mediaUrl && msg.mediaType === "image" && (
                         <img src={msg.mediaUrl} alt="From character" className="max-w-full rounded mb-2 max-h-64 object-contain" />
                       )}

@@ -59,7 +59,10 @@ export async function comfySubmitAndPollStandalone(
   const { promptId, outputType, runpodEndpointId } = submitData;
   const outType = outputType || (body.workflow === "wan-video" || body.workflow === "longlook" ? "video" : "image");
 
-  saveActiveJob({ promptId, outputType: outType, submittedAt: Date.now(), ...(runpodEndpointId && { runpodEndpointId }) });
+  // NOTE: Do NOT call saveActiveJob here — standalone polls are used by
+  // character chat which has its own separate job queue (char-media-jobs).
+  // Writing to the shared comfy-active-jobs queue causes character media
+  // to leak into the main UI results grid when the user navigates back.
 
   for (let i = 0; i < maxAttempts; i++) {
     await new Promise((r) => setTimeout(r, pollInterval));
