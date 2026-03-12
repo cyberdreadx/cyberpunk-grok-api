@@ -861,17 +861,18 @@ function buildGltchWanWorkflow(p: {
     let lastFrames: [string, number] = ["4", 0];
 
     if (p.useUpscale) {
-      // Lanczos 2x spatial upscale
+      // Lanczos 2x spatial upscale (matches reference WAN 2.2 Smooth Workflow v2.0)
       workflow["509"] = {
         class_type: "ImageScaleBy",
         inputs: { image: ["4", 0], upscale_method: "lanczos", scale_by: 2 },
       };
-      // Clean GPU before RIFE
+      // Clean GPU before RIFE — critical: RIFE must take from cleanGpu output,
+      // not directly from upscale, to free VRAM before frame interpolation
       workflow["76"] = {
         class_type: "easy cleanGpuUsed",
         inputs: { anything: ["509", 0] },
       };
-      lastFrames = ["509", 0];
+      lastFrames = ["76", 0];  // RIFE feeds from cleanGpu passthrough
     }
 
     // RIFE 2x frame interpolation (16fps → 32fps)
