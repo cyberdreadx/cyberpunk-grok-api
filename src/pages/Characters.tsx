@@ -366,7 +366,7 @@ export default function Characters() {
               action: "generate", workflow: "gltch-wan",
               prompt: trigger.prompt, imageBase64: imgResult.image, imageFilename: "character_frame.jpg",
               width: 832, height: 832, steps: 4, cfg: 1,
-              frameCount: 81, shift: 8, useUpscale: true, resolution: 832,
+              frameCount: 81, shift: 8, useRife: true, useUpscale: true, resolution: 832,
               videoLora: "mystic_xxx_wan22_i2v_v1", videoLoraStrength: 0.4, videoLoraPass: "both",
             },
           },
