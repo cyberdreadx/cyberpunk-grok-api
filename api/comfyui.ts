@@ -858,6 +858,7 @@ function buildGltchWanWorkflow(p: {
 
   // Enhanced output (smooth/HD) — node "85" has higher ID so server prefers it
   if (p.useRife || p.useUpscale) {
+    console.log(`[gltch-wan-builder] Enhanced output: useRife=${p.useRife}, useUpscale=${p.useUpscale} → creating nodes 75(RIFE)${p.useUpscale ? '+509(upscale)+76(cleanGpu)' : ''}+85(VHS 32fps)`);
     let lastFrames: [string, number] = ["4", 0];
 
     if (p.useUpscale) {
@@ -2143,6 +2144,7 @@ Rules:
           }
         }
 
+        console.log(`[comfyui] gltch-wan flags: useRife=${!!useRife}, useVidUpscale=${!!useVidUpscale}`);
         workflow = buildGltchWanWorkflow({
           prompt: prompt.trim(),
           negativePrompt: (negativePrompt || "").trim() || WAN_DEFAULT_NEGATIVE,
@@ -2604,7 +2606,7 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
                 const file = arr[arr.length - 1];
                 const uri = await resolveFileData(file, "video");
                 if (uri) {
-                  console.log(`[comfyui-poll] Found video in nested key "${key}".${arrKey}`);
+                  console.log(`[comfyui-poll] Found video in nested key "${key}".${arrKey} (HD preferred: highest node ID first)`);
                   cleanupS3Urls();
                   return res.status(200).json({ status: "done", video: uri });
                 }
