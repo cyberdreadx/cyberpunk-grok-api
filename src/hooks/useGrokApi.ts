@@ -1220,7 +1220,7 @@ export function useGrokApi() {
     const label = params.prompt.length > 80 ? params.prompt.slice(0, 80) + "…" : params.prompt;
 
     const newJob: ComfyJob = {
-      id: jobId, status: "submitting", workflowType: params.upscale ? "qwen-edit-hd" : "qwen-edit",
+      id: jobId, status: "submitting", workflowType: "qwen-edit",
       prompt: label, phase: "Editing image...", elapsed: 0, seed: null, error: null,
     };
     setComfyJobs(prev => [newJob, ...prev]);
@@ -1241,18 +1241,16 @@ export function useGrokApi() {
         const result = await comfySubmitAndPoll({
           workflow: "qwen-edit",
           prompt: params.prompt,
-          negativePrompt: params.negativePrompt,
           imageBase64: params.imageBase64,
           imageFilename: params.imageFilename || "input.jpg",
           imageBase64_2: params.imageBase64_2,
           imageFilename2: params.imageFilename2,
-          width: params.width || 1024,
-          height: params.height || 1024,
-          steps: params.steps || 5,
-          cfg: params.cfg || 4,
+          width: params.width || 1152,
+          height: params.height || 1152,
+          steps: params.steps || 4,
+          cfg: params.cfg || 1,
           seed: params.seed,
           loras: params.loras?.filter(l => l.name !== "none"),
-          upscale: params.upscale || false,
           ...(params.testCredits ? { testCredits: true } : {}),
         });
 

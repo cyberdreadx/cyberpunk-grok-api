@@ -358,6 +358,7 @@ function buildWanVideoWorkflow(p: {
   prompt: string;
   negativePrompt: string;
   imageFilename: string;
+  endImageFilename?: string;
   width: number;
   height: number;
   seed: number;
@@ -470,6 +471,30 @@ function buildWanVideoWorkflow(p: {
       batch_size: 1,
     },
   };
+
+  // Optional end frame for start→end interpolation
+  if (p.endImageFilename) {
+    // Load end image
+    workflow["200"] = {
+      class_type: "LoadImage",
+      inputs: { image: p.endImageFilename },
+    };
+    // Resize end image to match video dimensions
+    workflow["201"] = {
+      class_type: "ImageResizeKJ",
+      inputs: {
+        image: ["200", 0],
+        width: p.width,
+        height: p.height,
+        interpolation: "lanczos",
+        keep_proportion: false,
+        divisible_by: 2,
+        crop: "center",
+      },
+    };
+    // Wire end_image into the WanImageToVideo node
+    workflow["113"].inputs.end_image = ["201", 0];
+  }
 
   // Pass 1: high-noise sampler
   workflow["86"] = {
@@ -624,6 +649,7 @@ function buildGltchWanWorkflow(p: {
   prompt: string;
   negativePrompt: string;
   imageFilename: string;
+  endImageFilename?: string;
   width: number;
   height: number;
   seed: number;
@@ -741,6 +767,26 @@ function buildGltchWanWorkflow(p: {
     },
   };
 
+  // Optional end frame for start→end interpolation
+  if (p.endImageFilename) {
+    workflow["200"] = {
+      class_type: "LoadImage",
+      inputs: { image: p.endImageFilename },
+    };
+    workflow["201"] = {
+      class_type: "ImageResizeKJ",
+      inputs: {
+        image: ["200", 0],
+        width: p.resolution,
+        height: p.resolution,
+        interpolation: "lanczos",
+        keep_proportion: true,
+        divisible_by: 2,
+        crop: "center",
+      },
+    };
+    workflow["10"].inputs.end_image = ["201", 0];
+  }
 
   // ── Optional user video LoRA (NOT Lightning — those are baked in) ──
   const isPaired = !!(p.videoLoraHigh && p.videoLoraLow);
@@ -1518,33 +1564,27 @@ function buildZimageTurboWorkflow(p: {
 const TXT2IMG_DEFAULT_NEGATIVE =
   "cgi, 3d render, cartoon, anime, illustration, drawing, painting, sketch, plastic skin, smooth skin, airbrushed, doll-like, mannequin, blurry, low quality, worst quality, jpeg artifacts, deformed, bad anatomy, bad proportions, extra limbs, missing limbs, disfigured, ugly, watermark, text, signature, cropped";
 
-const QWEN_DEFAULT_NEGATIVE =
-  "smooth skin, plastic skin, waxy skin, cgi, 3d render, airbrushed, doll-like, mannequin, fake, cartoon, anime, illustration, drawing, painting, sketch, over-processed, over-smoothed, blurry, low quality, deformed, bad anatomy, bad proportions, extra limbs, disfigured, ugly, watermark, text, signature";
 
 function buildQwenEditWorkflow(p: {
   prompt: string;
-  negativePrompt: string;
   imageFilename: string;
   imageFilename2?: string;
-  width: number;
-  height: number;
+  width?: number;
+  height?: number;
   seed: number;
-  steps: number;
-  cfg: number;
+  steps?: number;
+  cfg?: number;
   sampler?: string;
   scheduler?: string;
   checkpoint: string;
   vae?: string;
-  upscale?: boolean;
   loras?: { name: string; strengthModel: number; strengthClip: number }[];
 }): Record<string, any> {
-  const activeLoras = (p.loras || []).filter(l => l.name && l.name !== "none");
+  const lightningLora = process.env.COMFYUI_QWEN_LIGHTNING_LORA
+    || "Qwen-Image-Edit-2509-Lightning-4steps-V1.0-bf16.safetensors";
 
   const ckptModel: [string, number] = ["125", 0];
   const ckptClip: [string, number] = ["125", 1];
-  let modelSource: [string, number] = ckptModel;
-  let clipSource: [string, number] = ckptClip;
-
   const vaeSource: [string, number] = p.vae ? ["130", 0] : ["125", 2];
 
   const workflow: Record<string, any> = {
@@ -1572,8 +1612,23 @@ function buildQwenEditWorkflow(p: {
     };
   }
 
+  // Lightning LoRA — essential for 4-step generation
+  workflow["14"] = {
+    class_type: "LoraLoader",
+    inputs: {
+      lora_name: lightningLora,
+      strength_model: 1,
+      strength_clip: 1,
+      model: ckptModel,
+      clip: ckptClip,
+    },
+  };
+  let modelSource: [string, number] = ["14", 0];
+  let clipSource: [string, number] = ["14", 1];
+
+  const activeLoras = (p.loras || []).filter(l => l.name && l.name !== "none");
   for (let i = 0; i < activeLoras.length; i++) {
-    const nodeId = String(10 + i);
+    const nodeId = String(15 + i);
     workflow[nodeId] = {
       class_type: "LoraLoader",
       inputs: {
@@ -1588,12 +1643,16 @@ function buildQwenEditWorkflow(p: {
     clipSource = [nodeId, 1];
   }
 
-  // Primary image → image1 (the image being edited)
-  // Optional second image → image2 (style/pose reference)
+  // Zoom trick: upscale input 1.5x for better conditioning detail
+  workflow["50"] = {
+    class_type: "ImageScaleBy",
+    inputs: { image: ["123", 0], upscale_method: "lanczos", scale_by: 1.5 },
+  };
+
   const positiveInputs: Record<string, any> = {
     clip: clipSource,
     vae: vaeSource,
-    image1: ["123", 0],
+    image1: ["50", 0],
     prompt: p.prompt,
   };
   if (p.imageFilename2) {
@@ -1610,12 +1669,12 @@ function buildQwenEditWorkflow(p: {
       inputs: {
         clip: ckptClip,
         vae: vaeSource,
-        prompt: p.negativePrompt,
+        prompt: "",
       },
     },
     "148": {
       class_type: "EmptyLatentImage",
-      inputs: { width: p.width, height: p.height, batch_size: 1 },
+      inputs: { width: p.width || 1152, height: p.height || 1152, batch_size: 1 },
     },
     "75": {
       class_type: "KSampler",
@@ -1625,9 +1684,9 @@ function buildQwenEditWorkflow(p: {
         negative: ["133", 0],
         latent_image: ["148", 0],
         seed: p.seed,
-        steps: p.steps,
-        cfg: p.cfg,
-        sampler_name: p.sampler || "sa_solver",
+        steps: p.steps || 4,
+        cfg: p.cfg || 1,
+        sampler_name: p.sampler || "euler_ancestral",
         scheduler: p.scheduler || "beta",
         denoise: 1,
       },
@@ -1636,57 +1695,15 @@ function buildQwenEditWorkflow(p: {
       class_type: "VAEDecode",
       inputs: { samples: ["75", 0], vae: vaeSource },
     },
+    "52": {
+      class_type: "ImageScaleBy",
+      inputs: { image: ["73", 0], upscale_method: "lanczos", scale_by: 0.6666666666666666 },
+    },
     "77": {
       class_type: "SaveImage",
-      inputs: { images: ["73", 0], filename_prefix: "GrokRunner" },
+      inputs: { images: ["52", 0], filename_prefix: "GrokRunner" },
     },
   });
-
-  if (p.upscale) {
-    // Clean GPU before heavy upscale to prevent VRAM fragmentation between runs
-    workflow["199"] = {
-      class_type: "easy cleanGpuUsed",
-      inputs: { anything: ["73", 0] },
-    };
-    workflow["128"] = {
-      class_type: "UpscaleModelLoader",
-      inputs: { model_name: "4x-UltraSharp.pth" },
-    };
-    workflow["126"] = {
-      class_type: "UltimateSDUpscale",
-      inputs: {
-        image: ["199", 0],
-        model: modelSource,
-        positive: ["132", 0],
-        negative: ["133", 0],
-        vae: vaeSource,
-        upscale_model: ["128", 0],
-        upscale_by: 2.0,
-        seed: p.seed,
-        steps: 12,
-        cfg: p.cfg,
-        sampler_name: "sa_solver",
-        scheduler: "simple",
-        denoise: 0.35,
-        mode_type: "Linear",
-        tile_width: 1024,
-        tile_height: 1024,
-        mask_blur: 12,
-        tile_padding: 48,
-        seam_fix_mode: "Band Pass",
-        seam_fix_denoise: 0.3,
-        seam_fix_width: 64,
-        seam_fix_mask_blur: 8,
-        seam_fix_padding: 16,
-        force_uniform_tiles: true,
-        tiled_decode: false,
-      },
-    };
-    workflow["200"] = {
-      class_type: "SaveImage",
-      inputs: { images: ["126", 0], filename_prefix: "GrokRunner_HD" },
-    };
-  }
 
   return workflow;
 }
@@ -2102,6 +2119,7 @@ Rules:
           prompt: prompt.trim(),
           negativePrompt: (negativePrompt || "").trim() || WAN_DEFAULT_NEGATIVE,
           imageFilename: imageFilename!,
+          endImageFilename: imageFilename2 || undefined,
           width: clampW,
           height: clampH,
           seed: actualSeed,
@@ -2149,6 +2167,7 @@ Rules:
           prompt: prompt.trim(),
           negativePrompt: (negativePrompt || "").trim() || WAN_DEFAULT_NEGATIVE,
           imageFilename: imageFilename!,
+          endImageFilename: imageFilename2 || undefined,
           width: clampW,
           height: clampH,
           seed: actualSeed,
@@ -2269,7 +2288,7 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           audioPrompt: audioPrompt || undefined,
         });
       } else if (workflowType === "qwen-edit") {
-        const qwenCkpt = process.env.COMFYUI_QWEN_MODEL || "Qwen-Rapid-AIO-v2.safetensors";
+        const qwenCkpt = process.env.COMFYUI_QWEN_MODEL || "Qwen-Rapid-AIO-NSFW-v19.safetensors";
         let qwenLoraList: { name: string; strengthModel: number; strengthClip: number }[] = [];
         if (Array.isArray(loras) && loras.length > 0) {
           qwenLoraList = loras
@@ -2284,53 +2303,21 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           qwenLoraList = [{ name: lora, strengthModel: s, strengthClip: s }];
         }
 
-        // Auto-inject skin + angles LoRAs for character pictures when flag is set and no other LoRA specified
-        if (useSkinLora && qwenLoraList.length === 0) {
-          const qwenLorasEnv = process.env.COMFYUI_QWEN_LORAS || "";
-          const allLoras = qwenLorasEnv.split(",").map(m => m.trim()).filter(Boolean);
-          const skinLora = allLoras.find(m => m.toLowerCase().includes("skin"));
-          const angleLora = allLoras.find(m => m.toLowerCase().includes("angle"));
-          if (skinLora) {
-            qwenLoraList.push({ name: skinLora, strengthModel: 0.8, strengthClip: 0.8 });
-          }
-          if (angleLora) {
-            qwenLoraList.push({ name: angleLora, strengthModel: 0.8, strengthClip: 0.8 });
-          }
-        }
-
-        // Only use external VAE if explicitly set (fp8 checkpoints strip the VAE)
         const qwenVae = process.env.COMFYUI_QWEN_VAE || "";
-
-        // Auto-detect input image dimensions for qwen-edit
-        let editW = clampW;
-        let editH = clampH;
-        if (imageBase64) {
-          const detected = getImageDimensionsFromBase64(imageBase64);
-          if (detected && detected.width > 0 && detected.height > 0) {
-            // Scale to fit within max dimension while preserving aspect ratio, snap to 64px
-            const maxDim = Math.max(clampW, clampH, 1024);
-            const scale = Math.min(maxDim / detected.width, maxDim / detected.height, 1);
-            editW = snap64(Math.round(detected.width * scale));
-            editH = snap64(Math.round(detected.height * scale));
-            console.log(`[qwen-edit] auto-detected input ${detected.width}x${detected.height} → output ${editW}x${editH}`);
-          }
-        }
 
         workflow = buildQwenEditWorkflow({
           prompt: prompt.trim(),
-          negativePrompt: (negativePrompt || "").trim() || QWEN_DEFAULT_NEGATIVE,
           imageFilename: imageFilename!,
           imageFilename2: imageFilename2 || undefined,
-          width: editW,
-          height: editH,
+          width: clampW || 1152,
+          height: clampH || 1152,
           seed: actualSeed,
-          steps: clampSteps,
-          cfg: clampCfg,
+          steps: clampSteps || 4,
+          cfg: clampCfg || 1,
           sampler: sampler || undefined,
           scheduler: scheduler || undefined,
           checkpoint: qwenCkpt,
           vae: qwenVae,
-          upscale: !!upscale,
           loras: qwenLoraList,
         });
       } else if (workflowType === "zimage") {
