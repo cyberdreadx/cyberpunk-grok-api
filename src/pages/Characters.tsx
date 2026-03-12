@@ -55,6 +55,16 @@ const LLM_OPTIONS = [
   { value: "deepseek", label: "DeepSeek", cost: "1 cr/msg" },
 ];
 
+/** Tiny component that ticks every second showing elapsed time */
+function ElapsedTimer({ startTime }: { startTime: number }) {
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    const iv = setInterval(() => setElapsed(Math.floor((Date.now() - startTime) / 1000)), 1000);
+    return () => clearInterval(iv);
+  }, [startTime]);
+  return <span className="font-mono-share text-[9px] text-muted-foreground/50 tabular-nums">{elapsed}s</span>;
+}
+
 export default function Characters() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -748,6 +758,7 @@ export default function Characters() {
                             <div className="absolute inset-0 border-2 border-secondary border-t-transparent rounded-full animate-spin" />
                           </div>
                           <span className="font-mono-share text-[10px] text-secondary/70 animate-pulse">{genPhase}</span>
+                          <ElapsedTimer startTime={msg.timestamp} />
                         </div>
                       ) : msg.content ? (
                         <p className="font-mono-share text-[11px] leading-relaxed whitespace-pre-wrap">
