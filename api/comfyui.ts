@@ -837,28 +837,43 @@ function buildGltchWanWorkflow(p: {
   // useUpscale     → lanczos 2x + RIFE 2x — full HD smooth
   // neither        → raw 16fps base output
 
-  let lastFrames: [string, number] = ["4", 0];
-  let outputFps = 16;
-  let outputPrefix = "GltchWAN";
-  let outputCrf = 19;
+  // Base 16fps output — ALWAYS created as fallback in case RIFE/upscale OOMs
+  workflow["16"] = {
+    class_type: "VHS_VideoCombine",
+    inputs: {
+      images: ["4", 0],
+      frame_rate: 16,
+      loop_count: 0,
+      filename_prefix: "GltchWAN",
+      format: "video/h264-mp4",
+      pix_fmt: "yuv420p",
+      crf: 19,
+      save_metadata: true,
+      trim_to_audio: false,
+      pingpong: false,
+      save_output: true,
+      ...(audioNodeId ? { audio: [audioNodeId, 0] } : {}),
+    },
+  };
 
-  if (p.useUpscale) {
-    // Lanczos 2x spatial upscale
-    workflow["509"] = {
-      class_type: "ImageScaleBy",
-      inputs: { image: ["4", 0], upscale_method: "lanczos", scale_by: 2 },
-    };
-    // Clean GPU before RIFE
-    workflow["76"] = {
-      class_type: "easy cleanGpuUsed",
-      inputs: { anything: ["509", 0] },
-    };
-    lastFrames = ["509", 0];
-    outputPrefix = "GltchWAN-HD";
-    outputCrf = 15;
-  }
-
+  // Enhanced output (smooth/HD) — node "85" has higher ID so server prefers it
   if (p.useRife || p.useUpscale) {
+    let lastFrames: [string, number] = ["4", 0];
+
+    if (p.useUpscale) {
+      // Lanczos 2x spatial upscale
+      workflow["509"] = {
+        class_type: "ImageScaleBy",
+        inputs: { image: ["4", 0], upscale_method: "lanczos", scale_by: 2 },
+      };
+      // Clean GPU before RIFE
+      workflow["76"] = {
+        class_type: "easy cleanGpuUsed",
+        inputs: { anything: ["509", 0] },
+      };
+      lastFrames = ["509", 0];
+    }
+
     // RIFE 2x frame interpolation (16fps → 32fps)
     workflow["75"] = {
       class_type: "RIFE VFI",
@@ -872,29 +887,26 @@ function buildGltchWanWorkflow(p: {
         scale_factor: 1,
       },
     };
-    lastFrames = ["75", 0];
-    outputFps = 32;
-    if (!p.useUpscale) outputPrefix = "GltchWAN-Smooth";
-  }
 
-  // Video output (highest node ID = preferred by output parser)
-  workflow["85"] = {
-    class_type: "VHS_VideoCombine",
-    inputs: {
-      images: lastFrames,
-      frame_rate: outputFps,
-      loop_count: 0,
-      filename_prefix: outputPrefix,
-      format: "video/h264-mp4",
-      pix_fmt: "yuv420p",
-      crf: outputCrf,
-      save_metadata: true,
-      trim_to_audio: false,
-      pingpong: false,
-      save_output: true,
-      ...(audioNodeId ? { audio: [audioNodeId, 0] } : {}),
-    },
-  };
+    // Smooth/HD video output (32fps, preferred by server via higher node ID)
+    workflow["85"] = {
+      class_type: "VHS_VideoCombine",
+      inputs: {
+        images: ["75", 0],
+        frame_rate: 32,
+        loop_count: 0,
+        filename_prefix: p.useUpscale ? "GltchWAN-HD" : "GltchWAN-Smooth",
+        format: "video/h264-mp4",
+        pix_fmt: "yuv420p",
+        crf: p.useUpscale ? 15 : 19,
+        save_metadata: true,
+        trim_to_audio: false,
+        pingpong: false,
+        save_output: true,
+        ...(audioNodeId ? { audio: [audioNodeId, 0] } : {}),
+      },
+    };
+  }
 
   return workflow;
 }

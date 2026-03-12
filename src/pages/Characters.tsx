@@ -419,12 +419,13 @@ export default function Characters() {
       characterId: char.id, role: "user", content: text, timestamp: Date.now(),
     };
 
-    // Use functional updater to get latest messages for API history
+    // Build history from PREVIOUS messages (before adding the new user message).
+    // The server adds the current message separately via the `message` field —
+    // if we include it here too, the LLM sees it twice and doubles its response.
     let historyForApi: { role: string; content: string }[] = [];
     setMessages(prev => {
-      const updated = [...prev, userMsg];
-      historyForApi = buildHistoryForApi(updated);
-      return updated;
+      historyForApi = buildHistoryForApi(prev);
+      return [...prev, userMsg];
     });
     await saveChatMessage(userMsg);
 
