@@ -191,6 +191,7 @@ function buildEmotionalSystemPrompt(
   mood: string | null,
   memorySummary: string | null,
   relationshipNotes: string | null,
+  timezone?: string,
 ): string {
   const parts = [basePrompt];
 
@@ -206,14 +207,18 @@ function buildEmotionalSystemPrompt(
     parts.push(`\n[Relationship context] ${relationshipNotes}\nLet this inform how open, warm, guarded, or playful you are.`);
   }
 
-  // Real-time awareness — inject current time context
+  // Real-time awareness — use the user's timezone if provided
+  const tz = timezone || "UTC";
   const now = new Date();
   const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
   const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-  const hour = now.getHours();
-  const timeOfDay = hour < 6 ? "late night" : hour < 12 ? "morning" : hour < 17 ? "afternoon" : hour < 21 ? "evening" : "night";
-  const timeStr = now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
-  parts.push(`\n[Current context — use naturally, do not announce] It is ${dayNames[now.getDay()]}, ${monthNames[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}, ${timeStr} (${timeOfDay}). React to the time naturally — for example greetings, commenting if it's late, weekend vibes, etc.`);
+  // Get hour in user's timezone
+  const userHour = parseInt(now.toLocaleString("en-US", { timeZone: tz, hour: "numeric", hour12: false }), 10) || 0;
+  const timeOfDay = userHour < 6 ? "late night" : userHour < 12 ? "morning" : userHour < 17 ? "afternoon" : userHour < 21 ? "evening" : "night";
+  const timeStr = now.toLocaleTimeString("en-US", { timeZone: tz, hour: "numeric", minute: "2-digit", hour12: true });
+  const dayStr = now.toLocaleDateString("en-US", { timeZone: tz, weekday: "long" });
+  const dateStr = now.toLocaleDateString("en-US", { timeZone: tz, month: "long", day: "numeric", year: "numeric" });
+  parts.push(`\n[Current context — use naturally, do not announce] It is ${dayStr}, ${dateStr}, ${timeStr} (${timeOfDay}). React to the time naturally — for example greetings, commenting if it's late, weekend vibes, etc.`);
 
   return parts.join("");
 }
@@ -322,6 +327,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         char.mood,
         char.memory_summary,
         char.relationship_notes,
+        req.body.timezone,
       );
 
       const messages: ChatMessage[] = [

@@ -464,7 +464,7 @@ export default function Characters() {
     try {
       const data = await apiFetch<{ reply: string; mediaTrigger?: { type: "image" | "video"; prompt: string } }>("/chat", {
         method: "POST",
-        body: { action: "message", characterId: char.id, message: text, history: historyForApi },
+        body: { action: "message", characterId: char.id, message: text, history: historyForApi, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone },
       });
 
       const assistantMsg: ChatMessage = {
