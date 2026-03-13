@@ -313,7 +313,7 @@ export default function Characters() {
   // ── Media generation (uses standalone comfySubmitAndPoll — no LoRAs, simple paths) ──
 
   const handleMediaTrigger = useCallback(async (
-    trigger: { type: "image" | "video"; prompt: string },
+    trigger: { type: "image" | "video"; prompt: string; videoLora?: string; videoLoraStrength?: number },
     char: Character,
   ) => {
     const placeholderId = `placeholder-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
@@ -391,7 +391,9 @@ export default function Characters() {
               prompt: trigger.prompt, imageBase64: imgResult.image, imageFilename: "character_frame.jpg",
               width: 832, height: 832, steps: 4, cfg: 1,
               frameCount: 81, shift: 8, useRife: true, useUpscale: true, resolution: 832,
-              videoLora: "mystic_xxx_wan22_i2v_v1", videoLoraStrength: 0.4, videoLoraPass: "both",
+              videoLora: trigger.videoLora || "mystic_xxx_wan22_i2v_v1",
+              videoLoraStrength: trigger.videoLoraStrength || 0.4,
+              videoLoraPass: "both",
             },
           },
         );

@@ -31,6 +31,15 @@ const ADMIN_EMAIL = "cyberdreadx@proton.me";
 const DEEPSEEK_BASE = "https://api.deepseek.com/v1";
 const GROK_BASE = "https://api.x.ai/v1";
 
+const VIDEO_LORA_CATEGORIES: Record<string, { loraName: string; strength: number; description: string }> = {
+  "nsfw_helper":  { loraName: "wan22-k3nk4llinon3-k3nk", strength: 0.7, description: "General NSFW motion enhancement" },
+  "solo_touch":   { loraName: "wan2.2_t2v_masturbation_v1.0", strength: 0.7, description: "Self-pleasure, rubbing, fingering" },
+  "dual_action":  { loraName: "WAN-2.2-I2V-HandjobBlowjobCombo-v1", strength: 0.8, description: "Handjob + oral combination" },
+  "pov_behind":   { loraName: "doggyPOV_v1_1", strength: 0.8, description: "POV doggy style from behind" },
+  "nude_posing":  { loraName: "W22_NSFW_Posing_Nude_i2v_v2", strength: 0.7, description: "Nude model posing, photoshoot style" },
+  "anatomy":      { loraName: "PussyLoRA_Wan2.2_HearmemanAI", strength: 0.7, description: "Detailed anatomy closeup focus" },
+};
+
 async function callLLM(
   backend: "grok" | "deepseek",
   messages: ChatMessage[],
@@ -78,11 +87,30 @@ async function callLLM(
   return data.choices?.[0]?.message?.content || "";
 }
 
-function extractMediaTrigger(text: string): { type: "image" | "video"; prompt: string } | null {
+interface MediaTrigger {
+  type: "image" | "video";
+  prompt: string;
+  videoLora?: string;
+  videoLoraStrength?: number;
+}
+
+function resolveLoraCategory(slug: string | undefined): { videoLora?: string; videoLoraStrength?: number } {
+  if (!slug || slug === "none") return {};
+  const entry = VIDEO_LORA_CATEGORIES[slug];
+  if (!entry) return {};
+  return { videoLora: entry.loraName, videoLoraStrength: entry.strength };
+}
+
+function extractMediaTrigger(text: string): MediaTrigger | null {
   const imgMatch = text.match(/\[MEDIA_IMAGE\](.*?)\[\/MEDIA_IMAGE\]/s);
   if (imgMatch) return { type: "image", prompt: imgMatch[1].trim() };
-  const vidMatch = text.match(/\[MEDIA_VIDEO\](.*?)\[\/MEDIA_VIDEO\]/s);
-  if (vidMatch) return { type: "video", prompt: vidMatch[1].trim() };
+
+  const vidMatch = text.match(/\[MEDIA_VIDEO(?:\s+lora="([^"]*)")?\](.*?)\[\/MEDIA_VIDEO\]/s);
+  if (vidMatch) {
+    const loraSlug = vidMatch[1];
+    const prompt = vidMatch[2].trim();
+    return { type: "video", prompt, ...resolveLoraCategory(loraSlug) };
+  }
 
   // Fallback: LLM said it sent a photo/video without using proper tags
   const sentPhotoPattern = /\b(?:sent? (?:you )?a (?:photo|pic|picture|selfie|image)|sends? (?:a )?(?:photo|pic|picture|selfie|image)|here(?:'s| is) (?:a |my )?(?:photo|pic|picture|selfie|image)|takes? a (?:photo|pic|picture|selfie|image)|snaps? a (?:photo|pic|picture|selfie|image))\b/i;
@@ -112,9 +140,9 @@ function extractMediaTrigger(text: string): { type: "image" | "video"; prompt: s
 function stripMediaTags(text: string): string {
   return text
     .replace(/\[MEDIA_IMAGE\].*?\[\/MEDIA_IMAGE\]/gs, "")
-    .replace(/\[MEDIA_VIDEO\].*?\[\/MEDIA_VIDEO\]/gs, "")
+    .replace(/\[MEDIA_VIDEO(?:\s+lora="[^"]*")?\].*?\[\/MEDIA_VIDEO\]/gs, "")
     .replace(/\[MEDIA_IMAGE\][^[]*$/gs, "")
-    .replace(/\[MEDIA_VIDEO\][^[]*$/gs, "")
+    .replace(/\[MEDIA_VIDEO(?:\s+lora="[^"]*")?\][^[]*$/gs, "")
     .replace(/\[\/?MEDIA_IMAGE\]/g, "")
     .replace(/\[\/?MEDIA_VIDEO\]/g, "")
     .replace(/\(sent a (?:photo|video|pic|picture|image)\)/gi, "")
@@ -219,6 +247,12 @@ function buildEmotionalSystemPrompt(
   const dayStr = now.toLocaleDateString("en-US", { timeZone: tz, weekday: "long" });
   const dateStr = now.toLocaleDateString("en-US", { timeZone: tz, month: "long", day: "numeric", year: "numeric" });
   parts.push(`\n[Current context — use naturally, do not announce] It is ${dayStr}, ${dateStr}, ${timeStr} (${timeOfDay}). React to the time naturally — for example greetings, commenting if it's late, weekend vibes, etc.`);
+
+  // Video LoRA style guidance
+  const styleList = Object.entries(VIDEO_LORA_CATEGORIES)
+    .map(([slug, v]) => `${slug} — ${v.description}`)
+    .join("; ");
+  parts.push(`\n[Media generation — video styles] When you send a video, you may pick a style that best matches the scene by adding a lora attribute: [MEDIA_VIDEO lora="slug"]description[/MEDIA_VIDEO]. Available styles: none (default — general motion); ${styleList}. Pick the style that best fits the action. If nothing specific fits or the scene is SFW, omit the lora attribute entirely.`);
 
   return parts.join("");
 }

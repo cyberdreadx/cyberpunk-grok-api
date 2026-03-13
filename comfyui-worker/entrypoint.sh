@@ -32,6 +32,16 @@ for node_entry in \
   fi
 done
 
+# ── Sync deps from network volume ComfyUI (if updated) ────────
+# If the volume has a newer ComfyUI with new requirements, install them.
+for reqfile in /workspace/runpod-slim/ComfyUI/requirements.txt /workspace/ComfyUI/requirements.txt; do
+  if [ -f "$reqfile" ]; then
+    echo "entrypoint: installing deps from $reqfile"
+    pip install -q -r "$reqfile" 2>&1 | tail -5
+    break
+  fi
+done
+
 # ── Clean stale job output from network volume ─────────────────
 # RunPod SDK leaves {job_id}-u{N} staging dirs in /workspace after
 # uploading to S3. Remove them on every worker start.

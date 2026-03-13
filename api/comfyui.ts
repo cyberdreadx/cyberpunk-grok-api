@@ -177,6 +177,7 @@ const VIDEO_LORA_DISPLAY_NAMES: Record<string, string> = {
   "WAN-2.2-I2V-HandjobBlowjobCombo-v1": "Dual Action",
   "W22_NSFW_Posing_Nude_i2v_v2": "Nude Posing v2",
   "doggyPOV_v1_1": "POV Behind",
+  "PussyLoRA_Wan2.2_HearmemanAI": "Anatomy Detail",
   "mystic_xxx_wan22_i2v_v1": "Mystic Motion",
   "pornmaster_slow_twerk": "Slow Dance",
 };
@@ -205,6 +206,7 @@ function groupVideoLoras(files: string[]): VideoLoraEntry[] {
     [/^(.+)-HIGH-(.+)$/, "-"],                       // WAN-2.2-I2V-HandjobBlowjobCombo-HIGH-v1
     [/^(.+)_high_(.+)$/, "_"],                       // mystic_xxx_wan22_i2v_high_v1
     [/^(.+)_highnoise_(.+)$/, "_"],                  // wan2.2_t2v_highnoise_masturbation_v1.0
+    [/^(.+)_HighNoise_(.+)$/, "_"],                  // PussyLoRA_HighNoise_Wan2.2_HearmemanAI
     [/^(.+)_HN_(.+)$/, "_"],                         // W22_NSFW_Posing_Nude_i2v_HN_v2
     [/^(.+)-\d+epoc-full-high-(.+)$/, "-"],          // wan22-k3nk4llinon3-16epoc-full-high-k3nk
     [/^(.+)_H$/, null],                              // something_H
@@ -215,6 +217,7 @@ function groupVideoLoras(files: string[]): VideoLoraEntry[] {
     [/^(.+)-LOW-(.+)$/, "-"],                        // WAN-2.2-I2V-HandjobBlowjobCombo-LOW-v1
     [/^(.+)_low_(.+)$/, "_"],                        // mystic_xxx_wan22_i2v_low_v1
     [/^(.+)_lownoise_(.+)$/, "_"],                   // wan2.2_t2v_lownoise_masturbation_v1.0
+    [/^(.+)_LowNoise_(.+)$/, "_"],                   // PussyLoRA_LowNoise_Wan2.2_HearmemanAI
     [/^(.+)_LN_(.+)$/, "_"],                         // W22_NSFW_Posing_Nude_i2v_LN_v2
     [/^(.+)-\d+epoc-full-low-(.+)$/, "-"],           // wan22-k3nk4llinon3-15epoc-full-low-k3nk
     [/^(.+)_L$/, null],
