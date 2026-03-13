@@ -163,12 +163,23 @@ const COMFY_COSTS: Record<string, number> = {
 // ---- Video LoRA pairing ----
 
 interface VideoLoraEntry {
-  name: string;       // Display name (e.g. "pornmaster_slow_twerk")
-  high?: string;      // Filename for high noise pass
-  low?: string;       // Filename for low noise pass
-  single?: string;    // Filename if not paired (applied per user-selected pass)
-  nsfw?: boolean;     // True if NSFW-gated (requires XRGE holding)
+  name: string;        // Internal key (base name derived from filename)
+  displayName?: string; // Clean UI label (falls back to name if absent)
+  high?: string;       // Filename for high noise pass
+  low?: string;        // Filename for low noise pass
+  single?: string;     // Filename if not paired (applied per user-selected pass)
+  nsfw?: boolean;      // True if NSFW-gated (requires XRGE holding)
 }
+
+const VIDEO_LORA_DISPLAY_NAMES: Record<string, string> = {
+  "wan22-k3nk4llinon3-k3nk": "NSFW Helper (K3NK)",
+  "wan2.2_t2v_masturbation_v1.0": "Solo Touch",
+  "WAN-2.2-I2V-HandjobBlowjobCombo-v1": "Dual Action",
+  "W22_NSFW_Posing_Nude_i2v_v2": "Nude Posing v2",
+  "doggyPOV_v1_1": "POV Behind",
+  "mystic_xxx_wan22_i2v_v1": "Mystic Motion",
+  "pornmaster_slow_twerk": "Slow Dance",
+};
 
 /** SFW LoRA names — everything else is NSFW-gated. Case-insensitive substring match. */
 const SFW_LORA_KEYWORDS = ["skin", "angle"];
@@ -187,33 +198,36 @@ function groupVideoLoras(files: string[]): VideoLoraEntry[] {
   const pairs = new Map<string, { high?: string; low?: string }>();
   const singles: string[] = [];
 
-  // Patterns: [regex to match, group 1 = base name, "high" or "low"]
-  // Index 1 patterns (two-capture) reconstruct base from both sides: "prefix" + "_" + "suffix"
-  const highPatterns = [
-    /^(.+)_high_noise$/,           // pornmaster_slow_twerk_high_noise
-    /^(.+)-H-(.+)$/,              // NSFW-22-H-e8  (capture both sides as base)
-    /^(.+)_high_(.+)$/,           // mystic_xxx_wan22_i2v_high_v1
-    /^(.+)-\d+epoc-full-high-(.+)$/,  // wan22-k3nk4llinon3-16epoc-full-high-k3nk
-    /^(.+)_H$/,                    // something_H
+  // Each pattern: [regex, separator for two-capture reconstruction (null = single capture)]
+  const highPatterns: Array<[RegExp, string | null]> = [
+    [/^(.+)_high_noise$/, null],                    // pornmaster_slow_twerk_high_noise
+    [/^(.+)-H-(.+)$/, "-"],                         // NSFW-22-H-e8
+    [/^(.+)-HIGH-(.+)$/, "-"],                       // WAN-2.2-I2V-HandjobBlowjobCombo-HIGH-v1
+    [/^(.+)_high_(.+)$/, "_"],                       // mystic_xxx_wan22_i2v_high_v1
+    [/^(.+)_highnoise_(.+)$/, "_"],                  // wan2.2_t2v_highnoise_masturbation_v1.0
+    [/^(.+)_HN_(.+)$/, "_"],                         // W22_NSFW_Posing_Nude_i2v_HN_v2
+    [/^(.+)-\d+epoc-full-high-(.+)$/, "-"],          // wan22-k3nk4llinon3-16epoc-full-high-k3nk
+    [/^(.+)_H$/, null],                              // something_H
   ];
-  const lowPatterns = [
-    /^(.+)_low_noise$/,
-    /^(.+)-L-(.+)$/,
-    /^(.+)_low_(.+)$/,            // mystic_xxx_wan22_i2v_low_v1
-    /^(.+)-\d+epoc-full-low-(.+)$/,   // wan22-k3nk4llinon3-15epoc-full-low-k3nk
-    /^(.+)_L$/,
+  const lowPatterns: Array<[RegExp, string | null]> = [
+    [/^(.+)_low_noise$/, null],
+    [/^(.+)-L-(.+)$/, "-"],
+    [/^(.+)-LOW-(.+)$/, "-"],                        // WAN-2.2-I2V-HandjobBlowjobCombo-LOW-v1
+    [/^(.+)_low_(.+)$/, "_"],                        // mystic_xxx_wan22_i2v_low_v1
+    [/^(.+)_lownoise_(.+)$/, "_"],                   // wan2.2_t2v_lownoise_masturbation_v1.0
+    [/^(.+)_LN_(.+)$/, "_"],                         // W22_NSFW_Posing_Nude_i2v_LN_v2
+    [/^(.+)-\d+epoc-full-low-(.+)$/, "-"],           // wan22-k3nk4llinon3-15epoc-full-low-k3nk
+    [/^(.+)_L$/, null],
   ];
 
   for (const f of files) {
     const noExt = f.replace(/\.[^.]+$/, "");
     let matched = false;
 
-    // Check high patterns
-    for (let i = 0; i < highPatterns.length; i++) {
-      const m = noExt.match(highPatterns[i]);
+    for (const [pat, sep] of highPatterns) {
+      const m = noExt.match(pat);
       if (m) {
-        // For two-capture patterns, reconstruct base from both sides
-        const base = (i === 1 || i === 3) ? `${m[1]}-${m[2]}` : i === 2 ? `${m[1]}_${m[2]}` : m[1];
+        const base = sep ? `${m[1]}${sep}${m[2]}` : m[1];
         const entry = pairs.get(base) || {};
         entry.high = f;
         pairs.set(base, entry);
@@ -223,11 +237,10 @@ function groupVideoLoras(files: string[]): VideoLoraEntry[] {
     }
     if (matched) continue;
 
-    // Check low patterns
-    for (let i = 0; i < lowPatterns.length; i++) {
-      const m = noExt.match(lowPatterns[i]);
+    for (const [pat, sep] of lowPatterns) {
+      const m = noExt.match(pat);
       if (m) {
-        const base = (i === 1 || i === 3) ? `${m[1]}-${m[2]}` : i === 2 ? `${m[1]}_${m[2]}` : m[1];
+        const base = sep ? `${m[1]}${sep}${m[2]}` : m[1];
         const entry = pairs.get(base) || {};
         entry.low = f;
         pairs.set(base, entry);
@@ -243,11 +256,11 @@ function groupVideoLoras(files: string[]): VideoLoraEntry[] {
   const result: VideoLoraEntry[] = [];
   const isSfw = (n: string) => SFW_LORA_KEYWORDS.some(k => n.toLowerCase().includes(k));
   for (const [base, { high, low }] of pairs) {
-    result.push({ name: base, high, low, nsfw: !isSfw(base) });
+    result.push({ name: base, displayName: VIDEO_LORA_DISPLAY_NAMES[base], high, low, nsfw: !isSfw(base) });
   }
   for (const f of singles) {
     const name = f.replace(/\.[^.]+$/, "");
-    result.push({ name, single: f, nsfw: !isSfw(name) });
+    result.push({ name, displayName: VIDEO_LORA_DISPLAY_NAMES[name], single: f, nsfw: !isSfw(name) });
   }
   return result;
 }

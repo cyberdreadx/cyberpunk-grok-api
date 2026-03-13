@@ -161,6 +161,7 @@ export interface GrokResult {
 
 export interface VideoLoraEntry {
   name: string;
+  displayName?: string;
   high?: string;
   low?: string;
   single?: string;

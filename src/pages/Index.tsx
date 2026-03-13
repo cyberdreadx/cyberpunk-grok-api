@@ -1351,7 +1351,7 @@ const Index = () => {
                             <option key={entry.name} value={entry.name}
                               disabled={!!entry.nsfw && !comfyModels.xrgeHolder}
                               style={entry.nsfw && !comfyModels.xrgeHolder ? { color: '#666', fontStyle: 'italic' } : undefined}>
-                              {entry.nsfw && !comfyModels.xrgeHolder ? `🔒 ${entry.name.replace(/_/g, " ")}` : entry.name.replace(/_/g, " ")}{entry.high && entry.low ? " (paired)" : ""}
+                              {entry.nsfw && !comfyModels.xrgeHolder ? `🔒 ${entry.displayName || entry.name.replace(/_/g, " ")}` : (entry.displayName || entry.name.replace(/_/g, " "))}{entry.high && entry.low ? " (paired)" : ""}
                             </option>
                           ))}
                         </select>
@@ -1494,7 +1494,7 @@ const Index = () => {
                             <option key={entry.name} value={entry.name}
                               disabled={!!entry.nsfw && !comfyModels.xrgeHolder}
                               style={entry.nsfw && !comfyModels.xrgeHolder ? { color: '#666', fontStyle: 'italic' } : undefined}>
-                              {entry.nsfw && !comfyModels.xrgeHolder ? "🔒 " : ""}{entry.name.replace(/_/g, " ")}{entry.high && entry.low ? " (paired)" : ""}
+                              {entry.nsfw && !comfyModels.xrgeHolder ? "🔒 " : ""}{entry.displayName || entry.name.replace(/_/g, " ")}{entry.high && entry.low ? " (paired)" : ""}
                             </option>
                           ))}
                         </select>
