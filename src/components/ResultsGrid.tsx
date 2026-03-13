@@ -528,18 +528,47 @@ function FolderBar({
               <span className="font-mono-share text-[10px] text-muted-foreground/40 ml-auto">{resultCounts.__trash ?? 0}</span>
             </button>
 
-            {hiddenFolders.length > 0 && (
-              <div className="border-t border-border/30 pt-1 mt-1">
-                <div className="px-3 py-1 text-[8px] font-orbitron tracking-wider text-muted-foreground/40">VAULT</div>
-                {hiddenFolders.map((f) => (
-                  <button key={f.id} className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-muted/30 transition-colors" onClick={() => onToggleFolderHidden?.(f.id)}>
-                    <Eye className="w-3 h-3 text-muted-foreground/40" />
-                    <span className="font-mono-share text-[10px] text-muted-foreground/60">{f.name.toUpperCase()}</span>
-                    <span className="font-mono-share text-[8px] text-muted-foreground/30 ml-auto">RESTORE</span>
-                  </button>
-                ))}
-              </div>
-            )}
+            {hiddenFolders.length > 0 && (() => {
+              const vaultHasPin = folderHasPin("__vault");
+              const vaultUnlocked = unlockedFolders.has("__vault");
+              const vaultLocked = vaultHasPin && !vaultUnlocked;
+              return (
+                <div className="border-t border-border/30 pt-1 mt-1">
+                  <div className="px-3 py-1 text-[8px] font-orbitron tracking-wider text-muted-foreground/40 flex items-center gap-1.5">
+                    VAULT
+                    {vaultHasPin && (vaultLocked
+                      ? <Lock className="w-2.5 h-2.5 text-secondary" />
+                      : <LockOpen className="w-2.5 h-2.5 text-muted-foreground/30" />
+                    )}
+                  </div>
+                  {vaultLocked ? (
+                    <button className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-muted/30 transition-colors" onClick={() => { onRequestUnlock("__vault"); setMobileOpen(false); }}>
+                      <Lock className="w-3 h-3 text-secondary" />
+                      <span className="font-mono-share text-[10px] text-secondary">TAP TO UNLOCK</span>
+                    </button>
+                  ) : (<>
+                    {hiddenFolders.map((f) => (
+                      <button key={f.id} className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-muted/30 transition-colors" onClick={() => onToggleFolderHidden?.(f.id)}>
+                        <Eye className="w-3 h-3 text-muted-foreground/40" />
+                        <span className="font-mono-share text-[10px] text-muted-foreground/60">{f.name.toUpperCase()}</span>
+                        <span className="font-mono-share text-[8px] text-muted-foreground/30 ml-auto">RESTORE</span>
+                      </button>
+                    ))}
+                    {vaultHasPin ? (
+                      <button className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-muted/30 transition-colors" onClick={() => { onLockFolder("__vault"); setMobileOpen(false); }}>
+                        <Lock className="w-3 h-3 text-muted-foreground/40" />
+                        <span className="font-mono-share text-[10px] text-muted-foreground/40">LOCK VAULT</span>
+                      </button>
+                    ) : (
+                      <button className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-muted/30 transition-colors" onClick={() => { onSetPin("__vault"); setMobileOpen(false); }}>
+                        <Lock className="w-3 h-3 text-muted-foreground/40" />
+                        <span className="font-mono-share text-[10px] text-muted-foreground/40">SET PIN</span>
+                      </button>
+                    )}
+                  </>)}
+                </div>
+              );
+            })()}
 
             <div className="border-t border-border/30 pt-1 mt-1 px-2">
               {isCreating ? (
@@ -594,15 +623,36 @@ function FolderBar({
             </div>
           );
         })}
-        {hiddenFolders.length > 0 && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild><button className="px-2 py-1.5 flex items-center gap-1 text-muted-foreground/30 hover:text-muted-foreground/60 transition-colors" title="Vault"><ShieldCheck className="w-3 h-3" /><span className="text-[8px] font-mono-share opacity-50">{hiddenFolders.length}</span></button></DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="min-w-[140px] bg-card border-border">
-              <div className="px-3 py-1.5 text-[9px] font-orbitron tracking-wider text-muted-foreground/40 border-b border-border/50 mb-1">VAULT</div>
-              {hiddenFolders.map((f) => <DropdownMenuItem key={f.id} className="text-[10px] py-1.5 font-mono-share text-muted-foreground cursor-pointer" onSelect={() => onToggleFolderHidden?.(f.id)}><Eye className="w-3 h-3 mr-1.5" /> {f.name.toUpperCase()} — RESTORE</DropdownMenuItem>)}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
+        {hiddenFolders.length > 0 && (() => {
+          const vaultHasPin = folderHasPin("__vault");
+          const vaultUnlocked = unlockedFolders.has("__vault");
+          const vaultLocked = vaultHasPin && !vaultUnlocked;
+          return vaultLocked ? (
+            <button
+              className="px-2 py-1.5 flex items-center gap-1 text-muted-foreground/30 hover:text-muted-foreground/60 transition-colors"
+              title="Vault (locked)"
+              onClick={() => onRequestUnlock("__vault")}
+            >
+              <Lock className="w-3 h-3" /><span className="text-[8px] font-mono-share opacity-50">{hiddenFolders.length}</span>
+            </button>
+          ) : (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild><button className="px-2 py-1.5 flex items-center gap-1 text-muted-foreground/30 hover:text-muted-foreground/60 transition-colors" title="Vault"><ShieldCheck className="w-3 h-3" /><span className="text-[8px] font-mono-share opacity-50">{hiddenFolders.length}</span></button></DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="min-w-[140px] bg-card border-border">
+                <div className="px-3 py-1.5 text-[9px] font-orbitron tracking-wider text-muted-foreground/40 border-b border-border/50 mb-1">VAULT</div>
+                {hiddenFolders.map((f) => <DropdownMenuItem key={f.id} className="text-[10px] py-1.5 font-mono-share text-muted-foreground cursor-pointer" onSelect={() => onToggleFolderHidden?.(f.id)}><Eye className="w-3 h-3 mr-1.5" /> {f.name.toUpperCase()} — RESTORE</DropdownMenuItem>)}
+                <div className="border-t border-border/50 mt-1 pt-1">
+                  {vaultHasPin ? (<>
+                    <DropdownMenuItem className="text-[10px] py-1.5 font-mono-share cursor-pointer" onSelect={() => onLockFolder("__vault")}><Lock className="w-3 h-3 mr-1.5" /> LOCK VAULT</DropdownMenuItem>
+                    <DropdownMenuItem className="text-[10px] py-1.5 font-mono-share text-secondary cursor-pointer" onSelect={() => onRemovePin("__vault")}><LockOpen className="w-3 h-3 mr-1.5" /> REMOVE PIN</DropdownMenuItem>
+                  </>) : (
+                    <DropdownMenuItem className="text-[10px] py-1.5 font-mono-share text-primary cursor-pointer" onSelect={() => onSetPin("__vault")}><Lock className="w-3 h-3 mr-1.5" /> SET PIN</DropdownMenuItem>
+                  )}
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          );
+        })()}
         {renderDesktopBuiltIn("all", "ALL", "__total")}
         {/* Trash tab */}
         <button
@@ -701,7 +751,7 @@ function MoveToFolderMenu({
           >
             UNFILED
           </button>
-          {folders.map((folder) => (
+          {folders.filter((f) => !f.hidden).map((folder) => (
             <button
               key={folder.id}
               className={`w-full text-left px-4 py-3.5 text-[12px] font-mono-share transition-colors flex items-center gap-2 ${currentFolderId === folder.id ? "text-primary bg-primary/10" : "text-muted-foreground"}`}
@@ -711,7 +761,7 @@ function MoveToFolderMenu({
               {folder.name.toUpperCase()}
             </button>
           ))}
-          {folders.length === 0 && (
+          {folders.filter((f) => !f.hidden).length === 0 && (
             <div className="px-4 py-4 text-[11px] font-mono-share text-muted-foreground/40">
               No folders yet
             </div>
@@ -738,7 +788,7 @@ function MoveToFolderMenu({
       >
         UNFILED
       </button>
-      {folders.map((folder) => (
+      {folders.filter((f) => !f.hidden).map((folder) => (
         <button
           key={folder.id}
           className={`w-full text-left px-3 py-1.5 text-[10px] font-mono-share transition-colors flex items-center gap-1.5 ${currentFolderId === folder.id ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"}`}
@@ -842,6 +892,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
   const getFolderName = useCallback((folderId: string): string => {
     if (folderId === "__unfiled") return "UNFILED";
     if (folderId === "__all") return "ALL";
+    if (folderId === "__vault") return "VAULT";
     return folders.find((f) => f.id === folderId)?.name || folderId;
   }, [folders]);
 
@@ -1779,7 +1830,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
                     }}>
                       UNFILED
                     </DropdownMenuItem>
-                    {folders.map((f) => (
+                    {folders.filter((f) => !f.hidden).map((f) => (
                       <DropdownMenuItem key={f.id} className="text-[10px] py-1.5 font-mono-share cursor-pointer" onSelect={async () => {
                         const ids = Array.from(selectedIds);
                         await onBulkMoveToFolder(ids, f.id);
