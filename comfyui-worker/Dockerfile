@@ -90,8 +90,8 @@ RUN mkdir -p /comfyui/models/clip_vision && \
 # ── Network Volume Model Paths ───────────────────────────────────
 RUN printf "\nrunpod_volume:\n    base_path: /runpod-volume/runpod-slim/ComfyUI/models\n    checkpoints: checkpoints\n    upscale_models: upscale_models\n    vae: vae\n    clip: text_encoders\n    clip_vision: clip_vision\n    loras: loras\n    unet: unet\n    diffusion_models: diffusion_models\n\nrunpod_volume_unet_compat:\n    base_path: /runpod-volume/runpod-slim/ComfyUI/models\n    diffusion_models: unet\n" >> /comfyui/extra_model_paths.yaml
 
-# ── Force full VRAM mode (H200 141GB — no need for lowvram) ──────
-RUN sed -i 's|python -u /comfyui/main.py|python -u /comfyui/main.py --gpu-only|g' /start.sh
+# ── Force high VRAM mode (H200 — skip all memory management) ─────
+RUN sed -i 's|python -u /comfyui/main.py|python -u /comfyui/main.py --highvram|g' /start.sh
 
 # ── Patch handler.py to support image output ─────────────────────
 COPY handler_patch.py /handler_patch.py
