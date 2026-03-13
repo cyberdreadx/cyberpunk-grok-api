@@ -637,7 +637,7 @@ function buildWanVideoWorkflow(p: {
  *
  * Default 6 steps split 50/50 (3+3).
  * CLIPVision encoding for I2V conditioning (clip_vision_h.safetensors).
- * Post-processing: RIFE 4x frame interpolation (16fps → 64fps smooth).
+ * Post-processing: lanczos 2x upscale → RIFE 2x @ 32fps (matches reference workflow v2.0).
  */
 function buildGltchWanWorkflow(p: {
   prompt: string;
@@ -870,19 +870,44 @@ function buildGltchWanWorkflow(p: {
     audioNodeId = addMMAudioNodes(workflow, "4", p.seed, p.audioPrompt || p.prompt);
   }
 
-  // ── Post-processing: RIFE 4x (16fps → 64fps smooth) ──
-  // RIFE is lightweight and reliable. Spatial upscale removed (caused OOM / choppy fallbacks).
+  // ── Base 16fps output — fallback / preview ──
+  workflow["16"] = {
+    class_type: "VHS_VideoCombine",
+    inputs: {
+      images: ["4", 0],
+      frame_rate: 16,
+      loop_count: 0,
+      filename_prefix: "GltchWAN-base",
+      format: "video/h264-mp4",
+      pix_fmt: "yuv420p",
+      crf: 19,
+      save_metadata: false,
+      trim_to_audio: false,
+      pingpong: false,
+      save_output: false,
+      ...(audioNodeId ? { audio: [audioNodeId, 0] } : {}),
+    },
+  };
 
-  // RIFE 4x frame interpolation
+  // ── Post-processing: lanczos 2x → RIFE 2x @ 32fps (matches reference workflow) ──
+  // Lanczos upscale is pure interpolation — zero VRAM pressure, always works.
+  workflow["74"] = {
+    class_type: "ImageScaleBy",
+    inputs: { image: ["4", 0], upscale_method: "lanczos", scale_by: 2 },
+  };
+  workflow["76"] = {
+    class_type: "easy cleanGpuUsed",
+    inputs: { anything: ["74", 0] },
+  };
   workflow["75"] = {
     class_type: "RIFE VFI",
     inputs: {
-      frames: ["4", 0],
+      frames: ["76", 0],
       ckpt_name: "rife49.pth",
       clear_cache_after_n_frames: 10,
-      multiplier: 4,
+      multiplier: 2,
       fast_mode: false,
-      ensemble: false,
+      ensemble: true,
       scale_factor: 1,
     },
   };
@@ -891,7 +916,7 @@ function buildGltchWanWorkflow(p: {
     class_type: "VHS_VideoCombine",
     inputs: {
       images: ["75", 0],
-      frame_rate: 64,
+      frame_rate: 32,
       loop_count: 0,
       filename_prefix: "GltchWAN",
       format: "video/h264-mp4",
