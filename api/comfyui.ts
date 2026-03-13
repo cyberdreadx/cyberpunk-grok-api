@@ -1624,7 +1624,7 @@ function buildQwenEditWorkflow(p: {
       inputs: {
         clip: ckptClip,
         vae: vaeSource,
-        prompt: "",
+        prompt: "worst quality, low quality, deformed hands, extra fingers, fused fingers, missing fingers, deformed feet, extra toes, bad anatomy, malformed limbs, mutated, disfigured, blurry",
       },
     },
     "148": {
