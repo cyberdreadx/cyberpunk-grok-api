@@ -1316,7 +1316,7 @@ const Index = () => {
                     <div className={`font-orbitron text-[11px] ${renderEngine === "comfy" ? "text-purple-400" : "text-foreground"}`}>COMFY</div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>WAN Video</span>
-                      <span className={renderEngine === "comfy" ? "text-purple-400/70" : "text-muted-foreground/50"}>3 cr</span>
+                      <span className={renderEngine === "comfy" ? "text-purple-400/70" : "text-muted-foreground/50"}>15 cr</span>
                     </div>
                   </button>
                 </div>
@@ -1401,7 +1401,7 @@ const Index = () => {
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-500/5 border border-purple-500/20 rounded">
                       <Film className="w-3 h-3 text-purple-400/70" />
                       <span className="font-mono-share text-[9px] text-purple-400/70">
-                        Auto-generates start frame, then animates — 3 cr flat
+                        Auto-generates start frame, then animates — 15 cr flat
                       </span>
                     </div>
                   </div>
@@ -1436,7 +1436,7 @@ const Index = () => {
                     </div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>WAN 2.2 SmoothMix I2V / T2V</span>
-                      <span className={animateEngine === "gltch" ? "text-secondary/70" : "text-muted-foreground/50"}>5 cr</span>
+                      <span className={animateEngine === "gltch" ? "text-secondary/70" : "text-muted-foreground/50"}>15 cr</span>
                     </div>
                   </button>
                 </div>

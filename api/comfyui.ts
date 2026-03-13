@@ -305,11 +305,7 @@ type Backend = "runpod" | "local";
 
 function getBackend(): { mode: Backend; runpodEndpoint?: string; runpodKey?: string; comfyUrl?: string } {
   const runpodKey = process.env.RUNPOD_API_KEY;
-  const runpodEndpoint = process.env.RUNPOD_ENDPOINT_ID
-    || process.env.RUNPOD_WAN_ENDPOINT_ID
-    || process.env.RUNPOD_ZIMAGE_ENDPOINT_ID
-    || process.env.RUNPOD_QWEN_EDIT_ENDPOINT_ID
-    || process.env.RUNPOD_UPSCALE_ENDPOINT_ID;
+  const runpodEndpoint = process.env.RUNPOD_ENDPOINT_ID;
   if (runpodEndpoint && runpodKey) {
     return { mode: "runpod", runpodEndpoint, runpodKey };
   }
@@ -321,25 +317,14 @@ function getBackend(): { mode: Backend; runpodEndpoint?: string; runpodKey?: str
 }
 
 /**
- * Resolve RunPod endpoint ID by workflow type.
- * Split endpoints keep heavy WAN i2v, Z turbo, Qwen edit, and upscale jobs on dedicated workers
- * to reduce queue pressure and failures.
+ * Resolve RunPod endpoint ID for a workflow.
+ * All workflows now route to a single consolidated endpoint (RUNPOD_ENDPOINT_ID).
  */
 function getRunPodEndpointForWorkflow(
-  workflowType: string,
-  options: { upscale?: boolean; useVidUpscale?: boolean } = {},
+  _workflowType: string,
+  _options: { upscale?: boolean; useVidUpscale?: boolean } = {},
 ): string {
-  const fallback = process.env.RUNPOD_ENDPOINT_ID || "";
-  const wan = process.env.RUNPOD_WAN_ENDPOINT_ID || fallback;
-  const zimage = process.env.RUNPOD_ZIMAGE_ENDPOINT_ID || fallback;
-  const qwen = process.env.RUNPOD_QWEN_EDIT_ENDPOINT_ID || fallback;
-  const upscale = process.env.RUNPOD_UPSCALE_ENDPOINT_ID || fallback;
-
-  if (workflowType === "wan-video" || workflowType === "longlook") return wan;
-  if (workflowType === "gltch-wan") return wan;
-  if (workflowType === "qwen-edit") return qwen;
-  if (workflowType === "zimage") return zimage;
-  return fallback;
+  return process.env.RUNPOD_ENDPOINT_ID || "";
 }
 
 // ---- Workflow builders ----
@@ -2468,13 +2453,7 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
       if (!promptId)
         return res.status(400).json({ error: "promptId is required" });
 
-      // Use the endpoint from generate if provided (required for split endpoints).
-      // Fallback: video → WAN, else default (for legacy clients / resumed jobs).
-      const pollEndpoint = runpodEndpointId
-        ? runpodEndpointId
-        : (outputType === "video" && process.env.RUNPOD_WAN_ENDPOINT_ID)
-          ? process.env.RUNPOD_WAN_ENDPOINT_ID
-          : backend.runpodEndpoint;
+      const pollEndpoint = runpodEndpointId || backend.runpodEndpoint;
 
       if (backend.mode === "runpod") {
         const resp = await runpodRequest(
