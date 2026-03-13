@@ -350,6 +350,7 @@ export default function Characters() {
           imageFilename: "portrait.jpg",
           width: 1024, height: 1360,
           steps: 4, cfg: 1,
+          lora: "qwen-multiple-angles.safetensors", loraStrength: 0.6,
         });
 
         if (result.image) {
@@ -377,6 +378,7 @@ export default function Characters() {
           imageBase64: portrait64,
           imageFilename: "portrait.jpg",
           steps: 4, cfg: 1,
+          lora: "qwen-multiple-angles.safetensors", loraStrength: 0.6,
         });
 
         if (!imgResult.image) throw new Error("Failed to generate source image for video");
