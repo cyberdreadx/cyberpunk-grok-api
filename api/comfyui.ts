@@ -628,7 +628,7 @@ function buildWanVideoWorkflow(p: {
  *
  * Default 6 steps split 50/50 (3+3).
  * CLIPVision encoding for I2V conditioning (clip_vision_h.safetensors).
- * Post-processing: AI upscale 4x → 0.5x scale (net 2x) → RIFE 4x (64fps).
+ * Post-processing: RealESRGAN 2x AI upscale → RIFE 4x (64fps).
  */
 function buildGltchWanWorkflow(p: {
   prompt: string;
@@ -864,9 +864,9 @@ function buildGltchWanWorkflow(p: {
   }
 
   // ── Post-processing: RIFE and/or HD upscale ──
-  // useRife alone  → RIFE 2x (16→32fps)   — smooth with no spatial upscale
-  // useUpscale     → lanczos 2x + RIFE 2x — full HD smooth
-  // neither        → raw 16fps base output
+  // useUpscale + useRife → RealESRGAN 2x AI upscale → RIFE 4x (64fps)
+  // useRife alone        → RIFE 4x (64fps, no spatial upscale)
+  // neither              → raw 16fps base output
 
   // Base 16fps output — ALWAYS created as fallback in case RIFE/upscale OOMs
   workflow["16"] = {
@@ -893,7 +893,7 @@ function buildGltchWanWorkflow(p: {
     let finalFps = 16;
 
     if (p.useUpscale) {
-      // AI upscaler 4x → scale back 0.5x = net 2x spatial upscale
+      // RealESRGAN 2x directly — no intermediate 4x frames, much lower peak VRAM
       const upscaleModel = process.env.COMFYUI_WAN_UPSCALE_MODEL || "RealESRGAN_x2plus.pth";
       workflow["510"] = {
         class_type: "UpscaleModelLoader",
@@ -903,15 +903,11 @@ function buildGltchWanWorkflow(p: {
         class_type: "ImageUpscaleWithModel",
         inputs: { upscale_model: ["510", 0], image: ["4", 0] },
       };
-      workflow["511"] = {
-        class_type: "ImageScaleBy",
-        inputs: { image: ["509", 0], upscale_method: "lanczos", scale_by: 0.5 },
-      };
       workflow["76"] = {
         class_type: "easy cleanGpuUsed",
-        inputs: { anything: ["511", 0] },
+        inputs: { anything: ["509", 0] },
       };
-      lastFrames = ["511", 0];
+      lastFrames = ["509", 0];
     }
 
     // RIFE 4x frame interpolation (16fps → 64fps)
