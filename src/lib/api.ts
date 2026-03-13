@@ -94,7 +94,7 @@ export const CREDIT_COSTS = {
   comfyImage: 2,
   comfyEdit: 2,
   comfyEditHd: 3,
-  comfyVideo: 5,
+  comfyVideo: 15,
   comfyLongLook: 3,
 } as const;
 
