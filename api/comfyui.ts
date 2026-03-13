@@ -145,7 +145,7 @@ async function downloadFromS3(url: string): Promise<{ buffer: Buffer; contentTyp
 
 export const config = {
   maxDuration: 120,
-  api: { bodyParser: { sizeLimit: "20mb" } },
+  api: { bodyParser: { sizeLimit: "50mb" } },
 };
 
 const ADMIN_EMAIL = "cyberdreadx@proton.me";
