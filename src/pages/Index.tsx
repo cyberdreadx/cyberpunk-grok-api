@@ -140,20 +140,16 @@ const Index = () => {
   const [comfyCheckpoint, setComfyCheckpoint] = useState("");
   const [comfyLora, setComfyLora] = useState("none");
   const [comfyLoraStrength, setComfyLoraStrength] = useState(0.8);
-  const [comfyNegPrompt, setComfyNegPrompt] = useState("");
   const [comfyWidth, setComfyWidth] = useState(832);
   const [comfyHeight, setComfyHeight] = useState(480);
-  const [comfySteps, setComfySteps] = useState(4);
-  const [comfyCfg, setComfyCfg] = useState(1);
   const [comfyFrameCount, setComfyFrameCount] = useState(81);
-  const [comfyRife, setComfyRife] = useState(true);
-  const [comfyVidUpscale, setComfyVidUpscale] = useState(true);
+  
   const [comfyVideoLora, setComfyVideoLora] = useState("none");
   const [comfyVideoLoraStrength, setComfyVideoLoraStrength] = useState(0.8);
   const [comfyVideoLoraPass, setComfyVideoLoraPass] = useState<"high" | "low" | "both">("high");
   const [comfyAudioMode, setComfyAudioMode] = useState<"none" | "ambient">("none");
   const [comfyAudioPrompt, setComfyAudioPrompt] = useState("");
-  const [comfyShift, setComfyShift] = useState(8);
+  
   const [comfyEndFrameUrl, setComfyEndFrameUrl] = useState<string>("");
 
   // Shared seed (empty = random)
@@ -343,7 +339,7 @@ const Index = () => {
       } else if (isComfyLongLook) {
         cost = calculateCreditCost("comfy-longlook", longLookSeqCount);
       } else if (isGltchWan) {
-        cost = calculateCreditCost(comfyVidUpscale ? "comfy-video" : "comfy-video");
+        cost = calculateCreditCost("comfy-video");
       } else if (isComfyRender || isComfyAnimate) {
         cost = calculateCreditCost("comfy-video");
       } else {
@@ -425,8 +421,7 @@ const Index = () => {
             imageFilename2: gltchImage2Name || undefined,
             width: round8(Math.max(256, w)),
             height: round8(Math.max(256, h)),
-            steps: comfySteps,
-            cfg: comfyCfg,
+            steps: 4, cfg: 1,
             seed: parsedSeed,
             loras: qwenLoraStack.filter(l => l.name !== "none"),
             ...(adminTestCredits ? { testCredits: true } : {}),
@@ -449,30 +444,22 @@ const Index = () => {
           const parsedSeed = globalSeed ? Number(globalSeed) : undefined;
           comfyGenerate({
             prompt: data.prompt,
-            negativePrompt: comfyNegPrompt || undefined,
             checkpoint: comfyCheckpoint,
             lora: comfyLora !== "none" ? comfyLora : undefined,
             loraStrength: comfyLoraStrength,
-            width: comfyWidth,
-            height: comfyHeight,
-            steps: comfySteps,
-            cfg: comfyCfg,
+            width: 832, height: 1024,
+            steps: 4, cfg: 1,
             seed: parsedSeed,
             ...(adminTestCredits ? { testCredits: true } : {}),
           });
         } else if (isComfyRender) {
           comfyTextToVideo({
             prompt: data.prompt,
-            negativePrompt: comfyNegPrompt || undefined,
-            width: comfyWidth,
-            height: comfyHeight,
-            steps: comfySteps,
-            cfg: comfyCfg,
+            width: 832, height: 480,
+            steps: 4, cfg: 1,
             frameCount: comfyFrameCount,
-            resolution: 832,
-            shift: comfyShift,
-            useRife: comfyRife,
-            useUpscale: comfyVidUpscale,
+            resolution: 832, shift: 8,
+            useRife: true, useUpscale: true,
             videoLora: comfyVideoLora !== "none" ? comfyVideoLora : undefined,
             videoLoraStrength: comfyVideoLoraStrength,
             videoLoraPass: comfyVideoLoraPass,
@@ -493,18 +480,15 @@ const Index = () => {
           const parsedSeedLL = globalSeed ? Number(globalSeed) : undefined;
           comfyLongLook({
             prompt: data.prompt,
-            negativePrompt: comfyNegPrompt || undefined,
             imageBase64,
             width: round8(Math.max(256, w)),
             height: round8(Math.max(256, h)),
             sequenceCount: longLookSeqCount,
             frameCount: longLookFrameCount,
-            steps: comfySteps,
-            cfg: comfyCfg,
+            steps: 4, cfg: 1,
             seed: parsedSeedLL,
             motionScale: longLookMotionScale,
-            useRife: comfyRife,
-            useUpscale: comfyVidUpscale,
+            useRife: true, useUpscale: true,
             videoLora: comfyVideoLora !== "none" ? comfyVideoLora : undefined,
             videoLoraStrength: comfyVideoLoraStrength,
             videoLoraPass: comfyVideoLoraPass,
@@ -527,20 +511,15 @@ const Index = () => {
             // Image-to-Video: direct WAN I2V
             comfyVideo({
               prompt: data.prompt,
-              negativePrompt: comfyNegPrompt || undefined,
               imageBase64,
               ...(endFrameBase64 ? { imageBase64_2: endFrameBase64, imageFilename2: "end_frame.png" } : {}),
-              width: 832,
-              height: 832,
+              width: 832, height: 832,
               frameCount: comfyFrameCount,
-              steps: comfySteps,
-              cfg: comfyCfg,
+              steps: 4, cfg: 1,
               seed: parsedSeedWan,
-              useRife: comfyRife,
-              useUpscale: comfyVidUpscale,
+              useRife: true, useUpscale: true,
               workflow: "gltch-wan",
-              resolution: 832,
-              shift: comfyShift,
+              resolution: 832, shift: 8,
               videoLora: comfyVideoLora !== "none" ? comfyVideoLora : undefined,
               videoLoraStrength: comfyVideoLoraStrength,
               videoLoraPass: comfyVideoLoraPass,
@@ -552,15 +531,11 @@ const Index = () => {
             // Text-to-Video: Z-Image Turbo → GLTCH WAN I2V
             comfyTextToVideo({
               prompt: data.prompt,
-              negativePrompt: comfyNegPrompt || undefined,
-              width: 832,
-              height: 480,
+              width: 832, height: 480,
               frameCount: comfyFrameCount,
-              steps: comfySteps,
-              cfg: comfyCfg,
-              resolution: 832,
-              shift: comfyShift,
-              useUpscale: comfyVidUpscale,
+              steps: 4, cfg: 1,
+              resolution: 832, shift: 8,
+              useUpscale: true,
               videoLora: comfyVideoLora !== "none" ? comfyVideoLora : undefined,
               videoLoraStrength: comfyVideoLoraStrength,
               videoLoraPass: comfyVideoLoraPass,
@@ -582,16 +557,13 @@ const Index = () => {
           const parsedSeedAnim = globalSeed ? Number(globalSeed) : undefined;
           comfyVideo({
             prompt: data.prompt,
-            negativePrompt: comfyNegPrompt || undefined,
             imageBase64,
             width: round8(Math.max(256, w)),
             height: round8(Math.max(256, h)),
             frameCount: comfyFrameCount,
-            steps: comfySteps,
-            cfg: comfyCfg,
+            steps: 4, cfg: 1,
             seed: parsedSeedAnim,
-            useRife: comfyRife,
-            useUpscale: comfyVidUpscale,
+            useRife: true, useUpscale: true,
             videoLora: comfyVideoLora !== "none" ? comfyVideoLora : undefined,
             videoLoraStrength: comfyVideoLoraStrength,
             videoLoraPass: comfyVideoLoraPass,
@@ -1280,45 +1252,7 @@ const Index = () => {
                         )}
                       </div>
                     )}
-                    {/* Negative Prompt */}
-                    <div>
-                      <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Negative Prompt</label>
-                      <input type="text" value={comfyNegPrompt} onChange={(e) => setComfyNegPrompt(e.target.value)}
-                        placeholder="(uses smart default if empty)"
-                        className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-[10px] font-mono-share text-foreground placeholder-muted-foreground/40" />
-                    </div>
-                    {/* Resolution */}
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">W</label>
-                        <select value={comfyWidth} onChange={(e) => setComfyWidth(Number(e.target.value))}
-                          className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-[10px] font-mono-share text-foreground">
-                          {[512, 768, 832, 1024, 1080, 1280, 1536].map((s) => <option key={s} value={s}>{s}</option>)}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">H</label>
-                        <select value={comfyHeight} onChange={(e) => setComfyHeight(Number(e.target.value))}
-                          className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-[10px] font-mono-share text-foreground">
-                          {[512, 768, 832, 1024, 1080, 1280, 1536].map((s) => <option key={s} value={s}>{s}</option>)}
-                        </select>
-                      </div>
-                    </div>
-                    {/* Steps & CFG */}
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Steps: {comfySteps}</label>
-                        <input type="range" min={1} max={50} value={comfySteps}
-                          onChange={(e) => setComfySteps(Number(e.target.value))}
-                          className="w-full accent-purple-500" />
-                      </div>
-                      <div>
-                        <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">CFG: {comfyCfg}</label>
-                        <input type="range" min={0.5} max={15} step={0.5} value={comfyCfg}
-                          onChange={(e) => setComfyCfg(Number(e.target.value))}
-                          className="w-full accent-purple-500" />
-                      </div>
-                    </div>
+                    
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-500/5 border border-purple-500/20 rounded">
                       <Cpu className="w-3 h-3 text-purple-400/70" />
                       <span className="font-mono-share text-[9px] text-purple-400/70">
@@ -1389,49 +1323,11 @@ const Index = () => {
                 {/* Comfy RENDER settings */}
                 {renderEngine === "comfy" && (
                   <div className="space-y-2">
-                    <div>
-                      <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Checkpoint (for start frame)</label>
-                      <select value={comfyCheckpoint} onChange={(e) => setComfyCheckpoint(e.target.value)}
-                        className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-[10px] font-mono-share text-foreground">
-                        {comfyModels.checkpoints.length === 0 && <option value="">No models found</option>}
-                        {comfyModels.checkpoints.map((c) => <option key={c} value={c}>{c}</option>)}
-                      </select>
-                    </div>
-                    {/* Negative Prompt */}
-                    <div>
-                      <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Negative Prompt</label>
-                      <input type="text" value={comfyNegPrompt} onChange={(e) => setComfyNegPrompt(e.target.value)}
-                        placeholder="(uses WAN default if empty)"
-                        className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-[10px] font-mono-share text-foreground placeholder-muted-foreground/40" />
-                    </div>
-                    {/* Resolution & Steps/CFG */}
-                    <div className="grid grid-cols-4 gap-2">
-                      <div>
-                        <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">W</label>
-                        <select value={comfyWidth} onChange={(e) => setComfyWidth(Number(e.target.value))}
-                          className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-[10px] font-mono-share text-foreground">
-                          {[480, 512, 640, 768, 832, 1024].map((s) => <option key={s} value={s}>{s}</option>)}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">H</label>
-                        <select value={comfyHeight} onChange={(e) => setComfyHeight(Number(e.target.value))}
-                          className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-[10px] font-mono-share text-foreground">
-                          {[480, 512, 640, 768, 832, 1024].map((s) => <option key={s} value={s}>{s}</option>)}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Steps: {comfySteps}</label>
-                        <input type="range" min={1} max={10} value={comfySteps}
-                          onChange={(e) => setComfySteps(Number(e.target.value))}
-                          className="w-full accent-purple-500" />
-                      </div>
-                      <div>
-                        <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">CFG: {comfyCfg}</label>
-                        <input type="range" min={0.5} max={15} step={0.5} value={comfyCfg}
-                          onChange={(e) => setComfyCfg(Number(e.target.value))}
-                          className="w-full accent-purple-500" />
-                      </div>
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-500/5 border border-purple-500/20 rounded">
+                      <div className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
+                      <span className="font-mono-share text-[9px] text-purple-400/70">
+                        WAN 2.2 SmoothMix — HD 64fps
+                      </span>
                     </div>
                     <div>
                       <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Duration</label>
@@ -1444,15 +1340,6 @@ const Index = () => {
                         ))}
                       </div>
                     </div>
-                    <button type="button" onClick={() => setComfyRife(!comfyRife)}
-                      className={`w-full flex items-center justify-between px-3 py-2 border rounded font-mono-share text-[10px] transition-all duration-200 ${comfyRife ? "border-purple-500/50 bg-purple-500/5 text-purple-300" : "border-border bg-card/30 text-muted-foreground hover:border-purple-500/30"}`}>
-                      <span className="flex items-center gap-1.5">
-                        <span className={`w-3 h-3 border rounded-sm flex items-center justify-center text-[8px] ${comfyRife ? "border-purple-500 bg-purple-500 text-white" : "border-muted-foreground/30"}`}>
-                          {comfyRife && "✓"}
-                        </span>
-                        RIFE 2x interpolation (smoother)
-                      </span>
-                    </button>
                     {comfyModels.videoLoras.length > 0 && (
                       <div>
                         <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Video LoRA (optional)</label>
@@ -1574,17 +1461,6 @@ const Index = () => {
                       </div>
                     </div>
                     <div>
-                      <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Shift: {comfyShift}</label>
-                      <input type="range" min={1} max={15} step={0.5} value={comfyShift}
-                        onChange={(e) => setComfyShift(Number(e.target.value))}
-                        className="w-full accent-secondary" />
-                      <div className="flex justify-between text-[8px] text-muted-foreground/40 font-mono-share mt-0.5">
-                        <span>1</span>
-                        <span>8 (default)</span>
-                        <span>15</span>
-                      </div>
-                    </div>
-                    <div>
                       <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">End Frame (optional — interpolates start→end)</label>
                       {comfyEndFrameUrl ? (
                         <div className="relative">
@@ -1607,16 +1483,7 @@ const Index = () => {
                         </label>
                       )}
                     </div>
-                    <button type="button" onClick={() => setComfyVidUpscale(!comfyVidUpscale)}
-                      className={`w-full flex items-center justify-between px-3 py-2 border rounded font-mono-share text-[10px] transition-all duration-200 ${comfyVidUpscale ? "border-secondary/50 bg-secondary/5 text-secondary" : "border-border bg-card/30 text-muted-foreground hover:border-secondary/30"}`}>
-                      <span className="flex items-center gap-1.5">
-                        <span className={`w-3 h-3 border rounded-sm flex items-center justify-center text-[8px] ${comfyVidUpscale ? "border-secondary bg-secondary text-secondary-foreground" : "border-muted-foreground/30"}`}>
-                          {comfyVidUpscale && "✓"}
-                        </span>
-                        HD (2x lanczos + RIFE 2x @ 32fps)
-                      </span>
-                      <span className="text-[8px]">+2 cr</span>
-                    </button>
+                    
                     {comfyModels.videoLoras.length > 0 && (
                       <div>
                         <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Video LoRA (optional)</label>
