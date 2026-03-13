@@ -643,7 +643,7 @@ function buildWanVideoWorkflow(p: {
  *
  * Default 6 steps split 50/50 (3+3).
  * CLIPVision encoding for I2V conditioning (clip_vision_h.safetensors).
- * Post-processing: lanczos 2x → ColorMatch (mkl) → RIFE 2x (32fps).
+ * Post-processing: AI upscale 4x → 0.5x scale (net 2x) → RIFE 4x (64fps).
  */
 function buildGltchWanWorkflow(p: {
   prompt: string;
@@ -904,49 +904,56 @@ function buildGltchWanWorkflow(p: {
 
   // Enhanced output (smooth/HD) — node "85" has higher ID so server prefers it
   if (p.useRife || p.useUpscale) {
-    console.log(`[gltch-wan-builder] Enhanced output: useRife=${p.useRife}, useUpscale=${p.useUpscale} → creating nodes 75(RIFE)${p.useUpscale ? '+509(upscale)+76(cleanGpu)' : ''}+85(VHS 32fps)`);
     let lastFrames: [string, number] = ["4", 0];
+    let finalFps = 16;
 
     if (p.useUpscale) {
-      // Lanczos 2x spatial upscale (matches reference WAN 2.2 Smooth Workflow v2.0)
-      workflow["509"] = {
-        class_type: "ImageScaleBy",
-        inputs: { image: ["4", 0], upscale_method: "lanczos", scale_by: 2 },
+      // AI upscaler 4x → scale back 0.5x = net 2x spatial upscale
+      const upscaleModel = process.env.COMFYUI_WAN_UPSCALE_MODEL || "RealESRGAN_x2plus.pth";
+      workflow["510"] = {
+        class_type: "UpscaleModelLoader",
+        inputs: { model_name: upscaleModel },
       };
-      // Clean GPU before RIFE — critical: RIFE must take from cleanGpu output,
-      // not directly from upscale, to free VRAM before frame interpolation
+      workflow["509"] = {
+        class_type: "ImageUpscaleWithModel",
+        inputs: { upscale_model: ["510", 0], image: ["4", 0] },
+      };
+      workflow["511"] = {
+        class_type: "ImageScaleBy",
+        inputs: { image: ["509", 0], upscale_method: "lanczos", scale_by: 0.5 },
+      };
       workflow["76"] = {
         class_type: "easy cleanGpuUsed",
-        inputs: { anything: ["509", 0] },
+        inputs: { anything: ["511", 0] },
       };
-      lastFrames = ["76", 0];  // RIFE feeds from cleanGpu passthrough
+      lastFrames = ["511", 0];
     }
 
-    // RIFE 2x frame interpolation (16fps → 32fps)
+    // RIFE 4x frame interpolation (16fps → 64fps)
     workflow["75"] = {
       class_type: "RIFE VFI",
       inputs: {
         frames: lastFrames,
         ckpt_name: "rife49.pth",
         clear_cache_after_n_frames: 10,
-        multiplier: 2,
-        fast_mode: !p.useUpscale,   // fast mode when RIFE-only, ensemble when HD
-        ensemble: !!p.useUpscale,
+        multiplier: 4,
+        fast_mode: false,
+        ensemble: false,
         scale_factor: 1,
       },
     };
+    finalFps = 64;
 
-    // Smooth/HD video output (32fps, preferred by server via higher node ID)
     workflow["85"] = {
       class_type: "VHS_VideoCombine",
       inputs: {
         images: ["75", 0],
-        frame_rate: 32,
+        frame_rate: finalFps,
         loop_count: 0,
         filename_prefix: p.useUpscale ? "GltchWAN-HD" : "GltchWAN-Smooth",
         format: "video/h264-mp4",
         pix_fmt: "yuv420p",
-        crf: p.useUpscale ? 15 : 19,
+        crf: 15,
         save_metadata: true,
         trim_to_audio: false,
         pingpong: false,
