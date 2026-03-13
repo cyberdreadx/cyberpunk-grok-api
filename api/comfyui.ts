@@ -15,6 +15,7 @@
 
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { S3Client, GetObjectCommand, DeleteObjectCommand, ListObjectsV2Command, DeleteObjectsCommand } from "@aws-sdk/client-s3";
+import { put } from "@vercel/blob";
 import { getUserFromRequest } from "./_lib/auth";
 import { getDb } from "./_lib/db";
 import { checkRateLimit } from "./_lib/ratelimit";
@@ -2513,17 +2514,53 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
 
           // Helper: detect S3/HTTP URLs vs base64, return appropriate URI.
           // Uses AWS SDK with credentials (RunPod S3 doesn't support presigned URL auth).
+          const BLOB_SIZE_THRESHOLD = 3 * 1024 * 1024; // 3MB — upload to Blob if larger
+
+          async function uploadToBlob(buffer: Buffer, mime: string, ext: string): Promise<string | null> {
+            const token = process.env.BLOB_READ_WRITE_TOKEN || process.env.grokrun_READ_WRITE_TOKEN || "";
+            if (!token) return null;
+            try {
+              const blob = await put(`comfyui-output/${Date.now()}-${Math.random().toString(36).slice(2, 6)}.${ext}`, buffer, {
+                access: "public",
+                contentType: mime,
+                token,
+              });
+              console.log(`[comfyui-poll] Uploaded ${(buffer.length / 1024 / 1024).toFixed(1)}MB to Blob: ${blob.url}`);
+              return blob.url;
+            } catch (err: any) {
+              console.error(`[comfyui-poll] Blob upload failed: ${err.message}`);
+              return null;
+            }
+          }
+
           async function resolveFileData(file: any, type: "video" | "image"): Promise<string | null> {
             const d = typeof file === "string" ? file : (file?.data || file?.url || null);
             if (!d || typeof d !== "string") return null;
             // Already a data URI
-            if (d.startsWith("data:")) return d;
+            if (d.startsWith("data:")) {
+              // Check if data URI is too large for response
+              if (d.length > BLOB_SIZE_THRESHOLD * 1.37) { // base64 is ~1.37x raw
+                const match = d.match(/^data:([^;]+);base64,(.+)/s);
+                if (match) {
+                  const buf = Buffer.from(match[2], "base64");
+                  const ext = type === "video" ? "mp4" : "png";
+                  const blobUrl = await uploadToBlob(buf, match[1], ext);
+                  if (blobUrl) return blobUrl;
+                }
+              }
+              return d;
+            }
             // S3 URL or any HTTP URL
             if (d.startsWith("http://") || d.startsWith("https://") || file?.type === "s3_url" || file?.type === "url") {
               const url = d.startsWith("http") ? d : (file?.url || d);
               const s3Data = await downloadFromS3(url);
               if (s3Data) {
                 s3UrlsToClean.push(url);
+                if (s3Data.buffer.length > BLOB_SIZE_THRESHOLD) {
+                  const ext = type === "video" ? "mp4" : "png";
+                  const blobUrl = await uploadToBlob(s3Data.buffer, s3Data.contentType, ext);
+                  if (blobUrl) return blobUrl;
+                }
                 const base64 = s3Data.buffer.toString("base64");
                 return `data:${s3Data.contentType};base64,${base64}`;
               }
@@ -2533,6 +2570,12 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
             // Raw base64
             if (d.length > 100) {
               const mime = type === "video" ? "video/mp4" : "image/png";
+              if (d.length > BLOB_SIZE_THRESHOLD * 1.37) {
+                const buf = Buffer.from(d, "base64");
+                const ext = type === "video" ? "mp4" : "png";
+                const blobUrl = await uploadToBlob(buf, mime, ext);
+                if (blobUrl) return blobUrl;
+              }
               return `data:${mime};base64,${d}`;
             }
             return null;
