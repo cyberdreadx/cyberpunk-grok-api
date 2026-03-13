@@ -178,6 +178,8 @@ const SFW_LORA_KEYWORDS = ["skin", "angle"];
  * Detects pairs by common suffixes:
  *   _high_noise / _low_noise   (e.g. pornmaster_slow_twerk_high_noise.safetensors)
  *   -H- / -L-                  (e.g. NSFW-22-H-e8.safetensors)
+ *   _high_ / _low_             (e.g. mystic_xxx_wan22_i2v_high_v1.safetensors)
+ *   -Nepoc-full-high- / -Nepoc-full-low-  (e.g. wan22-k3nk4llinon3-16epoc-full-high-k3nk.safetensors)
  *   _H / _L                    (e.g. something_H.safetensors)
  * Other files become single entries.
  */
@@ -188,15 +190,17 @@ function groupVideoLoras(files: string[]): VideoLoraEntry[] {
   // Patterns: [regex to match, group 1 = base name, "high" or "low"]
   // Index 1 patterns (two-capture) reconstruct base from both sides: "prefix" + "_" + "suffix"
   const highPatterns = [
-    /^(.+)_high_noise$/,   // pornmaster_slow_twerk_high_noise
-    /^(.+)-H-(.+)$/,      // NSFW-22-H-e8  (capture both sides as base)
-    /^(.+)_high_(.+)$/,   // mystic_xxx_wan22_i2v_high_v1
-    /^(.+)_H$/,            // something_H
+    /^(.+)_high_noise$/,           // pornmaster_slow_twerk_high_noise
+    /^(.+)-H-(.+)$/,              // NSFW-22-H-e8  (capture both sides as base)
+    /^(.+)_high_(.+)$/,           // mystic_xxx_wan22_i2v_high_v1
+    /^(.+)-\d+epoc-full-high-(.+)$/,  // wan22-k3nk4llinon3-16epoc-full-high-k3nk
+    /^(.+)_H$/,                    // something_H
   ];
   const lowPatterns = [
     /^(.+)_low_noise$/,
     /^(.+)-L-(.+)$/,
-    /^(.+)_low_(.+)$/,    // mystic_xxx_wan22_i2v_low_v1
+    /^(.+)_low_(.+)$/,            // mystic_xxx_wan22_i2v_low_v1
+    /^(.+)-\d+epoc-full-low-(.+)$/,   // wan22-k3nk4llinon3-15epoc-full-low-k3nk
     /^(.+)_L$/,
   ];
 
@@ -209,7 +213,7 @@ function groupVideoLoras(files: string[]): VideoLoraEntry[] {
       const m = noExt.match(highPatterns[i]);
       if (m) {
         // For two-capture patterns, reconstruct base from both sides
-        const base = i === 1 ? `${m[1]}-${m[2]}` : i === 2 ? `${m[1]}_${m[2]}` : m[1];
+        const base = (i === 1 || i === 3) ? `${m[1]}-${m[2]}` : i === 2 ? `${m[1]}_${m[2]}` : m[1];
         const entry = pairs.get(base) || {};
         entry.high = f;
         pairs.set(base, entry);
@@ -223,7 +227,7 @@ function groupVideoLoras(files: string[]): VideoLoraEntry[] {
     for (let i = 0; i < lowPatterns.length; i++) {
       const m = noExt.match(lowPatterns[i]);
       if (m) {
-        const base = i === 1 ? `${m[1]}-${m[2]}` : i === 2 ? `${m[1]}_${m[2]}` : m[1];
+        const base = (i === 1 || i === 3) ? `${m[1]}-${m[2]}` : i === 2 ? `${m[1]}_${m[2]}` : m[1];
         const entry = pairs.get(base) || {};
         entry.low = f;
         pairs.set(base, entry);
