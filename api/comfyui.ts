@@ -305,7 +305,9 @@ type Backend = "runpod" | "local";
 
 function getBackend(): { mode: Backend; runpodEndpoint?: string; runpodKey?: string; comfyUrl?: string } {
   const runpodKey = process.env.RUNPOD_API_KEY;
-  const runpodEndpoint = process.env.RUNPOD_ENDPOINT_ID;
+  const runpodEndpoint = process.env.RUNPOD_ENDPOINT_ID
+    || process.env.RUNPOD_WAN_ENDPOINT_ID
+    || process.env.RUNPOD_QWEN_EDIT_ENDPOINT_ID;
   if (runpodEndpoint && runpodKey) {
     return { mode: "runpod", runpodEndpoint, runpodKey };
   }
@@ -317,14 +319,21 @@ function getBackend(): { mode: Backend; runpodEndpoint?: string; runpodKey?: str
 }
 
 /**
- * Resolve RunPod endpoint ID for a workflow.
- * All workflows now route to a single consolidated endpoint (RUNPOD_ENDPOINT_ID).
+ * Resolve RunPod endpoint ID by workflow type.
+ * Video workflows (WAN) go to a dedicated endpoint to keep models warm.
+ * Image workflows (qwen-edit, zimage) share a separate endpoint.
  */
 function getRunPodEndpointForWorkflow(
-  _workflowType: string,
+  workflowType: string,
   _options: { upscale?: boolean; useVidUpscale?: boolean } = {},
 ): string {
-  return process.env.RUNPOD_ENDPOINT_ID || "";
+  const fallback = process.env.RUNPOD_ENDPOINT_ID || "";
+  const wan = process.env.RUNPOD_WAN_ENDPOINT_ID || fallback;
+  const qwen = process.env.RUNPOD_QWEN_EDIT_ENDPOINT_ID || fallback;
+
+  if (workflowType === "wan-video" || workflowType === "gltch-wan" || workflowType === "longlook") return wan;
+  if (workflowType === "qwen-edit" || workflowType === "zimage") return qwen;
+  return fallback;
 }
 
 // ---- Workflow builders ----
@@ -628,7 +637,7 @@ function buildWanVideoWorkflow(p: {
  *
  * Default 6 steps split 50/50 (3+3).
  * CLIPVision encoding for I2V conditioning (clip_vision_h.safetensors).
- * Post-processing: RealESRGAN 2x AI upscale → RIFE 4x (64fps).
+ * Post-processing: RIFE 4x frame interpolation (16fps → 64fps smooth).
  */
 function buildGltchWanWorkflow(p: {
   prompt: string;
@@ -643,8 +652,6 @@ function buildGltchWanWorkflow(p: {
   frameCount: number;
   resolution: number;
   shift?: number;
-  useRife: boolean;
-  useUpscale: boolean;
   videoLora?: string;
   videoLoraHigh?: string;
   videoLoraLow?: string;
@@ -863,22 +870,33 @@ function buildGltchWanWorkflow(p: {
     audioNodeId = addMMAudioNodes(workflow, "4", p.seed, p.audioPrompt || p.prompt);
   }
 
-  // ── Post-processing: RIFE and/or HD upscale ──
-  // useUpscale + useRife → RealESRGAN 2x AI upscale → RIFE 4x (64fps)
-  // useRife alone        → RIFE 4x (64fps, no spatial upscale)
-  // neither              → raw 16fps base output
+  // ── Post-processing: RIFE 4x (16fps → 64fps smooth) ──
+  // RIFE is lightweight and reliable. Spatial upscale removed (caused OOM / choppy fallbacks).
 
-  // Base 16fps output — ALWAYS created as fallback in case RIFE/upscale OOMs
-  workflow["16"] = {
+  // RIFE 4x frame interpolation
+  workflow["75"] = {
+    class_type: "RIFE VFI",
+    inputs: {
+      frames: ["4", 0],
+      ckpt_name: "rife49.pth",
+      clear_cache_after_n_frames: 10,
+      multiplier: 4,
+      fast_mode: false,
+      ensemble: false,
+      scale_factor: 1,
+    },
+  };
+
+  workflow["85"] = {
     class_type: "VHS_VideoCombine",
     inputs: {
-      images: ["4", 0],
-      frame_rate: 16,
+      images: ["75", 0],
+      frame_rate: 64,
       loop_count: 0,
       filename_prefix: "GltchWAN",
       format: "video/h264-mp4",
       pix_fmt: "yuv420p",
-      crf: 19,
+      crf: 15,
       save_metadata: true,
       trim_to_audio: false,
       pingpong: false,
@@ -886,63 +904,6 @@ function buildGltchWanWorkflow(p: {
       ...(audioNodeId ? { audio: [audioNodeId, 0] } : {}),
     },
   };
-
-  // Enhanced output (smooth/HD) — node "85" has higher ID so server prefers it
-  if (p.useRife || p.useUpscale) {
-    let lastFrames: [string, number] = ["4", 0];
-    let finalFps = 16;
-
-    if (p.useUpscale) {
-      // RealESRGAN 2x directly — no intermediate 4x frames, much lower peak VRAM
-      const upscaleModel = process.env.COMFYUI_WAN_UPSCALE_MODEL || "RealESRGAN_x2plus.pth";
-      workflow["510"] = {
-        class_type: "UpscaleModelLoader",
-        inputs: { model_name: upscaleModel },
-      };
-      workflow["509"] = {
-        class_type: "ImageUpscaleWithModel",
-        inputs: { upscale_model: ["510", 0], image: ["4", 0] },
-      };
-      workflow["76"] = {
-        class_type: "easy cleanGpuUsed",
-        inputs: { anything: ["509", 0] },
-      };
-      lastFrames = ["509", 0];
-    }
-
-    // RIFE 4x frame interpolation (16fps → 64fps)
-    workflow["75"] = {
-      class_type: "RIFE VFI",
-      inputs: {
-        frames: lastFrames,
-        ckpt_name: "rife49.pth",
-        clear_cache_after_n_frames: 10,
-        multiplier: 4,
-        fast_mode: false,
-        ensemble: false,
-        scale_factor: 1,
-      },
-    };
-    finalFps = 64;
-
-    workflow["85"] = {
-      class_type: "VHS_VideoCombine",
-      inputs: {
-        images: ["75", 0],
-        frame_rate: finalFps,
-        loop_count: 0,
-        filename_prefix: p.useUpscale ? "GltchWAN-HD" : "GltchWAN-Smooth",
-        format: "video/h264-mp4",
-        pix_fmt: "yuv420p",
-        crf: 15,
-        save_metadata: true,
-        trim_to_audio: false,
-        pingpong: false,
-        save_output: true,
-        ...(audioNodeId ? { audio: [audioNodeId, 0] } : {}),
-      },
-    };
-  }
 
   return workflow;
 }
@@ -2156,7 +2117,7 @@ Rules:
           }
         }
 
-        console.log(`[comfyui] gltch-wan flags: useRife=${!!useRife}, useVidUpscale=${!!useVidUpscale}`);
+        console.log(`[comfyui] gltch-wan: RIFE 4x always on (64fps)`);
         workflow = buildGltchWanWorkflow({
           prompt: prompt.trim(),
           negativePrompt: (negativePrompt || "").trim() || WAN_DEFAULT_NEGATIVE,
@@ -2170,8 +2131,6 @@ Rules:
           frameCount: Math.min(241, Math.max(17, Number(frameCount))),
           resolution,
           shift: req.body.shift ? Math.min(15, Math.max(1, Number(req.body.shift))) : undefined,
-          useRife: !!useRife,
-          useUpscale: !!useVidUpscale,
           videoLora: resolvedGltchLora,
           videoLoraHigh: resolvedGltchLoraHigh,
           videoLoraLow: resolvedGltchLoraLow,
@@ -2449,7 +2408,12 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
       if (!promptId)
         return res.status(400).json({ error: "promptId is required" });
 
-      const pollEndpoint = runpodEndpointId || backend.runpodEndpoint;
+      // Use the endpoint from generate if provided (required for split endpoints).
+      const pollEndpoint = runpodEndpointId
+        ? runpodEndpointId
+        : (outputType === "video" && process.env.RUNPOD_WAN_ENDPOINT_ID)
+          ? process.env.RUNPOD_WAN_ENDPOINT_ID
+          : backend.runpodEndpoint;
 
       if (backend.mode === "runpod") {
         const resp = await runpodRequest(

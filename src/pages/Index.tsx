@@ -132,9 +132,9 @@ const Index = () => {
   const gltchImage2Ref = useRef<HTMLInputElement>(null);
 
   type ComfyEngine = "grok" | "comfy" | "gltch";
-  const [genEngine, setGenEngine] = useState<ComfyEngine>("grok");
+  const [genEngine, setGenEngine] = useState<ComfyEngine>("gltch");
   const [renderEngine, setRenderEngine] = useState<ComfyEngine>("comfy");
-  const [animateEngine, setAnimateEngine] = useState<ComfyEngine>("grok");
+  const [animateEngine, setAnimateEngine] = useState<ComfyEngine>("gltch");
 
   // ComfyUI settings
   const [comfyCheckpoint, setComfyCheckpoint] = useState("");
@@ -855,28 +855,6 @@ const Index = () => {
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
-                    onClick={() => setEditEngine("grok")}
-                    className={`
-                      p-2.5 border rounded text-left transition-all duration-200
-                      ${editEngine === "grok"
-                        ? "border-primary neon-border bg-primary/5"
-                        : "border-border bg-card/30 hover:border-primary/40"
-                      }
-                    `}
-                  >
-                    <div className={`font-orbitron text-[11px] flex items-center gap-1.5 ${editEngine === "grok" ? "text-primary" : "text-foreground"}`}>
-                      GROK
-                      <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-amber-400/80 border-amber-500/30 bg-amber-500/10">BYOK ONLY</span>
-                    </div>
-                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
-                      <span>xAI</span>
-                      <span className={editEngine === "grok" ? "text-primary/70" : "text-muted-foreground/50"}>
-                        {grokPro ? `${settings.count * 4} cr` : `${settings.count * 2} cr`}
-                      </span>
-                    </div>
-                  </button>
-                  <button
-                    type="button"
                     onClick={() => { setEditEngine("gltch"); fetchComfyModels(); }}
                     className={`
                       p-2.5 border rounded text-left transition-all duration-200
@@ -894,6 +872,27 @@ const Index = () => {
                       <span>Edit + LoRA</span>
                       <span className={editEngine === "gltch" ? "text-secondary/70" : "text-muted-foreground/50"}>
                         1 cr
+                      </span>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditEngine("grok")}
+                    className={`
+                      p-2.5 border rounded text-left transition-all duration-200
+                      ${editEngine === "grok"
+                        ? "border-primary neon-border bg-primary/5"
+                        : "border-border bg-card/30 hover:border-primary/40"
+                      }
+                    `}
+                  >
+                    <div className={`font-orbitron text-[11px] flex items-center gap-1.5 ${editEngine === "grok" ? "text-primary" : "text-foreground"}`}>
+                      GROK
+                    </div>
+                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
+                      <span>xAI</span>
+                      <span className={editEngine === "grok" ? "text-primary/70" : "text-muted-foreground/50"}>
+                        {grokPro ? `${settings.count * 4} cr` : `${settings.count * 2} cr`}
                       </span>
                     </div>
                   </button>
@@ -1123,17 +1122,6 @@ const Index = () => {
                   ENGINE
                 </label>
                 <div className="grid grid-cols-2 gap-2">
-                  <button type="button" onClick={() => setGenEngine("grok")}
-                    className={`p-2.5 border rounded text-left transition-all duration-200 ${genEngine === "grok" ? "border-primary neon-border bg-primary/5" : "border-border bg-card/30 hover:border-primary/40"}`}>
-                    <div className={`font-orbitron text-[11px] flex items-center gap-1.5 ${genEngine === "grok" ? "text-primary" : "text-foreground"}`}>
-                      GROK
-                      <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-amber-400/80 border-amber-500/30 bg-amber-500/10">BYOK ONLY</span>
-                    </div>
-                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
-                      <span>xAI</span>
-                      <span className={genEngine === "grok" ? "text-primary/70" : "text-muted-foreground/50"}>{grokPro ? settings.count * 3 : settings.count} cr</span>
-                    </div>
-                  </button>
                   <button type="button" onClick={() => setGenEngine("gltch")}
                     className={`p-2.5 border rounded text-left transition-all duration-200 ${genEngine === "gltch" ? "border-secondary neon-border bg-secondary/5" : "border-border bg-card/30 hover:border-secondary/40"}`}>
                     <div className={`font-orbitron text-[11px] flex items-center gap-1.5 ${genEngine === "gltch" ? "text-secondary" : "text-foreground"}`}>
@@ -1143,6 +1131,16 @@ const Index = () => {
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>Z-Image Turbo</span>
                       <span className={genEngine === "gltch" ? "text-secondary/70" : "text-muted-foreground/50"}>1 cr</span>
+                    </div>
+                  </button>
+                  <button type="button" onClick={() => setGenEngine("grok")}
+                    className={`p-2.5 border rounded text-left transition-all duration-200 ${genEngine === "grok" ? "border-primary neon-border bg-primary/5" : "border-border bg-card/30 hover:border-primary/40"}`}>
+                    <div className={`font-orbitron text-[11px] flex items-center gap-1.5 ${genEngine === "grok" ? "text-primary" : "text-foreground"}`}>
+                      GROK
+                    </div>
+                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
+                      <span>xAI</span>
+                      <span className={genEngine === "grok" ? "text-primary/70" : "text-muted-foreground/50"}>{grokPro ? settings.count * 3 : settings.count} cr</span>
                     </div>
                   </button>
                 </div>
@@ -1300,23 +1298,22 @@ const Index = () => {
                   ENGINE
                 </label>
                 <div className="grid grid-cols-2 gap-2">
-                  <button type="button" onClick={() => setRenderEngine("grok")}
-                    className={`p-2.5 border rounded text-left transition-all duration-200 ${renderEngine === "grok" ? "border-primary neon-border bg-primary/5" : "border-border bg-card/30 hover:border-primary/40"}`}>
-                    <div className={`font-orbitron text-[11px] flex items-center gap-1.5 ${renderEngine === "grok" ? "text-primary" : "text-foreground"}`}>
-                      GROK
-                      <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-amber-400/80 border-amber-500/30 bg-amber-500/10">BYOK ONLY</span>
-                    </div>
-                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
-                      <span>xAI</span>
-                      <span className={renderEngine === "grok" ? "text-primary/70" : "text-muted-foreground/50"}>{videoSettings.duration * 2} cr</span>
-                    </div>
-                  </button>
                   <button type="button" onClick={() => setRenderEngine("comfy")}
                     className={`p-2.5 border rounded text-left transition-all duration-200 ${renderEngine === "comfy" ? "border-purple-500 bg-purple-500/5 shadow-[0_0_8px_rgba(168,85,247,0.15)]" : "border-border bg-card/30 hover:border-purple-500/40"}`}>
                     <div className={`font-orbitron text-[11px] ${renderEngine === "comfy" ? "text-purple-400" : "text-foreground"}`}>COMFY</div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>WAN Video</span>
                       <span className={renderEngine === "comfy" ? "text-purple-400/70" : "text-muted-foreground/50"}>15 cr</span>
+                    </div>
+                  </button>
+                  <button type="button" onClick={() => setRenderEngine("grok")}
+                    className={`p-2.5 border rounded text-left transition-all duration-200 ${renderEngine === "grok" ? "border-primary neon-border bg-primary/5" : "border-border bg-card/30 hover:border-primary/40"}`}>
+                    <div className={`font-orbitron text-[11px] flex items-center gap-1.5 ${renderEngine === "grok" ? "text-primary" : "text-foreground"}`}>
+                      GROK
+                    </div>
+                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
+                      <span>xAI</span>
+                      <span className={renderEngine === "grok" ? "text-primary/70" : "text-muted-foreground/50"}>{videoSettings.duration * 2} cr</span>
                     </div>
                   </button>
                 </div>
