@@ -2110,8 +2110,7 @@ Rules:
               resolvedVideoLoraLow = match.low;
             }
           } else {
-            // Direct filename (not grouped)
-            resolvedVideoLora = videoLora;
+            console.warn(`[comfyui] videoLora "${videoLora}" not found in COMFYUI_VIDEO_LORAS, skipping`);
           }
         }
 
@@ -2158,7 +2157,7 @@ Rules:
               resolvedGltchLoraLow = match.low;
             }
           } else {
-            resolvedGltchLora = videoLora;
+            console.warn(`[comfyui] videoLora "${videoLora}" not found in COMFYUI_VIDEO_LORAS, skipping`);
           }
         }
 
@@ -2260,7 +2259,7 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
               resolvedVideoLoraLow2 = match.low;
             }
           } else {
-            resolvedVideoLora2 = videoLora;
+            console.warn(`[comfyui] videoLora "${videoLora}" not found in COMFYUI_VIDEO_LORAS, skipping`);
           }
         }
 

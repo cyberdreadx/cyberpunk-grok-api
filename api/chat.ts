@@ -43,9 +43,9 @@ const VIDEO_LORA_CATEGORIES: Record<string, { loraName: string; strength: number
 async function callLLM(
   backend: "grok" | "deepseek",
   messages: ChatMessage[],
-  opts: { maxTokens?: number; temperature?: number } = {},
+  opts: { maxTokens?: number; temperature?: number; vision?: boolean } = {},
 ): Promise<string> {
-  const { maxTokens = 600, temperature = 0.85 } = opts;
+  const { maxTokens = 600, temperature = 0.85, vision = false } = opts;
 
   let apiKey: string;
   let baseUrl: string;
@@ -55,7 +55,7 @@ async function callLLM(
     apiKey = process.env.XAI_API_KEY || "";
     if (!apiKey) throw new Error("XAI_API_KEY not configured");
     baseUrl = GROK_BASE;
-    model = "grok-3-mini";
+    model = vision ? "grok-2-vision-latest" : "grok-3-mini";
   } else {
     apiKey = process.env.DEEPSEEK_API_KEY || "";
     if (!apiKey) throw new Error("DEEPSEEK_API_KEY not configured");
@@ -75,7 +75,7 @@ async function callLLM(
       max_tokens: maxTokens,
       temperature,
     }),
-    signal: AbortSignal.timeout(30000),
+    signal: AbortSignal.timeout(vision ? 60000 : 30000),
   });
 
   if (!resp.ok) {
@@ -92,6 +92,7 @@ interface MediaTrigger {
   prompt: string;
   videoLora?: string;
   videoLoraStrength?: number;
+  cameraAngle?: string;
 }
 
 function resolveLoraCategory(slug: string | undefined): { videoLora?: string; videoLoraStrength?: number } {
@@ -101,15 +102,26 @@ function resolveLoraCategory(slug: string | undefined): { videoLora?: string; vi
   return { videoLora: entry.loraName, videoLoraStrength: entry.strength };
 }
 
-function extractMediaTrigger(text: string): MediaTrigger | null {
-  const imgMatch = text.match(/\[MEDIA_IMAGE\](.*?)\[\/MEDIA_IMAGE\]/s);
-  if (imgMatch) return { type: "image", prompt: imgMatch[1].trim() };
+function parseMediaAttrs(tag: string): Record<string, string> {
+  const attrs: Record<string, string> = {};
+  const re = /(\w+)="([^"]*)"/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(tag)) !== null) attrs[m[1]] = m[2];
+  return attrs;
+}
 
-  const vidMatch = text.match(/\[MEDIA_VIDEO(?:\s+lora="([^"]*)")?\](.*?)\[\/MEDIA_VIDEO\]/s);
+function extractMediaTrigger(text: string): MediaTrigger | null {
+  const imgMatch = text.match(/\[MEDIA_IMAGE([^\]]*)\](.*?)\[\/MEDIA_IMAGE\]/s);
+  if (imgMatch) {
+    const attrs = parseMediaAttrs(imgMatch[1]);
+    return { type: "image", prompt: imgMatch[2].trim(), cameraAngle: attrs.angle || undefined };
+  }
+
+  const vidMatch = text.match(/\[MEDIA_VIDEO([^\]]*)\](.*?)\[\/MEDIA_VIDEO\]/s);
   if (vidMatch) {
-    const loraSlug = vidMatch[1];
+    const attrs = parseMediaAttrs(vidMatch[1]);
     const prompt = vidMatch[2].trim();
-    return { type: "video", prompt, ...resolveLoraCategory(loraSlug) };
+    return { type: "video", prompt, ...resolveLoraCategory(attrs.lora), cameraAngle: attrs.angle || undefined };
   }
 
   // Fallback: LLM said it sent a photo/video without using proper tags
@@ -139,10 +151,10 @@ function extractMediaTrigger(text: string): MediaTrigger | null {
 
 function stripMediaTags(text: string): string {
   return text
-    .replace(/\[MEDIA_IMAGE\].*?\[\/MEDIA_IMAGE\]/gs, "")
-    .replace(/\[MEDIA_VIDEO(?:\s+lora="[^"]*")?\].*?\[\/MEDIA_VIDEO\]/gs, "")
-    .replace(/\[MEDIA_IMAGE\][^[]*$/gs, "")
-    .replace(/\[MEDIA_VIDEO(?:\s+lora="[^"]*")?\][^[]*$/gs, "")
+    .replace(/\[MEDIA_IMAGE(?:\s+[^[\]]*?)?\].*?\[\/MEDIA_IMAGE\]/gs, "")
+    .replace(/\[MEDIA_VIDEO(?:\s+[^[\]]*?)?\].*?\[\/MEDIA_VIDEO\]/gs, "")
+    .replace(/\[MEDIA_IMAGE(?:\s+[^[\]]*?)?\][^[]*$/gs, "")
+    .replace(/\[MEDIA_VIDEO(?:\s+[^[\]]*?)?\][^[]*$/gs, "")
     .replace(/\[\/?MEDIA_IMAGE\]/g, "")
     .replace(/\[\/?MEDIA_VIDEO\]/g, "")
     .replace(/\(sent a (?:photo|video|pic|picture|image)\)/gi, "")
@@ -254,6 +266,9 @@ function buildEmotionalSystemPrompt(
     .join("; ");
   parts.push(`\n[Media generation — video styles] When you send a video, you may pick a style that best matches the scene by adding a lora attribute: [MEDIA_VIDEO lora="slug"]description[/MEDIA_VIDEO]. Available styles: none (default — general motion); ${styleList}. Pick the style that best fits the action. If nothing specific fits or the scene is SFW, omit the lora attribute entirely.`);
 
+  // Camera angle guidance for both images and videos
+  parts.push(`\n[Media generation — camera angles] You can optionally specify a camera angle for images or videos by adding angle="..." to the tag. Available angles: closeup (face/detail), wide (full body/scene), topdown (overhead view), forward (move closer), pov_down (looking down at subject). Examples: [MEDIA_IMAGE angle="closeup"]description[/MEDIA_IMAGE] or [MEDIA_VIDEO lora="slug" angle="wide"]description[/MEDIA_VIDEO]. Pick the angle that best frames the scene. If unsure, omit the angle attribute.`);
+
   return parts.join("");
 }
 
@@ -318,12 +333,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     if (action === "message") {
-      const { characterId, message, history } = req.body;
+      const { characterId, message, history, imageBase64 } = req.body;
       if (!characterId) return res.status(400).json({ error: "characterId required" });
       if (!message || typeof message !== "string" || message.trim().length < 1)
         return res.status(400).json({ error: "Message is required" });
       if (message.length > 2000)
         return res.status(400).json({ error: "Message must be 2000 characters or less" });
+
+      const hasImage = typeof imageBase64 === "string" && imageBase64.length > 100;
 
       const { allowed } = await checkRateLimit(auth.userId, "chat-message", { max: 30, windowSeconds: 60 });
       if (!allowed) return res.status(429).json({ error: "Slow down — too many messages" });
@@ -368,6 +385,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         { role: "system", content: fullSystemPrompt },
       ];
 
+      if (hasImage) {
+        messages[0].content += `\n[Reference image] The user has shared a photo. You can see it and should react naturally — comment on it, flirt about it, etc. If you decide to generate media in response, you can incorporate elements from their image.`;
+      }
+
       // Add recent history (last 20 messages to stay within context limits)
       const historyArr = Array.isArray(history) ? history.slice(-20) : [];
       for (const msg of historyArr) {
@@ -376,9 +397,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       }
 
-      messages.push({ role: "user", content: message.trim() });
+      // Build the user message — multimodal if image attached
+      if (hasImage) {
+        messages.push({
+          role: "user",
+          content: [
+            { type: "image_url", image_url: { url: imageBase64 } },
+            { type: "text", text: message.trim() },
+          ] as any,
+        });
+      } else {
+        messages.push({ role: "user", content: message.trim() });
+      }
 
-      const response = await callLLM(char.llm_backend || "grok", messages);
+      const response = await callLLM(char.llm_backend || "grok", messages, { vision: hasImage });
 
       const mediaTrigger = extractMediaTrigger(response);
       const cleanText = stripMediaTags(response);

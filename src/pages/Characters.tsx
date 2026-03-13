@@ -4,7 +4,7 @@ import { apiFetch } from "@/lib/api";
 import { saveChatMessage, getChatHistory, clearChatHistory, deleteChatMessage, type ChatMessage } from "@/lib/storage";
 import { comfySubmitAndPollStandalone, comfyPollUntilDone } from "@/hooks/useGrokApi";
 import CyberLayout from "@/components/CyberLayout";
-import { ArrowLeft, Plus, Trash2, Send, Edit, X, MessageSquare, Sparkles, Image, Download } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Send, Edit, X, MessageSquare, Sparkles, Image, Download, Paperclip } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface PendingCharJob {
@@ -91,6 +91,12 @@ export default function Characters() {
   const [confirmClear, setConfirmClear] = useState(false);
   const [selectedMsgIdx, setSelectedMsgIdx] = useState<number | null>(null);
 
+  const [pendingImage, setPendingImage] = useState<string | null>(null);
+  const [lastUserImageBase64, setLastUserImageBase64] = useState<string | null>(null);
+  const lastUserImageRef = useRef<string | null>(null);
+  lastUserImageRef.current = lastUserImageBase64;
+  const chatImageRef = useRef<HTMLInputElement>(null);
+
   // Keep a ref to activeChar so async callbacks always see the latest value
   const activeCharRef = useRef(activeChar);
   activeCharRef.current = activeChar;
@@ -139,6 +145,8 @@ export default function Characters() {
 
   const openChat = async (char: Character) => {
     setActiveChar(char);
+    setLastUserImageBase64(null);
+    setPendingImage(null);
     const history = await getChatHistory(char.id);
     setMessages(history);
     setView("chat");
@@ -214,6 +222,39 @@ export default function Characters() {
     } catch {
       toast({ title: "Unsupported format", description: "Could not process image. Try JPG or PNG." });
     }
+  };
+
+  const handleChatImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      let sourceBlob: Blob = file;
+      const isHeic = (f: File) => {
+        const t = (f.type || "").toLowerCase();
+        const n = (f.name || "").toLowerCase();
+        return t === "image/heic" || t === "image/heif" || n.endsWith(".heic") || n.endsWith(".heif");
+      };
+      if (isHeic(file)) {
+        const { default: heic2any } = await import("heic2any");
+        const converted = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.85 });
+        sourceBlob = Array.isArray(converted) ? converted[0] : converted;
+      }
+      const bitmap = await createImageBitmap(sourceBlob);
+      const maxDim = 768;
+      let w = bitmap.width, h = bitmap.height;
+      if (w > maxDim || h > maxDim) {
+        const s = maxDim / Math.max(w, h);
+        w = Math.round(w * s); h = Math.round(h * s);
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      canvas.getContext("2d")?.drawImage(bitmap, 0, 0, w, h);
+      bitmap.close();
+      setPendingImage(canvas.toDataURL("image/jpeg", 0.85));
+    } catch {
+      toast({ title: "Unsupported format", description: "Could not process image. Try JPG or PNG." });
+    }
+    e.target.value = "";
   };
 
   const toggleTrait = (t: string) => {
@@ -301,7 +342,9 @@ export default function Characters() {
       .slice(-18)
       .map(m => ({
         role: m.role,
-        content: m.content?.trim()
+        content: m.imageBase64
+          ? `[user sent a reference image] ${m.content || ""}`.trim()
+          : m.content?.trim()
           ? m.content
           : m.mediaType === "video" ? "[attached video]"
           : m.mediaUrl ? "[attached image]"
@@ -312,8 +355,19 @@ export default function Characters() {
 
   // ── Media generation (uses standalone comfySubmitAndPoll — no LoRAs, simple paths) ──
 
+  // Chinese camera angle tags for qwen-multiple-angles LoRA
+  const CAMERA_ANGLES: Record<string, string> = {
+    closeup:   "将镜头转为特写镜头, ",
+    wide:      "将镜头转为广角镜头, ",
+    topdown:   "将镜头转为俯视, ",
+    forward:   "将镜头向前移动, ",
+    pov_down:  "将镜头向下移动, ",
+    left:      "将镜头向左移动, ",
+    right:     "将镜头向右移动, ",
+  };
+
   const handleMediaTrigger = useCallback(async (
-    trigger: { type: "image" | "video"; prompt: string; videoLora?: string; videoLoraStrength?: number },
+    trigger: { type: "image" | "video"; prompt: string; videoLora?: string; videoLoraStrength?: number; cameraAngle?: string },
     char: Character,
   ) => {
     const placeholderId = `placeholder-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
@@ -337,21 +391,28 @@ export default function Characters() {
     try {
       const portrait64 = char.portrait_url;
       const hasPortrait = portrait64 && portrait64.length > 100;
+      const refImage = lastUserImageRef.current;
 
       if (trigger.type === "image") {
         if (!hasPortrait) {
           failPlaceholder("Image generation requires a character portrait. Edit the character and add one.");
           return;
         }
-        const result = await comfySubmitAndPollStandalone({
+        const anglePrefix = trigger.cameraAngle && CAMERA_ANGLES[trigger.cameraAngle] ? CAMERA_ANGLES[trigger.cameraAngle] : "";
+        const imgBody: Record<string, any> = {
           workflow: "qwen-edit",
-          prompt: trigger.prompt,
+          prompt: anglePrefix + trigger.prompt,
           imageBase64: portrait64,
           imageFilename: "portrait.jpg",
           width: 1024, height: 1360,
           steps: 4, cfg: 1,
-          lora: "qwen-multiple-angles.safetensors", loraStrength: 0.6,
-        });
+          lora: "qwen-edit-skin.safetensors", loraStrength: 1.0,
+        };
+        if (refImage) {
+          imgBody.imageBase64_2 = refImage;
+          imgBody.imageFilename2 = "reference.jpg";
+        }
+        const result = await comfySubmitAndPollStandalone(imgBody);
 
         if (result.image) {
           const mediaMsg: ChatMessage = {
@@ -372,14 +433,22 @@ export default function Characters() {
         }
 
         updatePlaceholder("generating image from portrait...");
-        const imgResult = await comfySubmitAndPollStandalone({
+        const vidAnglePrefix = trigger.cameraAngle && CAMERA_ANGLES[trigger.cameraAngle]
+          ? CAMERA_ANGLES[trigger.cameraAngle]
+          : CAMERA_ANGLES.closeup;
+        const vidFrameBody: Record<string, any> = {
           workflow: "qwen-edit",
-          prompt: trigger.prompt,
+          prompt: vidAnglePrefix + trigger.prompt,
           imageBase64: portrait64,
           imageFilename: "portrait.jpg",
           steps: 4, cfg: 1,
           lora: "qwen-multiple-angles.safetensors", loraStrength: 0.6,
-        });
+        };
+        if (refImage) {
+          vidFrameBody.imageBase64_2 = refImage;
+          vidFrameBody.imageFilename2 = "reference.jpg";
+        }
+        const imgResult = await comfySubmitAndPollStandalone(vidFrameBody);
 
         if (!imgResult.image) throw new Error("Failed to generate source image for video");
 
@@ -438,18 +507,20 @@ export default function Characters() {
   // ── Send message ──
 
   const sendMessage = async () => {
-    if (!chatInput.trim() || !activeChar || chatLoading) return;
+    if ((!chatInput.trim() && !pendingImage) || !activeChar || chatLoading) return;
     const text = chatInput.trim();
     const char = activeChar;
+    const attachedImage = pendingImage;
     setChatInput("");
+    setPendingImage(null);
+
+    if (attachedImage) setLastUserImageBase64(attachedImage);
 
     const userMsg: ChatMessage = {
-      characterId: char.id, role: "user", content: text, timestamp: Date.now(),
+      characterId: char.id, role: "user", content: text || (attachedImage ? "" : ""), timestamp: Date.now(),
+      imageBase64: attachedImage || undefined,
     };
 
-    // Build history from PREVIOUS messages (before adding the new user message).
-    // The server adds the current message separately via the `message` field —
-    // if we include it here too, the LLM sees it twice and doubles its response.
     let historyForApi: { role: string; content: string }[] = [];
     setMessages(prev => {
       historyForApi = buildHistoryForApi(prev);
@@ -459,9 +530,15 @@ export default function Characters() {
 
     setChatLoading(true);
     try {
-      const data = await apiFetch<{ reply: string; mediaTrigger?: { type: "image" | "video"; prompt: string } }>("/chat", {
+      const apiBody: Record<string, any> = {
+        action: "message", characterId: char.id, message: text || "[image]",
+        history: historyForApi, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      };
+      if (attachedImage) apiBody.imageBase64 = attachedImage;
+
+      const data = await apiFetch<{ reply: string; mediaTrigger?: { type: "image" | "video"; prompt: string; videoLora?: string; videoLoraStrength?: number; cameraAngle?: string } }>("/chat", {
         method: "POST",
-        body: { action: "message", characterId: char.id, message: text, history: historyForApi, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone },
+        body: apiBody,
       });
 
       const assistantMsg: ChatMessage = {
@@ -742,6 +819,9 @@ export default function Characters() {
                           )}
                         </div>
                       )}
+                      {msg.imageBase64 && (
+                        <img src={msg.imageBase64} alt="Reference" className="max-w-full rounded mb-2 max-h-48 object-contain border border-secondary/20" />
+                      )}
                       {msg.mediaUrl && msg.mediaType === "image" && (
                         <img src={msg.mediaUrl} alt="From character" className="max-w-full rounded mb-2 max-h-64 object-contain" />
                       )}
@@ -785,8 +865,25 @@ export default function Characters() {
               <div ref={chatEndRef} />
             </div>
 
+            {/* Pending image preview */}
+            {pendingImage && (
+              <div className="flex items-center gap-2 px-2 py-1.5 bg-card/40 border border-border rounded-t-lg shrink-0">
+                <img src={pendingImage} alt="Attached" className="w-12 h-12 rounded object-cover border border-secondary/30" />
+                <span className="font-mono-share text-[9px] text-muted-foreground flex-1">Reference image attached</span>
+                <button onClick={() => setPendingImage(null)} className="p-1 hover:text-red-400 transition-colors">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+
             {/* Input */}
-            <div className="flex gap-2 shrink-0">
+            <div className={`flex gap-2 shrink-0 ${pendingImage ? "-mt-px" : ""}`}>
+              <input type="file" ref={chatImageRef} accept="image/*" className="hidden" onChange={handleChatImage} />
+              <button onClick={() => chatImageRef.current?.click()} disabled={chatLoading}
+                className="px-3 py-2.5 bg-card/60 border border-border rounded-lg hover:border-secondary/50 transition-colors disabled:opacity-50"
+                title="Attach reference image">
+                <Paperclip className="w-4 h-4 text-muted-foreground" />
+              </button>
               <input
                 type="text"
                 value={chatInput}
@@ -796,7 +893,7 @@ export default function Characters() {
                 disabled={chatLoading}
                 className="flex-1 bg-card/60 border border-border rounded-lg px-4 py-2.5 text-sm font-mono-share text-foreground placeholder-muted-foreground/40 disabled:opacity-50"
               />
-              <button onClick={sendMessage} disabled={chatLoading || !chatInput.trim()}
+              <button onClick={sendMessage} disabled={chatLoading || (!chatInput.trim() && !pendingImage)}
                 className="px-4 py-2.5 bg-secondary/30 border border-secondary/50 rounded-lg hover:bg-secondary/40 transition-colors disabled:opacity-50">
                 <Send className="w-4 h-4 text-secondary" />
               </button>

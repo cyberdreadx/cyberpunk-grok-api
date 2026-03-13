@@ -6,12 +6,12 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Zap, ImagePlus, Film, Download, Sparkles, Bug, FolderOpen, Smartphone, Share2, Users, Clock, Link2, ExternalLink, ShieldAlert } from "lucide-react";
+import { Zap, ImagePlus, Film, Download, Sparkles, Bug, FolderOpen, Smartphone, Share2, Users, Clock, Link2, ExternalLink, ShieldAlert, Camera, Wrench } from "lucide-react";
 
 /* ─── Changelog entries ─── */
 // Add new entries at the TOP. Bump LATEST_VERSION when deploying.
 
-export const LATEST_VERSION = "2026.02.19";
+export const LATEST_VERSION = "2026.03.13";
 
 interface ChangelogEntry {
     version: string;
@@ -21,6 +21,19 @@ interface ChangelogEntry {
 }
 
 const CHANGELOG: ChangelogEntry[] = [
+    {
+        version: "2026.03.13",
+        date: "March 13, 2026",
+        title: "Smarter Characters — Vision, Reference Images & LoRA Intelligence",
+        items: [
+            { icon: <Camera className="w-3.5 h-3.5" />, text: "Image upload in character chat — attach a reference photo and the character sees it via Grok Vision", tag: "new" },
+            { icon: <ImagePlus className="w-3.5 h-3.5" />, text: "Reference image blending — uploaded photos merge with the character portrait for contextual media generation", tag: "new" },
+            { icon: <Sparkles className="w-3.5 h-3.5" />, text: "Smart LoRA strategy — skin detail LoRA for standalone images, camera angles LoRA with Chinese tags for video source frames", tag: "new" },
+            { icon: <Film className="w-3.5 h-3.5" />, text: "LLM-driven camera angles — characters pick close-up, wide, top-down, or POV perspectives for generated media", tag: "new" },
+            { icon: <Wrench className="w-3.5 h-3.5" />, text: "Flexible media tag parsing — attributes in any order, more robust extraction of LoRA and angle selections", tag: "improve" },
+            { icon: <Bug className="w-3.5 h-3.5" />, text: "Fixed LoRA crash — paired LoRAs no longer fail when base name isn't in the env config", tag: "fix" },
+        ],
+    },
     {
         version: "2026.02.19",
         date: "February 19, 2026",

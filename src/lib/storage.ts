@@ -497,6 +497,7 @@ export interface ChatMessage {
   content: string;
   mediaUrl?: string;
   mediaType?: "image" | "video";
+  imageBase64?: string;
   timestamp: number;
 }
 
