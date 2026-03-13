@@ -2468,7 +2468,28 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
         );
         if (!resp.ok) throw new Error(`RunPod status failed (${resp.status})`);
 
-        const data: any = await resp.json();
+        // Parse RunPod response — use text() first to detect and log oversized payloads
+        let data: any;
+        const rawText = await resp.text();
+        const rawSizeMB = (rawText.length / 1024 / 1024).toFixed(1);
+        console.log(`[comfyui-poll] RunPod response size: ${rawSizeMB}MB`);
+
+        // If the response is enormous (>80MB), try to extract any S3/HTTP URL before full parse
+        if (rawText.length > 80 * 1024 * 1024) {
+          console.warn(`[comfyui-poll] RunPod response is very large (${rawSizeMB}MB), scanning for URLs first`);
+          const urlMatch = rawText.match(/https?:\/\/[^\s"',\]]+\.(?:mp4|webm|png|jpg|gif)/i);
+          if (urlMatch) {
+            console.log(`[comfyui-poll] Extracted URL from oversized response: ${urlMatch[0].slice(0, 120)}`);
+            return res.status(200).json({ status: "done", [outputType === "video" ? "video" : "image"]: urlMatch[0] });
+          }
+        }
+
+        try {
+          data = JSON.parse(rawText);
+        } catch (parseErr: any) {
+          console.error(`[comfyui-poll] JSON parse failed on ${rawSizeMB}MB response: ${parseErr.message}`);
+          return res.status(200).json({ status: "error", error: `RunPod response too large to process (${rawSizeMB}MB). Try a lower resolution or fewer frames.` });
+        }
 
         // RunPod statuses: IN_QUEUE, IN_PROGRESS, COMPLETED, FAILED, CANCELLED, TIMED_OUT
         if (data.status === "COMPLETED") {
@@ -2514,71 +2535,109 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
 
           // Helper: detect S3/HTTP URLs vs base64, return appropriate URI.
           // Uses AWS SDK with credentials (RunPod S3 doesn't support presigned URL auth).
-          const BLOB_SIZE_THRESHOLD = 3 * 1024 * 1024; // 3MB — upload to Blob if larger
+          // Videos are ALWAYS uploaded to Vercel Blob (no size threshold)
+          // Images only go to Blob if larger than MAX_INLINE_SIZE (defined in resolveFileData)
 
           async function uploadToBlob(buffer: Buffer, mime: string, ext: string): Promise<string | null> {
             const token = process.env.BLOB_READ_WRITE_TOKEN || process.env.grokrun_READ_WRITE_TOKEN || "";
-            if (!token) return null;
-            try {
-              const blob = await put(`comfyui-output/${Date.now()}-${Math.random().toString(36).slice(2, 6)}.${ext}`, buffer, {
-                access: "public",
-                contentType: mime,
-                token,
-              });
-              console.log(`[comfyui-poll] Uploaded ${(buffer.length / 1024 / 1024).toFixed(1)}MB to Blob: ${blob.url}`);
-              return blob.url;
-            } catch (err: any) {
-              console.error(`[comfyui-poll] Blob upload failed: ${err.message}`);
+            if (!token) {
+              console.error("[comfyui-poll] No BLOB_READ_WRITE_TOKEN configured — cannot upload to Vercel Blob");
               return null;
             }
-          }
-
-          async function resolveFileData(file: any, type: "video" | "image"): Promise<string | null> {
-            const d = typeof file === "string" ? file : (file?.data || file?.url || null);
-            if (!d || typeof d !== "string") return null;
-            // Already a data URI
-            if (d.startsWith("data:")) {
-              // Check if data URI is too large for response
-              if (d.length > BLOB_SIZE_THRESHOLD * 1.37) { // base64 is ~1.37x raw
-                const match = d.match(/^data:([^;]+);base64,(.+)/s);
-                if (match) {
-                  const buf = Buffer.from(match[2], "base64");
-                  const ext = type === "video" ? "mp4" : "png";
-                  const blobUrl = await uploadToBlob(buf, match[1], ext);
-                  if (blobUrl) return blobUrl;
-                }
+            const sizeMB = (buffer.length / 1024 / 1024).toFixed(1);
+            const filename = `comfyui-output/${Date.now()}-${Math.random().toString(36).slice(2, 6)}.${ext}`;
+            for (let attempt = 1; attempt <= 2; attempt++) {
+              try {
+                const blob = await put(filename, buffer, {
+                  access: "public",
+                  contentType: mime,
+                  token,
+                });
+                console.log(`[comfyui-poll] Uploaded ${sizeMB}MB to Blob: ${blob.url}`);
+                return blob.url;
+              } catch (err: any) {
+                console.error(`[comfyui-poll] Blob upload attempt ${attempt}/2 failed (${sizeMB}MB): ${err.message}`);
+                if (attempt < 2) await new Promise(r => setTimeout(r, 1000));
               }
-              return d;
-            }
-            // S3 URL or any HTTP URL
-            if (d.startsWith("http://") || d.startsWith("https://") || file?.type === "s3_url" || file?.type === "url") {
-              const url = d.startsWith("http") ? d : (file?.url || d);
-              const s3Data = await downloadFromS3(url);
-              if (s3Data) {
-                s3UrlsToClean.push(url);
-                if (s3Data.buffer.length > BLOB_SIZE_THRESHOLD) {
-                  const ext = type === "video" ? "mp4" : "png";
-                  const blobUrl = await uploadToBlob(s3Data.buffer, s3Data.contentType, ext);
-                  if (blobUrl) return blobUrl;
-                }
-                const base64 = s3Data.buffer.toString("base64");
-                return `data:${s3Data.contentType};base64,${base64}`;
-              }
-              console.error(`[comfyui-poll] S3 download failed for ${type}, returning URL as fallback`);
-              return url;
-            }
-            // Raw base64
-            if (d.length > 100) {
-              const mime = type === "video" ? "video/mp4" : "image/png";
-              if (d.length > BLOB_SIZE_THRESHOLD * 1.37) {
-                const buf = Buffer.from(d, "base64");
-                const ext = type === "video" ? "mp4" : "png";
-                const blobUrl = await uploadToBlob(buf, mime, ext);
-                if (blobUrl) return blobUrl;
-              }
-              return `data:${mime};base64,${d}`;
             }
             return null;
+          }
+
+          const MAX_INLINE_SIZE = 3 * 1024 * 1024; // 3MB — anything larger MUST go through Blob
+
+          async function resolveFileData(file: any, type: "video" | "image"): Promise<string | null> {
+            try {
+              const d = typeof file === "string" ? file : (file?.data || file?.url || null);
+              if (!d || typeof d !== "string") return null;
+
+              const alwaysBlob = type === "video"; // videos always get uploaded to Blob
+              const ext = type === "video" ? "mp4" : "png";
+
+              // Already a data URI
+              if (d.startsWith("data:")) {
+                const isLarge = d.length > MAX_INLINE_SIZE * 1.37;
+                if (alwaysBlob || isLarge) {
+                  const match = d.match(/^data:([^;]+);base64,(.+)/s);
+                  if (match) {
+                    const buf = Buffer.from(match[2], "base64");
+                    console.log(`[comfyui-poll] ${type} data URI ${(buf.length / 1024 / 1024).toFixed(1)}MB — uploading to Blob`);
+                    const blobUrl = await uploadToBlob(buf, match[1], ext);
+                    if (blobUrl) return blobUrl;
+                    if (isLarge) {
+                      console.error(`[comfyui-poll] Blob upload failed for large ${type} (${(buf.length / 1024 / 1024).toFixed(1)}MB) — cannot inline`);
+                      return null;
+                    }
+                  }
+                }
+                return d;
+              }
+
+              // S3 URL or any HTTP URL
+              if (d.startsWith("http://") || d.startsWith("https://") || file?.type === "s3_url" || file?.type === "url") {
+                const url = d.startsWith("http") ? d : (file?.url || d);
+                const s3Data = await downloadFromS3(url);
+                if (s3Data) {
+                  s3UrlsToClean.push(url);
+                  const isLarge = s3Data.buffer.length > MAX_INLINE_SIZE;
+                  if (alwaysBlob || isLarge) {
+                    console.log(`[comfyui-poll] ${type} from S3 ${(s3Data.buffer.length / 1024 / 1024).toFixed(1)}MB — uploading to Blob`);
+                    const blobUrl = await uploadToBlob(s3Data.buffer, s3Data.contentType, ext);
+                    if (blobUrl) return blobUrl;
+                    if (isLarge) {
+                      console.error(`[comfyui-poll] Blob upload failed for large ${type} from S3 (${(s3Data.buffer.length / 1024 / 1024).toFixed(1)}MB) — cannot inline`);
+                      return null;
+                    }
+                  }
+                  const base64 = s3Data.buffer.toString("base64");
+                  return `data:${s3Data.contentType};base64,${base64}`;
+                }
+                // S3 download failed — return URL directly as fallback (browser may be able to fetch it)
+                console.warn(`[comfyui-poll] S3 download failed for ${type}, returning URL as fallback: ${url.slice(0, 120)}`);
+                return url;
+              }
+
+              // Raw base64
+              if (d.length > 100) {
+                const mime = type === "video" ? "video/mp4" : "image/png";
+                const rawSize = d.length / 1.37; // approximate raw byte size
+                const isLarge = rawSize > MAX_INLINE_SIZE;
+                if (alwaysBlob || isLarge) {
+                  const buf = Buffer.from(d, "base64");
+                  console.log(`[comfyui-poll] Raw base64 ${type} ${(buf.length / 1024 / 1024).toFixed(1)}MB — uploading to Blob`);
+                  const blobUrl = await uploadToBlob(buf, mime, ext);
+                  if (blobUrl) return blobUrl;
+                  if (isLarge) {
+                    console.error(`[comfyui-poll] Blob upload failed for large raw ${type} (${(buf.length / 1024 / 1024).toFixed(1)}MB) — cannot inline`);
+                    return null;
+                  }
+                }
+                return `data:${mime};base64,${d}`;
+              }
+              return null;
+            } catch (err: any) {
+              console.error(`[comfyui-poll] resolveFileData error for ${type}: ${err.message}`);
+              return null;
+            }
           }
 
           // Scan all file arrays in output (videos, gifs, images) at top level and nested
@@ -2665,9 +2724,14 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           }
 
           // If output exists but has no extractable data
-          const outStr = JSON.stringify(out);
-          console.error("[comfyui-poll] No output found. Keys:", Object.keys(out), "Size:", outStr.length, "Preview:", outStr.slice(0, 1000));
-          return res.status(200).json({ status: "error", error: "Job completed but no output could be extracted. The video may be too large for the response." });
+          let outPreview = "";
+          try { const s = JSON.stringify(out); outPreview = `Size: ${(s.length / 1024).toFixed(0)}KB, Preview: ${s.slice(0, 1000)}`; } catch { outPreview = "Could not serialize output"; }
+          console.error("[comfyui-poll] No output found. Keys:", Object.keys(out), outPreview);
+          const blobToken = process.env.BLOB_READ_WRITE_TOKEN || process.env.grokrun_READ_WRITE_TOKEN || "";
+          const hint = !blobToken
+            ? " Vercel Blob token is missing (BLOB_READ_WRITE_TOKEN) — large videos cannot be delivered without it."
+            : " Check server logs for Blob upload errors.";
+          return res.status(200).json({ status: "error", error: `Job completed but output could not be delivered.${hint} Try a lower resolution or fewer frames.` });
         }
 
         if (data.status === "FAILED" || data.status === "CANCELLED" || data.status === "TIMED_OUT") {

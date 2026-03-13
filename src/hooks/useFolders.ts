@@ -10,8 +10,12 @@ import {
   renameFolder as renameFolderStorage,
   deleteFolder as deleteFolderStorage,
   moveResultToFolder as moveResultStorage,
+  moveResultsToFolder as moveResultsBulkStorage,
   setFolderHidden as setFolderHiddenStorage,
+  deleteStoredResults as deleteResultsBulkStorage,
+  emptyTrash as emptyTrashStorage,
   type Folder,
+  TRASH_FOLDER_ID,
 } from "@/lib/storage";
 
 /** Filter modes: show all, unfiled only, or a specific folder */
@@ -74,6 +78,19 @@ export function useFolders() {
     return folderId;
   }, []);
 
+  const bulkMoveToFolder = useCallback(async (ids: string[], folderId: string | null) => {
+    await moveResultsBulkStorage(ids, folderId);
+    return folderId;
+  }, []);
+
+  const bulkDelete = useCallback(async (ids: string[]) => {
+    await deleteResultsBulkStorage(ids);
+  }, []);
+
+  const emptyTrashFolder = useCallback(async () => {
+    return await emptyTrashStorage();
+  }, []);
+
   const selectFilter = useCallback((filter: FolderFilter) => {
     setSelectedFilter(filter);
   }, []);
@@ -87,6 +104,10 @@ export function useFolders() {
     deleteFolder,
     toggleFolderHidden,
     moveToFolder,
+    bulkMoveToFolder,
+    bulkDelete,
+    emptyTrashFolder,
     selectFilter,
+    TRASH_FOLDER_ID,
   };
 }

@@ -35,6 +35,10 @@ const FOLDERS_STORE_NAME = "folders";
 const CHAT_STORE_NAME = "chat_messages";
 const OLD_STORAGE_KEY = "grok-results";
 
+// ── Constants ────────────────────────────────────────────────────────────
+
+export const TRASH_FOLDER_ID = "__trash";
+
 // ── Types ────────────────────────────────────────────────────────────────
 
 export interface StoredResult {
@@ -309,6 +313,68 @@ export async function moveResultToFolder(resultId: string, folderId: string | nu
     };
 
     tx.oncomplete = () => { db.close(); resolve(); };
+    tx.onerror = () => { db.close(); reject(tx.error); };
+  });
+}
+
+/**
+ * Move multiple results to a folder in a single transaction.
+ */
+export async function moveResultsToFolder(ids: string[], folderId: string | null): Promise<void> {
+  if (ids.length === 0) return;
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    const store = tx.objectStore(STORE_NAME);
+    for (const id of ids) {
+      const getReq = store.get(id);
+      getReq.onsuccess = () => {
+        const rec: StoredResult | undefined = getReq.result;
+        if (rec) {
+          rec.folderId = folderId;
+          store.put(rec);
+        }
+      };
+    }
+    tx.oncomplete = () => { db.close(); resolve(); };
+    tx.onerror = () => { db.close(); reject(tx.error); };
+  });
+}
+
+/**
+ * Permanently delete multiple results in a single transaction.
+ */
+export async function deleteStoredResults(ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    const store = tx.objectStore(STORE_NAME);
+    for (const id of ids) store.delete(id);
+    tx.oncomplete = () => { db.close(); resolve(); };
+    tx.onerror = () => { db.close(); reject(tx.error); };
+  });
+}
+
+/**
+ * Permanently delete all results in the trash folder.
+ */
+export async function emptyTrash(): Promise<string[]> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    const store = tx.objectStore(STORE_NAME);
+    const idx = store.index("folderId");
+    const req = idx.getAll(TRASH_FOLDER_ID);
+    const deletedIds: string[] = [];
+    req.onsuccess = () => {
+      const recs: StoredResult[] = req.result || [];
+      for (const rec of recs) {
+        deletedIds.push(rec.id);
+        store.delete(rec.id);
+      }
+    };
+    tx.oncomplete = () => { db.close(); resolve(deletedIds); };
     tx.onerror = () => { db.close(); reject(tx.error); };
   });
 }

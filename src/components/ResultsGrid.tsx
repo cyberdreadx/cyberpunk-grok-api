@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import { Download, Maximize2, X, Trash2, ExternalLink, ChevronLeft, ChevronRight, Pencil, Film, Copy, Check, FolderPlus, FolderOpen, MoreVertical, FolderInput, Lock, LockOpen, ShieldCheck, Eye, EyeOff, ChevronDown, Sparkles, Archive, Loader2, Link2 } from "lucide-react";
+import { Download, Maximize2, X, Trash2, ExternalLink, ChevronLeft, ChevronRight, Pencil, Film, Copy, Check, FolderPlus, FolderOpen, MoreVertical, FolderInput, Lock, LockOpen, ShieldCheck, Eye, EyeOff, ChevronDown, Sparkles, Archive, Loader2, Link2, CheckSquare, Square, ListChecks, RotateCcw, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -217,6 +217,10 @@ interface ResultsGridProps {
   onDeleteFolder?: (id: string) => Promise<void>;
   onToggleFolderHidden?: (id: string) => Promise<void>;
   onMoveToFolder?: (resultId: string, folderId: string | null) => Promise<any>;
+  // Bulk / Trash props
+  onBulkMoveToFolder?: (ids: string[], folderId: string | null) => Promise<void>;
+  onBulkDelete?: (ids: string[]) => Promise<void>;
+  onEmptyTrash?: () => Promise<void>;
 }
 
 const isMobile = () => /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
@@ -382,6 +386,7 @@ function FolderBar({
   const currentFilterName = () => {
     if (selectedFilter === "unfiled") return "UNFILED";
     if (selectedFilter === "all") return "ALL";
+    if (selectedFilter === "__trash") return "TRASH";
     if (selectedFilter === "none") return "LOCKED";
     return folders.find((f) => f.id === selectedFilter)?.name?.toUpperCase() || "ALL";
   };
@@ -389,6 +394,7 @@ function FolderBar({
   const currentCount = () => {
     if (selectedFilter === "unfiled") return resultCounts["__unfiled"] ?? 0;
     if (selectedFilter === "all") return resultCounts["__total"] ?? 0;
+    if (selectedFilter === "__trash") return resultCounts["__trash"] ?? 0;
     if (selectedFilter === "none") return 0;
     return resultCounts[selectedFilter] ?? 0;
   };
@@ -512,6 +518,15 @@ function FolderBar({
             {renderMobileRow("unfiled", "UNFILED", "__unfiled", true)}
             {visibleFolders.map((f) => renderMobileRow(f.id, f.name.toUpperCase(), f.id, false, f))}
             {renderMobileRow("all", "ALL", "__total", true)}
+            {/* Trash tab (mobile) */}
+            <button
+              className={`w-full flex items-center gap-2 px-3 py-2 text-left transition-colors ${selectedFilter === "__trash" ? "bg-destructive/10 text-destructive" : "hover:bg-muted/30 text-muted-foreground/60"}`}
+              onClick={() => { onSelectFilter?.("__trash"); setMobileOpen(false); }}
+            >
+              <Trash2 className="w-3 h-3" />
+              <span className="font-mono-share text-[10px]">TRASH</span>
+              <span className="font-mono-share text-[10px] text-muted-foreground/40 ml-auto">{resultCounts.__trash ?? 0}</span>
+            </button>
 
             {hiddenFolders.length > 0 && (
               <div className="border-t border-border/30 pt-1 mt-1">
@@ -589,6 +604,15 @@ function FolderBar({
           </DropdownMenu>
         )}
         {renderDesktopBuiltIn("all", "ALL", "__total")}
+        {/* Trash tab */}
+        <button
+          className={`${tabClass(selectedFilter === "__trash")} ${selectedFilter === "__trash" ? "!text-destructive !border-destructive/60" : "text-muted-foreground/50"}`}
+          onClick={() => onSelectFilter?.("__trash")}
+        >
+          <Trash2 className="w-3 h-3 inline-block mr-1 -mt-0.5" />
+          TRASH
+          <span className="ml-1 text-muted-foreground/40">{resultCounts.__trash ?? 0}</span>
+        </button>
         {isCreating ? (
           <input ref={createInputRef} value={newFolderName} onChange={(e) => setNewFolderName(e.target.value)} onBlur={handleCreate}
             onKeyDown={(e) => { if (e.key === "Enter") handleCreate(); if (e.key === "Escape") { setIsCreating(false); setNewFolderName(""); } }}
@@ -761,11 +785,33 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
   onDeleteFolder,
   onToggleFolderHidden,
   onMoveToFolder,
+  onBulkMoveToFolder,
+  onBulkDelete,
+  onEmptyTrash,
 }) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [mobileIndex, setMobileIndex] = useState(0);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [moveMenuId, setMoveMenuId] = useState<string | null>(null);
+
+  // Multi-select state
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  const isTrashView = selectedFilter === "__trash";
+
+  const exitSelectMode = useCallback(() => {
+    setSelectMode(false);
+    setSelectedIds(new Set());
+  }, []);
+
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
 
   // ZIP export state
   const [zipExporting, setZipExporting] = useState(false);
@@ -869,19 +915,31 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
     }
   }, [pinDialog, getFolderName, pinIdToFilter, onSelectFilter]);
 
-  // Filter results based on selected folder
+  // Exit select mode when switching filters
+  const prevFilter = useRef(selectedFilter);
+  useEffect(() => {
+    if (prevFilter.current !== selectedFilter) {
+      exitSelectMode();
+      prevFilter.current = selectedFilter;
+    }
+  }, [selectedFilter, exitSelectMode]);
+
+  // Filter results based on selected folder (trash excluded from "all" and "unfiled")
   const filteredResults = React.useMemo(() => {
     if (selectedFilter === "none") return [];
-    if (selectedFilter === "all") return results;
-    if (selectedFilter === "unfiled") return results.filter((r) => !r.folderId);
+    if (selectedFilter === "__trash") return results.filter((r) => r.folderId === "__trash");
+    if (selectedFilter === "all") return results.filter((r) => r.folderId !== "__trash");
+    if (selectedFilter === "unfiled") return results.filter((r) => !r.folderId || r.folderId === "");
     return results.filter((r) => r.folderId === selectedFilter);
   }, [results, selectedFilter]);
 
   // Compute result counts per folder for badges
   const resultCounts = React.useMemo(() => {
+    const nonTrash = results.filter((r) => r.folderId !== "__trash");
     const counts: Record<string, number> = {
-      __total: results.length,
-      __unfiled: results.filter((r) => !r.folderId).length,
+      __total: nonTrash.length,
+      __unfiled: results.filter((r) => !r.folderId || r.folderId === "").length,
+      __trash: results.filter((r) => r.folderId === "__trash").length,
     };
     for (const folder of folders) {
       counts[folder.id] = results.filter((r) => r.folderId === folder.id).length;
@@ -1196,36 +1254,68 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setPurgeConfirmOpen(true)}
-              className="text-destructive hover:text-destructive/80 font-mono-share text-xs"
+              onClick={() => { if (selectMode) exitSelectMode(); else setSelectMode(true); }}
+              className={`font-mono-share text-xs ${selectMode ? "text-primary" : "text-primary/60 hover:text-primary/80"}`}
             >
-              <Trash2 className="w-3 h-3 mr-1" />
-              PURGE
+              <ListChecks className="w-3 h-3 mr-1" />
+              {selectMode ? "CANCEL" : "SELECT"}
             </Button>
+            {isTrashView && onEmptyTrash && (resultCounts.__trash ?? 0) > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setPurgeConfirmOpen(true)}
+                className="text-destructive hover:text-destructive/80 font-mono-share text-xs"
+              >
+                <Trash2 className="w-3 h-3 mr-1" />
+                EMPTY TRASH
+              </Button>
+            )}
+            {!isTrashView && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setPurgeConfirmOpen(true)}
+                className="text-destructive hover:text-destructive/80 font-mono-share text-xs"
+              >
+                <Trash2 className="w-3 h-3 mr-1" />
+                PURGE
+              </Button>
+            )}
           </div>
         )}
 
-        {/* Purge confirmation dialog */}
+        {/* Purge / Empty Trash confirmation dialog */}
         <AlertDialog open={purgeConfirmOpen} onOpenChange={setPurgeConfirmOpen}>
           <AlertDialogContent className="bg-card border-destructive/40 sm:max-w-md shadow-[0_0_30px_rgba(255,0,0,0.15)]">
             <AlertDialogHeader>
               <AlertDialogTitle className="font-orbitron text-sm tracking-wider text-destructive flex items-center gap-2">
                 <Trash2 className="w-4 h-4" />
-                CONFIRM_PURGE_OPERATION
+                {isTrashView ? "EMPTY_TRASH" : "CONFIRM_PURGE_OPERATION"}
               </AlertDialogTitle>
               <AlertDialogDescription asChild>
                 <div className="font-mono-share text-[11px] text-muted-foreground space-y-3">
                   <p className="text-destructive font-semibold text-xs">
                     ⚠ WARNING: This action is IRREVERSIBLE
                   </p>
-                  <p>
-                    You are about to permanently delete{" "}
-                    <span className="text-foreground font-bold">{results.length} generation{results.length !== 1 ? "s" : ""}</span>{" "}
-                    from your library. All images and videos will be erased from local storage.
-                  </p>
-                  <p className="text-primary/90">
-                    💡 TIP: Use <span className="font-semibold">DOWNLOAD ALL</span> to back up your library before purging.
-                  </p>
+                  {isTrashView ? (
+                    <p>
+                      Permanently delete{" "}
+                      <span className="text-foreground font-bold">{resultCounts.__trash ?? 0} item{(resultCounts.__trash ?? 0) !== 1 ? "s" : ""}</span>{" "}
+                      from trash. They cannot be recovered.
+                    </p>
+                  ) : (
+                    <>
+                      <p>
+                        You are about to permanently delete{" "}
+                        <span className="text-foreground font-bold">{results.length} generation{results.length !== 1 ? "s" : ""}</span>{" "}
+                        from your library. All images and videos will be erased from local storage.
+                      </p>
+                      <p className="text-primary/90">
+                        TIP: Use <span className="font-semibold">DOWNLOAD ALL</span> to back up your library before purging.
+                      </p>
+                    </>
+                  )}
                 </div>
               </AlertDialogDescription>
             </AlertDialogHeader>
@@ -1235,10 +1325,11 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
                 className="font-orbitron text-[10px] bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 onClick={() => {
                   setPurgeConfirmOpen(false);
-                  onClear();
+                  if (isTrashView && onEmptyTrash) onEmptyTrash();
+                  else onClear();
                 }}
               >
-                PURGE ALL DATA
+                {isTrashView ? "EMPTY TRASH" : "PURGE ALL DATA"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -1483,8 +1574,13 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
         {filteredResults.map((result, idx) => (
           <div
             key={result.id}
-            className="group relative border border-border rounded overflow-hidden bg-card hover:border-primary/50 transition-all animate-slide-up"
+            className={`group relative border rounded overflow-hidden bg-card transition-all animate-slide-up ${
+              selectMode && selectedIds.has(result.id)
+                ? "border-primary ring-1 ring-primary/40"
+                : "border-border hover:border-primary/50"
+            }`}
             style={{ animationDelay: `${idx * 50}ms` }}
+            onClick={selectMode ? () => toggleSelect(result.id) : undefined}
           >
             {result.type === "image" ? (
               <img
@@ -1499,15 +1595,27 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
                 src={result.url}
                 className="w-full object-contain bg-black/40"
                 style={{ minHeight: "150px", maxHeight: "400px" }}
-                controls
+                controls={!selectMode}
                 muted
                 playsInline
                 preload="auto"
               />
             )}
 
+            {/* Select mode checkbox */}
+            {selectMode && (
+              <div className="absolute top-2 left-2 z-10">
+                {selectedIds.has(result.id) ? (
+                  <CheckSquare className="w-5 h-5 text-primary drop-shadow-md" />
+                ) : (
+                  <Square className="w-5 h-5 text-muted-foreground/60 drop-shadow-md" />
+                )}
+              </div>
+            )}
+
             {/* Overlay — desktop hover (stays visible when move menu is open) */}
-            <div className={`absolute inset-0 bg-background/80 transition-opacity flex items-center justify-center gap-2 ${moveMenuId === result.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+            <div className={`absolute inset-0 bg-background/80 transition-opacity flex items-center justify-center gap-2 ${
+              selectMode ? "opacity-0 pointer-events-none" : (moveMenuId === result.id ? "opacity-100" : "opacity-0 group-hover:opacity-100")
               }`}>
               <Button
                 size="icon"
@@ -1594,7 +1702,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
             </div>
 
             {/* Type badge */}
-            <div className="absolute top-2 left-2 font-mono-share text-[9px] bg-background/80 text-primary px-1.5 py-0.5 rounded">
+            <div className={`absolute top-2 font-mono-share text-[9px] bg-background/80 text-primary px-1.5 py-0.5 rounded ${selectMode ? "left-9" : "left-2"}`}>
               {result.type.toUpperCase()}
             </div>
 
@@ -1608,6 +1716,103 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
           </div>
         ))}
       </div>
+
+      {/* Floating multi-select action bar */}
+      {selectMode && selectedIds.size > 0 && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 bg-card/95 backdrop-blur border border-primary/30 rounded-lg shadow-[0_0_20px_rgba(168,85,247,0.15)] px-4 py-2.5">
+          <span className="font-mono-share text-xs text-primary mr-1">{selectedIds.size} selected</span>
+
+          {/* Select all / none */}
+          <Button variant="ghost" size="sm" className="font-mono-share text-[10px]"
+            onClick={() => {
+              if (selectedIds.size === filteredResults.length)
+                setSelectedIds(new Set());
+              else
+                setSelectedIds(new Set(filteredResults.map((r) => r.id)));
+            }}
+          >
+            {selectedIds.size === filteredResults.length ? "NONE" : "ALL"}
+          </Button>
+
+          {/* Trash-view: Restore + Delete Forever */}
+          {isTrashView ? (
+            <>
+              <Button variant="outline" size="sm" className="font-mono-share text-[10px] text-primary border-primary/30 gap-1"
+                onClick={async () => {
+                  if (!onBulkMoveToFolder) return;
+                  const ids = Array.from(selectedIds);
+                  await onBulkMoveToFolder(ids, null);
+                  exitSelectMode();
+                  toast.success(`${ids.length} item(s) restored`);
+                }}
+              >
+                <RotateCcw className="w-3 h-3" /> RESTORE
+              </Button>
+              <Button variant="outline" size="sm" className="font-mono-share text-[10px] text-destructive border-destructive/30 gap-1"
+                onClick={async () => {
+                  if (!onBulkDelete) return;
+                  const ids = Array.from(selectedIds);
+                  await onBulkDelete(ids);
+                  exitSelectMode();
+                  toast.success(`${ids.length} item(s) permanently deleted`);
+                }}
+              >
+                <XCircle className="w-3 h-3" /> DELETE FOREVER
+              </Button>
+            </>
+          ) : (
+            <>
+              {/* Move to folder dropdown */}
+              {onBulkMoveToFolder && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="font-mono-share text-[10px] text-primary border-primary/30 gap-1">
+                      <FolderInput className="w-3 h-3" /> MOVE TO...
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="center" className="min-w-[140px] bg-card border-border max-h-60 overflow-y-auto">
+                    <DropdownMenuItem className="text-[10px] py-1.5 font-mono-share cursor-pointer" onSelect={async () => {
+                      const ids = Array.from(selectedIds);
+                      await onBulkMoveToFolder(ids, null);
+                      exitSelectMode();
+                      toast.success(`${ids.length} item(s) moved to UNFILED`);
+                    }}>
+                      UNFILED
+                    </DropdownMenuItem>
+                    {folders.map((f) => (
+                      <DropdownMenuItem key={f.id} className="text-[10px] py-1.5 font-mono-share cursor-pointer" onSelect={async () => {
+                        const ids = Array.from(selectedIds);
+                        await onBulkMoveToFolder(ids, f.id);
+                        exitSelectMode();
+                        toast.success(`${ids.length} item(s) moved to ${f.name.toUpperCase()}`);
+                      }}>
+                        <FolderOpen className="w-3 h-3 mr-1.5" /> {f.name.toUpperCase()}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+              {/* Trash selected */}
+              {onBulkMoveToFolder && (
+                <Button variant="outline" size="sm" className="font-mono-share text-[10px] text-destructive border-destructive/30 gap-1"
+                  onClick={async () => {
+                    const ids = Array.from(selectedIds);
+                    await onBulkMoveToFolder(ids, "__trash");
+                    exitSelectMode();
+                    toast.success(`${ids.length} item(s) moved to trash`);
+                  }}
+                >
+                  <Trash2 className="w-3 h-3" /> TRASH
+                </Button>
+              )}
+            </>
+          )}
+
+          <Button variant="ghost" size="sm" className="font-mono-share text-[10px] text-muted-foreground" onClick={exitSelectMode}>
+            CANCEL
+          </Button>
+        </div>
+      )}
 
       {/* PIN Dialog */}
       {pinDialog && (

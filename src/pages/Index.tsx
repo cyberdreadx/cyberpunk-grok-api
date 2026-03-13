@@ -276,6 +276,33 @@ const Index = () => {
     }
   }, [foldersHook, updateResultFolder, toast]);
 
+  const handleBulkMoveToFolder = useCallback(async (ids: string[], folderId: string | null) => {
+    try {
+      await foldersHook.bulkMoveToFolder(ids, folderId);
+      for (const id of ids) updateResultFolder(id, folderId);
+    } catch {
+      toast({ title: "FOLDER ERROR", description: "Failed to move items.", variant: "destructive" });
+    }
+  }, [foldersHook, updateResultFolder, toast]);
+
+  const handleBulkDelete = useCallback(async (ids: string[]) => {
+    try {
+      await foldersHook.bulkDelete(ids);
+      for (const id of ids) deleteResult(id);
+    } catch {
+      toast({ title: "DELETE ERROR", description: "Failed to delete items.", variant: "destructive" });
+    }
+  }, [foldersHook, deleteResult, toast]);
+
+  const handleEmptyTrash = useCallback(async () => {
+    try {
+      const deletedIds = await foldersHook.emptyTrashFolder();
+      for (const id of deletedIds) deleteResult(id);
+    } catch {
+      toast({ title: "TRASH ERROR", description: "Failed to empty trash.", variant: "destructive" });
+    }
+  }, [foldersHook, deleteResult, toast]);
+
   const handleSubmit = async (data: { prompt: string; imageUrl?: string; extraImageUrls?: string[] }) => {
     // Determine which engine pathway
     const isGrokEdit = mode === "edit-image" && editEngine === "grok";
@@ -1738,6 +1765,9 @@ const Index = () => {
             onDeleteFolder={foldersHook.deleteFolder}
             onToggleFolderHidden={foldersHook.toggleFolderHidden}
             onMoveToFolder={handleMoveToFolder}
+            onBulkMoveToFolder={handleBulkMoveToFolder}
+            onBulkDelete={handleBulkDelete}
+            onEmptyTrash={handleEmptyTrash}
           />
         </section>
 
