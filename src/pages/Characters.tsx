@@ -348,7 +348,7 @@ export default function Characters() {
           prompt: trigger.prompt,
           imageBase64: portrait64,
           imageFilename: "portrait.jpg",
-          width: 1536, height: 2048,
+          width: 1024, height: 1360,
           steps: 4, cfg: 1,
         });
 

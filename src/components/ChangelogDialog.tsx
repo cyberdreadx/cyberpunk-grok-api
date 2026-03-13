@@ -11,7 +11,7 @@ import { Zap, ImagePlus, Film, Download, Sparkles, Bug, FolderOpen, Smartphone, 
 /* ─── Changelog entries ─── */
 // Add new entries at the TOP. Bump LATEST_VERSION when deploying.
 
-export const LATEST_VERSION = "2025.03.10";
+export const LATEST_VERSION = "2026.02.19";
 
 interface ChangelogEntry {
     version: string;
@@ -22,9 +22,23 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
     {
+        version: "2026.02.19",
+        date: "February 19, 2026",
+        title: "Qwen Edit Overhaul & Smoother Video",
+        items: [
+            { icon: <ImagePlus className="w-3.5 h-3.5" />, text: "Qwen Edit rewritten — zoom trick (1.5x input upscale, 0.667x output downscale) for dramatically sharper image edits at any resolution", tag: "new" },
+            { icon: <Sparkles className="w-3.5 h-3.5" />, text: "Lightning LoRA baked in — 4-step acceleration LoRA auto-applied for fast, high-quality generation", tag: "new" },
+            { icon: <Zap className="w-3.5 h-3.5" />, text: "Sampler upgraded to euler_ancestral + beta scheduler for better detail and consistency", tag: "improve" },
+            { icon: <Film className="w-3.5 h-3.5" />, text: "Video HD pipeline upgraded — AI upscaler (NMKD/RealESRGAN) + RIFE 4x for buttery smooth 64fps output", tag: "improve" },
+            { icon: <Bug className="w-3.5 h-3.5" />, text: "Fixed output resolution — width/height now correctly treated as desired output size, no more shrinkage from zoom downscale", tag: "fix" },
+            { icon: <Zap className="w-3.5 h-3.5" />, text: "Removed dead HD upscale toggle — zoom trick handles quality natively, no extra credits needed", tag: "fix" },
+            { icon: <Users className="w-3.5 h-3.5" />, text: "Character images now render at 1024x1360 (portrait) with zoom-enhanced detail", tag: "improve" },
+        ],
+    },
+    {
         version: "2025.03.10",
         date: "March 10, 2025",
-        title: "⚠️ Grok Image Model Notice",
+        title: "Grok Image Model Notice",
         items: [
             { icon: <ShieldAlert className="w-3.5 h-3.5" />, text: "Grok grok-2-image (omodel) is now heavily moderated by xAI — many prompts may be blocked or filtered", tag: "fix" },
             { icon: <Sparkles className="w-3.5 h-3.5" />, text: "Use GLTCH (cloud.gltch.app) for best results — unrestricted generation via local ComfyUI pipelines with no content filters", tag: "improve" },

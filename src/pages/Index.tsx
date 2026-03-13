@@ -126,7 +126,7 @@ const Index = () => {
   const [editEngine, setEditEngine] = useState<EditEngine>("grok");
   const [grokPro, setGrokPro] = useState(false);
   const [qwenLoraStack, setQwenLoraStack] = useState<{ name: string; strengthModel: number; strengthClip: number }[]>([]);
-  const [comfyEditUpscale, setComfyEditUpscale] = useState(false);
+
   const [gltchImage2, setGltchImage2] = useState<string | null>(null);
   const [gltchImage2Name, setGltchImage2Name] = useState("");
   const gltchImage2Ref = useRef<HTMLInputElement>(null);
@@ -337,7 +337,7 @@ const Index = () => {
         else editMode = "edit-image";
         cost = calculateCreditCost(editMode, settings.count);
       } else if (isGltchEdit) {
-        cost = calculateCreditCost(comfyEditUpscale ? "comfy-image-hd" : "comfy-image");
+        cost = calculateCreditCost("comfy-image");
       } else if (isZimage || isComfyGen) {
         cost = calculateCreditCost("comfy-image");
       } else if (isComfyLongLook) {
@@ -378,7 +378,7 @@ const Index = () => {
       if (!adminBypass && !isGrokEditByok) {
         let cost: number;
         if (isGrokEdit) cost = calculateCreditCost(grokPro ? "edit-image-pro" : "edit-image", settings.count);
-        else if (isGltchEdit) cost = calculateCreditCost(comfyEditUpscale ? "comfy-image-hd" : "comfy-image");
+        else if (isGltchEdit) cost = calculateCreditCost("comfy-image");
         else if (isGltchWan) cost = calculateCreditCost("comfy-video");
         else if (isZimage || isComfyGen) cost = calculateCreditCost("comfy-image");
         else if (isComfyLongLook) cost = calculateCreditCost("comfy-longlook", longLookSeqCount);
@@ -420,7 +420,6 @@ const Index = () => {
           const parsedSeed = globalSeed ? Number(globalSeed) : undefined;
           comfyEdit({
             prompt: data.prompt,
-            negativePrompt: comfyNegPrompt || undefined,
             imageBase64,
             imageBase64_2: gltchImage2 || undefined,
             imageFilename2: gltchImage2Name || undefined,
@@ -430,7 +429,6 @@ const Index = () => {
             cfg: comfyCfg,
             seed: parsedSeed,
             loras: qwenLoraStack.filter(l => l.name !== "none"),
-            upscale: comfyEditUpscale,
             ...(adminTestCredits ? { testCredits: true } : {}),
           });
         } else if (isZimage) {
@@ -923,7 +921,7 @@ const Index = () => {
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>Edit + LoRA</span>
                       <span className={editEngine === "gltch" ? "text-secondary/70" : "text-muted-foreground/50"}>
-                        {comfyEditUpscale ? "2" : "1"} cr
+                        1 cr
                       </span>
                     </div>
                   </button>
@@ -963,7 +961,7 @@ const Index = () => {
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-secondary/5 border border-secondary/20 rounded">
                       <div className="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse" />
                       <span className="font-mono-share text-[9px] text-secondary/70">
-                        {comfyEditUpscale ? "2" : "1"} cr/edit — Qwen2.5 VL Edit + LoRA
+                        1 cr/edit — Qwen2.5 VL Edit + LoRA
                       </span>
                     </div>
                     <div>
@@ -1103,25 +1101,7 @@ const Index = () => {
                         )}
                       </div>
                     )}
-                    <button
-                      type="button"
-                      onClick={() => setComfyEditUpscale(!comfyEditUpscale)}
-                      className={`w-full flex items-center justify-between px-3 py-2 border rounded font-mono-share text-[10px] transition-all duration-200 ${comfyEditUpscale
-                        ? "border-purple-500/50 bg-purple-500/5 text-purple-300"
-                        : "border-border bg-card/30 text-muted-foreground hover:border-purple-500/30"
-                        }`}
-                    >
-                      <span className="flex items-center gap-1.5">
-                        <span className={`w-3 h-3 border rounded-sm flex items-center justify-center text-[8px] ${comfyEditUpscale ? "border-purple-500 bg-purple-500 text-white" : "border-muted-foreground/30"
-                          }`}>
-                          {comfyEditUpscale ? "✓" : ""}
-                        </span>
-                        HD UPSCALE (2x)
-                      </span>
-                      <span className={`text-[8px] ${comfyEditUpscale ? "text-yellow-400" : "text-muted-foreground/50"}`}>
-                        +1 cr
-                      </span>
-                    </button>
+                    
                     <div>
                       <label className="font-mono-share text-[9px] text-muted-foreground mb-1 block">SECOND IMAGE (OPTIONAL)</label>
                       {gltchImage2 ? (

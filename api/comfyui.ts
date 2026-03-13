@@ -1590,6 +1590,12 @@ function buildQwenEditWorkflow(p: {
   const lightningLora = process.env.COMFYUI_QWEN_LIGHTNING_LORA
     || "Qwen-Image-Edit-2509-Lightning-4steps-V1.0-bf16.safetensors";
 
+  // Zoom trick math: latent = desired output * 1.5, then 0.667x downscale → back to output size
+  const outW = p.width || 768;
+  const outH = p.height || 768;
+  const latentW = snap64(Math.round(outW * 1.5));
+  const latentH = snap64(Math.round(outH * 1.5));
+
   const ckptModel: [string, number] = ["125", 0];
   const ckptClip: [string, number] = ["125", 1];
   const vaeSource: [string, number] = p.vae ? ["130", 0] : ["125", 2];
@@ -1681,7 +1687,7 @@ function buildQwenEditWorkflow(p: {
     },
     "148": {
       class_type: "EmptyLatentImage",
-      inputs: { width: p.width || 1152, height: p.height || 1152, batch_size: 1 },
+      inputs: { width: latentW, height: latentH, batch_size: 1 },
     },
     "75": {
       class_type: "KSampler",
