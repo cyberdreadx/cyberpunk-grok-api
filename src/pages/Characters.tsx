@@ -406,7 +406,7 @@ export default function Characters() {
           imageFilename: "portrait.jpg",
           width: 1024, height: 1360,
           steps: 4, cfg: 1,
-          lora: "qwen-edit-skin.safetensors", loraStrength: 1.0,
+          lora: "qwen-edit-skin.safetensors", loraStrength: 0.09,
         };
         if (refImage) {
           imgBody.imageBase64_2 = refImage;
@@ -442,7 +442,7 @@ export default function Characters() {
           imageBase64: portrait64,
           imageFilename: "portrait.jpg",
           steps: 4, cfg: 1,
-          lora: "qwen-multiple-angles.safetensors", loraStrength: 0.6,
+          lora: "qwen-multiple-angles.safetensors", loraStrength: 0.09,
         };
         if (refImage) {
           vidFrameBody.imageBase64_2 = refImage;
@@ -463,7 +463,7 @@ export default function Characters() {
               width: 832, height: 832, steps: 4, cfg: 1,
               frameCount: 81, shift: 8, useRife: true, useUpscale: true, resolution: 832,
               videoLora: trigger.videoLora || "mystic_xxx_wan22_i2v_v1",
-              videoLoraStrength: trigger.videoLoraStrength || 0.4,
+              videoLoraStrength: trigger.videoLoraStrength || 0.09,
               videoLoraPass: "both",
             },
           },
