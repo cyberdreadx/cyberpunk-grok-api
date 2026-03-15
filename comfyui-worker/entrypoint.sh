@@ -62,5 +62,46 @@ rm -rf /comfyui/output/*.png /comfyui/output/*.jpg 2>/dev/null
 rm -rf /comfyui/output/video/* /comfyui/output/wan2-2/* 2>/dev/null
 echo "entrypoint: cleared ComfyUI output cache"
 
+# ── Force --highvram mode (H200 has 141GB — no need for memory management) ──
+if ! grep -q "\-\-highvram" /start.sh 2>/dev/null; then
+  sed -i 's|main\.py|main.py --highvram|g' /start.sh
+  echo "entrypoint: injected --highvram into start.sh"
+else
+  echo "entrypoint: --highvram already set"
+fi
+
+# ── Re-apply handler patch (gifs/videos → images merge) ─────────
+# The RunPod SDK may overwrite handler.py at startup, so re-patch every time.
+if [ -f /handler.py ] && ! grep -q "PATCH.*gifs/videos" /handler.py 2>/dev/null; then
+  python3 -c "
+import re
+with open('/handler.py','r') as f: src = f.read()
+# Find the outputs loop and inject merge logic
+pat = r'(for\s+\w+,\s*\w+\s+in\s+outputs\.items\(\):)'
+m = re.search(pat, src)
+if m:
+    loop_line = m.group(0)
+    indent = ''
+    line_start = src.rfind('\n', 0, m.start()) + 1
+    for ch in src[line_start:m.start()]:
+        if ch in (' ','\t'): indent += ch
+        else: break
+    bi = indent + '    '
+    patch = (
+        f'\n{bi}# [PATCH] Merge gifs/videos into images so they get processed\n'
+        f'{bi}for _vk in (\"gifs\", \"videos\"):\n'
+        f'{bi}    if _vk in node_output:\n'
+        f'{bi}        node_output.setdefault(\"images\", []).extend(node_output[_vk])\n'
+    )
+    src = src[:m.end()] + patch + src[m.end():]
+    with open('/handler.py','w') as f: f.write(src)
+    print('entrypoint: handler.py patched (gifs/videos merged into images)')
+else:
+    print('entrypoint: WARNING — could not find outputs loop in handler.py')
+" 2>&1
+else
+  echo "entrypoint: handler.py patch already applied"
+fi
+
 exec "$@"
 
