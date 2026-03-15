@@ -679,6 +679,7 @@ function buildGltchWanWorkflow(p: {
   frameCount: number;
   resolution: number;
   shift?: number;
+  useUpscale?: boolean;
   videoLora?: string;
   videoLoraHigh?: string;
   videoLoraLow?: string;
@@ -916,7 +917,8 @@ function buildGltchWanWorkflow(p: {
     },
   };
 
-  // ── Post-processing: lanczos 2x → RIFE 2x @ 32fps (matches reference workflow) ──
+  // ── Post-processing: lanczos 2x → RIFE 2x @ 32fps ──
+  // HD mode adds a second RIFE pass for a 64fps "buttery" output.
   // Lanczos upscale is pure interpolation — zero VRAM pressure, always works.
   workflow["74"] = {
     class_type: "ImageScaleBy",
@@ -942,11 +944,38 @@ function buildGltchWanWorkflow(p: {
     },
   };
 
+  let finalFramesNode: [string, number] = ["75", 0];
+  let finalFrameRate = 32;
+
+  if (p.useUpscale) {
+    workflow["77"] = {
+      class_type: "easy cleanGpuUsed",
+      inputs: { anything: ["75", 0] },
+    };
+    workflow["78"] = {
+      class_type: "RIFE VFI",
+      inputs: {
+        frames: ["77", 0],
+        ckpt_name: "rife49.pth",
+        clear_cache_after_n_frames: 8,
+        multiplier: 2,
+        fast_mode: false,
+        ensemble: true,
+        scale_factor: 1,
+        batch_size: 2,
+        torch_compile: false,
+        dtype: "float16",
+      },
+    };
+    finalFramesNode = ["78", 0];
+    finalFrameRate = 64;
+  }
+
   workflow["85"] = {
     class_type: "VHS_VideoCombine",
     inputs: {
-      images: ["75", 0],
-      frame_rate: 32,
+      images: finalFramesNode,
+      frame_rate: finalFrameRate,
       loop_count: 0,
       filename_prefix: "GltchWAN",
       format: "video/h264-mp4",
@@ -2216,7 +2245,7 @@ Rules:
           }
         }
 
-        console.log(`[comfyui] gltch-wan: RIFE 4x always on (64fps)`);
+        console.log(`[comfyui] gltch-wan: ${useVidUpscale ? "HD smooth mode (RIFE 4x / 64fps)" : "standard smooth mode (RIFE 2x / 32fps)"}`);
         workflow = buildGltchWanWorkflow({
           prompt: prompt.trim(),
           negativePrompt: (negativePrompt || "").trim() || WAN_DEFAULT_NEGATIVE,
@@ -2230,6 +2259,7 @@ Rules:
           frameCount: Math.min(241, Math.max(17, Number(frameCount))),
           resolution,
           shift: req.body.shift ? Math.min(15, Math.max(1, Number(req.body.shift))) : undefined,
+          useUpscale: !!useVidUpscale,
           videoLora: resolvedGltchLora,
           videoLoraHigh: resolvedGltchLoraHigh,
           videoLoraLow: resolvedGltchLoraLow,
