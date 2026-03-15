@@ -62,12 +62,12 @@ rm -rf /comfyui/output/*.png /comfyui/output/*.jpg 2>/dev/null
 rm -rf /comfyui/output/video/* /comfyui/output/wan2-2/* 2>/dev/null
 echo "entrypoint: cleared ComfyUI output cache"
 
-# ── Force --highvram mode (H200 has 141GB — no need for memory management) ──
-if ! grep -q "\-\-highvram" /start.sh 2>/dev/null; then
-  sed -i 's|main\.py|main.py --highvram|g' /start.sh
-  echo "entrypoint: injected --highvram into start.sh"
+# ── Force --gpu-only mode (H200 141GB — disable all VRAM management) ──
+if ! grep -q "\-\-gpu-only" /start.sh 2>/dev/null; then
+  sed -i 's|main\.py|main.py --gpu-only|g' /start.sh
+  echo "entrypoint: injected --gpu-only into start.sh"
 else
-  echo "entrypoint: --highvram already set"
+  echo "entrypoint: --gpu-only already set"
 fi
 
 # ── Re-apply handler patch (gifs/videos → images merge) ─────────

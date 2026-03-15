@@ -1,14 +1,12 @@
 # GLTCH — ComfyUI RunPod Serverless Worker
-# Flux 2 Klein Image Edit + WAN 2.2 I2V GGUF workflows.
+# WAN 2.2 I2V GGUF video workflows.
+# NOTE: Uses base image ComfyUI version (not latest) for RIFE compatibility.
+# Flux 2 Klein image edits run on the separate zimage endpoint.
 #
 # Build:   docker build -t your-dockerhub-user/comfyui-worker:latest .
 # Push:    docker push your-dockerhub-user/comfyui-worker:latest
 
 FROM runpod/worker-comfyui:5.7.1-base
-
-# ── Update ComfyUI to latest (Flux 2 Klein requires ≥ 0.9.x) ─────
-RUN cd /comfyui && git fetch origin master && git reset --hard origin/master && \
-    uv pip install -r requirements.txt
 
 # ── Custom Nodes (git clone → uv pip install into /opt/venv) ─────
 # IMPORTANT: base image uses a Python venv at /opt/venv via uv.
@@ -90,8 +88,8 @@ RUN mkdir -p /comfyui/models/clip_vision && \
 # ── Network Volume Model Paths ───────────────────────────────────
 RUN printf "\nrunpod_volume:\n    base_path: /runpod-volume/runpod-slim/ComfyUI/models\n    checkpoints: checkpoints\n    upscale_models: upscale_models\n    vae: vae\n    clip: text_encoders\n    clip_vision: clip_vision\n    loras: loras\n    unet: unet\n    diffusion_models: diffusion_models\n\nrunpod_volume_unet_compat:\n    base_path: /runpod-volume/runpod-slim/ComfyUI/models\n    diffusion_models: unet\n" >> /comfyui/extra_model_paths.yaml
 
-# ── Force high VRAM mode (H200 — skip all memory management) ─────
-RUN sed -i 's|python -u /comfyui/main.py|python -u /comfyui/main.py --highvram|g' /start.sh
+# ── Force GPU-only mode (H200 141GB — disable all VRAM management) ──
+RUN sed -i 's|python -u /comfyui/main.py|python -u /comfyui/main.py --gpu-only|g' /start.sh
 
 # ── Patch handler.py to support image output ─────────────────────
 COPY handler_patch.py /handler_patch.py
