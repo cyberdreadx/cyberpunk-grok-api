@@ -1571,7 +1571,7 @@ function buildFlux2KleinEditWorkflow(p: {
   megapixels?: number;
   loras?: { name: string; strengthModel: number; strengthClip: number }[];
 }): Record<string, any> {
-  const unet = process.env.COMFYUI_KLEIN_UNET || "flux-2-klein-9b-fp8.safetensors";
+  const unet = process.env.COMFYUI_KLEIN_UNET || "flux-2-klein-9b-nvfp4.safetensors";
   const clipModel = process.env.COMFYUI_KLEIN_CLIP || "qwen_3_8b_fp8mixed.safetensors";
   const vae = process.env.COMFYUI_KLEIN_VAE || "flux2-vae.safetensors";
 

@@ -6,6 +6,10 @@
 
 FROM runpod/worker-comfyui:5.7.1-base
 
+# ── Update ComfyUI to latest (Flux 2 Klein requires ≥ 0.9.x) ─────
+RUN cd /comfyui && git fetch origin master && git reset --hard origin/master && \
+    uv pip install -r requirements.txt
+
 # ── Custom Nodes (git clone → uv pip install into /opt/venv) ─────
 # IMPORTANT: base image uses a Python venv at /opt/venv via uv.
 # All pip installs MUST use `uv pip install` to target the correct env.
