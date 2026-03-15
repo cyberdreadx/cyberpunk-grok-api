@@ -959,7 +959,7 @@ const Index = () => {
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-secondary/5 border border-secondary/20 rounded">
                       <div className="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse" />
                       <span className="font-mono-share text-[9px] text-secondary/70">
-                        1 cr/edit — Flux 2 Klein Edit + LoRA
+                        2 cr/edit — Flux 2 Klein Edit + LoRA
                       </span>
                     </div>
                     <div>
