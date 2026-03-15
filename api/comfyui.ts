@@ -653,6 +653,242 @@ function buildWanVideoWorkflow(p: {
 }
 
 /**
+ * GLTCH WAN 2.2 I2V workflow — simple baseline fallback.
+ *
+ * Keeps the same GGUF + CLIPVision conditioning as the main GLTCH workflow,
+ * but removes upscale/RIFE complexity so we can isolate native WAN motion.
+ * This is the "known-simple" path used for standard GLTCH video generation.
+ */
+function buildGltchWanSimpleWorkflow(p: {
+  prompt: string;
+  negativePrompt: string;
+  imageFilename: string;
+  endImageFilename?: string;
+  width: number;
+  height: number;
+  seed: number;
+  steps: number;
+  cfg: number;
+  frameCount: number;
+  resolution: number;
+  shift?: number;
+  videoLora?: string;
+  videoLoraHigh?: string;
+  videoLoraLow?: string;
+  videoLoraStrength?: number;
+  videoLoraPass?: "high" | "low" | "both";
+  audioMode?: "none" | "ambient";
+  audioPrompt?: string;
+}): Record<string, any> {
+  const splitStep = Math.max(1, Math.floor(p.steps / 2));
+  const shift = p.shift ?? 8;
+
+  const highModel = process.env.COMFYUI_GLTCH_HIGH_MODEL || "wan22EnhancedNSFWSVICamera_nsfwFASTMOVEV2Q8H.gguf";
+  const lowModel = process.env.COMFYUI_GLTCH_LOW_MODEL || "wan22EnhancedNSFWSVICamera_nsfwFASTMOVEV2Q8L.gguf";
+  const isGguf = highModel.endsWith(".gguf") || lowModel.endsWith(".gguf");
+  const clipModel = process.env.COMFYUI_WAN_CLIP || "umt5_xxl_fp8_e4m3fn_scaled.safetensors";
+  const clipVisionModel = process.env.COMFYUI_WAN_CLIP_VISION || "clip_vision_h.safetensors";
+
+  let highModelSource: [string, number] = ["29", 0];
+  let lowModelSource: [string, number] = ["30", 0];
+
+  const workflow: Record<string, any> = {
+    "1": {
+      class_type: "CLIPLoader",
+      inputs: { clip_name: clipModel, type: "wan", device: "cpu" },
+    },
+    "7": {
+      class_type: "VAELoader",
+      inputs: { vae_name: "wan_2.1_vae.safetensors" },
+    },
+    "50": {
+      class_type: "CLIPVisionLoader",
+      inputs: { clip_name: clipVisionModel },
+    },
+    "129": {
+      class_type: "LoadImage",
+      inputs: { image: p.imageFilename },
+    },
+    "94": {
+      class_type: "ImageResizeKJv2",
+      inputs: {
+        image: ["129", 0],
+        width: p.resolution,
+        height: p.resolution,
+        upscale_method: "lanczos",
+        keep_proportion: "resize",
+        pad_color: "0, 0, 0",
+        crop_position: "center",
+        divisible_by: 16,
+        device: "cpu",
+      },
+    },
+    "51": {
+      class_type: "CLIPVisionEncode",
+      inputs: {
+        clip_vision: ["50", 0],
+        image: ["129", 0],
+        crop: "none",
+      },
+    },
+    "13": {
+      class_type: "CLIPTextEncode",
+      inputs: { clip: ["1", 0], text: p.prompt },
+    },
+    "6": {
+      class_type: "CLIPTextEncode",
+      inputs: { clip: ["1", 0], text: p.negativePrompt },
+    },
+    "10": {
+      class_type: "WanImageToVideo",
+      inputs: {
+        positive: ["13", 0],
+        negative: ["6", 0],
+        vae: ["7", 0],
+        clip_vision_output: ["51", 0],
+        start_image: ["94", 0],
+        width: ["94", 1],
+        height: ["94", 2],
+        length: p.frameCount,
+        batch_size: 1,
+      },
+    },
+    "121": {
+      class_type: "easy seed",
+      inputs: { seed: p.seed },
+    },
+    "29": {
+      class_type: isGguf ? "UnetLoaderGGUF" : "UNETLoader",
+      inputs: isGguf ? { unet_name: highModel } : { unet_name: highModel, weight_dtype: "default" },
+    },
+    "30": {
+      class_type: isGguf ? "UnetLoaderGGUF" : "UNETLoader",
+      inputs: isGguf ? { unet_name: lowModel } : { unet_name: lowModel, weight_dtype: "default" },
+    },
+  };
+
+  if (p.endImageFilename) {
+    workflow["200"] = {
+      class_type: "LoadImage",
+      inputs: { image: p.endImageFilename },
+    };
+    workflow["201"] = {
+      class_type: "ImageResizeKJ",
+      inputs: {
+        image: ["200", 0],
+        width: p.resolution,
+        height: p.resolution,
+        interpolation: "lanczos",
+        keep_proportion: true,
+        divisible_by: 2,
+        crop: "center",
+      },
+    };
+    workflow["10"].inputs.end_image = ["201", 0];
+  }
+
+  const isPaired = !!(p.videoLoraHigh && p.videoLoraLow);
+  const hasHigh = isPaired || p.videoLoraHigh || (p.videoLora && (p.videoLoraPass === "high" || p.videoLoraPass === "both"));
+  const hasLow = isPaired || p.videoLoraLow || (p.videoLora && (p.videoLoraPass === "low" || p.videoLoraPass === "both"));
+  const loraStr = p.videoLoraStrength ?? 0.8;
+
+  if (hasHigh) {
+    workflow["42"] = {
+      class_type: "LoraLoaderModelOnly",
+      inputs: { model: highModelSource, lora_name: p.videoLoraHigh || p.videoLora!, strength_model: loraStr },
+    };
+    highModelSource = ["42", 0];
+  }
+  if (hasLow) {
+    workflow["44"] = {
+      class_type: "LoraLoaderModelOnly",
+      inputs: { model: lowModelSource, lora_name: p.videoLoraLow || p.videoLora!, strength_model: loraStr },
+    };
+    lowModelSource = ["44", 0];
+  }
+
+  workflow["8"] = {
+    class_type: "ModelSamplingSD3",
+    inputs: { model: highModelSource, shift },
+  };
+  workflow["9"] = {
+    class_type: "ModelSamplingSD3",
+    inputs: { model: lowModelSource, shift },
+  };
+
+  workflow["31"] = {
+    class_type: "KSamplerAdvanced",
+    inputs: {
+      model: ["8", 0],
+      positive: ["10", 0],
+      negative: ["10", 1],
+      latent_image: ["10", 2],
+      add_noise: "enable",
+      noise_seed: ["121", 0],
+      steps: p.steps,
+      cfg: p.cfg,
+      sampler_name: "euler",
+      scheduler: "simple",
+      start_at_step: 0,
+      end_at_step: splitStep,
+      return_with_leftover_noise: "enable",
+    },
+  };
+  workflow["120"] = {
+    class_type: "easy cleanGpuUsed",
+    inputs: { anything: ["31", 0] },
+  };
+  workflow["2"] = {
+    class_type: "KSamplerAdvanced",
+    inputs: {
+      model: ["9", 0],
+      positive: ["10", 0],
+      negative: ["10", 1],
+      latent_image: ["120", 0],
+      add_noise: "disable",
+      noise_seed: ["121", 0],
+      steps: p.steps,
+      cfg: p.cfg,
+      sampler_name: "euler",
+      scheduler: "simple",
+      start_at_step: splitStep,
+      end_at_step: 10000,
+      return_with_leftover_noise: "disable",
+    },
+  };
+  workflow["4"] = {
+    class_type: "VAEDecode",
+    inputs: { samples: ["2", 0], vae: ["7", 0] },
+  };
+
+  const audioMode = p.audioMode || "none";
+  let audioNodeId: string | undefined;
+  if (audioMode === "ambient") {
+    audioNodeId = addMMAudioNodes(workflow, "4", p.seed, p.audioPrompt || p.prompt);
+  }
+
+  workflow["16"] = {
+    class_type: "VHS_VideoCombine",
+    inputs: {
+      images: ["4", 0],
+      frame_rate: 12,
+      loop_count: 0,
+      filename_prefix: "GltchWAN-simple",
+      format: "video/h264-mp4",
+      pix_fmt: "yuv420p",
+      crf: 18,
+      save_metadata: false,
+      trim_to_audio: false,
+      pingpong: false,
+      save_output: true,
+      ...(audioNodeId ? { audio: [audioNodeId, 0] } : {}),
+    },
+  };
+
+  return workflow;
+}
+
+/**
  * GLTCH WAN 2.2 I2V workflow — SmoothMix Enhanced NSFW Lightning Edition.
  *
  * Uses SmoothMix_High / SmoothMix_Low safetensor checkpoints which have
@@ -2221,6 +2457,7 @@ Rules:
         });
       } else if (workflowType === "gltch-wan") {
         const resolution = Math.min(1280, Math.max(480, Number(req.body.resolution) || 832));
+        const useSimpleGltch = req.body.simpleWan === true || !useVidUpscale || process.env.COMFYUI_GLTCH_SIMPLE === "1";
 
         let resolvedGltchLora: string | undefined;
         let resolvedGltchLoraHigh: string | undefined;
@@ -2245,8 +2482,28 @@ Rules:
           }
         }
 
-        console.log(`[comfyui] gltch-wan: ${useVidUpscale ? "HD smooth mode (RIFE 4x / 64fps)" : "standard smooth mode (RIFE 2x / 32fps)"}`);
-        workflow = buildGltchWanWorkflow({
+        console.log(`[comfyui] gltch-wan: ${useSimpleGltch ? "simple baseline mode (native 12fps)" : useVidUpscale ? "HD smooth mode (RIFE 4x / 64fps)" : "standard smooth mode (RIFE 2x / 32fps)"}`);
+        workflow = useSimpleGltch ? buildGltchWanSimpleWorkflow({
+          prompt: prompt.trim(),
+          negativePrompt: (negativePrompt || "").trim() || WAN_DEFAULT_NEGATIVE,
+          imageFilename: imageFilename!,
+          endImageFilename: imageFilename2 || undefined,
+          width: clampW,
+          height: clampH,
+          seed: actualSeed,
+          steps: clampSteps,
+          cfg: clampCfg,
+          frameCount: Math.min(241, Math.max(17, Number(frameCount))),
+          resolution,
+          shift: req.body.shift ? Math.min(15, Math.max(1, Number(req.body.shift))) : undefined,
+          videoLora: resolvedGltchLora,
+          videoLoraHigh: resolvedGltchLoraHigh,
+          videoLoraLow: resolvedGltchLoraLow,
+          videoLoraStrength: Number(videoLoraStrength),
+          videoLoraPass: (["high", "low", "both"].includes(videoLoraPass) ? videoLoraPass : "both") as "high" | "low" | "both",
+          audioMode: (["none", "ambient"].includes(audioMode) ? audioMode : "none") as "none" | "ambient",
+          audioPrompt: audioPrompt || undefined,
+        }) : buildGltchWanWorkflow({
           prompt: prompt.trim(),
           negativePrompt: (negativePrompt || "").trim() || WAN_DEFAULT_NEGATIVE,
           imageFilename: imageFilename!,
