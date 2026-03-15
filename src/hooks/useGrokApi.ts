@@ -1219,7 +1219,7 @@ export function useGrokApi() {
     const label = params.prompt.length > 80 ? params.prompt.slice(0, 80) + "…" : params.prompt;
 
     const newJob: ComfyJob = {
-      id: jobId, status: "submitting", workflowType: "qwen-edit",
+      id: jobId, status: "submitting", workflowType: "gltch-edit",
       prompt: label, phase: "Editing image...", elapsed: 0, seed: null, error: null,
     };
     setComfyJobs(prev => [newJob, ...prev]);
