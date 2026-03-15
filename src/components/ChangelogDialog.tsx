@@ -28,7 +28,7 @@ const CHANGELOG: ChangelogEntry[] = [
         items: [
             { icon: <Camera className="w-3.5 h-3.5" />, text: "Image upload in character chat — attach a reference photo and the character sees it via Grok Vision", tag: "new" },
             { icon: <ImagePlus className="w-3.5 h-3.5" />, text: "Reference image blending — uploaded photos merge with the character portrait for contextual media generation", tag: "new" },
-            { icon: <Sparkles className="w-3.5 h-3.5" />, text: "Smart LoRA strategy — skin detail LoRA for standalone images, camera angles LoRA with Chinese tags for video source frames", tag: "new" },
+            { icon: <Sparkles className="w-3.5 h-3.5" />, text: "Image edit engine upgraded to Flux 2 Klein — sharper edits with built-in anatomy and quality LoRAs", tag: "new" },
             { icon: <Film className="w-3.5 h-3.5" />, text: "LLM-driven camera angles — characters pick close-up, wide, top-down, or POV perspectives for generated media", tag: "new" },
             { icon: <Wrench className="w-3.5 h-3.5" />, text: "Flexible media tag parsing — attributes in any order, more robust extraction of LoRA and angle selections", tag: "improve" },
             { icon: <Bug className="w-3.5 h-3.5" />, text: "Fixed LoRA crash — paired LoRAs no longer fail when base name isn't in the env config", tag: "fix" },

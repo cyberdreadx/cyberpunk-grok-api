@@ -1870,9 +1870,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           ? videoLorasEnv.split(",").map((m) => m.trim()).filter(Boolean)
           : [];
         const videoLoras = groupVideoLoras(videoLoraFiles);
-        const qwenLorasEnv = process.env.COMFYUI_QWEN_LORAS || "";
-        const qwenLoras = qwenLorasEnv
-          ? qwenLorasEnv.split(",").map((m) => m.trim()).filter(Boolean)
+        const editLorasEnv = process.env.COMFYUI_EDIT_LORAS || process.env.COMFYUI_QWEN_LORAS || "";
+        const editLoras = editLorasEnv
+          ? editLorasEnv.split(",").map((m) => m.trim()).filter(Boolean)
           : [];
 
         // Check if user is an XRGE holder (has any completed XRGE purchase)
@@ -1885,7 +1885,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           } catch { /* If DB fails, default to non-holder */ }
         }
 
-        return res.status(200).json({ checkpoints, loras, videoLoras, qwenLoras, xrgeHolder });
+        return res.status(200).json({ checkpoints, loras, videoLoras, editLoras, xrgeHolder });
       } else {
         const resp = await fetch(
           `${backend.comfyUrl}/object_info/CheckpointLoaderSimple`,
@@ -1913,11 +1913,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           ? videoLorasEnv.split(",").map((m) => m.trim()).filter(Boolean)
           : [];
         const videoLoras = groupVideoLoras(videoLoraFiles);
-        const qwenLorasEnv = process.env.COMFYUI_QWEN_LORAS || "";
-        const qwenLoras = qwenLorasEnv
-          ? qwenLorasEnv.split(",").map((m) => m.trim()).filter(Boolean)
+        const editLorasEnv = process.env.COMFYUI_EDIT_LORAS || process.env.COMFYUI_QWEN_LORAS || "";
+        const editLoras = editLorasEnv
+          ? editLorasEnv.split(",").map((m) => m.trim()).filter(Boolean)
           : [];
-        return res.status(200).json({ checkpoints, loras, videoLoras, qwenLoras });
+        return res.status(200).json({ checkpoints, loras, videoLoras, editLoras });
       }
     }
 

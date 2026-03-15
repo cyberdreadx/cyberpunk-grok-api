@@ -835,7 +835,7 @@ export function useGrokApi() {
     }
   }, [apiMode, makeRequest, makeProxyRequest, persistNewResults, startTimer, stopTimer]);
 
-  // GLTCH Edit (Qwen model via /api/gltch) — fire-and-forget with queue
+  // GLTCH Edit (Flux 2 Klein via /api/gltch) — fire-and-forget with queue
   const gltchEdit = useCallback((params: {
     prompt: string;
     image_url: string;
@@ -1088,13 +1088,13 @@ export function useGrokApi() {
     checkpoints: string[];
     loras: string[];
     videoLoras: VideoLoraEntry[];
-    qwenLoras: string[];
+    editLoras: string[];
     xrgeHolder: boolean;
   }>({
     checkpoints: [],
     loras: [],
     videoLoras: [],
-    qwenLoras: [],
+    editLoras: [],
     xrgeHolder: false,
   });
 
@@ -1104,7 +1104,7 @@ export function useGrokApi() {
         checkpoints: string[];
         loras?: string[];
         videoLoras?: VideoLoraEntry[];
-        qwenLoras?: string[];
+        editLoras?: string[];
         xrgeHolder?: boolean;
       }>("/comfyui", {
         method: "POST",
@@ -1114,11 +1114,11 @@ export function useGrokApi() {
         checkpoints: data.checkpoints || [],
         loras: data.loras || [],
         videoLoras: data.videoLoras || [],
-        qwenLoras: data.qwenLoras || [],
+        editLoras: data.editLoras || [],
         xrgeHolder: data.xrgeHolder ?? false,
       });
     } catch {
-      setComfyModels({ checkpoints: [], loras: [], videoLoras: [], qwenLoras: [], xrgeHolder: false });
+      setComfyModels({ checkpoints: [], loras: [], videoLoras: [], editLoras: [], xrgeHolder: false });
     }
   }, []);
 

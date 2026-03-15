@@ -125,7 +125,7 @@ const Index = () => {
   type EditEngine = "grok" | "gltch";
   const [editEngine, setEditEngine] = useState<EditEngine>("grok");
   const [grokPro, setGrokPro] = useState(false);
-  const [qwenLoraStack, setQwenLoraStack] = useState<{ name: string; strengthModel: number; strengthClip: number }[]>([]);
+  const [editLoraStack, setEditLoraStack] = useState<{ name: string; strengthModel: number; strengthClip: number }[]>([]);
 
   const [gltchImage2, setGltchImage2] = useState<string | null>(null);
   const [gltchImage2Name, setGltchImage2Name] = useState("");
@@ -450,7 +450,7 @@ const Index = () => {
             height: round8(Math.max(256, h)),
             steps: 4, cfg: 1,
             seed: parsedSeed,
-            loras: qwenLoraStack.filter(l => l.name !== "none"),
+            loras: editLoraStack.filter(l => l.name !== "none"),
             ...(adminTestCredits ? { testCredits: true } : {}),
           });
         } else if (isZimage) {
@@ -959,7 +959,7 @@ const Index = () => {
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-secondary/5 border border-secondary/20 rounded">
                       <div className="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse" />
                       <span className="font-mono-share text-[9px] text-secondary/70">
-                        1 cr/edit — Qwen2.5 VL Edit + LoRA
+                        1 cr/edit — Flux 2 Klein Edit + LoRA
                       </span>
                     </div>
                     <div>
@@ -989,27 +989,27 @@ const Index = () => {
                       </div>
                       <p className="font-mono-share text-[8px] text-muted-foreground/50 mt-1">AUTO = match input image</p>
                     </div>
-                    {comfyModels.qwenLoras.length > 0 && (
+                    {comfyModels.editLoras.length > 0 && (
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
                           <label className="font-mono-share text-[9px] text-muted-foreground">LORA STACK</label>
-                          {qwenLoraStack.length < comfyModels.qwenLoras.length && (
+                          {editLoraStack.length < comfyModels.editLoras.length && (
                             <button
                               type="button"
-                              onClick={() => setQwenLoraStack(prev => [...prev, { name: "none", strengthModel: 0.8, strengthClip: 0.8 }])}
+                              onClick={() => setEditLoraStack(prev => [...prev, { name: "none", strengthModel: 0.8, strengthClip: 0.8 }])}
                               className="font-mono-share text-[9px] text-purple-400 hover:text-purple-300 transition-colors"
                             >
                               + ADD LORA
                             </button>
                           )}
                         </div>
-                        {qwenLoraStack.length === 0 && (
+                        {editLoraStack.length === 0 && (
                           <div className="space-y-1.5">
                             <button
                               type="button"
                               onClick={() => {
-                                const skin = comfyModels.qwenLoras.find(l => l.toLowerCase().includes("skin"));
-                                if (skin) setQwenLoraStack([{ name: skin, strengthModel: 1, strengthClip: 1 }]);
+                                const skin = comfyModels.editLoras.find(l => l.toLowerCase().includes("skin"));
+                                if (skin) setEditLoraStack([{ name: skin, strengthModel: 1, strengthClip: 1 }]);
                               }}
                               className="w-full p-2 border border-cyan-500/30 bg-cyan-500/5 rounded text-center font-mono-share text-[9px] text-cyan-400 hover:border-cyan-500/50 hover:bg-cyan-500/10 transition-all"
                             >
@@ -1017,16 +1017,16 @@ const Index = () => {
                             </button>
                             <button
                               type="button"
-                              onClick={() => setQwenLoraStack([{ name: "none", strengthModel: 0.8, strengthClip: 0.8 }])}
+                              onClick={() => setEditLoraStack([{ name: "none", strengthModel: 0.8, strengthClip: 0.8 }])}
                               className="w-full p-2 border border-dashed border-purple-500/30 rounded text-center font-mono-share text-[9px] text-purple-400/60 hover:border-purple-500/50 hover:text-purple-400 transition-colors"
                             >
                               + ADD LORA MANUALLY
                             </button>
                           </div>
                         )}
-                        {qwenLoraStack.map((entry, idx) => {
-                          const usedNames = qwenLoraStack.filter((_, i) => i !== idx).map(l => l.name);
-                          const available = comfyModels.qwenLoras.filter(l => !usedNames.includes(l));
+                        {editLoraStack.map((entry, idx) => {
+                          const usedNames = editLoraStack.filter((_, i) => i !== idx).map(l => l.name);
+                          const available = comfyModels.editLoras.filter(l => !usedNames.includes(l));
                           return (
                             <div key={idx} className="space-y-1 p-2 bg-card/30 border border-purple-500/10 rounded">
                               <div className="flex items-center gap-1.5">
@@ -1034,7 +1034,7 @@ const Index = () => {
                                   value={entry.name}
                                   onChange={(e) => {
                                     if (isNsfwLora(e.target.value) && !comfyModels.xrgeHolder && e.target.value !== "none") return;
-                                    setQwenLoraStack(prev => prev.map((l, i) => i === idx ? { ...l, name: e.target.value } : l));
+                                    setEditLoraStack(prev => prev.map((l, i) => i === idx ? { ...l, name: e.target.value } : l));
                                   }}
                                   className="flex-1 bg-card/50 border border-border rounded px-2 py-1 font-mono-share text-[10px] text-foreground"
                                 >
@@ -1052,7 +1052,7 @@ const Index = () => {
                                 </select>
                                 <button
                                   type="button"
-                                  onClick={() => setQwenLoraStack(prev => prev.filter((_, i) => i !== idx))}
+                                  onClick={() => setEditLoraStack(prev => prev.filter((_, i) => i !== idx))}
                                   className="text-red-400/60 hover:text-red-400 transition-colors p-0.5"
                                   title="Remove"
                                 >
@@ -1070,7 +1070,7 @@ const Index = () => {
                                       type="range"
                                       min="0" max="1.5" step="0.05"
                                       value={entry.strengthModel}
-                                      onChange={(e) => setQwenLoraStack(prev => prev.map((l, i) => i === idx ? { ...l, strengthModel: Number(e.target.value) } : l))}
+                                      onChange={(e) => setEditLoraStack(prev => prev.map((l, i) => i === idx ? { ...l, strengthModel: Number(e.target.value) } : l))}
                                       className="w-full accent-purple-500"
                                     />
                                   </div>
@@ -1083,7 +1083,7 @@ const Index = () => {
                                       type="range"
                                       min="0" max="1.5" step="0.01"
                                       value={entry.strengthClip}
-                                      onChange={(e) => setQwenLoraStack(prev => prev.map((l, i) => i === idx ? { ...l, strengthClip: Number(e.target.value) } : l))}
+                                      onChange={(e) => setEditLoraStack(prev => prev.map((l, i) => i === idx ? { ...l, strengthClip: Number(e.target.value) } : l))}
                                       className="w-full accent-cyan-500"
                                     />
                                   </div>
@@ -1092,7 +1092,7 @@ const Index = () => {
                             </div>
                           );
                         })}
-                        {!comfyModels.xrgeHolder && comfyModels.qwenLoras.some(isNsfwLora) && (
+                        {!comfyModels.xrgeHolder && comfyModels.editLoras.some(isNsfwLora) && (
                           <p className="mt-1 font-mono-share text-[8px] text-pink-400/70">
                             🔒 NSFW LoRAs unlocked for <span className="text-pink-400">$XRGE</span> holders
                           </p>
