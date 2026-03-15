@@ -891,7 +891,7 @@ function buildGltchWanWorkflow(p: {
     audioNodeId = addMMAudioNodes(workflow, "4", p.seed, p.audioPrompt || p.prompt);
   }
 
-  // ── Base 16fps output — fallback / preview ──
+  // ── Base 16fps output — always saved so handler can capture it ──
   workflow["16"] = {
     class_type: "VHS_VideoCombine",
     inputs: {
@@ -905,7 +905,7 @@ function buildGltchWanWorkflow(p: {
       save_metadata: false,
       trim_to_audio: false,
       pingpong: false,
-      save_output: false,
+      save_output: true,
       ...(audioNodeId ? { audio: [audioNodeId, 0] } : {}),
     },
   };

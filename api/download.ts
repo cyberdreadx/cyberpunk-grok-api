@@ -13,9 +13,10 @@ export const config = { maxDuration: 60 };
 // Allow proxying from trusted domains (xAI + our media CDNs)
 const ALLOWED_HOSTS = [
   "vidgen.x.ai", "api.x.ai", "cdn.x.ai",
-  "r2.cloudflarestorage.com", "pub-", // R2 public buckets
-  "runpod.io",                        // RunPod serverless
-  "gltch.app", "cloud.gltch.app",     // our own domains
+  "r2.cloudflarestorage.com", "pub-",         // R2 public buckets
+  "vercel-storage.com",                       // Vercel Blob (GLTCH video output)
+  "runpod.io",                                // RunPod serverless
+  "gltch.app", "cloud.gltch.app",             // our own domains
 ];
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
