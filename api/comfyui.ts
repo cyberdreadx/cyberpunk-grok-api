@@ -1560,76 +1560,78 @@ const TXT2IMG_DEFAULT_NEGATIVE =
   "cgi, 3d render, cartoon, anime, illustration, drawing, painting, sketch, plastic skin, smooth skin, airbrushed, doll-like, mannequin, blurry, low quality, worst quality, jpeg artifacts, deformed, bad anatomy, bad proportions, extra limbs, missing limbs, disfigured, ugly, watermark, text, signature, cropped";
 
 
-function buildQwenEditWorkflow(p: {
+function buildFlux2KleinEditWorkflow(p: {
   prompt: string;
+  negativePrompt?: string;
   imageFilename: string;
-  imageFilename2?: string;
-  width?: number;
-  height?: number;
   seed: number;
   steps?: number;
   cfg?: number;
   sampler?: string;
-  scheduler?: string;
-  checkpoint: string;
-  vae?: string;
+  megapixels?: number;
   loras?: { name: string; strengthModel: number; strengthClip: number }[];
 }): Record<string, any> {
-  const lightningLora = process.env.COMFYUI_QWEN_LIGHTNING_LORA
-    || "Qwen-Image-Edit-2509-Lightning-4steps-V1.0-bf16.safetensors";
+  const unet = process.env.COMFYUI_KLEIN_UNET || "flux-2-klein-9b-nvfp4.safetensors";
+  const clipModel = process.env.COMFYUI_KLEIN_CLIP || "qwen_3_8b_fp8mixed.safetensors";
+  const vae = process.env.COMFYUI_KLEIN_VAE || "flux2-vae.safetensors";
 
-  // Zoom trick math: latent = desired output * 1.5, then 0.667x downscale → back to output size
-  const outW = p.width || 768;
-  const outH = p.height || 768;
-  const latentW = snap64(Math.round(outW * 1.5));
-  const latentH = snap64(Math.round(outH * 1.5));
+  const defaultNeg = "ugly, deformed, noisy, blurry, low contrast, text, watermark, logo, bad anatomy, extra limbs, missing fingers, extra fingers, crop, low resolution, jpeg artifacts, cartoon, illustration, painting.";
 
-  const ckptModel: [string, number] = ["125", 0];
-  const ckptClip: [string, number] = ["125", 1];
-  const vaeSource: [string, number] = p.vae ? ["130", 0] : ["125", 2];
+  let modelSource: [string, number] = ["70", 0];
+  let clipSource: [string, number] = ["71", 0];
+  const rawClipSource: [string, number] = ["71", 0];
 
   const workflow: Record<string, any> = {
-    "125": {
-      class_type: "CheckpointLoaderSimple",
-      inputs: { ckpt_name: p.checkpoint },
+    "70": {
+      class_type: "UNETLoader",
+      inputs: { unet_name: unet, weight_dtype: "default" },
     },
-    "123": {
+    "71": {
+      class_type: "CLIPLoader",
+      inputs: { clip_name: clipModel, type: "flux2", device: "default" },
+    },
+    "72": {
+      class_type: "VAELoader",
+      inputs: { vae_name: vae },
+    },
+    "76": {
       class_type: "LoadImage",
       inputs: { image: p.imageFilename },
     },
   };
 
-  if (p.imageFilename2) {
-    workflow["124"] = {
-      class_type: "LoadImage",
-      inputs: { image: p.imageFilename2 },
-    };
-  }
-
-  if (p.vae) {
-    workflow["130"] = {
-      class_type: "VAELoader",
-      inputs: { vae_name: p.vae },
-    };
-  }
-
-  // Lightning LoRA — essential for 4-step generation
-  workflow["14"] = {
+  // Built-in LoRA: KLEIN-Unchained-V2
+  workflow["83"] = {
     class_type: "LoraLoader",
     inputs: {
-      lora_name: lightningLora,
-      strength_model: 1,
-      strength_clip: 1,
-      model: ckptModel,
-      clip: ckptClip,
+      lora_name: "KLEIN-Unchained-V2.safetensors",
+      strength_model: 0.55,
+      strength_clip: 0.45,
+      model: modelSource,
+      clip: clipSource,
     },
   };
-  let modelSource: [string, number] = ["14", 0];
-  let clipSource: [string, number] = ["14", 1];
+  modelSource = ["83", 0];
+  clipSource = ["83", 1];
 
+  // Built-in LoRA: klein_slider_anatomy
+  workflow["85"] = {
+    class_type: "LoraLoader",
+    inputs: {
+      lora_name: "klein_slider_anatomy.safetensors",
+      strength_model: 0.55,
+      strength_clip: 0.45,
+      model: modelSource,
+      clip: clipSource,
+    },
+  };
+  modelSource = ["85", 0];
+  clipSource = ["85", 1];
+
+  // Chain any additional user LoRAs
   const activeLoras = (p.loras || []).filter(l => l.name && l.name !== "none");
   for (let i = 0; i < activeLoras.length; i++) {
-    const nodeId = String(15 + i);
+    const nodeId = String(200 + i);
     workflow[nodeId] = {
       class_type: "LoraLoader",
       inputs: {
@@ -1644,67 +1646,107 @@ function buildQwenEditWorkflow(p: {
     clipSource = [nodeId, 1];
   }
 
-  // Zoom trick: upscale input 1.5x for better conditioning detail
-  workflow["50"] = {
-    class_type: "ImageScaleBy",
-    inputs: { image: ["123", 0], upscale_method: "lanczos", scale_by: 1.5 },
+  // Scale input image to target megapixels
+  workflow["80"] = {
+    class_type: "ImageScaleToTotalPixels",
+    inputs: {
+      upscale_method: "nearest-exact",
+      megapixels: p.megapixels || 1,
+      resolution_steps: 1,
+      image: ["76", 0],
+    },
   };
 
-  const positiveInputs: Record<string, any> = {
-    clip: clipSource,
-    vae: vaeSource,
-    image1: ["50", 0],
-    prompt: p.prompt,
+  // Get image dimensions for latent and scheduler
+  workflow["81"] = {
+    class_type: "GetImageSize",
+    inputs: { image: ["80", 0] },
   };
-  if (p.imageFilename2) {
-    positiveInputs.image2 = ["124", 0];
-  }
 
-  Object.assign(workflow, {
-    "132": {
-      class_type: "TextEncodeQwenImageEditPlus",
-      inputs: positiveInputs,
+  // Positive prompt (uses LoRA-enhanced CLIP)
+  workflow["74"] = {
+    class_type: "CLIPTextEncode",
+    inputs: { text: p.prompt, clip: clipSource },
+  };
+
+  // Negative prompt (uses raw CLIP — before LoRAs)
+  workflow["67"] = {
+    class_type: "CLIPTextEncode",
+    inputs: { text: p.negativePrompt || defaultNeg, clip: rawClipSource },
+  };
+
+  // VAE encode reference image
+  workflow["78"] = {
+    class_type: "VAEEncode",
+    inputs: { pixels: ["80", 0], vae: ["72", 0] },
+  };
+
+  // ReferenceLatent — positive conditioning with encoded reference
+  workflow["77"] = {
+    class_type: "ReferenceLatent",
+    inputs: { conditioning: ["74", 0], latent: ["78", 0] },
+  };
+
+  // ReferenceLatent — negative conditioning with encoded reference
+  workflow["79"] = {
+    class_type: "ReferenceLatent",
+    inputs: { conditioning: ["67", 0], latent: ["78", 0] },
+  };
+
+  // Empty Flux 2 latent (dimensions derived from input image)
+  workflow["66"] = {
+    class_type: "EmptyFlux2LatentImage",
+    inputs: { width: ["81", 0], height: ["81", 1], batch_size: 1 },
+  };
+
+  // Flux2 scheduler
+  workflow["62"] = {
+    class_type: "Flux2Scheduler",
+    inputs: { steps: p.steps || 20, width: ["81", 0], height: ["81", 1] },
+  };
+
+  // CFG guider
+  workflow["63"] = {
+    class_type: "CFGGuider",
+    inputs: {
+      cfg: p.cfg || 5,
+      model: modelSource,
+      positive: ["77", 0],
+      negative: ["79", 0],
     },
-    "133": {
-      class_type: "TextEncodeQwenImageEditPlus",
-      inputs: {
-        clip: ckptClip,
-        vae: vaeSource,
-        prompt: "worst quality, low quality, deformed hands, extra fingers, fused fingers, missing fingers, deformed feet, extra toes, bad anatomy, malformed limbs, mutated, disfigured, blurry",
-      },
+  };
+
+  workflow["61"] = {
+    class_type: "KSamplerSelect",
+    inputs: { sampler_name: p.sampler || "euler_ancestral" },
+  };
+
+  workflow["73"] = {
+    class_type: "RandomNoise",
+    inputs: { noise_seed: p.seed },
+  };
+
+  // SamplerCustomAdvanced
+  workflow["64"] = {
+    class_type: "SamplerCustomAdvanced",
+    inputs: {
+      noise: ["73", 0],
+      guider: ["63", 0],
+      sampler: ["61", 0],
+      sigmas: ["62", 0],
+      latent_image: ["66", 0],
     },
-    "148": {
-      class_type: "EmptyLatentImage",
-      inputs: { width: latentW, height: latentH, batch_size: 1 },
-    },
-    "75": {
-      class_type: "KSampler",
-      inputs: {
-        model: modelSource,
-        positive: ["132", 0],
-        negative: ["133", 0],
-        latent_image: ["148", 0],
-        seed: p.seed,
-        steps: p.steps || 4,
-        cfg: p.cfg || 1,
-        sampler_name: p.sampler || "euler_ancestral",
-        scheduler: p.scheduler || "beta",
-        denoise: 1,
-      },
-    },
-    "73": {
-      class_type: "VAEDecode",
-      inputs: { samples: ["75", 0], vae: vaeSource },
-    },
-    "52": {
-      class_type: "ImageScaleBy",
-      inputs: { image: ["73", 0], upscale_method: "lanczos", scale_by: 0.6666666666666666 },
-    },
-    "77": {
-      class_type: "SaveImage",
-      inputs: { images: ["52", 0], filename_prefix: "GrokRunner" },
-    },
-  });
+  };
+
+  workflow["65"] = {
+    class_type: "VAEDecode",
+    inputs: { samples: ["64", 0], vae: ["72", 0] },
+  };
+
+  workflow["9"] = {
+    class_type: "SaveImage",
+    inputs: { images: ["65", 0], filename_prefix: "GrokRunner" },
+  };
 
   return workflow;
 }
@@ -1981,7 +2023,7 @@ Rules:
 
       if (!prompt)
         return res.status(400).json({ error: "Prompt is required" });
-      // Checkpoint is required for txt2img only; qwen-edit and wan-video use fixed models
+      // Checkpoint is required for txt2img only; qwen-edit (Flux 2 Klein) and wan-video use fixed models
       if (workflowType === "txt2img" && !checkpoint)
         return res.status(400).json({ error: "Checkpoint is required" });
 
@@ -2286,10 +2328,9 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           audioPrompt: audioPrompt || undefined,
         });
       } else if (workflowType === "qwen-edit") {
-        const qwenCkpt = process.env.COMFYUI_QWEN_MODEL || "Qwen-Rapid-AIO-NSFW-v19.safetensors";
-        let qwenLoraList: { name: string; strengthModel: number; strengthClip: number }[] = [];
+        let kleinLoraList: { name: string; strengthModel: number; strengthClip: number }[] = [];
         if (Array.isArray(loras) && loras.length > 0) {
-          qwenLoraList = loras
+          kleinLoraList = loras
             .filter((l: any) => l.name && l.name !== "none")
             .map((l: any) => ({
               name: String(l.name),
@@ -2298,25 +2339,18 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
             }));
         } else if (lora && lora !== "none") {
           const s = Number(loraStrength) || 0.8;
-          qwenLoraList = [{ name: lora, strengthModel: s, strengthClip: s }];
+          kleinLoraList = [{ name: lora, strengthModel: s, strengthClip: s }];
         }
 
-        const qwenVae = process.env.COMFYUI_QWEN_VAE || "";
-
-        workflow = buildQwenEditWorkflow({
+        workflow = buildFlux2KleinEditWorkflow({
           prompt: prompt.trim(),
+          negativePrompt: (negativePrompt || "").trim() || undefined,
           imageFilename: imageFilename!,
-          imageFilename2: imageFilename2 || undefined,
-          width: clampW || 1152,
-          height: clampH || 1152,
           seed: actualSeed,
-          steps: clampSteps || 4,
-          cfg: clampCfg || 1,
+          steps: clampSteps || 20,
+          cfg: clampCfg || 5,
           sampler: sampler || undefined,
-          scheduler: scheduler || undefined,
-          checkpoint: qwenCkpt,
-          vae: qwenVae,
-          loras: qwenLoraList,
+          loras: kleinLoraList,
         });
       } else if (workflowType === "zimage") {
         workflow = buildZimageTurboWorkflow({

@@ -1,5 +1,5 @@
 # GLTCH — ComfyUI RunPod Serverless Worker
-# Qwen Image Edit + WAN 2.2 I2V GGUF workflows.
+# Flux 2 Klein Image Edit + WAN 2.2 I2V GGUF workflows.
 #
 # Build:   docker build -t your-dockerhub-user/comfyui-worker:latest .
 # Push:    docker push your-dockerhub-user/comfyui-worker:latest
@@ -37,11 +37,7 @@ RUN git clone https://github.com/yolain/ComfyUI-Easy-Use.git && \
     cd ComfyUI-Easy-Use && \
     ([ -f requirements.txt ] && uv pip install -r requirements.txt || true)
 
-# QwenEditUtils (TextEncodeQwenImageEditPlus node)
-RUN git clone https://github.com/lrzjason/Comfyui-QwenEditUtils.git && \
-    ([ -f Comfyui-QwenEditUtils/requirements.txt ] && cd Comfyui-QwenEditUtils && uv pip install -r requirements.txt || true)
-
-# UltimateSDUpscale (HD upscale for Qwen edit)
+# UltimateSDUpscale (HD upscale)
 RUN git clone https://github.com/ssitu/ComfyUI_UltimateSDUpscale.git && \
     cd ComfyUI_UltimateSDUpscale/repositories && \
     rm -rf ultimate_sd_upscale && \

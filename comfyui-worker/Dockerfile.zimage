@@ -1,6 +1,7 @@
 # GLTCH — ComfyUI RunPod Serverless Worker (ZIMAGE — Image-only)
-# Lightweight image for txt2img / qwen-edit on 24 GB GPUs (RTX 4090).
+# Lightweight image for Flux 2 Klein image edit + zimage on 24 GB GPUs (RTX 4090).
 # No WAN video nodes, no --gpu-only, no SageAttention JIT.
+# Flux 2 nodes (ReferenceLatent, EmptyFlux2LatentImage, Flux2Scheduler) are in ComfyUI core.
 #
 # Build:   docker build -f Dockerfile.zimage -t your-dockerhub-user/comfyui-zimage:latest .
 # Push:    docker push your-dockerhub-user/comfyui-zimage:latest
@@ -12,11 +13,7 @@ FROM runpod/worker-comfyui:5.7.1-base
 
 WORKDIR /comfyui/custom_nodes
 
-# QwenEditUtils (TextEncodeQwenImageEditPlus node)
-RUN git clone https://github.com/lrzjason/Comfyui-QwenEditUtils.git && \
-    ([ -f Comfyui-QwenEditUtils/requirements.txt ] && cd Comfyui-QwenEditUtils && uv pip install -r requirements.txt || true)
-
-# UltimateSDUpscale (HD upscale for Qwen edit)
+# UltimateSDUpscale (HD upscale)
 RUN git clone https://github.com/ssitu/ComfyUI_UltimateSDUpscale.git && \
     cd ComfyUI_UltimateSDUpscale/repositories && \
     rm -rf ultimate_sd_upscale && \
@@ -41,7 +38,7 @@ ENTRYPOINT ["/entrypoint.sh"]
 CMD ["/start.sh"]
 
 # ── Bake in small models ─────────────────────────────────────────
-# 4x-UltraSharp for Qwen edit upscale (~67 MB)
+# 4x-UltraSharp for HD upscale (~67 MB)
 RUN mkdir -p /comfyui/models/upscale_models && \
     wget -q -O /comfyui/models/upscale_models/4x-UltraSharp.pth \
     https://huggingface.co/Kim2091/UltraSharp/resolve/main/4x-UltraSharp.pth

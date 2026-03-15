@@ -1200,7 +1200,7 @@ export function useGrokApi() {
     })();
   }, [comfySubmitAndPoll, persistNewResults]);
 
-  // ComfyUI Qwen Edit (fire-and-forget — uses qwen-edit workflow with zoom trick + Lightning LoRA)
+  // ComfyUI Image Edit (fire-and-forget — uses Flux 2 Klein workflow via qwen-edit endpoint)
   const comfyEdit = useCallback((params: {
     prompt: string;
     imageBase64: string;

@@ -355,15 +355,14 @@ export default function Characters() {
 
   // ── Media generation (uses standalone comfySubmitAndPoll — no LoRAs, simple paths) ──
 
-  // Chinese camera angle tags for qwen-multiple-angles LoRA
   const CAMERA_ANGLES: Record<string, string> = {
-    closeup:   "将镜头转为特写镜头, ",
-    wide:      "将镜头转为广角镜头, ",
-    topdown:   "将镜头转为俯视, ",
-    forward:   "将镜头向前移动, ",
-    pov_down:  "将镜头向下移动, ",
-    left:      "将镜头向左移动, ",
-    right:     "将镜头向右移动, ",
+    closeup:   "close-up shot, ",
+    wide:      "wide angle shot, ",
+    topdown:   "top-down view, ",
+    forward:   "camera moving forward, ",
+    pov_down:  "looking down, ",
+    left:      "camera from the left, ",
+    right:     "camera from the right, ",
   };
 
   const handleMediaTrigger = useCallback(async (
@@ -404,14 +403,8 @@ export default function Characters() {
           prompt: anglePrefix + trigger.prompt,
           imageBase64: portrait64,
           imageFilename: "portrait.jpg",
-          width: 1024, height: 1360,
-          steps: 4, cfg: 1,
-          lora: "qwen-edit-skin.safetensors", loraStrength: 0.09,
+          steps: 20, cfg: 5,
         };
-        if (refImage) {
-          imgBody.imageBase64_2 = refImage;
-          imgBody.imageFilename2 = "reference.jpg";
-        }
         const result = await comfySubmitAndPollStandalone(imgBody);
 
         if (result.image) {
@@ -441,13 +434,8 @@ export default function Characters() {
           prompt: vidAnglePrefix + trigger.prompt,
           imageBase64: portrait64,
           imageFilename: "portrait.jpg",
-          steps: 4, cfg: 1,
-          lora: "qwen-multiple-angles.safetensors", loraStrength: 0.09,
+          steps: 20, cfg: 5,
         };
-        if (refImage) {
-          vidFrameBody.imageBase64_2 = refImage;
-          vidFrameBody.imageFilename2 = "reference.jpg";
-        }
         const imgResult = await comfySubmitAndPollStandalone(vidFrameBody);
 
         if (!imgResult.image) throw new Error("Failed to generate source image for video");
