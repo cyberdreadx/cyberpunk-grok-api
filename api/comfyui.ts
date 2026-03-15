@@ -579,6 +579,9 @@ function buildWanVideoWorkflow(p: {
         fast_mode: true,
         ensemble: false,
         scale_factor: 1,
+        batch_size: 4,
+        torch_compile: false,
+        dtype: "auto",
       },
     };
     lastNode = "116";
@@ -609,6 +612,9 @@ function buildWanVideoWorkflow(p: {
           fast_mode: false,
           ensemble: true,
           scale_factor: 1,
+          batch_size: 4,
+          torch_compile: false,
+          dtype: "auto",
         },
       };
       lastNode = "119";
@@ -891,7 +897,7 @@ function buildGltchWanWorkflow(p: {
     audioNodeId = addMMAudioNodes(workflow, "4", p.seed, p.audioPrompt || p.prompt);
   }
 
-  // ── Base 16fps output — always saved so handler can capture it ──
+  // ── Base 16fps output — preview/fallback (temp, not captured by handler) ──
   workflow["16"] = {
     class_type: "VHS_VideoCombine",
     inputs: {
@@ -905,7 +911,7 @@ function buildGltchWanWorkflow(p: {
       save_metadata: false,
       trim_to_audio: false,
       pingpong: false,
-      save_output: true,
+      save_output: false,
       ...(audioNodeId ? { audio: [audioNodeId, 0] } : {}),
     },
   };
@@ -930,6 +936,9 @@ function buildGltchWanWorkflow(p: {
       fast_mode: false,
       ensemble: true,
       scale_factor: 1,
+      batch_size: 4,
+      torch_compile: false,
+      dtype: "auto",
     },
   };
 
@@ -1300,6 +1309,9 @@ function buildLongLookWorkflow(p: {
           fast_mode: true,
           ensemble: false,
           scale_factor: 1,
+          batch_size: 4,
+          torch_compile: false,
+          dtype: "auto",
         },
       };
       seqLastNode = rifeNode;
