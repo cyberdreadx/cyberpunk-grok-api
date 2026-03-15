@@ -581,7 +581,7 @@ function buildWanVideoWorkflow(p: {
         scale_factor: 1,
         batch_size: 4,
         torch_compile: false,
-        dtype: "auto",
+        dtype: "float16",
       },
     };
     lastNode = "116";
@@ -614,7 +614,7 @@ function buildWanVideoWorkflow(p: {
           scale_factor: 1,
           batch_size: 4,
           torch_compile: false,
-          dtype: "auto",
+          dtype: "float16",
         },
       };
       lastNode = "119";
@@ -938,7 +938,7 @@ function buildGltchWanWorkflow(p: {
       scale_factor: 1,
       batch_size: 4,
       torch_compile: false,
-      dtype: "auto",
+      dtype: "float16",
     },
   };
 
@@ -1311,7 +1311,7 @@ function buildLongLookWorkflow(p: {
           scale_factor: 1,
           batch_size: 4,
           torch_compile: false,
-          dtype: "auto",
+          dtype: "float16",
         },
       };
       seqLastNode = rifeNode;
