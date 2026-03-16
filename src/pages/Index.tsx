@@ -1603,7 +1603,7 @@ const Index = () => {
                 const mins = Math.floor(job.elapsed / 60).toString().padStart(2, "0");
                 const secs = (job.elapsed % 60).toString().padStart(2, "0");
 
-                return (
+                  return (
                   <div
                     key={job.id}
                     className={`relative border rounded-lg p-3 transition-all overflow-hidden min-w-0 ${isActive
@@ -1621,6 +1621,15 @@ const Index = () => {
                       >
                         <X className="w-3.5 h-3.5" />
                       </button>
+                    )}
+
+                    {/* Mobile: Show orb while generating */}
+                    {isActive && (
+                      <div className="sm:hidden w-40 h-40 mx-auto mb-2">
+                        <Suspense fallback={<div className="w-full h-full rounded-full bg-purple-500/10 animate-pulse" />}>
+                          <GrokOrb isGenerating={true} />
+                        </Suspense>
+                      </div>
                     )}
 
                     {/* Status row */}
