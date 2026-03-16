@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useSearchParams } from "react-router-dom";
 import { Loader2, Sparkles, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
+
+const API_BASE = import.meta.env.VITE_API_URL || "/api";
 
 interface ShareData {
   r2Url: string;
@@ -12,13 +14,15 @@ interface ShareData {
 
 export default function ShareView() {
   const { shareId } = useParams<{ shareId: string }>();
+  const [searchParams] = useSearchParams();
+  const refCode = searchParams.get("ref") || "";
   const [data, setData] = useState<ShareData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!shareId) return;
-    fetch(`/api/share?id=${encodeURIComponent(shareId)}`)
+    fetch(`${API_BASE}/share?id=${encodeURIComponent(shareId)}`)
       .then((r) => {
         if (!r.ok) throw new Error("Not found");
         return r.json();
@@ -60,12 +64,12 @@ export default function ShareView() {
       {/* Header */}
       <div className="border-b border-border/40 bg-card/50 backdrop-blur-sm">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2 group">
+          <Link to={`/${refCode ? `?ref=${refCode}` : ""}`} className="flex items-center gap-2 group">
             <div className="font-orbitron text-sm tracking-wider text-primary group-hover:text-primary/80 transition-colors">
               GROK_RUNNER
             </div>
           </Link>
-          <Link to="/">
+          <Link to={`/${refCode ? `?ref=${refCode}` : ""}`}>
             <Button size="sm" variant="outline" className="font-orbitron text-[10px] tracking-wider gap-1.5">
               <Sparkles className="w-3 h-3" />
               CREATE
@@ -114,7 +118,7 @@ export default function ShareView() {
             Made with Grok Runner — AI image & video generation
           </p>
           <div className="flex justify-center gap-2">
-            <Link to="/">
+            <Link to={`/${refCode ? `?ref=${refCode}` : ""}`}>
               <Button className="font-orbitron text-xs tracking-wider gap-1.5">
                 <Sparkles className="w-3 h-3" />
                 CREATE YOUR OWN
