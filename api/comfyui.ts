@@ -1807,6 +1807,7 @@ function buildFlux2KleinEditWorkflow(p: {
   prompt: string;
   negativePrompt?: string;
   imageFilename: string;
+  imageFilename2?: string;
   seed: number;
   steps?: number;
   cfg?: number;
@@ -1936,6 +1937,40 @@ function buildFlux2KleinEditWorkflow(p: {
     inputs: { conditioning: ["67", 0], latent: ["78", 0] },
   };
 
+  let positiveCondNode: [string, number] = ["77", 0];
+  let negativeCondNode: [string, number] = ["79", 0];
+
+  // Optional second reference image — chains another ReferenceLatent pair
+  if (p.imageFilename2) {
+    workflow["210"] = {
+      class_type: "LoadImage",
+      inputs: { image: p.imageFilename2 },
+    };
+    workflow["211"] = {
+      class_type: "ImageScaleToTotalPixels",
+      inputs: {
+        upscale_method: "nearest-exact",
+        megapixels: p.megapixels || 1,
+        resolution_steps: 1,
+        image: ["210", 0],
+      },
+    };
+    workflow["212"] = {
+      class_type: "VAEEncode",
+      inputs: { pixels: ["211", 0], vae: ["72", 0] },
+    };
+    workflow["213"] = {
+      class_type: "ReferenceLatent",
+      inputs: { conditioning: positiveCondNode, latent: ["212", 0] },
+    };
+    workflow["214"] = {
+      class_type: "ReferenceLatent",
+      inputs: { conditioning: negativeCondNode, latent: ["212", 0] },
+    };
+    positiveCondNode = ["213", 0];
+    negativeCondNode = ["214", 0];
+  }
+
   // Empty Flux 2 latent (dimensions derived from input image)
   workflow["66"] = {
     class_type: "EmptyFlux2LatentImage",
@@ -1954,8 +1989,8 @@ function buildFlux2KleinEditWorkflow(p: {
     inputs: {
       cfg: p.cfg || 5,
       model: modelSource,
-      positive: ["77", 0],
-      negative: ["79", 0],
+      positive: positiveCondNode,
+      negative: negativeCondNode,
     },
   };
 
@@ -2611,6 +2646,7 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           prompt: prompt.trim(),
           negativePrompt: (negativePrompt || "").trim() || undefined,
           imageFilename: imageFilename!,
+          imageFilename2: imageFilename2 || undefined,
           seed: actualSeed,
           steps: clampSteps || 20,
           cfg: clampCfg || 5,
