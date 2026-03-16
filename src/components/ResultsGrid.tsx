@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import type { GrokResult } from "@/hooks/useGrokApi";
 import type { Folder } from "@/lib/storage";
-import { exportLibraryAsZip } from "@/lib/storage";
+import { exportLibraryAsZip, getResultDataUrl } from "@/lib/storage";
 import type { FolderFilter } from "@/hooks/useFolders";
 import { useSwipe } from "@/hooks/useSwipe";
 import ShareCTA from "@/components/ShareCTA";
@@ -1062,20 +1062,30 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
       .catch(() => {});
   }, []);
 
-  /** Upload media to Blob and copy share link to clipboard */
+  /** Upload media to Blob and copy/share the link */
   const handleShare = useCallback(async (result: GrokResult) => {
     setSharingId(result.id);
     try {
+      // 1. Get media as base64 — prefer IndexedDB (works on PWA even if blob: URL revoked)
       let mediaBase64 = result.url;
-      if (result.url.startsWith("http") || result.url.startsWith("blob:")) {
-        const resp = await fetch(result.url);
-        const blob = await resp.blob();
-        mediaBase64 = await new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.readAsDataURL(blob);
-        });
+      if (!mediaBase64.startsWith("data:")) {
+        const stored = await getResultDataUrl(result.id).catch(() => null);
+        if (stored && stored.startsWith("data:")) {
+          mediaBase64 = stored;
+        } else if (mediaBase64.startsWith("http") || mediaBase64.startsWith("blob:")) {
+          const resp = await fetch(mediaBase64);
+          if (!resp.ok) throw new Error("Failed to fetch media");
+          const blob = await resp.blob();
+          mediaBase64 = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = () => reject(new Error("FileReader failed"));
+            reader.readAsDataURL(blob);
+          });
+        }
       }
+
+      // 2. Upload to share API
       const shareBase = (import.meta.env.VITE_API_URL as string) || "/api";
       const res = await fetch(`${shareBase}/share`, {
         method: "POST",
@@ -1094,28 +1104,63 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
       const shareLink = refCodeRef.current
         ? `${data.shareUrl}?ref=${refCodeRef.current}`
         : data.shareUrl;
-      await navigator.clipboard.writeText(shareLink);
-      toast.success("Share link copied to clipboard!");
-    } catch {
-      toast.error("Failed to create share link");
+
+      // 3. Copy to clipboard with mobile fallback
+      let copied = false;
+      if (navigator.clipboard?.writeText) {
+        try {
+          await navigator.clipboard.writeText(shareLink);
+          copied = true;
+        } catch { /* clipboard API can fail on mobile without user gesture */ }
+      }
+      if (!copied) {
+        const ta = document.createElement("textarea");
+        ta.value = shareLink;
+        ta.style.cssText = "position:fixed;left:-9999px;top:-9999px";
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        try { document.execCommand("copy"); copied = true; } catch { /* last resort failed */ }
+        document.body.removeChild(ta);
+      }
+
+      if (copied) {
+        toast.success("Share link copied to clipboard!");
+      } else if (navigator.share) {
+        await navigator.share({ title: "Grok Runner", url: shareLink });
+      } else {
+        toast.success("Share link created!", { description: shareLink });
+      }
+    } catch (err: any) {
+      console.error("[share] error:", err);
+      toast.error("Failed to create share link", {
+        description: err?.message || "Unknown error",
+      });
     } finally {
       setSharingId(null);
     }
   }, []);
 
-  /** Upload to R2 first, then open Grokker with the R2 URL */
+  /** Upload to Blob first, then open Grokker with the URL */
   const handleGrokkerPost = useCallback(async (result: GrokResult) => {
     setSharingId(result.id);
     try {
       let mediaBase64 = result.url;
-      if (result.url.startsWith("http") || result.url.startsWith("blob:")) {
-        const resp = await fetch(result.url);
-        const blob = await resp.blob();
-        mediaBase64 = await new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.readAsDataURL(blob);
-        });
+      if (!mediaBase64.startsWith("data:")) {
+        const stored = await getResultDataUrl(result.id).catch(() => null);
+        if (stored && stored.startsWith("data:")) {
+          mediaBase64 = stored;
+        } else if (mediaBase64.startsWith("http") || mediaBase64.startsWith("blob:")) {
+          const resp = await fetch(mediaBase64);
+          if (!resp.ok) throw new Error("Failed to fetch media");
+          const blob = await resp.blob();
+          mediaBase64 = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = () => reject(new Error("FileReader failed"));
+            reader.readAsDataURL(blob);
+          });
+        }
       }
       const shareBase2 = (import.meta.env.VITE_API_URL as string) || "/api";
       const res = await fetch(`${shareBase2}/share`, {
