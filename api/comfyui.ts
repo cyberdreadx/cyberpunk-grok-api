@@ -1160,14 +1160,10 @@ function buildGltchWanWorkflow(p: {
     class_type: "ImageScaleBy",
     inputs: { image: ["4", 0], upscale_method: "lanczos", scale_by: 2 },
   };
-  workflow["76"] = {
-    class_type: "easy cleanGpuUsed",
-    inputs: { anything: ["74", 0] },
-  };
   workflow["75"] = {
     class_type: "RIFE VFI",
     inputs: {
-      frames: ["76", 0],
+      frames: ["74", 0],
       ckpt_name: "rife49.pth",
       clear_cache_after_n_frames: 10,
       multiplier: 2,
