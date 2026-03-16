@@ -20,7 +20,7 @@ rm -rf /root/.triton/cache 2>/dev/null
 for node_entry in \
   "ComfyUI-VideoHelperSuite|https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite.git|requirements.txt" \
   "ComfyUI-GGUF|https://github.com/city96/ComfyUI-GGUF.git|requirements.txt" \
-  "ComfyUI-Frame-Interpolation|https://github.com/Fannovel16/ComfyUI-Frame-Interpolation.git|requirements-no-cupy.txt"; do
+  "ComfyUI-VFI|https://github.com/GACLove/ComfyUI-VFI.git|requirements.txt"; do
   IFS='|' read -r dir url reqs <<< "$node_entry"
   if [ ! -f "/comfyui/custom_nodes/$dir/__init__.py" ]; then
     echo "entrypoint: $dir missing — cloning..."

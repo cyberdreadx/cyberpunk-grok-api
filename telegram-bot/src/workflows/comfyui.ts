@@ -402,28 +402,16 @@ export function buildGltchWanWorkflow(p: {
     },
   };
 
-  // Lanczos 2x upscale + RIFE 2x @ 32fps
-  workflow["74"] = {
-    class_type: "ImageScaleBy",
-    inputs: { image: ["4", 0], upscale_method: "lanczos", scale_by: 2 },
-  };
-  workflow["76"] = {
-    class_type: "easy cleanGpuUsed",
-    inputs: { anything: ["74", 0] },
-  };
+  // RIFE 16fps → 32fps (GPU-accelerated via ComfyUI-VFI)
   workflow["75"] = {
-    class_type: "RIFE VFI",
+    class_type: "RIFEInterpolation",
     inputs: {
-      frames: ["76", 0],
-      ckpt_name: "rife49.pth",
-      clear_cache_after_n_frames: 10,
-      multiplier: 2,
-      fast_mode: false,
-      ensemble: true,
-      scale_factor: 1,
-      batch_size: 4,
-      torch_compile: false,
-      dtype: "auto",
+      images: ["4", 0],
+      source_fps: 16,
+      target_fps: 32,
+      scale: 1.0,
+      batch_size: 8,
+      use_fp16: true,
     },
   };
 

@@ -1,6 +1,6 @@
 # GLTCH — ComfyUI RunPod Serverless Worker
 # WAN 2.2 I2V GGUF video workflows.
-# NOTE: Uses base image ComfyUI version (not latest) for RIFE compatibility.
+# Uses GACLove/ComfyUI-VFI for GPU-accelerated RIFE frame interpolation.
 # Flux 2 Klein image edits run on the separate zimage endpoint.
 #
 # Build:   docker build -t your-dockerhub-user/comfyui-worker:latest .
@@ -24,10 +24,10 @@ RUN git clone https://github.com/city96/ComfyUI-GGUF.git && \
     cd ComfyUI-GGUF && \
     uv pip install -r requirements.txt
 
-# Frame Interpolation (RIFE VFI for temporal upscale)
-RUN git clone https://github.com/Fannovel16/ComfyUI-Frame-Interpolation.git && \
-    cd ComfyUI-Frame-Interpolation && \
-    uv pip install -r requirements-no-cupy.txt
+# Frame Interpolation (GPU-accelerated RIFE via ComfyUI-VFI)
+RUN git clone https://github.com/GACLove/ComfyUI-VFI.git && \
+    cd ComfyUI-VFI && \
+    uv pip install -r requirements.txt
 
 # KJNodes (SageAttention, PatchModelPatcherOrder, etc.)
 RUN git clone https://github.com/kijai/ComfyUI-KJNodes.git && \
@@ -65,7 +65,7 @@ RUN uv pip install gguf color-matcher sageattention triton
 RUN python -c "import sys; sys.path.insert(0,'/comfyui'); \
     assert __import__('os').path.isfile('/comfyui/custom_nodes/ComfyUI-VideoHelperSuite/__init__.py'), 'VHS missing'; \
     assert __import__('os').path.isfile('/comfyui/custom_nodes/ComfyUI-GGUF/__init__.py'), 'GGUF missing'; \
-    assert __import__('os').path.isfile('/comfyui/custom_nodes/ComfyUI-Frame-Interpolation/__init__.py'), 'Frame-Interp missing'; \
+    assert __import__('os').path.isfile('/comfyui/custom_nodes/ComfyUI-VFI/__init__.py'), 'ComfyUI-VFI missing'; \
     print('All critical custom nodes verified OK')"
 
 # ── Bake in small models ─────────────────────────────────────────
@@ -75,10 +75,9 @@ RUN mkdir -p /comfyui/models/upscale_models && \
     wget -q -O /comfyui/models/upscale_models/RealESRGAN_x2plus.pth \
     https://huggingface.co/xingren23/comfyflow-models/resolve/main/upscale_models/RealESRGAN_x2plus.pth
 
-# RIFE model for frame interpolation (~21 MB)
-RUN mkdir -p /comfyui/custom_nodes/ComfyUI-Frame-Interpolation/ckpts/rife && \
-    wget -q -O /comfyui/custom_nodes/ComfyUI-Frame-Interpolation/ckpts/rife/rife49.pth \
-    https://huggingface.co/hfmaster/models-moved/resolve/main/rife/rife49.pth
+# RIFE model for frame interpolation (flownet.pkl ~21 MB, auto-downloaded via plugin script)
+RUN cd /comfyui/custom_nodes/ComfyUI-VFI && \
+    python rife/download_rife.py rife/train_log
 
 # CLIPVision for WAN 2.2 I2V conditioning (~3.9 GB)
 RUN mkdir -p /comfyui/models/clip_vision && \

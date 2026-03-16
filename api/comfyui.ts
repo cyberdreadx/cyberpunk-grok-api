@@ -570,18 +570,14 @@ function buildWanVideoWorkflow(p: {
 
   if (p.useRife) {
     workflow["116"] = {
-      class_type: "RIFE VFI",
+      class_type: "RIFEInterpolation",
       inputs: {
-        frames: [lastNode, lastOut],
-        ckpt_name: "rife47.pth",
-        clear_cache_after_n_frames: 10,
-        multiplier: 2,
-        fast_mode: true,
-        ensemble: false,
-        scale_factor: 1,
-        batch_size: 4,
-        torch_compile: false,
-        dtype: "float16",
+        images: [lastNode, lastOut],
+        source_fps: 24,
+        target_fps: 48,
+        scale: 1.0,
+        batch_size: 8,
+        use_fp16: true,
       },
     };
     lastNode = "116";
@@ -603,18 +599,14 @@ function buildWanVideoWorkflow(p: {
 
     if (!p.useRife) {
       workflow["119"] = {
-        class_type: "RIFE VFI",
+        class_type: "RIFEInterpolation",
         inputs: {
-          frames: [lastNode, lastOut],
-          ckpt_name: "rife49.pth",
-          clear_cache_after_n_frames: 16,
-          multiplier: 2,
-          fast_mode: false,
-          ensemble: true,
-          scale_factor: 1,
-          batch_size: 4,
-          torch_compile: false,
-          dtype: "float16",
+          images: [lastNode, lastOut],
+          source_fps: 24,
+          target_fps: 48,
+          scale: 1.0,
+          batch_size: 8,
+          use_fp16: true,
         },
       };
       lastNode = "119";
@@ -1153,26 +1145,16 @@ function buildGltchWanWorkflow(p: {
     },
   };
 
-  // ── Post-processing: lanczos 2x → RIFE 2x @ 32fps ──
-  // HD mode adds a second RIFE pass for a 64fps "buttery" output.
-  // Lanczos upscale is pure interpolation — zero VRAM pressure, always works.
-  workflow["74"] = {
-    class_type: "ImageScaleBy",
-    inputs: { image: ["4", 0], upscale_method: "lanczos", scale_by: 2 },
-  };
+  // ── Post-processing: RIFE 16fps → 32fps (GPU-accelerated) ──
   workflow["75"] = {
-    class_type: "RIFE VFI",
+    class_type: "RIFEInterpolation",
     inputs: {
-      frames: ["74", 0],
-      ckpt_name: "rife49.pth",
-      clear_cache_after_n_frames: 10,
-      multiplier: 2,
-      fast_mode: false,
-      ensemble: true,
-      scale_factor: 1,
-      batch_size: 4,
-      torch_compile: false,
-      dtype: "float16",
+      images: ["4", 0],
+      source_fps: 16,
+      target_fps: 32,
+      scale: 1.0,
+      batch_size: 8,
+      use_fp16: true,
     },
   };
 
@@ -1180,23 +1162,15 @@ function buildGltchWanWorkflow(p: {
   let finalFrameRate = 32;
 
   if (p.useUpscale) {
-    workflow["77"] = {
-      class_type: "easy cleanGpuUsed",
-      inputs: { anything: ["75", 0] },
-    };
     workflow["78"] = {
-      class_type: "RIFE VFI",
+      class_type: "RIFEInterpolation",
       inputs: {
-        frames: ["77", 0],
-        ckpt_name: "rife49.pth",
-        clear_cache_after_n_frames: 8,
-        multiplier: 2,
-        fast_mode: false,
-        ensemble: true,
-        scale_factor: 1,
-        batch_size: 2,
-        torch_compile: false,
-        dtype: "float16",
+        images: ["75", 0],
+        source_fps: 32,
+        target_fps: 64,
+        scale: 1.0,
+        batch_size: 4,
+        use_fp16: true,
       },
     };
     finalFramesNode = ["78", 0];
@@ -1561,18 +1535,14 @@ function buildLongLookWorkflow(p: {
     if (p.useRife) {
       const rifeNode = `${base + 8}`;
       workflow[rifeNode] = {
-        class_type: "RIFE VFI",
+        class_type: "RIFEInterpolation",
         inputs: {
-          frames: [seqLastNode, seqLastOut],
-          ckpt_name: "rife47.pth",
-          clear_cache_after_n_frames: 10,
-          multiplier: 2,
-          fast_mode: true,
-          ensemble: false,
-          scale_factor: 1,
-          batch_size: 4,
-          torch_compile: false,
-          dtype: "float16",
+          images: [seqLastNode, seqLastOut],
+          source_fps: 24,
+          target_fps: 48,
+          scale: 1.0,
+          batch_size: 8,
+          use_fp16: true,
         },
       };
       seqLastNode = rifeNode;
