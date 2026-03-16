@@ -8,7 +8,6 @@
  * Invoked via vercel.json rewrite: /s/:shareId → /api/share-page?id=:shareId
  */
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { head } from "@vercel/blob";
 
 export const config = { maxDuration: 10 };
 
@@ -216,17 +215,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const metaPath = `shares/${shareId}.json`;
-    let metaBlobUrl: string;
-    try {
-      const metaBlob = await head(metaPath);
-      metaBlobUrl = metaBlob.url;
-    } catch {
+    const { list } = await import("@vercel/blob");
+    const { blobs } = await list({ prefix: `shares/${shareId}.json` });
+
+    if (blobs.length === 0) {
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       return res.status(404).send(notFoundPage(host));
     }
 
-    const metaResp = await fetch(metaBlobUrl);
+    const metaResp = await fetch(blobs[0].url);
     if (!metaResp.ok) {
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       return res.status(404).send(notFoundPage(host));
