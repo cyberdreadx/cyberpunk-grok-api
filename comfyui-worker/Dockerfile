@@ -25,9 +25,14 @@ RUN git clone https://github.com/city96/ComfyUI-GGUF.git && \
     uv pip install -r requirements.txt
 
 # Frame Interpolation (GPU-accelerated RIFE via ComfyUI-VFI)
+# Patch warplayer.py: use tensor device instead of module-level device var
+# (module-level torch.cuda.is_available() can be false at import time in RunPod)
 RUN git clone https://github.com/GACLove/ComfyUI-VFI.git && \
     cd ComfyUI-VFI && \
-    uv pip install -r requirements.txt
+    uv pip install -r requirements.txt && \
+    sed -i 's/device=device/device=tenFlow.device/g' rife/model/warplayer.py && \
+    sed -i 's/\.to(device)/.to(tenFlow.device)/g' rife/model/warplayer.py && \
+    sed -i 's/output_frames.append(images\[source_idx1\])/output_frames.append(images[source_idx1].cpu())/' rife/rife_comfyui_wrapper.py
 
 # KJNodes (SageAttention, PatchModelPatcherOrder, etc.)
 RUN git clone https://github.com/kijai/ComfyUI-KJNodes.git && \
