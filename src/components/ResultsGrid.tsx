@@ -1107,31 +1107,44 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
         ? `${data.shareUrl}?ref=${refCodeRef.current}`
         : data.shareUrl;
 
-      // 3. Copy to clipboard with mobile fallback
+      // 3. Share / copy — on mobile prefer native share sheet
+      const mobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+
+      if (mobile && navigator.share) {
+        try {
+          await navigator.share({ title: "Grok Runner", url: shareLink });
+          return;
+        } catch (e: any) {
+          if (e?.name === "AbortError") return;
+        }
+      }
+
       let copied = false;
       if (navigator.clipboard?.writeText) {
         try {
           await navigator.clipboard.writeText(shareLink);
           copied = true;
-        } catch { /* clipboard API can fail on mobile without user gesture */ }
+        } catch { /* clipboard blocked without user gesture */ }
       }
       if (!copied) {
         const ta = document.createElement("textarea");
         ta.value = shareLink;
-        ta.style.cssText = "position:fixed;left:-9999px;top:-9999px";
+        ta.style.cssText = "position:fixed;left:-9999px;top:-9999px;opacity:0";
         document.body.appendChild(ta);
         ta.focus();
         ta.select();
-        try { document.execCommand("copy"); copied = true; } catch { /* last resort failed */ }
+        try { copied = document.execCommand("copy"); } catch { /* fallback failed */ }
         document.body.removeChild(ta);
       }
 
       if (copied) {
         toast.success("Share link copied to clipboard!");
       } else if (navigator.share) {
-        await navigator.share({ title: "Grok Runner", url: shareLink });
+        try {
+          await navigator.share({ title: "Grok Runner", url: shareLink });
+        } catch { /* user cancelled */ }
       } else {
-        toast.success("Share link created!", { description: shareLink });
+        toast.success("Share link ready — tap to copy:", { description: shareLink });
       }
     } catch (err: any) {
       console.error("[share] error:", err);
