@@ -1019,7 +1019,7 @@ const Index = () => {
                       <input
                         ref={gltchImage2Ref}
                         type="file"
-                        accept="image/*"
+                        accept="image/*,.heic,.heif"
                         onChange={handleGltchImage2}
                         className="hidden"
                       />
@@ -1379,12 +1379,26 @@ const Index = () => {
                       ) : (
                         <label className="w-full flex items-center justify-center px-3 py-2 border border-dashed border-border rounded cursor-pointer hover:border-secondary/30 transition-colors">
                           <span className="font-mono-share text-[9px] text-muted-foreground">+ Upload end frame</span>
-                          <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                          <input type="file" accept="image/*,.heic,.heif" className="hidden" onChange={async (e) => {
                             const file = e.target.files?.[0];
-                            if (file) {
-                              const reader = new FileReader();
-                              reader.onload = () => setComfyEndFrameUrl(reader.result as string);
-                              reader.readAsDataURL(file);
+                            if (!file) return;
+                            try {
+                              let blob: Blob = file;
+                              const t = (file.type || "").toLowerCase();
+                              const n = (file.name || "").toLowerCase();
+                              if (t === "image/heic" || t === "image/heif" || n.endsWith(".heic") || n.endsWith(".heif")) {
+                                const { default: heic2any } = await import("heic2any");
+                                const converted = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.9 });
+                                blob = Array.isArray(converted) ? converted[0] : converted;
+                              }
+                              const bitmap = await createImageBitmap(blob);
+                              const canvas = document.createElement("canvas");
+                              canvas.width = bitmap.width; canvas.height = bitmap.height;
+                              canvas.getContext("2d")?.drawImage(bitmap, 0, 0);
+                              bitmap.close();
+                              setComfyEndFrameUrl(canvas.toDataURL("image/jpeg", 0.9));
+                            } catch {
+                              toast({ title: "Image error", description: "Could not process image.", variant: "destructive" });
                             }
                             e.target.value = "";
                           }} />
