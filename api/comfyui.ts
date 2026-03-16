@@ -1134,7 +1134,7 @@ function buildGltchWanWorkflow(p: {
     audioNodeId = addMMAudioNodes(workflow, "4", p.seed, p.audioPrompt || p.prompt);
   }
 
-  // ── Base 16fps output — saved as fallback if HD pipeline fails ──
+  // ── Base 16fps output — NOT saved (RIFE node 85 produces the real output) ──
   workflow["16"] = {
     class_type: "VHS_VideoCombine",
     inputs: {
@@ -1148,7 +1148,7 @@ function buildGltchWanWorkflow(p: {
       save_metadata: false,
       trim_to_audio: false,
       pingpong: false,
-      save_output: true,
+      save_output: false,
       ...(audioNodeId ? { audio: [audioNodeId, 0] } : {}),
     },
   };
