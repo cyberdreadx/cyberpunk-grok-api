@@ -487,28 +487,10 @@ function buildWanVideoWorkflow(p: {
     },
   };
 
-  // Optional end frame for start→end interpolation
+  // End frame support requires ComfyUI 0.7+ (WanImageToVideo end_image param).
+  // Skipped for now to avoid crashing older workers — enable after ComfyUI update.
   if (p.endImageFilename) {
-    // Load end image
-    workflow["200"] = {
-      class_type: "LoadImage",
-      inputs: { image: p.endImageFilename },
-    };
-    workflow["201"] = {
-      class_type: "ImageResizeKJv2",
-      inputs: {
-        image: ["200", 0],
-        width: p.width,
-        height: p.height,
-        upscale_method: "lanczos",
-        keep_proportion: "resize",
-        pad_color: "0, 0, 0",
-        crop_position: "center",
-        divisible_by: 16,
-        device: "cpu",
-      },
-    };
-    workflow["113"].inputs.end_image = ["201", 0];
+    console.warn("[comfyui] end_image requested but disabled — worker ComfyUI too old. Ignoring end frame.");
   }
 
   // Pass 1: high-noise sampler
@@ -760,25 +742,7 @@ function buildGltchWanSimpleWorkflow(p: {
   };
 
   if (p.endImageFilename) {
-    workflow["200"] = {
-      class_type: "LoadImage",
-      inputs: { image: p.endImageFilename },
-    };
-    workflow["201"] = {
-      class_type: "ImageResizeKJv2",
-      inputs: {
-        image: ["200", 0],
-        width: p.resolution,
-        height: p.resolution,
-        upscale_method: "lanczos",
-        keep_proportion: "resize",
-        pad_color: "0, 0, 0",
-        crop_position: "center",
-        divisible_by: 16,
-        device: "cpu",
-      },
-    };
-    workflow["10"].inputs.end_image = ["201", 0];
+    console.warn("[comfyui] end_image requested but disabled — worker ComfyUI too old. Ignoring end frame.");
   }
 
   const isPaired = !!(p.videoLoraHigh && p.videoLoraLow);
@@ -1017,27 +981,8 @@ function buildGltchWanWorkflow(p: {
     },
   };
 
-  // Optional end frame for start→end interpolation
   if (p.endImageFilename) {
-    workflow["200"] = {
-      class_type: "LoadImage",
-      inputs: { image: p.endImageFilename },
-    };
-    workflow["201"] = {
-      class_type: "ImageResizeKJv2",
-      inputs: {
-        image: ["200", 0],
-        width: p.resolution,
-        height: p.resolution,
-        upscale_method: "lanczos",
-        keep_proportion: "resize",
-        pad_color: "0, 0, 0",
-        crop_position: "center",
-        divisible_by: 16,
-        device: "cpu",
-      },
-    };
-    workflow["10"].inputs.end_image = ["201", 0];
+    console.warn("[comfyui] end_image requested but disabled — worker ComfyUI too old. Ignoring end frame.");
   }
 
   // ── Optional user video LoRA (NOT Lightning — those are baked in) ──
@@ -2837,6 +2782,21 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
         if (data.status === "COMPLETED") {
           const out = data.output || {};
           console.log("[comfyui-poll] COMPLETED output keys:", Object.keys(out));
+
+          // Store execution time for RunPod cost tracking
+          if (data.executionTime && auth?.userId) {
+            const execMs = Math.round(data.executionTime);
+            try {
+              const sql = getDb();
+              await sql`
+                UPDATE usage_log SET execution_time_ms = ${execMs}
+                WHERE user_id = ${auth.userId}::uuid
+                  AND mode LIKE 'comfy-%'
+                  AND execution_time_ms IS NULL
+                ORDER BY created_at DESC LIMIT 1
+              `;
+            } catch { /* best effort */ }
+          }
 
           // Track S3 URLs for cleanup after delivery
           const s3UrlsToClean: string[] = [];

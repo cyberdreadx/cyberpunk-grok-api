@@ -116,6 +116,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           FROM usage_log
         `;
 
+        // RunPod cost from tracked execution times (rate: $0.00155/s = 0.155 cents/s)
+        const [runpodCost] = await sql`
+          SELECT
+            COALESCE(SUM(execution_time_ms) FILTER (WHERE created_at > now() - interval '30 days'), 0)::bigint AS total_ms_30d
+          FROM usage_log
+          WHERE mode LIKE 'comfy-%' AND execution_time_ms IS NOT NULL
+        `;
+        const runpodCost30dCents = Math.round((Number(runpodCost.total_ms_30d) / 1000) * 0.155);
+
         // Moderation stats
         const [moderationStats] = await sql`
           SELECT
@@ -157,6 +166,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           apiCost: {
             estimated30dCents: costEstimate.estimated_cost_30d_cents,
             estimatedTotalCents: costEstimate.estimated_cost_total_cents,
+          },
+          runpodCost: {
+            estimated30dCents: runpodCost30dCents,
           },
           moderation: {
             ...moderationStats,
@@ -354,6 +366,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             topReferrers,
           },
         });
+      }
+
+      // -- Profit per action breakdown (30d) --
+      case "profit-breakdown": {
+        const rows = await sql`
+          SELECT
+            mode,
+            COUNT(*)::int AS generations,
+            COALESCE(SUM(credits_used), 0)::int AS credits_used,
+            COALESCE(SUM(execution_time_ms), 0)::bigint AS total_exec_ms,
+            COUNT(execution_time_ms)::int AS tracked_count
+          FROM usage_log
+          WHERE created_at > now() - interval '30 days'
+            AND mode NOT LIKE 'moderation-%'
+          GROUP BY mode
+          ORDER BY credits_used DESC
+        `;
+        return res.status(200).json({ profitBreakdown: rows });
       }
 
       // -- Sync subscription cancellation status from Stripe --

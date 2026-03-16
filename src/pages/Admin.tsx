@@ -19,6 +19,8 @@ import {
   Flame,
   Share2,
   Gift,
+  BarChart3,
+  Eye,
 } from "lucide-react";
 import {
   AreaChart,
@@ -37,8 +39,6 @@ import { apiFetch, hasAuthToken } from "@/lib/api";
 
 const ADMIN_EMAIL = "cyberdreadx@proton.me";
 
-// â”€â”€ Helpers â”€â”€
-
 function fmt$(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`;
 }
@@ -47,7 +47,7 @@ function fmtDate(d: string): string {
   return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-// â”€â”€ Types â”€â”€
+// ── Types ──
 
 interface ModerationOffender {
   email: string; block_count: number; credits_burned: number; last_block: string;
@@ -64,6 +64,7 @@ interface Overview {
   usage: { total_credits_used: number; credits_30d: number; credits_today: number; total_generations: number; generations_today: number };
   creditPool: { total_sub_credits_outstanding: number; total_pack_credits_outstanding: number };
   apiCost: { estimated30dCents: number; estimatedTotalCents: number };
+  runpodCost?: { estimated30dCents: number };
   moderation: ModerationStats;
 }
 
@@ -78,7 +79,7 @@ interface TopUser {
   created_at: string; total_spent_cents: number; total_generations: number; total_credits_used: number; last_generation: string | null;
 }
 
-// â”€â”€ KPI Card â”€â”€
+// ── Shared Components ──
 
 function KpiCard({ icon, label, value, sub, accent = "primary" }: {
   icon: React.ReactNode; label: string; value: string | number; sub?: string; accent?: "primary" | "secondary" | "destructive";
@@ -97,8 +98,6 @@ function KpiCard({ icon, label, value, sub, accent = "primary" }: {
   );
 }
 
-// â”€â”€ Cyber Tooltip â”€â”€
-
 function CyberTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   return (
@@ -113,12 +112,27 @@ function CyberTooltip({ active, payload, label }: any) {
   );
 }
 
-// â”€â”€ Main Admin Page â”€â”€
+// ── Tab Definitions ──
+
+type TabId = "overview" | "revenue" | "users" | "usage" | "moderation" | "referrals" | "system";
+
+const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
+  { id: "overview", label: "OVERVIEW", icon: <Eye className="w-3.5 h-3.5" /> },
+  { id: "revenue", label: "REVENUE", icon: <DollarSign className="w-3.5 h-3.5" /> },
+  { id: "users", label: "USERS", icon: <Users className="w-3.5 h-3.5" /> },
+  { id: "usage", label: "USAGE", icon: <BarChart3 className="w-3.5 h-3.5" /> },
+  { id: "moderation", label: "DEFENSE", icon: <ShieldX className="w-3.5 h-3.5" /> },
+  { id: "referrals", label: "REFERRALS", icon: <Share2 className="w-3.5 h-3.5" /> },
+  { id: "system", label: "SYSTEM", icon: <Server className="w-3.5 h-3.5" /> },
+];
+
+// ── Main Admin Page ──
 
 export default function Admin() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [authorized, setAuthorized] = useState(false);
+  const [activeTab, setActiveTab] = useState<TabId>("overview");
   const [overview, setOverview] = useState<Overview | null>(null);
   const [revenue, setRevenue] = useState<RevenueRow[]>([]);
   const [users, setUsers] = useState<UserRow[]>([]);
@@ -127,6 +141,7 @@ export default function Admin() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [revenueBreakdown, setRevenueBreakdown] = useState<any>(null);
   const [referralStats, setReferralStats] = useState<any>(null);
+  const [profitBreakdown, setProfitBreakdown] = useState<any[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<any>(null);
@@ -136,13 +151,11 @@ export default function Admin() {
     setRefreshing(true);
     const errors: string[] = [];
 
-    // Helper: fetch one action, return null on failure
     async function fetchAction(action: string) {
       try {
         return await apiFetch("/admin", { method: "POST", body: { action } });
       } catch (err: any) {
         const msg = err.message || String(err);
-        // Auth errors should stop everything
         if (msg.includes("Access denied") || msg.includes("403") || msg.includes("Unauthorized")) {
           throw err;
         }
@@ -153,7 +166,7 @@ export default function Admin() {
     }
 
     try {
-      const [o, r, u, us, t, tx, ref, rb] = await Promise.all([
+      const [o, r, u, us, t, tx, ref, rb, pb] = await Promise.all([
         fetchAction("overview"),
         fetchAction("revenue"),
         fetchAction("users"),
@@ -162,6 +175,7 @@ export default function Admin() {
         fetchAction("transactions"),
         fetchAction("referrals"),
         fetchAction("revenue-breakdown"),
+        fetchAction("profit-breakdown"),
       ]);
 
       if (o) setOverview(o);
@@ -172,11 +186,11 @@ export default function Admin() {
       if (tx) setTransactions(tx.transactions || []);
       if (ref) setReferralStats(ref.referrals || null);
       if (rb) setRevenueBreakdown(rb);
+      if (pb) setProfitBreakdown(pb.profitBreakdown || []);
 
       setAuthorized(true);
       setError(errors.length > 0 ? errors.join(" | ") : null);
-    } catch (err: any) {
-      // Auth error thrown from fetchAction
+    } catch {
       setAuthorized(false);
       setError(null);
     } finally {
@@ -191,7 +205,6 @@ export default function Admin() {
     try {
       const result = await apiFetch("/admin", { method: "POST", body: { action: "sync-subscriptions" } });
       setSyncResult(result);
-      // Refresh dashboard data after sync
       fetchAll();
     } catch (err: any) {
       setSyncResult({ error: err.message });
@@ -209,7 +222,6 @@ export default function Admin() {
     fetchAll();
   }, [fetchAll]);
 
-  // Pivot usage data into { day, generate-image, edit-image, generate-video }
   const usagePivot = React.useMemo(() => {
     const map = new Map<string, { day: string } & Record<string, number>>();
     for (const row of usage) {
@@ -221,7 +233,7 @@ export default function Admin() {
     return Array.from(map.values());
   }, [usage]);
 
-  // â”€â”€ Access denied / loading â”€â”€
+  // ── Loading / Auth gates ──
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -269,12 +281,16 @@ export default function Admin() {
   }
 
   const o = overview;
-  const profitMargin30d = o.revenue.revenue_30d_cents - o.apiCost.estimated30dCents;
+  const xaiCost30d = o.apiCost.estimated30dCents;
+  const runpodCost30d = o.runpodCost?.estimated30dCents || 0;
+  const modCost30d = o.moderation.wasted_cost_30d_cents;
+  const totalCost30d = xaiCost30d + runpodCost30d + modCost30d;
+  const trueMargin30d = o.revenue.revenue_30d_cents - totalCost30d;
 
   return (
     <div className="min-h-screen bg-background w-full overflow-x-hidden">
       {/* Header */}
-      <header className="border-b border-border/30 bg-card/40 backdrop-blur-sm sticky top-0 z-10">
+      <header className="border-b border-border/30 bg-card/40 backdrop-blur-sm sticky top-0 z-20">
         <div className="max-w-7xl mx-auto px-3 sm:px-4 py-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
             <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="gap-1 font-mono-share text-xs shrink-0 px-2">
@@ -303,86 +319,370 @@ export default function Admin() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
-        {/* KPI Grid */}
-        <section className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
-          <KpiCard icon={<Users className="w-4 h-4" />} label="TOTAL_USERS" value={o.users.total_users} sub={`${o.users.verified_users} verified // +${o.users.new_this_week} this week`} />
-          <KpiCard icon={<DollarSign className="w-4 h-4" />} label="REVENUE_30D" value={fmt$(o.revenue.revenue_30d_cents)} sub={`${fmt$(o.revenue.total_revenue_cents)} lifetime`} accent="secondary" />
-          <KpiCard icon={<Zap className="w-4 h-4" />} label="GENERATIONS_30D" value={o.usage.credits_30d} sub={`${o.usage.generations_today} today // ${o.usage.total_generations} total`} />
-          <KpiCard icon={<Crown className="w-4 h-4" />} label="SUBSCRIBERS" value={o.users.active_subscribers} sub={`${o.users.cancelling_subscribers} cancelling // ${o.revenue.pack_purchases} pack buys // ${o.revenue.sub_renewals} renewals`} accent="secondary" />
-        </section>
-
-        {/* Subscription Sync */}
-        <section className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm p-3 sm:p-4">
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <div className="flex items-center gap-2">
-              <Crown className="w-3.5 h-3.5 text-secondary" />
-              <span className="font-orbitron text-[10px] tracking-wider text-muted-foreground">SUBSCRIPTION_SYNC</span>
-              <span className="font-mono-share text-[9px] text-muted-foreground/40">
-                Pull cancellation status from Stripe for all active subscribers
-              </span>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={syncSubscriptions}
-              disabled={syncing}
-              className="font-mono-share text-xs gap-1.5 border-secondary/30 hover:bg-secondary/10"
+      {/* Tab Bar */}
+      <nav className="border-b border-border/20 bg-card/20 backdrop-blur-sm sticky top-[53px] z-10 overflow-x-auto">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 flex gap-0.5">
+          {TABS.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-1.5 px-3 py-2.5 font-orbitron text-[9px] sm:text-[10px] tracking-wider border-b-2 transition-all whitespace-nowrap ${
+                activeTab === tab.id
+                  ? "border-primary text-primary bg-primary/5"
+                  : "border-transparent text-muted-foreground/50 hover:text-muted-foreground hover:bg-card/40"
+              }`}
             >
-              {syncing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-              {syncing ? "SYNCING..." : "SYNC_NOW"}
-            </Button>
-          </div>
-          {syncResult && (
-            <div className="mt-3 space-y-2">
-              {syncResult.error ? (
-                <p className="font-mono-share text-xs text-destructive">{syncResult.error}</p>
-              ) : (
-                <>
-                  <div className="flex flex-wrap gap-3 font-mono-share text-[10px] text-muted-foreground/70">
-                    <span>Checked: <span className="text-foreground">{syncResult.total_checked}</span></span>
-                    <span>Marked cancelling: <span className="text-destructive">{syncResult.marked_cancelling}</span></span>
-                    <span>Cleared (reactivated): <span className="text-green-400">{syncResult.cleared}</span></span>
-                    <span>Already ended: <span className="text-muted-foreground">{syncResult.already_deleted}</span></span>
-                  </div>
-                  {syncResult.details?.length > 0 && (
-                    <div className="max-h-64 overflow-y-auto bg-input/30 rounded p-2 space-y-1.5">
-                      {syncResult.details.map((d: any, i: number) => (
-                        <div key={i} className={`font-mono-share text-[9px] border-b border-border/10 pb-1 ${
-                          d.action?.includes("error") ? "text-destructive" :
-                          d.action?.includes("cancelling") ? "text-destructive/80" :
-                          d.action?.includes("cleared") ? "text-green-400/80" :
-                          "text-muted-foreground/60"
-                        }`}>
-                          <p className="font-bold">{d.email}: {d.action}{d.cancel_at ? ` (${new Date(d.cancel_at).toLocaleDateString()})` : ""}</p>
-                          {d.subs_found !== undefined && (
-                            <p className="text-muted-foreground/40 ml-2">subs: {d.subs_found}</p>
-                          )}
-                          {d.statuses?.map((s: any, j: number) => (
-                            <p key={j} className="text-muted-foreground/40 ml-2">
-                              {s.id}: status={s.status}, cancel_at_end={String(s.cancel_at_period_end)}, cancel_at={s.cancel_at || "null"}, period_end={s.current_period_end}
-                            </p>
-                          ))}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </>
-              )}
+              {tab.icon}
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </nav>
+
+      <main className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
+
+        {/* ═══ OVERVIEW TAB ═══ */}
+        {activeTab === "overview" && (
+          <>
+            <section className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
+              <KpiCard icon={<Users className="w-4 h-4" />} label="TOTAL_USERS" value={o.users.total_users} sub={`${o.users.verified_users} verified // +${o.users.new_this_week} this week`} />
+              <KpiCard icon={<DollarSign className="w-4 h-4" />} label="REVENUE_30D" value={fmt$(o.revenue.revenue_30d_cents)} sub={`${fmt$(o.revenue.total_revenue_cents)} lifetime`} accent="secondary" />
+              <KpiCard icon={<Zap className="w-4 h-4" />} label="CREDITS_USED_30D" value={o.usage.credits_30d.toLocaleString()} sub={`${o.usage.generations_today} today // ${o.usage.total_generations} total`} />
+              <KpiCard icon={<Crown className="w-4 h-4" />} label="SUBSCRIBERS" value={o.users.active_subscribers} sub={`${o.users.cancelling_subscribers} cancelling // ${o.revenue.pack_purchases} pack buys`} accent="secondary" />
+            </section>
+
+            <section className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
+              <KpiCard icon={<CreditCard className="w-4 h-4" />} label="xAI_COST_30D" value={fmt$(xaiCost30d)} sub="estimated xAI API spend" accent="destructive" />
+              <KpiCard icon={<Server className="w-4 h-4" />} label="RUNPOD_COST_30D" value={runpodCost30d ? fmt$(runpodCost30d) : "N/A"} sub={runpodCost30d ? "tracked from execution time" : "enable tracking to see"} accent="destructive" />
+              <KpiCard icon={<Ban className="w-4 h-4" />} label="MOD_WASTE_30D" value={fmt$(modCost30d)} sub={`${o.moderation.blocks_30d} flagged requests`} accent="destructive" />
+              <KpiCard icon={<TrendingUp className="w-4 h-4" />} label="TRUE_MARGIN_30D" value={fmt$(trueMargin30d)} sub={`${Math.round((trueMargin30d / Math.max(1, o.revenue.revenue_30d_cents)) * 100)}% of revenue`} accent={trueMargin30d >= 0 ? "secondary" : "destructive"} />
+            </section>
+
+            <section className="grid grid-cols-2 md:grid-cols-3 gap-2 sm:gap-3">
+              <KpiCard icon={<Activity className="w-4 h-4" />} label="CREDITS_OUTSTANDING" value={(o.creditPool.total_sub_credits_outstanding + o.creditPool.total_pack_credits_outstanding).toLocaleString()} sub={`${o.creditPool.total_sub_credits_outstanding.toLocaleString()} sub + ${o.creditPool.total_pack_credits_outstanding.toLocaleString()} pack`} />
+              <KpiCard icon={<DollarSign className="w-4 h-4" />} label="REVENUE_7D" value={fmt$(o.revenue.revenue_7d_cents)} sub={`${o.revenue.total_transactions} total txns`} accent="secondary" />
+              <KpiCard icon={<Crown className="w-4 h-4" />} label="SUB_RENEWALS" value={o.revenue.sub_renewals} sub={`${o.revenue.pack_purchases} pack purchases`} accent="secondary" />
+            </section>
+          </>
+        )}
+
+        {/* ═══ REVENUE TAB ═══ */}
+        {activeTab === "revenue" && (
+          <>
+            <div className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm p-3 sm:p-4 min-w-0 overflow-hidden">
+              <h2 className="font-orbitron text-xs tracking-wider text-primary/80 mb-4 flex items-center gap-2">
+                <DollarSign className="w-3.5 h-3.5" />
+                REVENUE_STREAM (30d)
+              </h2>
+              <ResponsiveContainer width="100%" height={250}>
+                <AreaChart data={revenue}>
+                  <defs>
+                    <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="hsl(var(--secondary))" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="hsl(var(--secondary))" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.3} />
+                  <XAxis dataKey="day" interval="preserveStartEnd" tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} />
+                  <YAxis tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} tickFormatter={(v) => fmt$(v)} width={48} />
+                  <Tooltip content={<CyberTooltip />} />
+                  <Area type="monotone" dataKey="revenue_cents" name="Revenue" stroke="hsl(var(--secondary))" fill="url(#revGrad)" strokeWidth={2} />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
-          )}
-        </section>
 
-        {/* Financial overview */}
-        <section className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
-          <KpiCard icon={<CreditCard className="w-4 h-4" />} label="API_COST_30D" value={fmt$(o.apiCost.estimated30dCents)} sub="estimated xAI spend" accent="destructive" />
-          <KpiCard icon={<TrendingUp className="w-4 h-4" />} label="MARGIN_30D" value={fmt$(profitMargin30d)} sub={profitMargin30d >= 0 ? "revenue - api cost" : "WARNING: negative margin"} accent={profitMargin30d >= 0 ? "secondary" : "destructive"} />
-          <KpiCard icon={<Activity className="w-4 h-4" />} label="CREDITS_OUTSTANDING" value={(o.creditPool.total_sub_credits_outstanding + o.creditPool.total_pack_credits_outstanding).toLocaleString()} sub={`${o.creditPool.total_sub_credits_outstanding} sub + ${o.creditPool.total_pack_credits_outstanding} pack`} />
-          <KpiCard icon={<DollarSign className="w-4 h-4" />} label="REVENUE_7D" value={fmt$(o.revenue.revenue_7d_cents)} sub={`${o.revenue.total_transactions} total txns`} accent="secondary" />
-        </section>
+            {revenueBreakdown && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
+                <div className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm overflow-hidden">
+                  <div className="px-3 sm:px-4 py-3 border-b border-border/30">
+                    <h2 className="font-orbitron text-xs tracking-wider text-secondary/80 flex items-center gap-2">
+                      <CreditCard className="w-3.5 h-3.5" />
+                      REVENUE_BY_PACK (30d)
+                    </h2>
+                  </div>
+                  <div className="overflow-x-auto overscroll-x-contain">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-border/20">
+                          {["PACK", "TYPE", "COUNT", "REVENUE", "CREDITS"].map((h) => (
+                            <th key={h} className="px-2.5 py-2 text-left font-mono-share text-[9px] text-muted-foreground/50 tracking-wider">{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(revenueBreakdown.byPack30d || []).map((row: any, i: number) => (
+                          <tr key={i} className="border-b border-border/10 hover:bg-primary/5 transition-colors">
+                            <td className="px-2.5 py-2 font-orbitron text-[10px] tracking-wider text-foreground/80">{row.package?.toUpperCase() || "--"}</td>
+                            <td className="px-2.5 py-2">
+                              <span className={`font-orbitron text-[9px] tracking-wider px-2 py-0.5 rounded border ${
+                                row.type === "subscription" ? "bg-secondary/20 text-secondary border-secondary/30" : "bg-primary/20 text-primary border-primary/30"
+                              }`}>{row.type?.toUpperCase()}</span>
+                            </td>
+                            <td className="px-2.5 py-2 font-mono-share text-xs font-bold">{row.count}</td>
+                            <td className="px-2.5 py-2 font-mono-share text-xs text-secondary font-bold">{fmt$(row.total_cents)}</td>
+                            <td className="px-2.5 py-2 font-mono-share text-xs text-primary">{row.total_credits?.toLocaleString()}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
 
-        {/* Moderation Defense */}
-        {o.moderation && (
+                <div className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm overflow-hidden">
+                  <div className="px-3 sm:px-4 py-3 border-b border-border/30">
+                    <h2 className="font-orbitron text-xs tracking-wider text-secondary/80 flex items-center gap-2">
+                      <DollarSign className="w-3.5 h-3.5" />
+                      REVENUE_BY_GATEWAY (lifetime)
+                    </h2>
+                  </div>
+                  <div className="p-3 sm:p-4 space-y-2">
+                    {(revenueBreakdown.byGateway || []).map((row: any, i: number) => {
+                      const totalCents = (revenueBreakdown.byGateway || []).reduce((s: number, r: any) => s + (r.total_cents || 0), 0);
+                      const pct = totalCents > 0 ? Math.round((row.total_cents / totalCents) * 100) : 0;
+                      return (
+                        <div key={i} className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className={`font-mono-share text-[10px] font-bold px-2 py-0.5 rounded ${
+                              row.gateway === "stripe" ? "bg-indigo-500/20 text-indigo-400 border border-indigo-500/30"
+                              : row.gateway === "paypal" ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                              : row.gateway === "xrge" ? "bg-pink-500/20 text-pink-400 border border-pink-500/30"
+                              : "bg-muted/20 text-muted-foreground"
+                            }`}>{row.gateway === "xrge" ? "$XRGE" : row.gateway?.toUpperCase()}</span>
+                            <div className="flex items-center gap-3">
+                              <span className="font-mono-share text-[10px] text-muted-foreground/60">{row.count} txns</span>
+                              <span className="font-mono-share text-sm text-secondary font-bold">{fmt$(row.total_cents)}</span>
+                              <span className="font-mono-share text-[10px] text-muted-foreground/40">{pct}%</span>
+                            </div>
+                          </div>
+                          <div className="w-full bg-border/20 rounded-full h-1.5 overflow-hidden">
+                            <div className={`h-full rounded-full transition-all ${
+                              row.gateway === "stripe" ? "bg-indigo-500" : row.gateway === "paypal" ? "bg-blue-500" : row.gateway === "xrge" ? "bg-pink-500" : "bg-muted-foreground"
+                            }`} style={{ width: `${pct}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="px-3 sm:px-4 py-3 border-t border-border/20">
+                    <h3 className="font-orbitron text-[9px] tracking-wider text-muted-foreground/50 mb-2">ALL_TIME_BY_PACK</h3>
+                    <div className="overflow-x-auto overscroll-x-contain">
+                      <table className="w-full">
+                        <thead><tr className="border-b border-border/20">
+                          {["PACK", "TYPE", "#", "REVENUE"].map((h) => (
+                            <th key={h} className="px-2 py-1 text-left font-mono-share text-[8px] text-muted-foreground/40 tracking-wider">{h}</th>
+                          ))}
+                        </tr></thead>
+                        <tbody>
+                          {(revenueBreakdown.byPack || []).map((row: any, i: number) => (
+                            <tr key={i} className="border-b border-border/5">
+                              <td className="px-2 py-1 font-mono-share text-[10px] text-foreground/70">{row.package?.toUpperCase() || "--"}</td>
+                              <td className="px-2 py-1 font-mono-share text-[9px] text-muted-foreground/50">{row.type}</td>
+                              <td className="px-2 py-1 font-mono-share text-[10px]">{row.count}</td>
+                              <td className="px-2 py-1 font-mono-share text-[10px] text-secondary">{fmt$(row.total_cents)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <section className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm overflow-hidden">
+              <div className="px-3 sm:px-4 py-3 border-b border-border/30 flex items-center justify-between">
+                <h2 className="font-orbitron text-xs tracking-wider text-primary/80 flex items-center gap-2">
+                  <Receipt className="w-3.5 h-3.5" />
+                  TRANSACTION_LOG (last 100)
+                </h2>
+                <span className="font-mono-share text-[10px] text-muted-foreground/40">{transactions.length} records</span>
+              </div>
+              <div className="overflow-x-auto overscroll-x-contain">
+                <table className="w-full min-w-[560px]">
+                  <thead><tr className="border-b border-border/20">
+                    {["DATE", "USER", "TYPE", "PKG", "CR", "AMT", "VIA"].map((h) => (
+                      <th key={h} className="px-2.5 py-2 text-left font-mono-share text-[9px] text-muted-foreground/50 tracking-wider">{h}</th>
+                    ))}
+                  </tr></thead>
+                  <tbody>
+                    {transactions.map((tx, i) => (
+                      <tr key={i} className="border-b border-border/10 hover:bg-primary/5 transition-colors">
+                        <td className="px-2.5 py-2 font-mono-share text-[10px] text-muted-foreground/60 whitespace-nowrap">
+                          {new Date(tx.created_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                        </td>
+                        <td className="px-2.5 py-2 font-mono-share text-xs text-foreground/80">{tx.email || "unknown"}</td>
+                        <td className="px-2.5 py-2">
+                          <span className={`font-orbitron text-[9px] tracking-wider px-2 py-0.5 rounded border ${
+                            tx.type === "subscription" ? "bg-secondary/20 text-secondary border-secondary/30" : "bg-primary/20 text-primary border-primary/30"
+                          }`}>{tx.type?.toUpperCase() || "--"}</span>
+                        </td>
+                        <td className="px-2.5 py-2 font-mono-share text-xs text-foreground/70">{tx.package?.toUpperCase() || "--"}</td>
+                        <td className="px-2.5 py-2 font-mono-share text-xs text-primary font-bold">{tx.credits}</td>
+                        <td className="px-2.5 py-2 font-mono-share text-xs text-secondary">{fmt$(tx.amount_cents)}</td>
+                        <td className="px-2.5 py-2">
+                          <span className={`font-mono-share text-[9px] px-2 py-0.5 rounded ${
+                            tx.gateway === "stripe" ? "bg-indigo-500/20 text-indigo-400 border border-indigo-500/30"
+                            : tx.gateway === "paypal" ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                            : tx.gateway === "xrge" ? "bg-pink-500/20 text-pink-400 border border-pink-500/30"
+                            : "bg-muted/20 text-muted-foreground"
+                          }`}>{tx.gateway === "xrge" ? "$XRGE" : tx.gateway?.toUpperCase() || "--"}</span>
+                        </td>
+                      </tr>
+                    ))}
+                    {transactions.length === 0 && (
+                      <tr><td colSpan={7} className="px-4 py-8 text-center font-mono-share text-xs text-muted-foreground/40">No transactions yet.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </>
+        )}
+
+        {/* ═══ USERS TAB ═══ */}
+        {activeTab === "users" && (
+          <>
+            <div className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm p-3 sm:p-4 min-w-0 overflow-hidden">
+              <h2 className="font-orbitron text-xs tracking-wider text-primary/80 mb-4 flex items-center gap-2">
+                <Users className="w-3.5 h-3.5" />
+                USER_GROWTH (30d)
+              </h2>
+              <ResponsiveContainer width="100%" height={250}>
+                <AreaChart data={users}>
+                  <defs>
+                    <linearGradient id="userGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.3} />
+                  <XAxis dataKey="day" interval="preserveStartEnd" tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} />
+                  <YAxis tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} width={30} />
+                  <Tooltip content={<CyberTooltip />} />
+                  <Area type="monotone" dataKey="cumulative" name="Total Users" stroke="hsl(var(--primary))" fill="url(#userGrad)" strokeWidth={2} />
+                  <Bar dataKey="new_users" name="New Users" fill="hsl(var(--primary))" fillOpacity={0.5} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+
+            <section className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm overflow-hidden">
+              <div className="px-3 sm:px-4 py-3 border-b border-border/30">
+                <h2 className="font-orbitron text-xs tracking-wider text-primary/80 flex items-center gap-2">
+                  <Users className="w-3.5 h-3.5" />
+                  TOP_OPERATORS (by usage)
+                </h2>
+              </div>
+              <div className="overflow-x-auto overscroll-x-contain">
+                <table className="w-full min-w-[560px]">
+                  <thead><tr className="border-b border-border/20">
+                    {["OPERATOR", "TIER", "SPENT", "GENS", "USED", "BAL", "LAST"].map((h) => (
+                      <th key={h} className="px-2.5 py-2 text-left font-mono-share text-[9px] text-muted-foreground/50 tracking-wider">{h}</th>
+                    ))}
+                  </tr></thead>
+                  <tbody>
+                    {topUsers.map((u, i) => (
+                      <tr key={i} className="border-b border-border/10 hover:bg-primary/5 transition-colors">
+                        <td className="px-2.5 py-2 font-mono-share text-xs text-foreground/80">{u.email}</td>
+                        <td className="px-2.5 py-2">
+                          {u.subscription_tier ? (
+                            <span className={`font-orbitron text-[9px] tracking-wider px-2 py-0.5 rounded border ${
+                              u.subscription_cancel_at ? "bg-destructive/20 text-destructive border-destructive/30" : "bg-secondary/20 text-secondary border-secondary/30"
+                            }`}>{u.subscription_tier.toUpperCase()}{u.subscription_cancel_at && " (ending)"}</span>
+                          ) : (
+                            <span className="font-mono-share text-[10px] text-muted-foreground/40">none</span>
+                          )}
+                        </td>
+                        <td className="px-2.5 py-2 font-mono-share text-xs text-secondary">{fmt$(u.total_spent_cents)}</td>
+                        <td className="px-2.5 py-2 font-mono-share text-xs">{u.total_generations}</td>
+                        <td className="px-2.5 py-2 font-mono-share text-xs">{u.total_credits_used}</td>
+                        <td className="px-2.5 py-2 font-mono-share text-xs text-primary">{u.sub_credits + u.pack_credits}</td>
+                        <td className="px-2.5 py-2 font-mono-share text-[10px] text-muted-foreground/50">
+                          {u.last_generation ? new Date(u.last_generation).toLocaleDateString() : "never"}
+                        </td>
+                      </tr>
+                    ))}
+                    {topUsers.length === 0 && (
+                      <tr><td colSpan={7} className="px-4 py-8 text-center font-mono-share text-xs text-muted-foreground/40">No operator data yet.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </>
+        )}
+
+        {/* ═══ USAGE TAB ═══ */}
+        {activeTab === "usage" && (
+          <>
+            <div className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm p-3 sm:p-4 min-w-0 overflow-hidden">
+              <h2 className="font-orbitron text-xs tracking-wider text-primary/80 mb-4 flex items-center gap-2">
+                <Zap className="w-3.5 h-3.5" />
+                GENERATION_VOLUME (30d)
+              </h2>
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={usagePivot}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.3} />
+                  <XAxis dataKey="day" interval="preserveStartEnd" tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} />
+                  <YAxis tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} width={30} />
+                  <Tooltip content={<CyberTooltip />} />
+                  <Legend wrapperStyle={{ fontSize: 9, fontFamily: "var(--font-mono-share)" }} />
+                  <Bar dataKey="generate-image" name="Images" stackId="a" fill="hsl(var(--primary))" fillOpacity={0.8} />
+                  <Bar dataKey="edit-image" name="Edits" stackId="a" fill="hsl(var(--secondary))" fillOpacity={0.8} />
+                  <Bar dataKey="generate-video" name="Videos" stackId="a" fill="#ff6b6b" fillOpacity={0.8} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            <section className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
+              <KpiCard icon={<Activity className="w-4 h-4" />} label="CREDITS_OUTSTANDING" value={(o.creditPool.total_sub_credits_outstanding + o.creditPool.total_pack_credits_outstanding).toLocaleString()} sub={`${o.creditPool.total_sub_credits_outstanding.toLocaleString()} sub + ${o.creditPool.total_pack_credits_outstanding.toLocaleString()} pack`} />
+              <KpiCard icon={<Zap className="w-4 h-4" />} label="CREDITS_TODAY" value={o.usage.credits_today.toLocaleString()} sub={`${o.usage.generations_today} generations`} />
+              <KpiCard icon={<Zap className="w-4 h-4" />} label="TOTAL_GENERATIONS" value={o.usage.total_generations.toLocaleString()} sub={`${o.usage.total_credits_used.toLocaleString()} credits all-time`} />
+              <KpiCard icon={<Server className="w-4 h-4" />} label="RUNPOD_COST_30D" value={runpodCost30d ? fmt$(runpodCost30d) : "N/A"} sub="from execution time tracking" accent="destructive" />
+            </section>
+
+            {profitBreakdown.length > 0 && (
+              <section className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm overflow-hidden">
+                <div className="px-3 sm:px-4 py-3 border-b border-border/30">
+                  <h2 className="font-orbitron text-xs tracking-wider text-primary/80 flex items-center gap-2">
+                    <BarChart3 className="w-3.5 h-3.5" />
+                    PROFIT_PER_ACTION (30d)
+                  </h2>
+                </div>
+                <div className="overflow-x-auto overscroll-x-contain">
+                  <table className="w-full min-w-[500px]">
+                    <thead><tr className="border-b border-border/20">
+                      {["MODE", "GENS", "CREDITS", "AVG CR/GEN", "TRACKED", "AVG TIME", "EST. RUNPOD"].map((h) => (
+                        <th key={h} className="px-2.5 py-2 text-left font-mono-share text-[9px] text-muted-foreground/50 tracking-wider">{h}</th>
+                      ))}
+                    </tr></thead>
+                    <tbody>
+                      {profitBreakdown.map((row: any, i: number) => {
+                        const avgCr = row.generations > 0 ? (row.credits_used / row.generations).toFixed(1) : "—";
+                        const totalMs = Number(row.total_exec_ms);
+                        const avgTimeS = row.tracked_count > 0 ? (totalMs / row.tracked_count / 1000).toFixed(1) + "s" : "—";
+                        const estRunpodCents = Math.round((totalMs / 1000) * 0.155);
+                        return (
+                          <tr key={i} className="border-b border-border/10 hover:bg-primary/5 transition-colors">
+                            <td className="px-2.5 py-2 font-orbitron text-[10px] tracking-wider text-foreground/80">{row.mode?.toUpperCase()}</td>
+                            <td className="px-2.5 py-2 font-mono-share text-xs">{row.generations}</td>
+                            <td className="px-2.5 py-2 font-mono-share text-xs text-primary font-bold">{row.credits_used.toLocaleString()}</td>
+                            <td className="px-2.5 py-2 font-mono-share text-xs">{avgCr}</td>
+                            <td className="px-2.5 py-2 font-mono-share text-xs text-muted-foreground/50">{row.tracked_count}/{row.generations}</td>
+                            <td className="px-2.5 py-2 font-mono-share text-xs">{avgTimeS}</td>
+                            <td className="px-2.5 py-2 font-mono-share text-xs text-destructive">{estRunpodCents > 0 ? fmt$(estRunpodCents) : "—"}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            )}
+          </>
+        )}
+
+        {/* ═══ MODERATION TAB ═══ */}
+        {activeTab === "moderation" && o.moderation && (
           <section className="border border-red-500/30 rounded-lg bg-red-950/10 backdrop-blur-sm overflow-hidden">
             <div className="px-3 sm:px-4 py-3 border-b border-red-500/20 flex items-center justify-between">
               <h2 className="font-orbitron text-xs tracking-wider text-red-400 flex items-center gap-2">
@@ -394,23 +694,19 @@ export default function Admin() {
               </span>
             </div>
             <div className="p-3 sm:p-4 space-y-3">
-              {/* Moderation KPIs */}
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2 sm:gap-3">
                 <KpiCard icon={<Ban className="w-4 h-4" />} label="FLAGGED_30D" value={o.moderation.blocks_30d} sub={`${o.moderation.blocks_today} today // ${o.moderation.total_blocks} total`} accent="destructive" />
-                <KpiCard icon={<Flame className="w-4 h-4" />} label="CREDITS_USED_30D" value={o.moderation.credits_burned_30d} sub={`${o.moderation.total_credits_burned} lifetime (not refunded)`} accent="destructive" />
-                <KpiCard icon={<CreditCard className="w-4 h-4" />} label="xAI_COST_30D" value={fmt$(o.moderation.wasted_cost_30d_cents)} sub={`${fmt$(o.moderation.wasted_cost_total_cents)} lifetime (xAI still charges you)`} accent="destructive" />
+                <KpiCard icon={<Flame className="w-4 h-4" />} label="CREDITS_BURNED_30D" value={o.moderation.credits_burned_30d} sub={`${o.moderation.total_credits_burned} lifetime (not refunded)`} accent="destructive" />
+                <KpiCard icon={<CreditCard className="w-4 h-4" />} label="xAI_WASTE_30D" value={fmt$(o.moderation.wasted_cost_30d_cents)} sub={`${fmt$(o.moderation.wasted_cost_total_cents)} lifetime (xAI still charges you)`} accent="destructive" />
               </div>
-              {/* Flagged Users */}
               {o.moderation.offenders && o.moderation.offenders.length > 0 && (
                 <div className="overflow-x-auto overscroll-x-contain">
                   <table className="w-full min-w-[400px]">
-                    <thead>
-                      <tr className="border-b border-red-500/20">
-                        {["USER", "FLAGS", "CREDITS", "LAST"].map((h) => (
-                          <th key={h} className="px-2.5 py-2 text-left font-mono-share text-[9px] text-red-400/50 tracking-wider">{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
+                    <thead><tr className="border-b border-red-500/20">
+                      {["USER", "FLAGS", "CREDITS", "LAST"].map((h) => (
+                        <th key={h} className="px-2.5 py-2 text-left font-mono-share text-[9px] text-red-400/50 tracking-wider">{h}</th>
+                      ))}
+                    </tr></thead>
                     <tbody>
                       {o.moderation.offenders.map((off, i) => (
                         <tr key={i} className="border-b border-red-500/10 hover:bg-red-500/5 transition-colors">
@@ -430,309 +726,8 @@ export default function Admin() {
           </section>
         )}
 
-        {/* Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
-          {/* Revenue Chart */}
-          <div className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm p-3 sm:p-4 min-w-0 overflow-hidden">
-            <h2 className="font-orbitron text-xs tracking-wider text-primary/80 mb-4 flex items-center gap-2">
-              <DollarSign className="w-3.5 h-3.5" />
-              REVENUE_STREAM (30d)
-            </h2>
-            <ResponsiveContainer width="100%" height={200}>
-              <AreaChart data={revenue}>
-                <defs>
-                  <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(var(--secondary))" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="hsl(var(--secondary))" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.3} />
-                <XAxis dataKey="day" interval="preserveStartEnd" tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} />
-                <YAxis tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} tickFormatter={(v) => fmt$(v)} width={48} />
-                <Tooltip content={<CyberTooltip />} />
-                <Area type="monotone" dataKey="revenue_cents" name="Revenue" stroke="hsl(var(--secondary))" fill="url(#revGrad)" strokeWidth={2} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-
-          {/* User Growth Chart */}
-          <div className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm p-3 sm:p-4 min-w-0 overflow-hidden">
-            <h2 className="font-orbitron text-xs tracking-wider text-primary/80 mb-4 flex items-center gap-2">
-              <Users className="w-3.5 h-3.5" />
-              USER_GROWTH
-            </h2>
-            <ResponsiveContainer width="100%" height={200}>
-              <AreaChart data={users}>
-                <defs>
-                  <linearGradient id="userGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.3} />
-                <XAxis dataKey="day" interval="preserveStartEnd" tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} />
-                <YAxis tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} width={30} />
-                <Tooltip content={<CyberTooltip />} />
-                <Area type="monotone" dataKey="cumulative" name="Total Users" stroke="hsl(var(--primary))" fill="url(#userGrad)" strokeWidth={2} />
-                <Bar dataKey="new_users" name="New Users" fill="hsl(var(--primary))" fillOpacity={0.5} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-
-          {/* Generation Volume */}
-          <div className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm p-3 sm:p-4 lg:col-span-2 min-w-0 overflow-hidden">
-            <h2 className="font-orbitron text-xs tracking-wider text-primary/80 mb-4 flex items-center gap-2">
-              <Zap className="w-3.5 h-3.5" />
-              GENERATION_VOLUME (30d)
-            </h2>
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={usagePivot}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.3} />
-                <XAxis dataKey="day" interval="preserveStartEnd" tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} />
-                <YAxis tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} width={30} />
-                <Tooltip content={<CyberTooltip />} />
-                <Legend wrapperStyle={{ fontSize: 9, fontFamily: "var(--font-mono-share)" }} />
-                <Bar dataKey="generate-image" name="Images" stackId="a" fill="hsl(var(--primary))" fillOpacity={0.8} />
-                <Bar dataKey="edit-image" name="Edits" stackId="a" fill="hsl(var(--secondary))" fillOpacity={0.8} />
-                <Bar dataKey="generate-video" name="Videos" stackId="a" fill="#ff6b6b" fillOpacity={0.8} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Revenue Breakdown */}
-        {revenueBreakdown && (
-          <section className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
-            {/* By Pack (30d) */}
-            <div className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm overflow-hidden">
-              <div className="px-3 sm:px-4 py-3 border-b border-border/30 flex items-center justify-between">
-                <h2 className="font-orbitron text-xs tracking-wider text-secondary/80 flex items-center gap-2">
-                  <CreditCard className="w-3.5 h-3.5" />
-                  REVENUE_BY_PACK (30d)
-                </h2>
-              </div>
-              <div className="overflow-x-auto overscroll-x-contain">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-border/20">
-                      {["PACK", "TYPE", "COUNT", "REVENUE", "CREDITS"].map((h) => (
-                        <th key={h} className="px-2.5 py-2 text-left font-mono-share text-[9px] text-muted-foreground/50 tracking-wider">{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(revenueBreakdown.byPack30d || []).map((row: any, i: number) => (
-                      <tr key={i} className="border-b border-border/10 hover:bg-primary/5 transition-colors">
-                        <td className="px-2.5 py-2 font-orbitron text-[10px] tracking-wider text-foreground/80">{row.package?.toUpperCase() || "--"}</td>
-                        <td className="px-2.5 py-2">
-                          <span className={`font-orbitron text-[9px] tracking-wider px-2 py-0.5 rounded border ${
-                            row.type === "subscription"
-                              ? "bg-secondary/20 text-secondary border-secondary/30"
-                              : "bg-primary/20 text-primary border-primary/30"
-                          }`}>
-                            {row.type?.toUpperCase()}
-                          </span>
-                        </td>
-                        <td className="px-2.5 py-2 font-mono-share text-xs font-bold">{row.count}</td>
-                        <td className="px-2.5 py-2 font-mono-share text-xs text-secondary font-bold">{fmt$(row.total_cents)}</td>
-                        <td className="px-2.5 py-2 font-mono-share text-xs text-primary">{row.total_credits?.toLocaleString()}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* By Gateway */}
-            <div className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm overflow-hidden">
-              <div className="px-3 sm:px-4 py-3 border-b border-border/30">
-                <h2 className="font-orbitron text-xs tracking-wider text-secondary/80 flex items-center gap-2">
-                  <DollarSign className="w-3.5 h-3.5" />
-                  REVENUE_BY_GATEWAY (lifetime)
-                </h2>
-              </div>
-              <div className="p-3 sm:p-4 space-y-2">
-                {(revenueBreakdown.byGateway || []).map((row: any, i: number) => {
-                  const totalCents = (revenueBreakdown.byGateway || []).reduce((s: number, r: any) => s + (r.total_cents || 0), 0);
-                  const pct = totalCents > 0 ? Math.round((row.total_cents / totalCents) * 100) : 0;
-                  return (
-                    <div key={i} className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className={`font-mono-share text-[10px] font-bold px-2 py-0.5 rounded ${
-                          row.gateway === "stripe"
-                            ? "bg-indigo-500/20 text-indigo-400 border border-indigo-500/30"
-                            : row.gateway === "paypal"
-                            ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
-                            : row.gateway === "xrge"
-                            ? "bg-pink-500/20 text-pink-400 border border-pink-500/30"
-                            : "bg-muted/20 text-muted-foreground"
-                        }`}>
-                          {row.gateway === "xrge" ? "$XRGE" : row.gateway?.toUpperCase()}
-                        </span>
-                        <div className="flex items-center gap-3">
-                          <span className="font-mono-share text-[10px] text-muted-foreground/60">{row.count} txns</span>
-                          <span className="font-mono-share text-sm text-secondary font-bold">{fmt$(row.total_cents)}</span>
-                          <span className="font-mono-share text-[10px] text-muted-foreground/40">{pct}%</span>
-                        </div>
-                      </div>
-                      <div className="w-full bg-border/20 rounded-full h-1.5 overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all ${
-                            row.gateway === "stripe" ? "bg-indigo-500" :
-                            row.gateway === "paypal" ? "bg-blue-500" :
-                            row.gateway === "xrge" ? "bg-pink-500" : "bg-muted-foreground"
-                          }`}
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* All-time by pack */}
-              <div className="px-3 sm:px-4 py-3 border-t border-border/20">
-                <h3 className="font-orbitron text-[9px] tracking-wider text-muted-foreground/50 mb-2">ALL_TIME_BY_PACK</h3>
-                <div className="overflow-x-auto overscroll-x-contain">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-border/20">
-                        {["PACK", "TYPE", "#", "REVENUE"].map((h) => (
-                          <th key={h} className="px-2 py-1 text-left font-mono-share text-[8px] text-muted-foreground/40 tracking-wider">{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(revenueBreakdown.byPack || []).map((row: any, i: number) => (
-                        <tr key={i} className="border-b border-border/5">
-                          <td className="px-2 py-1 font-mono-share text-[10px] text-foreground/70">{row.package?.toUpperCase() || "--"}</td>
-                          <td className="px-2 py-1 font-mono-share text-[9px] text-muted-foreground/50">{row.type}</td>
-                          <td className="px-2 py-1 font-mono-share text-[10px]">{row.count}</td>
-                          <td className="px-2 py-1 font-mono-share text-[10px] text-secondary">{fmt$(row.total_cents)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* Top Users Table */}
-        <section className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm overflow-hidden">
-          <div className="px-3 sm:px-4 py-3 border-b border-border/30">
-            <h2 className="font-orbitron text-xs tracking-wider text-primary/80 flex items-center gap-2">
-              <Users className="w-3.5 h-3.5" />
-              TOP_OPERATORS (by usage)
-            </h2>
-          </div>
-          <div className="overflow-x-auto overscroll-x-contain">
-            <table className="w-full min-w-[560px]">
-              <thead>
-                <tr className="border-b border-border/20">
-                  {["OPERATOR", "TIER", "SPENT", "GENS", "USED", "BAL", "LAST"].map((h) => (
-                    <th key={h} className="px-2.5 py-2 text-left font-mono-share text-[9px] text-muted-foreground/50 tracking-wider">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {topUsers.map((u, i) => (
-                  <tr key={i} className="border-b border-border/10 hover:bg-primary/5 transition-colors">
-                    <td className="px-2.5 py-2 font-mono-share text-xs text-foreground/80">{u.email}</td>
-                    <td className="px-2.5 py-2">
-                      {u.subscription_tier ? (
-                        <span className={`font-orbitron text-[9px] tracking-wider px-2 py-0.5 rounded border ${
-                          u.subscription_cancel_at
-                            ? "bg-destructive/20 text-destructive border-destructive/30"
-                            : "bg-secondary/20 text-secondary border-secondary/30"
-                        }`}>
-                          {u.subscription_tier.toUpperCase()}
-                          {u.subscription_cancel_at && " (ending)"}
-                        </span>
-                      ) : (
-                        <span className="font-mono-share text-[10px] text-muted-foreground/40">none</span>
-                      )}
-                    </td>
-                    <td className="px-2.5 py-2 font-mono-share text-xs text-secondary">{fmt$(u.total_spent_cents)}</td>
-                    <td className="px-2.5 py-2 font-mono-share text-xs">{u.total_generations}</td>
-                    <td className="px-2.5 py-2 font-mono-share text-xs">{u.total_credits_used}</td>
-                    <td className="px-2.5 py-2 font-mono-share text-xs text-primary">{u.sub_credits + u.pack_credits}</td>
-                    <td className="px-2.5 py-2 font-mono-share text-[10px] text-muted-foreground/50">
-                      {u.last_generation ? new Date(u.last_generation).toLocaleDateString() : "never"}
-                    </td>
-                  </tr>
-                ))}
-                {topUsers.length === 0 && (
-                  <tr><td colSpan={7} className="px-4 py-8 text-center font-mono-share text-xs text-muted-foreground/40">No operator data yet.</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        {/* Transaction Log */}
-        <section className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm overflow-hidden">
-          <div className="px-3 sm:px-4 py-3 border-b border-border/30 flex items-center justify-between">
-            <h2 className="font-orbitron text-xs tracking-wider text-primary/80 flex items-center gap-2">
-              <Receipt className="w-3.5 h-3.5" />
-              TRANSACTION_LOG (last 100)
-            </h2>
-            <span className="font-mono-share text-[10px] text-muted-foreground/40">{transactions.length} records</span>
-          </div>
-          <div className="overflow-x-auto overscroll-x-contain">
-            <table className="w-full min-w-[560px]">
-              <thead>
-                <tr className="border-b border-border/20">
-                  {["DATE", "USER", "TYPE", "PKG", "CR", "AMT", "VIA"].map((h) => (
-                    <th key={h} className="px-2.5 py-2 text-left font-mono-share text-[9px] text-muted-foreground/50 tracking-wider">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {transactions.map((tx, i) => (
-                  <tr key={i} className="border-b border-border/10 hover:bg-primary/5 transition-colors">
-                    <td className="px-2.5 py-2 font-mono-share text-[10px] text-muted-foreground/60 whitespace-nowrap">
-                      {new Date(tx.created_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
-                    </td>
-                    <td className="px-2.5 py-2 font-mono-share text-xs text-foreground/80">{tx.email || "unknown"}</td>
-                    <td className="px-2.5 py-2">
-                      <span className={`font-orbitron text-[9px] tracking-wider px-2 py-0.5 rounded border ${
-                        tx.type === "subscription"
-                          ? "bg-secondary/20 text-secondary border-secondary/30"
-                          : "bg-primary/20 text-primary border-primary/30"
-                      }`}>
-                        {tx.type?.toUpperCase() || "--"}
-                      </span>
-                    </td>
-                    <td className="px-2.5 py-2 font-mono-share text-xs text-foreground/70">{tx.package?.toUpperCase() || "--"}</td>
-                    <td className="px-2.5 py-2 font-mono-share text-xs text-primary font-bold">{tx.credits}</td>
-                    <td className="px-2.5 py-2 font-mono-share text-xs text-secondary">{fmt$(tx.amount_cents)}</td>
-                    <td className="px-2.5 py-2">
-                      <span className={`font-mono-share text-[9px] px-2 py-0.5 rounded ${
-                        tx.gateway === "stripe"
-                          ? "bg-indigo-500/20 text-indigo-400 border border-indigo-500/30"
-                          : tx.gateway === "paypal"
-                          ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
-                          : tx.gateway === "xrge"
-                          ? "bg-pink-500/20 text-pink-400 border border-pink-500/30"
-                          : "bg-muted/20 text-muted-foreground"
-                      }`}>
-                        {tx.gateway === "xrge" ? "$XRGE" : tx.gateway?.toUpperCase() || "--"}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-                {transactions.length === 0 && (
-                  <tr><td colSpan={7} className="px-4 py-8 text-center font-mono-share text-xs text-muted-foreground/40">No transactions yet.</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        {/* Referral Program */}
-        {referralStats && (
+        {/* ═══ REFERRALS TAB ═══ */}
+        {activeTab === "referrals" && referralStats && (
           <section className="border border-green-500/30 rounded-lg bg-green-950/10 backdrop-blur-sm overflow-hidden">
             <div className="px-3 sm:px-4 py-3 border-b border-green-500/20 flex items-center justify-between">
               <h2 className="font-orbitron text-xs tracking-wider text-green-400 flex items-center gap-2">
@@ -753,13 +748,11 @@ export default function Admin() {
               {referralStats.topReferrers && referralStats.topReferrers.length > 0 && (
                 <div className="overflow-x-auto overscroll-x-contain">
                   <table className="w-full min-w-[400px]">
-                    <thead>
-                      <tr className="border-b border-green-500/20">
-                        {["REFERRER", "REFERRED", "CONVERTED", "REWARDS"].map((h) => (
-                          <th key={h} className="px-2.5 py-2 text-left font-mono-share text-[9px] text-green-400/50 tracking-wider">{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
+                    <thead><tr className="border-b border-green-500/20">
+                      {["REFERRER", "REFERRED", "CONVERTED", "REWARDS"].map((h) => (
+                        <th key={h} className="px-2.5 py-2 text-left font-mono-share text-[9px] text-green-400/50 tracking-wider">{h}</th>
+                      ))}
+                    </tr></thead>
                     <tbody>
                       {referralStats.topReferrers.map((r: any, i: number) => (
                         <tr key={i} className="border-b border-green-500/10 hover:bg-green-500/5 transition-colors">
@@ -777,7 +770,67 @@ export default function Admin() {
           </section>
         )}
 
-        {/* Footer */}
+        {/* ═══ SYSTEM TAB ═══ */}
+        {activeTab === "system" && (
+          <section className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm p-3 sm:p-4">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2">
+                <Crown className="w-3.5 h-3.5 text-secondary" />
+                <span className="font-orbitron text-[10px] tracking-wider text-muted-foreground">SUBSCRIPTION_SYNC</span>
+                <span className="font-mono-share text-[9px] text-muted-foreground/40">
+                  Pull cancellation status from Stripe for all active subscribers
+                </span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={syncSubscriptions}
+                disabled={syncing}
+                className="font-mono-share text-xs gap-1.5 border-secondary/30 hover:bg-secondary/10"
+              >
+                {syncing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                {syncing ? "SYNCING..." : "SYNC_NOW"}
+              </Button>
+            </div>
+            {syncResult && (
+              <div className="mt-3 space-y-2">
+                {syncResult.error ? (
+                  <p className="font-mono-share text-xs text-destructive">{syncResult.error}</p>
+                ) : (
+                  <>
+                    <div className="flex flex-wrap gap-3 font-mono-share text-[10px] text-muted-foreground/70">
+                      <span>Checked: <span className="text-foreground">{syncResult.total_checked}</span></span>
+                      <span>Marked cancelling: <span className="text-destructive">{syncResult.marked_cancelling}</span></span>
+                      <span>Cleared (reactivated): <span className="text-green-400">{syncResult.cleared}</span></span>
+                      <span>Already ended: <span className="text-muted-foreground">{syncResult.already_deleted}</span></span>
+                    </div>
+                    {syncResult.details?.length > 0 && (
+                      <div className="max-h-64 overflow-y-auto bg-input/30 rounded p-2 space-y-1.5">
+                        {syncResult.details.map((d: any, i: number) => (
+                          <div key={i} className={`font-mono-share text-[9px] border-b border-border/10 pb-1 ${
+                            d.action?.includes("error") ? "text-destructive" :
+                            d.action?.includes("cancelling") ? "text-destructive/80" :
+                            d.action?.includes("cleared") ? "text-green-400/80" :
+                            "text-muted-foreground/60"
+                          }`}>
+                            <p className="font-bold">{d.email}: {d.action}{d.cancel_at ? ` (${new Date(d.cancel_at).toLocaleDateString()})` : ""}</p>
+                            {d.subs_found !== undefined && <p className="text-muted-foreground/40 ml-2">subs: {d.subs_found}</p>}
+                            {d.statuses?.map((s: any, j: number) => (
+                              <p key={j} className="text-muted-foreground/40 ml-2">
+                                {s.id}: status={s.status}, cancel_at_end={String(s.cancel_at_period_end)}, cancel_at={s.cancel_at || "null"}, period_end={s.current_period_end}
+                              </p>
+                            ))}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+          </section>
+        )}
+
         <footer className="text-center py-4">
           <p className="font-mono-share text-[10px] text-muted-foreground/30">
             ADMIN_CONSOLE // real-time data from Neon Postgres

@@ -417,8 +417,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // Log usage
       try {
-        await sql`INSERT INTO usage_log (user_id, action, tokens_used)
-          VALUES (${auth.userId}, 'chat-message', ${response.length})`;
+        await sql`INSERT INTO usage_log (user_id, mode, credits_used)
+          VALUES (${auth.userId}::uuid, 'chat-message', 0)`;
       } catch { /* best effort */ }
 
       // Send reply immediately — don't make the user wait for memory extraction
