@@ -8,9 +8,7 @@
  * Invoked via vercel.json rewrite: /s/:shareId → /api/share-page?id=:shareId
  */
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { objectExists } from "./_lib/r2";
-import { getPublicUrl, getDownloadUrl } from "./_lib/r2";
-import { getR2Meta } from "./_lib/r2-meta";
+import { head } from "@vercel/blob";
 
 export const config = { maxDuration: 10 };
 
@@ -218,16 +216,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const metaKey = `shares/${shareId}.json`;
-    const exists = await objectExists(metaKey);
-    if (!exists) {
+    const metaPath = `shares/${shareId}.json`;
+    let metaBlobUrl: string;
+    try {
+      const metaBlob = await head(metaPath);
+      metaBlobUrl = metaBlob.url;
+    } catch {
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       return res.status(404).send(notFoundPage(host));
     }
 
-    const meta = await getR2Meta(metaKey);
-    let mediaUrl = getPublicUrl(meta.mediaKey);
-    if (!mediaUrl) mediaUrl = await getDownloadUrl(meta.mediaKey);
+    const metaResp = await fetch(metaBlobUrl);
+    if (!metaResp.ok) {
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      return res.status(404).send(notFoundPage(host));
+    }
+    const meta = await metaResp.json();
+    const mediaUrl = meta.mediaUrl;
 
     const safePrompt = escapeHtml(meta.prompt || "");
     const truncatedPrompt = truncate(meta.prompt || "AI-generated with Grok Runner", 200);

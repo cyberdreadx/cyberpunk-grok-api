@@ -1,12 +1,11 @@
 /**
  * /api/share — Upload media and create/retrieve shareable links.
  *
- * POST: Upload base64 media → R2, return { shareId, shareUrl, r2Url }
+ * POST: Upload base64 media → Vercel Blob, return { shareId, shareUrl, r2Url }
  * GET:  Retrieve share metadata by id → { r2Url, prompt, mediaType }
  */
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { uploadToR2, getDownloadUrl, getPublicUrl, objectExists } from "./_lib/r2";
-import { getR2Meta } from "./_lib/r2-meta";
+import { put, head } from "@vercel/blob";
 import crypto from "crypto";
 
 export const config = { maxDuration: 30 };
@@ -31,17 +30,21 @@ function getClientIp(req: VercelRequest): string {
   return req.socket?.remoteAddress || "unknown";
 }
 
-/** Generate a short share ID (8 chars, URL-safe) */
 function generateShareId(): string {
   return crypto.randomBytes(6).toString("base64url").slice(0, 8);
 }
 
-/** Derive the file extension from a media type */
 function extFromType(mediaType: string): string {
   if (mediaType.includes("video")) return "mp4";
   if (mediaType.includes("jpeg") || mediaType.includes("jpg")) return "jpg";
   if (mediaType.includes("webp")) return "webp";
   return "png";
+}
+
+function mimeFromType(mediaType: string): string {
+  if (mediaType.startsWith("video")) return "video/mp4";
+  if (mediaType.startsWith("image/")) return mediaType;
+  return "image/png";
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -60,44 +63,42 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ error: "mediaBase64 and mediaType required" });
       }
 
-      // Strip data URI prefix if present
       const raw = mediaBase64.includes(",") ? mediaBase64.split(",")[1] : mediaBase64;
       const buffer = Buffer.from(raw, "base64");
 
-      // Size limit: 50MB
       if (buffer.length > 50 * 1024 * 1024) {
         return res.status(413).json({ error: "File too large (max 50MB)" });
       }
 
       const shareId = generateShareId();
       const ext = extFromType(mediaType);
-      const r2Key = `shares/${shareId}.${ext}`;
+      const mediaPath = `shares/${shareId}.${ext}`;
+      const metaPath = `shares/${shareId}.json`;
 
-      // Upload media to R2
-      const mimeType = mediaType.startsWith("video") ? "video/mp4"
-        : mediaType.startsWith("image/") ? mediaType : "image/png";
-      await uploadToR2(r2Key, buffer, mimeType);
+      const mediaBlob = await put(mediaPath, buffer, {
+        access: "public",
+        contentType: mimeFromType(mediaType),
+        addRandomSuffix: false,
+      });
 
-      // Upload metadata JSON alongside media
-      const metaKey = `shares/${shareId}.json`;
       const metadata = JSON.stringify({
-        mediaKey: r2Key,
+        mediaUrl: mediaBlob.url,
         mediaType: mediaType.startsWith("video") ? "video" : "image",
         prompt: prompt || "",
         createdAt: new Date().toISOString(),
       });
-      await uploadToR2(metaKey, Buffer.from(metadata), "application/json");
 
-      // Build the share URL
-      const host = req.headers.host || "grokrunner.app";
+      await put(metaPath, metadata, {
+        access: "public",
+        contentType: "application/json",
+        addRandomSuffix: false,
+      });
+
+      const host = req.headers.host || "grokrunner.gltch.app";
       const protocol = host.includes("localhost") ? "http" : "https";
       const shareUrl = `${protocol}://${host}/s/${shareId}`;
 
-      // Get the media URL (public or presigned)
-      let r2Url = getPublicUrl(r2Key);
-      if (!r2Url) r2Url = await getDownloadUrl(r2Key);
-
-      return res.status(200).json({ shareId, shareUrl, r2Url });
+      return res.status(200).json({ shareId, shareUrl, r2Url: mediaBlob.url });
     } catch (err: any) {
       console.error("[share] POST error:", err.message);
       return res.status(500).json({ error: "Failed to create share" });
@@ -112,21 +113,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ error: "Invalid share ID" });
       }
 
-      const metaKey = `shares/${shareId}.json`;
-      const exists = await objectExists(metaKey);
-      if (!exists) {
+      const metaPath = `shares/${shareId}.json`;
+
+      let metaUrl: string;
+      try {
+        const metaBlob = await head(metaPath);
+        metaUrl = metaBlob.url;
+      } catch {
         return res.status(404).json({ error: "Share not found" });
       }
 
-      // Download metadata
-      const meta = await getR2Meta(metaKey);
+      const metaResp = await fetch(metaUrl);
+      if (!metaResp.ok) {
+        return res.status(404).json({ error: "Share not found" });
+      }
 
-      // Generate download URL for the media
-      let r2Url = getPublicUrl(meta.mediaKey);
-      if (!r2Url) r2Url = await getDownloadUrl(meta.mediaKey);
+      const meta = await metaResp.json();
 
       return res.status(200).json({
-        r2Url,
+        r2Url: meta.mediaUrl,
         mediaType: meta.mediaType,
         prompt: meta.prompt,
         createdAt: meta.createdAt,
