@@ -218,21 +218,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { list } = await import("@vercel/blob");
     const blobToken = process.env.BLOB_READ_WRITE_TOKEN || process.env.grokrun_READ_WRITE_TOKEN || "";
-    const { blobs } = await list({ prefix: `shares/${shareId}.json`, token: blobToken });
+    const storeId = blobToken.split("_")[3] || "";
+    const metaUrl = storeId
+      ? `https://${storeId}.public.blob.vercel-storage.com/shares/${shareId}.json`
+      : "";
 
-    if (blobs.length === 0) {
+    let meta: any = null;
+
+    if (metaUrl) {
+      const directResp = await fetch(metaUrl);
+      if (directResp.ok) meta = await directResp.json();
+    }
+
+    if (!meta) {
+      const { list } = await import("@vercel/blob");
+      const { blobs } = await list({ prefix: `shares/${shareId}.json`, token: blobToken });
+      if (blobs.length > 0) {
+        const fallbackResp = await fetch(blobs[0].url);
+        if (fallbackResp.ok) meta = await fallbackResp.json();
+      }
+    }
+
+    if (!meta) {
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       return res.status(404).send(notFoundPage(host));
     }
-
-    const metaResp = await fetch(blobs[0].url);
-    if (!metaResp.ok) {
-      res.setHeader("Content-Type", "text/html; charset=utf-8");
-      return res.status(404).send(notFoundPage(host));
-    }
-    const meta = await metaResp.json();
     const mediaUrl = meta.mediaUrl;
 
     const safePrompt = escapeHtml(meta.prompt || "");

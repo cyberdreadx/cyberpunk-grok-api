@@ -71,19 +71,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ error: "Invalid share ID" });
       }
 
-      const { list } = await import("@vercel/blob");
       const blobToken = process.env.BLOB_READ_WRITE_TOKEN || process.env.grokrun_READ_WRITE_TOKEN || "";
-      const { blobs } = await list({ prefix: `shares/${shareId}.json`, token: blobToken });
+      const storeId = blobToken.split("_")[3] || "";
+      const metaUrl = storeId
+        ? `https://${storeId}.public.blob.vercel-storage.com/shares/${shareId}.json`
+        : "";
 
-      if (blobs.length === 0) {
-        return res.status(404).json({ error: "Share not found" });
+      let meta: any = null;
+
+      if (metaUrl) {
+        const directResp = await fetch(metaUrl);
+        if (directResp.ok) meta = await directResp.json();
       }
 
-      const metaResp = await fetch(blobs[0].url);
-      if (!metaResp.ok) {
+      if (!meta) {
+        const { list } = await import("@vercel/blob");
+        const { blobs } = await list({ prefix: `shares/${shareId}.json`, token: blobToken });
+        if (blobs.length > 0) {
+          const fallbackResp = await fetch(blobs[0].url);
+          if (fallbackResp.ok) meta = await fallbackResp.json();
+        }
+      }
+
+      if (!meta) {
         return res.status(404).json({ error: "Share not found" });
       }
-      const meta = await metaResp.json();
 
       return res.status(200).json({
         r2Url: meta.mediaUrl,
