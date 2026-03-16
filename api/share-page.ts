@@ -204,9 +204,9 @@ function baseCSS(): string {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const host = req.headers.host || "grokrunner.gltch.app";
-  const protocol = host.includes("localhost") ? "http" : "https";
-  const baseUrl = `${protocol}://${host}`;
+  const siteUrl = process.env.SITE_URL || "https://grokrunner.gltch.app";
+  const baseUrl = siteUrl.replace(/\/$/, "");
+  const host = baseUrl.replace(/^https?:\/\//, "");
 
   const shareId = (req.query.id as string) || "";
   if (!shareId || !/^[a-zA-Z0-9_-]{4,16}$/.test(shareId)) {

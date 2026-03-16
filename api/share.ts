@@ -51,12 +51,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         token,
       });
 
-      const host = req.headers.host || "grokrunner.gltch.app";
-      const protocol = host.includes("localhost") ? "http" : "https";
+      const siteUrl = (process.env.SITE_URL || "https://grokrunner.gltch.app").replace(/\/$/, "");
 
       return res.status(200).json({
         shareId,
-        shareUrl: `${protocol}://${host}/s/${shareId}`,
+        shareUrl: `${siteUrl}/s/${shareId}`,
         r2Url: mediaBlob.url,
       });
     } catch (err: any) {
