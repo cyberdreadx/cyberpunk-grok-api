@@ -10,8 +10,10 @@ import { getR2Meta } from "./_lib/r2-meta";
 import { checkRateLimit, getClientIp } from "./_lib/ratelimit";
 import crypto from "crypto";
 
-// Allow up to 30s for large uploads
-export const config = { maxDuration: 30 };
+export const config = {
+  maxDuration: 30,
+  api: { bodyParser: { sizeLimit: "25mb" } },
+};
 
 /** Generate a short share ID (8 chars, URL-safe) */
 function generateShareId(): string {
@@ -32,10 +34,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // ── POST: Upload and create share ──
   if (req.method === "POST") {
     try {
-      const ip = getClientIp(req);
-      const { allowed } = await checkRateLimit(ip, "share-upload", { max: 15, windowSeconds: 300 });
-      if (!allowed) {
-        return res.status(429).json({ error: "Too many share requests. Try again later." });
+      try {
+        const ip = getClientIp(req);
+        const { allowed } = await checkRateLimit(ip, "share-upload", { max: 15, windowSeconds: 300 });
+        if (!allowed) {
+          return res.status(429).json({ error: "Too many share requests. Try again later." });
+        }
+      } catch (rlErr: any) {
+        console.warn("[share] Rate limit check failed, allowing request:", rlErr.message);
       }
 
       const { mediaBase64, mediaType, prompt } = req.body || {};

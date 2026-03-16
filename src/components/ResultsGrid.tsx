@@ -1037,9 +1037,8 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
   const handleShare = useCallback(async (result: GrokResult) => {
     setSharingId(result.id);
     try {
-      // Convert URL to base64 if needed
       let mediaBase64 = result.url;
-      if (result.url.startsWith("http")) {
+      if (result.url.startsWith("http") || result.url.startsWith("blob:")) {
         const resp = await fetch(result.url);
         const blob = await resp.blob();
         mediaBase64 = await new Promise<string>((resolve) => {
@@ -1057,7 +1056,10 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
           prompt: result.revised_prompt || "",
         }),
       });
-      if (!res.ok) throw new Error("Upload failed");
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `Upload failed (${res.status})`);
+      }
       const data = await res.json();
       await navigator.clipboard.writeText(data.shareUrl);
       toast.success("Share link copied to clipboard!");
@@ -1073,7 +1075,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
     setSharingId(result.id);
     try {
       let mediaBase64 = result.url;
-      if (result.url.startsWith("http")) {
+      if (result.url.startsWith("http") || result.url.startsWith("blob:")) {
         const resp = await fetch(result.url);
         const blob = await resp.blob();
         mediaBase64 = await new Promise<string>((resolve) => {
