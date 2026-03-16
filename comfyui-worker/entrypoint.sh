@@ -15,6 +15,21 @@ done
 
 rm -rf /root/.triton/cache 2>/dev/null
 
+# ── Swap old RIFE plugin for ComfyUI-VFI from network volume ──
+# Remove broken ComfyUI-Frame-Interpolation (CPU-only RIFE) if still baked in
+if [ -d "/comfyui/custom_nodes/ComfyUI-Frame-Interpolation" ]; then
+  rm -rf /comfyui/custom_nodes/ComfyUI-Frame-Interpolation
+  echo "entrypoint: removed old ComfyUI-Frame-Interpolation"
+fi
+# Symlink ComfyUI-VFI from network volume if available and not already present
+VOL_VFI="/workspace/runpod-slim/ComfyUI/custom_nodes/ComfyUI-VFI"
+if [ -d "$VOL_VFI" ] && [ ! -d "/comfyui/custom_nodes/ComfyUI-VFI" ]; then
+  ln -sf "$VOL_VFI" /comfyui/custom_nodes/ComfyUI-VFI
+  echo "entrypoint: symlinked ComfyUI-VFI from network volume"
+elif [ -d "/comfyui/custom_nodes/ComfyUI-VFI" ]; then
+  echo "entrypoint: ComfyUI-VFI OK"
+fi
+
 # ── Runtime safety net: ensure critical custom nodes exist ──────
 # If any are missing, clone + install deps at startup (~30s penalty).
 for node_entry in \
