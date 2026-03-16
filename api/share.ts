@@ -7,13 +7,29 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { uploadToR2, getDownloadUrl, getPublicUrl, objectExists } from "./_lib/r2";
 import { getR2Meta } from "./_lib/r2-meta";
-import { checkRateLimit, getClientIp } from "./_lib/ratelimit";
 import crypto from "crypto";
 
-export const config = {
-  maxDuration: 30,
-  api: { bodyParser: { sizeLimit: "25mb" } },
-};
+export const config = { maxDuration: 30 };
+
+const ipHits = new Map<string, { count: number; resetAt: number }>();
+function checkShareRate(ip: string, max = 15, windowMs = 300_000): boolean {
+  const now = Date.now();
+  const entry = ipHits.get(ip);
+  if (!entry || entry.resetAt < now) {
+    ipHits.set(ip, { count: 1, resetAt: now + windowMs });
+    return true;
+  }
+  if (entry.count >= max) return false;
+  entry.count++;
+  return true;
+}
+
+function getClientIp(req: VercelRequest): string {
+  const fwd = req.headers["x-forwarded-for"];
+  if (typeof fwd === "string") return fwd.split(",")[0].trim();
+  if (Array.isArray(fwd)) return fwd[0];
+  return req.socket?.remoteAddress || "unknown";
+}
 
 /** Generate a short share ID (8 chars, URL-safe) */
 function generateShareId(): string {
@@ -34,14 +50,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // ── POST: Upload and create share ──
   if (req.method === "POST") {
     try {
-      try {
-        const ip = getClientIp(req);
-        const { allowed } = await checkRateLimit(ip, "share-upload", { max: 15, windowSeconds: 300 });
-        if (!allowed) {
-          return res.status(429).json({ error: "Too many share requests. Try again later." });
-        }
-      } catch (rlErr: any) {
-        console.warn("[share] Rate limit check failed, allowing request:", rlErr.message);
+      const ip = getClientIp(req);
+      if (!checkShareRate(ip)) {
+        return res.status(429).json({ error: "Too many share requests. Try again later." });
       }
 
       const { mediaBase64, mediaType, prompt } = req.body || {};
