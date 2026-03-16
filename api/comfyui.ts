@@ -2457,7 +2457,7 @@ Rules:
         });
       } else if (workflowType === "gltch-wan") {
         const resolution = Math.min(1280, Math.max(480, Number(req.body.resolution) || 832));
-        const useSimpleGltch = req.body.simpleWan === true || !useVidUpscale || process.env.COMFYUI_GLTCH_SIMPLE === "1";
+        const useSimpleGltch = req.body.simpleWan === true || process.env.COMFYUI_GLTCH_SIMPLE === "1";
 
         let resolvedGltchLora: string | undefined;
         let resolvedGltchLoraHigh: string | undefined;
