@@ -10,14 +10,28 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 // Allow up to 60s for large video downloads
 export const config = { maxDuration: 60 };
 
-// Allow proxying from trusted domains (xAI + our media CDNs)
-const ALLOWED_HOSTS = [
+// Exact-match or subdomain-match only — no prefix matching
+const ALLOWED_DOMAINS = [
   "vidgen.x.ai", "api.x.ai", "cdn.x.ai",
-  "r2.cloudflarestorage.com", "pub-",         // R2 public buckets
-  "vercel-storage.com",                       // Vercel Blob (GLTCH video output)
-  "runpod.io",                                // RunPod serverless
-  "gltch.app", "cloud.gltch.app",             // our own domains
+  "r2.cloudflarestorage.com",
+  "vercel-storage.com",
+  "runpod.io",
+  "gltch.app", "cloud.gltch.app",
 ];
+
+// R2 public bucket hostnames start with "pub-" and end with ".r2.dev"
+function isAllowedHost(hostname: string): boolean {
+  for (const d of ALLOWED_DOMAINS) {
+    if (hostname === d || hostname.endsWith(`.${d}`)) return true;
+  }
+  if (/^pub-[a-z0-9]+\.r2\.dev$/.test(hostname)) return true;
+  return false;
+}
+
+// Block requests to private/internal IP ranges
+function isPrivateIP(hostname: string): boolean {
+  return /^(127\.|10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|0\.|169\.254\.|::1|fc|fd|fe80|localhost)/i.test(hostname);
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === "OPTIONS") return res.status(200).end();
@@ -25,16 +39,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const url = req.query.url as string;
-    // Sanitize filename: strip path separators, control chars, and double-quotes to prevent header injection
     const rawFilename = (req.query.filename as string) || "download";
     const filename = rawFilename
-      .replace(/[/\\:*?"<>|\x00-\x1f\x7f]/g, "_") // strip dangerous chars
-      .replace(/\.{2,}/g, ".") // collapse ".."
-      .slice(0, 200); // cap length
+      .replace(/[/\\:*?"<>|\x00-\x1f\x7f]/g, "_")
+      .replace(/\.{2,}/g, ".")
+      .slice(0, 200);
 
     if (!url) return res.status(400).json({ error: "Missing url parameter" });
 
-    // Validate the URL is from a trusted domain
     let parsedUrl: URL;
     try {
       parsedUrl = new URL(url);
@@ -42,9 +54,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: "Invalid URL" });
     }
 
-    if (!ALLOWED_HOSTS.some((h) =>
-      parsedUrl.hostname === h || parsedUrl.hostname.endsWith(`.${h}`) || parsedUrl.hostname.startsWith(h)
-    )) {
+    if (parsedUrl.protocol !== "https:") {
+      return res.status(403).json({ error: "Only HTTPS URLs allowed" });
+    }
+
+    if (isPrivateIP(parsedUrl.hostname)) {
+      return res.status(403).json({ error: "Domain not allowed" });
+    }
+
+    if (!isAllowedHost(parsedUrl.hostname)) {
       return res.status(403).json({ error: "Domain not allowed" });
     }
 

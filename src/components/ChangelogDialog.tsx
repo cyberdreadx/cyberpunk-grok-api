@@ -6,12 +6,12 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Zap, ImagePlus, Film, Download, Sparkles, Bug, FolderOpen, Smartphone, Share2, Users, Clock, Link2, ExternalLink, ShieldAlert, Camera, Wrench } from "lucide-react";
+import { Zap, ImagePlus, Film, Download, Sparkles, Bug, FolderOpen, Smartphone, Share2, Users, Clock, Link2, ExternalLink, ShieldAlert, Camera, Wrench, Shield, Search, Globe } from "lucide-react";
 
 /* ─── Changelog entries ─── */
 // Add new entries at the TOP. Bump LATEST_VERSION when deploying.
 
-export const LATEST_VERSION = "2026.03.16";
+export const LATEST_VERSION = "2026.03.16b";
 
 interface ChangelogEntry {
     version: string;
@@ -21,6 +21,20 @@ interface ChangelogEntry {
 }
 
 const CHANGELOG: ChangelogEntry[] = [
+    {
+        version: "2026.03.16b",
+        date: "March 16, 2026",
+        title: "Library Page, Share Links & Security Hardening",
+        items: [
+            { icon: <FolderOpen className="w-3.5 h-3.5" />, text: "Dedicated Library page — browse, search, and filter all your generations in one place", tag: "new" },
+            { icon: <FolderOpen className="w-3.5 h-3.5" />, text: "Generate into folders — pick a target folder before generating so results auto-sort", tag: "new" },
+            { icon: <Share2 className="w-3.5 h-3.5" />, text: "Enhanced share pages — shared links now show the image, prompt, and 'Try this prompt' CTA for social previews", tag: "new" },
+            { icon: <Globe className="w-3.5 h-3.5" />, text: "SEO optimization — Open Graph, Twitter Cards, structured data, sitemap, and robots.txt for better discoverability", tag: "improve" },
+            { icon: <Smartphone className="w-3.5 h-3.5" />, text: "Mobile layout fixes — action buttons wrap properly, no more overflow on small screens", tag: "fix" },
+            { icon: <Shield className="w-3.5 h-3.5" />, text: "Security hardening — rate limiting, SSRF protection, HSTS, and error sanitization across all endpoints", tag: "improve" },
+            { icon: <Smartphone className="w-3.5 h-3.5" />, text: "iPhone HEIC upload fix — large photos auto-resize to prevent 413 errors", tag: "fix" },
+        ],
+    },
     {
         version: "2026.03.16",
         date: "March 16, 2026",

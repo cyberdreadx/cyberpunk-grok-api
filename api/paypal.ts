@@ -56,7 +56,7 @@ async function handleCreate(
     return res.status(200).json({ orderId });
   } catch (err: any) {
     console.error("[paypal/create]", err.message);
-    return res.status(500).json({ error: err.message || "Failed to create order" });
+    return res.status(500).json({ error: "Failed to create order" });
   }
 }
 
@@ -123,6 +123,6 @@ async function handleCapture(
     return res.status(200).json({ success: true, credits });
   } catch (err: any) {
     console.error("[paypal/capture]", err.message);
-    return res.status(500).json({ error: err.message || "Failed to capture order" });
+    return res.status(500).json({ error: "Failed to capture order" });
   }
 }

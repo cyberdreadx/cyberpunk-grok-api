@@ -20,11 +20,10 @@ const YEARLY_TIER_CREDITS: Record<string, number> = {
 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Vercel Cron sends GET requests with an authorization header
   const authHeader = req.headers["authorization"];
   const cronSecret = process.env.CRON_SECRET;
 
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
@@ -79,6 +78,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   } catch (err: any) {
     console.error("[cron-reset-credits]", err.message);
-    return res.status(500).json({ error: "Cron failed: " + err.message });
+    return res.status(500).json({ error: "Cron failed" });
   }
 }

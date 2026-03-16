@@ -2212,7 +2212,7 @@ Rules:
         return res.status(200).json({ enhanced });
       } catch (err: any) {
         console.error("[enhance-prompt]", err.message);
-        return res.status(502).json({ error: `Prompt enhancement failed: ${err.message}` });
+        return res.status(502).json({ error: "Prompt enhancement failed" });
       }
     }
 
@@ -2304,7 +2304,7 @@ Rules:
           await sql`SELECT deduct_credits(${auth.userId}::uuid, ${cost})`;
           creditDeducted = true;
         } catch (err: any) {
-          return res.status(402).json({ error: "Failed to deduct credits. " + (err.message || "") });
+          return res.status(402).json({ error: "Failed to deduct credits" });
         }
       }
 
@@ -3187,7 +3187,7 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
       } catch (err: any) {
         return res.status(200).json({
           ok: false,
-          error: err.message,
+          error: "Request failed",
           endpoint,
           bucket,
           accessKeyPrefix: accessKey?.slice(0, 10) + "...",
@@ -3250,11 +3250,11 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
         }
         return;
       } catch (err: any) {
-        return res.status(502).json({ error: `S3 proxy failed: ${err.message}` });
+        return res.status(502).json({ error: "S3 proxy failed" });
       }
     }
 
-    return res.status(400).json({ error: `Unknown action: ${action}` });
+    return res.status(400).json({ error: "Unknown action" });
   } catch (err: any) {
     console.error("[comfyui]", err.message);
 
@@ -3273,6 +3273,6 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
       });
     }
 
-    return res.status(500).json({ error: err.message || "ComfyUI request failed" });
+    return res.status(500).json({ error: "ComfyUI request failed" });
   }
 }

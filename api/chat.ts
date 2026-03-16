@@ -484,7 +484,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    return res.status(400).json({ error: `Unknown action: ${action}` });
+    return res.status(400).json({ error: "Unknown action" });
   } catch (err: any) {
     console.error("[chat] Error:", err);
     if (err.message?.includes("not configured")) {

@@ -182,7 +182,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({ deleted: true });
     }
 
-    return res.status(400).json({ error: `Unknown action: ${action}` });
+    return res.status(400).json({ error: "Unknown action" });
   } catch (err: any) {
     console.error("[characters] Error:", err);
     return res.status(500).json({ error: "Internal server error" });

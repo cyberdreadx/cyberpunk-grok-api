@@ -124,7 +124,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   } catch (err: any) {
     console.error("[xrge-verify]", err.message);
-    // Return user-friendly error messages from the verification lib
-    return res.status(400).json({ error: err.message || "Failed to verify XRGE transfer" });
+    return res.status(400).json({ error: "Failed to verify XRGE transfer" });
   }
 }

@@ -7,6 +7,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { uploadToR2, getDownloadUrl, getPublicUrl, objectExists } from "./_lib/r2";
 import { getR2Meta } from "./_lib/r2-meta";
+import { checkRateLimit, getClientIp } from "./_lib/ratelimit";
 import crypto from "crypto";
 
 // Allow up to 30s for large uploads
@@ -31,6 +32,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // ── POST: Upload and create share ──
   if (req.method === "POST") {
     try {
+      const ip = getClientIp(req);
+      const { allowed } = await checkRateLimit(ip, "share-upload", { max: 15, windowSeconds: 300 });
+      if (!allowed) {
+        return res.status(429).json({ error: "Too many share requests. Try again later." });
+      }
+
       const { mediaBase64, mediaType, prompt } = req.body || {};
       if (!mediaBase64 || !mediaType) {
         return res.status(400).json({ error: "mediaBase64 and mediaType required" });

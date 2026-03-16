@@ -288,7 +288,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         await sql`SELECT deduct_credits(${auth.userId}::uuid, ${cost})`;
       } catch (err: any) {
         console.error("Failed to deduct credits:", err.message);
-        return res.status(402).json({ error: "Failed to deduct credits. " + (err.message || "") });
+        return res.status(402).json({ error: "Failed to deduct credits" });
       }
     }
 
