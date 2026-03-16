@@ -187,22 +187,55 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(429).json({ error: "Rate limit reached. Please wait a moment before generating again." });
     }
 
-    // Moderation cooldown: 15 flags in 10 minutes → block until window clears.
-    // Lenient threshold since xAI's filter can be aggressive with borderline content.
-    // Only checks usage_log (actual flags), not every request.
     const sql = getDb();
-    const [modCheck] = await sql`
-      SELECT COUNT(*)::int AS flag_count
-      FROM usage_log
-      WHERE user_id = ${auth.userId}::uuid
-        AND mode LIKE 'moderation-%'
+
+    // Tiered moderation cooldown — escalating penalties for repeat offenders.
+    // Tier 1: 10 flags in 10 minutes → 10 min cooldown (burst protection)
+    // Tier 2: 50 flags in 24 hours → 1 hour cooldown (daily abuser)
+    // Tier 3: 200 flags in 30 days → 24 hour cooldown (chronic abuser)
+    const [modShort] = await sql`
+      SELECT COUNT(*)::int AS cnt FROM usage_log
+      WHERE user_id = ${auth.userId}::uuid AND mode LIKE 'moderation-%'
         AND created_at > now() - interval '10 minutes'
     `;
-    if (modCheck.flag_count >= 15) {
+    if (modShort.cnt >= 10) {
       return res.status(429).json({
-        error: "Too many flagged requests in a short time. Take a breather and try again in a few minutes. Tip: try rephrasing your prompt.",
+        error: "Too many flagged requests. Cool down for 10 minutes, then try rephrasing your prompt.",
         moderated: true,
       });
+    }
+
+    const [modDaily] = await sql`
+      SELECT COUNT(*)::int AS cnt FROM usage_log
+      WHERE user_id = ${auth.userId}::uuid AND mode LIKE 'moderation-%'
+        AND created_at > now() - interval '24 hours'
+    `;
+    if (modDaily.cnt >= 50) {
+      return res.status(429).json({
+        error: "You've been flagged too many times today. Access is paused for 1 hour. Adjust your prompts to avoid content policy violations.",
+        moderated: true,
+      });
+    }
+
+    const [modMonthly] = await sql`
+      SELECT COUNT(*)::int AS cnt FROM usage_log
+      WHERE user_id = ${auth.userId}::uuid AND mode LIKE 'moderation-%'
+        AND created_at > now() - interval '30 days'
+    `;
+    if (modMonthly.cnt >= 200) {
+      const [lastFlag] = await sql`
+        SELECT created_at FROM usage_log
+        WHERE user_id = ${auth.userId}::uuid AND mode LIKE 'moderation-%'
+        ORDER BY created_at DESC LIMIT 1
+      `;
+      const lastFlagTime = lastFlag?.created_at ? new Date(lastFlag.created_at).getTime() : 0;
+      const hoursSinceLastFlag = (Date.now() - lastFlagTime) / (1000 * 60 * 60);
+      if (hoursSinceLastFlag < 24) {
+        return res.status(429).json({
+          error: "Your account has been repeatedly flagged for content policy violations. Generation is paused for 24 hours. Continued violations may result in permanent suspension.",
+          moderated: true,
+        });
+      }
     }
 
     const { action, ...params } = req.body || {};

@@ -90,12 +90,11 @@ export const CREDIT_COSTS = {
   gltchEdit: 2,
   /** 3 credits per GLTCH edit with HD upscale */
   gltchEditHd: 3,
-  /** ComfyUI — slightly below Grok */
   comfyImage: 2,
   comfyEdit: 2,
   comfyEditHd: 3,
-  comfyVideo: 15,
-  comfyLongLook: 3,
+  comfyVideo: 8,
+  comfyLongLook: 5,
 } as const;
 
 export type CreditMode =
@@ -180,15 +179,15 @@ export const TIER_RANK: Record<string, number> = {
 export const SUBSCRIPTION_TIERS_MONTHLY: SubscriptionTier[] = [
   { id: "basic", name: "BASIC", creditsPerMonth: 150, priceCents: 999, perCredit: "$0.067", interval: "month" },
   { id: "premium", name: "PREMIUM", creditsPerMonth: 500, priceCents: 2499, perCredit: "$0.050", popular: true, interval: "month" },
-  { id: "pro", name: "PRO", creditsPerMonth: 1200, priceCents: 7999, perCredit: "$0.067", interval: "month" },
-  { id: "elite", name: "ELITE", creditsPerMonth: 5000, priceCents: 29999, perCredit: "$0.060", interval: "month" },
+  { id: "pro", name: "PRO", creditsPerMonth: 1200, priceCents: 4999, perCredit: "$0.042", interval: "month" },
+  { id: "elite", name: "ELITE", creditsPerMonth: 5000, priceCents: 14999, perCredit: "$0.030", interval: "month" },
 ];
 
 export const SUBSCRIPTION_TIERS_YEARLY: SubscriptionTier[] = [
   { id: "basic-yearly", name: "BASIC", creditsPerMonth: 150, priceCents: 10548, perCredit: "$0.059", interval: "year", monthlyEquivalentCents: 879, savingsPercent: 12 },
   { id: "premium-yearly", name: "PREMIUM", creditsPerMonth: 500, priceCents: 26388, perCredit: "$0.044", popular: true, interval: "year", monthlyEquivalentCents: 2199, savingsPercent: 12 },
-  { id: "pro-yearly", name: "PRO", creditsPerMonth: 1200, priceCents: 84468, perCredit: "$0.059", interval: "year", monthlyEquivalentCents: 7039, savingsPercent: 12 },
-  { id: "elite-yearly", name: "ELITE", creditsPerMonth: 5000, priceCents: 316788, perCredit: "$0.053", interval: "year", monthlyEquivalentCents: 26399, savingsPercent: 12 },
+  { id: "pro-yearly", name: "PRO", creditsPerMonth: 1200, priceCents: 52788, perCredit: "$0.037", interval: "year", monthlyEquivalentCents: 4399, savingsPercent: 12 },
+  { id: "elite-yearly", name: "ELITE", creditsPerMonth: 5000, priceCents: 158388, perCredit: "$0.026", interval: "year", monthlyEquivalentCents: 13199, savingsPercent: 12 },
 ];
 
 /** Combined for backward compat */

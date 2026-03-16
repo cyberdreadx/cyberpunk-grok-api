@@ -11,7 +11,7 @@ import { Zap, ImagePlus, Film, Download, Sparkles, Bug, FolderOpen, Smartphone, 
 /* ─── Changelog entries ─── */
 // Add new entries at the TOP. Bump LATEST_VERSION when deploying.
 
-export const LATEST_VERSION = "2026.03.15";
+export const LATEST_VERSION = "2026.03.16";
 
 interface ChangelogEntry {
     version: string;
@@ -21,6 +21,19 @@ interface ChangelogEntry {
 }
 
 const CHANGELOG: ChangelogEntry[] = [
+    {
+        version: "2026.03.16",
+        date: "March 16, 2026",
+        title: "Smooth Video Returns — GPU-Accelerated RIFE",
+        items: [
+            { icon: <Film className="w-3.5 h-3.5" />, text: "RIFE frame interpolation rebuilt with GPU-accelerated engine — 32fps smooth video is back", tag: "new" },
+            { icon: <Zap className="w-3.5 h-3.5" />, text: "HD mode outputs 64fps buttery smooth video with dual RIFE passes", tag: "improve" },
+            { icon: <ImagePlus className="w-3.5 h-3.5" />, text: "Optional second reference image for Klein image edits — dual-image conditioning", tag: "new" },
+            { icon: <Smartphone className="w-3.5 h-3.5" />, text: "HEIF/HEIC file support fixed — iPhone photos now upload and convert automatically", tag: "fix" },
+            { icon: <Film className="w-3.5 h-3.5" />, text: "End frame for WAN video — upload a target frame for start→end video interpolation", tag: "fix" },
+            { icon: <Bug className="w-3.5 h-3.5" />, text: "Character videos upgraded from 12fps baseline to 32fps RIFE-smoothed output", tag: "improve" },
+        ],
+    },
     {
         version: "2026.03.15",
         date: "March 15, 2026",
