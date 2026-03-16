@@ -21,13 +21,14 @@ if [ -d "/comfyui/custom_nodes/ComfyUI-Frame-Interpolation" ]; then
   rm -rf /comfyui/custom_nodes/ComfyUI-Frame-Interpolation
   echo "entrypoint: removed old ComfyUI-Frame-Interpolation"
 fi
-# Symlink ComfyUI-VFI from network volume if available and not already present
+# Always prefer ComfyUI-VFI from network volume (has correct model + patches)
 VOL_VFI="/workspace/runpod-slim/ComfyUI/custom_nodes/ComfyUI-VFI"
-if [ -d "$VOL_VFI" ] && [ ! -d "/comfyui/custom_nodes/ComfyUI-VFI" ]; then
+if [ -d "$VOL_VFI" ]; then
+  rm -rf /comfyui/custom_nodes/ComfyUI-VFI
   ln -sf "$VOL_VFI" /comfyui/custom_nodes/ComfyUI-VFI
   echo "entrypoint: symlinked ComfyUI-VFI from network volume"
 elif [ -d "/comfyui/custom_nodes/ComfyUI-VFI" ]; then
-  echo "entrypoint: ComfyUI-VFI OK"
+  echo "entrypoint: ComfyUI-VFI OK (baked-in)"
 fi
 
 # ── Runtime safety net: ensure critical custom nodes exist ──────
