@@ -79,6 +79,7 @@ const Index = () => {
     error,
     results,
     elapsedSeconds,
+    storageReady,
     apiMode,
     setApiMode,
     setApiKey: setApiKeyRaw,
@@ -123,10 +124,12 @@ const Index = () => {
   const [activePrompt, setActivePrompt] = useState("");
   const [activeImageUrl, setActiveImageUrl] = useState("");
 
-  // Pick up edit/animate requests from Library page via sessionStorage
+  // Pick up deep-link actions from URL params (Library edit/animate, shared prompts)
   React.useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const action = params.get("action");
+    const sharedPrompt = params.get("prompt");
+
     if (action === "edit") {
       const url = sessionStorage.getItem("library-edit-image");
       if (url) {
@@ -134,8 +137,8 @@ const Index = () => {
         setActiveImageUrl(url);
         setActivePrompt("");
         sessionStorage.removeItem("library-edit-image");
-        window.history.replaceState({}, "", "/");
       }
+      window.history.replaceState({}, "", "/");
     } else if (action === "animate") {
       const url = sessionStorage.getItem("library-animate-image");
       if (url) {
@@ -143,8 +146,12 @@ const Index = () => {
         setActiveImageUrl(url);
         setActivePrompt("");
         sessionStorage.removeItem("library-animate-image");
-        window.history.replaceState({}, "", "/");
       }
+      window.history.replaceState({}, "", "/");
+    } else if (sharedPrompt) {
+      setActivePrompt(sharedPrompt);
+      setMode("text-to-image");
+      window.history.replaceState({}, "", "/");
     }
   }, []);
 
