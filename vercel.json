@@ -22,6 +22,11 @@
       "maxDuration": 30
     }
   },
+  "rewrites": [
+    { "source": "/library", "destination": "/index.html" },
+    { "source": "/characters", "destination": "/index.html" },
+    { "source": "/s/:shareId", "destination": "/index.html" }
+  ],
   "crons": [
     {
       "path": "/api/cron-reset-credits",

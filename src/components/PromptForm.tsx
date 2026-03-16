@@ -99,10 +99,24 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
   const fileToDataUrl = async (file: File): Promise<string> => {
     let blob: Blob = file;
     if (isHeicLike(file)) {
-      // HEIC/HEIF is often unsupported in browser decoders; convert to JPEG first.
       const { default: heic2any } = await import("heic2any");
-      const converted = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.92 });
+      const converted = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.85 });
       blob = Array.isArray(converted) ? converted[0] : converted;
+      // iPhone HEIC can be 48MP — always force through canvas resize to keep payload manageable
+      const bitmap = await createImageBitmap(blob);
+      let w = bitmap.width, h = bitmap.height;
+      const cap = 2048;
+      if (w > cap || h > cap) {
+        const scale = cap / Math.max(w, h);
+        w = Math.round(w * scale);
+        h = Math.round(h * scale);
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      canvas.getContext("2d")!.drawImage(bitmap, 0, 0, w, h);
+      bitmap.close();
+      return canvas.toDataURL("image/jpeg", 0.85);
     }
     return compressBlob(blob);
   };

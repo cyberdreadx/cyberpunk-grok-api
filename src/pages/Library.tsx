@@ -1,0 +1,268 @@
+import React, { useState, useCallback, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import { Image, Film, Search, X, ArrowLeft } from "lucide-react";
+import CyberLayout from "@/components/CyberLayout";
+import MobileBottomNav from "@/components/MobileBottomNav";
+import GlitchText from "@/components/GlitchText";
+import ResultsGrid from "@/components/ResultsGrid";
+import HowToUseDialog from "@/components/HowToUseDialog";
+import ChangelogDialog from "@/components/ChangelogDialog";
+import LegalDialog from "@/components/LegalDialog";
+import { useAuth } from "@/hooks/useAuth";
+import { useFolders } from "@/hooks/useFolders";
+import { useToast } from "@/hooks/use-toast";
+import {
+  loadResults,
+  deleteStoredResult,
+  clearStoredResults,
+} from "@/lib/storage";
+import type { GrokResult } from "@/hooks/useGrokApi";
+
+const Library: React.FC = () => {
+  const navigate = useNavigate();
+  const auth = useAuth();
+  const { toast } = useToast();
+  const foldersHook = useFolders();
+
+  const [results, setResults] = useState<GrokResult[]>([]);
+  const [loading, setLoading] = useState(true);
+  const revokeAllRef = useRef<(() => void) | null>(null);
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [typeFilter, setTypeFilter] = useState<"all" | "image" | "video">("all");
+
+  // Dialog states
+  const [guideOpen, setGuideOpen] = useState(false);
+  const [changelogOpen, setChangelogOpen] = useState(false);
+  const [tosOpen, setTosOpen] = useState(false);
+  const [privacyOpen, setPrivacyOpen] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { results: loaded, revokeAll } = await loadResults();
+      if (!cancelled) {
+        revokeAllRef.current = revokeAll;
+        setResults(loaded);
+        setLoading(false);
+      } else {
+        revokeAll();
+      }
+    })();
+    return () => {
+      cancelled = true;
+      revokeAllRef.current?.();
+    };
+  }, []);
+
+  const deleteResult = useCallback(async (id: string) => {
+    setResults(prev => prev.filter(r => r.id !== id));
+    try { await deleteStoredResult(id); } catch {}
+  }, []);
+
+  const clearResults = useCallback(async () => {
+    setResults([]);
+    revokeAllRef.current?.();
+    revokeAllRef.current = null;
+    try { await clearStoredResults(); } catch {}
+  }, []);
+
+  const updateResultFolder = useCallback((resultId: string, folderId: string | null) => {
+    setResults(prev => prev.map(r => r.id === resultId ? { ...r, folderId } : r));
+  }, []);
+
+  const handleMoveToFolder = useCallback(async (resultId: string, folderId: string | null) => {
+    try {
+      await foldersHook.moveToFolder(resultId, folderId);
+      updateResultFolder(resultId, folderId);
+    } catch {
+      toast({ title: "FOLDER ERROR", description: "Failed to move item.", variant: "destructive" });
+    }
+  }, [foldersHook, updateResultFolder, toast]);
+
+  const handleBulkMoveToFolder = useCallback(async (ids: string[], folderId: string | null) => {
+    try {
+      await foldersHook.bulkMoveToFolder(ids, folderId);
+      for (const id of ids) updateResultFolder(id, folderId);
+    } catch {
+      toast({ title: "FOLDER ERROR", description: "Failed to move items.", variant: "destructive" });
+    }
+  }, [foldersHook, updateResultFolder, toast]);
+
+  const handleBulkDelete = useCallback(async (ids: string[]) => {
+    try {
+      await foldersHook.bulkDelete(ids);
+      for (const id of ids) deleteResult(id);
+    } catch {
+      toast({ title: "DELETE ERROR", description: "Failed to delete items.", variant: "destructive" });
+    }
+  }, [foldersHook, deleteResult, toast]);
+
+  const handleEmptyTrash = useCallback(async () => {
+    try {
+      const deletedIds = await foldersHook.emptyTrashFolder();
+      for (const id of deletedIds) deleteResult(id);
+    } catch {
+      toast({ title: "TRASH ERROR", description: "Failed to empty trash.", variant: "destructive" });
+    }
+  }, [foldersHook, deleteResult, toast]);
+
+  const handleEditImage = useCallback((imageUrl: string) => {
+    sessionStorage.setItem("library-edit-image", imageUrl);
+    navigate("/?action=edit");
+  }, [navigate]);
+
+  const handleAnimateImage = useCallback((imageUrl: string) => {
+    sessionStorage.setItem("library-animate-image", imageUrl);
+    navigate("/?action=animate");
+  }, [navigate]);
+
+  // Filter results by search query and type
+  const displayResults = React.useMemo(() => {
+    let filtered = results;
+    if (typeFilter !== "all") {
+      filtered = filtered.filter(r => r.type === typeFilter);
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter(r => r.revised_prompt?.toLowerCase().includes(q));
+    }
+    return filtered;
+  }, [results, typeFilter, searchQuery]);
+
+  // Stats
+  const totalImages = results.filter(r => r.type === "image" && r.folderId !== "__trash").length;
+  const totalVideos = results.filter(r => r.type === "video" && r.folderId !== "__trash").length;
+  const totalFolders = foldersHook.folders.length;
+
+  return (
+    <CyberLayout>
+      <div className="max-w-6xl mx-auto px-4 py-6 pb-24 sm:pb-8 space-y-6">
+        {/* Header */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => navigate("/")}
+                className="p-1.5 rounded border border-border/50 hover:border-primary/40 hover:bg-primary/5 transition-all text-muted-foreground/60 hover:text-primary"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+              <div>
+                <GlitchText
+                  text="MEDIA_LIBRARY"
+                  className="font-orbitron text-lg sm:text-xl tracking-widest text-primary"
+                  glitchIntensity="low"
+                />
+                <p className="font-mono-share text-[10px] text-muted-foreground/50 mt-0.5">
+                  <span className="text-primary/30">$</span> ls -la ~/output/ — {totalImages + totalVideos} assets indexed
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Stats bar */}
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-border/40 bg-card/40">
+              <Image className="w-3.5 h-3.5 text-primary/60" />
+              <span className="font-mono-share text-[11px] text-foreground/70">{totalImages}</span>
+              <span className="font-mono-share text-[9px] text-muted-foreground/40">IMAGES</span>
+            </div>
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-border/40 bg-card/40">
+              <Film className="w-3.5 h-3.5 text-secondary/60" />
+              <span className="font-mono-share text-[11px] text-foreground/70">{totalVideos}</span>
+              <span className="font-mono-share text-[9px] text-muted-foreground/40">VIDEOS</span>
+            </div>
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-border/40 bg-card/40">
+              <span className="font-mono-share text-[11px] text-foreground/70">{totalFolders}</span>
+              <span className="font-mono-share text-[9px] text-muted-foreground/40">FOLDERS</span>
+            </div>
+          </div>
+
+          {/* Search + type filter bar */}
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/40" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="search prompts..."
+                className="w-full pl-8 pr-8 py-2 bg-card/60 border border-border/50 rounded text-sm font-mono-share text-foreground/80 placeholder:text-muted-foreground/30 outline-none focus:border-primary/50 transition-colors"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-primary transition-colors"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+            <div className="flex items-center border border-border/50 rounded overflow-hidden">
+              {(["all", "image", "video"] as const).map(t => (
+                <button
+                  key={t}
+                  onClick={() => setTypeFilter(t)}
+                  className={`px-3 py-2 text-[10px] font-mono-share tracking-wider transition-colors ${
+                    typeFilter === t
+                      ? "bg-primary/10 text-primary border-primary/30"
+                      : "text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted/20"
+                  }`}
+                >
+                  {t.toUpperCase()}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Loading state */}
+        {loading ? (
+          <div className="border border-dashed border-border rounded p-12 text-center">
+            <div className="font-mono-share text-sm text-muted-foreground tracking-wider animate-pulse">
+              <span className="text-primary/40">$</span> loading library...
+            </div>
+          </div>
+        ) : (
+          <ResultsGrid
+            results={displayResults}
+            isLoading={false}
+            onClear={clearResults}
+            onDelete={deleteResult}
+            onEditImage={handleEditImage}
+            onAnimateImage={handleAnimateImage}
+            folders={foldersHook.folders}
+            selectedFilter={foldersHook.selectedFilter}
+            onSelectFilter={foldersHook.selectFilter}
+            onCreateFolder={foldersHook.createFolder}
+            onRenameFolder={foldersHook.renameFolder}
+            onDeleteFolder={foldersHook.deleteFolder}
+            onToggleFolderHidden={foldersHook.toggleFolderHidden}
+            onMoveToFolder={handleMoveToFolder}
+            onBulkMoveToFolder={handleBulkMoveToFolder}
+            onBulkDelete={handleBulkDelete}
+            onEmptyTrash={handleEmptyTrash}
+          />
+        )}
+      </div>
+
+      {/* Mobile bottom navigation */}
+      <MobileBottomNav
+        isAuthenticated={auth.isAuthenticated}
+        onOpenGuide={() => setGuideOpen(true)}
+        onOpenChangelog={() => setChangelogOpen(true)}
+        onOpenTos={() => setTosOpen(true)}
+        onOpenPrivacy={() => setPrivacyOpen(true)}
+      />
+
+      {/* Dialogs */}
+      <HowToUseDialog open={guideOpen} onOpenChange={setGuideOpen} />
+      <ChangelogDialog open={changelogOpen} onOpenChange={setChangelogOpen} />
+      <LegalDialog type="tos" open={tosOpen} onOpenChange={setTosOpen} />
+      <LegalDialog type="privacy" open={privacyOpen} onOpenChange={setPrivacyOpen} />
+    </CyberLayout>
+  );
+};
+
+export default Library;

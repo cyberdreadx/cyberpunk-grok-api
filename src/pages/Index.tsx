@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, Suspense } from "react";
-import { Terminal, Key, Coins, Shield, Eye, MessageCircle, HelpCircle, Server, Zap, Cpu, ChevronDown, Film, X, AlertCircle, CheckCircle2, Loader2, Upload, Users } from "lucide-react";
+import { Terminal, Key, Coins, Shield, Eye, MessageCircle, HelpCircle, Server, Zap, Cpu, ChevronDown, Film, X, AlertCircle, CheckCircle2, Loader2, Upload, Users, Image } from "lucide-react";
 import { Link } from "react-router-dom";
 import CyberLayout from "@/components/CyberLayout";
 import MobileBottomNav from "@/components/MobileBottomNav";
@@ -116,10 +116,37 @@ const Index = () => {
 
   // Folders
   const foldersHook = useFolders();
+  const [targetFolderId, setTargetFolderId] = useState<string | null>(null);
+  const prevResultsLenRef = useRef(0);
 
   const { history, addEntry, removeEntry, clearHistory } = usePromptHistory();
   const [activePrompt, setActivePrompt] = useState("");
   const [activeImageUrl, setActiveImageUrl] = useState("");
+
+  // Pick up edit/animate requests from Library page via sessionStorage
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const action = params.get("action");
+    if (action === "edit") {
+      const url = sessionStorage.getItem("library-edit-image");
+      if (url) {
+        setMode("edit-image");
+        setActiveImageUrl(url);
+        setActivePrompt("");
+        sessionStorage.removeItem("library-edit-image");
+        window.history.replaceState({}, "", "/");
+      }
+    } else if (action === "animate") {
+      const url = sessionStorage.getItem("library-animate-image");
+      if (url) {
+        setMode("image-to-video");
+        setActiveImageUrl(url);
+        setActivePrompt("");
+        sessionStorage.removeItem("library-animate-image");
+        window.history.replaceState({}, "", "/");
+      }
+    }
+  }, []);
 
   // Engine selectors per mode
   type EditEngine = "grok" | "gltch";
@@ -301,6 +328,27 @@ const Index = () => {
       toast({ title: "TRASH ERROR", description: "Failed to empty trash.", variant: "destructive" });
     }
   }, [foldersHook, deleteResult, toast]);
+
+  // Auto-move newly generated results into the selected target folder
+  React.useEffect(() => {
+    if (!targetFolderId || !storageReady) return;
+    const newCount = results.length;
+    const prevCount = prevResultsLenRef.current;
+    if (newCount > prevCount) {
+      const added = results.slice(0, newCount - prevCount);
+      for (const r of added) {
+        if (!r.folderId) {
+          handleMoveToFolder(r.id, targetFolderId);
+        }
+      }
+    }
+    prevResultsLenRef.current = newCount;
+  }, [results.length, targetFolderId, storageReady, results, handleMoveToFolder]);
+
+  // Sync ref when storage first loads
+  React.useEffect(() => {
+    if (storageReady) prevResultsLenRef.current = results.length;
+  }, [storageReady, results.length]);
 
   const handleSubmit = async (data: { prompt: string; imageUrl?: string; extraImageUrls?: string[] }) => {
     // Determine which engine pathway
@@ -1471,6 +1519,23 @@ const Index = () => {
 
             <PromptHistory history={history} onSelect={handleSelectPrompt} onRemove={removeEntry} onClear={clearHistory} />
             <PromptForm mode={mode} isLoading={isLoading} onSubmit={handleSubmit} settings={settings} initialPrompt={activePrompt} initialImageUrl={activeImageUrl} hideExtraImages={mode === "edit-image" && editEngine === "gltch"} />
+
+            {/* Target folder selector */}
+            {foldersHook.folders.length > 0 && (
+              <div className="flex items-center gap-2 mt-2">
+                <span className="font-mono-share text-[9px] text-muted-foreground/40 tracking-wider">SAVE_TO:</span>
+                <select
+                  value={targetFolderId || ""}
+                  onChange={(e) => setTargetFolderId(e.target.value || null)}
+                  className="bg-card/60 border border-border/50 rounded px-2 py-1 text-[10px] font-mono-share text-foreground/70 outline-none focus:border-primary/50 transition-colors cursor-pointer min-w-[100px]"
+                >
+                  <option value="">UNFILED</option>
+                  {foldersHook.folders.filter(f => !f.hidden).map(f => (
+                    <option key={f.id} value={f.id}>{f.name.toUpperCase()}</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
         </section>
 
@@ -1624,6 +1689,13 @@ const Index = () => {
               glitchIntensity="low"
             />
             <div className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
+            <Link
+              to="/library"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded border border-primary/20 hover:border-primary/50 bg-primary/5 hover:bg-primary/10 transition-all font-mono-share text-[10px] text-primary/70 hover:text-primary tracking-wider"
+            >
+              <Image className="w-3 h-3" />
+              FULL LIBRARY
+            </Link>
           </div>
           <ResultsGrid
             results={results}
@@ -1706,6 +1778,14 @@ const Index = () => {
               <span className="text-[8px] font-bold leading-none border border-current rounded-sm px-0.5">$</span>
               GROKRUN
             </a>
+            <span className="text-border/50">|</span>
+            <Link
+              to="/library"
+              className="flex items-center gap-1 text-muted-foreground/40 hover:text-cyan-400 transition-colors"
+            >
+              <Image className="w-3 h-3" />
+              LIBRARY
+            </Link>
             {auth.isAuthenticated && (
               <>
                 <span className="text-border/50">|</span>

@@ -1239,13 +1239,12 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-y-2">
         <div className="font-orbitron text-xs tracking-wider text-muted-foreground">
           OUTPUT [{filteredResults.length}]
         </div>
         {filteredResults.length > 0 && (
-          <div className="flex items-center gap-1">
-            {/* Download All — exports entire library regardless of filter */}
+          <div className="flex items-center gap-1 flex-wrap">
             <Button
               variant="ghost"
               size="sm"
@@ -1263,7 +1262,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
                   setZipExporting(false);
                 }
               }}
-              className="text-primary hover:text-primary/80 font-mono-share text-xs"
+              className="text-primary hover:text-primary/80 font-mono-share text-[10px] sm:text-xs h-7 px-2 sm:px-3"
             >
               {zipExporting ? (
                 <>
@@ -1272,12 +1271,11 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
                 </>
               ) : (
                 <>
-                  <Download className="w-3 h-3 mr-1" />
-                  DOWNLOAD ALL
+                  <Download className="w-3 h-3 sm:mr-1" />
+                  <span className="hidden sm:inline">DOWNLOAD ALL</span>
                 </>
               )}
             </Button>
-            {/* Export current view */}
             {selectedFilter !== "all" && (
               <Button
                 variant="ghost"
@@ -1296,30 +1294,30 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
                     setZipExporting(false);
                   }
                 }}
-                className="text-primary/60 hover:text-primary/80 font-mono-share text-xs"
+                className="text-primary/60 hover:text-primary/80 font-mono-share text-[10px] sm:text-xs h-7 px-2 sm:px-3"
               >
-                <Archive className="w-3 h-3 mr-1" />
-                EXPORT VIEW
+                <Archive className="w-3 h-3 sm:mr-1" />
+                <span className="hidden sm:inline">EXPORT VIEW</span>
               </Button>
             )}
             <Button
               variant="ghost"
               size="sm"
               onClick={() => { if (selectMode) exitSelectMode(); else setSelectMode(true); }}
-              className={`font-mono-share text-xs ${selectMode ? "text-primary" : "text-primary/60 hover:text-primary/80"}`}
+              className={`font-mono-share text-[10px] sm:text-xs h-7 px-2 sm:px-3 ${selectMode ? "text-primary" : "text-primary/60 hover:text-primary/80"}`}
             >
-              <ListChecks className="w-3 h-3 mr-1" />
-              {selectMode ? "CANCEL" : "SELECT"}
+              <ListChecks className="w-3 h-3 sm:mr-1" />
+              <span className="hidden sm:inline">{selectMode ? "CANCEL" : "SELECT"}</span>
             </Button>
             {isTrashView && onEmptyTrash && (resultCounts.__trash ?? 0) > 0 && (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setPurgeConfirmOpen(true)}
-                className="text-destructive hover:text-destructive/80 font-mono-share text-xs"
+                className="text-destructive hover:text-destructive/80 font-mono-share text-[10px] sm:text-xs h-7 px-2 sm:px-3"
               >
-                <Trash2 className="w-3 h-3 mr-1" />
-                EMPTY TRASH
+                <Trash2 className="w-3 h-3 sm:mr-1" />
+                <span className="hidden sm:inline">EMPTY TRASH</span>
               </Button>
             )}
             {!isTrashView && (
@@ -1327,10 +1325,10 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
                 variant="ghost"
                 size="sm"
                 onClick={() => setPurgeConfirmOpen(true)}
-                className="text-destructive hover:text-destructive/80 font-mono-share text-xs"
+                className="text-destructive hover:text-destructive/80 font-mono-share text-[10px] sm:text-xs h-7 px-2 sm:px-3"
               >
-                <Trash2 className="w-3 h-3 mr-1" />
-                PURGE
+                <Trash2 className="w-3 h-3 sm:mr-1" />
+                <span className="hidden sm:inline">PURGE</span>
               </Button>
             )}
           </div>

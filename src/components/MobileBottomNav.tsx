@@ -25,6 +25,7 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
 
   const isHome = location.pathname === "/" || location.pathname === "";
   const isCharacters = location.pathname === "/characters";
+  const isLibrary = location.pathname === "/library";
 
   const tabs = [
     {
@@ -38,16 +39,8 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
       id: "library",
       label: "LIBRARY",
       icon: Image,
-      active: false,
-      onClick: () => {
-        if (!isHome) navigate("/");
-        // Scroll to results after navigation
-        setTimeout(() => {
-          const el = document.getElementById("results-section");
-          if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-        }, isHome ? 50 : 500);
-        setMoreOpen(false);
-      },
+      active: isLibrary,
+      onClick: () => { if (!isLibrary) navigate("/library"); setMoreOpen(false); },
     },
     ...(isAuthenticated ? [{
       id: "characters",
