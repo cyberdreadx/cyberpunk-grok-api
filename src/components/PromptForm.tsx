@@ -13,9 +13,10 @@ interface PromptFormProps {
   settings: GenerationSettings;
   initialPrompt?: string;
   initialImageUrl?: string;
+  hideExtraImages?: boolean;
 }
 
-const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, settings, initialPrompt, initialImageUrl }) => {
+const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, settings, initialPrompt, initialImageUrl, hideExtraImages }) => {
   const [prompt, setPrompt] = useState(initialPrompt || "");
   const [imageUrl, setImageUrl] = useState(initialImageUrl || "");
   const [imageSource, setImageSource] = useState<"url" | "upload">(initialImageUrl ? "url" : "upload");
@@ -435,7 +436,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
       )}
 
       {/* Extra images for multi-image editing (Grok edit-image only, up to 3 total) */}
-      {mode === "edit-image" && hasImage && (
+      {mode === "edit-image" && hasImage && !hideExtraImages && (
         <div className="space-y-2">
           <label className="font-mono-share text-[10px] tracking-wider text-muted-foreground flex items-center gap-2">
             <span className="text-primary/50">+</span>
