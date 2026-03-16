@@ -1047,7 +1047,8 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
           reader.readAsDataURL(blob);
         });
       }
-      const res = await fetch("/api/share", {
+      const shareBase = (import.meta.env.VITE_API_URL as string) || "/api";
+      const res = await fetch(`${shareBase}/share`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1084,7 +1085,8 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
           reader.readAsDataURL(blob);
         });
       }
-      const res = await fetch("/api/share", {
+      const shareBase2 = (import.meta.env.VITE_API_URL as string) || "/api";
+      const res = await fetch(`${shareBase2}/share`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
