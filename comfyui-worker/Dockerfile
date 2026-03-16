@@ -75,9 +75,10 @@ RUN mkdir -p /comfyui/models/upscale_models && \
     wget -q -O /comfyui/models/upscale_models/RealESRGAN_x2plus.pth \
     https://huggingface.co/xingren23/comfyflow-models/resolve/main/upscale_models/RealESRGAN_x2plus.pth
 
-# RIFE model for frame interpolation (flownet.pkl ~21 MB, auto-downloaded via plugin script)
-RUN cd /comfyui/custom_nodes/ComfyUI-VFI && \
-    python rife/download_rife.py rife/train_log
+# RIFE model for frame interpolation (~12 MB)
+RUN mkdir -p /comfyui/custom_nodes/ComfyUI-VFI/rife/train_log && \
+    wget -q -O /comfyui/custom_nodes/ComfyUI-VFI/rife/train_log/flownet.pkl \
+    https://huggingface.co/jbilcke-hf/varnish/resolve/main/rife/flownet.pkl
 
 # CLIPVision for WAN 2.2 I2V conditioning (~3.9 GB)
 RUN mkdir -p /comfyui/models/clip_vision && \
