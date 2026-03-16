@@ -81,18 +81,12 @@ RUN mkdir -p /comfyui/models/upscale_models && \
     https://huggingface.co/xingren23/comfyflow-models/resolve/main/upscale_models/RealESRGAN_x2plus.pth
 
 # RIFE v4.26 model for frame interpolation (~40 MB zip → ~12 MB pkl)
-RUN cd /comfyui/custom_nodes/ComfyUI-VFI && \
-    python -c "import zipfile, requests, shutil, os; \
-    os.makedirs('rife/train_log', exist_ok=True); \
-    r = requests.get('https://huggingface.co/hzwer/RIFE/resolve/main/RIFEv4.26_0921.zip', stream=True); \
-    r.raise_for_status(); \
-    with open('/tmp/rife.zip','wb') as f: [f.write(c) for c in r.iter_content(8192)]; \
-    z = zipfile.ZipFile('/tmp/rife.zip'); \
-    pkl = [n for n in z.namelist() if n.endswith('flownet.pkl')][0]; \
-    z.extract(pkl, '/tmp/rife_ext'); z.close(); \
-    shutil.move(f'/tmp/rife_ext/{pkl}', 'rife/train_log/flownet.pkl'); \
-    shutil.rmtree('/tmp/rife_ext'); os.remove('/tmp/rife.zip'); \
-    print('RIFE v4.26 flownet.pkl installed')"
+RUN apt-get update && apt-get install -y --no-install-recommends unzip && \
+    rm -rf /var/lib/apt/lists/* && \
+    mkdir -p /comfyui/custom_nodes/ComfyUI-VFI/rife/train_log && \
+    wget -q -O /tmp/rife.zip https://huggingface.co/hzwer/RIFE/resolve/main/RIFEv4.26_0921.zip && \
+    unzip -j /tmp/rife.zip '*/flownet.pkl' -d /comfyui/custom_nodes/ComfyUI-VFI/rife/train_log/ && \
+    rm /tmp/rife.zip
 
 # CLIPVision for WAN 2.2 I2V conditioning (~3.9 GB)
 RUN mkdir -p /comfyui/models/clip_vision && \
