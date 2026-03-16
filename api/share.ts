@@ -8,13 +8,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (req.method === "POST") {
     try {
-      const { mediaBase64, mediaType, prompt } = req.body || {};
-      if (!mediaBase64 || !mediaType) {
-        return res.status(400).json({ error: "mediaBase64 and mediaType required" });
+      const { mediaBase64, mediaUrl, mediaType, prompt } = req.body || {};
+      if (!mediaType || (!mediaBase64 && !mediaUrl)) {
+        return res.status(400).json({ error: "mediaType and either mediaBase64 or mediaUrl required" });
       }
 
-      const raw = mediaBase64.includes(",") ? mediaBase64.split(",")[1] : mediaBase64;
-      const buffer = Buffer.from(raw, "base64");
+      let buffer: Buffer;
+
+      if (mediaUrl) {
+        // Server-side download (for videos / large files that exceed body limits)
+        const urlObj = new URL(mediaUrl);
+        if (!["https:"].includes(urlObj.protocol)) {
+          return res.status(400).json({ error: "Only HTTPS URLs allowed" });
+        }
+        const dlResp = await fetch(mediaUrl, { signal: AbortSignal.timeout(25000) });
+        if (!dlResp.ok) {
+          return res.status(502).json({ error: `Failed to download media (${dlResp.status})` });
+        }
+        const arrayBuf = await dlResp.arrayBuffer();
+        buffer = Buffer.from(arrayBuf);
+      } else {
+        const raw = mediaBase64.includes(",") ? mediaBase64.split(",")[1] : mediaBase64;
+        buffer = Buffer.from(raw, "base64");
+      }
 
       if (buffer.length > 50 * 1024 * 1024) {
         return res.status(413).json({ error: "File too large (max 50MB)" });

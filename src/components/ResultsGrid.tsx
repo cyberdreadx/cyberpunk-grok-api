@@ -1064,17 +1064,86 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
       .catch(() => {});
   }, []);
 
+  /** Copy or share the link from a share API response */
+  const copyOrShareLink = useCallback(async (data: { shareUrl: string }, _result: GrokResult) => {
+    const shareLink = refCodeRef.current
+      ? `${data.shareUrl}?ref=${refCodeRef.current}`
+      : data.shareUrl;
+
+    const mobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+
+    if (mobile && navigator.share) {
+      try {
+        await navigator.share({ title: "Grok Runner", url: shareLink });
+        return;
+      } catch (e: any) {
+        if (e?.name === "AbortError") return;
+      }
+    }
+
+    let copied = false;
+    if (navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(shareLink);
+        copied = true;
+      } catch { /* clipboard blocked without user gesture */ }
+    }
+    if (!copied) {
+      const ta = document.createElement("textarea");
+      ta.value = shareLink;
+      ta.style.cssText = "position:fixed;left:-9999px;top:-9999px;opacity:0";
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      try { copied = document.execCommand("copy"); } catch { /* fallback failed */ }
+      document.body.removeChild(ta);
+    }
+
+    if (copied) {
+      toast.success("Share link copied to clipboard!");
+    } else if (navigator.share) {
+      try {
+        await navigator.share({ title: "Grok Runner", url: shareLink });
+      } catch { /* user cancelled */ }
+    } else {
+      toast.success("Share link ready — tap to copy:", { description: shareLink });
+    }
+  }, []);
+
   /** Upload media to Blob and copy/share the link */
   const handleShare = useCallback(async (result: GrokResult) => {
     setSharingId(result.id);
     try {
-      // 1. Get media as base64 — prefer IndexedDB (works on PWA even if blob: URL revoked)
+      const shareBase = (import.meta.env.VITE_API_URL as string) || "/api";
+
+      // For external URLs (videos, remote images) let the server download directly
+      // to avoid Vercel's ~4.5MB request body limit
+      if (result.url.startsWith("https://")) {
+        const res = await fetch(`${shareBase}/share`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            mediaUrl: result.url,
+            mediaType: result.type,
+            prompt: result.revised_prompt || "",
+          }),
+        });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || `Upload failed (${res.status})`);
+        }
+        const data = await res.json();
+        await copyOrShareLink(data, result);
+        return;
+      }
+
+      // For local data (IndexedDB / blob: URLs) send as base64
       let mediaBase64 = result.url;
       if (!mediaBase64.startsWith("data:")) {
         const stored = await getResultDataUrl(result.id).catch(() => null);
         if (stored && stored.startsWith("data:")) {
           mediaBase64 = stored;
-        } else if (mediaBase64.startsWith("http") || mediaBase64.startsWith("blob:")) {
+        } else if (mediaBase64.startsWith("blob:")) {
           const resp = await fetch(mediaBase64);
           if (!resp.ok) throw new Error("Failed to fetch media");
           const blob = await resp.blob();
@@ -1087,8 +1156,6 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
         }
       }
 
-      // 2. Upload to share API
-      const shareBase = (import.meta.env.VITE_API_URL as string) || "/api";
       const res = await fetch(`${shareBase}/share`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1103,49 +1170,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
         throw new Error(errData.error || `Upload failed (${res.status})`);
       }
       const data = await res.json();
-      const shareLink = refCodeRef.current
-        ? `${data.shareUrl}?ref=${refCodeRef.current}`
-        : data.shareUrl;
-
-      // 3. Share / copy — on mobile prefer native share sheet
-      const mobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
-
-      if (mobile && navigator.share) {
-        try {
-          await navigator.share({ title: "Grok Runner", url: shareLink });
-          return;
-        } catch (e: any) {
-          if (e?.name === "AbortError") return;
-        }
-      }
-
-      let copied = false;
-      if (navigator.clipboard?.writeText) {
-        try {
-          await navigator.clipboard.writeText(shareLink);
-          copied = true;
-        } catch { /* clipboard blocked without user gesture */ }
-      }
-      if (!copied) {
-        const ta = document.createElement("textarea");
-        ta.value = shareLink;
-        ta.style.cssText = "position:fixed;left:-9999px;top:-9999px;opacity:0";
-        document.body.appendChild(ta);
-        ta.focus();
-        ta.select();
-        try { copied = document.execCommand("copy"); } catch { /* fallback failed */ }
-        document.body.removeChild(ta);
-      }
-
-      if (copied) {
-        toast.success("Share link copied to clipboard!");
-      } else if (navigator.share) {
-        try {
-          await navigator.share({ title: "Grok Runner", url: shareLink });
-        } catch { /* user cancelled */ }
-      } else {
-        toast.success("Share link ready — tap to copy:", { description: shareLink });
-      }
+      await copyOrShareLink(data, result);
     } catch (err: any) {
       console.error("[share] error:", err);
       toast.error("Failed to create share link", {

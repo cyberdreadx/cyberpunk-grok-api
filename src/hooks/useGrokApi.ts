@@ -15,6 +15,7 @@ interface ActiveJob {
   submittedAt: number;
   runpodEndpointId?: string;
   pollEndpoint?: string;
+  prompt?: string;
 }
 
 function getActiveJobs(): ActiveJob[] {
@@ -371,7 +372,7 @@ export function useGrokApi() {
               } catch { }
             }
             const url = video || poll.image || "";
-            const newResult: GrokResult = { id: `resume-${Date.now()}-${saved.promptId.slice(0, 8)}`, url, type: (video ? "video" : "image") as any, timestamp: Date.now() };
+            const newResult: GrokResult = { id: `resume-${Date.now()}-${saved.promptId.slice(0, 8)}`, url, revised_prompt: saved.prompt || "", type: (video ? "video" : "image") as any, timestamp: Date.now() };
             if (!cancelled) {
               setResults(prev => [newResult, ...prev]);
               try { await saveResult(newResult); } catch { }
@@ -887,7 +888,7 @@ export function useGrokApi() {
           },
         });
 
-        saveActiveJob({ promptId: submitData.promptId, outputType: "image", submittedAt: Date.now(), pollEndpoint: "gltch" });
+        saveActiveJob({ promptId: submitData.promptId, outputType: "image", submittedAt: Date.now(), pollEndpoint: "gltch", prompt: params.prompt });
 
         // runsync may return result directly
         if (submitData.syncResult?.status === "done" && submitData.syncResult.image) {
@@ -1035,7 +1036,7 @@ export function useGrokApi() {
     const { promptId, outputType, runpodEndpointId } = submitData;
     const outType = outputType || (body.workflow === "wan-video" || body.workflow === "longlook" ? "video" : "image");
 
-    saveActiveJob({ promptId, outputType: outType, submittedAt: Date.now(), ...(runpodEndpointId && { runpodEndpointId }) });
+    saveActiveJob({ promptId, outputType: outType, submittedAt: Date.now(), ...(runpodEndpointId && { runpodEndpointId }), prompt: body.prompt as string || "" });
 
     for (let i = 0; i < maxAttempts; i++) {
       await new Promise((r) => setTimeout(r, pollInterval));
