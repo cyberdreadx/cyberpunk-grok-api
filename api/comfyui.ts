@@ -494,20 +494,20 @@ function buildWanVideoWorkflow(p: {
       class_type: "LoadImage",
       inputs: { image: p.endImageFilename },
     };
-    // Resize end image to match video dimensions
     workflow["201"] = {
-      class_type: "ImageResizeKJ",
+      class_type: "ImageResizeKJv2",
       inputs: {
         image: ["200", 0],
         width: p.width,
         height: p.height,
-        interpolation: "lanczos",
-        keep_proportion: false,
-        divisible_by: 2,
-        crop: "center",
+        upscale_method: "lanczos",
+        keep_proportion: "resize",
+        pad_color: "0, 0, 0",
+        crop_position: "center",
+        divisible_by: 16,
+        device: "cpu",
       },
     };
-    // Wire end_image into the WanImageToVideo node
     workflow["113"].inputs.end_image = ["201", 0];
   }
 
@@ -765,15 +765,17 @@ function buildGltchWanSimpleWorkflow(p: {
       inputs: { image: p.endImageFilename },
     };
     workflow["201"] = {
-      class_type: "ImageResizeKJ",
+      class_type: "ImageResizeKJv2",
       inputs: {
         image: ["200", 0],
         width: p.resolution,
         height: p.resolution,
-        interpolation: "lanczos",
-        keep_proportion: true,
-        divisible_by: 2,
-        crop: "center",
+        upscale_method: "lanczos",
+        keep_proportion: "resize",
+        pad_color: "0, 0, 0",
+        crop_position: "center",
+        divisible_by: 16,
+        device: "cpu",
       },
     };
     workflow["10"].inputs.end_image = ["201", 0];
@@ -1022,15 +1024,17 @@ function buildGltchWanWorkflow(p: {
       inputs: { image: p.endImageFilename },
     };
     workflow["201"] = {
-      class_type: "ImageResizeKJ",
+      class_type: "ImageResizeKJv2",
       inputs: {
         image: ["200", 0],
         width: p.resolution,
         height: p.resolution,
-        interpolation: "lanczos",
-        keep_proportion: true,
-        divisible_by: 2,
-        crop: "center",
+        upscale_method: "lanczos",
+        keep_proportion: "resize",
+        pad_color: "0, 0, 0",
+        crop_position: "center",
+        divisible_by: 16,
+        device: "cpu",
       },
     };
     workflow["10"].inputs.end_image = ["201", 0];
@@ -1417,14 +1421,17 @@ function buildLongLookWorkflow(p: {
       // First sequence: resize start image → standard i2v conditioning
       const resizeNode = `${base + 2}`;
       workflow[resizeNode] = {
-        class_type: "ImageResizeKJ",
+        class_type: "ImageResizeKJv2",
         inputs: {
           image: ["25", 0],
           width: p.width,
           height: p.height,
           upscale_method: "lanczos",
-          keep_proportion: true,
+          keep_proportion: "resize",
+          pad_color: "0, 0, 0",
+          crop_position: "center",
           divisible_by: 16,
+          device: "cpu",
         },
       };
 
