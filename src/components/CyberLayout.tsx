@@ -1,36 +1,67 @@
-import React from "react";
+import React, { useEffect } from "react";
 import DataRain from "@/components/DataRain";
 import HudOverlay from "@/components/HudOverlay";
+import { getStoredThemeId, getThemeById, applyTheme } from "@/lib/themes";
 
 interface CyberLayoutProps {
   children: React.ReactNode;
 }
 
 const CyberLayout: React.FC<CyberLayoutProps> = ({ children }) => {
+  useEffect(() => {
+    applyTheme(getThemeById(getStoredThemeId()));
+  }, []);
+
   return (
-    <div className="relative min-h-screen cyber-gradient overflow-hidden">
-      {/* Scanline overlay */}
-      <div className="fixed inset-0 scanline z-10" />
+    <div className="relative min-h-screen cyber-gradient overflow-hidden noise-overlay">
+      {/* CRT scanline overlay */}
+      <div className="fixed inset-0 scanline z-10 pointer-events-none" />
+
+      {/* Vignette edges */}
+      <div
+        className="fixed inset-0 z-10 pointer-events-none"
+        style={{
+          background: "radial-gradient(ellipse at center, transparent 55%, hsl(var(--background)) 100%)",
+        }}
+      />
 
       {/* Grid background */}
       <div
-        className="fixed inset-0 opacity-[0.04] z-0"
+        className="fixed inset-0 opacity-[0.03] z-0 pointer-events-none"
         style={{
           backgroundImage: `
-            linear-gradient(hsl(var(--neon-cyan)) 1px, transparent 1px),
-            linear-gradient(90deg, hsl(var(--neon-cyan)) 1px, transparent 1px)
+            linear-gradient(hsl(var(--primary)) 1px, transparent 1px),
+            linear-gradient(90deg, hsl(var(--primary)) 1px, transparent 1px)
           `,
           backgroundSize: "60px 60px",
         }}
       />
 
+      {/* Corner frame decorations */}
+      <div className="fixed top-0 left-0 w-16 h-16 z-10 pointer-events-none hidden md:block">
+        <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-primary/40 to-transparent" />
+        <div className="absolute top-0 left-0 h-full w-[1px] bg-gradient-to-b from-primary/40 to-transparent" />
+      </div>
+      <div className="fixed top-0 right-0 w-16 h-16 z-10 pointer-events-none hidden md:block">
+        <div className="absolute top-0 right-0 w-full h-[1px] bg-gradient-to-l from-primary/40 to-transparent" />
+        <div className="absolute top-0 right-0 h-full w-[1px] bg-gradient-to-b from-primary/40 to-transparent" />
+      </div>
+      <div className="fixed bottom-0 left-0 w-16 h-16 z-10 pointer-events-none hidden md:block">
+        <div className="absolute bottom-0 left-0 w-full h-[1px] bg-gradient-to-r from-primary/40 to-transparent" />
+        <div className="absolute bottom-0 left-0 h-full w-[1px] bg-gradient-to-t from-primary/40 to-transparent" />
+      </div>
+      <div className="fixed bottom-0 right-0 w-16 h-16 z-10 pointer-events-none hidden md:block">
+        <div className="absolute bottom-0 right-0 w-full h-[1px] bg-gradient-to-l from-primary/40 to-transparent" />
+        <div className="absolute bottom-0 right-0 h-full w-[1px] bg-gradient-to-t from-primary/40 to-transparent" />
+      </div>
+
       {/* Data rain */}
       <DataRain intensity={25} />
 
       {/* Terminal top bar */}
-      <div className="fixed top-0 left-0 right-0 z-30 h-7 bg-card/80 backdrop-blur-sm border-b border-border flex items-center px-4 gap-3">
+      <div className="fixed top-0 left-0 right-0 z-30 h-7 bg-card/90 backdrop-blur-sm border-b border-primary/20 flex items-center px-4 gap-3">
         <div className="flex items-center gap-1.5">
-          <div className="w-2.5 h-2.5 rounded-full bg-neon-red/70" />
+          <div className="w-2.5 h-2.5 rounded-full bg-destructive/70" />
           <div className="w-2.5 h-2.5 rounded-full bg-neon-yellow/70" />
           <div className="w-2.5 h-2.5 rounded-full bg-primary/70" />
         </div>
@@ -38,15 +69,15 @@ const CyberLayout: React.FC<CyberLayoutProps> = ({ children }) => {
           grok@xai:~/neural-render — bash
         </div>
         <div className="font-mono-share text-[10px] text-muted-foreground/30">
-          ⌘
+          PID:4F7A
         </div>
       </div>
 
       {/* Horizontal scan line */}
       <div
-        className="fixed left-0 right-0 h-[1px] z-[15] opacity-20"
+        className="fixed left-0 right-0 h-[1px] z-[15] opacity-20 pointer-events-none"
         style={{
-          background: "linear-gradient(90deg, transparent, hsl(180 100% 50%), transparent)",
+          background: "linear-gradient(90deg, transparent, hsl(var(--primary)), transparent)",
           animation: "hud-scan 8s linear infinite",
         }}
       />

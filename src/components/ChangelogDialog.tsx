@@ -6,12 +6,13 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Zap, ImagePlus, Film, Download, Sparkles, Bug, FolderOpen, Smartphone, Share2, Users, Clock, Link2, ExternalLink, ShieldAlert, Camera, Wrench, Shield, Search, Globe } from "lucide-react";
+import { Zap, ImagePlus, Film, Download, Sparkles, Bug, FolderOpen, Smartphone, Share2, Users, Clock, Link2, ExternalLink, ShieldAlert, Camera, Wrench, Shield, Search, Globe, Trash2, Tag } from "lucide-react";
 
 /* ─── Changelog entries ─── */
-// Add new entries at the TOP. Bump LATEST_VERSION when deploying.
+// Bump APP_BUILD in src/lib/version.ts when deploying.
 
-export const LATEST_VERSION = "2026.03.16b";
+import { APP_BUILD } from "@/lib/version";
+export const LATEST_VERSION = APP_BUILD;
 
 interface ChangelogEntry {
     version: string;
@@ -21,6 +22,17 @@ interface ChangelogEntry {
 }
 
 const CHANGELOG: ChangelogEntry[] = [
+    {
+        version: "2026.03.16c",
+        date: "March 16, 2026",
+        title: "Trash, Referral Links & Version Tracking",
+        items: [
+            { icon: <Trash2 className="w-3.5 h-3.5" />, text: "Trash system — deleting an image moves it to Trash instead of permanent delete; restore anytime from the Trash tab", tag: "new" },
+            { icon: <Trash2 className="w-3.5 h-3.5" />, text: "Delete confirmation — 'Are you sure?' dialog before removing images prevents accidental loss", tag: "new" },
+            { icon: <Link2 className="w-3.5 h-3.5" />, text: "Share links now include your referral code — anyone who signs up from your shared art earns you credits", tag: "new" },
+            { icon: <Tag className="w-3.5 h-3.5" />, text: "Version number auto-updates across all UI surfaces from a single source of truth", tag: "improve" },
+        ],
+    },
     {
         version: "2026.03.16b",
         date: "March 16, 2026",

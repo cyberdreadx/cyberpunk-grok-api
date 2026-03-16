@@ -46,7 +46,7 @@ const DataRain: React.FC<DataRainProps> = ({ intensity = 20 }) => {
           style={{
             left: `${drop.x}%`,
             opacity: drop.opacity,
-            color: "hsl(180 100% 50%)",
+            color: "hsl(var(--primary))",
             animation: `data-rain-fall ${drop.speed}s linear ${drop.delay}s infinite`,
             writingMode: "vertical-rl",
             textOrientation: "upright",

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { APP_VERSION } from "@/lib/version";
 
 const statusMessages = [
   "NEURAL_LINK_ACTIVE",
@@ -11,6 +12,8 @@ const statusMessages = [
   "UPLINK: STABLE",
   "THREAT_LEVEL: NULL",
   "BANDWIDTH: ∞",
+  "GPU_TEMP: 67°C",
+  "RENDER_QUEUE: IDLE",
 ];
 
 const HudOverlay: React.FC = () => {
@@ -43,28 +46,32 @@ const HudOverlay: React.FC = () => {
   return (
     <>
       {/* Top-left HUD */}
-      <div className="fixed top-4 left-4 z-30 font-mono-share text-[9px] text-primary/30 space-y-1 hidden md:block">
+      <div className="fixed top-10 left-4 z-30 font-mono-share text-[9px] text-primary/20 space-y-1 hidden md:block">
         <div className="animate-flicker">[SYS] {statusMessages[currentStatus]}</div>
-        <div className="text-muted-foreground/20">PID: 0x4F7A // {time}</div>
+        <div className="text-muted-foreground/15">PID: 0x4F7A // {time}</div>
+        <div className="text-muted-foreground/10 mt-2">
+          {"─".repeat(18)}
+        </div>
       </div>
 
       {/* Top-right HUD */}
-      <div className="fixed top-4 right-4 z-30 font-mono-share text-[9px] text-right hidden md:block">
-        <div className="text-secondary/25 animate-pulse-glow">◆ xAI GATEWAY</div>
-        <div className="text-muted-foreground/20">PROTO: HTTPS/3</div>
+      <div className="fixed top-10 right-4 z-30 font-mono-share text-[9px] text-right hidden md:block">
+        <div className="text-secondary/20 animate-pulse-glow">◆ xAI GATEWAY</div>
+        <div className="text-muted-foreground/15">PROTO: HTTPS/3</div>
       </div>
 
       {/* Bottom-left coordinates */}
-      <div className="fixed bottom-4 left-4 z-30 font-mono-share text-[8px] text-muted-foreground/15 hidden md:block">
+      <div className="fixed bottom-4 left-4 z-30 font-mono-share text-[8px] text-muted-foreground/10 hidden md:block">
         <div>LAT: 37.7749°N</div>
         <div>LNG: 122.4194°W</div>
         <div>ALT: CLASSIFIED</div>
       </div>
 
       {/* Bottom-right version */}
-      <div className="fixed bottom-4 right-4 z-30 font-mono-share text-[8px] text-muted-foreground/15 hidden md:block">
-        <div>BUILD: 2.0.7-CYBER</div>
+      <div className="fixed bottom-4 right-4 z-30 font-mono-share text-[8px] text-muted-foreground/10 hidden md:block text-right">
+        <div>BUILD: {APP_VERSION}-CYBER</div>
         <div>KERNEL: GROK-NN</div>
+        <div className="text-primary/15 mt-1">{time}</div>
       </div>
     </>
   );

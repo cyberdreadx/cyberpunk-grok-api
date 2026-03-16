@@ -6,6 +6,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Shield, Eye } from "lucide-react";
+import { APP_VERSION } from "@/lib/version";
 
 type LegalType = "tos" | "privacy";
 
@@ -22,7 +23,7 @@ function TosContent() {
         <span className="text-primary">$</span> cat /sys/legal/terms_of_service.dat
         <br />
         <span className="text-muted-foreground/40">
-          {"// Last updated: 2026.02.16 // Protocol v3.0"}
+          {`// Last updated: 2026.03.16 // Protocol v${APP_VERSION}`}
         </span>
       </p>
 

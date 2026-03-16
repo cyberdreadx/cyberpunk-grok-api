@@ -68,14 +68,14 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, videoSettings, 
     : `${settings.aspectRatio} • ×${settings.count} • ${(settings.resolution || "1k").toUpperCase()}`;
 
   return (
-    <Collapsible>
+    <Collapsible className="terminal-block rounded-md overflow-hidden px-3 py-2">
       <CollapsibleTrigger className="flex items-center gap-2 w-full group">
-        <span className="font-mono-share text-primary/40 text-xs group-data-[state=open]:text-primary/60">❯</span>
+        <span className="font-mono-share text-primary/40 text-xs group-data-[state=open]:text-primary/60">▸</span>
         <Settings className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors group-data-[state=open]:text-primary" />
         <span className="font-mono-share text-[10px] tracking-widest text-muted-foreground group-hover:text-primary transition-colors group-data-[state=open]:text-primary">
           render_config
         </span>
-        <div className="h-px flex-1 bg-border/50" />
+        <div className="h-px flex-1 bg-primary/10" />
         <span className="font-mono-share text-[9px] text-muted-foreground/30">
           {summaryText}
         </span>

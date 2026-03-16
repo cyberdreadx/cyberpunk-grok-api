@@ -4,6 +4,7 @@ import {
   loadResults,
   deleteStoredResult,
   clearStoredResults,
+  moveResultToFolder,
   migrateFromLocalStorage,
 } from "@/lib/storage";
 import { apiFetch, calculateCreditCost, backendEnabled } from "@/lib/api";
@@ -968,9 +969,15 @@ export function useGrokApi() {
   }, []);
 
   const deleteResult = useCallback(async (id: string) => {
-    setResults(prev => prev.filter(r => r.id !== id));
-    try { await deleteStoredResult(id); } catch { /* best-effort */ }
-  }, []);
+    const item = results.find(r => r.id === id);
+    if (item?.folderId === "__trash") {
+      setResults(prev => prev.filter(r => r.id !== id));
+      try { await deleteStoredResult(id); } catch { /* best-effort */ }
+    } else {
+      setResults(prev => prev.map(r => r.id === id ? { ...r, folderId: "__trash" } : r));
+      try { await moveResultToFolder(id, "__trash"); } catch { /* best-effort */ }
+    }
+  }, [results]);
 
   /** Update a result's folderId in React state (IndexedDB update is handled separately). */
   const updateResultFolder = useCallback((resultId: string, folderId: string | null) => {

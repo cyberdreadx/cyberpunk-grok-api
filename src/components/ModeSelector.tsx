@@ -9,18 +9,18 @@ interface ModeSelectorProps {
   isAuthenticated?: boolean;
 }
 
-const modes: { id: GrokMode; label: string; icon: React.ElementType; description: string }[] = [
-  { id: "text-to-image", label: "GENERATE", icon: Image, description: "Text → Image" },
-  { id: "edit-image", label: "MODIFY", icon: Pencil, description: "Image Edit" },
-  { id: "text-to-video", label: "RENDER", icon: Video, description: "Text → Video" },
-  { id: "image-to-video", label: "ANIMATE", icon: Film, description: "Image → Video" },
-  { id: "edit-video", label: "REMIX", icon: Scissors, description: "Video Edit" },
+const modes: { id: GrokMode; label: string; icon: React.ElementType; description: string; shortcut: string }[] = [
+  { id: "text-to-image", label: "GENERATE", icon: Image, description: "Text → Image", shortcut: "01" },
+  { id: "edit-image", label: "MODIFY", icon: Pencil, description: "Image Edit", shortcut: "02" },
+  { id: "text-to-video", label: "RENDER", icon: Video, description: "Text → Video", shortcut: "03" },
+  { id: "image-to-video", label: "ANIMATE", icon: Film, description: "Image → Video", shortcut: "04" },
+  { id: "edit-video", label: "REMIX", icon: Scissors, description: "Video Edit", shortcut: "05" },
 ];
 
 const ModeSelector: React.FC<ModeSelectorProps> = ({ activeMode, onModeChange, isAuthenticated }) => {
   return (
     <>
-      {/* ── Mobile: horizontal scroll pills ── */}
+      {/* Mobile: horizontal scroll pills */}
       <div className="flex sm:hidden gap-2 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
         {modes.map((mode) => {
           const isActive = activeMode === mode.id;
@@ -30,10 +30,10 @@ const ModeSelector: React.FC<ModeSelectorProps> = ({ activeMode, onModeChange, i
               key={mode.id}
               onClick={() => onModeChange(mode.id)}
               className={`
-                flex items-center gap-1.5 px-3 py-2 rounded-full border whitespace-nowrap transition-all duration-200 shrink-0
+                flex items-center gap-1.5 px-3 py-2 rounded border whitespace-nowrap transition-all duration-200 shrink-0
                 ${isActive
-                  ? "border-primary bg-primary/15 shadow-[0_0_8px_rgba(var(--primary-rgb),0.2)]"
-                  : "border-border/60 bg-card/50 active:bg-card"
+                  ? "border-primary/50 bg-primary/10 shadow-[0_0_12px_hsl(var(--primary)/0.15)]"
+                  : "border-border/40 bg-card/50 active:bg-card"
                 }
               `}
             >
@@ -47,16 +47,16 @@ const ModeSelector: React.FC<ModeSelectorProps> = ({ activeMode, onModeChange, i
         {isAuthenticated && (
           <a
             href="/characters"
-            className="flex items-center gap-1.5 px-3 py-2 rounded-full border whitespace-nowrap transition-all duration-200 shrink-0 border-purple-500/40 bg-card/50 active:bg-purple-500/10"
+            className="flex items-center gap-1.5 px-3 py-2 rounded border whitespace-nowrap transition-all duration-200 shrink-0 border-secondary/30 bg-card/50 active:bg-secondary/10"
           >
-            <Users className={`w-3.5 h-3.5 text-purple-400/70`} />
-            <span className="font-orbitron text-[9px] tracking-wider text-purple-400/80">CHARS</span>
+            <Users className="w-3.5 h-3.5 text-secondary/70" />
+            <span className="font-orbitron text-[9px] tracking-wider text-secondary/80">CHARS</span>
           </a>
         )}
       </div>
 
-      {/* ── Desktop: card grid ── */}
-      <div className="hidden sm:grid grid-cols-3 lg:grid-cols-6 gap-3">
+      {/* Desktop: terminal-style grid */}
+      <div className="hidden sm:grid grid-cols-3 lg:grid-cols-6 gap-2">
         {modes.map((mode) => {
           const isActive = activeMode === mode.id;
           const Icon = mode.icon;
@@ -65,35 +65,43 @@ const ModeSelector: React.FC<ModeSelectorProps> = ({ activeMode, onModeChange, i
               key={mode.id}
               onClick={() => onModeChange(mode.id)}
               className={`
-                relative group p-4 border rounded transition-all duration-300 text-left
+                relative group p-3 border rounded transition-all duration-300 text-left overflow-hidden
                 ${isActive
-                  ? "border-primary neon-border bg-primary/5"
-                  : "border-border hover:border-primary/50 bg-card/50 hover:bg-card"
+                  ? "border-primary/50 bg-primary/5 shadow-[0_0_15px_hsl(var(--primary)/0.1)]"
+                  : "border-border/40 hover:border-primary/30 bg-card/30 hover:bg-card/60"
                 }
               `}
             >
-              {isActive && (
-                <div className="absolute top-0 left-0 right-0 h-[2px] bg-primary animate-pulse-glow" />
-              )}
+              {/* Top accent line */}
+              <div
+                className={`absolute top-0 left-0 right-0 h-[2px] transition-all duration-300 ${
+                  isActive ? "bg-primary shadow-[0_0_8px_hsl(var(--primary)/0.5)]" : "bg-transparent group-hover:bg-primary/30"
+                }`}
+              />
 
-              <div className="flex items-center gap-2 mb-2">
-                <span className={`font-mono-share text-[10px] ${isActive ? "text-primary/60" : "text-muted-foreground/30"}`}>
-                  {isActive ? "❯" : "$"}
+              {/* Index number */}
+              <span className={`absolute top-2 right-2 font-mono-share text-[8px] ${isActive ? "text-primary/40" : "text-muted-foreground/15"}`}>
+                {mode.shortcut}
+              </span>
+
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className={`font-mono-share text-[10px] ${isActive ? "text-primary/60" : "text-muted-foreground/20"}`}>
+                  {isActive ? "▸" : "$"}
                 </span>
                 <Icon
                   className={`w-4 h-4 transition-colors ${
-                    isActive ? "text-primary" : "text-muted-foreground group-hover:text-primary/70"
+                    isActive ? "text-primary" : "text-muted-foreground/50 group-hover:text-primary/60"
                   }`}
                 />
               </div>
               <div
-                className={`font-orbitron text-xs font-bold tracking-wider ${
-                  isActive ? "neon-text-cyan" : "text-foreground"
+                className={`font-orbitron text-[10px] font-bold tracking-wider ${
+                  isActive ? "neon-text-cyan" : "text-foreground/80"
                 }`}
               >
                 {mode.label}
               </div>
-              <div className="font-mono-share text-[10px] text-muted-foreground mt-1">
+              <div className="font-mono-share text-[9px] text-muted-foreground/40 mt-0.5">
                 {mode.description}
               </div>
             </button>
@@ -103,16 +111,18 @@ const ModeSelector: React.FC<ModeSelectorProps> = ({ activeMode, onModeChange, i
         {isAuthenticated && (
           <Link
             to="/characters"
-            className="relative group p-4 border rounded transition-all duration-300 text-left border-border hover:border-purple-500/50 bg-card/50 hover:bg-card"
+            className="relative group p-3 border rounded transition-all duration-300 text-left overflow-hidden border-border/40 hover:border-secondary/30 bg-card/30 hover:bg-card/60"
           >
-            <div className="flex items-center gap-2 mb-2">
-              <span className="font-mono-share text-[10px] text-muted-foreground/30">$</span>
-              <Users className="w-4 h-4 transition-colors text-muted-foreground group-hover:text-purple-400" />
+            <div className="absolute top-0 left-0 right-0 h-[2px] bg-transparent group-hover:bg-secondary/30 transition-all" />
+            <span className="absolute top-2 right-2 font-mono-share text-[8px] text-muted-foreground/15">06</span>
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="font-mono-share text-[10px] text-muted-foreground/20">$</span>
+              <Users className="w-4 h-4 transition-colors text-muted-foreground/50 group-hover:text-secondary/70" />
             </div>
-            <div className="font-orbitron text-xs font-bold tracking-wider text-foreground group-hover:text-purple-400 transition-colors">
+            <div className="font-orbitron text-[10px] font-bold tracking-wider text-foreground/80 group-hover:text-secondary transition-colors">
               CHARACTERS
             </div>
-            <div className="font-mono-share text-[10px] text-muted-foreground mt-1">
+            <div className="font-mono-share text-[9px] text-muted-foreground/40 mt-0.5">
               AI Chat
             </div>
           </Link>

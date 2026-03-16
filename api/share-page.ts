@@ -208,6 +208,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const baseUrl = siteUrl.replace(/\/$/, "");
   const host = baseUrl.replace(/^https?:\/\//, "");
 
+  const refCode = typeof req.query.ref === "string" ? req.query.ref.replace(/[^a-zA-Z0-9]/g, "").slice(0, 20) : "";
+  const refSuffix = refCode ? `?ref=${refCode}` : "";
+
   const shareId = (req.query.id as string) || "";
   if (!shareId || !/^[a-zA-Z0-9_-]{4,16}$/.test(shareId)) {
     res.setHeader("Content-Type", "text/html; charset=utf-8");
@@ -244,7 +247,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ? `${escapeHtml(truncatedPrompt)} — Try this prompt or create your own AI art at Grok Runner.`
       : "Create stunning AI images, edit photos, and generate videos. Powered by xAI.";
 
-    const tryPromptUrl = `${baseUrl}/?prompt=${encodeURIComponent(meta.prompt || "")}`;
+    const tryPromptUrl = `${baseUrl}/?prompt=${encodeURIComponent(meta.prompt || "")}${refCode ? `&ref=${refCode}` : ""}`;
 
     const html = `<!DOCTYPE html>
 <html lang="en">
@@ -286,8 +289,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   <!-- Header -->
   <div class="header">
     <div class="header-inner">
-      <a href="${baseUrl}/" class="brand">GROK_RUNNER</a>
-      <a href="${baseUrl}/" class="header-cta">
+      <a href="${baseUrl}/${refSuffix}" class="brand">GROK_RUNNER</a>
+      <a href="${baseUrl}/${refSuffix}" class="header-cta">
         ✦ CREATE YOUR OWN
       </a>
     </div>
@@ -321,7 +324,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           TRY THIS PROMPT
         </a>
         ` : ""}
-        <a href="${baseUrl}/" class="cta-secondary">
+        <a href="${baseUrl}/${refSuffix}" class="cta-secondary">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.5 5.5H19l-4.5 3.5 1.5 5.5-4.5-3.5L7 17l1.5-5.5L4 8h5.5z"/></svg>
           CREATE YOUR OWN
         </a>

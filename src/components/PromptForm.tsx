@@ -494,72 +494,89 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
           </p>
         </div>
       )}
-      <div className="space-y-2">
-        <label className="font-mono-share text-[10px] tracking-wider text-muted-foreground flex items-center gap-1.5">
-          <span className="text-primary/50">❯</span>
-          prompt
-          <span className="inline-block w-1.5 h-3 bg-primary/40 animate-pulse align-middle" />
-        </label>
-        <div className="relative">
-          <Textarea
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={placeholders[mode]}
-            rows={4}
-            className="bg-input border-border font-rajdhani text-base text-foreground placeholder:text-muted-foreground focus:neon-border resize-none pr-14"
-          />
-          <div className="absolute bottom-3 right-3 flex items-center gap-1.5">
-            <Button
-              type="button"
-              onClick={enhancePrompt}
-              disabled={enhancing || !prompt.trim() || isLoading}
-              size="icon"
-              className="bg-cyan-600/80 text-white hover:bg-cyan-500 disabled:opacity-30 transition-all"
-              title="✨ Enhance prompt with Grok AI"
-            >
-              {enhancing ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Sparkles className="w-4 h-4" />
+      {/* Terminal prompt block */}
+      <div className="terminal-block rounded-md overflow-hidden">
+        {/* Terminal title bar */}
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/5 border-b border-primary/15">
+          <div className="flex items-center gap-1">
+            <div className="w-2 h-2 rounded-full bg-destructive/60" />
+            <div className="w-2 h-2 rounded-full bg-neon-yellow/60" />
+            <div className="w-2 h-2 rounded-full bg-primary/60" />
+          </div>
+          <span className="font-mono-share text-[9px] text-muted-foreground/40 flex-1 text-center">
+            prompt@grok:~/{mode.replace(/-/g, "_")}
+          </span>
+          <span className="font-mono-share text-[9px] text-muted-foreground/30">{prompt.length} chars</span>
+        </div>
+
+        {/* Input area */}
+        <div className="relative p-3">
+          <div className="flex items-start gap-2">
+            <span className="font-mono-share text-sm text-primary/70 mt-2 select-none shrink-0">
+              {isLoading ? "⟳" : "❯"}
+            </span>
+            <Textarea
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={placeholders[mode]}
+              rows={3}
+              className="flex-1 bg-transparent border-0 font-jetbrains text-sm text-foreground placeholder:text-muted-foreground/30 focus:ring-0 focus:outline-none resize-none p-0 pt-1.5 shadow-none focus-visible:ring-0"
+            />
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex items-center justify-between mt-2 pt-2 border-t border-primary/10">
+            <div className="flex items-center gap-2 font-mono-share text-[9px] text-muted-foreground/40">
+              {needsImage && (
+                <span className={hasImage ? "text-primary/60" : "text-destructive/50"}>
+                  {hasImage ? `[IMG_LOADED${extraImages.length > 0 ? ` +${extraImages.length}` : ""}]` : "[IMG_REQUIRED]"}
+                </span>
               )}
-            </Button>
-            <Button
-              type="submit"
-              disabled={isLoading || !prompt.trim() || (needsImage && !imageUrl.trim()) || (needsVideo && !imageUrl.trim())}
-              size="icon"
-              className="bg-primary text-primary-foreground hover:bg-primary/80 disabled:opacity-30 transition-all"
-              title="Submit (Ctrl+Enter)"
-            >
-              {isLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Send className="w-4 h-4" />
+              {needsVideo && (
+                <span className={imageUrl.trim() ? "text-primary/60" : "text-destructive/50"}>
+                  {imageUrl.trim() ? "[VID_LOADED]" : "[VID_REQUIRED]"}
+                </span>
               )}
-            </Button>
+              <span className={isLoading ? "text-secondary" : "text-primary/40"}>
+                {isLoading ? "PROCESSING" : "READY"}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <span className="hidden sm:inline font-mono-share text-[8px] text-muted-foreground/20 mr-1">Ctrl+Enter</span>
+              <Button
+                type="button"
+                onClick={enhancePrompt}
+                disabled={enhancing || !prompt.trim() || isLoading}
+                size="sm"
+                variant="ghost"
+                className="h-7 px-2 font-mono-share text-[10px] text-primary/60 hover:text-primary hover:bg-primary/10 disabled:opacity-30 gap-1"
+                title="Enhance prompt with Grok AI"
+              >
+                {enhancing ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <Sparkles className="w-3 h-3" />
+                )}
+                <span className="hidden sm:inline">ENHANCE</span>
+              </Button>
+              <Button
+                type="submit"
+                disabled={isLoading || !prompt.trim() || (needsImage && !imageUrl.trim()) || (needsVideo && !imageUrl.trim())}
+                size="sm"
+                className="h-7 px-3 font-orbitron text-[10px] bg-primary text-primary-foreground hover:bg-primary/80 disabled:opacity-30 gap-1 tracking-wider"
+              >
+                {isLoading ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <Send className="w-3 h-3" />
+                )}
+                EXECUTE
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
-
-      {/* Status bar */}
-      <div className="flex items-center justify-between text-[8px] sm:text-[10px] font-mono-share text-muted-foreground/40 border-t border-border/30 pt-2 gap-2 flex-wrap">
-        <span><span className="text-primary/30">mode</span>={mode.toUpperCase().replace(/-/g, "_")}</span>
-        {needsImage && (
-          <span className={hasImage ? "text-primary/50" : "text-destructive/50"}>
-            {hasImage ? `◆ IMG_LOADED${extraImages.length > 0 ? ` +${extraImages.length}` : ""}` : "○ IMG_REQUIRED"}
-          </span>
-        )}
-        {needsVideo && (
-          <span className={imageUrl.trim() ? "text-primary/50" : "text-destructive/50"}>
-            {imageUrl.trim() ? "◆ VID_LOADED" : "○ VID_REQUIRED"}
-          </span>
-        )}
-        {mode !== "text-to-video" && mode !== "image-to-video" && mode !== "edit-video" && (
-          <span className="hidden sm:inline">×{settings.count}</span>
-        )}
-        <span>{isLoading ? "⟳ PROCESSING..." : "● READY"}</span>
-        <span className="hidden sm:inline">{prompt.length} chars</span>
-        <span className="hidden sm:inline text-muted-foreground/20">Ctrl+Enter</span>
       </div>
     </form>
   );

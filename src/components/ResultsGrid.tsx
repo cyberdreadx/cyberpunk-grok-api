@@ -850,6 +850,20 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
 
   const isTrashView = selectedFilter === "__trash";
 
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
+  const confirmDelete = useCallback((id: string) => {
+    setDeleteConfirmId(id);
+  }, []);
+
+  const executeDelete = useCallback(() => {
+    if (deleteConfirmId) {
+      onDelete(deleteConfirmId);
+      if (expandedId === deleteConfirmId) setExpandedId(null);
+      setDeleteConfirmId(null);
+    }
+  }, [deleteConfirmId, onDelete, expandedId]);
+
   const exitSelectMode = useCallback(() => {
     setSelectMode(false);
     setSelectedIds(new Set());
@@ -1032,8 +1046,23 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
   }, [onMoveToFolder]);
 
   const [sharingId, setSharingId] = useState<string | null>(null);
+  const refCodeRef = useRef<string | null>(null);
 
-  /** Upload media to R2 and copy share link to clipboard */
+  useEffect(() => {
+    const token = localStorage.getItem("auth-token");
+    if (!token) return;
+    const apiBase = (import.meta.env.VITE_API_URL as string) || "/api";
+    fetch(`${apiBase}/referral`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ action: "get-code" }),
+    })
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (d?.code) refCodeRef.current = d.code; })
+      .catch(() => {});
+  }, []);
+
+  /** Upload media to Blob and copy share link to clipboard */
   const handleShare = useCallback(async (result: GrokResult) => {
     setSharingId(result.id);
     try {
@@ -1062,7 +1091,10 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
         throw new Error(errData.error || `Upload failed (${res.status})`);
       }
       const data = await res.json();
-      await navigator.clipboard.writeText(data.shareUrl);
+      const shareLink = refCodeRef.current
+        ? `${data.shareUrl}?ref=${refCodeRef.current}`
+        : data.shareUrl;
+      await navigator.clipboard.writeText(shareLink);
       toast.success("Share link copied to clipboard!");
     } catch {
       toast.error("Failed to create share link");
@@ -1387,6 +1419,32 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Single-item delete confirmation */}
+        <AlertDialog open={!!deleteConfirmId} onOpenChange={(open) => { if (!open) setDeleteConfirmId(null); }}>
+          <AlertDialogContent className="bg-card border-destructive/40 sm:max-w-sm shadow-[0_0_30px_rgba(255,0,0,0.15)]">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="font-orbitron text-sm tracking-wider text-destructive flex items-center gap-2">
+                <Trash2 className="w-4 h-4" />
+                {isTrashView ? "DELETE_FOREVER" : "CONFIRM_DELETE"}
+              </AlertDialogTitle>
+              <AlertDialogDescription className="font-mono-share text-[11px] text-muted-foreground">
+                {isTrashView
+                  ? "This will permanently delete this item. It cannot be recovered."
+                  : "This item will be moved to trash. You can restore it later from the Trash tab."}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel className="font-orbitron text-[10px]">CANCEL</AlertDialogCancel>
+              <AlertDialogAction
+                className="font-orbitron text-[10px] bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                onClick={executeDelete}
+              >
+                {isTrashView ? "DELETE FOREVER" : "MOVE TO TRASH"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
 
       {/* Share CTA — shown after generation */}
@@ -1596,7 +1654,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
                 size="icon"
                 variant="ghost"
                 className="text-destructive hover:bg-destructive/20 h-9 w-9"
-                onClick={() => currentResult && onDelete(currentResult.id)}
+                onClick={() => currentResult && confirmDelete(currentResult.id)}
                 title="Delete this item"
               >
                 <Trash2 className="w-4 h-4" />
@@ -1747,7 +1805,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
                 size="icon"
                 variant="ghost"
                 className="text-destructive hover:bg-destructive/20"
-                onClick={() => onDelete(result.id)}
+                onClick={() => confirmDelete(result.id)}
                 title="Delete this item"
               >
                 <Trash2 className="w-4 h-4" />
@@ -1967,7 +2025,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
                   size="sm"
                   variant="outline"
                   className="text-destructive border-destructive/30 hover:bg-destructive/10 text-xs gap-1.5"
-                  onClick={() => { onDelete(expandedResult.id); setExpandedId(null); }}
+                  onClick={() => confirmDelete(expandedResult.id)}
                 >
                   <Trash2 className="w-3 h-3" />
                   Delete

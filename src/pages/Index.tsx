@@ -18,6 +18,7 @@ import CreditDisplay from "@/components/CreditDisplay";
 import LegalDialog from "@/components/LegalDialog";
 import HowToUseDialog from "@/components/HowToUseDialog";
 import ChangelogDialog, { hasUnseenChangelog } from "@/components/ChangelogDialog";
+import ThemePicker from "@/components/ThemePicker";
 import { useGrokApi, urlToBase64, getImageDimensions, type GrokMode, type GenerationSettings, type VideoSettings, type ApiMode, type VideoLoraEntry, type ComfyJob, DEFAULT_SETTINGS, DEFAULT_VIDEO_SETTINGS } from "@/hooks/useGrokApi";
 import { useAuth } from "@/hooks/useAuth";
 import { useCredits } from "@/hooks/useCredits";
@@ -25,6 +26,7 @@ import { useFolders } from "@/hooks/useFolders";
 import { usePromptHistory } from "@/hooks/usePromptHistory";
 import { useToast } from "@/hooks/use-toast";
 import { calculateCreditCost, type CreditMode } from "@/lib/api";
+import { APP_VERSION } from "@/lib/version";
 
 const ANNOUNCEMENTS: { id: string; message: string; type?: "info" | "warning" | "success" }[] = [
   { id: "gltch-wan-launch", message: "GLTCH Animate now defaults to a simpler WAN 2.2 stable mode for more reliable results.", type: "info" },
@@ -736,7 +738,7 @@ const Index = () => {
             glitchIntensity="medium"
           />
           <p className="font-mono-share text-xs sm:text-sm text-muted-foreground animate-flicker">
-            <span className="text-primary/50">$</span> xAI Neural Rendering Interface // v3.0
+            <span className="text-primary/50">$</span> xAI Neural Rendering Interface // v{APP_VERSION}
             <span className="inline-block w-2 h-4 bg-primary/70 ml-1 animate-pulse align-middle" />
           </p>
 
@@ -823,6 +825,9 @@ const Index = () => {
                 {adminTestCredits ? "TEST CR: ON" : "TEST CR: OFF"}
               </button>
             )}
+
+            {/* Theme Picker */}
+            <ThemePicker />
 
             {/* Auth: login/logout */}
             {auth.enabled && (

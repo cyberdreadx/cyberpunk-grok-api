@@ -33,7 +33,7 @@ const GlitchText: React.FC<GlitchTextProps> = ({
           <span
             className="absolute inset-0 z-20"
             style={{
-              color: "hsl(180 100% 50%)",
+              color: "hsl(var(--primary))",
               clipPath: "inset(20% 0 60% 0)",
               transform: "translateX(-2px)",
               opacity: 0.8,
@@ -45,7 +45,7 @@ const GlitchText: React.FC<GlitchTextProps> = ({
           <span
             className="absolute inset-0 z-20"
             style={{
-              color: "hsl(300 100% 60%)",
+              color: "hsl(var(--secondary))",
               clipPath: "inset(50% 0 20% 0)",
               transform: "translateX(2px)",
               opacity: 0.8,
