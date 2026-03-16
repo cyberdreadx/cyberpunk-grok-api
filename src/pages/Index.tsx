@@ -27,7 +27,7 @@ import { useToast } from "@/hooks/use-toast";
 import { calculateCreditCost, type CreditMode } from "@/lib/api";
 
 const ANNOUNCEMENTS: { id: string; message: string; type?: "info" | "warning" | "success" }[] = [
-  { id: "gltch-wan-launch", message: "NEW: GLTCH Animate v2 — WAN 2.2 SmoothMix Lightning I2V + Text-to-Video + Start/End Frame interpolation.", type: "info" },
+  { id: "gltch-wan-launch", message: "GLTCH Animate now defaults to a simpler WAN 2.2 stable mode for more reliable results.", type: "info" },
 ];
 
 const SFW_LORA_KEYWORDS = ["skin", "angle"];
@@ -542,7 +542,7 @@ const Index = () => {
               frameCount: comfyFrameCount,
               steps: 4, cfg: 1,
               seed: parsedSeedWan,
-              useRife: true, useUpscale: true,
+              useRife: false, useUpscale: false, simpleWan: true,
               workflow: "gltch-wan",
               resolution: 832, shift: 8,
               videoLora: comfyVideoLora !== "none" ? comfyVideoLora : undefined,
@@ -560,7 +560,7 @@ const Index = () => {
               frameCount: comfyFrameCount,
               steps: 4, cfg: 1,
               resolution: 832, shift: 8,
-              useUpscale: true,
+              useRife: false, useUpscale: false, simpleWan: true,
               videoLora: comfyVideoLora !== "none" ? comfyVideoLora : undefined,
               videoLoraStrength: comfyVideoLoraStrength,
               videoLoraPass: comfyVideoLoraPass,
@@ -1238,7 +1238,7 @@ const Index = () => {
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-500/5 border border-purple-500/20 rounded">
                       <div className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
                       <span className="font-mono-share text-[9px] text-purple-400/70">
-                        WAN 2.2 SmoothMix — HD 64fps
+                        WAN 2.2 advanced mode — heavier post-processing
                       </span>
                     </div>
                     <div>
@@ -1331,13 +1331,10 @@ const Index = () => {
                 <div className="grid grid-cols-2 gap-2">
                   <button type="button" onClick={() => setAnimateEngine("gltch")}
                     className={`p-2.5 border rounded text-left transition-all duration-200 ${animateEngine === "gltch" ? "border-secondary neon-border bg-secondary/5" : "border-border bg-card/30 hover:border-secondary/40"}`}>
-                    <div className={`font-orbitron text-[11px] flex items-center gap-1.5 ${animateEngine === "gltch" ? "text-secondary" : "text-foreground"}`}>
-                      GLTCH
-                      <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-red-400/80 border-red-500/30 bg-red-500/10 animate-pulse">RAW</span>
-                    </div>
+                    <div className={`font-orbitron text-[11px] ${animateEngine === "gltch" ? "text-secondary" : "text-foreground"}`}>GLTCH</div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
-                      <span>WAN 2.2 SmoothMix I2V / T2V</span>
-                      <span className={animateEngine === "gltch" ? "text-secondary/70" : "text-muted-foreground/50"}>15 cr</span>
+                      <span>WAN 2.2 Stable I2V / T2V</span>
+                      <span className={animateEngine === "gltch" ? "text-secondary/70" : "text-muted-foreground/50"}>5 cr</span>
                     </div>
                   </button>
                   <button type="button" onClick={() => setAnimateEngine("grok")}
@@ -1357,7 +1354,7 @@ const Index = () => {
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-secondary/5 border border-secondary/20 rounded">
                       <div className="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse" />
                       <span className="font-mono-share text-[9px] text-secondary/70">
-                        WAN 2.2 SmoothMix — Enhanced NSFW Lightning Edition
+                        Native WAN baseline — simpler, cheaper, and more reliable
                       </span>
                     </div>
                     <div>

@@ -1295,6 +1295,7 @@ export function useGrokApi() {
     seed?: number;
     useRife?: boolean;
     useUpscale?: boolean;
+    simpleWan?: boolean;
     videoLora?: string;
     videoLoraStrength?: number;
     videoLoraPass?: "high" | "low" | "both";
@@ -1346,6 +1347,7 @@ export function useGrokApi() {
           seed: params.seed,
           useRife: params.useRife ?? true,
           useUpscale: params.useUpscale ?? false,
+          simpleWan: params.simpleWan ?? false,
           videoLora: params.videoLora,
           videoLoraStrength: params.videoLoraStrength,
           videoLoraPass: params.videoLoraPass,
@@ -1398,6 +1400,7 @@ export function useGrokApi() {
     shift?: number;
     useRife?: boolean;
     useUpscale?: boolean;
+    simpleWan?: boolean;
     videoLora?: string;
     videoLoraStrength?: number;
     videoLoraPass?: "high" | "low" | "both";
@@ -1445,7 +1448,7 @@ export function useGrokApi() {
 
         // Phase 2: Animate with GLTCH WAN I2V
         setComfyJobs(prev => prev.map(j => j.id === jobId
-          ? { ...j, phase: "Rendering video (WAN 2.2 SmoothMix)..." }
+          ? { ...j, phase: "Rendering video (WAN 2.2 stable mode)..." }
           : j
         ));
         const vidResult = await comfySubmitAndPoll({
@@ -1463,6 +1466,7 @@ export function useGrokApi() {
           shift: params.shift,
           useRife: params.useRife ?? true,
           useUpscale: params.useUpscale ?? false,
+          simpleWan: params.simpleWan ?? false,
           videoLora: params.videoLora,
           videoLoraStrength: params.videoLoraStrength,
           videoLoraPass: params.videoLoraPass,
