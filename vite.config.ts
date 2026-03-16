@@ -20,9 +20,9 @@ export default defineConfig(({ mode }) => ({
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "pwa-192.png", "pwa-512.png"],
       manifest: {
-        name: "GROK_IMAGINE — Neural Rendering Interface",
-        short_name: "GROK_IMAGINE",
-        description: "Cyberpunk xAI Grok Imagine API interface — generate images & video privately",
+        name: "GROK_RUNNER — Neural Rendering Interface",
+        short_name: "GROK_RUNNER",
+        description: "AI image & video generation with a cyberpunk twist — powered by xAI",
         theme_color: "#00ffff",
         background_color: "#0a0a14",
         display: "standalone",

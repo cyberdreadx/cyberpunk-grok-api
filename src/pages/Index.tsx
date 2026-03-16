@@ -19,6 +19,7 @@ import LegalDialog from "@/components/LegalDialog";
 import HowToUseDialog from "@/components/HowToUseDialog";
 import ChangelogDialog, { hasUnseenChangelog } from "@/components/ChangelogDialog";
 import ThemePicker from "@/components/ThemePicker";
+import PwaInstallBanner from "@/components/PwaInstallBanner";
 import { useGrokApi, urlToBase64, getImageDimensions, type GrokMode, type GenerationSettings, type VideoSettings, type ApiMode, type VideoLoraEntry, type ComfyJob, DEFAULT_SETTINGS, DEFAULT_VIDEO_SETTINGS } from "@/hooks/useGrokApi";
 import { useAuth } from "@/hooks/useAuth";
 import { useCredits } from "@/hooks/useCredits";
@@ -724,8 +725,8 @@ const Index = () => {
       <div className="max-w-5xl mx-auto px-3 sm:px-4 py-4 sm:py-8 pb-24 sm:pb-8 space-y-4 sm:space-y-6">
         {/* Header with Orb */}
         <header className="text-center space-y-2 animate-slide-up">
-          {/* Grok Orb — lazy-loaded (Three.js) */}
-          <div className="w-20 h-20 sm:w-48 sm:h-48 md:w-64 md:h-64 mx-auto">
+          {/* Grok Orb — hidden on mobile (shown in loading state instead), lazy-loaded */}
+          <div className="hidden sm:block sm:w-48 sm:h-48 md:w-64 md:h-64 mx-auto">
             <Suspense fallback={<div className="w-full h-full rounded-full bg-primary/5 animate-pulse" />}>
               <GrokOrb isGenerating={isLoading} />
             </Suspense>
@@ -1831,6 +1832,9 @@ const Index = () => {
         <LegalDialog type="tos" open={tosOpen} onOpenChange={setTosOpen} />
         <LegalDialog type="privacy" open={privacyOpen} onOpenChange={setPrivacyOpen} />
       </div>
+
+      {/* PWA install prompt (mobile only) */}
+      <PwaInstallBanner />
 
       {/* Mobile bottom navigation */}
       <MobileBottomNav

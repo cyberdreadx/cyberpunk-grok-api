@@ -1,4 +1,6 @@
-import React, { useState, useCallback, useRef, useEffect } from "react";
+import React, { useState, useCallback, useRef, useEffect, Suspense } from "react";
+
+const GrokOrb = React.lazy(() => import("@/components/GrokOrb"));
 import { Download, Maximize2, X, Trash2, ExternalLink, ChevronLeft, ChevronRight, Pencil, Film, Copy, Check, FolderPlus, FolderOpen, MoreVertical, FolderInput, Lock, LockOpen, ShieldCheck, Eye, EyeOff, ChevronDown, Sparkles, Archive, Loader2, Link2, CheckSquare, Square, ListChecks, RotateCcw, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -1495,15 +1497,22 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
       {/* Share CTA — shown after generation */}
       <ShareCTA visible={showShareCTA} onDismiss={() => setShareCTADismissed(true)} />
 
-      {/* Loading skeleton with elapsed timer — ComfyUI-style polished status */}
+      {/* Loading state */}
       {isLoading && (
         <div className={`border rounded p-1 ${loadingPhase ? "border-purple-500/40 shadow-[0_0_12px_rgba(168,85,247,0.15)]" : "border-primary/30"} animate-pulse-glow`}>
-          <div className="aspect-square bg-muted rounded flex flex-col items-center justify-center gap-3 relative overflow-hidden">
+          <div className="aspect-square sm:aspect-auto sm:h-auto bg-muted rounded flex flex-col items-center justify-center gap-3 relative overflow-hidden py-8 sm:py-12">
             {/* Animated background gradient */}
             <div className="absolute inset-0 bg-gradient-to-b from-transparent via-purple-500/5 to-transparent animate-pulse" />
 
-            {/* Status indicator */}
-            <div className="flex items-center gap-2">
+            {/* Mobile: Full orb animation (finally visible!) */}
+            <div className="sm:hidden w-48 h-48 relative">
+              <Suspense fallback={<div className="w-full h-full rounded-full bg-primary/10 animate-pulse" />}>
+                <GrokOrb isGenerating={true} />
+              </Suspense>
+            </div>
+
+            {/* Desktop: compact status indicator */}
+            <div className="hidden sm:flex items-center gap-2">
               <div className={`w-2 h-2 rounded-full animate-pulse ${loadingPhase ? "bg-cyan-400" : "bg-primary"}`} />
               <span className={`font-orbitron text-[10px] tracking-widest uppercase ${loadingPhase ? "text-cyan-400" : "text-primary"}`}>
                 {loadingPhase?.includes("start frame") ? "PHASE 1" : loadingPhase?.includes("video") || loadingPhase?.includes("Rendering") ? "RENDERING" : "GENERATING"}
