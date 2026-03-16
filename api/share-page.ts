@@ -216,7 +216,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const { list } = await import("@vercel/blob");
-    const { blobs } = await list({ prefix: `shares/${shareId}.json` });
+    const blobToken = process.env.BLOB_READ_WRITE_TOKEN || process.env.grokrun_READ_WRITE_TOKEN || "";
+    const { blobs } = await list({ prefix: `shares/${shareId}.json`, token: blobToken });
 
     if (blobs.length === 0) {
       res.setHeader("Content-Type", "text/html; charset=utf-8");

@@ -25,11 +25,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const contentType = mediaType.startsWith("video") ? "video/mp4" : mediaType.startsWith("image/") ? mediaType : "image/png";
 
       const { put } = await import("@vercel/blob");
+      const token = process.env.BLOB_READ_WRITE_TOKEN || process.env.grokrun_READ_WRITE_TOKEN || "";
+      if (!token) {
+        return res.status(503).json({ error: "Blob storage not configured" });
+      }
 
       const mediaBlob = await put(`shares/${shareId}.${ext}`, buffer, {
         access: "public",
         contentType,
         addRandomSuffix: false,
+        token,
       });
 
       const metadata = JSON.stringify({
@@ -43,6 +48,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         access: "public",
         contentType: "application/json",
         addRandomSuffix: false,
+        token,
       });
 
       const host = req.headers.host || "grokrunner.gltch.app";
@@ -67,7 +73,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       const { list } = await import("@vercel/blob");
-      const { blobs } = await list({ prefix: `shares/${shareId}.json` });
+      const blobToken = process.env.BLOB_READ_WRITE_TOKEN || process.env.grokrun_READ_WRITE_TOKEN || "";
+      const { blobs } = await list({ prefix: `shares/${shareId}.json`, token: blobToken });
 
       if (blobs.length === 0) {
         return res.status(404).json({ error: "Share not found" });
