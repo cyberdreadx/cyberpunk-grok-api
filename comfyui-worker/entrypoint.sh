@@ -36,7 +36,9 @@ fi
 for node_entry in \
   "ComfyUI-VideoHelperSuite|https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite.git|requirements.txt" \
   "ComfyUI-GGUF|https://github.com/city96/ComfyUI-GGUF.git|requirements.txt" \
-  "ComfyUI-VFI|https://github.com/GACLove/ComfyUI-VFI.git|requirements.txt"; do
+  "ComfyUI-VFI|https://github.com/GACLove/ComfyUI-VFI.git|requirements.txt" \
+  "comfyUI-LongLook|https://github.com/shootthesound/comfyUI-LongLook.git|" \
+  "ComfyUI-MediaMixer|https://github.com/DoctorDiffusion/ComfyUI-MediaMixer.git|requirements.txt"; do
   IFS='|' read -r dir url reqs <<< "$node_entry"
   if [ ! -f "/comfyui/custom_nodes/$dir/__init__.py" ]; then
     echo "entrypoint: $dir missing — cloning..."
@@ -45,6 +47,27 @@ for node_entry in \
     echo "entrypoint: $dir installed"
   else
     echo "entrypoint: $dir OK"
+  fi
+done
+
+# ── LongLook models: SmoothMix GGUF + LightX LoRAs ────────────
+# These go to the standard ComfyUI model directories.
+UNET_DIR="/comfyui/models/unet"
+LORA_DIR="/comfyui/models/loras"
+UPSCALE_DIR="/comfyui/models/upscale_models"
+
+for model_entry in \
+  "$UNET_DIR|smoothMixWan22I2VT2V_i2vHigh-Q6_K.gguf|https://huggingface.co/Bedovyy/smoothMixWan22-I2V-GGUF/resolve/main/HighNoise/smoothMixWan22I2VT2V_i2vHigh-Q6_K.gguf" \
+  "$UNET_DIR|smoothMixWan22I2VT2V_i2vLow-Q6_K.gguf|https://huggingface.co/Bedovyy/smoothMixWan22-I2V-GGUF/resolve/main/LowNoise/smoothMixWan22I2VT2V_i2vLow-Q6_K.gguf" \
+  "$LORA_DIR|wan2.2_i2v_A14b_high_noise_lora_rank64_lightx2v_4step_1022.safetensors|https://huggingface.co/lightx2v/Wan2.2-Distill-Loras/resolve/main/wan2.2_i2v_A14b_high_noise_lora_rank64_lightx2v_4step_1022.safetensors" \
+  "$LORA_DIR|wan2.2_i2v_A14b_low_noise_lora_rank64_lightx2v_4step_1022.safetensors|https://huggingface.co/lightx2v/Wan2.2-Distill-Loras/resolve/main/wan2.2_i2v_A14b_low_noise_lora_rank64_lightx2v_4step_1022.safetensors" \
+  "$UPSCALE_DIR|RealESRGAN_x2.pth|https://huggingface.co/ai-forever/Real-ESRGAN/resolve/main/RealESRGAN_x2.pth"; do
+  IFS='|' read -r dir fname url <<< "$model_entry"
+  if [ ! -f "$dir/$fname" ]; then
+    echo "entrypoint: downloading $fname..."
+    mkdir -p "$dir"
+    wget -q --show-progress -O "$dir/$fname" "$url" 2>&1
+    echo "entrypoint: $fname downloaded"
   fi
 done
 
@@ -64,10 +87,10 @@ done
 WORKSPACE="/workspace"
 if [ -d "$WORKSPACE" ]; then
   count=$(find "$WORKSPACE" -maxdepth 1 -mindepth 1 -type d -regextype posix-extended \
-    -regex '.*/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-u[0-9]+' 2>/dev/null | wc -l)
+    -regex '.*/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(-u[0-9]+)?' 2>/dev/null | wc -l)
   if [ "$count" -gt 0 ]; then
     find "$WORKSPACE" -maxdepth 1 -mindepth 1 -type d -regextype posix-extended \
-      -regex '.*/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-u[0-9]+' \
+      -regex '.*/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(-u[0-9]+)?' \
       -exec rm -rf {} + 2>/dev/null
     echo "entrypoint: removed $count stale job dirs from $WORKSPACE"
   fi

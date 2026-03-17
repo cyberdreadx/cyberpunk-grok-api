@@ -1401,7 +1401,7 @@ const Index = () => {
                   ENGINE
                 </label>
                 <div className={`grid ${isAdmin ? "grid-cols-3" : "grid-cols-2"} gap-2`}>
-                  <button type="button" onClick={() => setAnimateEngine("gltch")}
+                  <button type="button" onClick={() => { setAnimateEngine("gltch"); setLongLookEnabled(false); }}
                     className={`p-2.5 border rounded text-left transition-all duration-200 ${animateEngine === "gltch" ? "border-secondary neon-border bg-secondary/5" : "border-border bg-card/30 hover:border-secondary/40"}`}>
                     <div className={`font-orbitron text-[11px] ${animateEngine === "gltch" ? "text-secondary" : "text-foreground"}`}>GLTCH</div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
@@ -1409,7 +1409,7 @@ const Index = () => {
                       <span className={animateEngine === "gltch" ? "text-secondary/70" : "text-muted-foreground/50"}>8 cr</span>
                     </div>
                   </button>
-                  <button type="button" onClick={() => setAnimateEngine("grok")}
+                  <button type="button" onClick={() => { setAnimateEngine("grok"); setLongLookEnabled(false); }}
                     className={`p-2.5 border rounded text-left transition-all duration-200 ${animateEngine === "grok" ? "border-primary neon-border bg-primary/5" : "border-border bg-card/30 hover:border-primary/40"}`}>
                     <div className={`font-orbitron text-[11px] flex items-center gap-1.5 ${animateEngine === "grok" ? "text-primary" : "text-foreground"}`}>
                       GROK
@@ -1420,10 +1420,13 @@ const Index = () => {
                     </div>
                   </button>
                   {isAdmin && (
-                    <button type="button" onClick={() => setAnimateEngine("comfy")}
+                    <button type="button" onClick={() => { setAnimateEngine("comfy"); setLongLookEnabled(true); }}
                       className={`p-2.5 border rounded text-left transition-all duration-200 ${animateEngine === "comfy" ? "border-purple-500 bg-purple-500/5 shadow-[0_0_8px_rgba(168,85,247,0.15)]" : "border-border bg-card/30 hover:border-purple-500/40"}`}>
                       <div className={`font-orbitron text-[11px] ${animateEngine === "comfy" ? "text-purple-400" : "text-foreground"}`}>COMFY</div>
-                      <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5">LongLook</div>
+                      <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
+                        <span>LongLook MultiClip</span>
+                        <span className={animateEngine === "comfy" ? "text-purple-400/70" : "text-muted-foreground/50"}>{longLookSeqCount * 5} cr</span>
+                      </div>
                     </button>
                   )}
                 </div>
@@ -1507,11 +1510,79 @@ const Index = () => {
               </div>
             )}
 
+            {/* LongLook settings (when COMFY engine selected for I2V) */}
+            {mode === "image-to-video" && animateEngine === "comfy" && longLookEnabled && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-500/5 border border-purple-500/20 rounded">
+                  <div className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
+                  <span className="font-mono-share text-[9px] text-purple-400/70">
+                    LongLook MultiClip — generates {longLookSeqCount} chained sequences with FreeLong spectral blending
+                  </span>
+                </div>
+                <div>
+                  <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Sequences ({longLookSeqCount})</label>
+                  <div className="flex gap-1.5">
+                    {[1, 2, 3, 4].map((n) => (
+                      <button key={n} type="button" onClick={() => setLongLookSeqCount(n)}
+                        className={`px-3 py-1 rounded text-[9px] font-mono-share transition-all ${longLookSeqCount === n ? "bg-purple-500/20 border-purple-500/50 text-purple-300 border" : "bg-card/30 border border-border text-muted-foreground hover:border-purple-500/30"}`}>
+                        {n}x
+                      </button>
+                    ))}
+                  </div>
+                  <p className="mt-0.5 font-mono-share text-[8px] text-muted-foreground/50">
+                    Each sequence ≈ {Math.round(longLookFrameCount / 16)}s — total ≈ {Math.round((longLookFrameCount / 16) * longLookSeqCount)}s
+                  </p>
+                </div>
+                <div>
+                  <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Frames per sequence</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[{ label: "~3s", value: 49 }, { label: "~5s", value: 81 }, { label: "~7s", value: 113 }].map((p) => (
+                      <button key={p.value} type="button" onClick={() => setLongLookFrameCount(p.value)}
+                        className={`px-2 py-1 rounded text-[9px] font-mono-share transition-all ${longLookFrameCount === p.value ? "bg-purple-500/20 border-purple-500/50 text-purple-300 border" : "bg-card/30 border border-border text-muted-foreground hover:border-purple-500/30"}`}>
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Motion Scale: {longLookMotionScale.toFixed(1)}</label>
+                  <input type="range" min={0.5} max={2.5} step={0.1} value={longLookMotionScale}
+                    onChange={(e) => setLongLookMotionScale(Number(e.target.value))}
+                    className="w-full accent-purple-400 mt-0.5" />
+                  <p className="font-mono-share text-[8px] text-muted-foreground/50">
+                    {"< 1.0 = slow motion | 1.0 = normal | > 1.0 = faster, more dynamic"}
+                  </p>
+                </div>
+                {comfyModels.videoLoras.length > 0 && (
+                  <div>
+                    <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Video LoRA (optional)</label>
+                    <select value={comfyVideoLora} onChange={(e) => setComfyVideoLora(e.target.value)}
+                      className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-[10px] font-mono-share text-foreground">
+                      <option value="none">None</option>
+                      {comfyModels.videoLoras.map((entry) => (
+                        <option key={entry.name} value={entry.name}>
+                          {entry.displayName || entry.name.replace(/_/g, " ")}
+                        </option>
+                      ))}
+                    </select>
+                    {comfyVideoLora !== "none" && (
+                      <div className="mt-1.5">
+                        <label className="font-mono-share text-[9px] text-muted-foreground/70">Strength: {comfyVideoLoraStrength.toFixed(2)}</label>
+                        <input type="range" min={0} max={2} step={0.05} value={comfyVideoLoraStrength}
+                          onChange={(e) => setComfyVideoLoraStrength(Number(e.target.value))}
+                          className="w-full accent-purple-400 mt-0.5" />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Seed control — shared across all GLTCH/Comfy engine modes */}
             {auth.isAuthenticated && (
               (mode === "edit-image" && editEngine === "gltch") ||
               (mode === "text-to-image" && (genEngine === "comfy" || genEngine === "gltch")) ||
-              (mode === "image-to-video" && animateEngine === "gltch")
+              (mode === "image-to-video" && (animateEngine === "gltch" || animateEngine === "comfy"))
             ) && (
                 <div className="flex items-center gap-2">
                   <label className="font-mono-share text-[9px] text-muted-foreground/70 whitespace-nowrap">SEED</label>
