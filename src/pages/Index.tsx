@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, Suspense } from "react";
-import { Terminal, Key, Coins, Shield, Eye, MessageCircle, HelpCircle, Server, Zap, Cpu, ChevronDown, Film, X, AlertCircle, CheckCircle2, Loader2, Upload, Users, Image } from "lucide-react";
+import { Terminal, Key, Coins, Shield, Eye, MessageCircle, HelpCircle, Server, Zap, Cpu, ChevronDown, Film, X, AlertCircle, CheckCircle2, Upload, Users, Image } from "lucide-react";
 import { Link } from "react-router-dom";
 import CyberLayout from "@/components/CyberLayout";
 import MobileBottomNav from "@/components/MobileBottomNav";
@@ -1757,7 +1757,7 @@ const Index = () => {
 
                     {/* Status row */}
                     <div className="flex items-center gap-2 mb-1.5">
-                      {isActive && <Loader2 className="w-3.5 h-3.5 text-cyan-400 animate-spin" />}
+                      {isActive && <div className="w-3.5 h-3.5 rounded-full border-2 border-cyan-400/30 border-t-cyan-400 animate-spin shrink-0" />}
                       {isDone && <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />}
                       {isError && <AlertCircle className="w-3.5 h-3.5 text-red-400" />}
 

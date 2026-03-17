@@ -4,7 +4,6 @@ import {
   Wifi,
   WifiOff,
   Play,
-  Loader2,
   RefreshCw,
   ChevronDown,
   ChevronUp,
@@ -776,7 +775,7 @@ function JobCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             {isActive && (
-              <Loader2 className="w-3 h-3 animate-spin text-cyan-400 shrink-0" />
+              <div className="w-3 h-3 rounded-full border-2 border-cyan-400/30 border-t-cyan-400 animate-spin shrink-0" />
             )}
             <span className={`text-[10px] font-mono font-bold ${statusColor}`}>
               {statusLabel}
