@@ -15,6 +15,14 @@ done
 
 rm -rf /root/.triton/cache 2>/dev/null
 
+# ── Ensure /runpod-volume symlink exists ──────────────────────
+# The worker's extra_model_paths.yaml references /runpod-volume/models/*
+# but pods may not have this path. Symlink it to the actual ComfyUI install.
+if [ ! -e "/runpod-volume" ] && [ -d "/workspace/runpod-slim/ComfyUI" ]; then
+  ln -sf /workspace/runpod-slim/ComfyUI /runpod-volume
+  echo "entrypoint: symlinked /runpod-volume -> /workspace/runpod-slim/ComfyUI"
+fi
+
 # ── Swap old RIFE plugin for ComfyUI-VFI from network volume ──
 # Remove broken ComfyUI-Frame-Interpolation (CPU-only RIFE) if still baked in
 if [ -d "/comfyui/custom_nodes/ComfyUI-Frame-Interpolation" ]; then
