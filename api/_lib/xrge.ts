@@ -130,8 +130,8 @@ async function rpcCall(rpcUrl: string, method: string, params: any[]): Promise<a
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
   });
-  const data = await res.json();
-  if (data.error) throw new Error(`RPC error: ${data.error.message}`);
+  const data = (await res.json()) as { error?: { message?: string }; result?: unknown };
+  if (data.error) throw new Error(`RPC error: ${data.error.message ?? "unknown"}`);
   return data.result;
 }
 

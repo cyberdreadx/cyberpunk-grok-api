@@ -3133,7 +3133,7 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           backend.runpodEndpoint!, backend.runpodKey!,
           "/purge-queue", "POST",
         );
-        const data = await resp.json().catch(() => ({}));
+        const data = await resp.json().catch(() => ({})) as Record<string, unknown>;
         return res.status(resp.ok ? 200 : 502).json({ status: "purged", ...data });
       }
       try {
@@ -3170,7 +3170,7 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
       for (const ep of allEndpoints) {
         try {
           const resp = await runpodRequest(ep.id, backend.runpodKey!, "/health");
-          const data = resp.ok ? await resp.json() : { error: `HTTP ${resp.status}` };
+          const data = (resp.ok ? await resp.json() : { error: `HTTP ${resp.status}` }) as Record<string, unknown>;
           results.push({ endpoint: ep.id, name: ep.name, ...data });
         } catch (err: any) {
           results.push({ endpoint: ep.id, name: ep.name, error: err.message });
