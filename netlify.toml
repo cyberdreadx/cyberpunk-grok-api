@@ -10,6 +10,13 @@
   status = 200
   force = true
 
+# Share pages → Vercel server-rendered HTML (OG meta tags for social previews)
+[[redirects]]
+  from = "/s/:id"
+  to = "https://cyberpunk-grok-api.vercel.app/api/share-page?id=:id"
+  status = 200
+  force = true
+
 # SPA routing — send all non-file paths to index.html
 # Netlify automatically handles /.netlify/functions/* before redirects
 [[redirects]]
