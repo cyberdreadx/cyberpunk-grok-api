@@ -23,6 +23,16 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
     {
+        version: "2026.03.16d",
+        date: "March 16, 2026",
+        title: "LongLook Fixes & UI Polish",
+        items: [
+            { icon: <Film className="w-3.5 h-3.5" />, text: "LongLook playback speed fixed — WAN 2.2 outputs 16fps natively; RIFE now correctly interpolates 16→32fps for normal playback", tag: "fix" },
+            { icon: <Bug className="w-3.5 h-3.5" />, text: "LongLook upscale model fixed — RealESRGAN_x2plus.pth used (was missing RealESRGAN_x2.pth); entrypoint auto-downloads when needed", tag: "fix" },
+            { icon: <Zap className="w-3.5 h-3.5" />, text: "Loading spinner updated — circular ring replaces the old '2 sticks' animation in COMFY_QUEUE job status", tag: "improve" },
+        ],
+    },
+    {
         version: "2026.03.16c",
         date: "March 16, 2026",
         title: "Trash, Referral Links & Version Tracking",
