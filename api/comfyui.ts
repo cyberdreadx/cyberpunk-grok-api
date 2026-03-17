@@ -218,6 +218,8 @@ function groupVideoLoras(files: string[]): VideoLoraEntry[] {
     [/^(.+)_HighNoise_(.+)$/, "_"],                  // PussyLoRA_HighNoise_Wan2.2_HearmemanAI
     [/^(.+)_HN_(.+)$/, "_"],                         // W22_NSFW_Posing_Nude_i2v_HN_v2
     [/^(.+)-\d+epoc-full-high-(.+)$/, "-"],          // wan22-k3nk4llinon3-16epoc-full-high-k3nk
+    [/^(.+)-HN$/, null],                              // jfj-deepthroat-W22-I2V-HN
+    [/^(.+)_High$/, null],                             // Wan22_ThroatV3_High
     [/^(.+)_H$/, null],                              // something_H
   ];
   const lowPatterns: Array<[RegExp, string | null]> = [
@@ -229,6 +231,8 @@ function groupVideoLoras(files: string[]): VideoLoraEntry[] {
     [/^(.+)_LowNoise_(.+)$/, "_"],                   // PussyLoRA_LowNoise_Wan2.2_HearmemanAI
     [/^(.+)_LN_(.+)$/, "_"],                         // W22_NSFW_Posing_Nude_i2v_LN_v2
     [/^(.+)-\d+epoc-full-low-(.+)$/, "-"],           // wan22-k3nk4llinon3-15epoc-full-low-k3nk
+    [/^(.+)-LN$/, null],                              // jfj-deepthroat-W22-I2V-LN
+    [/^(.+)_Low$/, null],                              // Wan22_ThroatV3_Low
     [/^(.+)_L$/, null],
   ];
 

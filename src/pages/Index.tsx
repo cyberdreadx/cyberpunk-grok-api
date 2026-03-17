@@ -198,6 +198,10 @@ const Index = () => {
   const [zimageLora, setZimageLora] = useState("none");
   const [zimageLoraStrength, setZimageLoraStrength] = useState(1.0);
 
+  // GLTCH edit LoRA settings
+  const [editLora, setEditLora] = useState("none");
+  const [editLoraStrength, setEditLoraStrength] = useState(0.8);
+
   // LongLook settings
   const [longLookEnabled, setLongLookEnabled] = useState(false);
   const [longLookSeqCount, setLongLookSeqCount] = useState(2);
@@ -511,6 +515,7 @@ const Index = () => {
             height: round8(Math.max(256, h)),
             steps: 4, cfg: 1,
             seed: parsedSeed,
+            loras: editLora !== "none" ? [{ name: editLora, strengthModel: editLoraStrength, strengthClip: editLoraStrength }] : undefined,
             ...(adminTestCredits ? { testCredits: true } : {}),
           });
         } else if (isZimage) {
@@ -1089,6 +1094,42 @@ const Index = () => {
                         className="hidden"
                       />
                     </div>
+
+                    {comfyModels.editLoras.length > 0 && (
+                      <div>
+                        <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">LoRA (optional)</label>
+                        <select value={editLora} onChange={(e) => {
+                          if (isNsfwLora(e.target.value) && !comfyModels.xrgeHolder && e.target.value !== "none") return;
+                          setEditLora(e.target.value);
+                        }}
+                          className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-[10px] font-mono-share text-foreground">
+                          <option value="none">None</option>
+                          {comfyModels.editLoras.map((l) => (
+                            <option key={l} value={l}
+                              disabled={isNsfwLora(l) && !comfyModels.xrgeHolder}
+                              style={isNsfwLora(l) && !comfyModels.xrgeHolder ? { color: '#666', fontStyle: 'italic' } : undefined}>
+                              {isNsfwLora(l) && !comfyModels.xrgeHolder ? "🔒 " : ""}{l.replace(/\.[^.]+$/, "")}
+                            </option>
+                          ))}
+                        </select>
+                        {editLora !== "none" && (
+                          <div className="mt-1.5">
+                            <label className="font-mono-share text-[8px] text-muted-foreground/60 flex items-center justify-between">
+                              <span>STRENGTH</span>
+                              <span>{editLoraStrength.toFixed(1)}</span>
+                            </label>
+                            <input type="range" min="0" max="2" step="0.1" value={editLoraStrength}
+                              onChange={(e) => setEditLoraStrength(Number(e.target.value))}
+                              className="w-full h-1 accent-secondary" />
+                          </div>
+                        )}
+                        {!comfyModels.xrgeHolder && comfyModels.editLoras.some(isNsfwLora) && (
+                          <p className="font-mono-share text-[8px] text-pink-400/60 mt-1">
+                            🔒 NSFW LoRAs unlocked for <span className="text-pink-400">$XRGE</span> holders
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </>
                 )}
               </div>
