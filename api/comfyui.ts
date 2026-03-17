@@ -1452,7 +1452,7 @@ function buildLongLookWorkflow(p: {
       const upscaleNode = `${base + 8}`;
       workflow[upscaleLoaderNode] = {
         class_type: "UpscaleModelLoader",
-        inputs: { model_name: "RealESRGAN_x2.pth" },
+        inputs: { model_name: "RealESRGAN_x2plus.pth" },
       };
       workflow[upscaleNode] = {
         class_type: "ImageUpscaleWithModel",

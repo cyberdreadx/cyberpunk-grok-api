@@ -36,6 +36,17 @@ if [ -d "$VOLUME/models" ]; then
   echo "entrypoint: model dirs symlinked from network volume"
 fi
 
+# ── Ensure RealESRGAN_x2plus.pth exists (LongLook + HD upscale) ───
+UPSCALE_DIR="/comfyui/models/upscale_models"
+UPSCALE_MODEL="RealESRGAN_x2plus.pth"
+if [ ! -f "$UPSCALE_DIR/$UPSCALE_MODEL" ]; then
+  mkdir -p "$UPSCALE_DIR"
+  echo "entrypoint: downloading $UPSCALE_MODEL for LongLook/HD upscale..."
+  wget -q -O "$UPSCALE_DIR/$UPSCALE_MODEL" \
+    "https://huggingface.co/xingren23/comfyflow-models/resolve/main/upscale_models/$UPSCALE_MODEL" || true
+  [ -f "$UPSCALE_DIR/$UPSCALE_MODEL" ] && echo "entrypoint: $UPSCALE_MODEL ready" || echo "entrypoint: WARNING — $UPSCALE_MODEL download failed"
+fi
+
 # ── Symlink custom nodes from network volume ─────────────────────
 if [ -d "$VOLUME/custom_nodes" ]; then
   for node_dir in "$VOLUME/custom_nodes"/*/; do
