@@ -1468,8 +1468,8 @@ function buildLongLookWorkflow(p: {
         class_type: "RIFEInterpolation",
         inputs: {
           images: [seqLastNode, seqLastOut],
-          source_fps: 24,
-          target_fps: 48,
+          source_fps: 16,
+          target_fps: 32,
           scale: 1.0,
           batch_size: 8,
           use_fp16: true,
@@ -1483,8 +1483,8 @@ function buildLongLookWorkflow(p: {
   }
 
   // ── Final output ──
-
-  const fps = p.useRife ? 48 : 24;
+  // WAN 2.2 outputs 16fps natively; RIFE 16→32 matches GLTCH workflow
+  const fps = p.useRife ? 32 : 16;
   let finalFrames: [string, number];
 
   if (seqCount === 1) {
