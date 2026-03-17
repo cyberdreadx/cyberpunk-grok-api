@@ -567,7 +567,7 @@ export default function Characters() {
             </button>
           )}
           <h1 className="font-orbitron text-lg tracking-wider text-foreground">
-            {view === "gallery" ? "CHARACTERS" : view === "creator" ? (editingChar ? "EDIT CHARACTER" : "NEW CHARACTER") : activeChar?.name?.toUpperCase()}
+            {view === "gallery" ? "CHARACTERS" : view === "creator" ? (editingChar ? "EDIT CHARACTER" : "NEW CHARACTER") : (activeChar?.name ?? "").toUpperCase()}
           </h1>
           {view === "gallery" && (
             <button onClick={() => openCreator()}

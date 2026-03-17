@@ -93,7 +93,7 @@ const PromptHistory: React.FC<PromptHistoryProps> = ({ history, onSelect, onRemo
                   </p>
                   <div className="flex items-center gap-2 mt-0.5">
                     <span className="font-mono-share text-[9px] text-muted-foreground/40">
-                      {entry.mode.toUpperCase().replace(/-/g, "_")}
+                      {(entry.mode ?? "unknown").toUpperCase().replace(/-/g, "_")}
                     </span>
                     <span className="font-mono-share text-[9px] text-muted-foreground/30">
                       {formatTime(entry.timestamp)}

@@ -518,7 +518,7 @@ function FolderBar({
         {mobileOpen && (
           <div className="mt-1 border border-border/50 rounded bg-card/80 backdrop-blur-sm py-1 space-y-0.5 animate-slide-up max-h-[50vh] overflow-y-auto">
             {renderMobileRow("unfiled", "UNFILED", "__unfiled", true)}
-            {visibleFolders.map((f) => renderMobileRow(f.id, f.name.toUpperCase(), f.id, false, f))}
+            {visibleFolders.map((f) => renderMobileRow(f.id, (f.name ?? "").toUpperCase(), f.id, false, f))}
             {renderMobileRow("all", "ALL", "__total", true)}
             {/* Trash tab (mobile) */}
             <button
@@ -552,7 +552,7 @@ function FolderBar({
                     {hiddenFolders.map((f) => (
                       <button key={f.id} className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-muted/30 transition-colors" onClick={() => onToggleFolderHidden?.(f.id)}>
                         <Eye className="w-3 h-3 text-muted-foreground/40" />
-                        <span className="font-mono-share text-[10px] text-muted-foreground/60">{f.name.toUpperCase()}</span>
+                        <span className="font-mono-share text-[10px] text-muted-foreground/60">{(f.name ?? "").toUpperCase()}</span>
                         <span className="font-mono-share text-[8px] text-muted-foreground/30 ml-auto">RESTORE</span>
                       </button>
                     ))}
@@ -604,7 +604,7 @@ function FolderBar({
                 <button className={tabClass(selectedFilter === folder.id)} onClick={() => { if (isLocked) onRequestUnlock(folder.id); else onSelectFilter(folder.id); }}
                   onDoubleClick={() => { if (!isLocked) { setEditingId(folder.id); setEditingName(folder.name); } }}>
                   {hasPin ? (isLocked ? <Lock className="w-3 h-3 inline-block mr-1 -mt-0.5 text-secondary" /> : <LockOpen className="w-3 h-3 inline-block mr-1 -mt-0.5 text-primary/50" />) : <FolderOpen className="w-3 h-3 inline-block mr-1 -mt-0.5" />}
-                  {folder.name.toUpperCase()}
+                  {(folder.name ?? "").toUpperCase()}
                   <span className="ml-1 text-muted-foreground/40">{isLocked ? "***" : (resultCounts[folder.id] ?? 0)}</span>
                 </button>
               )}
@@ -642,7 +642,7 @@ function FolderBar({
               <DropdownMenuTrigger asChild><button className="px-2 py-1.5 flex items-center gap-1 text-muted-foreground/30 hover:text-muted-foreground/60 transition-colors" title="Vault"><ShieldCheck className="w-3 h-3" /><span className="text-[8px] font-mono-share opacity-50">{hiddenFolders.length}</span></button></DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="min-w-[140px] bg-card border-border">
                 <div className="px-3 py-1.5 text-[9px] font-orbitron tracking-wider text-muted-foreground/40 border-b border-border/50 mb-1">VAULT</div>
-                {hiddenFolders.map((f) => <DropdownMenuItem key={f.id} className="text-[10px] py-1.5 font-mono-share text-muted-foreground cursor-pointer" onSelect={() => onToggleFolderHidden?.(f.id)}><Eye className="w-3 h-3 mr-1.5" /> {f.name.toUpperCase()} — RESTORE</DropdownMenuItem>)}
+                {hiddenFolders.map((f) => <DropdownMenuItem key={f.id} className="text-[10px] py-1.5 font-mono-share text-muted-foreground cursor-pointer" onSelect={() => onToggleFolderHidden?.(f.id)}><Eye className="w-3 h-3 mr-1.5" /> {(f.name ?? "").toUpperCase()} — RESTORE</DropdownMenuItem>)}
                 <div className="border-t border-border/50 mt-1 pt-1">
                   {vaultHasPin ? (<>
                     <DropdownMenuItem className="text-[10px] py-1.5 font-mono-share cursor-pointer" onSelect={() => onLockFolder("__vault")}><Lock className="w-3 h-3 mr-1.5" /> LOCK VAULT</DropdownMenuItem>
@@ -760,7 +760,7 @@ function MoveToFolderMenu({
               onClick={() => { onMove(folder.id); onClose(); }}
             >
               <FolderOpen className="w-3.5 h-3.5 flex-shrink-0" />
-              {folder.name.toUpperCase()}
+              {(folder.name ?? "").toUpperCase()}
             </button>
           ))}
           {folders.filter((f) => !f.hidden).length === 0 && (
@@ -797,7 +797,7 @@ function MoveToFolderMenu({
           onClick={() => { onMove(folder.id); onClose(); }}
         >
           <FolderOpen className="w-3 h-3 flex-shrink-0" />
-          {folder.name.toUpperCase()}
+          {(folder.name ?? "").toUpperCase()}
         </button>
       ))}
       {folders.length === 0 && (
@@ -1632,7 +1632,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
 
             {/* Type badge */}
             <div className="absolute top-2 left-2 font-mono-share text-[9px] bg-background/80 text-primary px-1.5 py-0.5 rounded">
-              {currentResult?.type.toUpperCase()}
+              {(currentResult?.type ?? "unknown").toUpperCase()}
             </div>
 
             {/* Counter badge */}
@@ -1906,7 +1906,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
 
             {/* Type badge */}
             <div className={`absolute top-2 font-mono-share text-[9px] bg-background/80 text-primary px-1.5 py-0.5 rounded ${selectMode ? "left-9" : "left-2"}`}>
-              {result.type.toUpperCase()}
+              {(result.type ?? "unknown").toUpperCase()}
             </div>
 
             {/* Folder badge */}
@@ -1987,9 +1987,9 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
                         const ids = Array.from(selectedIds);
                         await onBulkMoveToFolder(ids, f.id);
                         exitSelectMode();
-                        toast.success(`${ids.length} item(s) moved to ${f.name.toUpperCase()}`);
+                        toast.success(`${ids.length} item(s) moved to ${(f.name ?? "").toUpperCase()}`);
                       }}>
-                        <FolderOpen className="w-3 h-3 mr-1.5" /> {f.name.toUpperCase()}
+                        <FolderOpen className="w-3 h-3 mr-1.5" /> {(f.name ?? "").toUpperCase()}
                       </DropdownMenuItem>
                     ))}
                   </DropdownMenuContent>

@@ -1660,7 +1660,7 @@ const Index = () => {
                 >
                   <option value="">UNFILED</option>
                   {foldersHook.folders.filter(f => !f.hidden).map(f => (
-                    <option key={f.id} value={f.id}>{f.name.toUpperCase()}</option>
+                    <option key={f.id} value={f.id}>{(f.name ?? "").toUpperCase()}</option>
                   ))}
                 </select>
               </div>
@@ -1763,7 +1763,7 @@ const Index = () => {
 
                       <span className={`font-orbitron text-[9px] tracking-widest uppercase ${isActive ? "text-cyan-400" : isDone ? "text-green-400" : "text-red-400"
                         }`}>
-                        {job.status === "submitting" ? "SUBMITTING" : job.status.toUpperCase()}
+                        {job.status === "submitting" ? "SUBMITTING" : (job.status ?? "unknown").toUpperCase()}
                       </span>
 
                       {/* Timer */}

@@ -210,7 +210,7 @@ const Library: React.FC = () => {
                       : "text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted/20"
                   }`}
                 >
-                  {t.toUpperCase()}
+                  {(t ?? "").toUpperCase()}
                 </button>
               ))}
             </div>

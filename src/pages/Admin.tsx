@@ -719,7 +719,7 @@ export default function Admin() {
                           {u.subscription_tier ? (
                             <span className={`font-orbitron text-[9px] tracking-wider px-2 py-0.5 rounded border ${
                               u.subscription_cancel_at ? "bg-destructive/20 text-destructive border-destructive/30" : "bg-secondary/20 text-secondary border-secondary/30"
-                            }`}>{u.subscription_tier.toUpperCase()}{u.subscription_cancel_at && " (ending)"}</span>
+                            }`}>{(u.subscription_tier ?? "").toUpperCase()}{u.subscription_cancel_at && " (ending)"}</span>
                           ) : (
                             <span className="font-mono-share text-[10px] text-muted-foreground/40">none</span>
                           )}

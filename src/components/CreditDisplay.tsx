@@ -160,7 +160,7 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
                   <div className="flex items-center gap-2">
                     <AlertTriangle className="w-4 h-4 text-destructive" />
                     <span className="font-orbitron text-xs tracking-wider text-destructive">
-                      CANCELLING: {subscriptionTier.toUpperCase()}
+                      CANCELLING: {(subscriptionTier ?? "").toUpperCase()}
                     </span>
                     {cancelLabel && (
                       <span className="font-mono-share text-[10px] text-destructive/60 ml-auto">
@@ -188,7 +188,7 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
                   <div className="flex items-center gap-2">
                     <Crown className="w-4 h-4 text-primary" />
                     <span className="font-orbitron text-xs tracking-wider text-primary">
-                      ACTIVE_PLAN: {subscriptionTier.toUpperCase()}
+                      ACTIVE_PLAN: {(subscriptionTier ?? "").toUpperCase()}
                     </span>
                     {renewsLabel && (
                       <span className="font-mono-share text-[10px] text-muted-foreground/60 ml-auto">
