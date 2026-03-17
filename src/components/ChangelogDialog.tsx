@@ -192,16 +192,16 @@ export function markChangelogSeen(): void {
     localStorage.setItem(SEEN_KEY, LATEST_VERSION);
 }
 
-/* ─── Tag badge ─── */
-function Tag({ type }: { type: "new" | "fix" | "improve" }) {
+/* ─── Tag badge (TagBadge to avoid conflict with Lucide Tag icon) ─── */
+function TagBadge({ type }: { type: "new" | "fix" | "improve" }) {
     const styles = {
         new: "bg-cyan-500/20 text-cyan-300 border-cyan-500/30",
         fix: "bg-red-500/20 text-red-300 border-red-500/30",
         improve: "bg-purple-500/20 text-purple-300 border-purple-500/30",
     };
     return (
-        <span className={`text-[8px] font-orbitron tracking-wider px-1.5 py-0.5 rounded border ${styles[type]}`}>
-            {type.toUpperCase()}
+        <span className={`text-[8px] font-orbitron tracking-wider px-1.5 py-0.5 rounded border ${styles[type] ?? ""}`}>
+            {(type ?? "").toUpperCase()}
         </span>
     );
 }
@@ -262,7 +262,7 @@ export default function ChangelogDialog({
                                             <span className="font-rajdhani text-sm text-foreground/70 leading-snug flex-1">
                                                 {item.text}
                                             </span>
-                                            {item.tag && <Tag type={item.tag} />}
+                                            {item.tag && <TagBadge type={item.tag} />}
                                         </li>
                                     ))}
                                 </ul>
