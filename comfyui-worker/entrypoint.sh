@@ -1,46 +1,54 @@
 #!/bin/bash
 # GLTCH ComfyUI Worker — entrypoint
-# Runs before start.sh to fix CUDA linking and auto-download models.
+# Runs before start.sh. Keeps it simple: symlink, patch, go.
+
+set -e
+
+VOLUME="/workspace/runpod-slim/ComfyUI"
 
 # ── CUDA symlink for Triton/SageAttention JIT ────────────────────
-# nvidia-docker bind-mounts the real libcuda.so.1 at container start.
-# Triton's JIT compiler (gcc) needs libcuda.so (unversioned) for -lcuda.
 for dir in /usr/lib/x86_64-linux-gnu /usr/local/nvidia/lib64 /usr/local/cuda/lib64; do
   if [ -f "$dir/libcuda.so.1" ]; then
     ln -sf "$dir/libcuda.so.1" "$dir/libcuda.so"
-    echo "entrypoint: linked $dir/libcuda.so -> $dir/libcuda.so.1"
+    echo "entrypoint: linked $dir/libcuda.so"
     break
   fi
 done
-
 rm -rf /root/.triton/cache 2>/dev/null
 
-# ── Ensure /runpod-volume symlink exists ──────────────────────
-# The worker's extra_model_paths.yaml references /runpod-volume/models/*
-# but pods may not have this path. Symlink it to the actual ComfyUI install.
-if [ ! -e "/runpod-volume" ] && [ -d "/workspace/runpod-slim/ComfyUI" ]; then
-  ln -sf /workspace/runpod-slim/ComfyUI /runpod-volume
-  echo "entrypoint: symlinked /runpod-volume -> /workspace/runpod-slim/ComfyUI"
+# ── Ensure /runpod-volume resolves to the network volume ─────────
+if [ ! -e "/runpod-volume" ] && [ -d "$VOLUME" ]; then
+  ln -sf "$VOLUME" /runpod-volume
+  echo "entrypoint: /runpod-volume -> $VOLUME"
 fi
 
-# ── Swap old RIFE plugin for ComfyUI-VFI from network volume ──
-# Remove broken ComfyUI-Frame-Interpolation (CPU-only RIFE) if still baked in
-if [ -d "/comfyui/custom_nodes/ComfyUI-Frame-Interpolation" ]; then
-  rm -rf /comfyui/custom_nodes/ComfyUI-Frame-Interpolation
-  echo "entrypoint: removed old ComfyUI-Frame-Interpolation"
-fi
-# Always prefer ComfyUI-VFI from network volume (has correct model + patches)
-VOL_VFI="/workspace/runpod-slim/ComfyUI/custom_nodes/ComfyUI-VFI"
-if [ -d "$VOL_VFI" ]; then
-  rm -rf /comfyui/custom_nodes/ComfyUI-VFI
-  ln -sf "$VOL_VFI" /comfyui/custom_nodes/ComfyUI-VFI
-  echo "entrypoint: symlinked ComfyUI-VFI from network volume"
-elif [ -d "/comfyui/custom_nodes/ComfyUI-VFI" ]; then
-  echo "entrypoint: ComfyUI-VFI OK (baked-in)"
+# ── Symlink model dirs from network volume into container ────────
+# Models live on the 500GB network volume, NOT the 5GB container overlay.
+if [ -d "$VOLUME/models" ]; then
+  for subdir in unet loras checkpoints clip clip_vision vae controlnet upscale_models configs; do
+    vol_path="$VOLUME/models/$subdir"
+    container_path="/comfyui/models/$subdir"
+    if [ -d "$vol_path" ] && [ ! -L "$container_path" ]; then
+      rm -rf "$container_path" 2>/dev/null
+      ln -sf "$vol_path" "$container_path"
+    fi
+  done
+  echo "entrypoint: model dirs symlinked from network volume"
 fi
 
-# ── Runtime safety net: ensure critical custom nodes exist ──────
-# If any are missing, clone + install deps at startup (~30s penalty).
+# ── Symlink custom nodes from network volume ─────────────────────
+if [ -d "$VOLUME/custom_nodes" ]; then
+  for node_dir in "$VOLUME/custom_nodes"/*/; do
+    node_name=$(basename "$node_dir")
+    container_node="/comfyui/custom_nodes/$node_name"
+    if [ ! -e "$container_node" ]; then
+      ln -sf "$node_dir" "$container_node"
+      echo "entrypoint: symlinked custom node $node_name"
+    fi
+  done
+fi
+
+# ── Safety net: clone missing critical custom nodes ──────────────
 for node_entry in \
   "ComfyUI-VideoHelperSuite|https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite.git|requirements.txt" \
   "ComfyUI-GGUF|https://github.com/city96/ComfyUI-GGUF.git|requirements.txt" \
@@ -48,50 +56,16 @@ for node_entry in \
   "comfyUI-LongLook|https://github.com/shootthesound/comfyUI-LongLook.git|" \
   "ComfyUI-MediaMixer|https://github.com/DoctorDiffusion/ComfyUI-MediaMixer.git|requirements.txt"; do
   IFS='|' read -r dir url reqs <<< "$node_entry"
-  if [ ! -f "/comfyui/custom_nodes/$dir/__init__.py" ]; then
+  if [ ! -f "/comfyui/custom_nodes/$dir/__init__.py" ] && [ ! -L "/comfyui/custom_nodes/$dir" ]; then
     echo "entrypoint: $dir missing — cloning..."
-    cd /comfyui/custom_nodes && git clone "$url" "$dir" 2>&1
-    [ -f "/comfyui/custom_nodes/$dir/$reqs" ] && uv pip install -r "/comfyui/custom_nodes/$dir/$reqs" 2>&1
+    cd /comfyui/custom_nodes && git clone --depth 1 "$url" "$dir" 2>&1
+    [ -n "$reqs" ] && [ -f "/comfyui/custom_nodes/$dir/$reqs" ] && \
+      pip install -q -r "/comfyui/custom_nodes/$dir/$reqs" 2>&1 | tail -3
     echo "entrypoint: $dir installed"
-  else
-    echo "entrypoint: $dir OK"
-  fi
-done
-
-# ── LongLook models: SmoothMix GGUF + LightX LoRAs ────────────
-# These go to the standard ComfyUI model directories.
-UNET_DIR="/comfyui/models/unet"
-LORA_DIR="/comfyui/models/loras"
-UPSCALE_DIR="/comfyui/models/upscale_models"
-
-for model_entry in \
-  "$UNET_DIR|smoothMixWan22I2VT2V_i2vHigh-Q6_K.gguf|https://huggingface.co/Bedovyy/smoothMixWan22-I2V-GGUF/resolve/main/HighNoise/smoothMixWan22I2VT2V_i2vHigh-Q6_K.gguf" \
-  "$UNET_DIR|smoothMixWan22I2VT2V_i2vLow-Q6_K.gguf|https://huggingface.co/Bedovyy/smoothMixWan22-I2V-GGUF/resolve/main/LowNoise/smoothMixWan22I2VT2V_i2vLow-Q6_K.gguf" \
-  "$LORA_DIR|wan2.2_i2v_A14b_high_noise_lora_rank64_lightx2v_4step_1022.safetensors|https://huggingface.co/lightx2v/Wan2.2-Distill-Loras/resolve/main/wan2.2_i2v_A14b_high_noise_lora_rank64_lightx2v_4step_1022.safetensors" \
-  "$LORA_DIR|wan2.2_i2v_A14b_low_noise_lora_rank64_lightx2v_4step_1022.safetensors|https://huggingface.co/lightx2v/Wan2.2-Distill-Loras/resolve/main/wan2.2_i2v_A14b_low_noise_lora_rank64_lightx2v_4step_1022.safetensors" \
-  "$UPSCALE_DIR|RealESRGAN_x2.pth|https://huggingface.co/ai-forever/Real-ESRGAN/resolve/main/RealESRGAN_x2.pth"; do
-  IFS='|' read -r dir fname url <<< "$model_entry"
-  if [ ! -f "$dir/$fname" ]; then
-    echo "entrypoint: downloading $fname..."
-    mkdir -p "$dir"
-    wget -q --show-progress -O "$dir/$fname" "$url" 2>&1
-    echo "entrypoint: $fname downloaded"
-  fi
-done
-
-# ── Sync deps from network volume ComfyUI (if updated) ────────
-# If the volume has a newer ComfyUI with new requirements, install them.
-for reqfile in /workspace/runpod-slim/ComfyUI/requirements.txt /workspace/ComfyUI/requirements.txt; do
-  if [ -f "$reqfile" ]; then
-    echo "entrypoint: installing deps from $reqfile"
-    pip install -q -r "$reqfile" 2>&1 | tail -5
-    break
   fi
 done
 
 # ── Clean stale job output from network volume ─────────────────
-# RunPod SDK leaves {job_id}-u{N} staging dirs in /workspace after
-# uploading to S3. Remove them on every worker start.
 WORKSPACE="/workspace"
 if [ -d "$WORKSPACE" ]; then
   count=$(find "$WORKSPACE" -maxdepth 1 -mindepth 1 -type d -regextype posix-extended \
@@ -100,36 +74,30 @@ if [ -d "$WORKSPACE" ]; then
     find "$WORKSPACE" -maxdepth 1 -mindepth 1 -type d -regextype posix-extended \
       -regex '.*/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(-u[0-9]+)?' \
       -exec rm -rf {} + 2>/dev/null
-    echo "entrypoint: removed $count stale job dirs from $WORKSPACE"
+    echo "entrypoint: removed $count stale job dirs"
   fi
 fi
 
-# Clean accumulated ComfyUI output files
+# Clean ComfyUI output cache
 rm -rf /comfyui/output/*.png /comfyui/output/*.jpg 2>/dev/null
 rm -rf /comfyui/output/video/* /comfyui/output/wan2-2/* 2>/dev/null
-echo "entrypoint: cleared ComfyUI output cache"
 
-# ── Force --gpu-only mode (H200 141GB — disable all VRAM management) ──
-if ! grep -q "\-\-gpu-only" /start.sh 2>/dev/null; then
+# ── Force --gpu-only mode for H200 ──────────────────────────────
+if [ -f /start.sh ] && ! grep -q "\-\-gpu-only" /start.sh 2>/dev/null; then
   sed -i 's|main\.py|main.py --gpu-only|g' /start.sh
-  echo "entrypoint: injected --gpu-only into start.sh"
-else
-  echo "entrypoint: --gpu-only already set"
+  echo "entrypoint: injected --gpu-only"
 fi
 
-# ── Re-apply handler patch (gifs/videos → images merge) ─────────
-# The RunPod SDK may overwrite handler.py at startup, so re-patch every time.
+# ── Patch handler.py (merge gifs/videos into images) ────────────
 if [ -f /handler.py ] && ! grep -q "PATCH.*gifs/videos" /handler.py 2>/dev/null; then
   python3 -c "
 import re
 with open('/handler.py','r') as f: src = f.read()
-# Find the outputs loop and inject merge logic
 pat = r'(for\s+\w+,\s*\w+\s+in\s+outputs\.items\(\):)'
 m = re.search(pat, src)
 if m:
-    loop_line = m.group(0)
-    indent = ''
     line_start = src.rfind('\n', 0, m.start()) + 1
+    indent = ''
     for ch in src[line_start:m.start()]:
         if ch in (' ','\t'): indent += ch
         else: break
@@ -142,13 +110,13 @@ if m:
     )
     src = src[:m.end()] + patch + src[m.end():]
     with open('/handler.py','w') as f: f.write(src)
-    print('entrypoint: handler.py patched (gifs/videos merged into images)')
+    print('entrypoint: handler.py patched')
 else:
     print('entrypoint: WARNING — could not find outputs loop in handler.py')
 " 2>&1
 else
-  echo "entrypoint: handler.py patch already applied"
+  echo "entrypoint: handler.py patch OK"
 fi
 
+echo "entrypoint: done"
 exec "$@"
-
