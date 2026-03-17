@@ -21,6 +21,8 @@ import {
   Gift,
   BarChart3,
   Eye,
+  Trash2,
+  Cpu,
 } from "lucide-react";
 import {
   AreaChart,
@@ -125,6 +127,136 @@ const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
   { id: "referrals", label: "REFERRALS", icon: <Share2 className="w-3.5 h-3.5" /> },
   { id: "system", label: "SYSTEM", icon: <Server className="w-3.5 h-3.5" /> },
 ];
+
+// ── RunPod Worker Status Panel ──
+
+function WorkerStatusPanel() {
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [purging, setPurging] = useState(false);
+  const [purgeResult, setPurgeResult] = useState<string | null>(null);
+
+  const fetchWorkers = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await apiFetch("/comfyui", { method: "POST", body: { action: "workers" } });
+      setData(res);
+    } catch (err: any) {
+      setData({ error: err.message });
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const handlePurge = useCallback(async () => {
+    if (!confirm("Purge ALL queued RunPod jobs? Running jobs will continue.")) return;
+    setPurging(true);
+    setPurgeResult(null);
+    try {
+      const res = await apiFetch("/comfyui", { method: "POST", body: { action: "purge" } });
+      setPurgeResult(res.status === "purged" ? "Queue purged successfully" : JSON.stringify(res));
+      fetchWorkers();
+    } catch (err: any) {
+      setPurgeResult(`Failed: ${err.message}`);
+    } finally {
+      setPurging(false);
+    }
+  }, [fetchWorkers]);
+
+  useEffect(() => { fetchWorkers(); }, [fetchWorkers]);
+
+  return (
+    <section className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm p-3 sm:p-4 space-y-3">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-2">
+          <Cpu className="w-3.5 h-3.5 text-cyan-400" />
+          <span className="font-orbitron text-[10px] tracking-wider text-muted-foreground">RUNPOD_WORKERS</span>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={handlePurge} disabled={purging}
+            className="font-mono-share text-xs gap-1.5 border-destructive/30 hover:bg-destructive/10 text-destructive">
+            {purging ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+            PURGE_QUEUE
+          </Button>
+          <Button variant="outline" size="sm" onClick={fetchWorkers} disabled={loading}
+            className="font-mono-share text-xs gap-1.5 border-cyan-500/30 hover:bg-cyan-500/10">
+            {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+            REFRESH
+          </Button>
+        </div>
+      </div>
+
+      {purgeResult && (
+        <div className={`font-mono-share text-[10px] px-2 py-1 rounded ${purgeResult.startsWith("Failed") ? "bg-destructive/10 text-destructive" : "bg-green-500/10 text-green-400"}`}>
+          {purgeResult}
+        </div>
+      )}
+
+      {data?.error && (
+        <div className="font-mono-share text-xs text-destructive">{data.error}</div>
+      )}
+
+      {data?.endpoints && (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {data.endpoints.map((ep: any) => {
+            const w = ep.workers || {};
+            const j = ep.jobs || {};
+            const totalWorkers = (w.idle || 0) + (w.running || 0) + (w.initializing || 0) + (w.ready || 0) + (w.throttled || 0);
+            const healthy = !ep.error;
+            return (
+              <div key={ep.endpoint} className={`border rounded-lg p-3 space-y-2 ${healthy ? "border-cyan-500/20 bg-cyan-500/5" : "border-red-500/20 bg-red-500/5"}`}>
+                <div className="flex items-center justify-between">
+                  <span className="font-orbitron text-[9px] tracking-wider text-primary">{ep.name}</span>
+                  <span className={`font-mono-share text-[8px] px-1.5 py-0.5 rounded ${healthy ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
+                    {healthy ? "ONLINE" : "ERROR"}
+                  </span>
+                </div>
+                <div className="font-mono-share text-[9px] text-muted-foreground/50 truncate">{ep.endpoint}</div>
+
+                {healthy && (
+                  <>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <div className="bg-background/30 rounded px-2 py-1">
+                        <div className="font-mono-share text-[8px] text-muted-foreground/50">WORKERS</div>
+                        <div className="font-orbitron text-sm text-foreground">{totalWorkers}</div>
+                      </div>
+                      <div className="bg-background/30 rounded px-2 py-1">
+                        <div className="font-mono-share text-[8px] text-muted-foreground/50">IN_QUEUE</div>
+                        <div className="font-orbitron text-sm text-yellow-400">{j.inQueue || 0}</div>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-x-3 gap-y-1 font-mono-share text-[9px]">
+                      <span className="text-green-400">idle: {w.idle || 0}</span>
+                      <span className="text-cyan-400">running: {w.running || 0}</span>
+                      <span className="text-yellow-400">init: {w.initializing || 0}</span>
+                      <span className="text-orange-400">throttled: {w.throttled || 0}</span>
+                    </div>
+                    <div className="flex flex-wrap gap-x-3 gap-y-1 font-mono-share text-[9px] text-muted-foreground/50">
+                      <span>completed: {j.completed || 0}</span>
+                      <span>failed: {j.failed || 0}</span>
+                      <span>running: {j.inProgress || 0}</span>
+                      <span>retried: {j.retried || 0}</span>
+                    </div>
+                  </>
+                )}
+
+                {ep.error && (
+                  <div className="font-mono-share text-[9px] text-red-400 break-all">{ep.error}</div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {!data && !loading && (
+        <div className="font-mono-share text-xs text-muted-foreground/50 text-center py-4">
+          Click REFRESH to load worker status
+        </div>
+      )}
+    </section>
+  );
+}
 
 // ── Main Admin Page ──
 
@@ -772,6 +904,11 @@ export default function Admin() {
 
         {/* ═══ SYSTEM TAB ═══ */}
         {activeTab === "system" && (
+          <div className="space-y-4">
+          {/* ── RunPod Worker Status ── */}
+          <WorkerStatusPanel />
+
+          {/* ── Subscription Sync ── */}
           <section className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm p-3 sm:p-4">
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-2">
@@ -829,6 +966,7 @@ export default function Admin() {
               </div>
             )}
           </section>
+          </div>
         )}
 
         <footer className="text-center py-4">

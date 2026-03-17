@@ -3139,6 +3139,86 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
       }
     }
 
+    // ========== CANCEL (abort a running/queued job) ==========
+    if (action === "cancel") {
+      const { jobId } = req.body;
+      if (!jobId || typeof jobId !== "string") {
+        return res.status(400).json({ error: "jobId is required" });
+      }
+      if (backend.mode === "runpod") {
+        const resp = await runpodRequest(
+          backend.runpodEndpoint!, backend.runpodKey!,
+          `/cancel/${jobId}`, "POST",
+        );
+        const data = await resp.json().catch(() => ({}));
+        return res.status(resp.ok ? 200 : 502).json(data);
+      }
+      // Local ComfyUI: POST /queue with delete payload
+      try {
+        const resp = await fetch(`${backend.comfyUrl}/queue`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ delete: [jobId] }),
+          signal: AbortSignal.timeout(5000),
+        });
+        return res.status(200).json({ status: resp.ok ? "cancelled" : "cancel_failed" });
+      } catch {
+        return res.status(502).json({ error: "Failed to cancel job" });
+      }
+    }
+
+    // ========== PURGE (clear all queued jobs) — admin only ==========
+    if (action === "purge") {
+      if (!isAdminUser) return res.status(403).json({ error: "Admin only" });
+      if (backend.mode === "runpod") {
+        const resp = await runpodRequest(
+          backend.runpodEndpoint!, backend.runpodKey!,
+          "/purge-queue", "POST",
+        );
+        const data = await resp.json().catch(() => ({}));
+        return res.status(resp.ok ? 200 : 502).json({ status: "purged", ...data });
+      }
+      try {
+        const resp = await fetch(`${backend.comfyUrl}/queue`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ clear: true }),
+          signal: AbortSignal.timeout(5000),
+        });
+        return res.status(200).json({ status: resp.ok ? "purged" : "purge_failed" });
+      } catch {
+        return res.status(502).json({ error: "Failed to purge queue" });
+      }
+    }
+
+    // ========== WORKERS (detailed worker + queue info) — admin only ==========
+    if (action === "workers") {
+      if (!isAdminUser) return res.status(403).json({ error: "Admin only" });
+      if (backend.mode !== "runpod") {
+        return res.status(200).json({ backend: "local", message: "Worker info only available for RunPod" });
+      }
+
+      const allEndpoints: { id: string; name: string }[] = [];
+      const epMain = process.env.RUNPOD_ENDPOINT_ID;
+      const epWan = process.env.RUNPOD_WAN_ENDPOINT_ID;
+      const epEdit = process.env.RUNPOD_QWEN_EDIT_ENDPOINT_ID;
+      if (epMain) allEndpoints.push({ id: epMain, name: "MAIN" });
+      if (epWan && epWan !== epMain) allEndpoints.push({ id: epWan, name: "WAN_VIDEO" });
+      if (epEdit && epEdit !== epMain && epEdit !== epWan) allEndpoints.push({ id: epEdit, name: "QWEN_EDIT" });
+
+      const results: any[] = [];
+      for (const ep of allEndpoints) {
+        try {
+          const resp = await runpodRequest(ep.id, backend.runpodKey!, "/health");
+          const data = resp.ok ? await resp.json() : { error: `HTTP ${resp.status}` };
+          results.push({ endpoint: ep.id, name: ep.name, ...data });
+        } catch (err: any) {
+          results.push({ endpoint: ep.id, name: ep.name, error: err.message });
+        }
+      }
+      return res.status(200).json({ endpoints: results });
+    }
+
     // ========== UPLOAD-IMAGE (legacy, local-only) ==========
     if (action === "upload-image") {
       if (backend.mode === "runpod") {

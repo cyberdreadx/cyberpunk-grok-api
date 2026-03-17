@@ -272,3 +272,34 @@
   initial-value: 0deg;
   inherits: false;
 }
+
+/* CSS-only GrokOrb for mobile — avoids WebGL entirely */
+@keyframes cssorb-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.7; }
+  50% { transform: scale(1.08); opacity: 1; }
+}
+@keyframes cssorb-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes cssorb-ring {
+  from { transform: rotateX(65deg) rotateZ(0deg); }
+  to { transform: rotateX(65deg) rotateZ(360deg); }
+}
+
+/* Reduce animation overhead on mobile and for users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .animate-flicker { animation: none !important; }
+  .animate-pulse-glow { animation: none !important; opacity: 0.7; }
+  .animate-data-rain { animation: none !important; display: none !important; }
+  .blur-3xl { filter: blur(24px) !important; }
+  .animate-hud-scan { animation: none !important; }
+}

@@ -101,6 +101,7 @@ const Index = () => {
     comfyPhase,
     comfyJobs,
     dismissComfyJob,
+    cancelComfyJob,
     clearFinishedComfyJobs,
     comfyModels,
     fetchComfyModels,
@@ -1600,7 +1601,7 @@ const Index = () => {
 
             <div className="grid gap-2 sm:grid-cols-2">
               {comfyJobs.map(job => {
-                const isActive = job.status === "submitting" || job.status === "generating";
+                const isActive = job.status === "submitting" || job.status === "generating" || job.status === "cancelling";
                 const isDone = job.status === "done";
                 const isError = job.status === "error";
                 const mins = Math.floor(job.elapsed / 60).toString().padStart(2, "0");
@@ -1616,13 +1617,20 @@ const Index = () => {
                         : "border-red-500/30 bg-red-500/5"
                       }`}
                   >
-                    {/* Dismiss button */}
-                    {!isActive && (
+                    {/* Dismiss / Cancel button */}
+                    {!isActive ? (
                       <button
                         onClick={() => dismissComfyJob(job.id)}
                         className="absolute top-2 right-2 p-0.5 rounded hover:bg-background/50 transition-colors text-muted-foreground/40 hover:text-foreground"
                       >
                         <X className="w-3.5 h-3.5" />
+                      </button>
+                    ) : job.status !== "cancelling" && (
+                      <button
+                        onClick={() => cancelComfyJob(job.id)}
+                        className="absolute top-2 right-2 px-1.5 py-0.5 rounded text-[8px] font-orbitron tracking-wider border border-red-500/30 text-red-400/70 hover:bg-red-500/10 hover:text-red-400 transition-colors"
+                      >
+                        CANCEL
                       </button>
                     )}
 

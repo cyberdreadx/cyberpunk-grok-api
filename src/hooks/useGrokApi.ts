@@ -172,13 +172,14 @@ export interface VideoLoraEntry {
 
 export interface ComfyJob {
   id: string;
-  status: "submitting" | "generating" | "done" | "error";
+  status: "submitting" | "generating" | "done" | "error" | "cancelling";
   workflowType: string;
   prompt: string;
   phase: string | null;
   elapsed: number;
   seed: number | null;
   error: string | null;
+  runpodJobId?: string;
 }
 
 interface GenerateImageParams {
@@ -315,7 +316,8 @@ export function useGrokApi() {
   const revokeAllRef = useRef<(() => void) | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [comfyJobs, setComfyJobs] = useState<ComfyJob[]>([]);
-  const comfyTimerRefs = useRef<Map<string, ReturnType<typeof setInterval>>>(new Map());
+  const comfyJobStarts = useRef<Map<string, number>>(new Map());
+  const videoBlobUrls = useRef<Map<string, string>>(new Map());
 
   // ── Load persisted results from IndexedDB on mount ──
   useEffect(() => {
@@ -335,6 +337,8 @@ export function useGrokApi() {
     return () => {
       cancelled = true;
       revokeAllRef.current?.();
+      videoBlobUrls.current.forEach(u => { try { URL.revokeObjectURL(u); } catch {} });
+      videoBlobUrls.current.clear();
     };
   }, []);
 
@@ -355,18 +359,11 @@ export function useGrokApi() {
       };
       setComfyJobs(prev => [resumeJob, ...prev]);
 
-      const timerIv = setInterval(() => {
-        if (cancelled) return;
-        setComfyJobs(prev => prev.map(j =>
-          j.id === jobId && j.status === "generating"
-            ? { ...j, elapsed: Math.floor((Date.now() - saved.submittedAt) / 1000) }
-            : j
-        ));
-      }, 1000);
+      comfyJobStarts.current.set(jobId, saved.submittedAt);
 
       try {
         for (let i = 0; i < 300; i++) {
-          if (cancelled) { clearInterval(timerIv); return; }
+          if (cancelled) { comfyJobStarts.current.delete(jobId); return; }
           await new Promise(r => setTimeout(r, 2000));
           const pollPath = saved.pollEndpoint === "gltch" ? "/gltch" : "/comfyui";
           const pollBody = saved.pollEndpoint === "gltch"
@@ -375,7 +372,7 @@ export function useGrokApi() {
           const poll = await apiFetch<{ status: string; image?: string; video?: string; error?: string }>(pollPath, { method: "POST", body: pollBody });
 
           if (poll.status === "done") {
-            clearInterval(timerIv);
+            comfyJobStarts.current.delete(jobId);
             removeActiveJob(saved.promptId);
             let video = poll.video;
             if (video && video.startsWith("https://") && !video.startsWith("data:")) {
@@ -385,7 +382,9 @@ export function useGrokApi() {
               } catch { }
             }
             const url = video || poll.image || "";
-            const newResult: GrokResult = { id: `resume-${Date.now()}-${saved.promptId.slice(0, 8)}`, url, revised_prompt: saved.prompt || "", type: (video ? "video" : "image") as any, timestamp: Date.now() };
+            const resultId = `resume-${Date.now()}-${saved.promptId.slice(0, 8)}`;
+            if (video && video.startsWith("blob:")) videoBlobUrls.current.set(resultId, video);
+            const newResult: GrokResult = { id: resultId, url, revised_prompt: saved.prompt || "", type: (video ? "video" : "image") as any, timestamp: Date.now() };
             if (!cancelled) {
               setResults(prev => [newResult, ...prev]);
               try { await saveResult(newResult); } catch { }
@@ -394,15 +393,15 @@ export function useGrokApi() {
             return;
           }
           if (poll.status === "error") {
-            clearInterval(timerIv);
+            comfyJobStarts.current.delete(jobId);
             removeActiveJob(saved.promptId);
             if (!cancelled) setComfyJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "error", error: poll.error || "Generation failed", phase: null } : j));
             return;
           }
         }
-        clearInterval(timerIv);
+        comfyJobStarts.current.delete(jobId);
         removeActiveJob(saved.promptId);
-      } catch { clearInterval(timerIv); removeActiveJob(saved.promptId); }
+      } catch { comfyJobStarts.current.delete(jobId); removeActiveJob(saved.promptId); }
     };
 
     activeJobs.forEach(j => resumeOne(j));
@@ -649,14 +648,7 @@ export function useGrokApi() {
     setComfyJobs(prev => [newJob, ...prev]);
 
     const startTime = Date.now();
-    const timerIv = setInterval(() => {
-      setComfyJobs(prev => prev.map(j =>
-        j.id === jobId && (j.status === "submitting" || j.status === "generating")
-          ? { ...j, elapsed: Math.floor((Date.now() - startTime) / 1000) }
-          : j
-      ));
-    }, 1000);
-    comfyTimerRefs.current.set(jobId, timerIv);
+    comfyJobStarts.current.set(jobId, startTime);
 
     (async () => {
       try {
@@ -698,8 +690,8 @@ export function useGrokApi() {
           data = await makeRequest("/images/edits", body);
         }
 
-        clearInterval(timerIv);
-        comfyTimerRefs.current.delete(jobId);
+        comfyJobStarts.current.delete(jobId);
+        comfyJobStarts.current.delete(jobId);
 
         const newResults: GrokResult[] = data.data.map((item: any, i: number) => ({
           id: `edit-${Date.now()}-${i}`,
@@ -715,8 +707,8 @@ export function useGrokApi() {
         persistNewResults(newResults);
         setComfyJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "done", phase: null } : j));
       } catch (err: any) {
-        clearInterval(timerIv);
-        comfyTimerRefs.current.delete(jobId);
+        comfyJobStarts.current.delete(jobId);
+        comfyJobStarts.current.delete(jobId);
         setComfyJobs(prev => prev.map(j => j.id === jobId
           ? { ...j, status: "error", error: friendlyError(err.message), phase: null }
           : j
@@ -868,14 +860,7 @@ export function useGrokApi() {
     setComfyJobs(prev => [newJob, ...prev]);
 
     const startTime = Date.now();
-    const timerIv = setInterval(() => {
-      setComfyJobs(prev => prev.map(j =>
-        j.id === jobId && (j.status === "submitting" || j.status === "generating")
-          ? { ...j, elapsed: Math.floor((Date.now() - startTime) / 1000) }
-          : j
-      ));
-    }, 1000);
-    comfyTimerRefs.current.set(jobId, timerIv);
+    comfyJobStarts.current.set(jobId, startTime);
 
     (async () => {
       try {
@@ -906,8 +891,8 @@ export function useGrokApi() {
         // runsync may return result directly
         if (submitData.syncResult?.status === "done" && submitData.syncResult.image) {
           removeActiveJob(submitData.promptId);
-          clearInterval(timerIv);
-          comfyTimerRefs.current.delete(jobId);
+          comfyJobStarts.current.delete(jobId);
+          comfyJobStarts.current.delete(jobId);
           const newResults: GrokResult[] = [{
             id: `gltch-${Date.now()}`,
             url: submitData.syncResult.image,
@@ -940,8 +925,8 @@ export function useGrokApi() {
           });
 
           if (pollData.status === "done" && pollData.image) {
-            clearInterval(timerIv);
-            comfyTimerRefs.current.delete(jobId);
+            comfyJobStarts.current.delete(jobId);
+            comfyJobStarts.current.delete(jobId);
             removeActiveJob(submitData.promptId);
             const newResults: GrokResult[] = [{
               id: `gltch-${Date.now()}`,
@@ -965,8 +950,8 @@ export function useGrokApi() {
         removeActiveJob(submitData.promptId);
         throw new Error("GLTCH edit timed out after 4 minutes");
       } catch (err: any) {
-        clearInterval(timerIv);
-        comfyTimerRefs.current.delete(jobId);
+        comfyJobStarts.current.delete(jobId);
+        comfyJobStarts.current.delete(jobId);
         setComfyJobs(prev => prev.map(j => j.id === jobId
           ? { ...j, status: "error", error: err.message || "GLTCH edit failed", phase: null }
           : j
@@ -976,15 +961,21 @@ export function useGrokApi() {
   }, [persistNewResults]);
 
   const clearResults = useCallback(async () => {
+    results.forEach(r => { if (r.url?.startsWith("blob:")) try { URL.revokeObjectURL(r.url); } catch {} });
+    videoBlobUrls.current.forEach(u => { try { URL.revokeObjectURL(u); } catch {} });
+    videoBlobUrls.current.clear();
     setResults([]);
     revokeAllRef.current?.();
     revokeAllRef.current = null;
     try { await clearStoredResults(); } catch { /* best-effort */ }
-  }, []);
+  }, [results]);
 
   const deleteResult = useCallback(async (id: string) => {
     const item = results.find(r => r.id === id);
     if (item?.folderId === "__trash") {
+      if (item.url?.startsWith("blob:")) try { URL.revokeObjectURL(item.url); } catch {}
+      const tracked = videoBlobUrls.current.get(id);
+      if (tracked) { try { URL.revokeObjectURL(tracked); } catch {} videoBlobUrls.current.delete(id); }
       setResults(prev => prev.filter(r => r.id !== id));
       try { await deleteStoredResult(id); } catch { /* best-effort */ }
     } else {
@@ -1008,23 +999,57 @@ export function useGrokApi() {
 
   // Clean up intervals on unmount
   useEffect(() => {
+    const iv = setInterval(() => {
+      setComfyJobs(prev => {
+        if (!comfyJobStarts.current.size) return prev;
+        let changed = false;
+        const next = prev.map(j => {
+          const start = comfyJobStarts.current.get(j.id);
+          if (!start || (j.status !== "submitting" && j.status !== "generating")) return j;
+          const elapsed = Math.floor((Date.now() - start) / 1000);
+          if (elapsed === j.elapsed) return j;
+          changed = true;
+          return { ...j, elapsed };
+        });
+        return changed ? next : prev;
+      });
+    }, 1000);
     return () => {
-      comfyTimerRefs.current.forEach(iv => clearInterval(iv));
+      clearInterval(iv);
+      comfyJobStarts.current.clear();
     };
   }, []);
 
+  const comfyPromptIds = useRef<Map<string, string>>(new Map());
+
   const dismissComfyJob = useCallback((jobId: string) => {
-    const iv = comfyTimerRefs.current.get(jobId);
-    if (iv) { clearInterval(iv); comfyTimerRefs.current.delete(jobId); }
+    comfyJobStarts.current.delete(jobId);
+    comfyPromptIds.current.delete(jobId);
     setComfyJobs(prev => prev.filter(j => j.id !== jobId));
   }, []);
+
+  const cancelComfyJob = useCallback(async (jobId: string) => {
+    const promptId = comfyPromptIds.current.get(jobId);
+    if (!promptId) {
+      dismissComfyJob(jobId);
+      return;
+    }
+    setComfyJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "cancelling" as const, phase: "Cancelling..." } : j));
+    try {
+      await apiFetch("/comfyui", { method: "POST", body: { action: "cancel", jobId: promptId } });
+    } catch { /* best effort */ }
+    removeActiveJob(promptId);
+    comfyJobStarts.current.delete(jobId);
+    comfyPromptIds.current.delete(jobId);
+    setComfyJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "error" as const, phase: null, error: "Cancelled" } : j));
+  }, [dismissComfyJob]);
 
   const clearFinishedComfyJobs = useCallback(() => {
     setComfyJobs(prev => {
       const removed = prev.filter(j => j.status === "done" || j.status === "error");
       for (const j of removed) {
-        const iv = comfyTimerRefs.current.get(j.id);
-        if (iv) { clearInterval(iv); comfyTimerRefs.current.delete(j.id); }
+        comfyJobStarts.current.delete(j.id);
+        comfyPromptIds.current.delete(j.id);
       }
       return prev.filter(j => j.status !== "done" && j.status !== "error");
     });
@@ -1035,9 +1060,9 @@ export function useGrokApi() {
   // Shared submit + poll helper for ComfyUI workflows
   const comfySubmitAndPoll = useCallback(async (
     body: Record<string, any>,
-    opts: { pollInterval?: number; maxAttempts?: number } = {},
+    opts: { pollInterval?: number; maxAttempts?: number; onPromptId?: (promptId: string) => void } = {},
   ): Promise<{ image?: string; video?: string }> => {
-    const { pollInterval = 2000, maxAttempts = 300 } = opts;
+    const { pollInterval = 2000, maxAttempts = 300, onPromptId } = opts;
 
     const submitData = await apiFetch<{
       promptId: string;
@@ -1047,6 +1072,7 @@ export function useGrokApi() {
     }>("/comfyui", { method: "POST", body: { action: "generate", ...body } });
 
     const { promptId, outputType, runpodEndpointId } = submitData;
+    onPromptId?.(promptId);
     const outType = outputType || (body.workflow === "wan-video" || body.workflow === "longlook" ? "video" : "image");
 
     saveActiveJob({ promptId, outputType: outType, submittedAt: Date.now(), ...(runpodEndpointId && { runpodEndpointId }), prompt: body.prompt as string || "" });
@@ -1169,14 +1195,7 @@ export function useGrokApi() {
     setComfyJobs(prev => [newJob, ...prev]);
 
     const startTime = Date.now();
-    const timerIv = setInterval(() => {
-      setComfyJobs(prev => prev.map(j =>
-        j.id === jobId && (j.status === "submitting" || j.status === "generating")
-          ? { ...j, elapsed: Math.floor((Date.now() - startTime) / 1000) }
-          : j
-      ));
-    }, 1000);
-    comfyTimerRefs.current.set(jobId, timerIv);
+    comfyJobStarts.current.set(jobId, startTime);
 
     (async () => {
       try {
@@ -1193,10 +1212,10 @@ export function useGrokApi() {
           cfg: params.cfg || 1,
           seed: params.seed,
           ...(params.testCredits ? { testCredits: true } : {}),
-        });
+        }, { onPromptId: (pid) => comfyPromptIds.current.set(jobId, pid) });
 
-        clearInterval(timerIv);
-        comfyTimerRefs.current.delete(jobId);
+        comfyJobStarts.current.delete(jobId);
+        comfyJobStarts.current.delete(jobId);
 
         if (!result.image) throw new Error("No image returned from ComfyUI");
 
@@ -1211,8 +1230,8 @@ export function useGrokApi() {
         persistNewResults(newResults);
         setComfyJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "done", phase: null } : j));
       } catch (err: any) {
-        clearInterval(timerIv);
-        comfyTimerRefs.current.delete(jobId);
+        comfyJobStarts.current.delete(jobId);
+        comfyJobStarts.current.delete(jobId);
         setComfyJobs(prev => prev.map(j => j.id === jobId
           ? { ...j, status: "error", error: err.message || "Generation failed", phase: null }
           : j
@@ -1246,14 +1265,7 @@ export function useGrokApi() {
     setComfyJobs(prev => [newJob, ...prev]);
 
     const startTime = Date.now();
-    const timerIv = setInterval(() => {
-      setComfyJobs(prev => prev.map(j =>
-        j.id === jobId && (j.status === "submitting" || j.status === "generating")
-          ? { ...j, elapsed: Math.floor((Date.now() - startTime) / 1000) }
-          : j
-      ));
-    }, 1000);
-    comfyTimerRefs.current.set(jobId, timerIv);
+    comfyJobStarts.current.set(jobId, startTime);
 
     (async () => {
       try {
@@ -1272,10 +1284,10 @@ export function useGrokApi() {
           seed: params.seed,
           loras: params.loras?.filter(l => l.name !== "none"),
           ...(params.testCredits ? { testCredits: true } : {}),
-        });
+        }, { onPromptId: (pid) => comfyPromptIds.current.set(jobId, pid) });
 
-        clearInterval(timerIv);
-        comfyTimerRefs.current.delete(jobId);
+        comfyJobStarts.current.delete(jobId);
+        comfyJobStarts.current.delete(jobId);
 
         if (!result.image) throw new Error("No image returned from ComfyUI");
 
@@ -1290,8 +1302,8 @@ export function useGrokApi() {
         persistNewResults(newResults);
         setComfyJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "done", phase: null } : j));
       } catch (err: any) {
-        clearInterval(timerIv);
-        comfyTimerRefs.current.delete(jobId);
+        comfyJobStarts.current.delete(jobId);
+        comfyJobStarts.current.delete(jobId);
         setComfyJobs(prev => prev.map(j => j.id === jobId
           ? { ...j, status: "error", error: err.message || "Edit failed", phase: null }
           : j
@@ -1340,14 +1352,7 @@ export function useGrokApi() {
     setComfyJobs(prev => [newJob, ...prev]);
 
     const startTime = Date.now();
-    const timerIv = setInterval(() => {
-      setComfyJobs(prev => prev.map(j =>
-        j.id === jobId && (j.status === "submitting" || j.status === "generating")
-          ? { ...j, elapsed: Math.floor((Date.now() - startTime) / 1000) }
-          : j
-      ));
-    }, 1000);
-    comfyTimerRefs.current.set(jobId, timerIv);
+    comfyJobStarts.current.set(jobId, startTime);
 
     (async () => {
       try {
@@ -1379,16 +1384,18 @@ export function useGrokApi() {
           audioMode: params.audioMode || "none",
           audioPrompt: params.audioPrompt,
           ...(params.testCredits ? { testCredits: true } : {}),
-        }, { pollInterval: 5000, maxAttempts: 120 });
+        }, { pollInterval: 5000, maxAttempts: 120, onPromptId: (pid) => comfyPromptIds.current.set(jobId, pid) });
 
-        clearInterval(timerIv);
-        comfyTimerRefs.current.delete(jobId);
+        comfyJobStarts.current.delete(jobId);
+        comfyJobStarts.current.delete(jobId);
 
         const videoSrc = result.video || result.image;
         if (!videoSrc) throw new Error("No video returned from ComfyUI");
 
+        const rid = `comfy-vid-${Date.now()}`;
+        if (videoSrc.startsWith("blob:")) videoBlobUrls.current.set(rid, videoSrc);
         const newResults: GrokResult[] = [{
-          id: `comfy-vid-${Date.now()}`,
+          id: rid,
           url: videoSrc,
           revised_prompt: params.prompt,
           type: "video" as const,
@@ -1398,8 +1405,8 @@ export function useGrokApi() {
         persistNewResults(newResults);
         setComfyJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "done", phase: null } : j));
       } catch (err: any) {
-        clearInterval(timerIv);
-        comfyTimerRefs.current.delete(jobId);
+        comfyJobStarts.current.delete(jobId);
+        comfyJobStarts.current.delete(jobId);
         setComfyJobs(prev => prev.map(j => j.id === jobId
           ? { ...j, status: "error", error: err.message || "Render failed", phase: null }
           : j
@@ -1439,14 +1446,7 @@ export function useGrokApi() {
     setComfyJobs(prev => [newJob, ...prev]);
 
     const startTime = Date.now();
-    const timerIv = setInterval(() => {
-      setComfyJobs(prev => prev.map(j =>
-        j.id === jobId && (j.status === "submitting" || j.status === "generating")
-          ? { ...j, elapsed: Math.floor((Date.now() - startTime) / 1000) }
-          : j
-      ));
-    }, 1000);
-    comfyTimerRefs.current.set(jobId, timerIv);
+    comfyJobStarts.current.set(jobId, startTime);
 
     (async () => {
       try {
@@ -1463,7 +1463,7 @@ export function useGrokApi() {
           steps: 8,
           cfg: 1,
           skipCredits: true,
-        });
+        }, { onPromptId: (pid) => comfyPromptIds.current.set(jobId, pid) });
 
         if (!imgResult.image) throw new Error("Failed to generate start frame");
 
@@ -1494,16 +1494,18 @@ export function useGrokApi() {
           audioMode: params.audioMode,
           audioPrompt: params.audioPrompt,
           ...(params.testCredits ? { testCredits: true } : {}),
-        }, { pollInterval: 5000, maxAttempts: 120 });
+        }, { pollInterval: 5000, maxAttempts: 120, onPromptId: (pid) => comfyPromptIds.current.set(jobId, pid) });
 
-        clearInterval(timerIv);
-        comfyTimerRefs.current.delete(jobId);
+        comfyJobStarts.current.delete(jobId);
+        comfyJobStarts.current.delete(jobId);
 
         const videoSrc = vidResult.video || vidResult.image;
         if (!videoSrc) throw new Error("No video returned from ComfyUI");
 
+        const rid = `comfy-t2v-${Date.now()}`;
+        if (videoSrc.startsWith("blob:")) videoBlobUrls.current.set(rid, videoSrc);
         const newResults: GrokResult[] = [{
-          id: `comfy-t2v-${Date.now()}`,
+          id: rid,
           url: videoSrc,
           revised_prompt: params.prompt,
           type: "video" as const,
@@ -1513,8 +1515,8 @@ export function useGrokApi() {
         persistNewResults(newResults);
         setComfyJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "done", phase: null } : j));
       } catch (err: any) {
-        clearInterval(timerIv);
-        comfyTimerRefs.current.delete(jobId);
+        comfyJobStarts.current.delete(jobId);
+        comfyJobStarts.current.delete(jobId);
         setComfyJobs(prev => prev.map(j => j.id === jobId
           ? { ...j, status: "error", error: err.message || "Text-to-video render failed", phase: null }
           : j
@@ -1556,14 +1558,7 @@ export function useGrokApi() {
     setComfyJobs(prev => [newJob, ...prev]);
 
     const startTime = Date.now();
-    const timerIv = setInterval(() => {
-      setComfyJobs(prev => prev.map(j =>
-        j.id === jobId && (j.status === "submitting" || j.status === "generating")
-          ? { ...j, elapsed: Math.floor((Date.now() - startTime) / 1000) }
-          : j
-      ));
-    }, 1000);
-    comfyTimerRefs.current.set(jobId, timerIv);
+    comfyJobStarts.current.set(jobId, startTime);
 
     (async () => {
       try {
@@ -1590,16 +1585,18 @@ export function useGrokApi() {
           audioMode: params.audioMode || "none",
           audioPrompt: params.audioPrompt,
           ...(params.testCredits ? { testCredits: true } : {}),
-        }, { pollInterval: 5000, maxAttempts: 240 });
+        }, { pollInterval: 5000, maxAttempts: 240, onPromptId: (pid) => comfyPromptIds.current.set(jobId, pid) });
 
-        clearInterval(timerIv);
-        comfyTimerRefs.current.delete(jobId);
+        comfyJobStarts.current.delete(jobId);
+        comfyJobStarts.current.delete(jobId);
 
         const videoSrc = result.video || result.image;
         if (!videoSrc) throw new Error("No video returned from ComfyUI");
 
+        const rid = `comfy-ll-${Date.now()}`;
+        if (videoSrc.startsWith("blob:")) videoBlobUrls.current.set(rid, videoSrc);
         const newResults: GrokResult[] = [{
-          id: `comfy-ll-${Date.now()}`,
+          id: rid,
           url: videoSrc,
           revised_prompt: params.prompt,
           type: "video" as const,
@@ -1609,8 +1606,8 @@ export function useGrokApi() {
         persistNewResults(newResults);
         setComfyJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "done", phase: null } : j));
       } catch (err: any) {
-        clearInterval(timerIv);
-        comfyTimerRefs.current.delete(jobId);
+        comfyJobStarts.current.delete(jobId);
+        comfyJobStarts.current.delete(jobId);
         setComfyJobs(prev => prev.map(j => j.id === jobId
           ? { ...j, status: "error", error: err.message || "LongLook render failed", phase: null }
           : j
@@ -1649,6 +1646,7 @@ export function useGrokApi() {
     comfyPhase,
     comfyJobs,
     dismissComfyJob,
+    cancelComfyJob,
     clearFinishedComfyJobs,
     comfyModels,
     fetchComfyModels,
