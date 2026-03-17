@@ -116,7 +116,19 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
       canvas.height = h;
       canvas.getContext("2d")!.drawImage(bitmap, 0, 0, w, h);
       bitmap.close();
-      return canvas.toDataURL("image/jpeg", 0.85);
+      return await new Promise<string>((resolve, reject) => {
+        canvas.toBlob(
+          (b) => {
+            if (!b) return reject(new Error("toBlob failed"));
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(b);
+          },
+          "image/jpeg",
+          0.85,
+        );
+      });
     }
     return compressBlob(blob);
   };

@@ -256,7 +256,20 @@ export async function urlToBase64(url: string): Promise<string> {
     canvas.height = h;
     canvas.getContext("2d")!.drawImage(bitmap, 0, 0, w, h);
     bitmap.close();
-    return canvas.toDataURL("image/jpeg", 0.92);
+    // Use async toBlob instead of synchronous toDataURL to avoid freezing the UI
+    return await new Promise<string>((resolve, reject) => {
+      canvas.toBlob(
+        (b) => {
+          if (!b) return reject(new Error("toBlob failed"));
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(b);
+        },
+        "image/jpeg",
+        0.92,
+      );
+    });
   } catch {
     return url;
   }

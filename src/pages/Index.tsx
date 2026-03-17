@@ -452,6 +452,9 @@ const Index = () => {
     addEntry(data.prompt, mode);
     setActivePrompt("");
 
+    // Yield to browser so loading UI paints before heavy image processing
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+
     // ── Queued jobs (fire-and-forget with optimistic credit deduction) ──
     if (isQueued) {
       // Deduct credits optimistically before firing the job (skip for BYOK grok edit)
