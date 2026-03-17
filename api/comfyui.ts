@@ -1199,16 +1199,19 @@ function buildLongLookWorkflow(p: {
   const seqCount = Math.min(4, Math.max(1, p.prompts.length));
   const workflow: Record<string, any> = {};
 
-  // ── Model filenames (env-overridable, defaults to SmoothMix GGUF) ──
+  // ── Model filenames (env-overridable) ──
+  // For photorealistic (match regular wan-video): set COMFYUI_LL_HIGH_MODEL/LOW_MODEL to Wan2.2_Remix_NSFW_* and COMFYUI_LL_USE_LIGHTX=0
+  // Default SmoothMix GGUF + LightX LoRAs can look more cartoony/stylized.
   const highModel = process.env.COMFYUI_LL_HIGH_MODEL || process.env.COMFYUI_GLTCH_HIGH_MODEL || "smoothMixWan22I2VT2V_i2vHigh-Q6_K.gguf";
   const lowModel = process.env.COMFYUI_LL_LOW_MODEL || process.env.COMFYUI_GLTCH_LOW_MODEL || "smoothMixWan22I2VT2V_i2vLow-Q6_K.gguf";
   const isGguf = highModel.endsWith(".gguf") || lowModel.endsWith(".gguf");
   const clipModel = process.env.COMFYUI_WAN_CLIP || "umt5_xxl_fp8_e4m3fn_scaled.safetensors";
+  const useLightX = process.env.COMFYUI_LL_USE_LIGHTX !== "0"; // "0" = disable LightX (more photorealistic)
   const lightxHiLora = process.env.COMFYUI_LL_LIGHTX_HI || "wan2.2_i2v_A14b_high_noise_lora_rank64_lightx2v_4step_1022.safetensors";
   const lightxLoLora = process.env.COMFYUI_LL_LIGHTX_LO || "wan2.2_i2v_A14b_low_noise_lora_rank64_lightx2v_4step_1022.safetensors";
   const lightxHiStrength = parseFloat(process.env.COMFYUI_LL_LIGHTX_HI_STR || "1.1");
   const lightxLoStrength = parseFloat(process.env.COMFYUI_LL_LIGHTX_LO_STR || "1.0");
-  const sd3Shift = parseFloat(process.env.COMFYUI_LL_SHIFT || "5");
+  const sd3Shift = parseFloat(process.env.COMFYUI_LL_SHIFT || (isGguf ? "5" : "12"));
 
   // ── Shared nodes (built once) ──
 
@@ -1265,11 +1268,13 @@ function buildLongLookWorkflow(p: {
     highChainTip = ["22", 0];
   }
 
-  workflow["23"] = {
-    class_type: "LoraLoaderModelOnly",
-    inputs: { model: highChainTip, lora_name: lightxHiLora, strength_model: lightxHiStrength },
-  };
-  highChainTip = ["23", 0];
+  if (useLightX) {
+    workflow["23"] = {
+      class_type: "LoraLoaderModelOnly",
+      inputs: { model: highChainTip, lora_name: lightxHiLora, strength_model: lightxHiStrength },
+    };
+    highChainTip = ["23", 0];
+  }
 
   // ── Low-noise model chain: GGUF → SD3 → LightX ──
 
@@ -1278,11 +1283,13 @@ function buildLongLookWorkflow(p: {
     inputs: { model: ["13", 0], shift: sd3Shift },
   };
 
-  workflow["31"] = {
-    class_type: "LoraLoaderModelOnly",
-    inputs: { model: ["30", 0], lora_name: lightxLoLora, strength_model: lightxLoStrength },
-  };
-  let lowChainTip: [string, number] = ["31", 0];
+  if (useLightX) {
+    workflow["31"] = {
+      class_type: "LoraLoaderModelOnly",
+      inputs: { model: ["30", 0], lora_name: lightxLoLora, strength_model: lightxLoStrength },
+    };
+  }
+  let lowChainTip: [string, number] = useLightX ? ["31", 0] : ["30", 0];
 
   // ── Optional user video LoRA (applied after LightX) ──
   const isPairedLora = !!(p.videoLoraHigh && p.videoLoraLow);
