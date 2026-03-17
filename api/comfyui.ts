@@ -362,9 +362,11 @@ function getRunPodEndpointForWorkflow(
 ): string {
   const fallback = process.env.RUNPOD_ENDPOINT_ID || "";
   const wan = process.env.RUNPOD_WAN_ENDPOINT_ID || fallback;
+  const longlook = process.env.RUNPOD_LONGLOOK_ENDPOINT_ID || wan;
   const qwen = process.env.RUNPOD_QWEN_EDIT_ENDPOINT_ID || fallback;
 
-  if (workflowType === "wan-video" || workflowType === "gltch-wan" || workflowType === "longlook") return wan;
+  if (workflowType === "longlook") return longlook;
+  if (workflowType === "wan-video" || workflowType === "gltch-wan") return wan;
   if (workflowType === "qwen-edit" || workflowType === "zimage") return qwen;
   return fallback;
 }
@@ -3150,10 +3152,12 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
       const allEndpoints: { id: string; name: string }[] = [];
       const epMain = process.env.RUNPOD_ENDPOINT_ID;
       const epWan = process.env.RUNPOD_WAN_ENDPOINT_ID;
+      const epLongLook = process.env.RUNPOD_LONGLOOK_ENDPOINT_ID;
       const epEdit = process.env.RUNPOD_QWEN_EDIT_ENDPOINT_ID;
       if (epMain) allEndpoints.push({ id: epMain, name: "MAIN" });
       if (epWan && epWan !== epMain) allEndpoints.push({ id: epWan, name: "WAN_VIDEO" });
-      if (epEdit && epEdit !== epMain && epEdit !== epWan) allEndpoints.push({ id: epEdit, name: "QWEN_EDIT" });
+      if (epLongLook && epLongLook !== epMain && epLongLook !== epWan) allEndpoints.push({ id: epLongLook, name: "LONGLOOK" });
+      if (epEdit && epEdit !== epMain && epEdit !== epWan && epEdit !== epLongLook) allEndpoints.push({ id: epEdit, name: "QWEN_EDIT" });
 
       const results: any[] = [];
       for (const ep of allEndpoints) {
