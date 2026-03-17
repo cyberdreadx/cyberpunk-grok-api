@@ -144,8 +144,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const seed = Math.floor(Math.random() * 2 ** 32);
       const size = aspectToSize(aspectRatio);
 
-      // Strip data URL prefix to get raw base64, upload to Vercel Blob for a URL
-      const rawBase64 = imageBase64.replace(/^data:[^;]+;base64,/, "");
+      // Strip data URL prefix and fix padding, then upload to Vercel Blob for a URL
+      let rawBase64 = imageBase64.replace(/^data:[^;]+;base64,/, "").replace(/\s/g, "");
+      const pad = rawBase64.length % 4;
+      if (pad) rawBase64 += "=".repeat(4 - pad);
       const imgBuffer = Buffer.from(rawBase64, "base64");
 
       let blobUrl = "";

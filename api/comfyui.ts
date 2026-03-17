@@ -20,6 +20,14 @@ import { getUserFromRequest } from "./_lib/auth";
 import { getDb } from "./_lib/db";
 import { checkRateLimit } from "./_lib/ratelimit";
 
+// ── Strip data URI prefix and fix base64 padding ───────────────────────
+function cleanBase64(b64: string): string {
+  let clean = b64.replace(/^data:[^;]+;base64,/, "").replace(/\s/g, "");
+  const pad = clean.length % 4;
+  if (pad) clean += "=".repeat(4 - pad);
+  return clean;
+}
+
 // ── Image dimension parser (from base64 PNG/JPEG header) ───────────────
 function getImageDimensionsFromBase64(b64: string): { width: number; height: number } | null {
   try {
@@ -2643,18 +2651,16 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
         const runpodInput: any = { workflow };
 
         if (needsImage && imageBase64) {
-          const b64clean = imageBase64.replace(/^data:[^;]+;base64,/, "");
           runpodInput.images = [
             {
               name: imageFilename!,
-              image: b64clean,
+              image: cleanBase64(imageBase64),
             },
           ];
           if (imageBase64_2 && imageFilename2) {
-            const b64clean2 = imageBase64_2.replace(/^data:[^;]+;base64,/, "");
             runpodInput.images.push({
               name: imageFilename2,
-              image: b64clean2,
+              image: cleanBase64(imageBase64_2),
             });
           }
         }
