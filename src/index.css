@@ -324,6 +324,22 @@
   will-change: transform, opacity;
 }
 
+/* Scanline texture — pure CSS, no animation, zero GPU cost */
+.loader-scanlines::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 3px,
+    hsl(var(--primary) / 0.04) 3px,
+    hsl(var(--primary) / 0.04) 4px
+  );
+  pointer-events: none;
+  border-radius: inherit;
+}
+
 /* Reduce animation overhead on mobile and for users who prefer reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

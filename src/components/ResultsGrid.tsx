@@ -1544,7 +1544,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
       {/* Loading state — CSS-only, zero WebGL */}
       {isLoading && (
         <div className={`border rounded p-1 ${loadingPhase ? "border-accent/40" : "border-primary/30"}`}>
-          <div className="bg-muted rounded flex flex-col items-center justify-center gap-4 py-10 sm:py-14 relative overflow-hidden">
+          <div className="loader-scanlines bg-muted rounded flex flex-col items-center justify-center gap-4 py-10 sm:py-14 relative overflow-hidden">
 
             {/* Scanline sweep — single element, compositor-only */}
             <div className="loader-scanline absolute inset-x-0 top-0 h-[2px] pointer-events-none" style={{ background: loadingPhase ? "hsl(var(--accent)/0.7)" : "hsl(var(--primary)/0.7)" }} />
