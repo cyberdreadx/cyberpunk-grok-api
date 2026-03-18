@@ -1,15 +1,15 @@
-import React, { useState, useCallback, useRef, useEffect, Suspense } from "react";
-
-const GrokOrb = React.lazy(() => import("@/components/GrokOrb"));
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Download, Maximize2, X, Trash2, ExternalLink, ChevronLeft, ChevronRight, Pencil, Film, Copy, Check, FolderPlus, FolderOpen, MoreVertical, FolderInput, Lock, LockOpen, ShieldCheck, Eye, EyeOff, ChevronDown, Sparkles, Archive, Loader2, Link2, CheckSquare, Square, ListChecks, RotateCcw, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -1541,49 +1541,64 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
         sharingId={sharingId}
       />
 
-      {/* Loading state */}
+      {/* Loading state — CSS-only, zero WebGL */}
       {isLoading && (
-        <div className={`border rounded p-1 ${loadingPhase ? "border-purple-500/40 shadow-[0_0_12px_rgba(168,85,247,0.15)]" : "border-primary/30"} animate-pulse-glow`}>
-          <div className="aspect-square sm:aspect-auto sm:h-auto bg-muted rounded flex flex-col items-center justify-center gap-3 relative overflow-hidden py-8 sm:py-12">
-            {/* Animated background gradient */}
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-purple-500/5 to-transparent animate-pulse" />
+        <div className={`border rounded p-1 ${loadingPhase ? "border-accent/40" : "border-primary/30"}`}>
+          <div className="bg-muted rounded flex flex-col items-center justify-center gap-4 py-10 sm:py-14 relative overflow-hidden">
 
-            {/* Mobile: Full orb animation (finally visible!) */}
-            <div className="sm:hidden w-48 h-48 relative">
-              <Suspense fallback={<div className="w-full h-full rounded-full bg-primary/10 animate-pulse" />}>
-                <GrokOrb isGenerating={true} />
-              </Suspense>
+            {/* Scanline sweep — single element, compositor-only */}
+            <div className="loader-scanline absolute inset-x-0 top-0 h-[2px] pointer-events-none" style={{ background: loadingPhase ? "hsl(var(--accent)/0.7)" : "hsl(var(--primary)/0.7)" }} />
+
+            {/* Ring + label */}
+            <div className="relative flex items-center justify-center w-20 h-20">
+              {/* Outer ring */}
+              <svg className="absolute inset-0 w-full h-full loader-ring-spin" viewBox="0 0 80 80" fill="none">
+                <circle cx="40" cy="40" r="36" stroke={loadingPhase ? "hsl(270 100% 65% / 0.15)" : "hsl(180 100% 50% / 0.15)"} strokeWidth="2" />
+                <circle
+                  cx="40" cy="40" r="36"
+                  stroke={loadingPhase ? "hsl(270 100% 65%)" : "hsl(180 100% 50%)"}
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeDasharray="60 166"
+                  style={{ filter: `drop-shadow(0 0 4px ${loadingPhase ? "hsl(270 100% 65% / 0.8)" : "hsl(180 100% 50% / 0.8)"})` }}
+                />
+              </svg>
+              {/* Inner counter-ring */}
+              <svg className="absolute inset-2 w-[calc(100%-16px)] h-[calc(100%-16px)] loader-ring-counter" viewBox="0 0 48 48" fill="none">
+                <circle
+                  cx="24" cy="24" r="20"
+                  stroke={loadingPhase ? "hsl(300 100% 60% / 0.5)" : "hsl(180 100% 50% / 0.35)"}
+                  strokeWidth="1"
+                  strokeLinecap="round"
+                  strokeDasharray="20 106"
+                />
+              </svg>
+              {/* Center dot */}
+              <div className="w-2 h-2 rounded-full loader-dot-pulse" style={{ background: loadingPhase ? "hsl(var(--accent))" : "hsl(var(--primary))" }} />
             </div>
 
-            {/* Desktop: compact status indicator */}
-            <div className="hidden sm:flex items-center gap-2">
-              <div className={`w-2 h-2 rounded-full animate-pulse ${loadingPhase ? "bg-cyan-400" : "bg-primary"}`} />
-              <span className={`font-orbitron text-[10px] tracking-widest uppercase ${loadingPhase ? "text-cyan-400" : "text-primary"}`}>
+            {/* Status label */}
+            <div className="flex items-center gap-2">
+              <span className={`font-orbitron text-[10px] tracking-widest ${loadingPhase ? "text-accent" : "text-primary"}`}>
                 {loadingPhase?.includes("start frame") ? "PHASE 1" : loadingPhase?.includes("video") || loadingPhase?.includes("Rendering") ? "RENDERING" : "GENERATING"}
               </span>
             </div>
 
-            {/* Phase text */}
-            <div className={`font-mono-share text-xs animate-flicker ${loadingPhase ? "text-purple-300" : "text-primary"}`}>
-              {loadingPhase || "RENDERING..."}
-            </div>
-
-            {/* Timer */}
-            {elapsedSeconds > 0 && (
-              <div className="flex flex-col items-center gap-1.5">
-                <div className={`font-mono-share text-lg font-bold tabular-nums ${loadingPhase ? "text-cyan-400" : "text-primary"}`}>
+            {/* Phase / elapsed */}
+            <div className="flex flex-col items-center gap-1.5 text-center px-4">
+              <div className={`font-mono-share text-[10px] ${loadingPhase ? "text-accent/80" : "text-primary/70"}`}>
+                {loadingPhase || "PROCESSING REQUEST..."}
+              </div>
+              {elapsedSeconds > 0 && (
+                <div className={`font-mono-share text-base font-bold tabular-nums ${loadingPhase ? "text-accent" : "text-primary"}`}>
                   {Math.floor(elapsedSeconds / 60).toString().padStart(2, "0")}:{(elapsedSeconds % 60).toString().padStart(2, "0")}
                 </div>
-                <div className="w-40 h-1 bg-border/50 rounded-full overflow-hidden">
-                  <div className={`h-full rounded-full ${loadingPhase ? "bg-purple-500/60" : "bg-primary/60"}`}
-                    style={{ width: "100%", animation: "pulse 1.5s ease-in-out infinite" }} />
-                </div>
-              </div>
-            )}
+              )}
+            </div>
 
-            {/* Hint text */}
-            <div className="font-mono-share text-[9px] text-muted-foreground/50 mt-1">
-              {elapsedSeconds > 120 ? "Complex renders can take 3-5 min" : elapsedSeconds > 30 ? "GPU is working hard..." : "Please wait"}
+            {/* Hint */}
+            <div className="font-mono-share text-[9px] text-muted-foreground/40">
+              {elapsedSeconds > 120 ? "Complex renders can take 3–5 min" : elapsedSeconds > 30 ? "GPU is working hard..." : "Please wait"}
             </div>
           </div>
         </div>

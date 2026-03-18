@@ -287,6 +287,43 @@
   to { transform: rotateX(65deg) rotateZ(360deg); }
 }
 
+/* Loader — compositor-only animations (transform + opacity only) */
+@keyframes loader-scanline {
+  0% { transform: translateY(0); opacity: 0; }
+  5% { opacity: 1; }
+  95% { opacity: 1; }
+  100% { transform: translateY(400px); opacity: 0; }
+}
+@keyframes loader-ring-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes loader-ring-counter {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(-360deg); }
+}
+@keyframes loader-dot-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.7; }
+  50% { transform: scale(1.5); opacity: 1; }
+}
+
+.loader-scanline {
+  animation: loader-scanline 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  will-change: transform;
+}
+.loader-ring-spin {
+  animation: loader-ring-spin 2s linear infinite;
+  will-change: transform;
+}
+.loader-ring-counter {
+  animation: loader-ring-counter 3s linear infinite;
+  will-change: transform;
+}
+.loader-dot-pulse {
+  animation: loader-dot-pulse 1.2s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
 /* Reduce animation overhead on mobile and for users who prefer reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
