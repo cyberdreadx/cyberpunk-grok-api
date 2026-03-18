@@ -1,50 +1,29 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { Share2, Copy, Check, X, Flame } from "lucide-react";
-import { apiFetch } from "@/lib/api";
+import React, { useState, useCallback } from "react";
+import { Share2, Check, X, Flame, Loader2 } from "lucide-react";
+import type { GrokResult } from "@/hooks/useGrokApi";
 
 interface ShareCTAProps {
   /** Show the CTA (typically after a generation completes) */
   visible: boolean;
   onDismiss: () => void;
+  /** The most recent generated result to share */
+  latestResult?: GrokResult | null;
+  /** Trigger the real share flow (upload + copy link) */
+  onShareResult?: (result: GrokResult) => Promise<void>;
+  /** ID of the result currently being shared (for loading state) */
+  sharingId?: string | null;
 }
 
-const ShareCTA: React.FC<ShareCTAProps> = ({ visible, onDismiss }) => {
-  const [referralCode, setReferralCode] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+const ShareCTA: React.FC<ShareCTAProps> = ({ visible, onDismiss, latestResult, onShareResult, sharingId }) => {
   const [dismissed, setDismissed] = useState(false);
 
-  // Fetch referral code once
-  useEffect(() => {
-    if (!visible) return;
-    (async () => {
-      try {
-        const data = await apiFetch("/referral", { method: "POST", body: { action: "get-code" } });
-        if (data.code) setReferralCode(data.code);
-      } catch {
-        // Not logged in — skip
-      }
-    })();
-  }, [visible]);
+  const isSharing = !!(latestResult && sharingId === latestResult.id);
 
-  const handleShare = useCallback(() => {
-    const link = referralCode
-      ? `https://grokrunner.gltch.app?ref=${referralCode}`
-      : "https://grokrunner.gltch.app";
-
-    const post = `Check out what I generated with Grok Runner — AI image & video generation with a cyberpunk twist 🔥\n\nTry it free: ${link}`;
-
-    navigator.clipboard.writeText(post);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 3000);
-
-    // Track share in localStorage for streak
-    const today = new Date().toISOString().split("T")[0];
-    const shareLog: string[] = JSON.parse(localStorage.getItem("share-streak") || "[]");
-    if (!shareLog.includes(today)) {
-      shareLog.push(today);
-      localStorage.setItem("share-streak", JSON.stringify(shareLog.slice(-30)));
+  const handleShare = useCallback(async () => {
+    if (latestResult && onShareResult) {
+      await onShareResult(latestResult);
     }
-  }, [referralCode]);
+  }, [latestResult, onShareResult]);
 
   const handleDismiss = useCallback(() => {
     setDismissed(true);
@@ -72,12 +51,13 @@ const ShareCTA: React.FC<ShareCTAProps> = ({ visible, onDismiss }) => {
         </div>
         <button
           onClick={handleShare}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-secondary/20 border border-secondary/40 rounded-full text-secondary hover:bg-secondary/30 transition-all shrink-0"
+          disabled={isSharing || !latestResult}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-secondary/20 border border-secondary/40 rounded-full text-secondary hover:bg-secondary/30 transition-all shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {copied ? (
+          {isSharing ? (
             <>
-              <Check className="w-3 h-3" />
-              <span className="font-orbitron text-[8px] tracking-wider">COPIED</span>
+              <Loader2 className="w-3 h-3 animate-spin" />
+              <span className="font-orbitron text-[8px] tracking-wider">SHARING</span>
             </>
           ) : (
             <>
