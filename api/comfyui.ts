@@ -1200,18 +1200,23 @@ function buildLongLookWorkflow(p: {
   const workflow: Record<string, any> = {};
 
   // ── Model filenames (env-overridable) ──
-  // For photorealistic (match regular wan-video): set COMFYUI_LL_HIGH_MODEL/LOW_MODEL to Wan2.2_Remix_NSFW_* and COMFYUI_LL_USE_LIGHTX=0
-  // Default SmoothMix GGUF + LightX LoRAs can look more cartoony/stylized.
-  const highModel = process.env.COMFYUI_LL_HIGH_MODEL || process.env.COMFYUI_GLTCH_HIGH_MODEL || "smoothMixWan22I2VT2V_i2vHigh-Q6_K.gguf";
-  const lowModel = process.env.COMFYUI_LL_LOW_MODEL || process.env.COMFYUI_GLTCH_LOW_MODEL || "smoothMixWan22I2VT2V_i2vLow-Q6_K.gguf";
+  // COMFYUI_LL_USE_GLTCH_MODELS=1: use GLTCH models (match GLTCH WAN quality), LightX disabled (Lightning baked in).
+  // Otherwise: SmoothMix + LightX, or Remix NSFW + COMFYUI_LL_USE_LIGHTX=0 for photorealistic.
+  const useGltchModels = process.env.COMFYUI_LL_USE_GLTCH_MODELS === "1";
+  const gltchHigh = process.env.COMFYUI_GLTCH_HIGH_MODEL || "wan22EnhancedNSFWSVICamera_nsfwFASTMOVEV2Q8H.gguf";
+  const gltchLow = process.env.COMFYUI_GLTCH_LOW_MODEL || "wan22EnhancedNSFWSVICamera_nsfwFASTMOVEV2Q8L.gguf";
+  const smoothHigh = process.env.COMFYUI_GLTCH_HIGH_MODEL || "smoothMixWan22I2VT2V_i2vHigh-Q6_K.gguf";
+  const smoothLow = process.env.COMFYUI_GLTCH_LOW_MODEL || "smoothMixWan22I2VT2V_i2vLow-Q6_K.gguf";
+  const highModel = process.env.COMFYUI_LL_HIGH_MODEL || (useGltchModels ? gltchHigh : smoothHigh);
+  const lowModel = process.env.COMFYUI_LL_LOW_MODEL || (useGltchModels ? gltchLow : smoothLow);
   const isGguf = highModel.endsWith(".gguf") || lowModel.endsWith(".gguf");
   const clipModel = process.env.COMFYUI_WAN_CLIP || "umt5_xxl_fp8_e4m3fn_scaled.safetensors";
-  const useLightX = process.env.COMFYUI_LL_USE_LIGHTX !== "0"; // "0" = disable LightX (more photorealistic)
+  const useLightX = !useGltchModels && process.env.COMFYUI_LL_USE_LIGHTX !== "0"; // GLTCH has Lightning baked in; "0" = disable for other models
   const lightxHiLora = process.env.COMFYUI_LL_LIGHTX_HI || "wan2.2_i2v_A14b_high_noise_lora_rank64_lightx2v_4step_1022.safetensors";
   const lightxLoLora = process.env.COMFYUI_LL_LIGHTX_LO || "wan2.2_i2v_A14b_low_noise_lora_rank64_lightx2v_4step_1022.safetensors";
   const lightxHiStrength = parseFloat(process.env.COMFYUI_LL_LIGHTX_HI_STR || "1.1");
   const lightxLoStrength = parseFloat(process.env.COMFYUI_LL_LIGHTX_LO_STR || "1.0");
-  const sd3Shift = parseFloat(process.env.COMFYUI_LL_SHIFT || (isGguf ? "5" : "12"));
+  const sd3Shift = parseFloat(process.env.COMFYUI_LL_SHIFT || (useGltchModels ? "8" : (isGguf ? "5" : "12")));
 
   // ── Shared nodes (built once) ──
 
@@ -1318,6 +1323,21 @@ function buildLongLookWorkflow(p: {
     inputs: { image: p.imageFilename },
   };
 
+  // ── CLIPVision for I2V conditioning (matches GLTCH WAN quality) ──
+  const clipVisionModel = process.env.COMFYUI_WAN_CLIP_VISION || "clip_vision_h.safetensors";
+  workflow["50"] = {
+    class_type: "CLIPVisionLoader",
+    inputs: { clip_name: clipVisionModel },
+  };
+  workflow["51"] = {
+    class_type: "CLIPVisionEncode",
+    inputs: {
+      clip_vision: ["50", 0],
+      image: ["40", 0],
+      crop: "none",
+    },
+  };
+
   // ── Per-sequence nodes ──
   const seqOutputNodes: string[] = [];
 
@@ -1342,15 +1362,17 @@ function buildLongLookWorkflow(p: {
     if (i === 0) {
       const resizeNode = `${base + 2}`;
       workflow[resizeNode] = {
-        class_type: "ImageResizeKJ",
+        class_type: "ImageResizeKJv2",
         inputs: {
           image: ["40", 0],
           width: p.width,
           height: p.height,
-          upscale_method: "nearest-exact",
-          keep_proportion: true,
+          upscale_method: "lanczos",
+          keep_proportion: "resize",
+          pad_color: "0, 0, 0",
+          crop_position: "center",
           divisible_by: 16,
-          crop: "center",
+          device: "cpu",
         },
       };
 
@@ -1360,6 +1382,7 @@ function buildLongLookWorkflow(p: {
           positive: [posNode, 0],
           negative: [negNode, 0],
           vae: ["11", 0],
+          clip_vision_output: ["51", 0],
           start_image: [resizeNode, 0],
           width: [resizeNode, 1],
           height: [resizeNode, 2],
@@ -1371,15 +1394,17 @@ function buildLongLookWorkflow(p: {
       const prevLastFrameNode = `${1000 + (i - 1) * 100 + 9}`;
       const prevResizeNode = `${base + 2}`;
       workflow[prevResizeNode] = {
-        class_type: "ImageResizeKJ",
+        class_type: "ImageResizeKJv2",
         inputs: {
           image: [prevLastFrameNode, 0],
           width: p.width,
           height: p.height,
-          upscale_method: "nearest-exact",
-          keep_proportion: true,
+          upscale_method: "lanczos",
+          keep_proportion: "resize",
+          pad_color: "0, 0, 0",
+          crop_position: "center",
           divisible_by: 16,
-          crop: "center",
+          device: "cpu",
         },
       };
 
