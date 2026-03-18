@@ -1533,7 +1533,13 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
       </div>
 
       {/* Share CTA — shown after generation */}
-      <ShareCTA visible={showShareCTA} onDismiss={() => setShareCTADismissed(true)} />
+      <ShareCTA
+        visible={showShareCTA}
+        onDismiss={() => setShareCTADismissed(true)}
+        latestResult={results[0] ?? null}
+        onShareResult={handleShare}
+        sharingId={sharingId}
+      />
 
       {/* Loading state */}
       {isLoading && (
