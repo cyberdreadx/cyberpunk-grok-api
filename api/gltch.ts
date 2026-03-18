@@ -15,8 +15,8 @@ import { getDb } from "./_lib/db";
 import { checkRateLimit } from "./_lib/ratelimit";
 import { checkPrompt, logSafetyViolation } from "./_lib/safety";
 
-const GLTCH_COST = 1;
-const GLTCH_HD_COST = 2;
+const GLTCH_COST = 5;
+const GLTCH_HD_COST = 7;
 const ADMIN_EMAIL = "cyberdreadx@proton.me";
 
 const RUNPOD_API_BASE = "https://api.runpod.ai/v2";
