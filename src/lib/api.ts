@@ -86,10 +86,10 @@ export const CREDIT_COSTS = {
   imageEditPro2k: 12,
   /** 3 credits per second of video (xAI charges $0.05/sec) */
   videoPerSecond: 3,
-  /** 2 credits per GLTCH edit */
-  gltchEdit: 2,
-  /** 3 credits per GLTCH edit with HD upscale */
-  gltchEditHd: 3,
+  /** 5 credits per GLTCH edit (premium quality, on par with Grok Pro) */
+  gltchEdit: 5,
+  /** 7 credits per GLTCH edit with HD upscale */
+  gltchEditHd: 7,
   comfyImage: 2,
   comfyEdit: 2,
   comfyEditHd: 3,
