@@ -159,19 +159,51 @@ const Index = () => {
     }
   }, []);
 
-  // Engine selectors per mode
+  // Engine selectors per mode — persisted per mode across sessions
   type EditEngine = "grok" | "gltch";
-  const [editEngine, setEditEngine] = useState<EditEngine>("gltch");
+  type ComfyEngine = "grok" | "comfy" | "gltch";
+
+  const [editEngine, setEditEngineRaw] = useState<EditEngine>(() => {
+    const v = localStorage.getItem("engine-edit-image");
+    return (v === "grok" || v === "gltch") ? v : "gltch";
+  });
+  const setEditEngine = useCallback((v: EditEngine) => {
+    localStorage.setItem("engine-edit-image", v);
+    setEditEngineRaw(v);
+  }, []);
+
+  const [genEngine, setGenEngineRaw] = useState<ComfyEngine>(() => {
+    const v = localStorage.getItem("engine-text-to-image");
+    return (v === "grok" || v === "comfy" || v === "gltch") ? v : "gltch";
+  });
+  const setGenEngine = useCallback((v: ComfyEngine) => {
+    localStorage.setItem("engine-text-to-image", v);
+    setGenEngineRaw(v);
+  }, []);
+
+  const [renderEngine, setRenderEngineRaw] = useState<ComfyEngine>(() => {
+    const v = localStorage.getItem("engine-text-to-video");
+    return (v === "grok" || v === "comfy" || v === "gltch") ? v : "comfy";
+  });
+  const setRenderEngine = useCallback((v: ComfyEngine) => {
+    localStorage.setItem("engine-text-to-video", v);
+    setRenderEngineRaw(v);
+  }, []);
+
+  const [animateEngine, setAnimateEngineRaw] = useState<ComfyEngine>(() => {
+    const v = localStorage.getItem("engine-image-to-video");
+    return (v === "grok" || v === "comfy" || v === "gltch") ? v : "gltch";
+  });
+  const setAnimateEngine = useCallback((v: ComfyEngine) => {
+    localStorage.setItem("engine-image-to-video", v);
+    setAnimateEngineRaw(v);
+  }, []);
+
   const [grokPro, setGrokPro] = useState(false);
 
   const [gltchImage2, setGltchImage2] = useState<string | null>(null);
   const [gltchImage2Name, setGltchImage2Name] = useState("");
   const gltchImage2Ref = useRef<HTMLInputElement>(null);
-
-  type ComfyEngine = "grok" | "comfy" | "gltch";
-  const [genEngine, setGenEngine] = useState<ComfyEngine>("gltch");
-  const [renderEngine, setRenderEngine] = useState<ComfyEngine>("comfy");
-  const [animateEngine, setAnimateEngine] = useState<ComfyEngine>("gltch");
 
   // ComfyUI settings
   const [comfyCheckpoint, setComfyCheckpoint] = useState("");
