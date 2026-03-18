@@ -161,7 +161,7 @@ const Index = () => {
 
   // Engine selectors per mode
   type EditEngine = "grok" | "gltch";
-  const [editEngine, setEditEngine] = useState<EditEngine>("grok");
+  const [editEngine, setEditEngine] = useState<EditEngine>("gltch");
   const [grokPro, setGrokPro] = useState(false);
 
   const [gltchImage2, setGltchImage2] = useState<string | null>(null);
