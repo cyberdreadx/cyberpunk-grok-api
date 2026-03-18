@@ -3,11 +3,13 @@ import { Download, Maximize2, X, Trash2, ExternalLink, ChevronLeft, ChevronRight
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 
-  import {
+import {
+  DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+
 import {
   AlertDialog,
   AlertDialogAction,
