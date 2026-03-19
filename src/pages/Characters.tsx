@@ -4,6 +4,7 @@ import { apiFetch } from "@/lib/api";
 import { saveChatMessage, getChatHistory, clearChatHistory, deleteChatMessage, type ChatMessage } from "@/lib/storage";
 import { comfySubmitAndPollStandalone, comfyPollUntilDone } from "@/hooks/useGrokApi";
 import CyberLayout from "@/components/CyberLayout";
+import MobileBottomNav from "@/components/MobileBottomNav";
 import { ArrowLeft, Plus, Trash2, Send, Edit, X, MessageSquare, Sparkles, Image, Download, Paperclip } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -551,6 +552,7 @@ export default function Characters() {
 
   // ── Render ──
   return (
+    <>
     <CyberLayout>
       <div className="max-w-4xl mx-auto px-4 py-6 min-h-screen">
         {/* Header */}
@@ -890,5 +892,7 @@ export default function Characters() {
         )}
       </div>
     </CyberLayout>
+    <MobileBottomNav isAuthenticated={true} />
+    </>
   );
 }
