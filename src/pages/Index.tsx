@@ -1183,7 +1183,7 @@ const Index = () => {
                     </div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>Z-Image Turbo</span>
-                      <span className={genEngine === "gltch" ? "text-secondary/70" : "text-muted-foreground/50"}>1 cr</span>
+                      <span className={genEngine === "gltch" ? "text-secondary/70" : "text-muted-foreground/50"}>3 cr</span>
                     </div>
                   </button>
                   <button type="button" onClick={() => setGenEngine("grok")}
