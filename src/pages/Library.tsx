@@ -220,9 +220,29 @@ const Library: React.FC = () => {
 
         {/* Loading state */}
         {loading ? (
-          <div className="border border-dashed border-border rounded p-12 text-center">
-            <div className="font-mono-share text-sm text-muted-foreground tracking-wider animate-pulse">
-              <span className="text-primary/40">$</span> loading library...
+          <div className="space-y-4">
+            {/* Folder bar skeleton */}
+            <div className="flex items-center gap-2 overflow-hidden">
+              {[80, 96, 72, 88, 64].map((w, i) => (
+                <Skeleton
+                  key={i}
+                  className="h-7 rounded border border-border/30 bg-muted/30 flex-shrink-0"
+                  style={{ width: w }}
+                />
+              ))}
+            </div>
+            {/* Grid skeleton */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="space-y-1.5">
+                  <Skeleton
+                    className="w-full rounded border border-border/20 bg-muted/20"
+                    style={{ aspectRatio: "1 / 1" }}
+                  />
+                  <Skeleton className="h-2.5 w-3/4 bg-muted/20 rounded" />
+                  <Skeleton className="h-2 w-1/2 bg-muted/15 rounded" />
+                </div>
+              ))}
             </div>
           </div>
         ) : (
