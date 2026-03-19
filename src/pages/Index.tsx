@@ -1363,7 +1363,7 @@ const Index = () => {
                     <div className={`font-orbitron text-[11px] ${renderEngine === "comfy" ? "text-purple-400" : "text-foreground"}`}>COMFY</div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>WAN Video</span>
-                      <span className={renderEngine === "comfy" ? "text-purple-400/70" : "text-muted-foreground/50"}>8 cr</span>
+                      <span className={renderEngine === "comfy" ? "text-purple-400/70" : "text-muted-foreground/50"}>15 cr</span>
                     </div>
                   </button>
                   <button type="button" onClick={() => setRenderEngine("grok")}
