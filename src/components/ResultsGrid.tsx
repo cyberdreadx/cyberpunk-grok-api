@@ -1371,12 +1371,14 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
               size="sm"
               disabled={zipExporting}
               onClick={async () => {
+                // Export only what's visible in the current folder view
+                const toExport = filteredResults;
                 setZipExporting(true);
-                setZipProgress({ completed: 0, total: results.length });
+                setZipProgress({ completed: 0, total: toExport.length });
                 try {
                   const folderMap: Record<string, string> = {};
                   for (const f of folders) folderMap[f.id] = f.name;
-                  await exportLibraryAsZip(results, folderMap, (c, t) =>
+                  await exportLibraryAsZip(toExport, folderMap, (c, t) =>
                     setZipProgress({ completed: c, total: t })
                   );
                 } finally {
