@@ -694,28 +694,36 @@ export async function exportLibraryAsZip(
         const res = await fetch(result.url);
         if (res.ok) blob = await res.blob();
       } catch { /* blob may have been revoked */ }
-      // If the blob: URL failed, try the original stored URL from IndexedDB
+      // blob: URL failed or revoked — try the raw stored URL from IDB
       if ((!blob || blob.size === 0) && rec?.url && !rec.url.startsWith("blob:")) {
+        // Try direct fetch first, then proxy for CORS-blocked sources
         try {
           const res = await fetch(rec.url);
           if (res.ok) blob = await res.blob();
-        } catch { /* skip */ }
+        } catch { /* CORS error — try proxy */ }
+        if (!blob || blob.size === 0) {
+          try {
+            const proxyUrl = getExportProxyUrl(rec.url, filename);
+            const res = await fetch(proxyUrl);
+            if (res.ok) blob = await res.blob();
+          } catch { /* skip */ }
+        }
       }
     }
-    // 4. External URLs — try direct fetch first (works for same-origin, R2, most CDNs)
-    //    then fall back to download proxy for CORS-restricted URLs
+    // 4. External URLs — always try proxy first for CORS-restricted domains,
+    //    then fall back to direct fetch for same-origin/R2/CDN URLs
     else if (result.url) {
-      // Direct fetch (no CORS proxy)
+      // Try proxy first (handles vidgen.x.ai, api.x.ai, etc.)
       try {
-        const res = await fetch(result.url);
+        const proxyUrl = getExportProxyUrl(result.url, filename);
+        const res = await fetch(proxyUrl);
         if (res.ok) blob = await res.blob();
-      } catch { /* CORS or network error — try proxy */ }
+      } catch { /* proxy failed — try direct */ }
 
-      // Proxy fallback
+      // Direct fetch fallback (same-origin, R2, public CDNs)
       if (!blob || blob.size === 0) {
         try {
-          const proxyUrl = getExportProxyUrl(result.url, filename);
-          const res = await fetch(proxyUrl);
+          const res = await fetch(result.url);
           if (res.ok) blob = await res.blob();
         } catch { /* skip */ }
       }
