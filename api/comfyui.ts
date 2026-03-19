@@ -353,8 +353,10 @@ function getBackend(): { mode: Backend; runpodEndpoint?: string; runpodKey?: str
 
 /**
  * Resolve RunPod endpoint ID by workflow type.
- * Video workflows (WAN) go to a dedicated endpoint to keep models warm.
- * Image workflows (qwen-edit, zimage) share a separate endpoint.
+ * Video workflows (WAN/LongLook) go to dedicated endpoints to keep models warm.
+ * Z-Image gets its own endpoint (RUNPOD_ZIMAGE_ENDPOINT_ID) so its UNET/CLIP/VAE
+ * don't compete with GLTCH edit models on the same worker.
+ * Falls back to RUNPOD_QWEN_EDIT_ENDPOINT_ID, then RUNPOD_ENDPOINT_ID.
  */
 function getRunPodEndpointForWorkflow(
   workflowType: string,
@@ -364,10 +366,12 @@ function getRunPodEndpointForWorkflow(
   const wan = process.env.RUNPOD_WAN_ENDPOINT_ID || fallback;
   const longlook = process.env.RUNPOD_LONGLOOK_ENDPOINT_ID || wan;
   const qwen = process.env.RUNPOD_QWEN_EDIT_ENDPOINT_ID || fallback;
+  const zimage = process.env.RUNPOD_ZIMAGE_ENDPOINT_ID || qwen; // dedicated Z-Image worker; falls back to qwen endpoint
 
   if (workflowType === "longlook") return longlook;
   if (workflowType === "wan-video" || workflowType === "gltch-wan") return wan;
-  if (workflowType === "qwen-edit" || workflowType === "zimage") return qwen;
+  if (workflowType === "zimage") return zimage;
+  if (workflowType === "qwen-edit") return qwen;
   return fallback;
 }
 
