@@ -782,15 +782,35 @@ export async function exportLibraryAsZip(
   // Add manifest
   zip.file("manifest.json", JSON.stringify(manifest, null, 2));
 
-  // Generate ZIP — stream to avoid holding the full buffer in memory twice
+  // Generate ZIP blob
   const content = await zip.generateAsync(
     { type: "blob", compression: "DEFLATE", compressionOptions: { level: 4 } },
-    (meta) => onProgress?.(Math.min(completed, total), total), // reuse callback for generation phase
+    () => onProgress?.(Math.min(completed, total), total),
   );
+
+  const zipFilename = `grok-library-${new Date().toISOString().slice(0, 10)}.zip`;
+  const isMobileDevice = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.matchMedia("(max-width: 768px)").matches;
+
+  // On mobile / PWA: share the ZIP file if the browser supports it
+  if (isMobileDevice && typeof navigator.share === "function") {
+    try {
+      const zipFile = new File([content], zipFilename, { type: "application/zip" });
+      if (navigator.canShare?.({ files: [zipFile] })) {
+        await navigator.share({ files: [zipFile], title: "GROK_RUNNER Library Export" });
+        return { included, skipped };
+      }
+    } catch (err: any) {
+      // AbortError = user cancelled share sheet — treat as success (no error toast)
+      if (err?.name === "AbortError") return { included, skipped };
+      // Other errors fall through to anchor download
+    }
+  }
+
+  // Desktop fallback: anchor click download
   const url = URL.createObjectURL(content);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `grok-library-${new Date().toISOString().slice(0, 10)}.zip`;
+  a.download = zipFilename;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
