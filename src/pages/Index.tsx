@@ -228,7 +228,7 @@ const Index = () => {
   const [zimageWidth, setZimageWidth] = useState(1024);
   const [zimageHeight, setZimageHeight] = useState(1024);
   const [zimageLora, setZimageLora] = useState("none");
-  const [zimageLoraStrength, setZimageLoraStrength] = useState(1.0);
+  const [zimageLoraStrength, setZimageLoraStrength] = useState(0.30);
 
   // GLTCH edit LoRA settings
   const [editLora, setEditLora] = useState("none");
