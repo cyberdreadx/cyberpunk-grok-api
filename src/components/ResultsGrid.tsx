@@ -1378,41 +1378,37 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
                 try {
                   const folderMap: Record<string, string> = {};
                   for (const f of folders) folderMap[f.id] = f.name;
-                  await exportLibraryAsZip(toExport, folderMap, (c, t) =>
+                  const { included, skipped } = await exportLibraryAsZip(toExport, folderMap, (c, t) =>
                     setZipProgress({ completed: c, total: t })
                   );
+                  if (skipped > 0) {
+                    toast.warning(`ZIP saved — ${included} file${included !== 1 ? "s" : ""} included, ${skipped} skipped (expired links).`);
+                  } else {
+                    toast.success(`ZIP saved — ${included} file${included !== 1 ? "s" : ""} exported.`);
+                  }
+                } catch {
+                  toast.error("ZIP export failed.");
                 } finally {
                   setZipExporting(false);
                 }
               }}
-              className="text-primary hover:text-primary/80 font-mono-share text-[10px] sm:text-xs h-7 px-2 sm:px-3"
-            >
-              {zipExporting ? (
-                <>
-                  <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                  {zipProgress.total > 0 ? `${Math.round((zipProgress.completed / zipProgress.total) * 100)}%` : "ZIP"}
-                </>
-              ) : (
-                <>
-                  <Download className="w-3 h-3 sm:mr-1" />
-                  <span className="hidden sm:inline">DOWNLOAD ALL</span>
-                </>
-              )}
-            </Button>
-            {selectedFilter !== "all" && (
-              <Button
-                variant="ghost"
-                size="sm"
-                disabled={zipExporting}
+...
                 onClick={async () => {
                   setZipExporting(true);
                   setZipProgress({ completed: 0, total: filteredResults.length });
                   try {
                     const folderMap: Record<string, string> = {};
                     for (const f of folders) folderMap[f.id] = f.name;
-                    await exportLibraryAsZip(filteredResults, folderMap, (c, t) =>
+                    const { included, skipped } = await exportLibraryAsZip(filteredResults, folderMap, (c, t) =>
                       setZipProgress({ completed: c, total: t })
                     );
+                    if (skipped > 0) {
+                      toast.warning(`ZIP saved — ${included} file${included !== 1 ? "s" : ""} included, ${skipped} skipped (expired links).`);
+                    } else {
+                      toast.success(`ZIP saved — ${included} file${included !== 1 ? "s" : ""} exported.`);
+                    }
+                  } catch {
+                    toast.error("ZIP export failed.");
                   } finally {
                     setZipExporting(false);
                   }
