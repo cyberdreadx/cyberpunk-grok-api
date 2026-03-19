@@ -639,7 +639,7 @@ export async function exportLibraryAsZip(
   folderMap: Record<string, string>,
   /** Optional progress callback: (completed, total) */
   onProgress?: (completed: number, total: number) => void,
-): Promise<void> {
+): Promise<{ included: number; skipped: number }> {
   const JSZip = (await import("jszip")).default;
   const zip = new JSZip();
 
