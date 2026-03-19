@@ -208,13 +208,13 @@ const Index = () => {
   // ComfyUI settings
   const [comfyCheckpoint, setComfyCheckpoint] = useState("");
   const [comfyLora, setComfyLora] = useState("none");
-  const [comfyLoraStrength, setComfyLoraStrength] = useState(0.8);
+  const [comfyLoraStrength, setComfyLoraStrength] = useState(0.30);
   const [comfyWidth, setComfyWidth] = useState(832);
   const [comfyHeight, setComfyHeight] = useState(480);
   const [comfyFrameCount, setComfyFrameCount] = useState(81);
   
   const [comfyVideoLora, setComfyVideoLora] = useState("none");
-  const [comfyVideoLoraStrength, setComfyVideoLoraStrength] = useState(0.8);
+  const [comfyVideoLoraStrength, setComfyVideoLoraStrength] = useState(0.30);
   const [comfyVideoLoraPass, setComfyVideoLoraPass] = useState<"high" | "low" | "both">("high");
   const [comfyAudioMode, setComfyAudioMode] = useState<"none" | "ambient">("none");
   const [comfyAudioPrompt, setComfyAudioPrompt] = useState("");
@@ -228,11 +228,11 @@ const Index = () => {
   const [zimageWidth, setZimageWidth] = useState(1024);
   const [zimageHeight, setZimageHeight] = useState(1024);
   const [zimageLora, setZimageLora] = useState("none");
-  const [zimageLoraStrength, setZimageLoraStrength] = useState(1.0);
+  const [zimageLoraStrength, setZimageLoraStrength] = useState(0.30);
 
   // GLTCH edit LoRA settings
   const [editLora, setEditLora] = useState("none");
-  const [editLoraStrength, setEditLoraStrength] = useState(0.8);
+  const [editLoraStrength, setEditLoraStrength] = useState(0.30);
 
   // LongLook settings
   const [longLookEnabled, setLongLookEnabled] = useState(false);
