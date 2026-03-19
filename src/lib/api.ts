@@ -93,8 +93,8 @@ export const CREDIT_COSTS = {
   comfyImage: 2,
   comfyEdit: 2,
   comfyEditHd: 3,
-  comfyVideo: 8,
-  comfyLongLook: 5,
+  comfyVideo: 12,
+  comfyLongLook: 15,
 } as const;
 
 export type CreditMode =

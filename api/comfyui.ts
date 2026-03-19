@@ -2276,7 +2276,7 @@ Rules:
           : workflowType;
       const baseCost = COMFY_COSTS[costKey] ?? 1;
       const audioCost = audioMode === "ambient" ? 1 : 0;
-      const cost = skipCredits ? 0 : (workflowType === "longlook" ? baseCost * Math.min(4, Math.max(1, Number(sequenceCount))) + audioCost : baseCost + audioCost);
+      const cost = skipCredits ? 0 : (baseCost + audioCost);
       let creditDeducted = false;
 
       if (!isAdminUser || adminTestCredits) {
