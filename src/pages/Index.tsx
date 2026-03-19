@@ -1778,18 +1778,30 @@ const Index = () => {
                       </button>
                     )}
 
-                    {/* Mobile: Show orb while generating */}
+                    {/* Mobile: CSS ring loader while generating */}
                     {isActive && (
-                      <div className="sm:hidden w-40 h-40 mx-auto mb-2">
-                        <Suspense fallback={<div className="w-full h-full rounded-full bg-purple-500/10 animate-pulse" />}>
-                          <GrokOrb isGenerating={true} />
-                        </Suspense>
+                      <div className="sm:hidden w-20 h-20 mx-auto mb-2 relative flex items-center justify-center">
+                        <svg className="absolute inset-0 w-full h-full loader-ring-spin" viewBox="0 0 80 80" fill="none">
+                          <circle cx="40" cy="40" r="36" stroke="hsl(270 100% 65% / 0.15)" strokeWidth="2" />
+                          <circle cx="40" cy="40" r="36" stroke="hsl(270 100% 65%)" strokeWidth="2" strokeLinecap="round" strokeDasharray="60 166" style={{ filter: "drop-shadow(0 0 4px hsl(270 100% 65% / 0.8))" }} />
+                        </svg>
+                        <svg className="absolute inset-2 w-[calc(100%-16px)] h-[calc(100%-16px)] loader-ring-counter" viewBox="0 0 48 48" fill="none">
+                          <circle cx="24" cy="24" r="20" stroke="hsl(300 100% 60% / 0.5)" strokeWidth="1" strokeLinecap="round" strokeDasharray="20 105" />
+                        </svg>
+                        <div className="w-2 h-2 rounded-full loader-dot-pulse" style={{ background: "hsl(var(--accent))" }} />
                       </div>
                     )}
 
                     {/* Status row */}
                     <div className="flex items-center gap-2 mb-1.5">
-                      {isActive && <div className="w-3.5 h-3.5 rounded-full border-2 border-cyan-400/30 border-t-cyan-400 animate-spin shrink-0" />}
+                      {isActive && (
+                        <div className="relative w-3.5 h-3.5 shrink-0 flex items-center justify-center">
+                          <svg className="absolute inset-0 w-full h-full loader-ring-spin" viewBox="0 0 14 14" fill="none">
+                            <circle cx="7" cy="7" r="6" stroke="hsl(180 100% 50% / 0.2)" strokeWidth="1.5" />
+                            <circle cx="7" cy="7" r="6" stroke="hsl(180 100% 50%)" strokeWidth="1.5" strokeLinecap="round" strokeDasharray="10 28" />
+                          </svg>
+                        </div>
+                      )}
                       {isDone && <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />}
                       {isError && <AlertCircle className="w-3.5 h-3.5 text-red-400" />}
 
