@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 // Lazy-load heavy pages to keep initial bundle small
 const Admin = React.lazy(() => import("./pages/Admin"));
@@ -17,6 +18,14 @@ import AgeGateDialog from "@/components/AgeGateDialog";
 
 const queryClient = new QueryClient();
 
+const PageShell = ({ children }: { children: React.ReactNode }) => (
+  <ErrorBoundary>
+    <Suspense fallback={<div className="min-h-screen bg-background" />}>
+      {children}
+    </Suspense>
+  </ErrorBoundary>
+);
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -25,11 +34,11 @@ const App = () => (
       <BrowserRouter>
         <AgeGateDialog />
         <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/admin" element={<Suspense fallback={<div className="min-h-screen bg-background" />}><Admin /></Suspense>} />
-          <Route path="/characters" element={<Suspense fallback={<div className="min-h-screen bg-background" />}><Characters /></Suspense>} />
-          <Route path="/library" element={<Suspense fallback={<div className="min-h-screen bg-background" />}><Library /></Suspense>} />
-          <Route path="/s/:shareId" element={<Suspense fallback={<div className="min-h-screen bg-background" />}><ShareView /></Suspense>} />
+          <Route path="/" element={<PageShell><Index /></PageShell>} />
+          <Route path="/admin" element={<PageShell><Admin /></PageShell>} />
+          <Route path="/characters" element={<PageShell><Characters /></PageShell>} />
+          <Route path="/library" element={<PageShell><Library /></PageShell>} />
+          <Route path="/s/:shareId" element={<PageShell><ShareView /></PageShell>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
@@ -38,5 +47,6 @@ const App = () => (
     </TooltipProvider>
   </QueryClientProvider>
 );
+
 
 export default App;
