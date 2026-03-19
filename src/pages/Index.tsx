@@ -1458,7 +1458,7 @@ const Index = () => {
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-500/5 border border-purple-500/20 rounded">
                       <Film className="w-3 h-3 text-purple-400/70" />
                       <span className="font-mono-share text-[9px] text-purple-400/70">
-                        Auto-generates start frame, then animates — 8 cr flat
+                        Auto-generates start frame, then animates — 15 cr flat
                       </span>
                     </div>
                   </div>
