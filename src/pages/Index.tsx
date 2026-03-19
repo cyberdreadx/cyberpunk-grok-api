@@ -208,7 +208,7 @@ const Index = () => {
   // ComfyUI settings
   const [comfyCheckpoint, setComfyCheckpoint] = useState("");
   const [comfyLora, setComfyLora] = useState("none");
-  const [comfyLoraStrength, setComfyLoraStrength] = useState(0.8);
+  const [comfyLoraStrength, setComfyLoraStrength] = useState(0.30);
   const [comfyWidth, setComfyWidth] = useState(832);
   const [comfyHeight, setComfyHeight] = useState(480);
   const [comfyFrameCount, setComfyFrameCount] = useState(81);
