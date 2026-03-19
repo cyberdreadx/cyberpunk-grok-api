@@ -4,6 +4,7 @@ import { apiFetch } from "@/lib/api";
 import { saveChatMessage, getChatHistory, clearChatHistory, deleteChatMessage, type ChatMessage } from "@/lib/storage";
 import { comfySubmitAndPollStandalone, comfyPollUntilDone } from "@/hooks/useGrokApi";
 import CyberLayout from "@/components/CyberLayout";
+import MobileBottomNav from "@/components/MobileBottomNav";
 import { ArrowLeft, Plus, Trash2, Send, Edit, X, MessageSquare, Sparkles, Image, Download, Paperclip } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
