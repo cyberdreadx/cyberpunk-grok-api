@@ -164,9 +164,9 @@ const COMFY_COSTS: Record<string, number> = {
   "qwen-edit": 2,
   "qwen-edit-hd": 2,
   "wan-video": 2,
-  "gltch-wan": 5,
-  "gltch-wan-hd": 7,
-  "longlook": 2, // per sequence — actual cost = sequenceCount * 2
+  "gltch-wan": 12,
+  "gltch-wan-hd": 14,
+  "longlook": 15, // flat cost regardless of sequence count
 };
 
 // ---- Video LoRA pairing ----
@@ -2276,7 +2276,7 @@ Rules:
           : workflowType;
       const baseCost = COMFY_COSTS[costKey] ?? 1;
       const audioCost = audioMode === "ambient" ? 1 : 0;
-      const cost = skipCredits ? 0 : (workflowType === "longlook" ? baseCost * Math.min(4, Math.max(1, Number(sequenceCount))) + audioCost : baseCost + audioCost);
+      const cost = skipCredits ? 0 : (baseCost + audioCost);
       let creditDeducted = false;
 
       if (!isAdminUser || adminTestCredits) {
