@@ -1401,7 +1401,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
               ) : (
                 <>
                   <Download className="w-3 h-3 sm:mr-1" />
-                  <span className="hidden sm:inline">DOWNLOAD ALL</span>
+                  <span className="hidden sm:inline">DOWNLOAD ALL ({filteredResults.length})</span>
                 </>
               )}
             </Button>
