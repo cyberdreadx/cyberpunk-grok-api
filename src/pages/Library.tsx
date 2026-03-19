@@ -16,6 +16,7 @@ import {
   deleteStoredResult,
   clearStoredResults,
 } from "@/lib/storage";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { GrokResult } from "@/hooks/useGrokApi";
 
 const Library: React.FC = () => {
