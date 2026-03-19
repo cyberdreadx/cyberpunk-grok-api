@@ -22,8 +22,8 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <AgeGateDialog />
       <BrowserRouter>
+        <AgeGateDialog />
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/admin" element={<Suspense fallback={<div className="min-h-screen bg-background" />}><Admin /></Suspense>} />
