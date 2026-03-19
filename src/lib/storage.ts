@@ -667,6 +667,8 @@ export async function exportLibraryAsZip(
 
   const total = results.length;
   let completed = 0;
+  let included = 0;
+  let skipped = 0;
 
   for (const result of results) {
     const rec = recordMap.get(result.id);
@@ -731,6 +733,9 @@ export async function exportLibraryAsZip(
 
     if (blob && blob.size > 0) {
       zip.file(path, blob);
+      included++;
+    } else {
+      skipped++;
     }
 
     manifest.push({
@@ -758,6 +763,8 @@ export async function exportLibraryAsZip(
   a.click();
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 30_000);
+
+  return { included, skipped };
 }
 
 /** Build a proxy URL for exporting external media (same pattern as ResultsGrid). */
