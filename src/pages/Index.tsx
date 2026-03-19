@@ -1473,13 +1473,21 @@ const Index = () => {
                   <Zap className="w-3 h-3" />
                   ENGINE
                 </label>
-                <div className={`grid ${isAdmin ? "grid-cols-3" : "grid-cols-2"} gap-2`}>
+                <div className="grid grid-cols-3 gap-2">
+                  <button type="button" onClick={() => { setAnimateEngine("comfy"); setLongLookEnabled(true); }}
+                    className={`p-2.5 border rounded text-left transition-all duration-200 ${animateEngine === "comfy" ? "border-purple-500 bg-purple-500/5 shadow-[0_0_8px_rgba(168,85,247,0.15)]" : "border-border bg-card/30 hover:border-purple-500/40"}`}>
+                    <div className={`font-orbitron text-[11px] ${animateEngine === "comfy" ? "text-purple-400" : "text-foreground"}`}>GLTCH PRO</div>
+                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
+                      <span>MultiClip</span>
+                      <span className={animateEngine === "comfy" ? "text-purple-400/70" : "text-muted-foreground/50"}>15 cr</span>
+                    </div>
+                  </button>
                   <button type="button" onClick={() => { setAnimateEngine("gltch"); setLongLookEnabled(false); }}
                     className={`p-2.5 border rounded text-left transition-all duration-200 ${animateEngine === "gltch" ? "border-secondary neon-border bg-secondary/5" : "border-border bg-card/30 hover:border-secondary/40"}`}>
                     <div className={`font-orbitron text-[11px] ${animateEngine === "gltch" ? "text-secondary" : "text-foreground"}`}>GLTCH</div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
-                      <span>WAN 2.2 Stable I2V / T2V</span>
-                      <span className={animateEngine === "gltch" ? "text-secondary/70" : "text-muted-foreground/50"}>8 cr</span>
+                      <span>WAN 2.2 I2V / T2V</span>
+                      <span className={animateEngine === "gltch" ? "text-secondary/70" : "text-muted-foreground/50"}>12 cr</span>
                     </div>
                   </button>
                   <button type="button" onClick={() => { setAnimateEngine("grok"); setLongLookEnabled(false); }}
@@ -1492,16 +1500,6 @@ const Index = () => {
                       <span className={animateEngine === "grok" ? "text-primary/70" : "text-muted-foreground/50"}>{videoSettings.duration * 2} cr</span>
                     </div>
                   </button>
-                  {isAdmin && (
-                    <button type="button" onClick={() => { setAnimateEngine("comfy"); setLongLookEnabled(true); }}
-                      className={`p-2.5 border rounded text-left transition-all duration-200 ${animateEngine === "comfy" ? "border-purple-500 bg-purple-500/5 shadow-[0_0_8px_rgba(168,85,247,0.15)]" : "border-border bg-card/30 hover:border-purple-500/40"}`}>
-                      <div className={`font-orbitron text-[11px] ${animateEngine === "comfy" ? "text-purple-400" : "text-foreground"}`}>COMFY</div>
-                      <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
-                        <span>LongLook MultiClip</span>
-                        <span className={animateEngine === "comfy" ? "text-purple-400/70" : "text-muted-foreground/50"}>{longLookSeqCount * 5} cr</span>
-                      </div>
-                    </button>
-                  )}
                 </div>
                 {/* GLTCH WAN settings */}
                 {animateEngine === "gltch" && (
