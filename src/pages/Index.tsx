@@ -232,7 +232,7 @@ const Index = () => {
 
   // GLTCH edit LoRA settings
   const [editLora, setEditLora] = useState("none");
-  const [editLoraStrength, setEditLoraStrength] = useState(0.8);
+  const [editLoraStrength, setEditLoraStrength] = useState(0.30);
 
   // LongLook settings
   const [longLookEnabled, setLongLookEnabled] = useState(false);
