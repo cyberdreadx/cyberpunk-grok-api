@@ -1371,16 +1371,22 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
               size="sm"
               disabled={zipExporting}
               onClick={async () => {
-                // Export only what's visible in the current folder view
                 const toExport = filteredResults;
                 setZipExporting(true);
                 setZipProgress({ completed: 0, total: toExport.length });
                 try {
                   const folderMap: Record<string, string> = {};
                   for (const f of folders) folderMap[f.id] = f.name;
-                  await exportLibraryAsZip(toExport, folderMap, (c, t) =>
+                  const { included, skipped } = await exportLibraryAsZip(toExport, folderMap, (c, t) =>
                     setZipProgress({ completed: c, total: t })
                   );
+                  if (skipped > 0) {
+                    toast.warning(`ZIP saved — ${included} file${included !== 1 ? "s" : ""} included, ${skipped} skipped (expired links).`);
+                  } else {
+                    toast.success(`ZIP saved — ${included} file${included !== 1 ? "s" : ""} exported.`);
+                  }
+                } catch {
+                  toast.error("ZIP export failed.");
                 } finally {
                   setZipExporting(false);
                 }
@@ -1410,9 +1416,16 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
                   try {
                     const folderMap: Record<string, string> = {};
                     for (const f of folders) folderMap[f.id] = f.name;
-                    await exportLibraryAsZip(filteredResults, folderMap, (c, t) =>
+                    const { included, skipped } = await exportLibraryAsZip(filteredResults, folderMap, (c, t) =>
                       setZipProgress({ completed: c, total: t })
                     );
+                    if (skipped > 0) {
+                      toast.warning(`ZIP saved — ${included} file${included !== 1 ? "s" : ""} included, ${skipped} skipped (expired links).`);
+                    } else {
+                      toast.success(`ZIP saved — ${included} file${included !== 1 ? "s" : ""} exported.`);
+                    }
+                  } catch {
+                    toast.error("ZIP export failed.");
                   } finally {
                     setZipExporting(false);
                   }
