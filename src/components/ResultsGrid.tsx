@@ -1371,7 +1371,8 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
               size="sm"
               disabled={zipExporting}
               onClick={async () => {
-                const toExport = filteredResults;
+                // DOWNLOAD ALL = everything except trash, regardless of current folder filter
+                const toExport = results.filter((r) => r.folderId !== "__trash");
                 setZipExporting(true);
                 setZipProgress({ completed: 0, total: toExport.length });
                 try {
@@ -1401,7 +1402,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
               ) : (
                 <>
                   <Download className="w-3 h-3 sm:mr-1" />
-                  <span className="hidden sm:inline">DOWNLOAD ALL ({filteredResults.length})</span>
+                  <span className="hidden sm:inline">DOWNLOAD ALL ({results.filter((r) => r.folderId !== "__trash").length})</span>
                 </>
               )}
             </Button>
