@@ -670,91 +670,123 @@ export async function exportLibraryAsZip(
   let included = 0;
   let skipped = 0;
 
-  for (const result of results) {
-    const rec = recordMap.get(result.id);
-    const ext = result.type === "image" ? "png" : "mp4";
-    const prefix = result.type === "image" ? "img" : "vid";
-    const filename = `${prefix}_${result.id.slice(0, 8)}.${ext}`;
-    const folderName = result.folderId && folderNames[result.folderId]
-      ? folderNames[result.folderId]
-      : "unfiled";
-    const path = `${folderName}/${filename}`;
-
-    let blob: Blob | null = null;
-
-    // 1. Try to get blob from IndexedDB record (best source — local, no network)
+  // Helper to fetch a single result's blob, trying multiple sources
+  async function fetchBlobForResult(result: GrokResult, rec: StoredResult | undefined, filename: string): Promise<Blob | null> {
+    // 1. IndexedDB blob (best — already local, no network needed)
     if (rec?.blob && rec.blob instanceof Blob && rec.blob.size > 0) {
-      blob = rec.blob;
+      return rec.blob;
     }
-    // 2. Data URLs in the result itself → convert
-    else if (result.url.startsWith("data:")) {
-      blob = dataUrlToBlob(result.url);
+    // 2. Data URL embedded in result
+    if (result.url.startsWith("data:")) {
+      return dataUrlToBlob(result.url);
     }
-    // 3. blob: URLs → fetch the in-memory blob
-    else if (result.url.startsWith("blob:")) {
+    // 3. blob: URL (in-memory object URL)
+    if (result.url.startsWith("blob:")) {
       try {
         const res = await fetch(result.url);
-        if (res.ok) blob = await res.blob();
-      } catch { /* blob may have been revoked */ }
-      // blob: URL failed or revoked — try the raw stored URL from IDB
-      if ((!blob || blob.size === 0) && rec?.url && !rec.url.startsWith("blob:")) {
-        // Try direct fetch first, then proxy for CORS-blocked sources
+        if (res.ok) {
+          const b = await res.blob();
+          if (b.size > 0) return b;
+        }
+      } catch { /* revoked — fall through */ }
+      // Fallback to the raw stored URL in IDB
+      if (rec?.url && !rec.url.startsWith("blob:")) {
         try {
           const res = await fetch(rec.url);
-          if (res.ok) blob = await res.blob();
-        } catch { /* CORS error — try proxy */ }
-        if (!blob || blob.size === 0) {
-          try {
-            const proxyUrl = getExportProxyUrl(rec.url, filename);
-            const res = await fetch(proxyUrl);
-            if (res.ok) blob = await res.blob();
-          } catch { /* skip */ }
-        }
-      }
-    }
-    // 4. External URLs — always try proxy first for CORS-restricted domains,
-    //    then fall back to direct fetch for same-origin/R2/CDN URLs
-    else if (result.url) {
-      // Try proxy first (handles vidgen.x.ai, api.x.ai, etc.)
-      try {
-        const proxyUrl = getExportProxyUrl(result.url, filename);
-        const res = await fetch(proxyUrl);
-        if (res.ok) blob = await res.blob();
-      } catch { /* proxy failed — try direct */ }
-
-      // Direct fetch fallback (same-origin, R2, public CDNs)
-      if (!blob || blob.size === 0) {
+          if (res.ok) {
+            const b = await res.blob();
+            if (b.size > 0) return b;
+          }
+        } catch { /* CORS — try proxy */ }
         try {
-          const res = await fetch(result.url);
-          if (res.ok) blob = await res.blob();
+          const res = await fetch(getExportProxyUrl(rec.url, filename));
+          if (res.ok) {
+            const b = await res.blob();
+            if (b.size > 0) return b;
+          }
         } catch { /* skip */ }
       }
+      return null;
     }
-
-    if (blob && blob.size > 0) {
-      zip.file(path, blob);
-      included++;
-    } else {
-      skipped++;
+    // 4. External URL — proxy first, then direct fallback
+    if (result.url) {
+      try {
+        const res = await fetch(getExportProxyUrl(result.url, filename));
+        if (res.ok) {
+          const b = await res.blob();
+          if (b.size > 0) return b;
+        }
+      } catch { /* try direct */ }
+      try {
+        const res = await fetch(result.url);
+        if (res.ok) {
+          const b = await res.blob();
+          if (b.size > 0) return b;
+        }
+      } catch { /* skip */ }
     }
+    return null;
+  }
 
-    manifest.push({
-      filename: path,
-      type: result.type,
-      prompt: result.revised_prompt || undefined,
-      folder: folderName,
-      timestamp: result.timestamp,
-    });
+  // Process in batches to avoid exhausting browser fetch pool / memory
+  // Images are fetched in larger batches; videos (larger files) in smaller ones
+  const BATCH_SIZE = 4;
+  const BATCH_DELAY_MS = 120; // breathing room between batches
 
-    completed++;
-    onProgress?.(completed, total);
+  for (let i = 0; i < results.length; i += BATCH_SIZE) {
+    const batch = results.slice(i, i + BATCH_SIZE);
+
+    // Fetch all items in the batch concurrently
+    await Promise.all(batch.map(async (result) => {
+      const rec = recordMap.get(result.id);
+      const ext = result.type === "image" ? "png" : "mp4";
+      const prefix = result.type === "image" ? "img" : "vid";
+      const filename = `${prefix}_${result.id.slice(0, 8)}.${ext}`;
+      const folderName = result.folderId && folderNames[result.folderId]
+        ? folderNames[result.folderId]
+        : "unfiled";
+      const path = `${folderName}/${filename}`;
+
+      manifest.push({
+        filename: path,
+        type: result.type,
+        prompt: result.revised_prompt || undefined,
+        folder: folderName,
+        timestamp: result.timestamp,
+      });
+
+      try {
+        const blob = await fetchBlobForResult(result, rec, filename);
+        if (blob && blob.size > 0) {
+          // Videos are already compressed — STORE avoids wasted CPU & memory
+          const compression = result.type === "video" ? "STORE" : "DEFLATE";
+          zip.file(path, blob, { compression, compressionOptions: { level: 4 } });
+          included++;
+        } else {
+          skipped++;
+        }
+      } catch {
+        skipped++;
+      }
+
+      completed++;
+      onProgress?.(completed, total);
+    }));
+
+    // Small pause between batches so the browser can breathe
+    if (i + BATCH_SIZE < results.length) {
+      await new Promise<void>((r) => setTimeout(r, BATCH_DELAY_MS));
+    }
   }
 
   // Add manifest
   zip.file("manifest.json", JSON.stringify(manifest, null, 2));
 
-  // Generate and trigger download
-  const content = await zip.generateAsync({ type: "blob", compression: "DEFLATE", compressionOptions: { level: 6 } });
+  // Generate ZIP — stream to avoid holding the full buffer in memory twice
+  const content = await zip.generateAsync(
+    { type: "blob", compression: "DEFLATE", compressionOptions: { level: 4 } },
+    (meta) => onProgress?.(Math.min(completed, total), total), // reuse callback for generation phase
+  );
   const url = URL.createObjectURL(content);
   const a = document.createElement("a");
   a.href = url;
@@ -762,7 +794,7 @@ export async function exportLibraryAsZip(
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 30_000);
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
 
   return { included, skipped };
 }
