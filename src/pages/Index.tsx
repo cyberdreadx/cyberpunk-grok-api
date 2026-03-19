@@ -1479,7 +1479,7 @@ const Index = () => {
                     <div className={`font-orbitron text-[11px] ${animateEngine === "comfy" ? "text-purple-400" : "text-foreground"}`}>GLTCH PRO</div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>MultiClip</span>
-                      <span className={animateEngine === "comfy" ? "text-purple-400/70" : "text-muted-foreground/50"}>15 cr</span>
+                      <span className={animateEngine === "comfy" ? "text-purple-400/70" : "text-muted-foreground/50"}>20 cr</span>
                     </div>
                   </button>
                   <button type="button" onClick={() => { setAnimateEngine("gltch"); setLongLookEnabled(false); }}
