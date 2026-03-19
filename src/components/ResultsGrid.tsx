@@ -1371,7 +1371,6 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
               size="sm"
               disabled={zipExporting}
               onClick={async () => {
-                // Export only what's visible in the current folder view
                 const toExport = filteredResults;
                 setZipExporting(true);
                 setZipProgress({ completed: 0, total: toExport.length });
@@ -1392,7 +1391,25 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
                   setZipExporting(false);
                 }
               }}
-...
+              className="text-primary hover:text-primary/80 font-mono-share text-[10px] sm:text-xs h-7 px-2 sm:px-3"
+            >
+              {zipExporting ? (
+                <>
+                  <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                  {zipProgress.total > 0 ? `${Math.round((zipProgress.completed / zipProgress.total) * 100)}%` : "ZIP"}
+                </>
+              ) : (
+                <>
+                  <Download className="w-3 h-3 sm:mr-1" />
+                  <span className="hidden sm:inline">DOWNLOAD ALL</span>
+                </>
+              )}
+            </Button>
+            {selectedFilter !== "all" && (
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={zipExporting}
                 onClick={async () => {
                   setZipExporting(true);
                   setZipProgress({ completed: 0, total: filteredResults.length });
