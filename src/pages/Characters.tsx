@@ -552,6 +552,7 @@ export default function Characters() {
 
   // ── Render ──
   return (
+    <>
     <CyberLayout>
       <div className="max-w-4xl mx-auto px-4 py-6 min-h-screen">
         {/* Header */}
