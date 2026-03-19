@@ -159,14 +159,14 @@ export const config = {
 const ADMIN_EMAIL = "cyberdreadx@proton.me";
 
 const COMFY_COSTS: Record<string, number> = {
-  "txt2img": 1,
-  "zimage": 1,
-  "qwen-edit": 2,
-  "qwen-edit-hd": 2,
-  "wan-video": 2,
-  "gltch-wan": 12,
-  "gltch-wan-hd": 14,
-  "longlook": 15, // flat cost regardless of sequence count
+  "txt2img": 3,
+  "zimage": 3,
+  "qwen-edit": 3,
+  "qwen-edit-hd": 4,
+  "wan-video": 15,
+  "gltch-wan": 15,
+  "gltch-wan-hd": 18,
+  "longlook": 20, // flat cost regardless of sequence count
 };
 
 // ---- Video LoRA pairing ----

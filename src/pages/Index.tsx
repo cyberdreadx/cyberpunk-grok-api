@@ -998,7 +998,7 @@ const Index = () => {
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>Edit + LoRA</span>
                       <span className={editEngine === "gltch" ? "text-secondary/70" : "text-muted-foreground/50"}>
-                        1 cr
+                        3 cr
                       </span>
                     </div>
                   </button>
