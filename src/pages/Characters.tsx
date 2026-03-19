@@ -893,5 +893,6 @@ export default function Characters() {
       </div>
     </CyberLayout>
     <MobileBottomNav isAuthenticated={true} />
+    </>
   );
 }
