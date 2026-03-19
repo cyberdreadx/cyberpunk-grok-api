@@ -998,7 +998,7 @@ const Index = () => {
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>Edit + LoRA</span>
                       <span className={editEngine === "gltch" ? "text-secondary/70" : "text-muted-foreground/50"}>
-                        1 cr
+                        3 cr
                       </span>
                     </div>
                   </button>
@@ -1183,7 +1183,7 @@ const Index = () => {
                     </div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>Z-Image Turbo</span>
-                      <span className={genEngine === "gltch" ? "text-secondary/70" : "text-muted-foreground/50"}>1 cr</span>
+                      <span className={genEngine === "gltch" ? "text-secondary/70" : "text-muted-foreground/50"}>3 cr</span>
                     </div>
                   </button>
                   <button type="button" onClick={() => setGenEngine("grok")}
@@ -1363,7 +1363,7 @@ const Index = () => {
                     <div className={`font-orbitron text-[11px] ${renderEngine === "comfy" ? "text-purple-400" : "text-foreground"}`}>COMFY</div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>WAN Video</span>
-                      <span className={renderEngine === "comfy" ? "text-purple-400/70" : "text-muted-foreground/50"}>8 cr</span>
+                      <span className={renderEngine === "comfy" ? "text-purple-400/70" : "text-muted-foreground/50"}>15 cr</span>
                     </div>
                   </button>
                   <button type="button" onClick={() => setRenderEngine("grok")}
@@ -1458,7 +1458,7 @@ const Index = () => {
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-500/5 border border-purple-500/20 rounded">
                       <Film className="w-3 h-3 text-purple-400/70" />
                       <span className="font-mono-share text-[9px] text-purple-400/70">
-                        Auto-generates start frame, then animates — 8 cr flat
+                        Auto-generates start frame, then animates — 15 cr flat
                       </span>
                     </div>
                   </div>
@@ -1479,7 +1479,7 @@ const Index = () => {
                     <div className={`font-orbitron text-[11px] ${animateEngine === "comfy" ? "text-purple-400" : "text-foreground"}`}>GLTCH PRO</div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>MultiClip</span>
-                      <span className={animateEngine === "comfy" ? "text-purple-400/70" : "text-muted-foreground/50"}>15 cr</span>
+                      <span className={animateEngine === "comfy" ? "text-purple-400/70" : "text-muted-foreground/50"}>20 cr</span>
                     </div>
                   </button>
                   <button type="button" onClick={() => { setAnimateEngine("gltch"); setLongLookEnabled(false); }}
