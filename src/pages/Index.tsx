@@ -214,7 +214,7 @@ const Index = () => {
   const [comfyFrameCount, setComfyFrameCount] = useState(81);
   
   const [comfyVideoLora, setComfyVideoLora] = useState("none");
-  const [comfyVideoLoraStrength, setComfyVideoLoraStrength] = useState(0.8);
+  const [comfyVideoLoraStrength, setComfyVideoLoraStrength] = useState(0.30);
   const [comfyVideoLoraPass, setComfyVideoLoraPass] = useState<"high" | "low" | "both">("high");
   const [comfyAudioMode, setComfyAudioMode] = useState<"none" | "ambient">("none");
   const [comfyAudioPrompt, setComfyAudioPrompt] = useState("");
