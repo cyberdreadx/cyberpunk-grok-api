@@ -399,19 +399,28 @@ export default function Characters() {
           return;
         }
         const anglePrefix = trigger.cameraAngle && CAMERA_ANGLES[trigger.cameraAngle] ? CAMERA_ANGLES[trigger.cameraAngle] : "";
-        const imgBody: Record<string, any> = {
-          workflow: "qwen-edit",
-          prompt: anglePrefix + trigger.prompt,
-          imageBase64: portrait64,
-          imageFilename: "portrait.jpg",
-          steps: 20, cfg: 5,
-        };
-        const result = await comfySubmitAndPollStandalone(imgBody);
+        // Use Grok edit endpoint (fast, same as UI Modify mode) instead of slow ComfyUI qwen-edit
+        const grokResult = await apiFetch<{ data?: Array<{ b64_json?: string; url?: string }> }>(
+          "/generate", {
+            method: "POST",
+            body: {
+              action: "edit-image",
+              prompt: anglePrefix + trigger.prompt,
+              image_url: portrait64,
+              n: 1,
+              model: "grok-2-image",
+            },
+          },
+        );
+        const imgData = grokResult?.data?.[0];
+        const imgOut = imgData?.b64_json
+          ? `data:image/jpeg;base64,${imgData.b64_json}`
+          : imgData?.url || null;
 
-        if (result.image) {
+        if (imgOut) {
           const mediaMsg: ChatMessage = {
             characterId: char.id, role: "assistant", content: "",
-            mediaUrl: result.image, mediaType: "image", timestamp: Date.now(),
+            mediaUrl: imgOut, mediaType: "image", timestamp: Date.now(),
           };
           replacePlaceholder(mediaMsg);
           await saveChatMessage(mediaMsg);
@@ -430,16 +439,25 @@ export default function Characters() {
         const vidAnglePrefix = trigger.cameraAngle && CAMERA_ANGLES[trigger.cameraAngle]
           ? CAMERA_ANGLES[trigger.cameraAngle]
           : CAMERA_ANGLES.closeup;
-        const vidFrameBody: Record<string, any> = {
-          workflow: "qwen-edit",
-          prompt: vidAnglePrefix + trigger.prompt,
-          imageBase64: portrait64,
-          imageFilename: "portrait.jpg",
-          steps: 20, cfg: 5,
-        };
-        const imgResult = await comfySubmitAndPollStandalone(vidFrameBody);
+        // Use fast Grok edit for the source frame (same speed as UI Modify)
+        const vidFrameGrok = await apiFetch<{ data?: Array<{ b64_json?: string; url?: string }> }>(
+          "/generate", {
+            method: "POST",
+            body: {
+              action: "edit-image",
+              prompt: vidAnglePrefix + trigger.prompt,
+              image_url: portrait64,
+              n: 1,
+              model: "grok-2-image",
+            },
+          },
+        );
+        const vidFrameItem = vidFrameGrok?.data?.[0];
+        const vidFrameBase64 = vidFrameItem?.b64_json
+          ? `data:image/jpeg;base64,${vidFrameItem.b64_json}`
+          : vidFrameItem?.url || null;
 
-        if (!imgResult.image) throw new Error("Failed to generate source image for video");
+        if (!vidFrameBase64) throw new Error("Failed to generate source image for video");
 
         updatePlaceholder("animating video...");
 
@@ -448,7 +466,7 @@ export default function Characters() {
             method: "POST",
             body: {
               action: "generate", workflow: "gltch-wan",
-              prompt: trigger.prompt, imageBase64: imgResult.image, imageFilename: "character_frame.jpg",
+              prompt: trigger.prompt, imageBase64: vidFrameBase64, imageFilename: "character_frame.jpg",
               width: 832, height: 832, steps: 4, cfg: 1,
               frameCount: 81, shift: 8, useRife: true, useUpscale: false, resolution: 832,
               videoLora: trigger.videoLora || "mystic_xxx_wan22_i2v_v1",
