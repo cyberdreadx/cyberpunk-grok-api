@@ -135,7 +135,11 @@
     filter: brightness(calc(1 + var(--immersion-glow) * 0.3));
   }
 
-  /** Full-screen color grade driven by admin sliders (--immersion-* on :root). */
+  /**
+   * Full-screen color grade driven by admin sliders (--immersion-* on :root).
+   * Note: `filter` on an ancestor creates a containing block — `position: fixed` UI
+   * (e.g. mobile nav) must render via portal to `document.body`, not under this host.
+   */
   .immersion-screen-host {
     filter: hue-rotate(calc(var(--immersion-red-shift) * 0.6deg))
       brightness(calc(0.88 + var(--immersion-glow) * 0.12));

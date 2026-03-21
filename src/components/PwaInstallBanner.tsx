@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { createPortal } from "react-dom";
 import { Download, X, Share, Plus, Smartphone } from "lucide-react";
 import { usePwaInstall } from "@/hooks/usePwaInstall";
 
@@ -8,7 +9,8 @@ const PwaInstallBanner: React.FC = () => {
 
   if (!shouldShow) return null;
 
-  return (
+  /** Portal: CyberLayout `.immersion-screen-host` uses `filter`, which breaks `position: fixed`. */
+  const node = (
     <>
       {/* Install banner */}
       <div className="fixed bottom-[72px] left-2 right-2 z-50 sm:hidden animate-slide-up">
@@ -142,6 +144,9 @@ const PwaInstallBanner: React.FC = () => {
       )}
     </>
   );
+
+  if (typeof document === "undefined") return null;
+  return createPortal(node, document.body);
 };
 
 export default PwaInstallBanner;

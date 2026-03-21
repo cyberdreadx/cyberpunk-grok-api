@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { createPortal } from "react-dom";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Sparkles, Image, Users, ShoppingCart, MoreHorizontal, HelpCircle, FileText, Shield, ScrollText } from "lucide-react";
 
@@ -65,7 +66,12 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
     },
   ];
 
-  return (
+  /**
+   * Portaled to document.body so `position: fixed` is relative to the viewport.
+   * CyberLayout uses `.immersion-screen-host` (CSS `filter` on an ancestor), which
+   * creates a new containing block and breaks fixed positioning for descendants.
+   */
+  const node = (
     <>
       {/* More menu overlay */}
       {moreOpen && (
@@ -144,6 +150,9 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
       </nav>
     </>
   );
+
+  if (typeof document === "undefined") return null;
+  return createPortal(node, document.body);
 };
 
 export default MobileBottomNav;
