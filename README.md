@@ -8,7 +8,6 @@
 
 ## ✅ Recent Updates
 
-- **PayPal for credit packs** (alongside Stripe) with server-side capture + idempotency
 - **Folder Vault system** — hide folders from main tabs, restore from discreet vault menu
 - **Safer folder deletion** — confirmation modal with clear consequences; contents move to `UNFILED`
 - **Mobile folder UX upgrades** — larger tap targets and easier menu interactions
@@ -49,7 +48,7 @@ A cyberpunk-themed web app for the [xAI Grok Imagine API](https://docs.x.ai/docs
 - **User Authentication** — Custom JWT-based signup/login
 - **Credit System** — Pay-per-use credits with sub-credits (subscription) and pack-credits (one-time)
 - **Stripe Integration** — One-time credit packs, monthly subscriptions, customer portal
-- **PayPal Integration** — One-time credit packs as an alternate checkout path
+- **$XRGE on Base** — Optional crypto checkout for packs (+ bonus credits; unlocks NSFW LoRAs for holders)
 - **Monthly Plans** — Basic and Premium tiers with auto-renewing credits (no rollover)
 - **API Proxy** — Server-side xAI API calls for credit users (key stays on server)
 
@@ -93,7 +92,7 @@ npm run build
           │  /api/auth/*        │  ← JWT auth
           │  /api/credits       │  ← credit balance
           │  /api/checkout      │  ← Stripe sessions
-│  /api/paypal        │  ← PayPal create/capture
+          │  /api/xrge-*        │  ← XRGE pack orders (Base)
           │  /api/webhook       │  ← Stripe webhooks
           │  /api/generate      │  ← xAI proxy
           │  /api/download      │  ← media proxy
@@ -120,11 +119,8 @@ Copy `.env.example` and fill in your values:
 | `STRIPE_WEBHOOK_SECRET` | Backend | Stripe webhook signing secret |
 | `STRIPE_PRICE_*` | Backend | Stripe Price IDs for packs and subscriptions |
 | `SITE_URL` | Backend | Frontend URL for Stripe redirects |
-| `PAYPAL_CLIENT_ID` | Backend | PayPal app client ID |
-| `PAYPAL_CLIENT_SECRET` | Backend | PayPal app secret |
-| `PAYPAL_SANDBOX` | Backend | `true` for sandbox testing, `false` for live |
 | `VITE_API_URL` | Frontend | Backend API URL (only if on a different domain) |
-| `VITE_PAYPAL_CLIENT_ID` | Frontend | Enables PayPal button rendering in UI |
+| `XRGE_DEPOSIT_ADDRESS` | Backend | Wallet to receive XRGE (Base); see `api/_lib/xrge.ts` |
 
 ## 🏠 Self-Hosting
 
@@ -142,11 +138,9 @@ See [SELF-HOSTING.md](SELF-HOSTING.md) for complete instructions on running priv
 To enable the credit-based SaaS features:
 
 1. **Database** — Create a [Neon](https://neon.tech) Postgres project and run `supabase/migrations/20260209_saas_credits.sql`
-   - Also run `supabase/migrations/20260211_paypal_transactions.sql` for PayPal idempotency support
 2. **Stripe** — Create products using `scripts/setup-stripe-products.ps1` (Windows) or `scripts/setup-stripe-products.sh` (Mac/Linux)
-3. **PayPal (optional)** — Create sandbox/live app credentials in the PayPal Developer Dashboard
-4. **Backend** — Deploy the `api/` folder to [Vercel](https://vercel.com) and configure environment variables
-5. **Frontend** — Set `VITE_API_URL` to your Vercel deployment URL if hosted separately
+3. **Backend** — Deploy the `api/` folder to [Vercel](https://vercel.com) and configure environment variables
+4. **Frontend** — Set `VITE_API_URL` to your Vercel deployment URL if hosted separately
 
 ## 🛠️ Tech Stack
 
@@ -162,7 +156,7 @@ To enable the credit-based SaaS features:
 - Vercel Serverless Functions (Node.js)
 - Neon Postgres (serverless driver)
 - Custom JWT authentication (bcryptjs + jsonwebtoken)
-- Stripe + PayPal for payments
+- Stripe (cards/subscriptions) + optional XRGE (packs on Base)
 
 **Hosting:**
 - Frontend: Netlify (with Netlify Functions for download proxy)

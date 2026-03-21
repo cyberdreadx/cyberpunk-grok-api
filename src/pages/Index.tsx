@@ -888,7 +888,7 @@ const Index = () => {
                 onPurchase={creditsHook.purchaseCredits}
                 onSubscribe={creditsHook.subscribeToPlan}
                 onManageSubscription={creditsHook.manageSubscription}
-                onPayPalSuccess={creditsHook.refreshCredits}
+                onCreditsRefresh={creditsHook.refreshCredits}
                 externalOpen={storeOpen}
                 onExternalOpenChange={setStoreOpen}
               />

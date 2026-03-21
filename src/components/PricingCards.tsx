@@ -1,8 +1,7 @@
 import React, { useState } from "react";
 import { Loader2, Zap, Crown, RefreshCw, Sparkles, ArrowUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { PayPalButtons } from "@paypal/react-paypal-js";
-import { apiFetch, SUBSCRIPTION_TIERS_MONTHLY, SUBSCRIPTION_TIERS_YEARLY, TIER_RANK } from "@/lib/api";
+import { SUBSCRIPTION_TIERS_MONTHLY, SUBSCRIPTION_TIERS_YEARLY, TIER_RANK } from "@/lib/api";
 import type { CreditPackage, SubscriptionTier } from "@/lib/api";
 
 interface PricingCardsProps {
@@ -13,7 +12,6 @@ interface PricingCardsProps {
   onPurchase: (packageId: string) => Promise<void> | void;
   onSubscribe: (tierId: string) => Promise<void> | void;
   onManageSubscription?: () => Promise<void> | void;
-  onPayPalSuccess?: () => void;
   onXrgePurchase?: (packageId: string) => void;
 }
 
@@ -24,7 +22,6 @@ const PricingCards: React.FC<PricingCardsProps> = ({
   onPurchase,
   onSubscribe,
   onManageSubscription,
-  onPayPalSuccess,
   onXrgePurchase,
 }) => {
   const [billingInterval, setBillingInterval] = useState<"month" | "year">("month");
@@ -88,41 +85,42 @@ const PricingCards: React.FC<PricingCardsProps> = ({
           </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid w-full min-w-0 max-w-full grid-cols-1 min-[520px]:grid-cols-2 xl:grid-cols-4 gap-3">
           {activeTiers.map((tier) => {
             const isActive = tierIsActive(tier);
             return (
               <div
                 key={tier.id}
-                className={`relative flex flex-col border rounded-lg p-4 transition-all ${
+                className={`relative flex min-w-0 max-w-full flex-col overflow-hidden rounded-lg border-2 transition-all ${
                   tier.popular
-                    ? "border-secondary/60 bg-secondary/5 shadow-[0_0_12px_rgba(var(--secondary-rgb),0.15)]"
-                    : "border-border bg-card/40"
-                } ${isActive ? "ring-1 ring-primary/50" : ""}`}
+                    ? "border-secondary/70 bg-secondary/[0.07] shadow-[0_0_24px_hsl(var(--secondary)/0.12)]"
+                    : "border-border/90 bg-card/50"
+                } ${isActive ? "ring-2 ring-primary/45 ring-offset-2 ring-offset-background" : ""}`}
               >
                 {tier.popular && !isActive && (
-                  <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-secondary text-secondary-foreground font-orbitron text-[8px] tracking-widest px-3 py-0.5 rounded-full">
+                  <div className="border-b border-secondary/50 bg-secondary/85 py-1.5 text-center font-orbitron text-[8px] tracking-[0.18em] text-secondary-foreground">
                     BEST VALUE
                   </div>
                 )}
                 {isActive && (
-                  <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground font-orbitron text-[8px] tracking-widest px-3 py-0.5 rounded-full">
-                    ACTIVE
+                  <div className="border-b border-primary/40 bg-primary/20 py-1.5 text-center font-orbitron text-[8px] tracking-[0.18em] text-primary">
+                    ACTIVE PLAN
                   </div>
                 )}
 
-                <div className="flex items-center gap-1.5 mb-1">
-                  <Crown className="w-3 h-3 text-secondary" />
-                  <h3 className="font-orbitron text-xs tracking-wider text-foreground">{tier.name}</h3>
+                <div className="flex flex-1 flex-col p-3 sm:p-4 min-w-0">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <Crown className="w-3 h-3 shrink-0 text-primary" />
+                  <h3 className="font-orbitron text-xs tracking-wider text-foreground truncate">{tier.name}</h3>
                 </div>
 
-                <div className="flex items-baseline gap-1 mb-1">
-                  <span className="font-orbitron text-2xl font-bold text-foreground">
+                <div className="mb-2 min-w-0 space-y-1">
+                  <p className="font-orbitron text-lg font-bold tabular-nums leading-none text-foreground sm:text-xl break-words">
                     ${(tier.priceCents / 100).toFixed(2)}
-                  </span>
-                  <span className="font-mono-share text-[10px] text-muted-foreground">
-                    /{tier.interval === "year" ? "year" : "month"}
-                  </span>
+                  </p>
+                  <p className="font-mono-share text-[10px] uppercase tracking-wide text-muted-foreground">
+                    per {tier.interval === "year" ? "year" : "month"}
+                  </p>
                 </div>
 
                 {tier.interval === "year" && tier.monthlyEquivalentCents && (
@@ -131,17 +129,17 @@ const PricingCards: React.FC<PricingCardsProps> = ({
                   </p>
                 )}
 
-                <div className="flex items-center gap-1 mb-2">
-                  <Zap className="w-3 h-3 text-secondary" />
-                  <span className="font-mono-share text-sm text-secondary font-bold">
+                <div className="mb-2 flex items-center gap-1">
+                  <Zap className="h-3 w-3 shrink-0 text-secondary" />
+                  <span className="font-mono-share text-sm font-bold text-secondary">
                     {tier.creditsPerMonth} credits/mo
                   </span>
                 </div>
 
-                <p className="font-mono-share text-[10px] text-muted-foreground mb-1">
+                <p className="mb-1 font-mono-share text-[10px] text-muted-foreground">
                   {tier.perCredit}/credit
                 </p>
-                <p className="font-mono-share text-[9px] text-muted-foreground/50 mb-4 flex-1">
+                <p className="mb-4 flex-1 font-mono-share text-[9px] leading-snug text-muted-foreground/75">
                   Credits reset each billing cycle
                 </p>
 
@@ -156,7 +154,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
                         onClick={() => { Promise.resolve(onManageSubscription?.()).catch(() => {}); }}
                         disabled={purchasing}
                         variant="outline"
-                        className="w-full font-orbitron text-[10px] tracking-wider gap-1 border-primary/50 text-primary"
+                        className="w-full rounded-md font-orbitron text-[10px] tracking-wider gap-1 border-primary/50 text-primary"
                       >
                         MANAGE_PLAN
                       </Button>
@@ -167,7 +165,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
                       <Button
                         disabled
                         variant="outline"
-                        className="w-full font-orbitron text-[10px] tracking-wider gap-1 opacity-40 cursor-not-allowed"
+                        className="w-full rounded-md font-orbitron text-[10px] tracking-wider gap-1 opacity-40 cursor-not-allowed"
                       >
                         CURRENT_PLAN_HIGHER
                       </Button>
@@ -178,7 +176,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
                       <Button
                         onClick={() => safeSubscribe(tier.id)}
                         disabled={purchasing}
-                        className="w-full font-orbitron text-[10px] tracking-wider gap-1 bg-green-600 text-white hover:bg-green-500"
+                        className="w-full rounded-md font-orbitron text-[10px] tracking-wider gap-1 bg-green-600 text-white hover:bg-green-500"
                       >
                         {purchasing ? (
                           <Loader2 className="w-3 h-3 animate-spin" />
@@ -191,16 +189,16 @@ const PricingCards: React.FC<PricingCardsProps> = ({
                       </Button>
                     );
                   }
-                  return (
-                    <Button
-                      onClick={() => safeSubscribe(tier.id)}
-                      disabled={purchasing}
-                      className={`w-full font-orbitron text-[10px] tracking-wider gap-1 ${
-                        tier.popular
-                          ? "bg-secondary text-secondary-foreground hover:bg-secondary/80"
-                          : "bg-primary text-primary-foreground hover:bg-primary/80"
-                      }`}
-                    >
+                    return (
+                      <Button
+                        onClick={() => safeSubscribe(tier.id)}
+                        disabled={purchasing}
+                        className={`w-full rounded-md font-orbitron text-[10px] tracking-wider gap-1 ${
+                          tier.popular
+                            ? "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                            : "bg-primary text-primary-foreground hover:bg-primary/80"
+                        }`}
+                      >
                       {purchasing ? (
                         <Loader2 className="w-3 h-3 animate-spin" />
                       ) : (
@@ -209,6 +207,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
                     </Button>
                   );
                 })()}
+                </div>
               </div>
             );
           })}
@@ -226,9 +225,9 @@ const PricingCards: React.FC<PricingCardsProps> = ({
         </div>
 
         {/* Standard packs (3 cols) */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid w-full min-w-0 max-w-full grid-cols-1 sm:grid-cols-3 gap-3">
           {packages.slice(0, 3).map((pkg) => (
-            <PackCard key={pkg.id} pkg={pkg} purchasing={purchasing} onPurchase={onPurchase} onPayPalSuccess={onPayPalSuccess} onXrgePurchase={onXrgePurchase} />
+            <PackCard key={pkg.id} pkg={pkg} purchasing={purchasing} onPurchase={onPurchase} onXrgePurchase={onXrgePurchase} />
           ))}
         </div>
 
@@ -242,9 +241,9 @@ const PricingCards: React.FC<PricingCardsProps> = ({
               </h4>
               <div className="h-px flex-1 bg-border/20" />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid w-full min-w-0 max-w-full grid-cols-1 sm:grid-cols-2 gap-3">
               {packages.slice(3).map((pkg) => (
-                <PackCard key={pkg.id} pkg={pkg} purchasing={purchasing} onPurchase={onPurchase} onPayPalSuccess={onPayPalSuccess} onXrgePurchase={onXrgePurchase} isBulk />
+                <PackCard key={pkg.id} pkg={pkg} purchasing={purchasing} onPurchase={onPurchase} onXrgePurchase={onXrgePurchase} isBulk />
               ))}
             </div>
           </>
@@ -259,55 +258,54 @@ function PackCard({
   pkg,
   purchasing,
   onPurchase,
-  onPayPalSuccess,
   onXrgePurchase,
   isBulk,
 }: {
   pkg: CreditPackage;
   purchasing: boolean;
   onPurchase: (id: string) => Promise<void> | void;
-  onPayPalSuccess?: () => void;
   onXrgePurchase?: (id: string) => void;
   isBulk?: boolean;
 }) {
   return (
     <div
-      className={`relative flex flex-col border rounded-lg p-4 transition-all ${
+      className={`relative flex min-w-0 max-w-full flex-col overflow-hidden rounded-lg border-2 transition-all ${
         pkg.popular
-          ? "border-secondary/60 bg-secondary/5 shadow-[0_0_12px_rgba(var(--secondary-rgb),0.15)]"
+          ? "border-secondary/70 bg-secondary/[0.06] shadow-[0_0_20px_hsl(var(--secondary)/0.1)]"
           : isBulk
-          ? "border-primary/40 bg-primary/5 shadow-[0_0_8px_rgba(var(--primary-rgb),0.1)]"
-          : "border-border bg-card/40"
+          ? "border-primary/45 bg-primary/[0.06] shadow-[0_0_16px_hsl(var(--primary)/0.08)]"
+          : "border-border/90 bg-card/50"
       }`}
     >
       {pkg.popular && (
-        <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-secondary text-secondary-foreground font-orbitron text-[8px] tracking-widest px-3 py-0.5 rounded-full">
+        <div className="border-b border-secondary/50 bg-secondary/85 py-1.5 text-center font-orbitron text-[8px] tracking-[0.18em] text-secondary-foreground">
           POPULAR
         </div>
       )}
       {isBulk && !pkg.popular && (
-        <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground font-orbitron text-[8px] tracking-widest px-3 py-0.5 rounded-full">
+        <div className="border-b border-primary/40 bg-primary/20 py-1.5 text-center font-orbitron text-[8px] tracking-[0.18em] text-primary">
           BULK
         </div>
       )}
 
-      <h3 className="font-orbitron text-xs tracking-wider text-foreground mb-1">{pkg.name}</h3>
+      <div className="flex flex-1 flex-col p-3 sm:p-4 min-w-0">
+      <h3 className="mb-2 font-orbitron text-xs tracking-wider text-foreground truncate">{pkg.name}</h3>
 
-      <div className="flex items-baseline gap-1 mb-2">
-        <span className="font-orbitron text-2xl font-bold text-foreground">
+      <div className="mb-2 min-w-0 space-y-1">
+        <p className="font-orbitron text-xl font-bold tabular-nums leading-none text-foreground sm:text-2xl break-words">
           ${(pkg.priceCents / 100).toFixed(0)}
-        </span>
-        <span className="font-mono-share text-[10px] text-muted-foreground">one-time</span>
+        </p>
+        <p className="font-mono-share text-[10px] uppercase tracking-wide text-muted-foreground">one-time</p>
       </div>
 
-      <div className="flex items-center gap-1 mb-3">
-        <Zap className="w-3 h-3 text-secondary" />
-        <span className="font-mono-share text-sm text-secondary font-bold">
+      <div className="mb-3 flex items-center gap-1">
+        <Zap className="h-3 w-3 shrink-0 text-secondary" />
+        <span className="font-mono-share text-sm font-bold text-secondary">
           {pkg.credits.toLocaleString()} credits
         </span>
       </div>
 
-      <p className="font-mono-share text-[10px] text-muted-foreground mb-1 flex-1">
+      <p className="mb-1 flex-1 font-mono-share text-[10px] text-muted-foreground">
         {pkg.perCredit}/credit &mdash; never expires
       </p>
 
@@ -315,7 +313,7 @@ function PackCard({
         <Button
           onClick={() => { Promise.resolve(onPurchase(pkg.id)).catch(() => {}); }}
           disabled={purchasing}
-          className={`w-full font-orbitron text-[10px] tracking-wider gap-1 ${
+          className={`w-full rounded-md font-orbitron text-[10px] tracking-wider gap-1 ${
             pkg.popular
               ? "bg-secondary text-secondary-foreground hover:bg-secondary/80"
               : isBulk
@@ -329,54 +327,30 @@ function PackCard({
             "PURCHASE"
           )}
         </Button>
-        {onPayPalSuccess && (
-          <div className="flex items-center gap-2 my-1">
-            <div className="h-px flex-1 bg-border/30" />
-            <span className="font-mono-share text-[8px] text-muted-foreground/40 tracking-widest">OR_PAY_WITH</span>
-            <div className="h-px flex-1 bg-border/30" />
-          </div>
-        )}
-        {onPayPalSuccess && (
-          <div className="flex justify-center">
-            <div className="w-full max-w-[200px] min-h-[40px] [&>div]:min-h-[40px] rounded border border-border/40 bg-black/20 p-1.5 shadow-[0_0_6px_rgba(var(--primary-rgb),0.1)]">
-              <PayPalButtons
-                style={{ layout: "horizontal", color: "black", shape: "rect", label: "paypal", height: 35, tagline: false }}
-                createOrder={async () => {
-                  const { orderId } = (await apiFetch("/paypal", {
-                    method: "POST",
-                    body: { action: "create", package: pkg.id },
-                  })) as { orderId: string };
-                  return orderId;
-                }}
-                onApprove={async (data) => {
-                  await apiFetch("/paypal", {
-                    method: "POST",
-                    body: { action: "capture", orderID: data.orderID },
-                  });
-                  onPayPalSuccess();
-                }}
-              />
-            </div>
-          </div>
-        )}
+        {/* XRGE first — one tap to crypto checkout (Base) */}
         {onXrgePurchase && (
           <>
-            <div className="flex items-center gap-2 my-1.5">
+            <div className="flex items-center gap-2 my-1">
               <div className="h-px flex-1 bg-border/30" />
-              <span className="font-mono-share text-[8px] text-muted-foreground/40 tracking-widest">OR</span>
+              <span className="font-mono-share text-[8px] text-pink-400/70 tracking-widest">OR_CRYPTO</span>
               <div className="h-px flex-1 bg-border/30" />
             </div>
             <button
+              type="button"
               onClick={() => onXrgePurchase(pkg.id)}
               disabled={purchasing}
               className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-md border border-[#c44b8b]/50 bg-gradient-to-r from-[#8b2fc0]/10 via-[#c44b8b]/10 to-[#e8445a]/10 hover:from-[#8b2fc0]/20 hover:via-[#c44b8b]/20 hover:to-[#e8445a]/20 hover:border-[#c44b8b]/70 transition-all disabled:opacity-50"
             >
-              <img src="/xrge-logo.png" alt="XRGE" className="w-5 h-5 rounded-full" />
+              <img src="/xrge-logo.png" alt="" className="w-5 h-5 rounded-full" />
               <span className="font-orbitron text-[10px] tracking-wider text-white/90">PAY WITH $XRGE</span>
               <span className="text-green-400 font-mono-share text-[8px] font-bold bg-green-400/10 px-1.5 py-0.5 rounded-full leading-none">+15%</span>
             </button>
+            <p className="font-mono-share text-[8px] text-center text-muted-foreground/55 leading-tight">
+              Base chain · unlocks NSFW LoRAs when you complete a pack
+            </p>
           </>
         )}
+      </div>
       </div>
     </div>
   );

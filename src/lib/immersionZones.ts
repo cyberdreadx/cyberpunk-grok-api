@@ -18,8 +18,11 @@ export interface PulseZoneInfo {
   note: string;
 }
 
+/** One row: upper bound (Hz) + zone copy. Fields are flat (not nested under `.info`). */
+type ZoneRow = { maxHz: number } & PulseZoneInfo;
+
 /** Ordered low → high; boundaries are inclusive on the lower edge. */
-const ZONES: { maxHz: number; info: Omit<PulseZoneInfo, "id"> & { id: PulseZoneInfo["id"] } }[] = [
+const ZONES: ZoneRow[] = [
   {
     maxHz: 2,
     id: "slow",
@@ -58,14 +61,19 @@ const ZONES: { maxHz: number; info: Omit<PulseZoneInfo, "id"> & { id: PulseZoneI
   },
 ];
 
+function rowToPulseZone(row: ZoneRow): PulseZoneInfo {
+  const { maxHz: _m, ...rest } = row;
+  return rest;
+}
+
 export function getPulseZoneInfo(hz: number): PulseZoneInfo {
   const h = Number.isFinite(hz) ? Math.max(PULSE_HZ_MIN, Math.min(PULSE_HZ_MAX, hz)) : PULSE_HZ_MIN;
   for (const z of ZONES) {
     if (h <= z.maxHz) {
-      return { ...z.info, id: z.info.id };
+      return rowToPulseZone(z);
     }
   }
-  return { ...ZONES[ZONES.length - 1].info, id: "extreme" };
+  return rowToPulseZone(ZONES[ZONES.length - 1]!);
 }
 
 /** Period of one full cycle: T = 1/f (seconds). */

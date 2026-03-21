@@ -18,8 +18,9 @@ const ZONE_LABELS = ["Slow", "Moderate", "Elevated", "Very high"] as const;
  * Color-coded Hz map + period (T=1/f) + informational zone badge.
  */
 const ImmersionPulseGuide: React.FC<ImmersionPulseGuideProps> = ({ hz }) => {
-  const zone = useMemo(() => getPulseZoneInfo(hz), [hz]);
-  const markerPct = useMemo(() => pulseHzToBarPercent(hz), [hz]);
+  const safeHz = typeof hz === "number" && Number.isFinite(hz) ? hz : 0.7;
+  const zone = useMemo(() => getPulseZoneInfo(safeHz), [safeHz]);
+  const markerPct = useMemo(() => pulseHzToBarPercent(safeHz), [safeHz]);
   const [w1, w2, w3, w4] = useMemo(() => pulseZoneSegmentPercents(), []);
 
   return (
@@ -33,12 +34,12 @@ const ImmersionPulseGuide: React.FC<ImmersionPulseGuideProps> = ({ hz }) => {
         <span className="text-muted-foreground/80">{zone.rangeLabel}</span>
         <span className="text-primary/70">·</span>
         <span className="text-muted-foreground">
-          T ≈ <span className="text-foreground/90">{formatPulsePeriod(hz)}</span>
+          T ≈ <span className="text-foreground/90">{formatPulsePeriod(safeHz)}</span>
           <span className="text-muted-foreground/60"> / cycle</span>
         </span>
         <span className="text-primary/70">·</span>
         <span className="text-muted-foreground/70">
-          {hz.toFixed(3)} cycles/s
+          {safeHz.toFixed(3)} cycles/s
         </span>
       </div>
 

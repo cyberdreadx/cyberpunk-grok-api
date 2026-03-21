@@ -118,6 +118,19 @@
     will-change: opacity, filter;
   }
 
+  /**
+   * Full-viewport pulse so PULSE RATE (Hz) is visible — not just tiny HUD text.
+   * Above main content (z-20), below modals/top chrome; pointer-events none.
+   */
+  .immersion-pulse-layer {
+    background: radial-gradient(
+      ellipse 85% 65% at 50% 45%,
+      hsl(var(--primary) / 0.09) 0%,
+      transparent 72%
+    );
+    mix-blend-mode: soft-light;
+  }
+
   .immersion-glow {
     filter: brightness(calc(1 + var(--immersion-glow) * 0.3));
   }
@@ -223,6 +236,42 @@
   }
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
+  }
+
+  /**
+   * Themed scrollbars for dialogs / panels (default OS scrollbars look harsh on dark UI).
+   * Use with an inner overflow-y-auto wrapper (not always applied correctly to Radix Dialog root).
+   */
+  .scrollbar-cyber {
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--primary) / 0.45) hsl(var(--muted) / 0.35);
+  }
+  .scrollbar-cyber::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .scrollbar-cyber::-webkit-scrollbar-track {
+    background: hsl(var(--muted) / 0.25);
+    border-radius: 9999px;
+  }
+  .scrollbar-cyber::-webkit-scrollbar-thumb {
+    background: linear-gradient(
+      180deg,
+      hsl(var(--primary) / 0.55),
+      hsl(var(--secondary) / 0.35)
+    );
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  .scrollbar-cyber::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(
+      180deg,
+      hsl(var(--primary) / 0.75),
+      hsl(var(--secondary) / 0.5)
+    );
+    background-clip: padding-box;
   }
 
   /* Typed cursor blink */

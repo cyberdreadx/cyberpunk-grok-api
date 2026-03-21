@@ -18,6 +18,13 @@ import {
   Gift,
 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
+import {
+  XRGE_CHAIN_NAME,
+  XRGE_CHAIN_ID,
+  XRGE_CONTRACT,
+  XRGE_DEXSCREENER_URL,
+  basescanAddressUrl,
+} from "@/lib/xrgePublic";
 
 interface XrgeOrder {
   orderId: string;
@@ -50,7 +57,7 @@ const XrgePaymentDialog: React.FC<XrgePaymentDialogProps> = ({
   const [order, setOrder] = useState<XrgeOrder | null>(null);
   const [txHash, setTxHash] = useState("");
   const [error, setError] = useState("");
-  const [copied, setCopied] = useState<"address" | "amount" | null>(null);
+  const [copied, setCopied] = useState<"address" | "amount" | "all" | null>(null);
   const [timeLeft, setTimeLeft] = useState("");
   const [creditsAdded, setCreditsAdded] = useState(0);
   const [bonusAdded, setBonusAdded] = useState(0);
@@ -105,12 +112,24 @@ const XrgePaymentDialog: React.FC<XrgePaymentDialogProps> = ({
     };
   }, [order?.expiresAt, step]);
 
-  const copyToClipboard = async (text: string, type: "address" | "amount") => {
+  const copyToClipboard = async (text: string, type: "address" | "amount" | "all") => {
     try {
       await navigator.clipboard.writeText(text);
       setCopied(type);
-      setTimeout(() => setCopied(null), 2000);
+      setTimeout(() => setCopied(null), 2500);
     } catch {}
+  };
+
+  const copyPaymentBlock = () => {
+    if (!order) return;
+    const text = [
+      `XRGE pack payment — ${XRGE_CHAIN_NAME} (chain ${XRGE_CHAIN_ID})`,
+      `Send exactly: ${order.xrgeAmount} XRGE (ERC-20)`,
+      `To wallet: ${order.depositAddress}`,
+      `Token contract (XRGE): ${XRGE_CONTRACT}`,
+      `Do not send ETH or other tokens — XRGE on Base only.`,
+    ].join("\n");
+    copyToClipboard(text, "all");
   };
 
   const handleVerify = async () => {
@@ -176,6 +195,26 @@ const XrgePaymentDialog: React.FC<XrgePaymentDialogProps> = ({
         {/* Payment step */}
         {(step === "pay" || step === "verifying") && order && (
           <div className="space-y-4">
+            <ol className="list-decimal list-inside space-y-1 rounded border border-border/40 bg-card/40 px-3 py-2 font-mono-share text-[9px] text-muted-foreground leading-relaxed">
+              <li>
+                Get XRGE on {XRGE_CHAIN_NAME} if needed —{" "}
+                <a
+                  href={XRGE_DEXSCREENER_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary underline underline-offset-2"
+                >
+                  DexScreener
+                </a>{" "}
+                · bridge ETH on{" "}
+                <a href="https://bridge.base.org" target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2">
+                  bridge.base.org
+                </a>
+              </li>
+              <li>Copy amount + address below (or use “Copy all”). Send XRGE only.</li>
+              <li>After it confirms, paste the transaction hash and verify.</li>
+            </ol>
+
             {/* Package info with bonus */}
             <div className="border border-secondary/30 rounded-lg p-3 bg-secondary/5">
               <div className="flex items-center justify-between mb-1">
@@ -234,7 +273,7 @@ const XrgePaymentDialog: React.FC<XrgePaymentDialogProps> = ({
             {/* Deposit address */}
             <div>
               <label className="font-orbitron text-[9px] tracking-widest text-muted-foreground block mb-1.5">
-                TO_ADDRESS (Base Chain)
+                TO_ADDRESS ({XRGE_CHAIN_NAME} · chain {XRGE_CHAIN_ID})
               </label>
               <div className="flex items-center gap-2">
                 <div className="flex-1 border border-primary/40 rounded bg-card/60 px-3 py-2 font-mono-share text-[11px] text-foreground/80 break-all select-all">
@@ -253,7 +292,37 @@ const XrgePaymentDialog: React.FC<XrgePaymentDialogProps> = ({
                   )}
                 </Button>
               </div>
+              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+                <a
+                  href={basescanAddressUrl(order.depositAddress)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 font-mono-share text-[8px] text-primary/70 hover:text-primary"
+                >
+                  View on Basescan
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
             </div>
+
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={copyPaymentBlock}
+              className="w-full font-mono-share text-[10px] gap-2 border border-pink-500/30 bg-pink-500/10 hover:bg-pink-500/20"
+            >
+              {copied === "all" ? (
+                <>
+                  <CheckCircle2 className="w-4 h-4 text-green-400" />
+                  COPIED_FULL_PAYMENT_DETAILS
+                </>
+              ) : (
+                <>
+                  <Copy className="w-4 h-4" />
+                  COPY_ALL_FOR_WALLET / TELEGRAM
+                </>
+              )}
+            </Button>
 
             {/* Warning */}
             <div className="flex items-start gap-2 border border-yellow-600/30 rounded p-2 bg-yellow-600/5">

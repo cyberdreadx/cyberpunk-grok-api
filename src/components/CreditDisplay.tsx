@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Coins, ShoppingCart, Loader2, Crown, Settings, XCircle, AlertTriangle, Share2, Copy, Check, Gift, Users } from "lucide-react";
-import { PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
 import {
@@ -14,6 +13,7 @@ import {
 import PricingCards from "@/components/PricingCards";
 import XrgePaymentDialog from "@/components/XrgePaymentDialog";
 import type { CreditPackage, SubscriptionTier } from "@/lib/api";
+import { XRGE_DEXSCREENER_URL, XRGE_CHAIN_NAME } from "@/lib/xrgePublic";
 
 interface CreditDisplayProps {
   totalCredits: number;
@@ -31,12 +31,11 @@ interface CreditDisplayProps {
   onPurchase: (packageId: CreditPackage["id"]) => Promise<void>;
   onSubscribe: (tierId: SubscriptionTier["id"]) => Promise<void>;
   onManageSubscription: () => Promise<void>;
-  onPayPalSuccess?: () => void;
+  /** Called after XRGE payment verifies (refresh credits). */
+  onCreditsRefresh?: () => void;
   externalOpen?: boolean;
   onExternalOpenChange?: (open: boolean) => void;
 }
-
-const paypalClientId = import.meta.env.VITE_PAYPAL_CLIENT_ID as string | undefined;
 
 const CreditDisplay: React.FC<CreditDisplayProps> = ({
   totalCredits,
@@ -54,7 +53,7 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
   onPurchase,
   onSubscribe,
   onManageSubscription,
-  onPayPalSuccess,
+  onCreditsRefresh,
   externalOpen,
   onExternalOpenChange,
 }) => {
@@ -73,8 +72,7 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
   };
 
   const handleXrgeSuccess = () => {
-    // Refresh credits after successful XRGE payment
-    if (onPayPalSuccess) onPayPalSuccess(); // reuse the same refresh callback
+    onCreditsRefresh?.();
   };
 
   const renewsLabel = subscriptionRenewsAt
@@ -117,7 +115,9 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
             <span className="hidden sm:inline">STORE</span>
           </Button>
         </DialogTrigger>
-        <DialogContent className="bg-card border-border sm:max-w-xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="bg-card border-border border-primary/20 shadow-[0_0_48px_hsl(var(--primary)/0.08)] w-[min(96vw,72rem)] max-w-6xl max-h-[85vh] overflow-hidden p-0 gap-0 flex flex-col">
+          {/* Inner scroll — must NOT be on DialogContent (grid + overflow quirks; OS scrollbars ignore webkit rules on some builds). */}
+          <div className="credit-store-scroll scrollbar-cyber min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-6 py-6 [color-scheme:dark]">
           <DialogHeader>
             <DialogTitle className="font-orbitron text-sm tracking-wider neon-text-cyan">
               CREDIT_STORE
@@ -125,10 +125,27 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
             <DialogDescription className="font-rajdhani text-muted-foreground">
               Subscribe monthly or buy one-time packs. Images: 1-2 cr · Videos: 5 cr · HD upscale: 7 cr.
             </DialogDescription>
+            <a
+              href={XRGE_DEXSCREENER_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-3 flex items-center gap-2 rounded-lg border border-pink-500/25 bg-gradient-to-r from-pink-500/10 to-violet-500/10 px-3 py-2.5 transition-colors hover:border-pink-400/40 hover:bg-pink-500/15"
+            >
+              <img src="/xrge-logo.png" alt="" className="h-8 w-8 shrink-0 rounded-full" />
+              <div className="min-w-0 flex-1 text-left">
+                <p className="font-orbitron text-[10px] tracking-wide text-pink-200">
+                  Pay with $XRGE on {XRGE_CHAIN_NAME}
+                </p>
+                <p className="font-mono-share text-[9px] text-muted-foreground/90 leading-snug">
+                  Bonus credits on packs · holders unlock NSFW LoRAs. Need tokens?{" "}
+                  <span className="text-pink-300 underline underline-offset-2">View pair on DexScreener →</span>
+                </p>
+              </div>
+            </a>
           </DialogHeader>
 
           {/* Current balance summary */}
-          <div className="flex items-center gap-4 bg-input/50 border border-border/30 rounded px-3 py-2 mt-2">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 bg-input/50 border border-border/30 rounded-md px-3 py-2 mt-2">
             <div className="flex items-center gap-1.5">
               <Coins className="w-3.5 h-3.5 text-secondary" />
               <span className="font-mono-share text-sm text-secondary font-bold">
@@ -242,56 +259,30 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
           )}
 
           <div className="mt-4">
-            {paypalClientId ? (
-              <PayPalScriptProvider
-                options={{
-                  clientId: paypalClientId,
-                  currency: "USD",
-                  intent: "capture",
-                  disableFunding: "paylater,credit,card",
-                }}
-              >
-                <PricingCards
-                  packages={packages}
-                  subscriptionTiers={subscriptionTiers}
-                  currentTier={subscriptionTier}
-                  purchasing={purchasing}
-                  onPurchase={async (id) => {
-                    await onPurchase(id);
-                  }}
-                  onSubscribe={async (id) => {
-                    await onSubscribe(id);
-                  }}
-                  onManageSubscription={onManageSubscription}
-                  onPayPalSuccess={onPayPalSuccess}
-                  onXrgePurchase={handleXrgePurchase}
-                />
-              </PayPalScriptProvider>
-            ) : (
-              <PricingCards
-                packages={packages}
-                subscriptionTiers={subscriptionTiers}
-                currentTier={subscriptionTier}
-                purchasing={purchasing}
-                onPurchase={async (id) => {
-                  await onPurchase(id);
-                }}
-                onSubscribe={async (id) => {
-                  await onSubscribe(id);
-                }}
-                onManageSubscription={onManageSubscription}
-                onXrgePurchase={handleXrgePurchase}
-              />
-            )}
+            <PricingCards
+              packages={packages}
+              subscriptionTiers={subscriptionTiers}
+              currentTier={subscriptionTier}
+              purchasing={purchasing}
+              onPurchase={async (id) => {
+                await onPurchase(id);
+              }}
+              onSubscribe={async (id) => {
+                await onSubscribe(id);
+              }}
+              onManageSubscription={onManageSubscription}
+              onXrgePurchase={handleXrgePurchase}
+            />
           </div>
 
           {/* Referral Section */}
           <ReferralCard />
 
           <div className="border-t border-border pt-3 mt-2">
-            <p className="text-[10px] font-mono-share text-muted-foreground/60 leading-relaxed">
-              Payments processed securely via Stripe{paypalClientId ? " and PayPal" : ""}. Pack credits never expire. Subscription credits reset each billing cycle (no rollover).
+            <p className="text-[10px] font-mono-share text-muted-foreground/80 leading-relaxed">
+              Payments: Stripe (card) or $XRGE on Base (pack cards). Pack credits never expire. Subscription credits reset each billing cycle (no rollover).
             </p>
+          </div>
           </div>
         </DialogContent>
       </Dialog>
