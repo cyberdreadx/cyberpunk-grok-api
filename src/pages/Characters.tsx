@@ -399,19 +399,28 @@ export default function Characters() {
           return;
         }
         const anglePrefix = trigger.cameraAngle && CAMERA_ANGLES[trigger.cameraAngle] ? CAMERA_ANGLES[trigger.cameraAngle] : "";
-        const imgBody: Record<string, any> = {
-          workflow: "qwen-edit",
-          prompt: anglePrefix + trigger.prompt,
-          imageBase64: portrait64,
-          imageFilename: "portrait.jpg",
-          steps: 20, cfg: 5,
-        };
-        const result = await comfySubmitAndPollStandalone(imgBody);
+        // Use Grok edit endpoint (fast, same as UI Modify mode) instead of slow ComfyUI qwen-edit
+        const grokResult = await apiFetch<{ data?: Array<{ b64_json?: string; url?: string }> }>(
+          "/generate", {
+            method: "POST",
+            body: {
+              action: "edit-image",
+              prompt: anglePrefix + trigger.prompt,
+              image_url: portrait64,
+              n: 1,
+              model: "grok-2-image",
+            },
+          },
+        );
+        const imgData = grokResult?.data?.[0];
+        const imgOut = imgData?.b64_json
+          ? `data:image/jpeg;base64,${imgData.b64_json}`
+          : imgData?.url || null;
 
-        if (result.image) {
+        if (imgOut) {
           const mediaMsg: ChatMessage = {
             characterId: char.id, role: "assistant", content: "",
-            mediaUrl: result.image, mediaType: "image", timestamp: Date.now(),
+            mediaUrl: imgOut, mediaType: "image", timestamp: Date.now(),
           };
           replacePlaceholder(mediaMsg);
           await saveChatMessage(mediaMsg);
