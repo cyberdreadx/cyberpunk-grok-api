@@ -17,6 +17,8 @@ import type {
 } from "@/hooks/useGrokApi";
 import type { ImmersionSettings } from "@/lib/immersion";
 import { DEFAULT_IMMERSION } from "@/lib/immersion";
+import ImmersionPulseGuide from "@/components/ImmersionPulseGuide";
+import { PULSE_HZ_MAX, PULSE_HZ_MIN } from "@/lib/immersionZones";
 
 export type { ImmersionSettings };
 export { DEFAULT_IMMERSION };
@@ -292,63 +294,105 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
 
             <div className="space-y-5">
               <div>
-                <div className="flex justify-between text-[10px] mb-1 text-muted-foreground">
-                  <span>FLICKER INTENSITY</span>
-                  <span className="font-mono-share text-red-400">{(immersionSettings?.flicker ?? 0.35).toFixed(2)}</span>
+                <div className="flex justify-between text-[10px] mb-1 text-muted-foreground gap-2">
+                  <span>FLICKER DEPTH (0–1)</span>
+                  <span className="font-mono-share text-red-400 shrink-0">{(immersionSettings?.flicker ?? 0.35).toFixed(3)}</span>
                 </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.05"
-                  value={immersionSettings?.flicker ?? 0.35}
-                  onChange={(e) => onImmersionChange({ ...(immersionSettings ?? DEFAULT_IMMERSION), flicker: parseFloat(e.target.value) })}
-                  className="w-full accent-red-500"
-                />
+                <p className="text-[8px] text-muted-foreground/65 mb-1.5 leading-relaxed">
+                  <span className="text-amber-500/80 font-mono-share">Not Hz.</span> Amplitude of the opacity/brightness swing in the flicker keyframes. Higher + faster pulse → stronger perceived strobing.
+                </p>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    value={immersionSettings?.flicker ?? 0.35}
+                    onChange={(e) => onImmersionChange({ ...(immersionSettings ?? DEFAULT_IMMERSION), flicker: parseFloat(e.target.value) })}
+                    className="flex-1 min-w-0 accent-red-500"
+                  />
+                  <input
+                    type="number"
+                    min={0}
+                    max={1}
+                    step={0.01}
+                    value={immersionSettings?.flicker ?? 0.35}
+                    onChange={(e) => {
+                      const v = Math.min(1, Math.max(0, parseFloat(e.target.value) || 0));
+                      onImmersionChange({ ...(immersionSettings ?? DEFAULT_IMMERSION), flicker: v });
+                    }}
+                    className="w-[4.5rem] shrink-0 rounded border border-border/50 bg-background/80 px-1.5 py-0.5 font-mono-share text-[10px] text-right"
+                  />
+                </div>
               </div>
 
               <div>
-                <div className="flex justify-between text-[10px] mb-1 text-muted-foreground">
+                <div className="flex flex-wrap justify-between text-[10px] mb-1 text-muted-foreground gap-2">
                   <span>PULSE RATE (Hz)</span>
-                  <span className="font-mono-share text-red-400">{(immersionSettings?.pulseHz ?? 0.7).toFixed(1)}</span>
+                  <span className="font-mono-share text-red-400 shrink-0">
+                    {(immersionSettings?.pulseHz ?? 0.7).toFixed(3)} Hz
+                  </span>
                 </div>
-                <input
-                  type="range"
-                  min="0.1"
-                  max="8"
-                  step="0.1"
-                  value={immersionSettings?.pulseHz ?? 0.7}
-                  onChange={(e) => onImmersionChange({ ...(immersionSettings ?? DEFAULT_IMMERSION), pulseHz: parseFloat(e.target.value) })}
-                  className="w-full accent-red-500"
-                />
+                <ImmersionPulseGuide hz={immersionSettings?.pulseHz ?? 0.7} />
+                <div className="flex items-center gap-2 mt-2">
+                  <input
+                    type="range"
+                    min={PULSE_HZ_MIN}
+                    max={PULSE_HZ_MAX}
+                    step="0.05"
+                    value={Math.min(PULSE_HZ_MAX, Math.max(PULSE_HZ_MIN, immersionSettings?.pulseHz ?? 0.7))}
+                    onChange={(e) => onImmersionChange({ ...(immersionSettings ?? DEFAULT_IMMERSION), pulseHz: parseFloat(e.target.value) })}
+                    className="flex-1 min-w-0 accent-red-500"
+                  />
+                  <input
+                    type="number"
+                    min={PULSE_HZ_MIN}
+                    max={PULSE_HZ_MAX}
+                    step={0.01}
+                    value={immersionSettings?.pulseHz ?? 0.7}
+                    onChange={(e) => {
+                      const raw = parseFloat(e.target.value);
+                      if (Number.isNaN(raw)) return;
+                      const v = Math.min(PULSE_HZ_MAX, Math.max(PULSE_HZ_MIN, raw));
+                      onImmersionChange({ ...(immersionSettings ?? DEFAULT_IMMERSION), pulseHz: v });
+                    }}
+                    className="w-[4.75rem] shrink-0 rounded border border-border/50 bg-background/80 px-1.5 py-0.5 font-mono-share text-[10px] text-right"
+                  />
+                </div>
               </div>
 
               <div>
                 <div className="flex justify-between text-[10px] mb-1 text-muted-foreground">
-                  <span>RED SHIFT</span>
-                  <span className="font-mono-share text-red-400">{immersionSettings?.redShift ?? 8}</span>
+                  <span>RED SHIFT (hue)</span>
+                  <span className="font-mono-share text-red-400">{(immersionSettings?.redShift ?? 8).toFixed(1)}</span>
                 </div>
+                <p className="text-[8px] text-muted-foreground/65 mb-1.5">
+                  Pushes global <span className="font-mono-share text-muted-foreground/80">hue-rotate</span> (not Hz). ~0–30 mapped in CSS filter.
+                </p>
                 <input
                   type="range"
                   min="0"
                   max="30"
-                  step="1"
+                  step="0.5"
                   value={immersionSettings?.redShift ?? 8}
-                  onChange={(e) => onImmersionChange({ ...(immersionSettings ?? DEFAULT_IMMERSION), redShift: parseInt(e.target.value) })}
+                  onChange={(e) => onImmersionChange({ ...(immersionSettings ?? DEFAULT_IMMERSION), redShift: parseFloat(e.target.value) })}
                   className="w-full accent-red-500"
                 />
               </div>
 
               <div>
                 <div className="flex justify-between text-[10px] mb-1 text-muted-foreground">
-                  <span>GLOW INTENSITY</span>
-                  <span className="font-mono-share text-red-400">{(immersionSettings?.glow ?? 0.85).toFixed(2)}</span>
+                  <span>GLOW / BRIGHTNESS BIAS</span>
+                  <span className="font-mono-share text-red-400">{(immersionSettings?.glow ?? 0.85).toFixed(3)}</span>
                 </div>
+                <p className="text-[8px] text-muted-foreground/65 mb-1.5">
+                  Scales <span className="font-mono-share">brightness()</span> on the immersion filter host (unitless 0–2).
+                </p>
                 <input
                   type="range"
                   min="0"
                   max="2"
-                  step="0.05"
+                  step="0.01"
                   value={immersionSettings?.glow ?? 0.85}
                   onChange={(e) => onImmersionChange({ ...(immersionSettings ?? DEFAULT_IMMERSION), glow: parseFloat(e.target.value) })}
                   className="w-full accent-red-500"
@@ -358,13 +402,14 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
               <div>
                 <div className="flex justify-between text-[10px] mb-1 text-muted-foreground">
                   <span>SCANLINE WEIGHT</span>
-                  <span className="font-mono-share text-red-400">{(immersionSettings?.scanline ?? 0.16).toFixed(2)}</span>
+                  <span className="font-mono-share text-red-400">{(immersionSettings?.scanline ?? 0.16).toFixed(3)}</span>
                 </div>
+                <p className="text-[8px] text-muted-foreground/65 mb-1.5">Line contrast overlay (0–1). Not Hz.</p>
                 <input
                   type="range"
                   min="0"
                   max="1"
-                  step="0.02"
+                  step="0.01"
                   value={immersionSettings?.scanline ?? 0.16}
                   onChange={(e) => onImmersionChange({ ...(immersionSettings ?? DEFAULT_IMMERSION), scanline: parseFloat(e.target.value) })}
                   className="w-full accent-red-500"
@@ -374,13 +419,14 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
               <div>
                 <div className="flex justify-between text-[10px] mb-1 text-muted-foreground">
                   <span>VIGNETTE</span>
-                  <span className="font-mono-share text-red-400">{(immersionSettings?.vignette ?? 0.4).toFixed(2)}</span>
+                  <span className="font-mono-share text-red-400">{(immersionSettings?.vignette ?? 0.4).toFixed(3)}</span>
                 </div>
+                <p className="text-[8px] text-muted-foreground/65 mb-1.5">Edge darkening strength (0–1). Not Hz.</p>
                 <input
                   type="range"
                   min="0"
                   max="1"
-                  step="0.02"
+                  step="0.01"
                   value={immersionSettings?.vignette ?? 0.4}
                   onChange={(e) => onImmersionChange({ ...(immersionSettings ?? DEFAULT_IMMERSION), vignette: parseFloat(e.target.value) })}
                   className="w-full accent-red-500"

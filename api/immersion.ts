@@ -34,7 +34,7 @@ function parseImmersion(raw: unknown): typeof DEFAULT {
   const o = raw as Record<string, unknown>;
   return {
     flicker: clamp(Number(o.flicker), 0, 1, DEFAULT.flicker),
-    pulseHz: clamp(Number(o.pulseHz), 0.1, 8, DEFAULT.pulseHz),
+    pulseHz: clamp(Number(o.pulseHz), 0.05, 30, DEFAULT.pulseHz),
     redShift: clamp(Number(o.redShift), 0, 30, DEFAULT.redShift),
     glow: clamp(Number(o.glow), 0, 2, DEFAULT.glow),
     scanline: clamp(Number(o.scanline), 0, 1, DEFAULT.scanline),

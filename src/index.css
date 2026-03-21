@@ -114,7 +114,7 @@
 
   /* Dynamic Immersion Effects — duration must use time units (1s / Hz) */
   .immersion-flicker {
-    animation: immersion-flicker calc(1s / max(0.1, var(--immersion-pulse-hz))) infinite alternate ease-in-out;
+    animation: immersion-flicker calc(1s / max(0.05, var(--immersion-pulse-hz))) infinite alternate ease-in-out;
     will-change: opacity, filter;
   }
 
