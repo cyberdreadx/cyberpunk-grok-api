@@ -2,11 +2,16 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiFetch } from "@/lib/api";
 import { saveChatMessage, getChatHistory, clearChatHistory, deleteChatMessage, type ChatMessage } from "@/lib/storage";
-import { comfySubmitAndPollStandalone, comfyPollUntilDone } from "@/hooks/useGrokApi";
+import { comfyPollUntilDone } from "@/hooks/useGrokApi";
+import { useGrokApi } from "@/hooks/useGrokApi";
+import { useAuth } from "@/hooks/useAuth";
 import CyberLayout from "@/components/CyberLayout";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import { ArrowLeft, Plus, Trash2, Send, Edit, X, MessageSquare, Sparkles, Image, Download, Paperclip } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+
+const SFW_LORA_KEYWORDS = ["skin", "angle"];
+const isNsfwLora = (name: string) => !SFW_LORA_KEYWORDS.some(k => name.toLowerCase().includes(k));
 
 interface PendingCharJob {
   characterId: string;
@@ -69,8 +74,12 @@ function ElapsedTimer({ startTime }: { startTime: number }) {
 export default function Characters() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const auth = useAuth();
+  const { comfyModels, fetchComfyModels } = useGrokApi();
 
   const [view, setView] = useState<View>("gallery");
+  const [editLora, setEditLora] = useState("none");
+  const [editLoraStrength, setEditLoraStrength] = useState(0.30);
   const [characters, setCharacters] = useState<Character[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeChar, setActiveChar] = useState<Character | null>(null);
@@ -118,6 +127,10 @@ export default function Characters() {
   }, [toast]);
 
   useEffect(() => { fetchCharacters(); }, [fetchCharacters]);
+
+  useEffect(() => {
+    if (auth.isAuthenticated) fetchComfyModels();
+  }, [auth.isAuthenticated, fetchComfyModels]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -399,15 +412,16 @@ export default function Characters() {
           return;
         }
         const anglePrefix = trigger.cameraAngle && CAMERA_ANGLES[trigger.cameraAngle] ? CAMERA_ANGLES[trigger.cameraAngle] : "";
-        // Use Flux 2 Klein ComfyUI workflow for image generation
         const imgSubmit = await apiFetch<{ promptId: string; outputType?: string; runpodEndpointId?: string }>(
           "/comfyui", {
             method: "POST",
             body: {
-              action: "generate", workflow: "flux2-klein-edit",
+              action: "generate", workflow: "klein",
               prompt: anglePrefix + trigger.prompt,
               imageBase64: portrait64, imageFilename: "character_portrait.jpg",
-              steps: 20, cfg: 5,
+              width: 768, height: 768,
+              steps: 4, cfg: 1,
+              loras: editLora !== "none" ? [{ name: editLora, strengthModel: editLoraStrength, strengthClip: editLoraStrength }] : undefined,
             },
           },
         );
@@ -452,15 +466,17 @@ export default function Characters() {
         const vidAnglePrefix = trigger.cameraAngle && CAMERA_ANGLES[trigger.cameraAngle]
           ? CAMERA_ANGLES[trigger.cameraAngle]
           : CAMERA_ANGLES.closeup;
-        // Use Flux 2 Klein ComfyUI workflow for the source frame
+        // Klein edit for video source frame (same as Index)
         const vidFrameSubmit = await apiFetch<{ promptId: string; outputType?: string; runpodEndpointId?: string }>(
           "/comfyui", {
             method: "POST",
             body: {
-              action: "generate", workflow: "flux2-klein-edit",
+              action: "generate", workflow: "klein",
               prompt: vidAnglePrefix + trigger.prompt,
               imageBase64: portrait64, imageFilename: "character_portrait.jpg",
-              steps: 20, cfg: 5,
+              width: 768, height: 768,
+              steps: 4, cfg: 1,
+              loras: editLora !== "none" ? [{ name: editLora, strengthModel: editLoraStrength, strengthClip: editLoraStrength }] : undefined,
             },
           },
         );
@@ -523,7 +539,7 @@ export default function Characters() {
     } catch (err: any) {
       failPlaceholder(err.message || "unknown error");
     }
-  }, []);
+  }, [editLora, editLoraStrength]);
 
   // ── Send message ──
 
@@ -895,6 +911,49 @@ export default function Characters() {
                 <button onClick={() => setPendingImage(null)} className="p-1 hover:text-red-400 transition-colors">
                   <X className="w-3.5 h-3.5" />
                 </button>
+              </div>
+            )}
+
+            {/* LoRA settings — same as GLTCH Klein edit on Index */}
+            {comfyModels.editLoras.length > 0 && (
+              <div className="shrink-0 px-2 py-2 space-y-1.5 border-b border-border/60">
+                <div className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse" />
+                  <span className="font-mono-share text-[9px] text-secondary/70">Flux 2 Klein Edit + LoRA</span>
+                </div>
+                <div>
+                  <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">LoRA (optional)</label>
+                  <select value={editLora} onChange={(e) => {
+                    if (isNsfwLora(e.target.value) && !comfyModels.xrgeHolder && e.target.value !== "none") return;
+                    setEditLora(e.target.value);
+                  }}
+                    className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-[10px] font-mono-share text-foreground">
+                    <option value="none">None</option>
+                    {comfyModels.editLoras.map((l) => (
+                      <option key={l} value={l}
+                        disabled={isNsfwLora(l) && !comfyModels.xrgeHolder}
+                        style={isNsfwLora(l) && !comfyModels.xrgeHolder ? { color: '#666', fontStyle: 'italic' } : undefined}>
+                        {isNsfwLora(l) && !comfyModels.xrgeHolder ? "🔒 " : ""}{l.replace(/\.[^.]+$/, "")}
+                      </option>
+                    ))}
+                  </select>
+                  {editLora !== "none" && (
+                    <div className="mt-1.5">
+                      <label className="font-mono-share text-[8px] text-muted-foreground/60 flex items-center justify-between">
+                        <span>STRENGTH</span>
+                        <span>{editLoraStrength.toFixed(1)}</span>
+                      </label>
+                      <input type="range" min="0" max="2" step="0.1" value={editLoraStrength}
+                        onChange={(e) => setEditLoraStrength(Number(e.target.value))}
+                        className="w-full h-1 accent-secondary" />
+                    </div>
+                  )}
+                  {!comfyModels.xrgeHolder && comfyModels.editLoras.some(isNsfwLora) && (
+                    <p className="font-mono-share text-[8px] text-pink-400/60 mt-1">
+                      🔒 NSFW LoRAs unlocked for <span className="text-pink-400">$XRGE</span> holders
+                    </p>
+                  )}
+                </div>
               </div>
             )}
 

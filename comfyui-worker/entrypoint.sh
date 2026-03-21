@@ -118,6 +118,7 @@ if m:
         f'{bi}for _vk in (\"gifs\", \"videos\"):\n'
         f'{bi}    if _vk in node_output:\n'
         f'{bi}        node_output.setdefault(\"images\", []).extend(node_output[_vk])\n'
+        f'{bi}        del node_output[_vk]\n'
     )
     src = src[:m.end()] + patch + src[m.end():]
     with open('/handler.py','w') as f: f.write(src)

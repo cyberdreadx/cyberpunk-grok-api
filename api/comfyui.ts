@@ -161,6 +161,10 @@ const ADMIN_EMAIL = "cyberdreadx@proton.me";
 const COMFY_COSTS: Record<string, number> = {
   "txt2img": 3,
   "zimage": 3,
+  /** Flux 2 Klein image edit (canonical) */
+  "klein": 3,
+  "klein-hd": 4,
+  /** @deprecated use `klein` — same billing */
   "qwen-edit": 3,
   "qwen-edit-hd": 4,
   "wan-video": 15,
@@ -168,6 +172,11 @@ const COMFY_COSTS: Record<string, number> = {
   "gltch-wan-hd": 18,
   "longlook": 20, // flat cost regardless of sequence count
 };
+
+/** Flux 2 Klein image edit — canonical `klein`; `qwen-edit` kept for backward compatibility */
+function isKleinEditWorkflow(workflowType: string): boolean {
+  return workflowType === "klein" || workflowType === "qwen-edit";
+}
 
 // ---- Video LoRA pairing ----
 
@@ -371,7 +380,7 @@ function getRunPodEndpointForWorkflow(
   if (workflowType === "longlook") return longlook;
   if (workflowType === "wan-video" || workflowType === "gltch-wan") return wan;
   if (workflowType === "zimage") return zimage;
-  if (workflowType === "qwen-edit") return qwen;
+  if (isKleinEditWorkflow(workflowType)) return qwen;
   return fallback;
 }
 
@@ -2035,6 +2044,29 @@ async function uploadImageToLocal(baseUrl: string, imageBase64: string, rawName:
   return result.name as string;
 }
 
+/** Best-effort string for catch blocks (non-Error throws, empty .message, AggregateError, etc.) */
+function formatComfyHandlerError(err: unknown): string {
+  if (err instanceof Error) {
+    const m = err.message?.trim();
+    if (m) return m.slice(0, 1200);
+    const st = err.stack?.trim();
+    if (st) return st.slice(0, 1200);
+    return (err.name || "Error").slice(0, 1200);
+  }
+  if (typeof err === "string") return err.slice(0, 1200);
+  if (err && typeof err === "object") {
+    const c = (err as { cause?: unknown }).cause;
+    if (c instanceof Error && c.message?.trim()) return c.message.trim().slice(0, 1200);
+    const msg = (err as { message?: unknown }).message;
+    if (typeof msg === "string" && msg.trim()) return msg.trim().slice(0, 1200);
+  }
+  try {
+    const s = JSON.stringify(err);
+    if (s && s !== "{}") return s.slice(0, 1200);
+  } catch { /* ignore */ }
+  return String(err ?? "unknown").slice(0, 1200);
+}
+
 // =============== Handler ===============
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -2248,7 +2280,7 @@ Rules:
 
       if (!prompt)
         return res.status(400).json({ error: "Prompt is required" });
-      // Checkpoint is required for txt2img only; qwen-edit (Flux 2 Klein) and wan-video use fixed models
+      // Checkpoint is required for txt2img only; klein (Flux 2 Klein edit) and wan-video use fixed models
       if (workflowType === "txt2img" && !checkpoint)
         return res.status(400).json({ error: "Checkpoint is required" });
 
@@ -2271,9 +2303,10 @@ Rules:
       // (e.g. txt2img as part of text-to-video — the video step pays for both)
       const skipCredits = req.body.skipCredits === true;
       const adminTestCredits = isAdminUser && req.body.testCredits === true;
-      const costKey = workflowType === "qwen-edit" && upscale ? "qwen-edit-hd"
-        : workflowType === "gltch-wan" && useVidUpscale ? "gltch-wan-hd"
-          : workflowType;
+      const costKey = isKleinEditWorkflow(workflowType) && upscale ? "klein-hd"
+        : isKleinEditWorkflow(workflowType) ? "klein"
+          : workflowType === "gltch-wan" && useVidUpscale ? "gltch-wan-hd"
+            : workflowType;
       const baseCost = COMFY_COSTS[costKey] ?? 1;
       const audioCost = audioMode === "ambient" ? 1 : 0;
       const cost = skipCredits ? 0 : (baseCost + audioCost);
@@ -2314,7 +2347,7 @@ Rules:
       const clampCfg = Math.min(30, Math.max(0.1, Number(cfg) || 1));
 
       // Workflows that need a start image
-      const needsImage = workflowType === "qwen-edit" || workflowType === "wan-video" || workflowType === "gltch-wan" || workflowType === "longlook";
+      const needsImage = isKleinEditWorkflow(workflowType) || workflowType === "wan-video" || workflowType === "gltch-wan" || workflowType === "longlook";
 
       // Determine image filename for workflow
       let imageFilename: string | undefined;
@@ -2574,7 +2607,7 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           audioMode: (["none", "ambient"].includes(audioMode) ? audioMode : "none") as "none" | "ambient",
           audioPrompt: audioPrompt || undefined,
         });
-      } else if (workflowType === "qwen-edit") {
+      } else if (isKleinEditWorkflow(workflowType)) {
         let kleinLoraList: { name: string; strengthModel: number; strengthClip: number }[] = [];
         if (Array.isArray(loras) && loras.length > 0) {
           kleinLoraList = loras
@@ -3330,15 +3363,18 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
     }
 
     return res.status(400).json({ error: "Unknown action" });
-  } catch (err: any) {
-    console.error("[comfyui]", err.message);
+  } catch (err: unknown) {
+    const detail = formatComfyHandlerError(err);
+    console.error("[comfyui]", detail, err);
 
     const isTimeout =
-      err.name === "TimeoutError" || err.message?.includes("timeout");
+      err instanceof AggregateError
+        ? err.errors?.some((e) => String(e).includes("timeout"))
+        : (err as { name?: string })?.name === "TimeoutError" || detail.includes("timeout");
     const isConn =
-      err.cause?.code === "ECONNREFUSED" ||
-      err.message?.includes("ECONNREFUSED") ||
-      err.message?.includes("fetch failed");
+      (err as { cause?: { code?: string } })?.cause?.code === "ECONNREFUSED" ||
+      detail.includes("ECONNREFUSED") ||
+      detail.includes("fetch failed");
 
     if (isTimeout || isConn) {
       return res.status(502).json({
@@ -3348,6 +3384,6 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
       });
     }
 
-    return res.status(500).json({ error: "ComfyUI request failed" });
+    return res.status(500).json({ error: detail || "ComfyUI request failed" });
   }
 }

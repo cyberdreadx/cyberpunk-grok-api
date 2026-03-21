@@ -343,7 +343,7 @@ export default function ComfyPanel({
     try {
       const body: Record<string, any> = {
         action: "generate",
-        workflow: "qwen-edit",
+        workflow: "klein",
         prompt: prompt.trim(),
         negativePrompt: negPrompt.trim() || undefined,
         width,

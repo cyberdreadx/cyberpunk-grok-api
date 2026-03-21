@@ -4,8 +4,9 @@
  */
 
 // ── API base URL ─────────────────────────────────────────────────────────
-// In production: same origin (Vercel serves both frontend + /api routes)
-// In dev: Vite proxy or direct URL
+// Production (Vercel): same origin — `/api` hits serverless routes.
+// Netlify: `netlify.toml` proxies `/api/*` to your Vercel app.
+// Local dev: set `VITE_API_URL` to full API base, OR leave unset — Vite proxies `/api` → backend (see vite.config).
 const API_BASE = import.meta.env.VITE_API_URL || "/api";
 
 /** Whether the backend is configured (always true if deployed on Vercel). */
@@ -61,8 +62,17 @@ export async function apiFetch<T = any>(path: string, options: ApiOptions = {}):
   const res = await fetch(`${API_BASE}${path}`, fetchOptions);
 
   if (!res.ok) {
-    const data = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
-    throw new Error(data.error || data.message || `API error: ${res.status}`);
+    const text = await res.text().catch(() => "");
+    let message = `HTTP ${res.status}`;
+    try {
+      const data = JSON.parse(text) as { error?: string; message?: string };
+      message = data.error || data.message || message;
+    } catch {
+      // Proxies / gateways often return HTML or plain text on 502/413
+      const t = text.trim();
+      if (t) message = t.slice(0, 800);
+    }
+    throw new Error(message);
   }
 
   return res.json();

@@ -1240,7 +1240,7 @@ export function useGrokApi() {
     })();
   }, [comfySubmitAndPoll, persistNewResults]);
 
-  // ComfyUI Image Edit (fire-and-forget — uses Flux 2 Klein workflow via qwen-edit endpoint)
+  // ComfyUI Image Edit (fire-and-forget — Flux 2 Klein via `klein` workflow)
   const comfyEdit = useCallback((params: {
     prompt: string;
     imageBase64: string;
@@ -1271,7 +1271,7 @@ export function useGrokApi() {
       try {
         setComfyJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "generating" } : j));
         const result = await comfySubmitAndPoll({
-          workflow: "qwen-edit",
+          workflow: "klein",
           prompt: params.prompt,
           imageBase64: params.imageBase64,
           imageFilename: params.imageFilename || "input.jpg",
