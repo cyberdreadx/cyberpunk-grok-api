@@ -754,7 +754,7 @@ export default function Characters() {
 
         {/* ── Chat View ── */}
         {view === "chat" && activeChar && (
-          <div className="flex flex-col" style={{ height: "calc(100vh - 140px)" }}>
+          <div className="flex flex-col sm:[height:calc(100vh-140px)]" style={{ height: "calc(100vh - 140px - 68px)" }}>
             {/* Character header */}
             <div className="flex items-center gap-3 pb-3 border-b border-border mb-3 shrink-0">
               {activeChar.portrait_url ? (
@@ -867,7 +867,7 @@ export default function Characters() {
             )}
 
             {/* Input */}
-            <div className={`flex gap-2 shrink-0 ${pendingImage ? "-mt-px" : ""}`}>
+            <div className={`flex gap-2 shrink-0 pb-[env(safe-area-inset-bottom,0px)] sm:pb-0 ${pendingImage ? "-mt-px" : ""}`}>
               <input type="file" ref={chatImageRef} accept="image/*" className="hidden" onChange={handleChatImage} />
               <button onClick={() => chatImageRef.current?.click()} disabled={chatLoading}
                 className="px-3 py-2.5 bg-card/60 border border-border rounded-lg hover:border-secondary/50 transition-colors disabled:opacity-50"
