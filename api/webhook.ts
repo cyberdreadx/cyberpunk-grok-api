@@ -254,6 +254,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       await sql`
         INSERT INTO transactions (user_id, credits, amount_cents, stripe_session_id, package, type, payment_method)
         VALUES (${userId}::uuid, ${creditsPerMonth}, ${invoice.amount_paid || 0}, ${invoice.id}, ${tier}, 'subscription', ${invoicePayMethod})
+        ON CONFLICT (stripe_session_id) DO NOTHING
       `;
       console.log(`Reset sub_credits to ${creditsPerMonth} for ${userId} (${tier}) via ${invoicePayMethod}`);
     }
@@ -330,12 +331,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         if (buyerUserId) {
-          // Find an unrewarded referral for this buyer
+          // Atomically claim the referral row to avoid double-rewards on webhook retries
           const [ref] = await sql`
-            SELECT r.id, r.referrer_id
-            FROM referrals r
-            WHERE r.referee_id = ${buyerUserId}::uuid
-              AND r.referee_purchased = false
+            UPDATE referrals
+            SET referee_purchased = true, referee_purchase_reward = true
+            WHERE referee_id = ${buyerUserId}::uuid
+              AND referee_purchased = false
+            RETURNING id, referrer_id
           `;
 
           if (ref) {
@@ -347,26 +349,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             `;
 
             if ((cap?.rewarded || 0) < 50) {
-              // Grant 10 credits to referrer
               await sql`SELECT add_pack_credits(${ref.referrer_id}::uuid, 10)`;
-              // Grant 5 bonus credits to referee (buyer)
               await sql`SELECT add_pack_credits(${buyerUserId}::uuid, 5)`;
-              // Mark referral as fully rewarded
               await sql`
                 UPDATE referrals
-                SET referee_purchased = true,
-                    referrer_rewarded = true,
-                    referee_purchase_reward = true
+                SET referrer_rewarded = true
                 WHERE id = ${ref.id}::uuid
               `;
               console.log(`[referral] Purchase reward: +10 to referrer ${ref.referrer_id}, +5 bonus to buyer ${buyerUserId}`);
             } else {
-              // Referrer hit cap — still mark purchase but don't grant referrer credits
-              await sql`
-                UPDATE referrals
-                SET referee_purchased = true, referee_purchase_reward = true
-                WHERE id = ${ref.id}::uuid
-              `;
+              console.log(`[referral] Referrer ${ref.referrer_id} hit 50-referral cap, purchase marked but no credits granted`);
               // Still give the buyer their 5 bonus
               await sql`SELECT add_pack_credits(${buyerUserId}::uuid, 5)`;
               console.log(`[referral] Referrer ${ref.referrer_id} hit 50-cap, but buyer ${buyerUserId} still gets +5 bonus`);

@@ -18,9 +18,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import Stripe from "stripe";
 import { getDb } from "./_lib/db";
-import { getUserFromRequest } from "./_lib/auth";
-
-const ADMIN_EMAIL = "cyberdreadx@proton.me";
+import { getUserFromRequest, ADMIN_EMAIL } from "./_lib/auth";
 
 function isAdmin(req: VercelRequest): boolean {
   const auth = getUserFromRequest(req);
@@ -489,8 +487,44 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
 
+      // -- Grant credits to a user by email --
+      case "grant-credits": {
+        const { email, credits, type = "pack" } = req.body;
+        if (!email || typeof email !== "string")
+          return res.status(400).json({ error: "email is required" });
+        const amount = parseInt(credits, 10);
+        if (!amount || amount < 1 || amount > 50000)
+          return res.status(400).json({ error: "credits must be 1–50000" });
+
+        const [user] = await sql`SELECT id, email, sub_credits, pack_credits FROM users WHERE email = ${email.trim().toLowerCase()}`;
+        if (!user)
+          return res.status(404).json({ error: `User not found: ${email}` });
+
+        if (type === "sub") {
+          await sql`UPDATE users SET sub_credits = sub_credits + ${amount}, updated_at = now() WHERE id = ${user.id}`;
+        } else {
+          await sql`SELECT add_pack_credits(${user.id}::uuid, ${amount})`;
+        }
+
+        await sql`
+          INSERT INTO transactions (user_id, credits, amount_cents, stripe_session_id, package, type, payment_method)
+          VALUES (${user.id}::uuid, ${amount}, 0, ${'admin-grant-' + Date.now()}, 'admin-grant', ${type === "sub" ? "subscription" : "pack"}, 'admin')
+        `.catch(() => {});
+
+        const [updated] = await sql`SELECT sub_credits, pack_credits FROM users WHERE id = ${user.id}`;
+        console.log(`[admin] Granted ${amount} ${type} credits to ${email} (sub=${updated.sub_credits}, pack=${updated.pack_credits})`);
+
+        return res.status(200).json({
+          granted: amount,
+          type,
+          email: user.email,
+          sub_credits: updated.sub_credits,
+          pack_credits: updated.pack_credits,
+        });
+      }
+
       default:
-        return res.status(400).json({ error: "Unknown action. Expected: overview, revenue, revenue-breakdown, users, usage, transactions, top-users, referrals, sync-subscriptions" });
+        return res.status(400).json({ error: "Unknown action. Expected: overview, revenue, revenue-breakdown, users, usage, transactions, top-users, referrals, sync-subscriptions, grant-credits" });
     }
   } catch (err: any) {
     console.error("[admin]", err.message);

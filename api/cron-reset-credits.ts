@@ -63,8 +63,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       await sql`
         INSERT INTO transactions (user_id, credits, amount_cents, stripe_session_id, package, type, payment_method)
-        VALUES (${user.id}::uuid, ${credits}, 0, ${'cron-reset-' + new Date().toISOString().slice(0, 10)}, ${user.subscription_tier}, 'subscription', 'cron')
-      `.catch(() => {});
+        VALUES (${user.id}::uuid, ${credits}, 0, ${'cron-reset-' + user.id + '-' + new Date().toISOString().slice(0, 10)}, ${user.subscription_tier}, 'subscription', 'cron')
+      `.catch((e: any) => { console.error("[cron] transaction log failed:", user.id, e.message); });
 
       console.log(`[cron] Reset ${credits} sub_credits for user ${user.id} (${user.subscription_tier}), next renewal: ${nextRenewal.toISOString()}`);
       resetCount++;

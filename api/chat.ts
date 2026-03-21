@@ -13,7 +13,7 @@
  */
 
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { getUserFromRequest } from "./_lib/auth";
+import { getUserFromRequest, ADMIN_EMAIL } from "./_lib/auth";
 import { getDb } from "./_lib/db";
 import { checkRateLimit } from "./_lib/ratelimit";
 
@@ -25,8 +25,6 @@ interface ChatMessage {
   role: "user" | "assistant" | "system";
   content: string;
 }
-
-const ADMIN_EMAIL = "cyberdreadx@proton.me";
 
 const DEEPSEEK_BASE = "https://api.deepseek.com/v1";
 const GROK_BASE = "https://api.x.ai/v1";
@@ -418,7 +416,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Log usage
       try {
         await sql`INSERT INTO usage_log (user_id, mode, credits_used)
-          VALUES (${auth.userId}::uuid, 'chat-message', 0)`;
+          VALUES (${auth.userId}::uuid, 'chat-message', 1)`;
       } catch { /* best effort */ }
 
       // Send reply immediately — don't make the user wait for memory extraction

@@ -5,6 +5,8 @@
 import jwt from "jsonwebtoken";
 import type { VercelRequest } from "@vercel/node";
 
+export const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "cyberdreadx@proton.me";
+
 const getSecret = () => {
   const secret = process.env.JWT_SECRET;
   if (!secret) throw new Error("JWT_SECRET not configured");

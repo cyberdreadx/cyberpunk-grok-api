@@ -5,6 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import type { GrokMode, GenerationSettings } from "@/hooks/useGrokApi";
 import { apiFetch } from "@/lib/api";
+import { toast } from "sonner";
 
 interface PromptFormProps {
   mode: GrokMode;
@@ -274,6 +275,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
       if (data.enhanced) setPrompt(data.enhanced);
     } catch (err: any) {
       console.error("[PromptForm] Enhance failed:", err?.message || err);
+      toast.error("Enhance failed", { description: err?.message || "Try again" });
     } finally {
       setEnhancing(false);
     }

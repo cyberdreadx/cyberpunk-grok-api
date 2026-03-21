@@ -279,6 +279,13 @@ export default function Admin() {
   const [syncResult, setSyncResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Grant credits
+  const [grantEmail, setGrantEmail] = useState("");
+  const [grantAmount, setGrantAmount] = useState("");
+  const [grantType, setGrantType] = useState<"pack" | "sub">("pack");
+  const [granting, setGranting] = useState(false);
+  const [grantResult, setGrantResult] = useState<{ ok: boolean; msg: string } | null>(null);
+
   const fetchAll = useCallback(async () => {
     setRefreshing(true);
     const errors: string[] = [];
@@ -696,6 +703,55 @@ export default function Admin() {
                 </AreaChart>
               </ResponsiveContainer>
             </div>
+
+            {/* Grant Credits */}
+            <section className="border border-secondary/30 rounded-lg bg-card/40 backdrop-blur-sm p-3 sm:p-4 space-y-3">
+              <h2 className="font-orbitron text-xs tracking-wider text-secondary/80 flex items-center gap-2">
+                <Gift className="w-3.5 h-3.5" />
+                GRANT_CREDITS
+              </h2>
+              <div className="flex flex-wrap items-end gap-2">
+                <div className="flex-1 min-w-[180px]">
+                  <label className="font-mono-share text-[9px] text-muted-foreground/60 block mb-1">EMAIL</label>
+                  <input type="email" value={grantEmail} onChange={e => setGrantEmail(e.target.value)} placeholder="user@example.com"
+                    className="w-full bg-background/60 border border-border rounded px-2.5 py-1.5 font-mono-share text-xs text-foreground placeholder-muted-foreground/40" />
+                </div>
+                <div className="w-24">
+                  <label className="font-mono-share text-[9px] text-muted-foreground/60 block mb-1">AMOUNT</label>
+                  <input type="number" value={grantAmount} onChange={e => setGrantAmount(e.target.value)} placeholder="100" min="1" max="50000"
+                    className="w-full bg-background/60 border border-border rounded px-2.5 py-1.5 font-mono-share text-xs text-foreground placeholder-muted-foreground/40" />
+                </div>
+                <div className="w-24">
+                  <label className="font-mono-share text-[9px] text-muted-foreground/60 block mb-1">TYPE</label>
+                  <select value={grantType} onChange={e => setGrantType(e.target.value as "pack" | "sub")}
+                    className="w-full bg-background/60 border border-border rounded px-2.5 py-1.5 font-mono-share text-xs text-foreground">
+                    <option value="pack">Pack</option>
+                    <option value="sub">Sub</option>
+                  </select>
+                </div>
+                <Button variant="outline" size="sm" disabled={granting || !grantEmail.trim() || !grantAmount}
+                  className="font-mono-share text-xs gap-1.5 border-secondary/40 hover:bg-secondary/10 text-secondary"
+                  onClick={async () => {
+                    setGranting(true); setGrantResult(null);
+                    try {
+                      const res = await apiFetch("/admin", { method: "POST", body: { action: "grant-credits", email: grantEmail.trim(), credits: grantAmount, type: grantType } });
+                      setGrantResult({ ok: true, msg: `Granted ${res.granted} ${res.type} credits to ${res.email} (sub=${res.sub_credits}, pack=${res.pack_credits})` });
+                      setGrantEmail(""); setGrantAmount("");
+                      fetchAll();
+                    } catch (err: any) {
+                      setGrantResult({ ok: false, msg: err.message || "Failed" });
+                    } finally { setGranting(false); }
+                  }}>
+                  {granting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
+                  GRANT
+                </Button>
+              </div>
+              {grantResult && (
+                <div className={`font-mono-share text-[10px] px-2 py-1.5 rounded ${grantResult.ok ? "bg-green-500/10 text-green-400" : "bg-destructive/10 text-destructive"}`}>
+                  {grantResult.msg}
+                </div>
+              )}
+            </section>
 
             <section className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm overflow-hidden">
               <div className="px-3 sm:px-4 py-3 border-b border-border/30">

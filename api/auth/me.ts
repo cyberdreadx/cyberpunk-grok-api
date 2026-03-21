@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getDb } from "../_lib/db";
 import { getUserFromRequest } from "../_lib/auth";
+import { checkRateLimit } from "../_lib/ratelimit";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === "OPTIONS") return res.status(200).end();
@@ -9,6 +10,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const auth = getUserFromRequest(req);
     if (!auth) return res.status(401).json({ error: "Unauthorized" });
+
+    await checkRateLimit(auth.userId, "me", { max: 60, windowSeconds: 60 });
 
     const sql = getDb();
     const rows = await sql`

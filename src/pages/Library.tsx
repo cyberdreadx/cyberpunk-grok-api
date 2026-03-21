@@ -58,14 +58,14 @@ const Library: React.FC = () => {
 
   const deleteResult = useCallback(async (id: string) => {
     setResults(prev => prev.filter(r => r.id !== id));
-    try { await deleteStoredResult(id); } catch {}
+    try { await deleteStoredResult(id); } catch (e) { console.error("[library] delete failed:", e); }
   }, []);
 
   const clearResults = useCallback(async () => {
     setResults([]);
     revokeAllRef.current?.();
     revokeAllRef.current = null;
-    try { await clearStoredResults(); } catch {}
+    try { await clearStoredResults(); } catch (e) { console.error("[library] clear failed:", e); }
   }, []);
 
   const updateResultFolder = useCallback((resultId: string, folderId: string | null) => {

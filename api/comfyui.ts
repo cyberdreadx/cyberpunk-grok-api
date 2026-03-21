@@ -16,7 +16,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { S3Client, GetObjectCommand, DeleteObjectCommand, ListObjectsV2Command, DeleteObjectsCommand } from "@aws-sdk/client-s3";
 import { put } from "@vercel/blob";
-import { getUserFromRequest } from "./_lib/auth";
+import { getUserFromRequest, ADMIN_EMAIL } from "./_lib/auth";
 import { getDb } from "./_lib/db";
 import { checkRateLimit } from "./_lib/ratelimit";
 
@@ -155,8 +155,6 @@ export const config = {
   maxDuration: 120,
   api: { bodyParser: { sizeLimit: "50mb" } },
 };
-
-const ADMIN_EMAIL = "cyberdreadx@proton.me";
 
 const COMFY_COSTS: Record<string, number> = {
   "txt2img": 3,
@@ -2294,7 +2292,10 @@ Rules:
             if (rows.length === 0) {
               return res.status(403).json({ error: "NSFW LoRAs require $XRGE token holding. Purchase credits with $XRGE to unlock." });
             }
-          } catch { /* If DB fails, allow through */ }
+          } catch (e: any) {
+            console.error("[comfyui] NSFW gate DB check failed:", e.message);
+            return res.status(403).json({ error: "Unable to verify NSFW access. Try again." });
+          }
         }
       }
 
@@ -2698,7 +2699,7 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           // Refund credits on submission failure
           if (creditDeducted) {
             const sql = getDb();
-            await sql`SELECT add_pack_credits(${auth.userId}::uuid, ${cost})`.catch(() => { });
+            await sql`SELECT add_pack_credits(${auth.userId}::uuid, ${cost})`.catch((e: any) => { console.error("[comfyui] refund failed:", auth.userId, cost, e.message); });
           }
           throw new Error(`RunPod submit failed (${resp.status}): ${errText}`);
         }
@@ -2735,7 +2736,7 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           const errText = await resp.text().catch(() => "Unknown error");
           if (creditDeducted) {
             const sql = getDb();
-            await sql`SELECT add_pack_credits(${auth.userId}::uuid, ${cost})`.catch(() => { });
+            await sql`SELECT add_pack_credits(${auth.userId}::uuid, ${cost})`.catch((e: any) => { console.error("[comfyui] refund failed:", auth.userId, cost, e.message); });
           }
           throw new Error(`ComfyUI prompt failed (${resp.status}): ${errText}`);
         }
