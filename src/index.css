@@ -42,6 +42,14 @@
     --neon-yellow: 55 100% 55%;
     --neon-red: 0 100% 55%;
 
+    /* ── IMMERSION CONTROL (MKULTRA Research Inspired) ── */
+    --immersion-flicker: 0.35;
+    --immersion-pulse-hz: 0.7;
+    --immersion-red-shift: 8;
+    --immersion-glow: 0.85;
+    --immersion-scanline: 0.16;
+    --immersion-vignette: 0.4;
+
     --glow-cyan: 0 0 10px hsl(180 100% 50% / 0.5), 0 0 30px hsl(180 100% 50% / 0.2);
     --glow-magenta: 0 0 10px hsl(300 100% 60% / 0.5), 0 0 30px hsl(300 100% 60% / 0.2);
     --glow-purple: 0 0 10px hsl(270 100% 65% / 0.5), 0 0 30px hsl(270 100% 65% / 0.2);
@@ -104,6 +112,31 @@
     text-shadow: var(--glow-purple);
   }
 
+  /* Dynamic Immersion Effects — duration must use time units (1s / Hz) */
+  .immersion-flicker {
+    animation: immersion-flicker calc(1s / max(0.1, var(--immersion-pulse-hz))) infinite alternate ease-in-out;
+    will-change: opacity, filter;
+  }
+
+  .immersion-glow {
+    filter: brightness(calc(1 + var(--immersion-glow) * 0.3));
+  }
+
+  /** Full-screen color grade driven by admin sliders (--immersion-* on :root). */
+  .immersion-screen-host {
+    filter: hue-rotate(calc(var(--immersion-red-shift) * 0.6deg))
+      brightness(calc(0.88 + var(--immersion-glow) * 0.12));
+  }
+
+  /** CRT edge darkening — strength from --immersion-vignette (0–1). */
+  .immersion-vignette {
+    background: radial-gradient(
+      ellipse at center,
+      transparent 48%,
+      hsl(var(--background) / calc(0.35 + var(--immersion-vignette) * 0.55)) 100%
+    );
+  }
+
   .neon-border {
     border-color: hsl(var(--primary));
     box-shadow: 0 0 10px hsl(var(--primary) / 0.4), 0 0 30px hsl(var(--primary) / 0.15), inset 0 0 10px hsl(var(--primary) / 0.05);
@@ -123,8 +156,8 @@
       0deg,
       transparent,
       transparent 2px,
-      hsl(var(--primary) / 0.02) 2px,
-      hsl(var(--primary) / 0.02) 4px
+      hsl(var(--primary) / calc(0.015 + var(--immersion-scanline) * 0.35)) 2px,
+      hsl(var(--primary) / calc(0.015 + var(--immersion-scanline) * 0.35)) 4px
     );
     pointer-events: none;
   }
@@ -262,6 +295,17 @@
   50% { opacity: 0; }
 }
 
+@keyframes immersion-flicker {
+  0% {
+    opacity: calc(1 - var(--immersion-flicker) * 0.14);
+    filter: brightness(calc(0.96 + var(--immersion-flicker) * 0.06));
+  }
+  100% {
+    opacity: 1;
+    filter: brightness(calc(1.02 + var(--immersion-flicker) * 0.12));
+  }
+}
+
 @keyframes typing {
   from { width: 0; }
   to { width: 100%; }
@@ -346,6 +390,12 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+  .immersion-flicker {
+    animation: none !important;
+  }
+  .immersion-screen-host {
+    filter: none !important;
   }
 }
 

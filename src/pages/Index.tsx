@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, Suspense } from "react";
+import React, { useState, useCallback, useRef, useEffect, Suspense } from "react";
 import { Terminal, Key, Coins, Shield, Eye, MessageCircle, HelpCircle, Server, Zap, Cpu, ChevronDown, Film, X, AlertCircle, CheckCircle2, Upload, Users, Image } from "lucide-react";
 import { Link } from "react-router-dom";
 import CyberLayout from "@/components/CyberLayout";
@@ -11,6 +11,13 @@ import GlitchText from "@/components/GlitchText";
 import ModeSelector from "@/components/ModeSelector";
 import PromptForm from "@/components/PromptForm";
 import SettingsPanel from "@/components/SettingsPanel";
+import {
+  applyImmersionToRoot,
+  DEFAULT_IMMERSION,
+  fetchMasterImmersion,
+  saveMasterImmersion,
+  type ImmersionSettings,
+} from "@/lib/immersion";
 import PromptHistory from "@/components/PromptHistory";
 import ResultsGrid from "@/components/ResultsGrid";
 import ApiKeyDialog from "@/components/ApiKeyDialog";
@@ -69,6 +76,9 @@ const Index = () => {
     }
   });
 
+  /** Master immersion (server-backed); sliders sync when admin loads. */
+  const [immersionSettings, setImmersionSettings] = useState<ImmersionSettings>(DEFAULT_IMMERSION);
+
   const handleSettingsChange = (next: GenerationSettings) => {
     setSettings(next);
     localStorage.setItem("grok-settings", JSON.stringify(next));
@@ -77,6 +87,7 @@ const Index = () => {
     setVideoSettings(next);
     localStorage.setItem("grok-video-settings", JSON.stringify(next));
   };
+
   const { toast } = useToast();
   const {
     isLoading,
@@ -119,6 +130,34 @@ const Index = () => {
   const isAdmin = auth.user?.email === "cyberdreadx@proton.me";
   const [adminTestCredits, setAdminTestCredits] = useState(false);
   const adminBypass = isAdmin && !adminTestCredits;
+
+  const immersionSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleImmersionChange = useCallback(
+    (next: ImmersionSettings) => {
+      setImmersionSettings(next);
+      applyImmersionToRoot(next);
+      if (immersionSaveTimer.current) clearTimeout(immersionSaveTimer.current);
+      immersionSaveTimer.current = setTimeout(async () => {
+        immersionSaveTimer.current = null;
+        try {
+          await saveMasterImmersion(next);
+          toast({ title: "Global UI saved", description: "Applied for all visitors." });
+        } catch (e) {
+          toast({
+            title: "Could not save globally",
+            description: (e as Error).message || "Check API / database.",
+            variant: "destructive",
+          });
+        }
+      }, 650);
+    },
+    [toast],
+  );
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    fetchMasterImmersion().then(setImmersionSettings);
+  }, [isAdmin]);
 
   // Folders
   const foldersHook = useFolders();
@@ -971,7 +1010,16 @@ const Index = () => {
 
             <div className="h-px bg-border/30" />
 
-            <SettingsPanel settings={settings} videoSettings={videoSettings} onChange={handleSettingsChange} onVideoChange={handleVideoSettingsChange} mode={mode} />
+            <SettingsPanel 
+              settings={settings} 
+              videoSettings={videoSettings} 
+              immersionSettings={immersionSettings}
+              onChange={handleSettingsChange} 
+              onVideoChange={handleVideoSettingsChange}
+              onImmersionChange={isAdmin ? handleImmersionChange : undefined}
+              isAdmin={isAdmin}
+              mode={mode} 
+            />
 
             {/* Engine selector — shows in edit-image mode */}
             {mode === "edit-image" && (

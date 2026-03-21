@@ -47,7 +47,7 @@ const HudOverlay: React.FC = () => {
     <>
       {/* Top-left HUD */}
       <div className="fixed top-10 left-4 z-30 font-mono-share text-[9px] text-primary/20 space-y-1 hidden md:block">
-        <div className="animate-flicker">[SYS] {statusMessages[currentStatus]}</div>
+        <div className="immersion-flicker">[SYS] {statusMessages[currentStatus]}</div>
         <div className="text-muted-foreground/15">PID: 0x4F7A // {time}</div>
         <div className="text-muted-foreground/10 mt-2">
           {"─".repeat(18)}

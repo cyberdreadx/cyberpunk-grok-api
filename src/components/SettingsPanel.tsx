@@ -1,5 +1,5 @@
 import React from "react";
-import { Settings, Maximize, Hash, Clock, Monitor } from "lucide-react";
+import { Settings, Maximize, Hash, Clock, Monitor, Zap } from "lucide-react";
 import {
   Collapsible,
   CollapsibleContent,
@@ -15,12 +15,20 @@ import type {
   ImageCount,
   GrokMode,
 } from "@/hooks/useGrokApi";
+import type { ImmersionSettings } from "@/lib/immersion";
+import { DEFAULT_IMMERSION } from "@/lib/immersion";
+
+export type { ImmersionSettings };
+export { DEFAULT_IMMERSION };
 
 interface SettingsPanelProps {
   settings: GenerationSettings;
   videoSettings: VideoSettings;
+  immersionSettings?: ImmersionSettings;
   onChange: (settings: GenerationSettings) => void;
   onVideoChange: (settings: VideoSettings) => void;
+  onImmersionChange?: (settings: ImmersionSettings) => void;
+  isAdmin?: boolean;
   mode: GrokMode;
 }
 
@@ -60,7 +68,16 @@ const imageResolutions: { value: ImageResolution; label: string; desc: string }[
   { value: "2k", label: "2K", desc: "High-Res" },
 ];
 
-const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, videoSettings, onChange, onVideoChange, mode }) => {
+const SettingsPanel: React.FC<SettingsPanelProps> = ({ 
+  settings, 
+  videoSettings, 
+  immersionSettings,
+  onChange, 
+  onVideoChange, 
+  onImmersionChange,
+  isAdmin = false,
+  mode 
+}) => {
   const isVideoMode = mode === "text-to-video" || mode === "image-to-video";
 
   const summaryText = isVideoMode
@@ -259,6 +276,118 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, videoSettings, 
             </div>
 
           </>
+        )}
+
+        {/* ADMIN ONLY - Immersion Control */}
+        {isAdmin && onImmersionChange && (
+          <div className="pt-6 border-t border-red-500/20 mt-6">
+            <label className="font-orbitron text-[10px] tracking-wider text-red-400 flex items-center gap-2 mb-4">
+              <Zap className="w-4 h-4" />
+              IMMERSION CONTROL
+              <span className="text-[9px] text-red-500/50 font-mono-share">(GLOBAL — ALL USERS)</span>
+            </label>
+            <p className="font-mono-share text-[8px] text-muted-foreground/70 mb-3 leading-relaxed">
+              Saves to the server. Everyone loads these values; sliders debounce ~650ms before POST.
+            </p>
+
+            <div className="space-y-5">
+              <div>
+                <div className="flex justify-between text-[10px] mb-1 text-muted-foreground">
+                  <span>FLICKER INTENSITY</span>
+                  <span className="font-mono-share text-red-400">{(immersionSettings?.flicker ?? 0.35).toFixed(2)}</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.05"
+                  value={immersionSettings?.flicker ?? 0.35}
+                  onChange={(e) => onImmersionChange({ ...(immersionSettings ?? DEFAULT_IMMERSION), flicker: parseFloat(e.target.value) })}
+                  className="w-full accent-red-500"
+                />
+              </div>
+
+              <div>
+                <div className="flex justify-between text-[10px] mb-1 text-muted-foreground">
+                  <span>PULSE RATE (Hz)</span>
+                  <span className="font-mono-share text-red-400">{(immersionSettings?.pulseHz ?? 0.7).toFixed(1)}</span>
+                </div>
+                <input
+                  type="range"
+                  min="0.1"
+                  max="8"
+                  step="0.1"
+                  value={immersionSettings?.pulseHz ?? 0.7}
+                  onChange={(e) => onImmersionChange({ ...(immersionSettings ?? DEFAULT_IMMERSION), pulseHz: parseFloat(e.target.value) })}
+                  className="w-full accent-red-500"
+                />
+              </div>
+
+              <div>
+                <div className="flex justify-between text-[10px] mb-1 text-muted-foreground">
+                  <span>RED SHIFT</span>
+                  <span className="font-mono-share text-red-400">{immersionSettings?.redShift ?? 8}</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="30"
+                  step="1"
+                  value={immersionSettings?.redShift ?? 8}
+                  onChange={(e) => onImmersionChange({ ...(immersionSettings ?? DEFAULT_IMMERSION), redShift: parseInt(e.target.value) })}
+                  className="w-full accent-red-500"
+                />
+              </div>
+
+              <div>
+                <div className="flex justify-between text-[10px] mb-1 text-muted-foreground">
+                  <span>GLOW INTENSITY</span>
+                  <span className="font-mono-share text-red-400">{(immersionSettings?.glow ?? 0.85).toFixed(2)}</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="2"
+                  step="0.05"
+                  value={immersionSettings?.glow ?? 0.85}
+                  onChange={(e) => onImmersionChange({ ...(immersionSettings ?? DEFAULT_IMMERSION), glow: parseFloat(e.target.value) })}
+                  className="w-full accent-red-500"
+                />
+              </div>
+
+              <div>
+                <div className="flex justify-between text-[10px] mb-1 text-muted-foreground">
+                  <span>SCANLINE WEIGHT</span>
+                  <span className="font-mono-share text-red-400">{(immersionSettings?.scanline ?? 0.16).toFixed(2)}</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.02"
+                  value={immersionSettings?.scanline ?? 0.16}
+                  onChange={(e) => onImmersionChange({ ...(immersionSettings ?? DEFAULT_IMMERSION), scanline: parseFloat(e.target.value) })}
+                  className="w-full accent-red-500"
+                />
+              </div>
+
+              <div>
+                <div className="flex justify-between text-[10px] mb-1 text-muted-foreground">
+                  <span>VIGNETTE</span>
+                  <span className="font-mono-share text-red-400">{(immersionSettings?.vignette ?? 0.4).toFixed(2)}</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.02"
+                  value={immersionSettings?.vignette ?? 0.4}
+                  onChange={(e) => onImmersionChange({ ...(immersionSettings ?? DEFAULT_IMMERSION), vignette: parseFloat(e.target.value) })}
+                  className="w-full accent-red-500"
+                />
+              </div>
+            </div>
+          </div>
         )}
       </CollapsibleContent>
     </Collapsible>

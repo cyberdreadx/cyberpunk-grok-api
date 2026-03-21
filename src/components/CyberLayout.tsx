@@ -2,6 +2,7 @@ import React, { useEffect } from "react";
 import DataRain from "@/components/DataRain";
 import HudOverlay from "@/components/HudOverlay";
 import { getStoredThemeId, getThemeById, applyTheme } from "@/lib/themes";
+import { applyImmersionToRoot, DEFAULT_IMMERSION, fetchMasterImmersion } from "@/lib/immersion";
 
 interface CyberLayoutProps {
   children: React.ReactNode;
@@ -10,20 +11,18 @@ interface CyberLayoutProps {
 const CyberLayout: React.FC<CyberLayoutProps> = ({ children }) => {
   useEffect(() => {
     applyTheme(getThemeById(getStoredThemeId()));
+    fetchMasterImmersion()
+      .then(applyImmersionToRoot)
+      .catch(() => applyImmersionToRoot(DEFAULT_IMMERSION));
   }, []);
 
   return (
-    <div className="relative min-h-screen cyber-gradient overflow-hidden noise-overlay">
-      {/* CRT scanline overlay */}
+    <div className="relative min-h-screen cyber-gradient overflow-hidden noise-overlay immersion-screen-host">
+      {/* CRT scanline overlay — opacity driven by --immersion-scanline */}
       <div className="fixed inset-0 scanline z-10 pointer-events-none" />
 
-      {/* Vignette edges */}
-      <div
-        className="fixed inset-0 z-10 pointer-events-none"
-        style={{
-          background: "radial-gradient(ellipse at center, transparent 55%, hsl(var(--background)) 100%)",
-        }}
-      />
+      {/* Vignette edges — strength driven by --immersion-vignette */}
+      <div className="fixed inset-0 z-10 pointer-events-none immersion-vignette" />
 
       {/* Grid background */}
       <div
