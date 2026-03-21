@@ -399,23 +399,36 @@ export default function Characters() {
           return;
         }
         const anglePrefix = trigger.cameraAngle && CAMERA_ANGLES[trigger.cameraAngle] ? CAMERA_ANGLES[trigger.cameraAngle] : "";
-        // Use Grok edit endpoint (fast, same as UI Modify mode) instead of slow ComfyUI qwen-edit
-        const grokResult = await apiFetch<{ data?: Array<{ b64_json?: string; url?: string }> }>(
-          "/generate", {
+        // Use Flux 2 Klein ComfyUI workflow for image generation
+        const imgSubmit = await apiFetch<{ promptId: string; outputType?: string; runpodEndpointId?: string }>(
+          "/comfyui", {
             method: "POST",
             body: {
-              action: "edit-image",
+              action: "generate", workflow: "flux2-klein-edit",
               prompt: anglePrefix + trigger.prompt,
-              image_url: portrait64,
-              n: 1,
-              model: "grok-2-image",
+              imageBase64: portrait64, imageFilename: "character_portrait.jpg",
+              steps: 20, cfg: 5,
             },
           },
         );
-        const imgData = grokResult?.data?.[0];
-        const imgOut = imgData?.b64_json
-          ? `data:image/jpeg;base64,${imgData.b64_json}`
-          : imgData?.url || null;
+
+        savePendingCharJob({
+          characterId: char.id,
+          promptId: imgSubmit.promptId,
+          outputType: "image",
+          runpodEndpointId: imgSubmit.runpodEndpointId,
+          submittedAt: Date.now(),
+        });
+
+        const imgResult = await comfyPollUntilDone(
+          imgSubmit.promptId,
+          imgSubmit.outputType || "image",
+          { runpodEndpointId: imgSubmit.runpodEndpointId, pollInterval: 3000, maxAttempts: 120 },
+        );
+
+        removePendingCharJob(imgSubmit.promptId);
+
+        const imgOut = imgResult.image || null;
 
         if (imgOut) {
           const mediaMsg: ChatMessage = {
@@ -435,27 +448,28 @@ export default function Characters() {
           return;
         }
 
-        updatePlaceholder("generating image from portrait...");
+        updatePlaceholder("generating source frame via Flux Klein...");
         const vidAnglePrefix = trigger.cameraAngle && CAMERA_ANGLES[trigger.cameraAngle]
           ? CAMERA_ANGLES[trigger.cameraAngle]
           : CAMERA_ANGLES.closeup;
-        // Use fast Grok edit for the source frame (same speed as UI Modify)
-        const vidFrameGrok = await apiFetch<{ data?: Array<{ b64_json?: string; url?: string }> }>(
-          "/generate", {
+        // Use Flux 2 Klein ComfyUI workflow for the source frame
+        const vidFrameSubmit = await apiFetch<{ promptId: string; outputType?: string; runpodEndpointId?: string }>(
+          "/comfyui", {
             method: "POST",
             body: {
-              action: "edit-image",
+              action: "generate", workflow: "flux2-klein-edit",
               prompt: vidAnglePrefix + trigger.prompt,
-              image_url: portrait64,
-              n: 1,
-              model: "grok-2-image",
+              imageBase64: portrait64, imageFilename: "character_portrait.jpg",
+              steps: 20, cfg: 5,
             },
           },
         );
-        const vidFrameItem = vidFrameGrok?.data?.[0];
-        const vidFrameBase64 = vidFrameItem?.b64_json
-          ? `data:image/jpeg;base64,${vidFrameItem.b64_json}`
-          : vidFrameItem?.url || null;
+        const vidFrameResult = await comfyPollUntilDone(
+          vidFrameSubmit.promptId,
+          vidFrameSubmit.outputType || "image",
+          { runpodEndpointId: vidFrameSubmit.runpodEndpointId, pollInterval: 3000, maxAttempts: 120 },
+        );
+        const vidFrameBase64 = vidFrameResult.image || null;
 
         if (!vidFrameBase64) throw new Error("Failed to generate source image for video");
 
