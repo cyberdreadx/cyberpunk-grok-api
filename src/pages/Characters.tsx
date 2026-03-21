@@ -466,7 +466,7 @@ export default function Characters() {
             method: "POST",
             body: {
               action: "generate", workflow: "gltch-wan",
-              prompt: trigger.prompt, imageBase64: imgResult.image, imageFilename: "character_frame.jpg",
+              prompt: trigger.prompt, imageBase64: vidFrameBase64, imageFilename: "character_frame.jpg",
               width: 832, height: 832, steps: 4, cfg: 1,
               frameCount: 81, shift: 8, useRife: true, useUpscale: false, resolution: 832,
               videoLora: trigger.videoLora || "mystic_xxx_wan22_i2v_v1",
