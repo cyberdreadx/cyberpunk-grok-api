@@ -439,16 +439,25 @@ export default function Characters() {
         const vidAnglePrefix = trigger.cameraAngle && CAMERA_ANGLES[trigger.cameraAngle]
           ? CAMERA_ANGLES[trigger.cameraAngle]
           : CAMERA_ANGLES.closeup;
-        const vidFrameBody: Record<string, any> = {
-          workflow: "qwen-edit",
-          prompt: vidAnglePrefix + trigger.prompt,
-          imageBase64: portrait64,
-          imageFilename: "portrait.jpg",
-          steps: 20, cfg: 5,
-        };
-        const imgResult = await comfySubmitAndPollStandalone(vidFrameBody);
+        // Use fast Grok edit for the source frame (same speed as UI Modify)
+        const vidFrameGrok = await apiFetch<{ data?: Array<{ b64_json?: string; url?: string }> }>(
+          "/generate", {
+            method: "POST",
+            body: {
+              action: "edit-image",
+              prompt: vidAnglePrefix + trigger.prompt,
+              image_url: portrait64,
+              n: 1,
+              model: "grok-2-image",
+            },
+          },
+        );
+        const vidFrameItem = vidFrameGrok?.data?.[0];
+        const vidFrameBase64 = vidFrameItem?.b64_json
+          ? `data:image/jpeg;base64,${vidFrameItem.b64_json}`
+          : vidFrameItem?.url || null;
 
-        if (!imgResult.image) throw new Error("Failed to generate source image for video");
+        if (!vidFrameBase64) throw new Error("Failed to generate source image for video");
 
         updatePlaceholder("animating video...");
 
