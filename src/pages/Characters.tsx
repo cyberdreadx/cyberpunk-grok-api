@@ -754,7 +754,7 @@ export default function Characters() {
 
         {/* ── Chat View ── */}
         {view === "chat" && activeChar && (
-          <div className="flex flex-col" style={{ height: "calc(100vh - 140px)" }}>
+          <div className="flex flex-col sm:[height:calc(100vh-140px)]" style={{ height: "calc(100vh - 140px - 68px)" }}>
             {/* Character header */}
             <div className="flex items-center gap-3 pb-3 border-b border-border mb-3 shrink-0">
               {activeChar.portrait_url ? (
