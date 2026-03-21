@@ -4,8 +4,9 @@ import { Link } from "react-router-dom";
 import CyberLayout from "@/components/CyberLayout";
 import MobileBottomNav from "@/components/MobileBottomNav";
 
+import { lazyWithRetry } from "@/lib/lazyWithRetry";
 // Lazy-load the 3D orb — Three.js is ~800 KB and not needed for initial render
-const GrokOrb = React.lazy(() => import("@/components/GrokOrb"));
+const GrokOrb = lazyWithRetry(() => import("@/components/GrokOrb"), "grok-orb");
 import GlitchText from "@/components/GlitchText";
 import ModeSelector from "@/components/ModeSelector";
 import PromptForm from "@/components/PromptForm";

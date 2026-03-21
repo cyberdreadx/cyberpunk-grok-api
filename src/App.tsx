@@ -8,12 +8,13 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import { lazyWithRetry } from "@/lib/lazyWithRetry";
 
 // Lazy-load heavy pages to keep initial bundle small
-const Admin = React.lazy(() => import("./pages/Admin"));
-const Characters = React.lazy(() => import("./pages/Characters"));
-const Library = React.lazy(() => import("./pages/Library"));
-const ShareView = React.lazy(() => import("./pages/ShareView"));
+const Admin = lazyWithRetry(() => import("./pages/Admin"), "admin");
+const Characters = lazyWithRetry(() => import("./pages/Characters"), "characters");
+const Library = lazyWithRetry(() => import("./pages/Library"), "library");
+const ShareView = lazyWithRetry(() => import("./pages/ShareView"), "share-view");
 import AgeGateDialog from "@/components/AgeGateDialog";
 
 const queryClient = new QueryClient();
