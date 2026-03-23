@@ -437,6 +437,34 @@ const Index = () => {
     if (storageReady) prevResultsLenRef.current = results.length;
   }, [storageReady, results.length]);
 
+  // Preview credit cost shown on the GENERATE button
+  const previewCreditCost = React.useMemo((): number | undefined => {
+    if (effectiveApiMode !== "credits") return undefined;
+    const isGrokEdit = mode === "edit-image" && editEngine === "grok";
+    const isGltchEdit = mode === "edit-image" && editEngine === "gltch";
+    const isZimage = mode === "text-to-image" && genEngine === "gltch";
+    const isComfyGen = mode === "text-to-image" && genEngine === "comfy";
+    const isComfyRender = mode === "text-to-video" && renderEngine === "comfy";
+    const isGltchWan = mode === "image-to-video" && animateEngine === "gltch";
+    const isComfyAnimate = mode === "image-to-video" && animateEngine === "comfy" && !longLookEnabled;
+    const isComfyLongLook = mode === "image-to-video" && animateEngine === "comfy" && longLookEnabled;
+
+    if (isGrokEdit) {
+      const is2k = (settings.resolution || "1k") === "2k";
+      let m: CreditMode = grokPro && is2k ? "edit-image-pro-2k" : grokPro ? "edit-image-pro" : is2k ? "edit-image-2k" : "edit-image";
+      return calculateCreditCost(m, settings.count);
+    }
+    if (isGltchEdit) return calculateCreditCost("comfy-image");
+    if (isZimage || isComfyGen) return calculateCreditCost("comfy-image");
+    if (isComfyRender || isComfyAnimate) return calculateCreditCost("comfy-video");
+    if (isGltchWan) return calculateCreditCost("comfy-video");
+    if (isComfyLongLook) return calculateCreditCost("comfy-longlook", longLookSeqCount);
+    // Grok generate
+    const is2k = (settings.resolution || "1k") === "2k";
+    let cm: CreditMode = grokPro && is2k ? "text-to-image-pro-2k" : grokPro ? "text-to-image-pro" : is2k ? "text-to-image-2k" : "text-to-image";
+    return calculateCreditCost(cm, settings.count);
+  }, [mode, editEngine, genEngine, renderEngine, animateEngine, longLookEnabled, settings, grokPro, longLookSeqCount, effectiveApiMode]);
+
   const handleSubmit = async (data: { prompt: string; imageUrl?: string; extraImageUrls?: string[] }) => {
     // Determine which engine pathway
     const isGrokEdit = mode === "edit-image" && editEngine === "grok";
@@ -1778,7 +1806,17 @@ const Index = () => {
               )}
 
             <PromptHistory history={history} onSelect={handleSelectPrompt} onRemove={removeEntry} onClear={clearHistory} />
-            <PromptForm mode={mode} isLoading={isLoading} onSubmit={handleSubmit} settings={settings} initialPrompt={activePrompt} initialImageUrl={activeImageUrl} hideExtraImages={mode === "edit-image" && editEngine === "gltch"} />
+            <PromptForm
+              mode={mode}
+              isLoading={isLoading}
+              onSubmit={handleSubmit}
+              settings={settings}
+              initialPrompt={activePrompt}
+              initialImageUrl={activeImageUrl}
+              hideExtraImages={mode === "edit-image" && editEngine === "gltch"}
+              creditCost={previewCreditCost}
+              hasSubscription={creditsHook.hasSubscription}
+            />
 
             {/* Target folder selector */}
             {foldersHook.folders.length > 0 && (
@@ -2006,6 +2044,24 @@ const Index = () => {
             onBulkDelete={handleBulkDelete}
             onEmptyTrash={handleEmptyTrash}
           />
+
+          {/* Post-first-result upsell — shown once user has generated something */}
+          {results.length > 0 && !creditsHook.hasSubscription && creditsHook.enabled && (
+            <div className="mt-4 flex items-center justify-between gap-3 px-4 py-3 rounded border border-secondary/25 bg-secondary/5">
+              <div className="space-y-0.5 min-w-0">
+                <p className="font-orbitron text-[11px] text-secondary font-bold tracking-wider">WANT MORE?</p>
+                <p className="font-mono-share text-[10px] text-muted-foreground/70 leading-relaxed">
+                  Faster renders · Priority queue · Unlimited credits from $9.99/mo
+                </p>
+              </div>
+              <button
+                onClick={() => setStoreOpen(true)}
+                className="shrink-0 font-orbitron text-[10px] font-bold px-4 py-2 rounded border border-secondary/50 bg-secondary/10 text-secondary hover:bg-secondary/20 hover:border-secondary transition-all tracking-wider whitespace-nowrap"
+              >
+                GET CREDITS →
+              </button>
+            </div>
+          )}
         </section>
 
         {/* Footer */}
