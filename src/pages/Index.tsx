@@ -1546,6 +1546,7 @@ const Index = () => {
                     className={`p-2.5 border rounded text-left transition-all duration-200 ${animateEngine === "grok" ? "border-primary neon-border bg-primary/5" : "border-border bg-card/30 hover:border-primary/40"}`}>
                     <div className={`font-orbitron text-[11px] flex items-center gap-1.5 ${animateEngine === "grok" ? "text-primary" : "text-foreground"}`}>
                       GROK
+                      <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-amber-400/80 border-amber-500/30 bg-amber-500/10">⚠ RISK</span>
                     </div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>xAI</span>
