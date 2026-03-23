@@ -15,6 +15,8 @@ interface PromptFormProps {
   initialPrompt?: string;
   initialImageUrl?: string;
   hideExtraImages?: boolean;
+  creditCost?: number;
+  hasSubscription?: boolean;
 }
 
 const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, settings, initialPrompt, initialImageUrl, hideExtraImages }) => {
