@@ -1586,6 +1586,17 @@ const Index = () => {
                     </div>
                   </button>
                 </div>
+
+                {/* GROK warning */}
+                {animateEngine === "grok" && (
+                  <div className="flex items-start gap-2 px-3 py-2 bg-amber-500/5 border border-amber-500/30 rounded">
+                    <span className="text-amber-400 text-[11px] mt-px shrink-0">⚠</span>
+                    <p className="font-mono-share text-[9px] text-amber-400/80 leading-relaxed">
+                      GROK engine has ~95% chance of being blocked by xAI moderation — credits may be wasted. Use <span className="text-secondary font-bold">GLTCH</span> or <span className="text-purple-400 font-bold">GLTCH PRO</span> for reliable results.
+                    </p>
+                  </div>
+                )}
+
                 {/* GLTCH WAN settings */}
                 {animateEngine === "gltch" && (
                   <div className="space-y-2">
