@@ -1341,23 +1341,28 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* Folder bar */}
+      {/* Folder bar — sticky below the terminal top bar */}
       {hasFolders && onSelectFilter && onCreateFolder && (
-        <FolderBar
-          folders={folders}
-          selectedFilter={selectedFilter}
-          onSelectFilter={onSelectFilter}
-          onCreateFolder={onCreateFolder}
-          onRenameFolder={onRenameFolder}
-          onDeleteFolder={onDeleteFolder}
-          onToggleFolderHidden={onToggleFolderHidden}
-          resultCounts={resultCounts}
-          unlockedFolders={unlockedFolders}
-          onRequestUnlock={handleRequestUnlock}
-          onSetPin={handleSetPin}
-          onRemovePin={handleRemovePin}
-          onLockFolder={handleLockFolder}
-        />
+        <div
+          className="sticky z-30 bg-card/90 backdrop-blur-md -mx-4 px-4 py-1 border-b border-border/40"
+          style={{ top: 'calc(env(safe-area-inset-top, 0px) + 28px)' }}
+        >
+          <FolderBar
+            folders={folders}
+            selectedFilter={selectedFilter}
+            onSelectFilter={onSelectFilter}
+            onCreateFolder={onCreateFolder}
+            onRenameFolder={onRenameFolder}
+            onDeleteFolder={onDeleteFolder}
+            onToggleFolderHidden={onToggleFolderHidden}
+            resultCounts={resultCounts}
+            unlockedFolders={unlockedFolders}
+            onRequestUnlock={handleRequestUnlock}
+            onSetPin={handleSetPin}
+            onRemovePin={handleRemovePin}
+            onLockFolder={handleLockFolder}
+          />
+        </div>
       )}
 
       {/* Header */}
