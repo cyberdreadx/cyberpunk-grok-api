@@ -17,7 +17,7 @@ const CyberLayout: React.FC<CyberLayoutProps> = ({ children }) => {
   }, []);
 
   return (
-    <div className="relative min-h-screen cyber-gradient overflow-hidden noise-overlay immersion-screen-host">
+    <div className="relative min-h-dvh cyber-gradient overflow-hidden noise-overlay immersion-screen-host">
       {/* Global immersion pulse (Hz + flicker depth) — full screen, visible above page content */}
       <div
         className="fixed inset-0 z-[25] pointer-events-none immersion-flicker immersion-pulse-layer"
