@@ -303,7 +303,8 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
   const hasImage = imageSource === "upload" ? !!uploadPreview : !!imageUrl.trim();
 
   return (
-    <form ref={formRef} onSubmit={handleSubmit} onPaste={handlePaste} className="space-y-4">
+    <>
+      <form ref={formRef} onSubmit={handleSubmit} onPaste={handlePaste} className="space-y-4">
       {needsVideo && (
         <div className="space-y-2">
           <div className="flex items-center justify-between">
