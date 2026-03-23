@@ -138,7 +138,7 @@ const Library: React.FC = () => {
 
   return (
     <CyberLayout>
-      <div className="max-w-6xl mx-auto px-4 py-6 pb-24 sm:pb-8 space-y-6">
+      <div className="max-w-6xl mx-auto px-4 py-6 sm:pb-8 space-y-6" style={{ paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 0px))' }}>
         {/* Header */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">

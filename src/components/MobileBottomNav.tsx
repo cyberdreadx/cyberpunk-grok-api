@@ -77,7 +77,8 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
       {moreOpen && (
         <div className="fixed inset-0 z-40 sm:hidden" onClick={() => setMoreOpen(false)}>
           <div
-            className="absolute bottom-[68px] left-2 right-2 bg-card/95 backdrop-blur-md border border-border/60 rounded-lg shadow-[0_-4px_20px_rgba(0,0,0,0.4)] p-2 space-y-0.5 animate-slide-up"
+            className="absolute left-2 right-2 bg-card/95 backdrop-blur-md border border-border/60 rounded-lg shadow-[0_-4px_20px_rgba(0,0,0,0.4)] p-2 space-y-0.5 animate-slide-up"
+            style={{ bottom: 'calc(62px + env(safe-area-inset-bottom, 0px))' }}
             onClick={(e) => e.stopPropagation()}
           >
             <button
