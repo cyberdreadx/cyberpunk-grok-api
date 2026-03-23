@@ -291,6 +291,14 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
     "edit-video": "Describe the edits to apply to the video...",
   };
 
+  const suggestedPrompts: Record<GrokMode, string[]> = {
+    "text-to-image": ["cinematic portrait", "anime music video still", "uncensored fantasy art", "neon cyberpunk city"],
+    "edit-image": ["remove background", "add dramatic lighting", "make it anime style", "enhance details"],
+    "text-to-video": ["cinematic camera pan", "anime fight scene", "slow motion explosion", "looping abstract art"],
+    "image-to-video": ["subtle breathing motion", "camera slowly zooms in", "hair blowing in wind", "eyes blink slowly"],
+    "edit-video": ["add motion blur", "color grade cinematic", "slow it down", "loop seamlessly"],
+  };
+
   const hasImage = imageSource === "upload" ? !!uploadPreview : !!imageUrl.trim();
 
   return (
