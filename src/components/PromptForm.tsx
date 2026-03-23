@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { Send, Upload, Loader2, ImagePlus, Link, X, Film, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -302,7 +303,8 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
   const hasImage = imageSource === "upload" ? !!uploadPreview : !!imageUrl.trim();
 
   return (
-    <form ref={formRef} onSubmit={handleSubmit} onPaste={handlePaste} className="space-y-4">
+    <>
+      <form ref={formRef} onSubmit={handleSubmit} onPaste={handlePaste} className="space-y-4">
       {needsVideo && (
         <div className="space-y-2">
           <div className="flex items-center justify-between">
@@ -623,6 +625,27 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
         </div>
       </div>
     </form>
+
+    {/* Sticky mobile CTA — portaled above bottom nav, visible only when prompt has text */}
+    {typeof document !== "undefined" && prompt.trim() && createPortal(
+      <div className="fixed bottom-[57px] left-0 right-0 z-40 sm:hidden px-3 pb-2 animate-slide-up">
+        <button
+          type="button"
+          onClick={() => formRef.current?.requestSubmit()}
+          disabled={isLoading || !prompt.trim() || (needsImage && !imageUrl.trim()) || (needsVideo && !imageUrl.trim())}
+          className="w-full h-12 font-orbitron text-sm font-bold bg-primary text-primary-foreground disabled:opacity-40 flex items-center justify-center gap-2 tracking-widest rounded shadow-[0_0_24px_hsl(var(--primary)/0.5)] active:scale-[0.98] transition-all duration-150"
+        >
+          {isLoading ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Send className="w-4 h-4" />
+          )}
+          <span>{isLoading ? "GENERATING…" : creditCost ? `GENERATE · ${creditCost} cr` : "GENERATE"}</span>
+        </button>
+      </div>,
+      document.body
+    )}
+    </>
   );
 };
 
