@@ -1806,7 +1806,17 @@ const Index = () => {
               )}
 
             <PromptHistory history={history} onSelect={handleSelectPrompt} onRemove={removeEntry} onClear={clearHistory} />
-            <PromptForm mode={mode} isLoading={isLoading} onSubmit={handleSubmit} settings={settings} initialPrompt={activePrompt} initialImageUrl={activeImageUrl} hideExtraImages={mode === "edit-image" && editEngine === "gltch"} />
+            <PromptForm
+              mode={mode}
+              isLoading={isLoading}
+              onSubmit={handleSubmit}
+              settings={settings}
+              initialPrompt={activePrompt}
+              initialImageUrl={activeImageUrl}
+              hideExtraImages={mode === "edit-image" && editEngine === "gltch"}
+              creditCost={previewCreditCost}
+              hasSubscription={creditsHook.hasSubscription}
+            />
 
             {/* Target folder selector */}
             {foldersHook.folders.length > 0 && (
