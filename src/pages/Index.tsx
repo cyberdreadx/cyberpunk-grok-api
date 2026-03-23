@@ -1064,6 +1064,7 @@ const Index = () => {
                   >
                     <div className={`font-orbitron text-[11px] flex items-center gap-1.5 ${editEngine === "grok" ? "text-primary" : "text-foreground"}`}>
                       GROK
+                      <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-amber-400/80 border-amber-500/30 bg-amber-500/10">⚠ RISK</span>
                     </div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>xAI</span>
@@ -1073,6 +1074,16 @@ const Index = () => {
                     </div>
                   </button>
                 </div>
+
+                {/* GROK warning */}
+                {editEngine === "grok" && (
+                  <div className="flex items-start gap-2 px-3 py-2 bg-amber-500/5 border border-amber-500/30 rounded">
+                    <span className="text-amber-400 text-[11px] mt-px shrink-0">⚠</span>
+                    <p className="font-mono-share text-[9px] text-amber-400/80 leading-relaxed">
+                      GROK engine has ~95% chance of being blocked by xAI moderation — credits may be wasted. Use <span className="text-secondary font-bold">GLTCH</span> for reliable results.
+                    </p>
+                  </div>
+                )}
 
                 {/* PRO quality toggle — Grok edit */}
                 {editEngine === "grok" && (
@@ -1239,6 +1250,7 @@ const Index = () => {
                     className={`p-2.5 border rounded text-left transition-all duration-200 ${genEngine === "grok" ? "border-primary neon-border bg-primary/5" : "border-border bg-card/30 hover:border-primary/40"}`}>
                     <div className={`font-orbitron text-[11px] flex items-center gap-1.5 ${genEngine === "grok" ? "text-primary" : "text-foreground"}`}>
                       GROK
+                      <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-amber-400/80 border-amber-500/30 bg-amber-500/10">⚠ RISK</span>
                     </div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>xAI</span>
@@ -1253,6 +1265,17 @@ const Index = () => {
                     </button>
                   )}
                 </div>
+
+                {/* GROK warning */}
+                {genEngine === "grok" && (
+                  <div className="flex items-start gap-2 px-3 py-2 bg-amber-500/5 border border-amber-500/30 rounded">
+                    <span className="text-amber-400 text-[11px] mt-px shrink-0">⚠</span>
+                    <p className="font-mono-share text-[9px] text-amber-400/80 leading-relaxed">
+                      GROK engine has ~95% chance of being blocked by xAI moderation — credits may be wasted. Use <span className="text-secondary font-bold">GLTCH</span> for reliable results.
+                    </p>
+                  </div>
+                )}
+
                 {genEngine === "gltch" && (
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-secondary/5 border border-secondary/20 rounded">
@@ -1419,6 +1442,7 @@ const Index = () => {
                     className={`p-2.5 border rounded text-left transition-all duration-200 ${renderEngine === "grok" ? "border-primary neon-border bg-primary/5" : "border-border bg-card/30 hover:border-primary/40"}`}>
                     <div className={`font-orbitron text-[11px] flex items-center gap-1.5 ${renderEngine === "grok" ? "text-primary" : "text-foreground"}`}>
                       GROK
+                      <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-amber-400/80 border-amber-500/30 bg-amber-500/10">⚠ RISK</span>
                     </div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>xAI</span>
@@ -1426,6 +1450,17 @@ const Index = () => {
                     </div>
                   </button>
                 </div>
+
+                {/* GROK warning */}
+                {renderEngine === "grok" && (
+                  <div className="flex items-start gap-2 px-3 py-2 bg-amber-500/5 border border-amber-500/30 rounded">
+                    <span className="text-amber-400 text-[11px] mt-px shrink-0">⚠</span>
+                    <p className="font-mono-share text-[9px] text-amber-400/80 leading-relaxed">
+                      GROK engine has ~95% chance of being blocked by xAI moderation — credits may be wasted. Use <span className="text-secondary font-bold">GLTCH</span> engines for reliable results.
+                    </p>
+                  </div>
+                )}
+
                 {/* Comfy RENDER settings */}
                 {renderEngine === "comfy" && (
                   <div className="space-y-2">
@@ -1543,6 +1578,7 @@ const Index = () => {
                     className={`p-2.5 border rounded text-left transition-all duration-200 ${animateEngine === "grok" ? "border-primary neon-border bg-primary/5" : "border-border bg-card/30 hover:border-primary/40"}`}>
                     <div className={`font-orbitron text-[11px] flex items-center gap-1.5 ${animateEngine === "grok" ? "text-primary" : "text-foreground"}`}>
                       GROK
+                      <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-amber-400/80 border-amber-500/30 bg-amber-500/10">⚠ RISK</span>
                     </div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>xAI</span>
@@ -1550,6 +1586,17 @@ const Index = () => {
                     </div>
                   </button>
                 </div>
+
+                {/* GROK warning */}
+                {animateEngine === "grok" && (
+                  <div className="flex items-start gap-2 px-3 py-2 bg-amber-500/5 border border-amber-500/30 rounded">
+                    <span className="text-amber-400 text-[11px] mt-px shrink-0">⚠</span>
+                    <p className="font-mono-share text-[9px] text-amber-400/80 leading-relaxed">
+                      GROK engine has ~95% chance of being blocked by xAI moderation — credits may be wasted. Use <span className="text-secondary font-bold">GLTCH</span> or <span className="text-purple-400 font-bold">GLTCH PRO</span> for reliable results.
+                    </p>
+                  </div>
+                )}
+
                 {/* GLTCH WAN settings */}
                 {animateEngine === "gltch" && (
                   <div className="space-y-2">
