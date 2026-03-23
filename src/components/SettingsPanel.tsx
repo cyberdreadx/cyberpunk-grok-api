@@ -87,7 +87,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
     : `${settings.aspectRatio} • ×${settings.count} • ${(settings.resolution || "1k").toUpperCase()}`;
 
   return (
-    <Collapsible className="terminal-block rounded-md overflow-hidden px-3 py-2">
+    <Collapsible defaultOpen={false} className="terminal-block rounded-md overflow-hidden px-3 py-2">
       <CollapsibleTrigger className="flex items-center gap-2 w-full group">
         <span className="font-mono-share text-primary/40 text-xs group-data-[state=open]:text-primary/60">▸</span>
         <Settings className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors group-data-[state=open]:text-primary" />
