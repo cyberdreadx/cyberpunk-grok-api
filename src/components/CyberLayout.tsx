@@ -93,8 +93,11 @@ const CyberLayout: React.FC<CyberLayoutProps> = ({ children }) => {
       {/* HUD overlay */}
       <HudOverlay />
 
-      {/* Main content */}
-      <div className="relative z-20 pt-7">{children}</div>
+      {/* Main content — offset by terminal bar height + safe area */}
+      <div
+        className="relative z-20"
+        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 28px)' }}
+      >{children}</div>
     </div>
   );
 };
