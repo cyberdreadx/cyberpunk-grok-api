@@ -549,6 +549,22 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
             />
           </div>
 
+          {/* Suggested prompt chips */}
+          {!prompt.trim() && (
+            <div className="flex flex-wrap gap-1.5 mt-2 mb-1">
+              {suggestedPrompts[mode].map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setPrompt(s)}
+                  className="font-mono-share text-[9px] px-2 py-1 rounded border border-border/40 bg-card/50 text-muted-foreground/60 hover:border-primary/40 hover:text-primary/80 hover:bg-primary/5 transition-all duration-150"
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* Action buttons */}
           <div className="flex items-center gap-2 mt-3 pt-2 border-t border-primary/10">
             {/* Status indicators */}
@@ -583,18 +599,25 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
                 )}
                 <span className="hidden sm:inline">ENHANCE</span>
               </Button>
-              <Button
-                type="submit"
-                disabled={isLoading || !prompt.trim() || (needsImage && !imageUrl.trim()) || (needsVideo && !imageUrl.trim())}
-                className="h-10 px-5 sm:px-8 font-orbitron text-xs sm:text-sm font-bold bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-30 gap-2 tracking-widest shadow-[0_0_20px_hsl(var(--primary)/0.4)] hover:shadow-[0_0_30px_hsl(var(--primary)/0.6)] transition-all duration-200"
-              >
-                {isLoading ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Send className="w-4 h-4" />
+              <div className="flex flex-col items-end gap-0.5">
+                <Button
+                  type="submit"
+                  disabled={isLoading || !prompt.trim() || (needsImage && !imageUrl.trim()) || (needsVideo && !imageUrl.trim())}
+                  className="h-10 px-5 sm:px-8 font-orbitron text-xs sm:text-sm font-bold bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-30 gap-2 tracking-widest shadow-[0_0_20px_hsl(var(--primary)/0.4)] hover:shadow-[0_0_30px_hsl(var(--primary)/0.6)] transition-all duration-200"
+                >
+                  {isLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Send className="w-4 h-4" />
+                  )}
+                  {isLoading ? "GENERATING…" : creditCost ? `GENERATE · ${creditCost} cr` : "GENERATE"}
+                </Button>
+                {!isLoading && (
+                  <span className="font-mono-share text-[8px] text-muted-foreground/35 pr-1">
+                    {hasSubscription ? "⚡ Priority queue" : "Subscribe for faster renders"}
+                  </span>
                 )}
-                {isLoading ? "GENERATING…" : "GENERATE"}
-              </Button>
+              </div>
             </div>
           </div>
         </div>
