@@ -17,7 +17,7 @@ const CyberLayout: React.FC<CyberLayoutProps> = ({ children }) => {
   }, []);
 
   return (
-    <div className="relative min-h-screen cyber-gradient overflow-hidden noise-overlay immersion-screen-host">
+    <div className="relative min-h-dvh cyber-gradient overflow-hidden noise-overlay immersion-screen-host">
       {/* Global immersion pulse (Hz + flicker depth) — full screen, visible above page content */}
       <div
         className="fixed inset-0 z-[25] pointer-events-none immersion-flicker immersion-pulse-layer"
@@ -63,17 +63,20 @@ const CyberLayout: React.FC<CyberLayoutProps> = ({ children }) => {
       {/* Data rain */}
       <DataRain intensity={25} />
 
-      {/* Terminal top bar */}
-      <div className="fixed top-0 left-0 right-0 z-30 h-7 bg-card/90 backdrop-blur-sm border-b border-primary/20 flex items-center px-4 gap-3">
-        <div className="flex items-center gap-1.5">
+      {/* Terminal top bar — padded for iOS safe area (notch/Dynamic Island) */}
+      <div
+        className="fixed top-0 left-0 right-0 z-30 bg-card/90 backdrop-blur-sm border-b border-primary/20 flex items-end px-4 gap-3"
+        style={{ paddingTop: 'env(safe-area-inset-top, 0px)', height: 'calc(env(safe-area-inset-top, 0px) + 28px)' }}
+      >
+        <div className="flex items-center gap-1.5 pb-1">
           <div className="w-2.5 h-2.5 rounded-full bg-destructive/70" />
           <div className="w-2.5 h-2.5 rounded-full bg-neon-yellow/70" />
           <div className="w-2.5 h-2.5 rounded-full bg-primary/70" />
         </div>
-        <div className="font-mono-share text-[10px] text-muted-foreground/50 flex-1 text-center">
+        <div className="font-mono-share text-[10px] text-muted-foreground/50 flex-1 text-center pb-1">
           grok@xai:~/neural-render — bash
         </div>
-        <div className="font-mono-share text-[10px] text-muted-foreground/30">
+        <div className="font-mono-share text-[10px] text-muted-foreground/30 pb-1">
           PID:4F7A
         </div>
       </div>
@@ -90,8 +93,11 @@ const CyberLayout: React.FC<CyberLayoutProps> = ({ children }) => {
       {/* HUD overlay */}
       <HudOverlay />
 
-      {/* Main content */}
-      <div className="relative z-20 pt-7">{children}</div>
+      {/* Main content — offset by terminal bar height + safe area */}
+      <div
+        className="relative z-20"
+        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 28px)' }}
+      >{children}</div>
     </div>
   );
 };
