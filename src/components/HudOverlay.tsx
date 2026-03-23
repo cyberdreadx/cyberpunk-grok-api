@@ -46,7 +46,7 @@ const HudOverlay: React.FC = () => {
   return (
     <>
       {/* Top-left HUD */}
-      <div className="fixed top-10 left-4 z-30 font-mono-share text-[9px] text-primary/20 space-y-1 hidden md:block">
+      <div className="fixed left-4 z-30 font-mono-share text-[9px] text-primary/20 space-y-1 hidden md:block" style={{ top: 'calc(env(safe-area-inset-top, 0px) + 44px)' }}>
         <div className="immersion-flicker">[SYS] {statusMessages[currentStatus]}</div>
         <div className="text-muted-foreground/15">PID: 0x4F7A // {time}</div>
         <div className="text-muted-foreground/10 mt-2">
@@ -55,7 +55,7 @@ const HudOverlay: React.FC = () => {
       </div>
 
       {/* Top-right HUD */}
-      <div className="fixed top-10 right-4 z-30 font-mono-share text-[9px] text-right hidden md:block">
+      <div className="fixed right-4 z-30 font-mono-share text-[9px] text-right hidden md:block" style={{ top: 'calc(env(safe-area-inset-top, 0px) + 44px)' }}>
         <div className="text-secondary/20 animate-pulse-glow">◆ xAI GATEWAY</div>
         <div className="text-muted-foreground/15">PROTO: HTTPS/3</div>
       </div>
