@@ -2044,6 +2044,24 @@ const Index = () => {
             onBulkDelete={handleBulkDelete}
             onEmptyTrash={handleEmptyTrash}
           />
+
+          {/* Post-first-result upsell — shown once user has generated something */}
+          {results.length > 0 && !creditsHook.hasSubscription && creditsHook.enabled && (
+            <div className="mt-4 flex items-center justify-between gap-3 px-4 py-3 rounded border border-secondary/25 bg-secondary/5">
+              <div className="space-y-0.5 min-w-0">
+                <p className="font-orbitron text-[11px] text-secondary font-bold tracking-wider">WANT MORE?</p>
+                <p className="font-mono-share text-[10px] text-muted-foreground/70 leading-relaxed">
+                  Faster renders · Priority queue · Unlimited credits from $9.99/mo
+                </p>
+              </div>
+              <button
+                onClick={() => setStoreOpen(true)}
+                className="shrink-0 font-orbitron text-[10px] font-bold px-4 py-2 rounded border border-secondary/50 bg-secondary/10 text-secondary hover:bg-secondary/20 hover:border-secondary transition-all tracking-wider whitespace-nowrap"
+              >
+                GET CREDITS →
+              </button>
+            </div>
+          )}
         </section>
 
         {/* Footer */}
