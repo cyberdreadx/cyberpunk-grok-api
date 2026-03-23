@@ -628,7 +628,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
 
     {/* Sticky mobile CTA — portaled above bottom nav, visible only when prompt has text */}
     {typeof document !== "undefined" && prompt.trim() && createPortal(
-      <div className="fixed bottom-[57px] left-0 right-0 z-40 sm:hidden px-3 pb-2 animate-slide-up">
+      <div className="fixed left-0 right-0 z-40 sm:hidden px-3 pt-2 pb-2 animate-slide-up bg-card/80 backdrop-blur-sm border-t border-border/30" style={{ bottom: 'calc(56px + env(safe-area-inset-bottom, 0px))' }}>
         <button
           type="button"
           onClick={() => formRef.current?.requestSubmit()}
