@@ -1014,7 +1014,6 @@ const Index = () => {
           {/* Terminal body */}
           <div className="p-3 sm:p-5 space-y-3 sm:space-y-4">
 
-            <div className="h-px bg-border/30" />
 
             <SettingsPanel 
               settings={settings} 
