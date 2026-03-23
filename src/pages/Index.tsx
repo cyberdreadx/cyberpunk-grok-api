@@ -931,6 +931,21 @@ const Index = () => {
           </div>
         </header>
 
+        {/* Value prop strip */}
+        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 py-2 animate-slide-up">
+          {[
+            { icon: "⚡", label: "Fast generations" },
+            { icon: "🔞", label: "NSFW allowed" },
+            { icon: "🎬", label: "Images & video" },
+            { icon: "💳", label: "Pay-as-you-go credits" },
+          ].map(({ icon, label }) => (
+            <span key={label} className="flex items-center gap-1.5 font-mono-share text-[10px] text-muted-foreground/50">
+              <span className="text-primary/60">{icon}</span>
+              {label}
+            </span>
+          ))}
+        </div>
+
         {/* Announcements */}
         {visibleAnnouncements.length > 0 && (
           <div className="space-y-2 mb-4 animate-slide-up">
