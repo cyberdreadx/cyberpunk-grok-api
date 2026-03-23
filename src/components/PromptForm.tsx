@@ -540,8 +540,9 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
           </div>
 
           {/* Action buttons */}
-          <div className="flex items-center justify-between mt-2 pt-2 border-t border-primary/10">
-            <div className="flex items-center gap-2 font-mono-share text-[9px] text-muted-foreground/40">
+          <div className="flex items-center gap-2 mt-3 pt-2 border-t border-primary/10">
+            {/* Status indicators */}
+            <div className="flex items-center gap-2 font-mono-share text-[9px] text-muted-foreground/40 flex-1 min-w-0">
               {needsImage && (
                 <span className={hasImage ? "text-primary/60" : "text-destructive/50"}>
                   {hasImage ? `[IMG_LOADED${extraImages.length > 0 ? ` +${extraImages.length}` : ""}]` : "[IMG_REQUIRED]"}
@@ -552,20 +553,17 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
                   {imageUrl.trim() ? "[VID_LOADED]" : "[VID_REQUIRED]"}
                 </span>
               )}
-              <span className={isLoading ? "text-secondary" : "text-primary/40"}>
-                {isLoading ? "PROCESSING" : "READY"}
-              </span>
+              <span className="hidden sm:inline font-mono-share text-[8px] text-muted-foreground/20">Ctrl+Enter</span>
             </div>
 
-            <div className="flex items-center gap-1.5">
-              <span className="hidden sm:inline font-mono-share text-[8px] text-muted-foreground/20 mr-1">Ctrl+Enter</span>
+            <div className="flex items-center gap-2 shrink-0">
               <Button
                 type="button"
                 onClick={enhancePrompt}
                 disabled={enhancing || !prompt.trim() || isLoading}
                 size="sm"
                 variant="ghost"
-                className="h-7 px-2 font-mono-share text-[10px] text-primary/60 hover:text-primary hover:bg-primary/10 disabled:opacity-30 gap-1"
+                className="h-8 px-2 font-mono-share text-[10px] text-primary/60 hover:text-primary hover:bg-primary/10 disabled:opacity-30 gap-1"
                 title="Enhance prompt with Grok AI"
               >
                 {enhancing ? (
@@ -578,15 +576,14 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
               <Button
                 type="submit"
                 disabled={isLoading || !prompt.trim() || (needsImage && !imageUrl.trim()) || (needsVideo && !imageUrl.trim())}
-                size="sm"
-                className="h-7 px-3 font-orbitron text-[10px] bg-primary text-primary-foreground hover:bg-primary/80 disabled:opacity-30 gap-1 tracking-wider"
+                className="h-10 px-5 sm:px-8 font-orbitron text-xs sm:text-sm font-bold bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-30 gap-2 tracking-widest shadow-[0_0_20px_hsl(var(--primary)/0.4)] hover:shadow-[0_0_30px_hsl(var(--primary)/0.6)] transition-all duration-200"
               >
                 {isLoading ? (
-                  <Loader2 className="w-3 h-3 animate-spin" />
+                  <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
-                  <Send className="w-3 h-3" />
+                  <Send className="w-4 h-4" />
                 )}
-                EXECUTE
+                {isLoading ? "GENERATING…" : "GENERATE"}
               </Button>
             </div>
           </div>

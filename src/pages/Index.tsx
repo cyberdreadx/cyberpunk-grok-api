@@ -931,6 +931,21 @@ const Index = () => {
           </div>
         </header>
 
+        {/* Value prop strip */}
+        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 py-2 animate-slide-up">
+          {[
+            { icon: "⚡", label: "Fast generations" },
+            { icon: "🔞", label: "NSFW allowed" },
+            { icon: "🎬", label: "Images & video" },
+            { icon: "💳", label: "Pay-as-you-go credits" },
+          ].map(({ icon, label }) => (
+            <span key={label} className="flex items-center gap-1.5 font-mono-share text-[10px] text-muted-foreground/50">
+              <span className="text-primary/60">{icon}</span>
+              {label}
+            </span>
+          ))}
+        </div>
+
         {/* Announcements */}
         {visibleAnnouncements.length > 0 && (
           <div className="space-y-2 mb-4 animate-slide-up">
@@ -979,36 +994,26 @@ const Index = () => {
           style={{ animationDelay: "200ms" }}
         >
           {/* Terminal title bar */}
-          <div className="flex items-center gap-2 px-4 py-2 border-b border-border/50 bg-card/60">
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50 bg-card/60">
             <div className="flex items-center gap-1.5">
               <div className="w-2 h-2 rounded-full bg-neon-red/60" />
               <div className="w-2 h-2 rounded-full bg-neon-yellow/60" />
               <div className="w-2 h-2 rounded-full bg-primary/60" />
             </div>
-            <div className="flex-1 flex items-center gap-2">
-              <div className={`w-2 h-2 rounded-full transition-colors duration-500 ${isLoading ? "bg-secondary animate-pulse" : "bg-primary animate-pulse-glow"
-                }`} />
-              <GlitchText
-                text="INPUT_TERMINAL"
-                className="font-orbitron text-[10px] tracking-wider text-muted-foreground"
-                glitchIntensity="low"
-              />
+            <div className="flex-1 flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2 ml-1">
+              <span className="font-orbitron text-sm sm:text-base font-bold text-foreground tracking-wide leading-tight">
+                Describe what you want to create
+              </span>
+              <span className="font-mono-share text-[10px] text-muted-foreground/50 hidden sm:inline">
+                — images, video, edits
+              </span>
             </div>
-            <span className="font-mono-share text-[9px] text-muted-foreground/30">
-              pid:4207
-            </span>
+            <div className={`w-2 h-2 rounded-full transition-colors duration-500 shrink-0 ${isLoading ? "bg-secondary animate-pulse" : "bg-primary animate-pulse-glow"}`} />
           </div>
 
           {/* Terminal body */}
           <div className="p-3 sm:p-5 space-y-3 sm:space-y-4">
-            {/* Boot messages */}
-            <div className="font-mono-share text-[10px] text-muted-foreground/30 space-y-0.5">
-              <div><span className="text-primary/40">[ok]</span> neural_link initialized</div>
-              <div><span className="text-primary/40">[ok]</span> grok-2-image-gen loaded</div>
-              <div><span className="text-primary/40">[ok]</span> awaiting input<span className="inline-block w-1.5 h-3 bg-muted-foreground/20 ml-1 animate-pulse align-middle" /></div>
-            </div>
 
-            <div className="h-px bg-border/30" />
 
             <SettingsPanel 
               settings={settings} 
