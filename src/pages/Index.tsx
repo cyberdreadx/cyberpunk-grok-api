@@ -960,14 +960,14 @@ const Index = () => {
         </header>
 
         {/* Value prop strip */}
-        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 py-2 animate-slide-up">
+        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 py-1.5 animate-slide-up">
           {[
-            { icon: "⚡", label: "Fast generations" },
-            { icon: "🔞", label: "NSFW allowed" },
-            { icon: "🎬", label: "Images & video" },
-            { icon: "💳", label: "Pay-as-you-go credits" },
+            { icon: "⚡", label: "Fast" },
+            { icon: "🔞", label: "NSFW OK" },
+            { icon: "🎬", label: "Image & Video" },
+            { icon: "💳", label: "Pay-per-credit" },
           ].map(({ icon, label }) => (
-            <span key={label} className="flex items-center gap-1.5 font-mono-share text-[10px] text-muted-foreground/50">
+            <span key={label} className="flex items-center gap-1 font-mono-share text-[10px] text-muted-foreground/50">
               <span className="text-primary/60">{icon}</span>
               {label}
             </span>
