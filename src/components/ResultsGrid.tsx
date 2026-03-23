@@ -730,12 +730,13 @@ function MoveToFolderMenu({
     };
   }, [onClose]);
 
-  // Mobile: fixed bottom sheet overlay
+  // Mobile: fixed bottom sheet overlay — sits above the bottom nav bar
   const mobileSheet = (
     <div className="sm:hidden fixed inset-0 z-[200]" onClick={onClose}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div
-        className="absolute bottom-0 left-0 right-0 bg-card border-t border-border/60 rounded-t-xl shadow-2xl animate-slide-up"
+        className="absolute left-0 right-0 bg-card border-t border-border/60 rounded-t-xl shadow-2xl animate-slide-up"
+        style={{ bottom: 'calc(56px + env(safe-area-inset-bottom, 0px))' }}
         onClick={(e) => e.stopPropagation()}
         onMouseDown={(e) => e.stopPropagation()}
       >
@@ -746,7 +747,7 @@ function MoveToFolderMenu({
         <div className="px-4 py-2 text-[10px] font-orbitron tracking-wider text-muted-foreground/50 border-b border-border/40">
           MOVE_TO_FOLDER
         </div>
-        <div className="overflow-y-auto max-h-[50vh] pb-[env(safe-area-inset-bottom,16px)]">
+        <div className="overflow-y-auto max-h-[45vh] pb-3">
           <button
             className={`w-full text-left px-4 py-3.5 text-[12px] font-mono-share transition-colors flex items-center gap-2 ${!currentFolderId ? "text-primary bg-primary/10" : "text-muted-foreground"}`}
             onClick={() => { onMove(null); onClose(); }}
