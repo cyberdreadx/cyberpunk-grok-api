@@ -1054,6 +1054,33 @@ const Index = () => {
               mode={mode} 
             />
 
+            {/* 3-step flow guide */}
+            <div className="flex items-center gap-0 font-mono-share text-[9px] select-none overflow-x-auto">
+              {[
+                { n: "1", label: "Mode" },
+                { n: "2", label: "Prompt" },
+                { n: "3", label: "Engine → Generate" },
+              ].map((step, i) => (
+                <React.Fragment key={step.n}>
+                  <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded shrink-0 ${
+                    i === 0 ? "bg-primary/10 border border-primary/25 text-primary/80"
+                    : i === 1 ? "bg-primary/5 border border-primary/15 text-primary/50"
+                    : "bg-secondary/5 border border-secondary/20 text-secondary/70"
+                  }`}>
+                    <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold shrink-0 ${
+                      i === 0 ? "bg-primary/20 text-primary"
+                      : i === 1 ? "bg-primary/10 text-primary/60"
+                      : "bg-secondary/20 text-secondary"
+                    }`}>
+                      {step.n}
+                    </span>
+                    <span className="tracking-wider">{step.label}</span>
+                  </div>
+                  {i < 2 && <span className="text-border/60 px-1 shrink-0">→</span>}
+                </React.Fragment>
+              ))}
+            </div>
+
             {/* Engine selector — shows in edit-image mode */}
             {mode === "edit-image" && (
               <div className="space-y-2">
