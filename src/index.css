@@ -112,10 +112,10 @@
     text-shadow: var(--glow-purple);
   }
 
-  /* Dynamic Immersion Effects — duration must use time units (1s / Hz) */
+  /* Dynamic Immersion Effects — duration must use time units (1s / Hz). Opacity-only: animating `filter` repaints the full layer every frame. */
   .immersion-flicker {
     animation: immersion-flicker calc(1s / max(0.05, var(--immersion-pulse-hz))) infinite alternate ease-in-out;
-    will-change: opacity, filter;
+    will-change: opacity;
   }
 
   /**
@@ -139,10 +139,23 @@
    * Full-screen color grade driven by admin sliders (--immersion-* on :root).
    * Note: `filter` on an ancestor creates a containing block — `position: fixed` UI
    * (e.g. mobile nav) must render via portal to `document.body`, not under this host.
+   * `filter` on the entire app is very expensive (GPU repaint); keep on large screens only.
    */
   .immersion-screen-host {
     filter: hue-rotate(calc(var(--immersion-red-shift) * 0.6deg))
       brightness(calc(0.88 + var(--immersion-glow) * 0.12));
+  }
+
+  @media (max-width: 1023px) {
+    .immersion-screen-host {
+      filter: none;
+    }
+    .immersion-flicker {
+      animation: none !important;
+    }
+    .immersion-pulse-layer {
+      opacity: 0.5;
+    }
   }
 
   /** CRT edge darkening — strength from --immersion-vignette (0–1). */
@@ -351,11 +364,9 @@
 @keyframes immersion-flicker {
   0% {
     opacity: calc(1 - var(--immersion-flicker) * 0.14);
-    filter: brightness(calc(0.96 + var(--immersion-flicker) * 0.06));
   }
   100% {
     opacity: 1;
-    filter: brightness(calc(1.02 + var(--immersion-flicker) * 0.12));
   }
 }
 

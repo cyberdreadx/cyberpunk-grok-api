@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, startTransition } from "react";
 import {
   saveResult,
   loadResults,
@@ -310,6 +310,14 @@ export function useGrokApi() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<GrokResult[]>([]);
+
+  /** Large base64 rows can block the main thread if merged synchronously; schedule as transition. */
+  const prependResults = useCallback((items: GrokResult[]) => {
+    startTransition(() => {
+      setResults((prev) => [...items, ...prev]);
+    });
+  }, []);
+
   const [storageReady, setStorageReady] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [apiMode, setApiMode] = useState<ApiMode>("byok");
@@ -386,7 +394,7 @@ export function useGrokApi() {
             if (video && video.startsWith("blob:")) videoBlobUrls.current.set(resultId, video);
             const newResult: GrokResult = { id: resultId, url, revised_prompt: saved.prompt || "", type: (video ? "video" : "image") as any, timestamp: Date.now() };
             if (!cancelled) {
-              setResults(prev => [newResult, ...prev]);
+              prependResults([newResult]);
               try { await saveResult(newResult); } catch { }
               setComfyJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "done", phase: null } : j));
             }
@@ -406,7 +414,7 @@ export function useGrokApi() {
 
     activeJobs.forEach(j => resumeOne(j));
     return () => { cancelled = true; };
-  }, []);
+  }, [prependResults]);
 
   // ── Warn before closing tab if generations are in progress ──
   useEffect(() => {
@@ -562,7 +570,7 @@ export function useGrokApi() {
         timestamp: Date.now(),
       }));
 
-      setResults(prev => [...newResults, ...prev]);
+      prependResults(newResults);
       persistNewResults(newResults);
       return newResults;
     } catch (err: any) {
@@ -571,7 +579,7 @@ export function useGrokApi() {
     } finally {
       setIsLoading(false);
     }
-  }, [apiMode, makeRequest, makeProxyRequest, persistNewResults]);
+  }, [apiMode, makeRequest, makeProxyRequest, persistNewResults, prependResults]);
 
   // Edit Image
   const editImage = useCallback(async (params: EditImageParams) => {
@@ -624,7 +632,7 @@ export function useGrokApi() {
         timestamp: Date.now(),
       }));
 
-      setResults(prev => [...newResults, ...prev]);
+      prependResults(newResults);
       persistNewResults(newResults);
       return newResults;
     } catch (err: any) {
@@ -633,7 +641,7 @@ export function useGrokApi() {
     } finally {
       setIsLoading(false);
     }
-  }, [apiMode, makeRequest, makeProxyRequest, persistNewResults]);
+  }, [apiMode, makeRequest, makeProxyRequest, persistNewResults, prependResults]);
 
   // Edit Image — fire-and-forget with queue (same UX as ComfyUI/GLTCH)
   const grokEditQueued = useCallback((params: EditImageParams) => {
@@ -703,7 +711,7 @@ export function useGrokApi() {
           timestamp: Date.now(),
         }));
 
-        setResults(prev => [...newResults, ...prev]);
+        prependResults(newResults);
         persistNewResults(newResults);
         setComfyJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "done", phase: null } : j));
       } catch (err: any) {
@@ -715,7 +723,7 @@ export function useGrokApi() {
         ));
       }
     })();
-  }, [apiMode, makeRequest, makeProxyRequest, persistNewResults]);
+  }, [apiMode, makeRequest, makeProxyRequest, persistNewResults, prependResults]);
 
   // Video generation (text-to-video & image-to-video)
   const generateVideo = useCallback(async (params: GenerateVideoParams) => {
@@ -751,7 +759,7 @@ export function useGrokApi() {
           type: "video" as const,
           timestamp: Date.now(),
         }];
-        setResults(prev => [...newResults, ...prev]);
+        prependResults(newResults);
         persistNewResults(newResults);
         return newResults;
       }
@@ -772,7 +780,7 @@ export function useGrokApi() {
         timestamp: Date.now(),
       }];
 
-      setResults(prev => [...newResults, ...prev]);
+      prependResults(newResults);
       persistNewResults(newResults);
       return newResults;
     } catch (err: any) {
@@ -782,7 +790,7 @@ export function useGrokApi() {
       setIsLoading(false);
       stopTimer();
     }
-  }, [apiMode, makeRequest, makeProxyRequest, persistNewResults, startTimer, stopTimer]);
+  }, [apiMode, makeRequest, makeProxyRequest, persistNewResults, prependResults, startTimer, stopTimer]);
 
   // Edit Video (video-to-video with text prompt)
   const editVideo = useCallback(async (params: EditVideoParams) => {
@@ -810,7 +818,7 @@ export function useGrokApi() {
           type: "video" as const,
           timestamp: Date.now(),
         }];
-        setResults(prev => [...newResults, ...prev]);
+        prependResults(newResults);
         persistNewResults(newResults);
         return newResults;
       }
@@ -830,7 +838,7 @@ export function useGrokApi() {
         timestamp: Date.now(),
       }];
 
-      setResults(prev => [...newResults, ...prev]);
+      prependResults(newResults);
       persistNewResults(newResults);
       return newResults;
     } catch (err: any) {
@@ -840,7 +848,7 @@ export function useGrokApi() {
       setIsLoading(false);
       stopTimer();
     }
-  }, [apiMode, makeRequest, makeProxyRequest, persistNewResults, startTimer, stopTimer]);
+  }, [apiMode, makeRequest, makeProxyRequest, persistNewResults, prependResults, startTimer, stopTimer]);
 
   // GLTCH Edit (Flux 2 Klein via /api/gltch) — fire-and-forget with queue
   const gltchEdit = useCallback((params: {
@@ -900,7 +908,7 @@ export function useGrokApi() {
             type: "image" as const,
             timestamp: Date.now(),
           }];
-          setResults(prev => [...newResults, ...prev]);
+          prependResults(newResults);
           persistNewResults(newResults);
           setComfyJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "done", phase: null, seed: submitData.seed } : j));
           return;
@@ -935,7 +943,7 @@ export function useGrokApi() {
               type: "image" as const,
               timestamp: Date.now(),
             }];
-            setResults(prev => [...newResults, ...prev]);
+            prependResults(newResults);
             persistNewResults(newResults);
             setComfyJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "done", phase: null, seed: submitData.seed } : j));
             return;
@@ -958,7 +966,7 @@ export function useGrokApi() {
         ));
       }
     })();
-  }, [persistNewResults]);
+  }, [persistNewResults, prependResults]);
 
   const clearResults = useCallback(async () => {
     results.forEach(r => { if (r.url?.startsWith("blob:")) try { URL.revokeObjectURL(r.url); } catch {} });
@@ -991,9 +999,9 @@ export function useGrokApi() {
 
   /** Add an externally-produced result (e.g. from ComfyUI) to the gallery. */
   const addExternalResult = useCallback(async (result: GrokResult) => {
-    setResults(prev => [result, ...prev]);
+    prependResults([result]);
     try { await saveResult(result); } catch { /* best-effort */ }
-  }, []);
+  }, [prependResults]);
 
   // ── ComfyUI Job Queue ─────────────────────────────────────────────────────
 
@@ -1226,7 +1234,7 @@ export function useGrokApi() {
           type: "image" as const,
           timestamp: Date.now(),
         }];
-        setResults(prev => [...newResults, ...prev]);
+        prependResults(newResults);
         persistNewResults(newResults);
         setComfyJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "done", phase: null } : j));
       } catch (err: any) {
@@ -1238,7 +1246,7 @@ export function useGrokApi() {
         ));
       }
     })();
-  }, [comfySubmitAndPoll, persistNewResults]);
+  }, [comfySubmitAndPoll, persistNewResults, prependResults]);
 
   // ComfyUI Image Edit (fire-and-forget — Flux 2 Klein via `klein` workflow)
   const comfyEdit = useCallback((params: {
@@ -1298,7 +1306,7 @@ export function useGrokApi() {
           type: "image" as const,
           timestamp: Date.now(),
         }];
-        setResults(prev => [...newResults, ...prev]);
+        prependResults(newResults);
         persistNewResults(newResults);
         setComfyJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "done", phase: null } : j));
       } catch (err: any) {
@@ -1310,7 +1318,7 @@ export function useGrokApi() {
         ));
       }
     })();
-  }, [comfySubmitAndPoll, persistNewResults]);
+  }, [comfySubmitAndPoll, persistNewResults, prependResults]);
 
   // ComfyUI Image-to-Video (WAN Video) — fire-and-forget
   const comfyVideo = useCallback((params: {
@@ -1401,7 +1409,7 @@ export function useGrokApi() {
           type: "video" as const,
           timestamp: Date.now(),
         }];
-        setResults(prev => [...newResults, ...prev]);
+        prependResults(newResults);
         persistNewResults(newResults);
         setComfyJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "done", phase: null } : j));
       } catch (err: any) {
@@ -1413,7 +1421,7 @@ export function useGrokApi() {
         ));
       }
     })();
-  }, [comfySubmitAndPoll, persistNewResults]);
+  }, [comfySubmitAndPoll, persistNewResults, prependResults]);
 
   // ComfyUI Chained Text-to-Video (zimage → gltch-wan) — fire-and-forget
   const comfyTextToVideo = useCallback((params: {
@@ -1511,7 +1519,7 @@ export function useGrokApi() {
           type: "video" as const,
           timestamp: Date.now(),
         }];
-        setResults(prev => [...newResults, ...prev]);
+        prependResults(newResults);
         persistNewResults(newResults);
         setComfyJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "done", phase: null } : j));
       } catch (err: any) {
@@ -1523,7 +1531,7 @@ export function useGrokApi() {
         ));
       }
     })();
-  }, [comfySubmitAndPoll, persistNewResults]);
+  }, [comfySubmitAndPoll, persistNewResults, prependResults]);
 
   // ComfyUI LongLook Multi-Clip Video — fire-and-forget
   const comfyLongLook = useCallback((params: {
@@ -1602,7 +1610,7 @@ export function useGrokApi() {
           type: "video" as const,
           timestamp: Date.now(),
         }];
-        setResults(prev => [...newResults, ...prev]);
+        prependResults(newResults);
         persistNewResults(newResults);
         setComfyJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "done", phase: null } : j));
       } catch (err: any) {
@@ -1614,7 +1622,7 @@ export function useGrokApi() {
         ));
       }
     })();
-  }, [comfySubmitAndPoll, persistNewResults]);
+  }, [comfySubmitAndPoll, persistNewResults, prependResults]);
 
   const clearError = useCallback(() => {
     setError(null);

@@ -60,8 +60,10 @@ const CyberLayout: React.FC<CyberLayoutProps> = ({ children }) => {
         <div className="absolute bottom-0 right-0 h-full w-[1px] bg-gradient-to-t from-primary/40 to-transparent" />
       </div>
 
-      {/* Data rain */}
-      <DataRain intensity={25} />
+      {/* Data rain — hidden on small viewports (many DOM nodes + animations); full effect on md+ */}
+      <div className="hidden md:block" aria-hidden>
+        <DataRain intensity={14} />
+      </div>
 
       {/* Terminal top bar — padded for iOS safe area (notch/Dynamic Island) */}
       <div
