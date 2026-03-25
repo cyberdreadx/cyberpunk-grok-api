@@ -3276,7 +3276,7 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
         return res.status(200).json({
           ok: false,
           error: `Missing env vars: ${missingVars.join(", ")}`,
-          hint: "Set these in your Vercel/Netlify environment settings and redeploy.",
+          hint: "Set these in your Vercel project environment settings and redeploy.",
         });
       }
 

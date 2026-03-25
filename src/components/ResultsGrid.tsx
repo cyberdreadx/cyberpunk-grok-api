@@ -245,13 +245,11 @@ async function fetchBlob(url: string): Promise<Blob | null> {
 /**
  * For external URLs (like vidgen.x.ai) that block CORS, route through
  * our server-side proxy which fetches and returns the file with proper headers.
- * Works with both Netlify Functions and Vercel API routes.
+ * Uses the Vercel `/api/download` route (or `VITE_API_URL` when split-hosted).
  */
 function getProxyDownloadUrl(url: string, filename: string): string {
-  const apiUrl = import.meta.env.VITE_API_URL as string;
-  const base = apiUrl
-    ? `${apiUrl}/download`
-    : "/.netlify/functions/download";
+  const apiBase = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") || "/api";
+  const base = `${apiBase}/download`;
   return `${base}?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(filename)}`;
 }
 

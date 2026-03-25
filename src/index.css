@@ -172,6 +172,42 @@
     background: linear-gradient(135deg, hsl(var(--card)) 0%, hsl(var(--background)) 50%, hsl(var(--card)) 100%);
   }
 
+  /**
+   * BARE_RUN theme — strip decorative layers and motion (data-cyber-theme set in themes.ts).
+   */
+  html[data-cyber-theme="bare"] .immersion-pulse-layer,
+  html[data-cyber-theme="bare"] .immersion-vignette,
+  html[data-cyber-theme="bare"] .scanline,
+  html[data-cyber-theme="bare"] .cyber-grid-bg,
+  html[data-cyber-theme="bare"] .cyber-corner-frame,
+  html[data-cyber-theme="bare"] .cyber-hud-overlay,
+  html[data-cyber-theme="bare"] .cyber-hud-scanline,
+  html[data-cyber-theme="bare"] .cyber-terminal-bar {
+    display: none !important;
+  }
+
+  html[data-cyber-theme="bare"] .cyber-gradient {
+    background: hsl(var(--background)) !important;
+  }
+
+  html[data-cyber-theme="bare"] .cyber-main-padding {
+    padding-top: calc(env(safe-area-inset-top, 0px) + 12px) !important;
+  }
+
+  html[data-cyber-theme="bare"] .loader-scanline,
+  html[data-cyber-theme="bare"] .loader-ring-spin,
+  html[data-cyber-theme="bare"] .loader-ring-counter,
+  html[data-cyber-theme="bare"] .loader-dot-pulse {
+    animation: none !important;
+    will-change: auto;
+  }
+
+  html[data-cyber-theme="bare"] .neon-text-cyan,
+  html[data-cyber-theme="bare"] .neon-text-magenta,
+  html[data-cyber-theme="bare"] .neon-text-purple {
+    text-shadow: none;
+  }
+
   .scanline {
     background: repeating-linear-gradient(
       0deg,

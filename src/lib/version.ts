@@ -1,6 +1,8 @@
 /**
  * Single source of truth for the app version.
- * Bump this when deploying — all UI surfaces read from here.
+ * Bump when deploying — UI, legal text, and the PWA web manifest (`vite.config.ts`) read from here.
+ * Service worker updates still rely on hashed assets + `registerType: "autoUpdate"`; manifest `version`
+ * helps humans, install prompts, and any tooling that reads the built `manifest.webmanifest`.
  */
 
 /** Semver-style version shown in the header, HUD, and legal page */

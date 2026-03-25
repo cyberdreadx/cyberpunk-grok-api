@@ -4,6 +4,13 @@
  * The active theme is persisted in localStorage.
  */
 
+import {
+  applyImmersionToRoot,
+  BARE_IMMERSION,
+  DEFAULT_IMMERSION,
+  fetchMasterImmersion,
+} from "@/lib/immersion";
+
 export interface CyberTheme {
   id: string;
   name: string;
@@ -12,6 +19,12 @@ export interface CyberTheme {
   swatch: string;
   /** CSS custom property overrides (HSL values without hsl() wrapper) */
   vars: Record<string, string>;
+}
+
+export const BARE_THEME_ID = "bare";
+
+export function isBareThemeId(id: string): boolean {
+  return id === BARE_THEME_ID;
 }
 
 export const THEMES: CyberTheme[] = [
@@ -180,9 +193,51 @@ export const THEMES: CyberTheme[] = [
       "--glow-purple": "0 0 10px hsl(250 100% 65% / 0.5), 0 0 30px hsl(250 100% 65% / 0.2)",
     },
   },
+  {
+    id: BARE_THEME_ID,
+    name: "BARE_RUN",
+    label: "No chrome — flat UI, minimal GPU",
+    swatch: "#94a3b8",
+    vars: {
+      "--background": "220 14% 10%",
+      "--foreground": "210 20% 92%",
+      "--card": "220 12% 14%",
+      "--card-foreground": "210 20% 92%",
+      "--popover": "220 12% 12%",
+      "--popover-foreground": "210 20% 92%",
+      "--primary": "215 70% 55%",
+      "--primary-foreground": "220 14% 8%",
+      "--secondary": "220 10% 40%",
+      "--secondary-foreground": "210 20% 96%",
+      "--muted": "220 10% 20%",
+      "--muted-foreground": "215 12% 55%",
+      "--accent": "215 50% 45%",
+      "--accent-foreground": "0 0% 100%",
+      "--border": "220 10% 24%",
+      "--input": "220 10% 18%",
+      "--ring": "215 70% 55%",
+      "--neon-cyan": "215 70% 55%",
+      "--neon-magenta": "220 10% 55%",
+      "--neon-purple": "215 50% 45%",
+      "--neon-yellow": "45 80% 50%",
+      "--neon-red": "0 70% 50%",
+      "--glow-cyan": "none",
+      "--glow-magenta": "none",
+      "--glow-purple": "none",
+    },
+  },
 ];
 
 const THEME_KEY = "cyber-theme";
+
+/** Apply palette + `data-cyber-theme` only (use before React paint; no network). */
+export function applyThemeVisuals(theme: CyberTheme): void {
+  const root = document.documentElement;
+  for (const [prop, value] of Object.entries(theme.vars)) {
+    root.style.setProperty(prop, value);
+  }
+  root.dataset.cyberTheme = theme.id;
+}
 
 export function getStoredThemeId(): string {
   try {
@@ -197,11 +252,15 @@ export function getThemeById(id: string): CyberTheme {
 }
 
 export function applyTheme(theme: CyberTheme): void {
-  const root = document.documentElement;
-  for (const [prop, value] of Object.entries(theme.vars)) {
-    root.style.setProperty(prop, value);
-  }
+  applyThemeVisuals(theme);
   try {
     localStorage.setItem(THEME_KEY, theme.id);
   } catch { /* quota exceeded */ }
+  if (isBareThemeId(theme.id)) {
+    applyImmersionToRoot(BARE_IMMERSION);
+  } else {
+    fetchMasterImmersion()
+      .then(applyImmersionToRoot)
+      .catch(() => applyImmersionToRoot(DEFAULT_IMMERSION));
+  }
 }

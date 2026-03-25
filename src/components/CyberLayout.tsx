@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 import HudOverlay from "@/components/HudOverlay";
-import { getStoredThemeId, getThemeById, applyTheme } from "@/lib/themes";
-import { applyImmersionToRoot, DEFAULT_IMMERSION, fetchMasterImmersion } from "@/lib/immersion";
+import { BARE_THEME_ID } from "@/lib/themes";
+import { applyImmersionToRoot, BARE_IMMERSION, DEFAULT_IMMERSION, fetchMasterImmersion } from "@/lib/immersion";
 
 interface CyberLayoutProps {
   children: React.ReactNode;
@@ -9,7 +9,10 @@ interface CyberLayoutProps {
 
 const CyberLayout: React.FC<CyberLayoutProps> = ({ children }) => {
   useEffect(() => {
-    applyTheme(getThemeById(getStoredThemeId()));
+    if (document.documentElement.dataset.cyberTheme === BARE_THEME_ID) {
+      applyImmersionToRoot(BARE_IMMERSION);
+      return;
+    }
     fetchMasterImmersion()
       .then(applyImmersionToRoot)
       .catch(() => applyImmersionToRoot(DEFAULT_IMMERSION));
@@ -28,7 +31,7 @@ const CyberLayout: React.FC<CyberLayoutProps> = ({ children }) => {
 
       {/* Grid background */}
       <div
-        className="fixed inset-0 opacity-[0.03] z-0 pointer-events-none"
+        className="cyber-grid-bg fixed inset-0 opacity-[0.03] z-0 pointer-events-none"
         style={{
           backgroundImage: `
             linear-gradient(hsl(var(--primary)) 1px, transparent 1px),
@@ -39,26 +42,26 @@ const CyberLayout: React.FC<CyberLayoutProps> = ({ children }) => {
       />
 
       {/* Corner frame decorations */}
-      <div className="fixed top-0 left-0 w-16 h-16 z-10 pointer-events-none hidden md:block">
+      <div className="cyber-corner-frame fixed top-0 left-0 w-16 h-16 z-10 pointer-events-none hidden md:block">
         <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-primary/40 to-transparent" />
         <div className="absolute top-0 left-0 h-full w-[1px] bg-gradient-to-b from-primary/40 to-transparent" />
       </div>
-      <div className="fixed top-0 right-0 w-16 h-16 z-10 pointer-events-none hidden md:block">
+      <div className="cyber-corner-frame fixed top-0 right-0 w-16 h-16 z-10 pointer-events-none hidden md:block">
         <div className="absolute top-0 right-0 w-full h-[1px] bg-gradient-to-l from-primary/40 to-transparent" />
         <div className="absolute top-0 right-0 h-full w-[1px] bg-gradient-to-b from-primary/40 to-transparent" />
       </div>
-      <div className="fixed bottom-0 left-0 w-16 h-16 z-10 pointer-events-none hidden md:block">
+      <div className="cyber-corner-frame fixed bottom-0 left-0 w-16 h-16 z-10 pointer-events-none hidden md:block">
         <div className="absolute bottom-0 left-0 w-full h-[1px] bg-gradient-to-r from-primary/40 to-transparent" />
         <div className="absolute bottom-0 left-0 h-full w-[1px] bg-gradient-to-t from-primary/40 to-transparent" />
       </div>
-      <div className="fixed bottom-0 right-0 w-16 h-16 z-10 pointer-events-none hidden md:block">
+      <div className="cyber-corner-frame fixed bottom-0 right-0 w-16 h-16 z-10 pointer-events-none hidden md:block">
         <div className="absolute bottom-0 right-0 w-full h-[1px] bg-gradient-to-l from-primary/40 to-transparent" />
         <div className="absolute bottom-0 right-0 h-full w-[1px] bg-gradient-to-t from-primary/40 to-transparent" />
       </div>
 
       {/* Terminal top bar — padded for iOS safe area (notch/Dynamic Island). No backdrop-blur (very expensive on mobile GPU). */}
       <div
-        className="fixed top-0 left-0 right-0 z-30 bg-card/95 border-b border-primary/20 flex items-end px-4 gap-3"
+        className="cyber-terminal-bar fixed top-0 left-0 right-0 z-30 bg-card/95 border-b border-primary/20 flex items-end px-4 gap-3"
         style={{ paddingTop: 'env(safe-area-inset-top, 0px)', height: 'calc(env(safe-area-inset-top, 0px) + 28px)' }}
       >
         <div className="flex items-center gap-1.5 pb-1">
@@ -76,7 +79,7 @@ const CyberLayout: React.FC<CyberLayoutProps> = ({ children }) => {
 
       {/* Horizontal scan line — desktop only (animation + layer cost) */}
       <div
-        className="fixed left-0 right-0 h-[1px] z-[15] opacity-20 pointer-events-none hidden md:block"
+        className="cyber-hud-scanline fixed left-0 right-0 h-[1px] z-[15] opacity-20 pointer-events-none hidden md:block"
         style={{
           background: "linear-gradient(90deg, transparent, hsl(var(--primary)), transparent)",
           animation: "hud-scan 8s linear infinite",
@@ -88,7 +91,7 @@ const CyberLayout: React.FC<CyberLayoutProps> = ({ children }) => {
 
       {/* Main content — offset by terminal bar height + safe area */}
       <div
-        className="relative z-20"
+        className="cyber-main-padding relative z-20"
         style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 28px)' }}
       >{children}</div>
     </div>

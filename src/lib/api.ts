@@ -5,7 +5,6 @@
 
 // ── API base URL ─────────────────────────────────────────────────────────
 // Production (Vercel): same origin — `/api` hits serverless routes.
-// Netlify: `netlify.toml` proxies `/api/*` to your Vercel app.
 // Local dev: set `VITE_API_URL` to full API base, OR leave unset — Vite proxies `/api` → backend (see vite.config).
 const API_BASE = import.meta.env.VITE_API_URL || "/api";
 

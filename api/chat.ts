@@ -485,9 +485,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: "Unknown action" });
   } catch (err: any) {
     console.error("[chat] Error:", err);
-    if (err.message?.includes("not configured")) {
+    const msg = err.message || "Unknown error";
+    if (msg.includes("not configured")) {
       return res.status(503).json({ error: "Chat backend not configured. Ask the admin to set up the API key." });
     }
-    return res.status(500).json({ error: "Chat failed. Please try again." });
+    if (msg.includes("AbortError") || msg.includes("timeout") || msg.includes("TIMEOUT")) {
+      return res.status(504).json({ error: "Chat timed out — the AI took too long to respond. Try again." });
+    }
+    if (msg.includes("socket hang up") || msg.includes("ECONNRESET") || msg.includes("fetch failed")) {
+      return res.status(502).json({ error: "Connection to AI backend dropped. Try again in a moment." });
+    }
+    return res.status(500).json({ error: `Chat failed: ${msg.slice(0, 200)}` });
   }
 }

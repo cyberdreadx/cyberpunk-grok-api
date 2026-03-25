@@ -78,7 +78,7 @@ npm run build
 
 ```
 ┌──────────────────────────────────────────────────┐
-│  Frontend (Netlify / any static host)            │
+│  Frontend (Vercel static + SPA, or any static host) │
 │  React + Vite + Tailwind + shadcn/ui             │
 │                                                  │
 │  BYOK mode: calls xAI API directly              │
@@ -103,8 +103,6 @@ npm run build
         │ Postgres│  │ Payments  │
         └─────────┘  └───────────┘
 ```
-
-A **Netlify Function** (`/.netlify/functions/download`) also provides the download proxy directly from the frontend host, so video downloads work without the Vercel backend.
 
 ## 🔧 Environment Variables
 
@@ -159,8 +157,7 @@ To enable the credit-based SaaS features:
 - Stripe (cards/subscriptions) + optional XRGE (packs on Base)
 
 **Hosting:**
-- Frontend: Netlify (with Netlify Functions for download proxy)
-- Backend: Vercel
+- App (frontend + API): [Vercel](https://vercel.com) — static `dist` and `/api/*` serverless routes on one project
 - Database: Neon Postgres
 
 ## 📝 License

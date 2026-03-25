@@ -19,6 +19,16 @@ export const DEFAULT_IMMERSION: ImmersionSettings = {
   vignette: 0.4,
 };
 
+/** Zeroed immersion for the bare / fast theme (no CRT, no pulse math in CSS). */
+export const BARE_IMMERSION: ImmersionSettings = {
+  flicker: 0,
+  pulseHz: 0,
+  redShift: 0,
+  glow: 0,
+  scanline: 0,
+  vignette: 0,
+};
+
 function mergeImmersion(partial: Partial<ImmersionSettings> | null | undefined): ImmersionSettings {
   return { ...DEFAULT_IMMERSION, ...partial };
 }

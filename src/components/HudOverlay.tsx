@@ -46,7 +46,7 @@ const HudOverlay: React.FC = () => {
   }, []);
 
   return (
-    <>
+    <div className="cyber-hud-overlay pointer-events-none fixed inset-0 z-30 hidden md:block" aria-hidden>
       {/* Top-left HUD */}
       <div className="fixed left-4 z-30 font-mono-share text-[9px] text-primary/20 space-y-1 hidden md:block" style={{ top: 'calc(env(safe-area-inset-top, 0px) + 44px)' }}>
         <div>[SYS] {statusMessages[currentStatus]}</div>
@@ -75,7 +75,7 @@ const HudOverlay: React.FC = () => {
         <div>KERNEL: GROK-NN</div>
         <div className="text-primary/15 mt-1">{time}</div>
       </div>
-    </>
+    </div>
   );
 };
 
