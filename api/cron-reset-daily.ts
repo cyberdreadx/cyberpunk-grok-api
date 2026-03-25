@@ -1,9 +1,11 @@
 /**
- * /api/cron-reset-daily — Reset daily_credits to 10 for all verified users
- * and send a "credits refilled" email notification.
+ * /api/cron-reset-daily — Reset daily_credits to 10 for all verified users.
  *
  * Runs at midnight UTC via Vercel Cron. No rollover — overwrites to exactly 10.
  * Secured via CRON_SECRET Bearer token (same pattern as cron-reset-credits).
+ *
+ * Pass ?notify=true to also send "credits refilled" emails (adds ~60-120s
+ * for large user bases; the cron itself runs without emails to stay fast).
  */
 
 import type { VercelRequest, VercelResponse } from "@vercel/node";
@@ -11,7 +13,7 @@ import { getDb } from "./_lib/db";
 import { getResend, getFromAddress, buildDailyCreditsHtml } from "./_lib/email";
 
 const DAILY_AMOUNT = 10;
-const BATCH_SIZE = 100; // Resend batch limit
+const BATCH_SIZE = 100;
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const authHeader = req.headers["authorization"];
@@ -33,51 +35,56 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       WHERE email_verified = true
     `;
 
-    const resetCount = result.count ?? 0;
+    const resetCount = (result as any).count ?? 0;
     console.log(`[cron-reset-daily] Reset ${resetCount} users to ${DAILY_AMOUNT} daily credits`);
 
-    // 2. Send email notifications in batches
+    // 2. Send email notifications only when ?notify=true
+    const shouldNotify = req.query.notify === "true";
     let emailsSent = 0;
     let emailsFailed = 0;
 
-    try {
-      const users = await sql`
-        SELECT email FROM users WHERE email_verified = true
-      `;
+    if (shouldNotify) {
+      try {
+        const users = await sql`
+          SELECT email FROM users WHERE email_verified = true
+        `;
 
-      if (users.length > 0) {
-        const resend = getResend();
-        const fromAddress = getFromAddress();
-        const html = buildDailyCreditsHtml(DAILY_AMOUNT);
+        if (users.length > 0) {
+          const resend = getResend();
+          const fromAddress = getFromAddress();
+          const html = buildDailyCreditsHtml(DAILY_AMOUNT);
+          const subject = `Your ${DAILY_AMOUNT} daily credits are ready`;
 
-        for (let i = 0; i < users.length; i += BATCH_SIZE) {
-          const batch = users.slice(i, i + BATCH_SIZE);
-          const emails = batch.map((u: any) => ({
-            from: `Grok Runner <${fromAddress}>`,
-            to: [u.email],
-            subject: `Your ${DAILY_AMOUNT} daily credits are ready`,
-            html,
-          }));
+          for (let i = 0; i < users.length; i += BATCH_SIZE) {
+            const batch = users.slice(i, i + BATCH_SIZE);
+            const emails = batch.map((u: any) => ({
+              from: `Grok Runner <${fromAddress}>`,
+              to: [u.email],
+              subject,
+              html,
+            }));
 
-          try {
-            await resend.batch.send(emails);
-            emailsSent += batch.length;
-          } catch (batchErr: any) {
-            console.error(`[cron-reset-daily] Batch ${i / BATCH_SIZE + 1} failed:`, batchErr.message);
-            emailsFailed += batch.length;
+            try {
+              await resend.batch.send(emails);
+              emailsSent += batch.length;
+            } catch (batchErr: any) {
+              console.error(`[cron-reset-daily] Batch ${Math.floor(i / BATCH_SIZE) + 1} failed:`, batchErr.message);
+              emailsFailed += batch.length;
+            }
           }
         }
-      }
-    } catch (emailErr: any) {
-      console.error("[cron-reset-daily] Email notification error:", emailErr.message);
-    }
 
-    console.log(`[cron-reset-daily] Emails: ${emailsSent} sent, ${emailsFailed} failed`);
+        console.log(`[cron-reset-daily] Emails: ${emailsSent} sent, ${emailsFailed} failed`);
+      } catch (emailErr: any) {
+        console.error("[cron-reset-daily] Email notification error:", emailErr.message);
+      }
+    }
 
     return res.status(200).json({
       success: true,
       reset: resetCount,
       dailyAmount: DAILY_AMOUNT,
+      notified: shouldNotify,
       emailsSent,
       emailsFailed,
       timestamp: new Date().toISOString(),
