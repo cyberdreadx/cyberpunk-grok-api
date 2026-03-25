@@ -280,6 +280,9 @@ const Index = () => {
   const [editLora, setEditLora] = useState("none");
   const [editLoraStrength, setEditLoraStrength] = useState(0.30);
 
+  // Shared negative prompt (all comfy workflows)
+  const [negPrompt, setNegPrompt] = useState("");
+
   // LongLook settings
   const [longLookEnabled, setLongLookEnabled] = useState(false);
   const [longLookSeqCount, setLongLookSeqCount] = useState(2);
@@ -614,6 +617,7 @@ const Index = () => {
           const parsedSeed = globalSeed ? Number(globalSeed) : undefined;
           comfyEdit({
             prompt: data.prompt,
+            negativePrompt: negPrompt || undefined,
             imageBase64,
             imageBase64_2: gltchImage2 || undefined,
             imageFilename2: gltchImage2Name || undefined,
@@ -628,6 +632,7 @@ const Index = () => {
           const parsedSeed = globalSeed ? Number(globalSeed) : undefined;
           comfyGenerate({
             prompt: data.prompt,
+            negativePrompt: negPrompt || undefined,
             workflow: "zimage",
             width: zimageWidth,
             height: zimageHeight,
@@ -642,6 +647,7 @@ const Index = () => {
           const parsedSeed = globalSeed ? Number(globalSeed) : undefined;
           comfyGenerate({
             prompt: data.prompt,
+            negativePrompt: negPrompt || undefined,
             checkpoint: comfyCheckpoint,
             lora: comfyLora !== "none" ? comfyLora : undefined,
             loraStrength: comfyLoraStrength,
@@ -653,6 +659,7 @@ const Index = () => {
         } else if (isComfyRender) {
           comfyTextToVideo({
             prompt: data.prompt,
+            negativePrompt: negPrompt || undefined,
             width: 832, height: 480,
             steps: 4, cfg: 1,
             frameCount: comfyFrameCount,
@@ -678,6 +685,7 @@ const Index = () => {
           const parsedSeedLL = globalSeed ? Number(globalSeed) : undefined;
           comfyLongLook({
             prompt: data.prompt,
+            negativePrompt: negPrompt || undefined,
             imageBase64,
             width: round8(Math.max(256, w)),
             height: round8(Math.max(256, h)),
@@ -709,6 +717,7 @@ const Index = () => {
             // Image-to-Video: direct WAN I2V
             comfyVideo({
               prompt: data.prompt,
+              negativePrompt: negPrompt || undefined,
               imageBase64,
               ...(endFrameBase64 ? { imageBase64_2: endFrameBase64, imageFilename2: "end_frame.png" } : {}),
               width: 832, height: 832,
@@ -729,6 +738,7 @@ const Index = () => {
             // Text-to-Video: Z-Image Turbo → GLTCH WAN I2V
             comfyTextToVideo({
               prompt: data.prompt,
+              negativePrompt: negPrompt || undefined,
               width: 832, height: 480,
               frameCount: comfyFrameCount,
               steps: 4, cfg: 1,
@@ -755,6 +765,7 @@ const Index = () => {
           const parsedSeedAnim = globalSeed ? Number(globalSeed) : undefined;
           comfyVideo({
             prompt: data.prompt,
+            negativePrompt: negPrompt || undefined,
             imageBase64,
             width: round8(Math.max(256, w)),
             height: round8(Math.max(256, h)),
@@ -1837,6 +1848,30 @@ const Index = () => {
                   )}
                 </div>
               )}
+
+            {/* Negative prompt — shared across all comfy workflows */}
+            {(editEngine === "gltch"
+              || genEngine === "comfy" || genEngine === "gltch"
+              || renderEngine === "comfy" || animateEngine === "comfy" || animateEngine === "gltch") && (
+              <div className="mt-2 space-y-1">
+                <label className="font-mono-share text-[9px] text-muted-foreground/60 flex items-center justify-between">
+                  <span>NEGATIVE_PROMPT</span>
+                  {negPrompt && (
+                    <button onClick={() => setNegPrompt("")}
+                      className="font-mono-share text-[8px] text-muted-foreground/50 hover:text-red-400 transition-colors">
+                      CLEAR
+                    </button>
+                  )}
+                </label>
+                <input
+                  type="text"
+                  value={negPrompt}
+                  onChange={(e) => setNegPrompt(e.target.value)}
+                  placeholder="ugly, blurry, watermark... (leave empty for defaults)"
+                  className="w-full bg-card/60 border border-border/50 rounded px-2.5 py-1.5 text-[10px] font-mono-share text-foreground/80 placeholder:text-muted-foreground/25 outline-none focus:border-primary/50 transition-colors"
+                />
+              </div>
+            )}
 
             <PromptHistory history={history} onSelect={handleSelectPrompt} onRemove={removeEntry} onClear={clearHistory} />
             <PromptForm
