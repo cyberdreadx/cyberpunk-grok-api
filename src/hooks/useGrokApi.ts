@@ -533,10 +533,17 @@ export function useGrokApi() {
     return data;
   }, []);
 
-  // ── Persist a batch of new results to IndexedDB ──
-  const persistNewResults = useCallback(async (newResults: GrokResult[]) => {
-    for (const r of newResults) {
-      try { await saveResult(r); } catch { /* best-effort */ }
+  // ── Persist a batch of new results to IndexedDB (idle/deferred — never block the UI thread) ──
+  const persistNewResults = useCallback((newResults: GrokResult[]) => {
+    const run = async () => {
+      for (const r of newResults) {
+        try { await saveResult(r); } catch { /* best-effort */ }
+      }
+    };
+    if (typeof requestIdleCallback !== "undefined") {
+      requestIdleCallback(() => { void run(); }, { timeout: 4000 });
+    } else {
+      queueMicrotask(() => { void run(); });
     }
   }, []);
 

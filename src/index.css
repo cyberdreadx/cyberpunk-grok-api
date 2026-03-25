@@ -112,9 +112,14 @@
     text-shadow: var(--glow-purple);
   }
 
-  /* Dynamic Immersion Effects — duration must use time units (1s / Hz). Opacity-only: animating `filter` repaints the full layer every frame. */
+  /*
+   * Pulse layer: opacity-only. Cap minimum animation period (~0.4s) so admin Hz sliders
+   * cannot drive 20–30 full-screen repaints/sec (main-thread jank).
+   */
   .immersion-flicker {
-    animation: immersion-flicker calc(1s / max(0.05, var(--immersion-pulse-hz))) infinite alternate ease-in-out;
+    animation: immersion-flicker
+      max(0.4s, calc(1s / max(0.05, var(--immersion-pulse-hz))))
+      infinite alternate ease-in-out;
     will-change: opacity;
   }
 
@@ -125,10 +130,10 @@
   .immersion-pulse-layer {
     background: radial-gradient(
       ellipse 85% 65% at 50% 45%,
-      hsl(var(--primary) / 0.09) 0%,
+      hsl(var(--primary) / 0.1) 0%,
       transparent 72%
     );
-    mix-blend-mode: soft-light;
+    /* avoid mix-blend-mode: forces expensive compositing over the full page */
   }
 
   .immersion-glow {
@@ -136,25 +141,19 @@
   }
 
   /**
-   * Full-screen color grade driven by admin sliders (--immersion-* on :root).
-   * Note: `filter` on an ancestor creates a containing block — `position: fixed` UI
-   * (e.g. mobile nav) must render via portal to `document.body`, not under this host.
-   * `filter` on the entire app is very expensive (GPU repaint); keep on large screens only.
+   * Full-tree `filter` was removed for performance (constant GPU repaint of the whole UI).
+   * Red-shift / glow from admin sliders still affect pulse, scanlines, vignette via --immersion-*.
    */
   .immersion-screen-host {
-    filter: hue-rotate(calc(var(--immersion-red-shift) * 0.6deg))
-      brightness(calc(0.88 + var(--immersion-glow) * 0.12));
+    isolation: isolate;
   }
 
   @media (max-width: 1023px) {
-    .immersion-screen-host {
-      filter: none;
-    }
     .immersion-flicker {
       animation: none !important;
     }
     .immersion-pulse-layer {
-      opacity: 0.5;
+      opacity: 0.45;
     }
   }
 
@@ -457,9 +456,6 @@
   }
   .immersion-flicker {
     animation: none !important;
-  }
-  .immersion-screen-host {
-    filter: none !important;
   }
 }
 
