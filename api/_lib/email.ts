@@ -1,19 +1,25 @@
 /**
  * Email sending utility using Resend.
- * Sends verification codes for signup email confirmation.
+ * Verification codes, password resets, and daily credit notifications.
  */
 
 import { Resend } from "resend";
 
+export type { Resend };
+
 let resend: Resend | null = null;
 
-function getResend(): Resend {
+export function getResend(): Resend {
   if (!resend) {
     const key = process.env.RESEND_API_KEY;
     if (!key) throw new Error("RESEND_API_KEY not configured");
     resend = new Resend(key);
   }
   return resend;
+}
+
+export function getFromAddress(): string {
+  return process.env.EMAIL_FROM || "noreply@grokrunner.gltch.app";
 }
 
 /** Generate a random 6-digit verification code. */
@@ -26,7 +32,7 @@ export async function sendVerificationEmail(
   to: string,
   code: string,
 ): Promise<void> {
-  const fromAddress = process.env.EMAIL_FROM || "noreply@grokrunner.gltch.app";
+  const fromAddress = getFromAddress();
 
   const { error } = await getResend().emails.send({
     from: `Grok Runner <${fromAddress}>`,
@@ -65,7 +71,7 @@ export async function sendPasswordResetEmail(
   to: string,
   code: string,
 ): Promise<void> {
-  const fromAddress = process.env.EMAIL_FROM || "noreply@grokrunner.gltch.app";
+  const fromAddress = getFromAddress();
 
   const { error } = await getResend().emails.send({
     from: `Grok Runner <${fromAddress}>`,
@@ -97,4 +103,34 @@ export async function sendPasswordResetEmail(
     console.error("[email] Failed to send password reset email:", error);
     throw new Error("Failed to send password reset email");
   }
+}
+
+/** Build the HTML body for the daily credits refill notification. */
+export function buildDailyCreditsHtml(amount: number): string {
+  return `
+    <div style="font-family: 'Courier New', monospace; background: #0a0a0f; color: #e0e0e0; padding: 32px; max-width: 480px; margin: 0 auto;">
+      <div style="border: 1px solid #00f0ff33; padding: 24px; border-radius: 4px;">
+        <h1 style="color: #00f0ff; font-size: 18px; letter-spacing: 3px; margin: 0 0 16px;">
+          GROK RUNNER
+        </h1>
+        <p style="font-size: 14px; color: #a0a0a0; margin: 0 0 12px;">
+          Your daily credits have been refilled.
+        </p>
+        <div style="background: #111; border: 1px solid #00f0ff55; padding: 16px; text-align: center; border-radius: 4px; margin: 0 0 16px;">
+          <span style="font-size: 36px; color: #00f0ff; font-weight: bold;">${amount}</span>
+          <span style="font-size: 14px; color: #00f0ff99; display: block; margin-top: 4px;">FREE CREDITS READY</span>
+        </div>
+        <p style="font-size: 13px; color: #a0a0a0; margin: 0 0 16px;">
+          Use them today — they reset at midnight UTC and don't roll over.
+          Generate images, videos, and chat with AI characters.
+        </p>
+        <a href="https://grokrunner.gltch.app" style="display: inline-block; background: #00f0ff22; border: 1px solid #00f0ff55; color: #00f0ff; text-decoration: none; padding: 10px 24px; border-radius: 4px; font-size: 13px; letter-spacing: 2px;">
+          START CREATING →
+        </a>
+        <p style="font-size: 11px; color: #444; margin: 16px 0 0;">
+          You're receiving this because you have a verified Grok Runner account.
+        </p>
+      </div>
+    </div>
+  `;
 }

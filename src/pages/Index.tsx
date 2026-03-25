@@ -919,6 +919,7 @@ const Index = () => {
             {effectiveApiMode === "credits" && canUseCredits && (
               <CreditDisplay
                 totalCredits={creditsHook.totalCredits}
+                dailyCredits={creditsHook.dailyCredits}
                 subCredits={creditsHook.subCredits}
                 packCredits={creditsHook.packCredits}
                 subscriptionTier={creditsHook.subscriptionTier}

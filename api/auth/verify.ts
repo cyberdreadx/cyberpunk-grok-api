@@ -82,13 +82,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // Success — mark email as verified and clear the code
+    // Success — mark email as verified, clear the code, and grant daily credits
     await sql`
       UPDATE users
       SET email_verified = true,
           verification_code = NULL,
           verification_code_expires_at = NULL,
           verification_attempts = 0,
+          daily_credits = 10,
+          daily_credits_reset_at = now(),
           updated_at = now()
       WHERE id = ${user.id}
     `;

@@ -16,6 +16,7 @@ import {
 import type { AuthUser } from "@/hooks/useAuth";
 
 export function useCredits(user: AuthUser | null) {
+  const [dailyCredits, setDailyCredits] = useState<number>(0);
   const [subCredits, setSubCredits] = useState<number>(0);
   const [packCredits, setPackCredits] = useState<number>(0);
   const [subscriptionTier, setSubscriptionTier] = useState<string | null>(null);
@@ -25,11 +26,12 @@ export function useCredits(user: AuthUser | null) {
   const [purchasing, setPurchasing] = useState(false);
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
 
-  const totalCredits = subCredits + packCredits;
+  const totalCredits = dailyCredits + subCredits + packCredits;
 
   // Fetch credit balance
   const fetchCredits = useCallback(async () => {
     if (!user) {
+      setDailyCredits(0);
       setSubCredits(0);
       setPackCredits(0);
       setSubscriptionTier(null);
@@ -40,6 +42,7 @@ export function useCredits(user: AuthUser | null) {
     setLoading(true);
     try {
       const data = await apiFetch("/credits");
+      setDailyCredits(data.daily_credits ?? 0);
       setSubCredits(data.sub_credits ?? 0);
       setPackCredits(data.pack_credits ?? 0);
       setSubscriptionTier(data.subscription_tier ?? null);
@@ -128,20 +131,28 @@ export function useCredits(user: AuthUser | null) {
     }
   }, [user]);
 
-  // Optimistic local deduction (mirrors server logic: sub first, then pack)
+  // Optimistic local deduction (mirrors server logic: daily → sub → pack)
   const deductCreditsLocally = useCallback((amount: number) => {
-    setSubCredits((prevSub) => {
-      const fromSub = Math.min(prevSub, amount);
-      const remainder = amount - fromSub;
+    setDailyCredits((prevDaily) => {
+      const fromDaily = Math.min(prevDaily, amount);
+      let remainder = amount - fromDaily;
       if (remainder > 0) {
-        setPackCredits((prevPack) => Math.max(0, prevPack - remainder));
+        setSubCredits((prevSub) => {
+          const fromSub = Math.min(prevSub, remainder);
+          const packRemainder = remainder - fromSub;
+          if (packRemainder > 0) {
+            setPackCredits((prevPack) => Math.max(0, prevPack - packRemainder));
+          }
+          return prevSub - fromSub;
+        });
       }
-      return prevSub - fromSub;
+      return prevDaily - fromDaily;
     });
   }, []);
 
   return {
     totalCredits,
+    dailyCredits,
     subCredits,
     packCredits,
     subscriptionTier,

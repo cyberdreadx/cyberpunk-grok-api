@@ -2321,10 +2321,10 @@ Rules:
         }
 
         const sql = getDb();
-        const rows = await sql`SELECT sub_credits, pack_credits FROM users WHERE id = ${auth.userId}`;
+        const rows = await sql`SELECT daily_credits, sub_credits, pack_credits FROM users WHERE id = ${auth.userId}`;
         if (rows.length === 0) return res.status(404).json({ error: "User not found." });
 
-        const totalCredits = (rows[0].sub_credits || 0) + (rows[0].pack_credits || 0);
+        const totalCredits = (rows[0].daily_credits || 0) + (rows[0].sub_credits || 0) + (rows[0].pack_credits || 0);
         if (totalCredits < cost) {
           return res.status(402).json({ error: `Not enough credits. This costs ${cost} credit${cost !== 1 ? "s" : ""}.` });
         }
