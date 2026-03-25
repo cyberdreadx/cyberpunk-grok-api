@@ -80,6 +80,7 @@ export default function Characters() {
   const [view, setView] = useState<View>("gallery");
   const [editLora, setEditLora] = useState("none");
   const [editLoraStrength, setEditLoraStrength] = useState(0.30);
+  const [negPrompt, setNegPrompt] = useState("");
   const [characters, setCharacters] = useState<Character[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeChar, setActiveChar] = useState<Character | null>(null);
@@ -418,6 +419,7 @@ export default function Characters() {
             body: {
               action: "generate", workflow: "klein",
               prompt: anglePrefix + trigger.prompt,
+              negativePrompt: negPrompt || undefined,
               imageBase64: portrait64, imageFilename: "character_portrait.jpg",
               width: 768, height: 768,
               steps: 4, cfg: 1,
@@ -496,7 +498,8 @@ export default function Characters() {
             method: "POST",
             body: {
               action: "generate", workflow: "gltch-wan",
-              prompt: trigger.prompt, imageBase64: vidFrameBase64, imageFilename: "character_frame.jpg",
+              prompt: trigger.prompt, negativePrompt: negPrompt || undefined,
+              imageBase64: vidFrameBase64, imageFilename: "character_frame.jpg",
               width: 832, height: 832, steps: 4, cfg: 1,
               frameCount: 113, shift: 8, useRife: true, useUpscale: false, resolution: 832,
               videoLora: trigger.videoLora || "mystic_xxx_wan22_i2v_v1",
@@ -539,7 +542,7 @@ export default function Characters() {
     } catch (err: any) {
       failPlaceholder(err.message || "unknown error");
     }
-  }, [editLora, editLoraStrength]);
+  }, [editLora, editLoraStrength, negPrompt]);
 
   // ── Send message ──
 
@@ -956,6 +959,24 @@ export default function Characters() {
                 </div>
               </div>
             )}
+
+            {/* Negative prompt */}
+            <div className="shrink-0 px-2 py-2 border-b border-border/60">
+              <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Negative prompt (optional)</label>
+              <input
+                type="text"
+                value={negPrompt}
+                onChange={(e) => setNegPrompt(e.target.value)}
+                placeholder="ugly, blurry, watermark..."
+                className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-[10px] font-mono-share text-foreground placeholder:text-muted-foreground/30"
+              />
+              {negPrompt && (
+                <button onClick={() => setNegPrompt("")}
+                  className="mt-1 font-mono-share text-[8px] text-muted-foreground/50 hover:text-red-400 transition-colors">
+                  clear
+                </button>
+              )}
+            </div>
 
             {/* Input */}
             <div className={`flex gap-2 shrink-0 pb-[env(safe-area-inset-bottom,0px)] sm:pb-0 ${pendingImage ? "-mt-px" : ""}`}>
