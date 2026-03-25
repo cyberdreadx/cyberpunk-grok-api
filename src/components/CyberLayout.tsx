@@ -1,5 +1,4 @@
 import React, { useEffect } from "react";
-import DataRain from "@/components/DataRain";
 import HudOverlay from "@/components/HudOverlay";
 import { getStoredThemeId, getThemeById, applyTheme } from "@/lib/themes";
 import { applyImmersionToRoot, DEFAULT_IMMERSION, fetchMasterImmersion } from "@/lib/immersion";
@@ -17,12 +16,9 @@ const CyberLayout: React.FC<CyberLayoutProps> = ({ children }) => {
   }, []);
 
   return (
-    <div className="relative min-h-dvh cyber-gradient overflow-hidden noise-overlay immersion-screen-host">
-      {/* Global immersion pulse (Hz + flicker depth) — full screen, visible above page content */}
-      <div
-        className="fixed inset-0 z-[25] pointer-events-none immersion-flicker immersion-pulse-layer"
-        aria-hidden
-      />
+    <div className="relative min-h-dvh cyber-gradient overflow-hidden immersion-screen-host">
+      {/* Static pulse tint only — no CSS animation (full-viewport keyframes = main-thread cost) */}
+      <div className="fixed inset-0 z-[25] pointer-events-none immersion-pulse-layer" aria-hidden />
 
       {/* CRT scanline overlay — opacity driven by --immersion-scanline */}
       <div className="fixed inset-0 scanline z-10 pointer-events-none" />
@@ -60,14 +56,9 @@ const CyberLayout: React.FC<CyberLayoutProps> = ({ children }) => {
         <div className="absolute bottom-0 right-0 h-full w-[1px] bg-gradient-to-t from-primary/40 to-transparent" />
       </div>
 
-      {/* Data rain — hidden on small viewports (many DOM nodes + animations); full effect on md+ */}
-      <div className="hidden md:block" aria-hidden>
-        <DataRain intensity={14} />
-      </div>
-
-      {/* Terminal top bar — padded for iOS safe area (notch/Dynamic Island) */}
+      {/* Terminal top bar — padded for iOS safe area (notch/Dynamic Island). No backdrop-blur (very expensive on mobile GPU). */}
       <div
-        className="fixed top-0 left-0 right-0 z-30 bg-card/90 backdrop-blur-sm border-b border-primary/20 flex items-end px-4 gap-3"
+        className="fixed top-0 left-0 right-0 z-30 bg-card/95 border-b border-primary/20 flex items-end px-4 gap-3"
         style={{ paddingTop: 'env(safe-area-inset-top, 0px)', height: 'calc(env(safe-area-inset-top, 0px) + 28px)' }}
       >
         <div className="flex items-center gap-1.5 pb-1">
@@ -83,9 +74,9 @@ const CyberLayout: React.FC<CyberLayoutProps> = ({ children }) => {
         </div>
       </div>
 
-      {/* Horizontal scan line */}
+      {/* Horizontal scan line — desktop only (animation + layer cost) */}
       <div
-        className="fixed left-0 right-0 h-[1px] z-[15] opacity-20 pointer-events-none"
+        className="fixed left-0 right-0 h-[1px] z-[15] opacity-20 pointer-events-none hidden md:block"
         style={{
           background: "linear-gradient(90deg, transparent, hsl(var(--primary)), transparent)",
           animation: "hud-scan 8s linear infinite",

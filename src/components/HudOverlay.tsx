@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, memo } from "react";
 import { APP_VERSION } from "@/lib/version";
 
 const statusMessages = [
@@ -21,11 +21,7 @@ const HudOverlay: React.FC = () => {
   const [time, setTime] = useState("");
 
   useEffect(() => {
-    const statusInterval = setInterval(() => {
-      setCurrentStatus((prev) => (prev + 1) % statusMessages.length);
-    }, 3000);
-
-    const timeInterval = setInterval(() => {
+    const tick = () => {
       const now = new Date();
       setTime(
         now.toLocaleTimeString("en-US", {
@@ -33,9 +29,15 @@ const HudOverlay: React.FC = () => {
           hour: "2-digit",
           minute: "2-digit",
           second: "2-digit",
-        })
+        }),
       );
-    }, 1000);
+    };
+    tick();
+    // Slow updates — decorative only; 1s intervals caused unnecessary React re-renders.
+    const statusInterval = setInterval(() => {
+      setCurrentStatus((prev) => (prev + 1) % statusMessages.length);
+    }, 8000);
+    const timeInterval = setInterval(tick, 5000);
 
     return () => {
       clearInterval(statusInterval);
@@ -47,7 +49,7 @@ const HudOverlay: React.FC = () => {
     <>
       {/* Top-left HUD */}
       <div className="fixed left-4 z-30 font-mono-share text-[9px] text-primary/20 space-y-1 hidden md:block" style={{ top: 'calc(env(safe-area-inset-top, 0px) + 44px)' }}>
-        <div className="immersion-flicker">[SYS] {statusMessages[currentStatus]}</div>
+        <div>[SYS] {statusMessages[currentStatus]}</div>
         <div className="text-muted-foreground/15">PID: 0x4F7A // {time}</div>
         <div className="text-muted-foreground/10 mt-2">
           {"─".repeat(18)}
@@ -56,7 +58,7 @@ const HudOverlay: React.FC = () => {
 
       {/* Top-right HUD */}
       <div className="fixed right-4 z-30 font-mono-share text-[9px] text-right hidden md:block" style={{ top: 'calc(env(safe-area-inset-top, 0px) + 44px)' }}>
-        <div className="text-secondary/20 animate-pulse-glow">◆ xAI GATEWAY</div>
+        <div className="text-secondary/20">◆ xAI GATEWAY</div>
         <div className="text-muted-foreground/15">PROTO: HTTPS/3</div>
       </div>
 
@@ -77,4 +79,4 @@ const HudOverlay: React.FC = () => {
   );
 };
 
-export default HudOverlay;
+export default memo(HudOverlay);

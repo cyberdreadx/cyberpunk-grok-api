@@ -112,28 +112,20 @@
     text-shadow: var(--glow-purple);
   }
 
-  /*
-   * Pulse layer: opacity-only. Cap minimum animation period (~0.4s) so admin Hz sliders
-   * cannot drive 20–30 full-screen repaints/sec (main-thread jank).
-   */
+  /* Optional: decorative text flicker (small regions only — never full-screen). */
   .immersion-flicker {
-    animation: immersion-flicker
-      max(0.4s, calc(1s / max(0.05, var(--immersion-pulse-hz))))
-      infinite alternate ease-in-out;
+    animation: immersion-flicker 2.5s infinite alternate ease-in-out;
     will-change: opacity;
   }
 
-  /**
-   * Full-viewport pulse so PULSE RATE (Hz) is visible — not just tiny HUD text.
-   * Above main content (z-20), below modals/top chrome; pointer-events none.
-   */
+  /** Full-viewport tint — static only (animated full-screen layers are a major jank source). */
   .immersion-pulse-layer {
     background: radial-gradient(
       ellipse 85% 65% at 50% 45%,
       hsl(var(--primary) / 0.1) 0%,
       transparent 72%
     );
-    /* avoid mix-blend-mode: forces expensive compositing over the full page */
+    opacity: 0.5;
   }
 
   .immersion-glow {
@@ -153,7 +145,7 @@
       animation: none !important;
     }
     .immersion-pulse-layer {
-      opacity: 0.45;
+      opacity: 0.35;
     }
   }
 
@@ -295,16 +287,7 @@
     animation: cursor-blink 1s step-end infinite;
   }
 
-  /* Noise grain overlay */
-  .noise-overlay::after {
-    content: '';
-    position: fixed;
-    inset: 0;
-    opacity: 0.015;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-    pointer-events: none;
-    z-index: 11;
-  }
+  /* Noise grain — disabled: SVG feTurbulence full-screen is very GPU-expensive. */
 }
 
 /* ── Keyframes ── */

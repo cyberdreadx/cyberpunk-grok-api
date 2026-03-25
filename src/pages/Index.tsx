@@ -19,7 +19,8 @@ import {
   type ImmersionSettings,
 } from "@/lib/immersion";
 import PromptHistory from "@/components/PromptHistory";
-import ResultsGrid from "@/components/ResultsGrid";
+import GalleryChunkLoader from "@/components/GalleryChunkLoader";
+const ResultsGrid = lazyWithRetry(() => import("@/components/ResultsGrid"), "results-grid");
 import ApiKeyDialog from "@/components/ApiKeyDialog";
 import AuthDialog from "@/components/AuthDialog";
 import CreditDisplay from "@/components/CreditDisplay";
@@ -158,6 +159,11 @@ const Index = () => {
     if (!isAdmin) return;
     fetchMasterImmersion().then(setImmersionSettings);
   }, [isAdmin]);
+
+  // Warm the lazy gallery chunk in the background so the chunk loader is brief on fast networks.
+  useEffect(() => {
+    void import("@/components/ResultsGrid");
+  }, []);
 
   // Folders
   const foldersHook = useFolders();
@@ -2050,27 +2056,29 @@ const Index = () => {
               FULL LIBRARY
             </Link>
           </div>
-          <ResultsGrid
-            results={results}
-            isLoading={isLoading}
-            elapsedSeconds={elapsedSeconds}
-            loadingPhase={comfyPhase}
-            onClear={clearResults}
-            onDelete={deleteResult}
-            onEditImage={handleEditImage}
-            onAnimateImage={handleAnimateImage}
-            folders={foldersHook.folders}
-            selectedFilter={foldersHook.selectedFilter}
-            onSelectFilter={foldersHook.selectFilter}
-            onCreateFolder={foldersHook.createFolder}
-            onRenameFolder={foldersHook.renameFolder}
-            onDeleteFolder={foldersHook.deleteFolder}
-            onToggleFolderHidden={foldersHook.toggleFolderHidden}
-            onMoveToFolder={handleMoveToFolder}
-            onBulkMoveToFolder={handleBulkMoveToFolder}
-            onBulkDelete={handleBulkDelete}
-            onEmptyTrash={handleEmptyTrash}
-          />
+          <Suspense fallback={<GalleryChunkLoader />}>
+            <ResultsGrid
+              results={results}
+              isLoading={isLoading}
+              elapsedSeconds={elapsedSeconds}
+              loadingPhase={comfyPhase}
+              onClear={clearResults}
+              onDelete={deleteResult}
+              onEditImage={handleEditImage}
+              onAnimateImage={handleAnimateImage}
+              folders={foldersHook.folders}
+              selectedFilter={foldersHook.selectedFilter}
+              onSelectFilter={foldersHook.selectFilter}
+              onCreateFolder={foldersHook.createFolder}
+              onRenameFolder={foldersHook.renameFolder}
+              onDeleteFolder={foldersHook.deleteFolder}
+              onToggleFolderHidden={foldersHook.toggleFolderHidden}
+              onMoveToFolder={handleMoveToFolder}
+              onBulkMoveToFolder={handleBulkMoveToFolder}
+              onBulkDelete={handleBulkDelete}
+              onEmptyTrash={handleEmptyTrash}
+            />
+          </Suspense>
 
           {/* Post-first-result upsell — shown once user has generated something */}
           {results.length > 0 && !creditsHook.hasSubscription && creditsHook.enabled && (
