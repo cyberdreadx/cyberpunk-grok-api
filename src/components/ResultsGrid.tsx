@@ -1647,7 +1647,9 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
                 controls
                 muted
                 playsInline
-                preload="auto"
+                // @ts-ignore
+                webkit-playsinline="true"
+                preload="metadata"
               />
             ) : null}
 
