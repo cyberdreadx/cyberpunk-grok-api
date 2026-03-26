@@ -1651,7 +1651,7 @@ const Index = () => {
                     <div className={`font-orbitron text-[11px] ${animateEngine === "gltch" ? "text-secondary" : "text-foreground"}`}>GLTCH</div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>WAN 2.2 I2V / T2V</span>
-                      <span className={animateEngine === "gltch" ? "text-secondary/70" : "text-muted-foreground/50"}>12 cr</span>
+                      <span className={animateEngine === "gltch" ? "text-secondary/70" : "text-muted-foreground/50"}>15 cr</span>
                     </div>
                   </button>
                   <button type="button" onClick={() => { setAnimateEngine("grok"); setLongLookEnabled(false); }}
