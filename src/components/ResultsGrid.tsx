@@ -1647,7 +1647,9 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
                 controls
                 muted
                 playsInline
-                preload="auto"
+                // @ts-ignore
+                webkit-playsinline="true"
+                preload="metadata"
               />
             ) : null}
 
@@ -1842,7 +1844,9 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
                 controls={!selectMode}
                 muted
                 playsInline
-                preload="auto"
+                // @ts-ignore
+                webkit-playsinline="true"
+                preload="metadata"
               />
             )}
 
@@ -2187,8 +2191,11 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
                 className="w-full max-h-[60vh] sm:max-h-[75vh] rounded border border-border"
                 controls
                 autoPlay
+                muted
                 playsInline
-                preload="auto"
+                // @ts-ignore
+                webkit-playsinline="true"
+                preload="metadata"
               />
             )}
 
