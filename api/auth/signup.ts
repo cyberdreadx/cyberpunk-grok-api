@@ -15,7 +15,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   try {
-    const { email, password, referral_code } = req.body || {};
+    const { email, password, referral_code, device_fingerprint } = req.body || {};
     if (!email || !password) {
       return res.status(400).json({ error: "Email and password required" });
     }
@@ -36,7 +36,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(429).json({ error: "Account creation limit reached for this IP. Try again in 24 hours." });
     }
 
+    // Device fingerprint limit: max 3 verified accounts per device fingerprint
+    const fp = typeof device_fingerprint === "string" && device_fingerprint.trim()
+      ? device_fingerprint.trim().slice(0, 64) // sanitise length
+      : null;
+
     const sql = getDb();
+
+    if (fp) {
+      const fpRows = await sql`
+        SELECT COUNT(*) AS cnt FROM users
+        WHERE device_fingerprint = ${fp}
+          AND email_verified = true
+      `;
+      const fpCount = Number(fpRows[0]?.cnt ?? 0);
+      if (fpCount >= 3) {
+        return res.status(429).json({
+          error: "Account limit reached for this device. Max 3 accounts per device.",
+        });
+      }
+    }
     const normalizedEmail = email.toLowerCase().trim();
     const passwordHash = await bcrypt.hash(password, 10);
 
