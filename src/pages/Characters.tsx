@@ -867,7 +867,7 @@ export default function Characters() {
                         <img src={msg.mediaUrl} alt="From character" className="max-w-full rounded mb-2 max-h-64 object-contain" />
                       )}
                       {msg.mediaUrl && msg.mediaType === "video" && (
-                        <video src={msg.mediaUrl} controls className="max-w-full rounded mb-2 max-h-64" />
+                        <video src={msg.mediaUrl} controls muted playsInline webkit-playsinline="true" className="max-w-full rounded mb-2 max-h-64" />
                       )}
                       {isGenerating ? (
                         <div className="flex items-center gap-2 py-1">
