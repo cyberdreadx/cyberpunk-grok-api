@@ -141,10 +141,13 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
         <Button
           variant="ghost"
           size="sm"
-          className="font-mono-share text-xs gap-1.5 text-secondary hover:text-secondary/80"
+          className="font-mono-share text-xs gap-1 text-secondary hover:text-secondary/80 relative"
         >
           <LogIn className="w-3 h-3" />
-          LOGIN
+          <span>LOGIN</span>
+          <span className="font-mono-share text-[8px] text-primary/80 bg-primary/10 border border-primary/25 rounded px-1 py-0 leading-4 hidden sm:inline">
+            10 FREE / DAY
+          </span>
         </Button>
       </DialogTrigger>
       <DialogContent className="bg-card border-border sm:max-w-md">
