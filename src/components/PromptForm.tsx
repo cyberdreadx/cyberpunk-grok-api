@@ -615,7 +615,12 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
                   ) : (
                     <Send className="w-4 h-4" />
                   )}
-                  {isLoading ? "GENERATING…" : creditCost ? `GENERATE · ${creditCost} cr` : "GENERATE"}
+                  {isLoading ? "GENERATING…" : "GENERATE"}
+                  {!isLoading && creditCost != null && (
+                    <span className="inline-flex items-center rounded-sm bg-primary-foreground/20 border border-primary-foreground/30 px-1.5 py-0.5 font-mono-share text-[10px] font-bold leading-none tabular-nums">
+                      {creditCost} cr
+                    </span>
+                  )}
                 </Button>
                 {!isLoading && (
                   <span className="font-mono-share text-[8px] text-muted-foreground/35 pr-1">
@@ -631,19 +636,24 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
 
     {/* Sticky mobile CTA — portaled above bottom nav, visible only when prompt has text */}
     {typeof document !== "undefined" && prompt.trim() && createPortal(
-      <div className="fixed left-0 right-0 z-40 sm:hidden px-3 pt-2 pb-2 animate-slide-up bg-card/80 backdrop-blur-sm border-t border-border/30" style={{ bottom: 'calc(56px + env(safe-area-inset-bottom, 0px))' }}>
+      <div className="fixed left-0 right-0 z-40 sm:hidden px-3 pt-2 pb-2 animate-slide-up bg-card/95 backdrop-blur-md border-t border-primary/20" style={{ bottom: 'calc(56px + env(safe-area-inset-bottom, 0px))' }}>
         <button
           type="button"
           onClick={() => formRef.current?.requestSubmit()}
           disabled={isLoading || !prompt.trim() || (needsImage && !imageUrl.trim()) || (needsVideo && !imageUrl.trim())}
-          className="w-full h-12 font-orbitron text-sm font-bold bg-primary text-primary-foreground disabled:opacity-40 flex items-center justify-center gap-2 tracking-widest rounded shadow-[0_0_24px_hsl(var(--primary)/0.5)] active:scale-[0.98] transition-all duration-150"
+          className="w-full h-13 font-orbitron text-sm font-bold bg-primary text-primary-foreground disabled:opacity-40 flex items-center justify-center gap-3 tracking-widest rounded shadow-[0_0_28px_hsl(var(--primary)/0.55)] active:scale-[0.98] transition-all duration-150"
         >
           {isLoading ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
+            <Loader2 className="w-5 h-5 animate-spin" />
           ) : (
-            <Send className="w-4 h-4" />
+            <Send className="w-5 h-5" />
           )}
-          <span>{isLoading ? "GENERATING…" : creditCost ? `GENERATE · ${creditCost} cr` : "GENERATE"}</span>
+          <span>{isLoading ? "GENERATING…" : "GENERATE"}</span>
+          {!isLoading && creditCost != null && (
+            <span className="inline-flex items-center rounded bg-primary-foreground/20 border border-primary-foreground/40 px-2 py-1 font-mono-share text-xs font-bold leading-none tabular-nums tracking-normal">
+              {creditCost} cr
+            </span>
+          )}
         </button>
       </div>,
       document.body
