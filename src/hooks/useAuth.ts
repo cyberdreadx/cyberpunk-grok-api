@@ -43,6 +43,8 @@ export function useAuth() {
   const signUp = useCallback(async (email: string, password: string, referralCode?: string) => {
     const body: Record<string, string> = { email, password };
     if (referralCode) body.referral_code = referralCode;
+    // Attach a lightweight browser fingerprint to throttle multi-account creation
+    try { body.device_fingerprint = getBrowserFingerprint(); } catch { /* non-fatal */ }
     const data = await apiFetch<{ message: string; needsVerification: boolean; email: string }>("/auth/signup", {
       method: "POST",
       body,
