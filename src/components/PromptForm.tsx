@@ -348,6 +348,9 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
                     className="w-full max-h-32 object-contain rounded border border-border bg-input"
                     controls
                     muted
+                    playsInline
+                    // @ts-ignore
+                    webkit-playsinline="true"
                   />
                   <button
                     type="button"
