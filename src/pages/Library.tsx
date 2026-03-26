@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Image, Film, Search, X, ArrowLeft } from "lucide-react";
+import { Image, Film, ArrowLeft } from "lucide-react";
 import CyberLayout from "@/components/CyberLayout";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import GlitchText from "@/components/GlitchText";
