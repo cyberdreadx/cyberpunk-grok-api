@@ -40,8 +40,22 @@ const Library: React.FC = () => {
 
   // Scroll-to-top visibility — show after ~3 grid rows (~300px)
   const [showScrollTop, setShowScrollTop] = useState(false);
+  // Header collapse — hide on scroll-down, reveal on scroll-up
+  const [headerVisible, setHeaderVisible] = useState(true);
+  const lastScrollY = useRef(0);
+
   useEffect(() => {
-    const onScroll = () => setShowScrollTop(window.scrollY > 300);
+    const onScroll = () => {
+      const y = window.scrollY;
+      setShowScrollTop(y > 300);
+      // Only collapse after scrolling past the header (~80px) to avoid flicker at top
+      if (y > 80) {
+        setHeaderVisible(y < lastScrollY.current);
+      } else {
+        setHeaderVisible(true);
+      }
+      lastScrollY.current = y;
+    };
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
