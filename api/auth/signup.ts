@@ -107,8 +107,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Insert new user with verification code + referral link
       try {
         const newRows = await sql`
-          INSERT INTO users (email, password_hash, email_verified, verification_code, verification_code_expires_at, verification_attempts, referred_by)
-          VALUES (${normalizedEmail}, ${passwordHash}, false, ${code}, ${expiresAt}, 0, ${referrerId}::uuid)
+          INSERT INTO users (email, password_hash, email_verified, verification_code, verification_code_expires_at, verification_attempts, referred_by, device_fingerprint)
+          VALUES (${normalizedEmail}, ${passwordHash}, false, ${code}, ${expiresAt}, 0, ${referrerId}::uuid, ${fp})
           RETURNING id
         `;
         // Create referral row linking referrer → referee
