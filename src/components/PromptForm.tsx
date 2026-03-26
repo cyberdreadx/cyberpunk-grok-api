@@ -624,23 +624,33 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
                 <span className="hidden sm:inline">ENHANCE</span>
               </Button>
               <div className="flex flex-col items-end gap-0.5">
-                <Button
-                  type="submit"
-                  disabled={isLoading || !prompt.trim() || (needsImage && !imageUrl.trim()) || (needsVideo && !imageUrl.trim())}
-                  className="h-10 px-5 sm:px-8 font-orbitron text-xs sm:text-sm font-bold bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-30 gap-2 tracking-widest shadow-[0_0_20px_hsl(var(--primary)/0.4)] hover:shadow-[0_0_30px_hsl(var(--primary)/0.6)] transition-all duration-200"
-                >
-                  {isLoading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Send className="w-4 h-4" />
-                  )}
-                  {isLoading ? "GENERATING…" : "GENERATE"}
-                  {!isLoading && creditCost != null && (
-                    <span className="inline-flex items-center rounded-sm bg-primary-foreground/20 border border-primary-foreground/30 px-1.5 py-0.5 font-mono-share text-[10px] font-bold leading-none tabular-nums">
-                      {creditCost} cr
-                    </span>
-                  )}
-                </Button>
+                <TooltipProvider delayDuration={300}>
+                  <Button
+                    type="submit"
+                    disabled={isLoading || !prompt.trim() || (needsImage && !imageUrl.trim()) || (needsVideo && !imageUrl.trim())}
+                    className="h-10 px-5 sm:px-8 font-orbitron text-xs sm:text-sm font-bold bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-30 gap-2 tracking-widest shadow-[0_0_20px_hsl(var(--primary)/0.4)] hover:shadow-[0_0_30px_hsl(var(--primary)/0.6)] transition-all duration-200"
+                  >
+                    {isLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Send className="w-4 h-4" />
+                    )}
+                    {isLoading ? "GENERATING…" : "GENERATE"}
+                    {!isLoading && creditCost != null && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="inline-flex items-center gap-1 rounded-sm bg-primary-foreground/20 border border-primary-foreground/30 px-1.5 py-0.5 font-mono-share text-[10px] font-bold leading-none tabular-nums cursor-help">
+                            {creditCost} cr
+                            <Info className="w-2.5 h-2.5 opacity-70" />
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="font-mono-share text-[11px] max-w-[220px] text-center leading-snug">
+                          {creditCostLabel(mode, creditCost)}
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                  </Button>
+                </TooltipProvider>
                 {!isLoading && (
                   <span className="font-mono-share text-[8px] text-muted-foreground/35 pr-1">
                     {hasSubscription ? "⚡ Priority queue" : "Subscribe for faster renders"}
@@ -661,6 +671,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
           onClick={() => formRef.current?.requestSubmit()}
           disabled={isLoading || !prompt.trim() || (needsImage && !imageUrl.trim()) || (needsVideo && !imageUrl.trim())}
           className="w-full h-13 font-orbitron text-sm font-bold bg-primary text-primary-foreground disabled:opacity-40 flex items-center justify-center gap-3 tracking-widest rounded shadow-[0_0_28px_hsl(var(--primary)/0.55)] active:scale-[0.98] transition-all duration-150"
+          title={creditCost != null ? creditCostLabel(mode, creditCost) : undefined}
         >
           {isLoading ? (
             <Loader2 className="w-5 h-5 animate-spin" />
@@ -669,8 +680,9 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
           )}
           <span>{isLoading ? "GENERATING…" : "GENERATE"}</span>
           {!isLoading && creditCost != null && (
-            <span className="inline-flex items-center rounded bg-primary-foreground/20 border border-primary-foreground/40 px-2 py-1 font-mono-share text-xs font-bold leading-none tabular-nums tracking-normal">
+            <span className="inline-flex items-center gap-1 rounded bg-primary-foreground/20 border border-primary-foreground/40 px-2 py-1 font-mono-share text-xs font-bold leading-none tabular-nums tracking-normal">
               {creditCost} cr
+              <Info className="w-3 h-3 opacity-60" />
             </span>
           )}
         </button>
