@@ -453,26 +453,28 @@ const Index = () => {
     const isGltchEdit = mode === "edit-image" && editEngine === "gltch";
     const isZimage = mode === "text-to-image" && genEngine === "gltch";
     const isComfyGen = mode === "text-to-image" && genEngine === "comfy";
+    const isGrokRender = mode === "text-to-video" && renderEngine === "grok";
     const isComfyRender = mode === "text-to-video" && renderEngine === "comfy";
     const isGltchWan = mode === "image-to-video" && animateEngine === "gltch";
+    const isGrokAnimate = mode === "image-to-video" && animateEngine === "grok";
     const isComfyAnimate = mode === "image-to-video" && animateEngine === "comfy" && !longLookEnabled;
     const isComfyLongLook = mode === "image-to-video" && animateEngine === "comfy" && longLookEnabled;
 
     if (isGrokEdit) {
       const is2k = (settings.resolution || "1k") === "2k";
-      let m: CreditMode = grokPro && is2k ? "edit-image-pro-2k" : grokPro ? "edit-image-pro" : is2k ? "edit-image-2k" : "edit-image";
+      const m: CreditMode = grokPro && is2k ? "edit-image-pro-2k" : grokPro ? "edit-image-pro" : is2k ? "edit-image-2k" : "edit-image";
       return calculateCreditCost(m, settings.count);
     }
     if (isGltchEdit) return calculateCreditCost("comfy-image");
     if (isZimage || isComfyGen) return calculateCreditCost("comfy-image");
-    if (isComfyRender || isComfyAnimate) return calculateCreditCost("comfy-video");
-    if (isGltchWan) return calculateCreditCost("comfy-video");
+    if (isComfyRender || isComfyAnimate || isGltchWan) return calculateCreditCost("comfy-video");
+    if (isGrokRender || isGrokAnimate) return calculateCreditCost("text-to-video", 1, videoSettings.duration);
     if (isComfyLongLook) return calculateCreditCost("comfy-longlook", longLookSeqCount);
-    // Grok generate
+    // Grok generate (text-to-image)
     const is2k = (settings.resolution || "1k") === "2k";
-    let cm: CreditMode = grokPro && is2k ? "text-to-image-pro-2k" : grokPro ? "text-to-image-pro" : is2k ? "text-to-image-2k" : "text-to-image";
+    const cm: CreditMode = grokPro && is2k ? "text-to-image-pro-2k" : grokPro ? "text-to-image-pro" : is2k ? "text-to-image-2k" : "text-to-image";
     return calculateCreditCost(cm, settings.count);
-  }, [mode, editEngine, genEngine, renderEngine, animateEngine, longLookEnabled, settings, grokPro, longLookSeqCount, effectiveApiMode]);
+  }, [mode, editEngine, genEngine, renderEngine, animateEngine, longLookEnabled, settings, grokPro, longLookSeqCount, videoSettings.duration, effectiveApiMode]);
 
   const handleSubmit = async (data: { prompt: string; imageUrl?: string; extraImageUrls?: string[] }) => {
     // Determine which engine pathway
@@ -1332,7 +1334,7 @@ const Index = () => {
                     </div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>xAI</span>
-                      <span className={genEngine === "grok" ? "text-primary/70" : "text-muted-foreground/50"}>{grokPro ? settings.count * 3 : settings.count} cr</span>
+                      <span className={genEngine === "grok" ? "text-primary/70" : "text-muted-foreground/50"}>{grokPro ? settings.count * 5 : settings.count * 2} cr</span>
                     </div>
                   </button>
                   {isAdmin && (
@@ -1524,7 +1526,7 @@ const Index = () => {
                     </div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>xAI</span>
-                      <span className={renderEngine === "grok" ? "text-primary/70" : "text-muted-foreground/50"}>{videoSettings.duration * 2} cr</span>
+                      <span className={renderEngine === "grok" ? "text-primary/70" : "text-muted-foreground/50"}>{videoSettings.duration * 3} cr</span>
                     </div>
                   </button>
                 </div>
@@ -1641,7 +1643,7 @@ const Index = () => {
                     <div className={`font-orbitron text-[11px] ${animateEngine === "comfy" ? "text-purple-400" : "text-foreground"}`}>GLTCH PRO</div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>MultiClip</span>
-                      <span className={animateEngine === "comfy" ? "text-purple-400/70" : "text-muted-foreground/50"}>20 cr</span>
+                      <span className={animateEngine === "comfy" ? "text-purple-400/70" : "text-muted-foreground/50"}>15 cr</span>
                     </div>
                   </button>
                   <button type="button" onClick={() => { setAnimateEngine("gltch"); setLongLookEnabled(false); }}
@@ -1649,7 +1651,7 @@ const Index = () => {
                     <div className={`font-orbitron text-[11px] ${animateEngine === "gltch" ? "text-secondary" : "text-foreground"}`}>GLTCH</div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>WAN 2.2 I2V / T2V</span>
-                      <span className={animateEngine === "gltch" ? "text-secondary/70" : "text-muted-foreground/50"}>12 cr</span>
+                      <span className={animateEngine === "gltch" ? "text-secondary/70" : "text-muted-foreground/50"}>15 cr</span>
                     </div>
                   </button>
                   <button type="button" onClick={() => { setAnimateEngine("grok"); setLongLookEnabled(false); }}
@@ -1660,7 +1662,7 @@ const Index = () => {
                     </div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>xAI</span>
-                      <span className={animateEngine === "grok" ? "text-primary/70" : "text-muted-foreground/50"}>{videoSettings.duration * 2} cr</span>
+                      <span className={animateEngine === "grok" ? "text-primary/70" : "text-muted-foreground/50"}>{videoSettings.duration * 3} cr</span>
                     </div>
                   </button>
                 </div>
