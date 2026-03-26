@@ -12,6 +12,7 @@ import {
   hasAuthToken,
   backendEnabled,
 } from "@/lib/api";
+import { getBrowserFingerprint } from "@/lib/fingerprint";
 
 export interface AuthUser {
   id: string;
