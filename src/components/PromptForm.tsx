@@ -663,7 +663,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
                     )}
                     {isLoading ? "GENERATING…" : "GENERATE"}
                     {!isLoading && creditCost != null && (() => {
-                      const bd = creditCostBreakdown(mode, creditCost, settings.count ?? 1, settings.videoDuration ?? 5);
+                      const bd = creditCostBreakdown(mode, creditCost, settings.count ?? 1, videoDuration ?? 5);
                       return (
                         <Tooltip>
                           <TooltipTrigger asChild>
