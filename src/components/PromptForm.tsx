@@ -626,7 +626,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
                 )}
                 <span className="hidden sm:inline">ENHANCE</span>
               </Button>
-              <div className="flex flex-col items-end gap-0.5">
+              <div className="flex flex-col items-end gap-1">
                 <TooltipProvider delayDuration={300}>
                   <Button
                     type="submit"
@@ -654,7 +654,22 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
                     )}
                   </Button>
                 </TooltipProvider>
-                {!isLoading && (
+                {/* Low-credits warning */}
+                {!isLoading && isLowCredits && (
+                  <div className="flex items-center gap-1.5 text-[9px] font-mono-share text-destructive/80 bg-destructive/10 border border-destructive/25 rounded px-2 py-1 w-full justify-between">
+                    <span>⚠ Need {creditCost! - totalCredits!} more cr</span>
+                    {onOpenStore && (
+                      <button
+                        type="button"
+                        onClick={onOpenStore}
+                        className="underline underline-offset-2 text-primary/80 hover:text-primary font-bold whitespace-nowrap"
+                      >
+                        Top up →
+                      </button>
+                    )}
+                  </div>
+                )}
+                {!isLoading && !isLowCredits && (
                   <span className="font-mono-share text-[8px] text-muted-foreground/35 pr-1">
                     {hasSubscription ? "⚡ Priority queue" : "Subscribe for faster renders"}
                   </span>
