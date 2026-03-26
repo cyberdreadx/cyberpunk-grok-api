@@ -59,6 +59,7 @@ interface PromptFormProps {
   hideExtraImages?: boolean;
   creditCost?: number;
   totalCredits?: number;
+  videoDuration?: number;
   hasSubscription?: boolean;
   onOpenStore?: () => void;
 }
