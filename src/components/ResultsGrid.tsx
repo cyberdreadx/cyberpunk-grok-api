@@ -844,6 +844,10 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
   onBulkMoveToFolder,
   onBulkDelete,
   onEmptyTrash,
+  searchQuery = "",
+  onSearchChange,
+  typeFilter = "all",
+  onTypeFilterChange,
 }) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [mobileIndex, setMobileIndex] = useState(0);
