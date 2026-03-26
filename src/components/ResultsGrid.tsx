@@ -223,6 +223,11 @@ interface ResultsGridProps {
   onBulkMoveToFolder?: (ids: string[], folderId: string | null) => Promise<void>;
   onBulkDelete?: (ids: string[]) => Promise<void>;
   onEmptyTrash?: () => Promise<void>;
+  // Search / filter props (rendered sticky inside the grid)
+  searchQuery?: string;
+  onSearchChange?: (q: string) => void;
+  typeFilter?: "all" | "image" | "video";
+  onTypeFilterChange?: (t: "all" | "image" | "video") => void;
 }
 
 const isMobile = () => /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
