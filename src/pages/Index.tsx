@@ -1334,7 +1334,7 @@ const Index = () => {
                     </div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>xAI</span>
-                      <span className={genEngine === "grok" ? "text-primary/70" : "text-muted-foreground/50"}>{grokPro ? settings.count * 3 : settings.count} cr</span>
+                      <span className={genEngine === "grok" ? "text-primary/70" : "text-muted-foreground/50"}>{grokPro ? settings.count * 5 : settings.count * 2} cr</span>
                     </div>
                   </button>
                   {isAdmin && (
