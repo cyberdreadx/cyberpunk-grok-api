@@ -1,12 +1,31 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { Send, Upload, Loader2, ImagePlus, Link, X, Film, Sparkles } from "lucide-react";
+import { Send, Upload, Loader2, ImagePlus, Link, X, Film, Sparkles, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { GrokMode, GenerationSettings } from "@/hooks/useGrokApi";
 import { apiFetch } from "@/lib/api";
 import { toast } from "sonner";
+
+/** Returns a short human-readable label explaining what the credit cost covers. */
+function creditCostLabel(mode: GrokMode, cost: number): string {
+  switch (mode) {
+    case "text-to-image":
+      return `${cost} cr — Grok / Z-Image text-to-image generation`;
+    case "edit-image":
+      return `${cost} cr — Grok / GLTCH image editing`;
+    case "text-to-video":
+      return `${cost} cr — video generation (3 cr/s for Grok · 15 cr flat for GLTCH PRO)`;
+    case "image-to-video":
+      return `${cost} cr — image-to-video animation (3 cr/s for Grok · 15 cr flat for GLTCH PRO)`;
+    case "edit-video":
+      return `${cost} cr — video editing`;
+    default:
+      return `${cost} cr`;
+  }
+}
 
 interface PromptFormProps {
   mode: GrokMode;
