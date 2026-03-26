@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Image, Film, ArrowLeft } from "lucide-react";
+import { Image, Film, ArrowLeft, ChevronsUp } from "lucide-react";
 import CyberLayout from "@/components/CyberLayout";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import GlitchText from "@/components/GlitchText";
@@ -37,6 +37,14 @@ const Library: React.FC = () => {
   const [changelogOpen, setChangelogOpen] = useState(false);
   const [tosOpen, setTosOpen] = useState(false);
   const [privacyOpen, setPrivacyOpen] = useState(false);
+
+  // Scroll-to-top visibility — show after ~3 grid rows (~300px)
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setShowScrollTop(window.scrollY > 300);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -250,6 +258,19 @@ const Library: React.FC = () => {
       <ChangelogDialog open={changelogOpen} onOpenChange={setChangelogOpen} />
       <LegalDialog type="tos" open={tosOpen} onOpenChange={setTosOpen} />
       <LegalDialog type="privacy" open={privacyOpen} onOpenChange={setPrivacyOpen} />
+
+      {/* Scroll-to-top button */}
+      <button
+        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+        aria-label="Scroll to top"
+        className={`fixed right-4 z-40 flex items-center gap-1.5 px-3 py-2 rounded border font-mono-share text-[10px] tracking-wider transition-all duration-300 bg-card/90 backdrop-blur-md border-primary/40 text-primary hover:bg-primary/10 hover:border-primary/70 shadow-lg ${
+          showScrollTop ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 translate-y-4 pointer-events-none"
+        }`}
+        style={{ bottom: 'calc(56px + env(safe-area-inset-bottom, 0px) + 12px)' }}
+      >
+        <ChevronsUp className="w-3.5 h-3.5" />
+        TOP
+      </button>
     </CyberLayout>
   );
 };
