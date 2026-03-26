@@ -684,6 +684,21 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
     {/* Sticky mobile CTA — portaled above bottom nav, visible only when prompt has text */}
     {typeof document !== "undefined" && prompt.trim() && createPortal(
       <div className="fixed left-0 right-0 z-40 sm:hidden px-3 pt-2 pb-2 animate-slide-up bg-card/95 backdrop-blur-md border-t border-primary/20" style={{ bottom: 'calc(56px + env(safe-area-inset-bottom, 0px))' }}>
+        {/* Low-credits warning strip */}
+        {!isLoading && isLowCredits && (
+          <div className="flex items-center justify-between font-mono-share text-[10px] text-destructive/90 bg-destructive/10 border border-destructive/25 rounded px-2.5 py-1.5 mb-1.5">
+            <span>⚠ Need {creditCost! - totalCredits!} more cr to generate</span>
+            {onOpenStore && (
+              <button
+                type="button"
+                onClick={onOpenStore}
+                className="underline underline-offset-2 text-primary/90 hover:text-primary font-bold ml-2 whitespace-nowrap"
+              >
+                Top up →
+              </button>
+            )}
+          </div>
+        )}
         <button
           type="button"
           onClick={() => formRef.current?.requestSubmit()}
@@ -698,7 +713,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
           )}
           <span>{isLoading ? "GENERATING…" : "GENERATE"}</span>
           {!isLoading && creditCost != null && (
-            <span className="inline-flex items-center gap-1 rounded bg-primary-foreground/20 border border-primary-foreground/40 px-2 py-1 font-mono-share text-xs font-bold leading-none tabular-nums tracking-normal">
+            <span className={`inline-flex items-center gap-1 rounded px-2 py-1 font-mono-share text-xs font-bold leading-none tabular-nums tracking-normal border ${isLowCredits ? "bg-destructive/30 border-destructive/50 text-destructive-foreground" : "bg-primary-foreground/20 border-primary-foreground/40"}`}>
               {creditCost} cr
               <Info className="w-3 h-3 opacity-60" />
             </span>
