@@ -1903,6 +1903,7 @@ const Index = () => {
               hideExtraImages={mode === "edit-image" && editEngine === "gltch"}
               creditCost={previewCreditCost}
               totalCredits={effectiveApiMode === "credits" ? creditsHook.totalCredits : undefined}
+              videoDuration={videoSettings.duration}
               hasSubscription={creditsHook.hasSubscription}
               onOpenStore={effectiveApiMode === "credits" ? () => setStoreOpen(true) : undefined}
             />
