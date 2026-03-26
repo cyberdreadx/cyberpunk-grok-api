@@ -3,7 +3,6 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
-import { APP_VERSION } from "./src/lib/version";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
@@ -33,8 +32,6 @@ export default defineConfig(({ mode }) => {
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "pwa-192.png", "pwa-512.png"],
       manifest: {
-        /** Kept in sync with `APP_VERSION` / UI — bump in `src/lib/version.ts` when you ship. */
-        version: APP_VERSION,
         name: "GROK_RUNNER — Neural Rendering Interface",
         short_name: "GROK_RUNNER",
         description: "AI image & video generation with a cyberpunk twist — powered by xAI",

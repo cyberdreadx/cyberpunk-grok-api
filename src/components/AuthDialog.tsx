@@ -141,10 +141,13 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
         <Button
           variant="ghost"
           size="sm"
-          className="font-mono-share text-xs gap-1.5 text-secondary hover:text-secondary/80"
+          className="font-mono-share text-xs gap-1 text-secondary hover:text-secondary/80 relative"
         >
           <LogIn className="w-3 h-3" />
-          LOGIN
+          <span>LOGIN</span>
+          <span className="font-mono-share text-[8px] text-primary/80 bg-primary/10 border border-primary/25 rounded px-1 py-0 leading-4 hidden sm:inline">
+            10 FREE / DAY
+          </span>
         </Button>
       </DialogTrigger>
       <DialogContent className="bg-card border-border sm:max-w-md">
@@ -171,8 +174,21 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
               <DialogTitle className="font-orbitron text-sm tracking-wider neon-text-cyan">
                 NEURAL_AUTH
               </DialogTitle>
-              <DialogDescription className="font-rajdhani text-muted-foreground">
-                Sign in to use credits, or use your own API key for free.
+              <DialogDescription asChild>
+                <div className="space-y-2 mt-1">
+                  <div className="flex items-center gap-2 bg-primary/10 border border-primary/25 rounded-md px-3 py-2">
+                    <span className="text-base">⚡</span>
+                    <div>
+                      <p className="font-orbitron text-[10px] tracking-wider text-primary">10 FREE CREDITS EVERY DAY</p>
+                      <p className="font-mono-share text-[10px] text-muted-foreground/70 leading-snug">
+                        Free on login — no card needed. Generate images &amp; video daily.
+                      </p>
+                    </div>
+                  </div>
+                  <p className="font-rajdhani text-muted-foreground text-xs">
+                    Sign in to use credits, or use your own API key for free.
+                  </p>
+                </div>
               </DialogDescription>
             </DialogHeader>
 

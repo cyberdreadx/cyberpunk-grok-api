@@ -1268,6 +1268,7 @@ export function useGrokApi() {
     cfg?: number;
     seed?: number;
     loras?: { name: string; strengthModel: number; strengthClip: number }[];
+    negativePrompt?: string;
     testCredits?: boolean;
   }) => {
     const jobId = `cj-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
