@@ -29,11 +29,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: "Password must be at least 6 characters" });
     }
 
-    // Rate limit: 5 signups per IP per 15 minutes
+    // Rate limit: 2 signups per IP per 24 hours
     const ip = getClientIp(req);
-    const { allowed } = await checkRateLimit(ip, "signup", { max: 5, windowSeconds: 900 });
+    const { allowed } = await checkRateLimit(ip, "signup", { max: 2, windowSeconds: 86400 });
     if (!allowed) {
-      return res.status(429).json({ error: "Too many signup attempts. Please try again later." });
+      return res.status(429).json({ error: "Account creation limit reached for this IP. Try again in 24 hours." });
     }
 
     const sql = getDb();
