@@ -228,6 +228,10 @@ const Library: React.FC = () => {
             onBulkMoveToFolder={handleBulkMoveToFolder}
             onBulkDelete={handleBulkDelete}
             onEmptyTrash={handleEmptyTrash}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            typeFilter={typeFilter}
+            onTypeFilterChange={setTypeFilter}
           />
         )}
       </div>
