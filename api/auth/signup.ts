@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { getDb } from "../_lib/db";
 import { generateVerificationCode, sendVerificationEmail } from "../_lib/email";
 import { checkRateLimit, getClientIp } from "../_lib/ratelimit";
+import { isDisposableEmail } from "../_lib/disposable-domains";
 
 /** Basic email format validation. */
 function isValidEmail(email: string): boolean {
