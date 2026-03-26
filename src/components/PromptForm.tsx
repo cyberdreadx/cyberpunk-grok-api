@@ -661,19 +661,29 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
                       <Send className="w-4 h-4" />
                     )}
                     {isLoading ? "GENERATING…" : "GENERATE"}
-                    {!isLoading && creditCost != null && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span className="inline-flex items-center gap-1 rounded-sm bg-primary-foreground/20 border border-primary-foreground/30 px-1.5 py-0.5 font-mono-share text-[10px] font-bold leading-none tabular-nums cursor-help">
-                            {creditCost} cr
-                            <Info className="w-2.5 h-2.5 opacity-70" />
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="font-mono-share text-[11px] max-w-[220px] text-center leading-snug">
-                          {creditCostLabel(mode, creditCost)}
-                        </TooltipContent>
-                      </Tooltip>
-                    )}
+                    {!isLoading && creditCost != null && (() => {
+                      const bd = creditCostBreakdown(mode, creditCost, settings.count ?? 1, settings.videoDuration ?? 5);
+                      return (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="inline-flex items-center gap-1 rounded-sm bg-primary-foreground/20 border border-primary-foreground/30 px-1.5 py-0.5 font-mono-share text-[10px] font-bold leading-none tabular-nums cursor-help">
+                              {creditCost} cr
+                              <Info className="w-2.5 h-2.5 opacity-70" />
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="font-mono-share text-[11px] max-w-[200px] leading-snug p-3">
+                            <div className="space-y-1">
+                              {bd.lines.map((line, i) => (
+                                <div key={i} className={`tabular-nums ${i === bd.lines.length - 1 && bd.lines.length > 1 ? "text-primary font-bold border-t border-border/40 pt-1 mt-0.5" : "text-foreground/80"}`}>
+                                  {line}
+                                </div>
+                              ))}
+                              {bd.note && <div className="text-muted-foreground/60 text-[10px] pt-0.5">{bd.note}</div>}
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      );
+                    })()}
                   </Button>
                 </TooltipProvider>
                 {/* Low-credits warning */}
