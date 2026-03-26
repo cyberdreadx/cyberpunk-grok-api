@@ -40,8 +40,22 @@ const Library: React.FC = () => {
 
   // Scroll-to-top visibility — show after ~3 grid rows (~300px)
   const [showScrollTop, setShowScrollTop] = useState(false);
+  // Header collapse — hide on scroll-down, reveal on scroll-up
+  const [headerVisible, setHeaderVisible] = useState(true);
+  const lastScrollY = useRef(0);
+
   useEffect(() => {
-    const onScroll = () => setShowScrollTop(window.scrollY > 300);
+    const onScroll = () => {
+      const y = window.scrollY;
+      setShowScrollTop(y > 300);
+      // Only collapse after scrolling past the header (~80px) to avoid flicker at top
+      if (y > 80) {
+        setHeaderVisible(y < lastScrollY.current);
+      } else {
+        setHeaderVisible(true);
+      }
+      lastScrollY.current = y;
+    };
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
@@ -147,8 +161,12 @@ const Library: React.FC = () => {
   return (
     <CyberLayout>
       <div className="max-w-6xl mx-auto px-4 py-6 sm:pb-8 space-y-6" style={{ paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 0px))' }}>
-        {/* Header */}
-        <div className="space-y-4">
+        {/* Header — collapses on scroll-down, snaps back on scroll-up */}
+        <div
+          className={`space-y-4 transition-all duration-300 overflow-hidden ${
+            headerVisible ? "max-h-40 opacity-100" : "max-h-0 opacity-0 pointer-events-none"
+          }`}
+        >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <button
