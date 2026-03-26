@@ -1351,7 +1351,8 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
       {/* Folder bar — sticky immediately below terminal top bar */}
       {hasFolders && onSelectFilter && onCreateFolder && (
         <div
-          className="sticky z-30 bg-card/90 backdrop-blur-md -mx-4 px-4 py-1 border-b border-border/40"
+          id="library-folder-bar"
+          className="sticky z-30 bg-card/90 backdrop-blur-md -mx-4 px-4 pt-1.5 pb-1 border-b border-border/40"
           style={{ top: 'calc(env(safe-area-inset-top, 0px) + 28px)' }}
         >
           <FolderBar
@@ -1372,11 +1373,12 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
         </div>
       )}
 
-      {/* Search + type filter — sticky below folder bar */}
+      {/* Search + type filter — sticky below folder bar.
+          Folder bar = terminal(28px) + pt-1.5(6px) + button(~36px) + pb-1(4px) + border(1px) = ~47px */}
       {onSearchChange && onTypeFilterChange && (
         <div
           className="sticky z-20 bg-card/95 backdrop-blur-md -mx-4 px-4 py-2 border-b border-border/40"
-          style={{ top: `calc(env(safe-area-inset-top, 0px) + 28px + ${hasFolders ? "40px" : "0px"})` }}
+          style={{ top: `calc(env(safe-area-inset-top, 0px) + 28px + ${hasFolders ? "47px" : "0px"})` }}
         >
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
