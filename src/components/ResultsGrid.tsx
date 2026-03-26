@@ -1844,7 +1844,9 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
                 controls={!selectMode}
                 muted
                 playsInline
-                preload="auto"
+                // @ts-ignore
+                webkit-playsinline="true"
+                preload="metadata"
               />
             )}
 
