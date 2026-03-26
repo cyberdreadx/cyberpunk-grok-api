@@ -1886,7 +1886,9 @@ const Index = () => {
               initialImageUrl={activeImageUrl}
               hideExtraImages={mode === "edit-image" && editEngine === "gltch"}
               creditCost={previewCreditCost}
+              totalCredits={effectiveApiMode === "credits" ? creditsHook.totalCredits : undefined}
               hasSubscription={creditsHook.hasSubscription}
+              onOpenStore={effectiveApiMode === "credits" ? () => setStoreOpen(true) : undefined}
             />
 
             {/* Target folder selector */}

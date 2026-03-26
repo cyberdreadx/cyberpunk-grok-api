@@ -36,10 +36,13 @@ interface PromptFormProps {
   initialImageUrl?: string;
   hideExtraImages?: boolean;
   creditCost?: number;
+  totalCredits?: number;
   hasSubscription?: boolean;
+  onOpenStore?: () => void;
 }
 
-const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, settings, initialPrompt, initialImageUrl, hideExtraImages, creditCost, hasSubscription }) => {
+const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, settings, initialPrompt, initialImageUrl, hideExtraImages, creditCost, totalCredits, hasSubscription, onOpenStore }) => {
+  const isLowCredits = creditCost != null && totalCredits != null && totalCredits < creditCost;
   const [prompt, setPrompt] = useState(initialPrompt || "");
   const [imageUrl, setImageUrl] = useState(initialImageUrl || "");
   const [imageSource, setImageSource] = useState<"url" | "upload">(initialImageUrl ? "url" : "upload");
@@ -623,7 +626,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
                 )}
                 <span className="hidden sm:inline">ENHANCE</span>
               </Button>
-              <div className="flex flex-col items-end gap-0.5">
+              <div className="flex flex-col items-end gap-1">
                 <TooltipProvider delayDuration={300}>
                   <Button
                     type="submit"
@@ -651,7 +654,22 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
                     )}
                   </Button>
                 </TooltipProvider>
-                {!isLoading && (
+                {/* Low-credits warning */}
+                {!isLoading && isLowCredits && (
+                  <div className="flex items-center gap-1.5 text-[9px] font-mono-share text-destructive/80 bg-destructive/10 border border-destructive/25 rounded px-2 py-1 w-full justify-between">
+                    <span>⚠ Need {creditCost! - totalCredits!} more cr</span>
+                    {onOpenStore && (
+                      <button
+                        type="button"
+                        onClick={onOpenStore}
+                        className="underline underline-offset-2 text-primary/80 hover:text-primary font-bold whitespace-nowrap"
+                      >
+                        Top up →
+                      </button>
+                    )}
+                  </div>
+                )}
+                {!isLoading && !isLowCredits && (
                   <span className="font-mono-share text-[8px] text-muted-foreground/35 pr-1">
                     {hasSubscription ? "⚡ Priority queue" : "Subscribe for faster renders"}
                   </span>
@@ -666,6 +684,21 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
     {/* Sticky mobile CTA — portaled above bottom nav, visible only when prompt has text */}
     {typeof document !== "undefined" && prompt.trim() && createPortal(
       <div className="fixed left-0 right-0 z-40 sm:hidden px-3 pt-2 pb-2 animate-slide-up bg-card/95 backdrop-blur-md border-t border-primary/20" style={{ bottom: 'calc(56px + env(safe-area-inset-bottom, 0px))' }}>
+        {/* Low-credits warning strip */}
+        {!isLoading && isLowCredits && (
+          <div className="flex items-center justify-between font-mono-share text-[10px] text-destructive/90 bg-destructive/10 border border-destructive/25 rounded px-2.5 py-1.5 mb-1.5">
+            <span>⚠ Need {creditCost! - totalCredits!} more cr to generate</span>
+            {onOpenStore && (
+              <button
+                type="button"
+                onClick={onOpenStore}
+                className="underline underline-offset-2 text-primary/90 hover:text-primary font-bold ml-2 whitespace-nowrap"
+              >
+                Top up →
+              </button>
+            )}
+          </div>
+        )}
         <button
           type="button"
           onClick={() => formRef.current?.requestSubmit()}
@@ -680,7 +713,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
           )}
           <span>{isLoading ? "GENERATING…" : "GENERATE"}</span>
           {!isLoading && creditCost != null && (
-            <span className="inline-flex items-center gap-1 rounded bg-primary-foreground/20 border border-primary-foreground/40 px-2 py-1 font-mono-share text-xs font-bold leading-none tabular-nums tracking-normal">
+            <span className={`inline-flex items-center gap-1 rounded px-2 py-1 font-mono-share text-xs font-bold leading-none tabular-nums tracking-normal border ${isLowCredits ? "bg-destructive/30 border-destructive/50 text-destructive-foreground" : "bg-primary-foreground/20 border-primary-foreground/40"}`}>
               {creditCost} cr
               <Info className="w-3 h-3 opacity-60" />
             </span>
