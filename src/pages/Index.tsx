@@ -1531,13 +1531,29 @@ const Index = () => {
                   </button>
                 </div>
 
-                {/* GROK warning */}
+                {/* GROK render settings */}
                 {renderEngine === "grok" && (
-                  <div className="flex items-start gap-2 px-3 py-2 bg-amber-500/5 border border-amber-500/30 rounded">
-                    <span className="text-amber-400 text-[11px] mt-px shrink-0">⚠</span>
-                    <p className="font-mono-share text-[9px] text-amber-400/80 leading-relaxed">
-                      GROK engine has ~95% chance of being blocked by xAI moderation — credits may be wasted. Use <span className="text-secondary font-bold">GLTCH</span> engines for reliable results.
-                    </p>
+                  <div className="space-y-2">
+                    <div className="flex items-start gap-2 px-3 py-2 bg-amber-500/5 border border-amber-500/30 rounded">
+                      <span className="text-amber-400 text-[11px] mt-px shrink-0">⚠</span>
+                      <p className="font-mono-share text-[9px] text-amber-400/80 leading-relaxed">
+                        GROK engine has ~95% chance of being blocked by xAI moderation — credits may be wasted. Use <span className="text-secondary font-bold">GLTCH</span> engines for reliable results.
+                      </p>
+                    </div>
+                    <div>
+                      <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">
+                        Duration — {videoSettings.duration}s × 3 cr/s = <span className="text-primary/80 font-bold">{videoSettings.duration * 3} cr</span>
+                      </label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {[2, 3, 5, 7, 10, 15].map((s) => (
+                          <button key={s} type="button"
+                            onClick={() => handleVideoSettingsChange({ ...videoSettings, duration: s })}
+                            className={`px-2 py-1 rounded text-[9px] font-mono-share transition-all ${videoSettings.duration === s ? "bg-primary/20 border-primary/50 text-primary border" : "bg-card/30 border border-border text-muted-foreground hover:border-primary/30"}`}>
+                            ~{s}s
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 )}
 
