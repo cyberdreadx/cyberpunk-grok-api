@@ -9,21 +9,43 @@ import type { GrokMode, GenerationSettings } from "@/hooks/useGrokApi";
 import { apiFetch } from "@/lib/api";
 import { toast } from "sonner";
 
-/** Returns a short human-readable label explaining what the credit cost covers. */
-function creditCostLabel(mode: GrokMode, cost: number): string {
+interface CostBreakdown {
+  lines: string[];   // e.g. ["2 cr/image", "× 3 images", "= 6 cr total"]
+  note?: string;     // optional small footnote
+}
+
+function creditCostBreakdown(mode: GrokMode, cost: number, imageCount: number, videoDuration: number): CostBreakdown {
   switch (mode) {
     case "text-to-image":
-      return `${cost} cr — Grok / Z-Image text-to-image generation`;
+      return imageCount > 1
+        ? { lines: [`${Math.round(cost / imageCount)} cr / image`, `× ${imageCount} images`, `= ${cost} cr total`], note: "Grok · Z-Image · GLTCH" }
+        : { lines: [`${cost} cr / image`], note: "Grok · Z-Image · GLTCH" };
     case "edit-image":
-      return `${cost} cr — Grok / GLTCH image editing`;
+      return imageCount > 1
+        ? { lines: [`${Math.round(cost / imageCount)} cr / image`, `× ${imageCount} images`, `= ${cost} cr total`], note: "Grok · GLTCH image editing" }
+        : { lines: [`${cost} cr / image`], note: "Grok · GLTCH image editing" };
     case "text-to-video":
-      return `${cost} cr — video generation (3 cr/s for Grok · 15 cr flat for GLTCH PRO)`;
     case "image-to-video":
-      return `${cost} cr — image-to-video animation (3 cr/s for Grok · 15 cr flat for GLTCH PRO)`;
-    case "edit-video":
-      return `${cost} cr — video editing`;
+    case "edit-video": {
+      const isFlat = cost === 15;
+      return isFlat
+        ? { lines: [`${cost} cr flat rate`], note: "GLTCH PRO / ComfyUI WAN 2.2" }
+        : { lines: [`3 cr / second`, `× ${videoDuration}s`, `= ${cost} cr total`], note: "Grok video engine" };
+    }
     default:
-      return `${cost} cr`;
+      return { lines: [`${cost} cr`] };
+  }
+}
+
+/** Tooltip-safe one-liner fallback (used for mobile title attr) */
+function creditCostLabel(mode: GrokMode, cost: number): string {
+  switch (mode) {
+    case "text-to-image": return `${cost} cr — text-to-image generation`;
+    case "edit-image":    return `${cost} cr — image editing`;
+    case "text-to-video":
+    case "image-to-video":
+    case "edit-video":    return cost === 15 ? `${cost} cr flat — GLTCH/ComfyUI` : `3 cr/s × ${cost/3}s = ${cost} cr`;
+    default:              return `${cost} cr`;
   }
 }
 
