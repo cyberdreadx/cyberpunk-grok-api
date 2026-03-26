@@ -615,7 +615,12 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
                   ) : (
                     <Send className="w-4 h-4" />
                   )}
-                  {isLoading ? "GENERATING…" : creditCost ? `GENERATE · ${creditCost} cr` : "GENERATE"}
+                  {isLoading ? "GENERATING…" : "GENERATE"}
+                  {!isLoading && creditCost != null && (
+                    <span className="inline-flex items-center rounded-sm bg-primary-foreground/20 border border-primary-foreground/30 px-1.5 py-0.5 font-mono-share text-[10px] font-bold leading-none tabular-nums">
+                      {creditCost} cr
+                    </span>
+                  )}
                 </Button>
                 {!isLoading && (
                   <span className="font-mono-share text-[8px] text-muted-foreground/35 pr-1">
