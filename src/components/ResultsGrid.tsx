@@ -1348,11 +1348,11 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* Folder bar — sticky below search bar */}
+      {/* Folder bar — sticky immediately below terminal top bar */}
       {hasFolders && onSelectFilter && onCreateFolder && (
         <div
           className="sticky z-30 bg-card/90 backdrop-blur-md -mx-4 px-4 py-1 border-b border-border/40"
-          style={{ top: 'calc(env(safe-area-inset-top, 0px) + 28px + 44px)' }}
+          style={{ top: 'calc(env(safe-area-inset-top, 0px) + 28px)' }}
         >
           <FolderBar
             folders={folders}
@@ -1369,6 +1369,50 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
             onRemovePin={handleRemovePin}
             onLockFolder={handleLockFolder}
           />
+        </div>
+      )}
+
+      {/* Search + type filter — sticky below folder bar */}
+      {onSearchChange && onTypeFilterChange && (
+        <div
+          className="sticky z-20 bg-card/95 backdrop-blur-md -mx-4 px-4 py-2 border-b border-border/40"
+          style={{ top: `calc(env(safe-area-inset-top, 0px) + 28px + ${hasFolders ? "40px" : "0px"})` }}
+        >
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/40" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => onSearchChange(e.target.value)}
+                placeholder="search prompts..."
+                className="w-full pl-8 pr-8 py-1.5 bg-card/60 border border-border/50 rounded text-sm font-mono-share text-foreground/80 placeholder:text-muted-foreground/30 outline-none focus:border-primary/50 transition-colors"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => onSearchChange("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-primary transition-colors"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+            <div className="flex items-center border border-border/50 rounded overflow-hidden">
+              {(["all", "image", "video"] as const).map(t => (
+                <button
+                  key={t}
+                  onClick={() => onTypeFilterChange(t)}
+                  className={`px-2.5 py-1.5 text-[10px] font-mono-share tracking-wider transition-colors ${
+                    typeFilter === t
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted/20"
+                  }`}
+                >
+                  {t.toUpperCase()}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 
