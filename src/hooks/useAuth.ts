@@ -17,6 +17,7 @@ import { getBrowserFingerprint } from "@/lib/fingerprint";
 export interface AuthUser {
   id: string;
   email: string;
+  email_verified?: boolean;
 }
 
 export function useAuth() {
@@ -31,10 +32,11 @@ export function useAuth() {
       setLoading(false);
       return;
     }
-    apiFetch<AuthUser>("/auth/me")
-      .then((data) => setUser({ id: data.id, email: data.email }))
+    apiFetch<AuthUser & { email_verified?: boolean }>("/auth/me")
+      .then((data) => {
+        setUser({ id: data.id, email: data.email, email_verified: data.email_verified });
+      })
       .catch(() => {
-        // Token expired or invalid — clear it
         clearAuthToken();
       })
       .finally(() => setLoading(false));
@@ -43,38 +45,40 @@ export function useAuth() {
   const signUp = useCallback(async (email: string, password: string, referralCode?: string) => {
     const body: Record<string, string> = { email, password };
     if (referralCode) body.referral_code = referralCode;
-    // Attach a lightweight browser fingerprint to throttle multi-account creation
     try { body.device_fingerprint = getBrowserFingerprint(); } catch { /* non-fatal */ }
-    const data = await apiFetch<{ message: string; needsVerification: boolean; email: string }>("/auth/signup", {
+    const data = await apiFetch<{ token: string; user: AuthUser; email_verified: boolean; needsVerification: boolean }>("/auth/signup", {
       method: "POST",
       body,
       auth: false,
     });
-    // Signup no longer returns a token — user needs to verify email first
-    setPendingVerificationEmail(data.email);
+    // Log the user in immediately (they can browse with 0 credits)
+    if (data.token) {
+      setAuthToken(data.token);
+      setUser({ ...data.user, email_verified: data.email_verified });
+    }
+    // Still show verification prompt so they verify for daily credits
+    if (data.needsVerification) {
+      setPendingVerificationEmail(data.user?.email ?? email);
+    }
     return data;
   }, []);
 
   const signIn = useCallback(async (email: string, password: string) => {
-    try {
-      const data = await apiFetch<{ token: string; user: AuthUser }>("/auth/login", {
-        method: "POST",
-        body: { email, password },
-        auth: false,
-      });
-      setAuthToken(data.token);
-      setUser(data.user);
-      return data;
-    } catch (err: any) {
-      // If the backend says this account needs verification, surface that to the UI
-      if (err.message?.includes("not verified") || err.message?.includes("needsVerification")) {
-        setPendingVerificationEmail(email.toLowerCase().trim());
-      }
-      throw err;
+    const data = await apiFetch<{ token: string; user: AuthUser; email_verified: boolean }>("/auth/login", {
+      method: "POST",
+      body: { email, password },
+      auth: false,
+    });
+    setAuthToken(data.token);
+    setUser({ ...data.user, email_verified: data.email_verified });
+    // If unverified, prompt for verification so they can unlock daily credits
+    if (!data.email_verified) {
+      setPendingVerificationEmail(data.user.email);
     }
+    return data;
   }, []);
 
-  /** Verify email with the 6-digit code. On success, logs the user in. */
+  /** Verify email with the 6-digit code. Refreshes token and grants daily credits. */
   const verifyEmail = useCallback(async (email: string, code: string) => {
     const data = await apiFetch<{ token: string; user: AuthUser }>("/auth/verify", {
       method: "POST",
@@ -82,7 +86,7 @@ export function useAuth() {
       auth: false,
     });
     setAuthToken(data.token);
-    setUser(data.user);
+    setUser({ ...data.user, email_verified: true });
     setPendingVerificationEmail(null);
     return data;
   }, []);
@@ -100,6 +104,13 @@ export function useAuth() {
   const cancelVerification = useCallback(() => {
     setPendingVerificationEmail(null);
   }, []);
+
+  /** Open the verification dialog for an already-logged-in but unverified user. */
+  const requestVerification = useCallback(() => {
+    if (user && !user.email_verified) {
+      setPendingVerificationEmail(user.email);
+    }
+  }, [user]);
 
   /** Request a password reset code. */
   const forgotPassword = useCallback(async (email: string) => {
@@ -151,6 +162,7 @@ export function useAuth() {
     verifyEmail,
     resendCode,
     cancelVerification,
+    requestVerification,
     forgotPassword,
     resetPassword,
     deleteAccount,

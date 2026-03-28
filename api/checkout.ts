@@ -47,6 +47,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const stripe = new Stripe(STRIPE_SECRET_KEY);
     const sql = getDb();
+
+    // Require email verification before purchasing
+    const [userRow] = await sql`SELECT email_verified FROM users WHERE id = ${auth.userId}`;
+    if (!userRow?.email_verified) {
+      return res.status(403).json({ error: "Please verify your email before purchasing credits." });
+    }
+
     const body = req.body || {};
 
     // ── Portal: redirect to Stripe Customer Portal ──

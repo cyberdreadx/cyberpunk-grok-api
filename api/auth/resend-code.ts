@@ -49,9 +49,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: "Email is already verified" });
     }
 
-    // Generate a fresh code and reset attempts
+    // Generate a fresh code and reset attempts (30 min expiry)
     const code = generateVerificationCode();
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
 
     await sql`
       UPDATE users

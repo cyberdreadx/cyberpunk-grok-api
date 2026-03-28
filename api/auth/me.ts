@@ -15,7 +15,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const sql = getDb();
     const rows = await sql`
-      SELECT id, email, sub_credits, pack_credits, subscription_tier, subscription_renews_at
+      SELECT id, email, email_verified, sub_credits, pack_credits, subscription_tier, subscription_renews_at
       FROM users
       WHERE id = ${auth.userId}
     `;
@@ -28,6 +28,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json({
       id: user.id,
       email: user.email,
+      email_verified: !!user.email_verified,
       sub_credits: user.sub_credits,
       pack_credits: user.pack_credits,
       subscription_tier: user.subscription_tier,

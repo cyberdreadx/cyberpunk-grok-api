@@ -3,7 +3,7 @@ import { getDb } from "../_lib/db";
 import { signToken } from "../_lib/auth";
 import { checkRateLimit, getClientIp } from "../_lib/ratelimit";
 
-const MAX_ATTEMPTS = 5;
+const MAX_ATTEMPTS = 10;
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === "OPTIONS") return res.status(200).end();

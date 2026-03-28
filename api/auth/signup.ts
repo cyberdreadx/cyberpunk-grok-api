@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import bcrypt from "bcryptjs";
 import { getDb } from "../_lib/db";
+import { signToken } from "../_lib/auth";
 import { generateVerificationCode, sendVerificationEmail } from "../_lib/email";
 import { checkRateLimit, getClientIp } from "../_lib/ratelimit";
 import { isDisposableEmail } from "../_lib/disposable-domains";
@@ -29,9 +30,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: "Password must be at least 6 characters" });
     }
 
-    // Rate limit: 2 signups per IP per 24 hours
+    // Rate limit: 5 signups per IP per 24 hours
     const ip = getClientIp(req);
-    const { allowed } = await checkRateLimit(ip, "signup", { max: 2, windowSeconds: 86400 });
+    const { allowed } = await checkRateLimit(ip, "signup", { max: 5, windowSeconds: 86400 });
     if (!allowed) {
       return res.status(429).json({ error: "Account creation limit reached for this IP. Try again in 24 hours." });
     }
@@ -59,9 +60,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const normalizedEmail = email.toLowerCase().trim();
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // Generate a 6-digit verification code (expires in 10 minutes)
+    // Generate a 6-digit verification code (expires in 30 minutes)
     const code = generateVerificationCode();
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
 
     // Check if an unverified account with this email already exists
     const existing = await sql`
@@ -79,12 +80,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
+    let userId: string;
+
     if (existing.length > 0) {
       if (existing[0].email_verified) {
         return res.status(409).json({ error: "An account with this email already exists" });
       }
+      userId = existing[0].id;
       // Unverified account exists — update password + resend code, reset attempts
-      // Also set referred_by if not already set
       await sql`
         UPDATE users
         SET password_hash = ${passwordHash},
@@ -93,29 +96,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             verification_attempts = 0,
             referred_by = COALESCE(referred_by, ${referrerId}::uuid),
             updated_at = now()
-        WHERE id = ${existing[0].id}
+        WHERE id = ${userId}
       `;
-      // Create referral row if referrer was found and not already linked
       if (referrerId) {
         await sql`
           INSERT INTO referrals (referrer_id, referee_id)
-          VALUES (${referrerId}::uuid, ${existing[0].id}::uuid)
+          VALUES (${referrerId}::uuid, ${userId}::uuid)
           ON CONFLICT (referee_id) DO NOTHING
         `;
       }
     } else {
-      // Insert new user with verification code + referral link
       try {
         const newRows = await sql`
           INSERT INTO users (email, password_hash, email_verified, verification_code, verification_code_expires_at, verification_attempts, referred_by, device_fingerprint)
           VALUES (${normalizedEmail}, ${passwordHash}, false, ${code}, ${expiresAt}, 0, ${referrerId}::uuid, ${fp})
           RETURNING id
         `;
-        // Create referral row linking referrer → referee
-        if (referrerId && newRows.length > 0) {
+        userId = newRows[0].id;
+        if (referrerId) {
           await sql`
             INSERT INTO referrals (referrer_id, referee_id)
-            VALUES (${referrerId}::uuid, ${newRows[0].id}::uuid)
+            VALUES (${referrerId}::uuid, ${userId}::uuid)
             ON CONFLICT (referee_id) DO NOTHING
           `;
         }
@@ -127,13 +128,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
-    // Send the verification email
-    await sendVerificationEmail(normalizedEmail, code);
+    // Send the verification email (non-blocking — don't let email failure block signup)
+    sendVerificationEmail(normalizedEmail, code).catch((e) => {
+      console.error("[signup] verification email failed:", e.message);
+    });
+
+    // Issue a token so the user can browse immediately (0 credits until verified)
+    const token = signToken({ userId, email: normalizedEmail });
 
     return res.status(201).json({
-      message: "Verification code sent. Check your email.",
+      token,
+      user: { id: userId, email: normalizedEmail },
+      email_verified: false,
       needsVerification: true,
-      email: normalizedEmail,
     });
   } catch (err: any) {
     console.error("[signup]", err.message);

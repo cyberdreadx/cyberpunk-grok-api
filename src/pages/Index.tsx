@@ -851,6 +851,23 @@ const Index = () => {
   return (
     <CyberLayout>
       <div className="max-w-5xl mx-auto px-3 sm:px-4 py-4 sm:py-8 pb-24 sm:pb-8 space-y-4 sm:space-y-6">
+        {/* Verify email banner for unverified users */}
+        {auth.isAuthenticated && auth.user && !auth.user.email_verified && (
+          <div className="flex items-center gap-3 bg-secondary/10 border border-secondary/30 rounded-lg px-4 py-3 animate-slide-up">
+            <AlertCircle className="w-4 h-4 text-secondary shrink-0" />
+            <p className="font-mono-share text-xs text-secondary flex-1">
+              Verify your email to unlock <span className="font-bold">10 free daily credits</span>.
+              Check your inbox for a 6-digit code.
+            </p>
+            <button
+              onClick={() => auth.requestVerification()}
+              className="shrink-0 px-3 py-1.5 bg-secondary/20 border border-secondary/40 rounded text-[10px] font-mono-share text-secondary hover:bg-secondary/30 transition-colors"
+            >
+              VERIFY NOW
+            </button>
+          </div>
+        )}
+
         {/* Header with Orb */}
         <header className="text-center space-y-2 animate-slide-up">
           {/* Grok Orb — hidden on mobile (shown in loading state instead), lazy-loaded */}

@@ -57,7 +57,7 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
     } catch { return undefined; }
   }, []);
 
-  // Force dialog open when verification is needed or when referral code is in URL
+  // Open dialog when verification is needed (signup, login, or "verify now" banner)
   useEffect(() => {
     if (pendingVerificationEmail) {
       setOpen(true);
@@ -81,8 +81,8 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
         setOpen(false);
       } else {
         await onSignUp(email, password, referralCode);
-        // After signup, the hook will set pendingVerificationEmail
-        // which triggers the verification UI
+        // User is now logged in (even if unverified) — close dialog
+        setOpen(false);
       }
       setEmail("");
       setPassword("");

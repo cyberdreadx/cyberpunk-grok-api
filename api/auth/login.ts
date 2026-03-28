@@ -38,20 +38,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(401).json({ error: "Invalid email or password" });
     }
 
-    // Block unverified accounts — tell frontend to show verification step
-    if (!user.email_verified) {
-      return res.status(403).json({
-        error: "Email not verified. Please check your inbox for a verification code.",
-        needsVerification: true,
-        email: user.email,
-      });
-    }
-
     const token = signToken({ userId: user.id, email: user.email });
 
     return res.status(200).json({
       token,
       user: { id: user.id, email: user.email },
+      email_verified: !!user.email_verified,
     });
   } catch (err: any) {
     console.error("[login]", err.message);
