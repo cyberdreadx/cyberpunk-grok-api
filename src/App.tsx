@@ -15,6 +15,7 @@ const Admin = lazyWithRetry(() => import("./pages/Admin"), "admin");
 const Characters = lazyWithRetry(() => import("./pages/Characters"), "characters");
 const Library = lazyWithRetry(() => import("./pages/Library"), "library");
 const ShareView = lazyWithRetry(() => import("./pages/ShareView"), "share-view");
+const ApiDocs = lazyWithRetry(() => import("./pages/ApiDocs"), "api-docs");
 import AgeGateDialog from "@/components/AgeGateDialog";
 
 const queryClient = new QueryClient();
