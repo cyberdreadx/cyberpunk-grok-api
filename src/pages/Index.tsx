@@ -2264,7 +2264,7 @@ const Index = () => {
                   API DOCS
                 </Link>
                 <span className="text-border/50">|</span>
-                <ApiKeysPanel />
+                <ApiKeysPanel triggerClassName="flex items-center gap-1 text-muted-foreground/40 hover:text-primary transition-colors" />
               </>
             )}
             {auth.user?.email === "cyberdreadx@proton.me" && (
