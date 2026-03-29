@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import { Upload, Sparkles, Pencil, Image, Film, X, Loader2, ChevronRight } from "lucide-react";
+import { Upload, Sparkles, Pencil, Image, Film, X, Loader2, ChevronRight, HelpCircle } from "lucide-react";
 import type { GrokMode } from "@/hooks/useGrokApi";
 
 interface SimpleModeProps {
@@ -383,6 +383,21 @@ const SimpleMode: React.FC<SimpleModeProps> = ({
         <p className="text-center font-mono-share text-[10px] text-destructive/70">
           Not enough credits — you need {creditCost} but have {totalCredits}
         </p>
+      )}
+
+      {/* Restart Tour */}
+      {!isTourActive && (
+        <button
+          onClick={() => {
+            localStorage.removeItem(TOUR_STORAGE_KEY);
+            localStorage.removeItem("results-tip-seen");
+            setTourStep(0);
+          }}
+          className="mx-auto flex items-center gap-1 font-mono-share text-[9px] text-muted-foreground/30 hover:text-primary/60 transition-colors"
+        >
+          <HelpCircle className="w-3 h-3" />
+          Restart tour
+        </button>
       )}
     </div>
   );
