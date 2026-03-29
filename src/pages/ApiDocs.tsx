@@ -959,18 +959,30 @@ print(f"Credits used: {data['credits_used']}")`} />
             Purchase credits or subscribe at{" "}
             <a href={baseUrl} className="text-primary underline">{baseUrl}</a>.
           </p>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <div className="border border-primary/20 rounded-lg p-3 text-center">
               <div className="text-2xl font-mono font-bold text-primary">2 cr</div>
-              <div className="text-xs text-muted-foreground font-mono">per standard image</div>
+              <div className="text-xs text-muted-foreground font-mono">Grok image</div>
             </div>
             <div className="border border-primary/20 rounded-lg p-3 text-center">
               <div className="text-2xl font-mono font-bold text-primary">5 cr</div>
-              <div className="text-xs text-muted-foreground font-mono">per pro image</div>
+              <div className="text-xs text-muted-foreground font-mono">Grok pro image</div>
+            </div>
+            <div className="border border-primary/20 rounded-lg p-3 text-center">
+              <div className="text-2xl font-mono font-bold text-primary">3 cr/s</div>
+              <div className="text-xs text-muted-foreground font-mono">Grok video</div>
+            </div>
+            <div className="border border-primary/20 rounded-lg p-3 text-center">
+              <div className="text-2xl font-mono font-bold text-primary">5 cr</div>
+              <div className="text-xs text-muted-foreground font-mono">GLTCH edit</div>
             </div>
             <div className="border border-primary/20 rounded-lg p-3 text-center">
               <div className="text-2xl font-mono font-bold text-primary">3 cr</div>
-              <div className="text-xs text-muted-foreground font-mono">per second of video</div>
+              <div className="text-xs text-muted-foreground font-mono">GLTCH PRO image</div>
+            </div>
+            <div className="border border-primary/20 rounded-lg p-3 text-center">
+              <div className="text-2xl font-mono font-bold text-primary">15 cr</div>
+              <div className="text-xs text-muted-foreground font-mono">GLTCH PRO video</div>
             </div>
           </div>
         </Section>
