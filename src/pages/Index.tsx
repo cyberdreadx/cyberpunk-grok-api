@@ -48,6 +48,7 @@ const SFW_LORA_KEYWORDS = ["skin", "angle"];
 const isNsfwLora = (name: string) => !SFW_LORA_KEYWORDS.some(k => name.toLowerCase().includes(k));
 
 const Index = () => {
+  const [simpleMode, setSimpleMode] = useState(() => localStorage.getItem("ui-mode") !== "advanced");
   const [mode, setMode] = useState<GrokMode>("text-to-image");
   const [dismissedAnnouncements, setDismissedAnnouncements] = useState<string[]>(() => {
     try {
