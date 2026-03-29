@@ -112,7 +112,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (xaiRes.status === 400 && errText.includes("safety")) {
           return res.status(400).json({ error: "Content policy violation" });
         }
-        return res.status(502).json({ error: "Generation failed. Credits refunded." });
+        return res.status(502).json({ error: "Generation failed. Credits refunded.", upstream_status: xaiRes.status, detail: errText.slice(0, 500) });
       }
 
       const result = await xaiRes.json();
