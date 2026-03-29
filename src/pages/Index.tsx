@@ -319,13 +319,14 @@ const Index = () => {
   const [storeOpen, setStoreOpen] = useState(false);
   const [apiKeySet, setApiKeySet] = useState(() => hasApiKey());
 
-  // Auto-switch to credits mode when user logs in without a BYOK key
+  // Auto-switch to credits mode when user logs in without a BYOK key,
+  // or when simple mode is active (simple mode always uses credits)
   const canUseCredits = auth.isAuthenticated && creditsHook.enabled;
   React.useEffect(() => {
-    if (canUseCredits && !apiKeySet && apiMode === "byok") {
+    if (canUseCredits && apiMode === "byok" && (simpleMode || !apiKeySet)) {
       setApiMode("credits");
     }
-  }, [canUseCredits, apiKeySet, apiMode, setApiMode]);
+  }, [canUseCredits, apiKeySet, apiMode, setApiMode, simpleMode]);
   const effectiveApiMode = apiMode;
 
   const handleSaveApiKey = useCallback((key: string) => {
@@ -959,8 +960,8 @@ const Index = () => {
             )}
 
 
-            {/* Credits: balance display */}
-            {effectiveApiMode === "credits" && canUseCredits && (
+            {/* Credits: balance display — always visible in simple mode for authenticated users */}
+            {(effectiveApiMode === "credits" || simpleMode) && canUseCredits && (
               <CreditDisplay
                 totalCredits={creditsHook.totalCredits}
                 dailyCredits={creditsHook.dailyCredits}
