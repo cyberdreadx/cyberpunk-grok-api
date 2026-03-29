@@ -23,6 +23,8 @@ import {
   Eye,
   Trash2,
   Cpu,
+  Mail,
+  AlertTriangle,
 } from "lucide-react";
 import {
   AreaChart,
