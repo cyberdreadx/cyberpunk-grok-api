@@ -22,6 +22,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getUserFromApiKey } from "../_lib/apikey-auth";
 import { checkRateLimit } from "../_lib/ratelimit";
 import { getDb } from "../_lib/db";
+import { deductCredits, refundCredits, logUsage, getUserCredits } from "./_lib/credits";
 
 const XAI_BASE = "https://api.x.ai/v1";
 
@@ -37,43 +38,6 @@ export const config = {
   api: { bodyParser: { sizeLimit: "2mb" } },
   maxDuration: 300,
 };
-
-/** Deduct credits from user, returning the breakdown for potential refund. */
-async function deductCredits(sql: any, userId: string, totalCost: number, user: any) {
-  let remaining = totalCost;
-  const dDaily = Math.min(remaining, user.daily_credits || 0); remaining -= dDaily;
-  const dSub = Math.min(remaining, user.sub_credits || 0); remaining -= dSub;
-  const dPack = remaining;
-
-  await sql`
-    UPDATE users SET
-      daily_credits = daily_credits - ${dDaily},
-      sub_credits = sub_credits - ${dSub},
-      pack_credits = pack_credits - ${dPack}
-    WHERE id = ${userId}
-  `;
-  return { dDaily, dSub, dPack };
-}
-
-async function refundCredits(sql: any, userId: string, d: { dDaily: number; dSub: number; dPack: number }) {
-  await sql`
-    UPDATE users SET
-      daily_credits = daily_credits + ${d.dDaily},
-      sub_credits = sub_credits + ${d.dSub},
-      pack_credits = pack_credits + ${d.dPack}
-    WHERE id = ${userId}
-  `;
-}
-
-async function logUsage(sql: any, auth: any, action: string, totalCost: number, ip: string) {
-  await sql`
-    INSERT INTO api_usage_log (api_key_id, user_id, action, credits_used, ip_address)
-    VALUES (${auth.apiKeyId}, ${auth.userId}, ${action}, ${totalCost}, ${ip})
-  `;
-  await sql`
-    UPDATE api_keys SET total_credits = total_credits + ${totalCost} WHERE id = ${auth.apiKeyId}
-  `;
-}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -107,12 +71,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const sql = getDb();
     const XAI_API_KEY = process.env.XAI_API_KEY;
 
-    // Fetch user credits
     const [user] = await sql`
       SELECT daily_credits, sub_credits, pack_credits FROM users WHERE id = ${auth.userId}
     `;
     if (!user) return res.status(404).json({ error: "User not found" });
-    const available = (user.daily_credits || 0) + (user.sub_credits || 0) + (user.pack_credits || 0);
+    const available = getUserCredits(user);
     const ip = (req.headers["x-forwarded-for"] as string) || "unknown";
 
     // ═══════════════════════════════════════════════════════════════════
@@ -196,9 +159,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       let videoData: any = await xaiRes.json();
       const requestId = videoData.request_id || videoData.id;
 
-      // Poll for completion (videos are async)
+      // Poll for completion (videos are async).
+      // Cap at ~280s so refund can run before Vercel's 300s maxDuration kills us.
+      const deadline = Date.now() + 280_000;
       if (requestId) {
-        for (let i = 0; i < 120; i++) {
+        while (Date.now() < deadline) {
           await new Promise((r) => setTimeout(r, 3000));
           let pollRes: Response;
           try {

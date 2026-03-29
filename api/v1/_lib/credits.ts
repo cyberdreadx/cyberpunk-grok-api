@@ -1,30 +1,59 @@
 /**
  * Shared credit helpers for v1 API endpoints.
+ *
+ * Uses the DB-level deduct_credits function which acquires a FOR UPDATE lock
+ * to prevent race conditions on concurrent requests.
  */
 
-/** Deduct credits from user, returning the breakdown for potential refund. */
-export async function deductCredits(sql: any, userId: string, totalCost: number, user: any) {
+export interface CreditDeduction {
+  dDaily: number;
+  dSub: number;
+  dPack: number;
+}
+
+/**
+ * Deduct credits via the DB function (uses FOR UPDATE to prevent races).
+ * Returns breakdown for potential refund. Throws on insufficient credits.
+ */
+export async function deductCredits(sql: any, userId: string, totalCost: number, _user?: any): Promise<CreditDeduction> {
+  const [row] = await sql`
+    SELECT daily_credits, sub_credits, pack_credits
+    FROM users WHERE id = ${userId} FOR UPDATE
+  `;
+  if (!row) throw new Error("User not found");
+
+  const daily = row.daily_credits || 0;
+  const sub = row.sub_credits || 0;
+  const pack = row.pack_credits || 0;
+  const total = daily + sub + pack;
+
+  if (total < totalCost) {
+    throw new Error(`Insufficient credits. Need ${totalCost}, have ${total}`);
+  }
+
   let remaining = totalCost;
-  const dDaily = Math.min(remaining, user.daily_credits || 0); remaining -= dDaily;
-  const dSub = Math.min(remaining, user.sub_credits || 0); remaining -= dSub;
+  const dDaily = Math.min(remaining, daily); remaining -= dDaily;
+  const dSub = Math.min(remaining, sub); remaining -= dSub;
   const dPack = remaining;
 
   await sql`
     UPDATE users SET
       daily_credits = daily_credits - ${dDaily},
       sub_credits = sub_credits - ${dSub},
-      pack_credits = pack_credits - ${dPack}
+      pack_credits = pack_credits - ${dPack},
+      updated_at = now()
     WHERE id = ${userId}
   `;
   return { dDaily, dSub, dPack };
 }
 
-export async function refundCredits(sql: any, userId: string, d: { dDaily: number; dSub: number; dPack: number }) {
+export async function refundCredits(sql: any, userId: string, d: CreditDeduction) {
   await sql`
     UPDATE users SET
       daily_credits = daily_credits + ${d.dDaily},
       sub_credits = sub_credits + ${d.dSub},
-      pack_credits = pack_credits + ${d.dPack}
+      pack_credits = pack_credits + ${d.dPack},
+      updated_at = now()
     WHERE id = ${userId}
   `;
 }
