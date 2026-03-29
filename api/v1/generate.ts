@@ -219,6 +219,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: `Unknown type "${type}". Use "image" or "video".` });
   } catch (err: any) {
     console.error("[v1/generate]", err.message, err.stack);
-    return res.status(500).json({ error: "Internal error" });
+    const msg = err.message || "Internal error";
+    if (msg.includes("Insufficient credits")) {
+      return res.status(402).json({ error: msg });
+    }
+    return res.status(500).json({ error: msg });
   }
 }

@@ -251,7 +251,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     await refundCredits(sql, auth.userId, d);
     return res.status(504).json({ error: "Generation timed out. Credits refunded." });
   } catch (err: any) {
-    console.error("[v1/comfy]", err.message);
-    return res.status(500).json({ error: "Internal error" });
+    console.error("[v1/comfy]", err.message, err.stack);
+    const msg = err.message || "Internal error";
+    if (msg.includes("Insufficient credits")) {
+      return res.status(402).json({ error: msg });
+    }
+    return res.status(500).json({ error: msg });
   }
 }

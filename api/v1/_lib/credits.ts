@@ -1,8 +1,7 @@
 /**
  * Shared credit helpers for v1 API endpoints.
  *
- * Uses the DB-level deduct_credits function which acquires a FOR UPDATE lock
- * to prevent race conditions on concurrent requests.
+ * Uses GREATEST(..., 0) on UPDATE to prevent negative credits from race conditions.
  */
 
 export interface CreditDeduction {
@@ -12,13 +11,13 @@ export interface CreditDeduction {
 }
 
 /**
- * Deduct credits via the DB function (uses FOR UPDATE to prevent races).
+ * Deduct credits from user's balance (daily -> sub -> pack).
  * Returns breakdown for potential refund. Throws on insufficient credits.
  */
 export async function deductCredits(sql: any, userId: string, totalCost: number, _user?: any): Promise<CreditDeduction> {
   const [row] = await sql`
     SELECT daily_credits, sub_credits, pack_credits
-    FROM users WHERE id = ${userId} FOR UPDATE
+    FROM users WHERE id = ${userId}
   `;
   if (!row) throw new Error("User not found");
 
@@ -38,9 +37,9 @@ export async function deductCredits(sql: any, userId: string, totalCost: number,
 
   await sql`
     UPDATE users SET
-      daily_credits = daily_credits - ${dDaily},
-      sub_credits = sub_credits - ${dSub},
-      pack_credits = pack_credits - ${dPack},
+      daily_credits = GREATEST(daily_credits - ${dDaily}, 0),
+      sub_credits = GREATEST(sub_credits - ${dSub}, 0),
+      pack_credits = GREATEST(pack_credits - ${dPack}, 0),
       updated_at = now()
     WHERE id = ${userId}
   `;
