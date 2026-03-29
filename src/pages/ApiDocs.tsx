@@ -805,6 +805,43 @@ console.log(data.data[0].url);
 console.log(\`Credits used: \${data.credits_used}\`);
 console.log(\`Credits remaining: \${data.credits_remaining}\`);`} />
             </div>
+
+            <div>
+              <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">cURL — GLTCH Edit</h4>
+              <CopyBlock code={`curl -X POST ${baseUrl}/api/v1/gltch \\
+  -H "Content-Type: application/json" \\
+  -H "X-API-Key: gltch_sk_your_key_here" \\
+  -d '{
+    "prompt": "make it look like a watercolor painting",
+    "image_url": "https://example.com/photo.jpg",
+    "aspect_ratio": "16:9"
+  }'`} />
+            </div>
+
+            <div>
+              <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">Python — GLTCH PRO (txt2img)</h4>
+              <CopyBlock language="python" code={`import requests
+
+response = requests.post(
+    "${baseUrl}/api/v1/comfy",
+    headers={
+        "Content-Type": "application/json",
+        "X-API-Key": "gltch_sk_your_key_here",
+    },
+    json={
+        "prompt": "ethereal forest scene, volumetric lighting",
+        "workflow": "txt2img",
+        "width": 832,
+        "height": 1216,
+        "steps": 25,
+    },
+    timeout=120,
+)
+
+data = response.json()
+print(data["image_url"])
+print(f"Credits used: {data['credits_used']}")`} />
+            </div>
           </div>
         </Section>
 
