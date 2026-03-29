@@ -35,6 +35,7 @@
   },
   "rewrites": [
     { "source": "/s/:id", "destination": "/api/share-page?id=:id" },
+    { "source": "/api/:path*", "destination": "/api/:path*" },
     { "source": "/library", "destination": "/index.html" },
     { "source": "/characters", "destination": "/index.html" },
     { "source": "/docs", "destination": "/index.html" }
