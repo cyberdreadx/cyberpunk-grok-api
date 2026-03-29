@@ -102,6 +102,17 @@ const SimpleMode: React.FC<SimpleModeProps> = ({
   });
   const isTourActive = tourStep >= 0 && tourStep < WALKTHROUGH_STEPS.length;
 
+  // Ensure tour starts on edit-image so the upload step makes sense
+  const tourInitRef = useRef(false);
+  useEffect(() => {
+    if (tourStep === 0 && !tourInitRef.current) {
+      tourInitRef.current = true;
+      if (currentMode !== "edit-image") {
+        onModeChange("edit-image" as GrokMode);
+      }
+    }
+  }, [tourStep, currentMode, onModeChange]);
+
   const advanceTour = useCallback(() => {
     setTourStep(prev => {
       const next = prev + 1;
