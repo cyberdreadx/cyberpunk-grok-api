@@ -446,6 +446,11 @@ console.log(\`Credits remaining: \${data.credits_remaining}\`);`} />
           </div>
         </Section>
 
+        {/* API Playground */}
+        <Section title="🧪 API PLAYGROUND">
+          <ApiPlayground baseUrl={baseUrl} />
+        </Section>
+
         {/* Footer */}
         <div className="border-t border-primary/10 pt-6 text-center">
           <p className="text-xs text-muted-foreground font-mono">
