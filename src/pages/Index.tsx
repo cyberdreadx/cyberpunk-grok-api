@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect, Suspense } from "react";
-import { Terminal, Key, Coins, Shield, Eye, MessageCircle, HelpCircle, Server, Zap, Cpu, ChevronDown, Film, X, AlertCircle, CheckCircle2, Upload, Users, Image } from "lucide-react";
+import { Terminal, Key, Coins, Shield, Eye, MessageCircle, HelpCircle, Server, Zap, Cpu, ChevronDown, Film, X, AlertCircle, CheckCircle2, Upload, Users, Image, Code } from "lucide-react";
 import { Link } from "react-router-dom";
 import CyberLayout from "@/components/CyberLayout";
 import MobileBottomNav from "@/components/MobileBottomNav";
@@ -935,8 +935,6 @@ const Index = () => {
               />
             )}
 
-            {/* Developer API keys */}
-            {effectiveApiMode === "credits" && canUseCredits && <ApiKeysPanel />}
 
             {/* Credits: balance display */}
             {effectiveApiMode === "credits" && canUseCredits && (
@@ -2253,6 +2251,20 @@ const Index = () => {
                   <Users className="w-3 h-3" />
                   CHARACTERS
                 </Link>
+              </>
+            )}
+            {effectiveApiMode === "credits" && canUseCredits && (
+              <>
+                <span className="text-border/50">|</span>
+                <Link
+                  to="/docs"
+                  className="flex items-center gap-1 text-muted-foreground/40 hover:text-cyan-400 transition-colors"
+                >
+                  <Code className="w-3 h-3" />
+                  API DOCS
+                </Link>
+                <span className="text-border/50">|</span>
+                <ApiKeysPanel triggerClassName="flex items-center gap-1 text-muted-foreground/40 hover:text-primary transition-colors" />
               </>
             )}
             {auth.user?.email === "cyberdreadx@proton.me" && (

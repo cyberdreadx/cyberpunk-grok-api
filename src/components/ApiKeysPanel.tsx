@@ -24,7 +24,7 @@ interface ApiKeyRow {
   created_at: string;
 }
 
-export default function ApiKeysPanel() {
+export default function ApiKeysPanel({ triggerClassName }: { triggerClassName?: string }) {
   const [keys, setKeys] = useState<ApiKeyRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [newKeyName, setNewKeyName] = useState("");
@@ -84,9 +84,9 @@ export default function ApiKeysPanel() {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2 border-primary/30 text-primary font-mono text-xs">
+        <button className={triggerClassName || "inline-flex items-center gap-2 border border-primary/30 text-primary font-mono text-xs px-3 py-1.5 rounded-md hover:bg-primary/10 transition-colors"}>
           <Key className="w-3 h-3" /> API KEYS
-        </Button>
+        </button>
       </DialogTrigger>
       <DialogContent className="max-w-lg bg-background border-primary/30">
         <DialogHeader>
