@@ -15,6 +15,7 @@ const Admin = lazyWithRetry(() => import("./pages/Admin"), "admin");
 const Characters = lazyWithRetry(() => import("./pages/Characters"), "characters");
 const Library = lazyWithRetry(() => import("./pages/Library"), "library");
 const ShareView = lazyWithRetry(() => import("./pages/ShareView"), "share-view");
+const ApiDocs = lazyWithRetry(() => import("./pages/ApiDocs"), "api-docs");
 import AgeGateDialog from "@/components/AgeGateDialog";
 
 const queryClient = new QueryClient();
@@ -45,6 +46,7 @@ const App = () => (
           <Route path="/characters" element={<PageShell><Characters /></PageShell>} />
           <Route path="/library" element={<PageShell><Library /></PageShell>} />
           <Route path="/s/:shareId" element={<PageShell><ShareView /></PageShell>} />
+          <Route path="/docs" element={<PageShell><ApiDocs /></PageShell>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
