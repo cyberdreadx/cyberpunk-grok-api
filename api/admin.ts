@@ -523,8 +523,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
 
+      // -- Email delivery logs --
+      case "email-logs": {
+        const { limit = 50, email_type, status: logStatus } = req.body;
+        const rows = await sql`
+          SELECT id, recipient, email_type, resend_id, status, error_message, created_at
+          FROM email_log
+          WHERE (${email_type ?? null}::text IS NULL OR email_type = ${email_type ?? null})
+            AND (${logStatus ?? null}::text IS NULL OR status = ${logStatus ?? null})
+          ORDER BY created_at DESC
+          LIMIT ${Math.min(Number(limit) || 50, 200)}
+        `;
+
+        const [stats] = await sql`
+          SELECT
+            COUNT(*)::int AS total,
+            COUNT(*) FILTER (WHERE status = 'sent')::int AS sent,
+            COUNT(*) FILTER (WHERE status = 'failed')::int AS failed,
+            COUNT(*) FILTER (WHERE created_at > now() - interval '24 hours')::int AS last_24h,
+            COUNT(*) FILTER (WHERE status = 'failed' AND created_at > now() - interval '24 hours')::int AS failed_24h
+          FROM email_log
+        `;
+
+        return res.status(200).json({ logs: rows, stats });
+      }
+
       default:
-        return res.status(400).json({ error: "Unknown action. Expected: overview, revenue, revenue-breakdown, users, usage, transactions, top-users, referrals, sync-subscriptions, grant-credits" });
+        return res.status(400).json({ error: "Unknown action. Expected: overview, revenue, revenue-breakdown, users, usage, transactions, top-users, referrals, sync-subscriptions, grant-credits, email-logs" });
     }
   } catch (err: any) {
     console.error("[admin]", err.message);
