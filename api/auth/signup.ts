@@ -149,6 +149,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   } catch (err: any) {
     console.error("[signup]", err.message, err.stack);
-    return res.status(500).json({ error: "Failed to create account", detail: err.message });
+    return res.status(500).json({ error: "Failed to create account" });
   }
 }
