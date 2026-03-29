@@ -100,7 +100,7 @@ function ApiPlayground({ baseUrl }: { baseUrl: string }) {
       const contentType = res.headers.get("content-type") || "";
       if (!contentType.includes("application/json")) {
         const text = await res.text();
-        setError(`API returned non-JSON (${res.status}). Make sure you're on the deployed site (grokrunner.gltch.app), not a preview. Raw: ${text.slice(0, 200)}`);
+        setError(`API returned non-JSON (${res.status}). Raw: ${text.slice(0, 200)}`);
         setLoading(false);
         return;
       }
@@ -118,7 +118,7 @@ function ApiPlayground({ baseUrl }: { baseUrl: string }) {
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Network error";
       if (msg.includes("Failed to fetch")) {
-        setError("Failed to fetch — the API playground only works on the deployed site (grokrunner.gltch.app). Preview environments cannot reach the backend.");
+        setError("Failed to fetch — check your network connection and try again.");
       } else {
         setError(msg);
       }
@@ -344,8 +344,7 @@ function ApiPlayground({ baseUrl }: { baseUrl: string }) {
 }
 
 export default function ApiDocs() {
-  const apiUrl = import.meta.env.VITE_API_URL as string | undefined;
-  const baseUrl = apiUrl ? apiUrl.replace(/\/api\/?$/, "") : (typeof window !== "undefined" ? window.location.origin : "https://grokrunner.gltch.app");
+  const baseUrl = "https://cyberpunk-grok-api.vercel.app";
 
   return (
     <CyberLayout>
