@@ -25,6 +25,7 @@ import {
   Cpu,
   Mail,
   AlertTriangle,
+  Key,
 } from "lucide-react";
 import {
   AreaChart,
