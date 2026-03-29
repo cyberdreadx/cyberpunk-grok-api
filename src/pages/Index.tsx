@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect, Suspense } from "react";
-import { Terminal, Key, Coins, Shield, Eye, MessageCircle, HelpCircle, Server, Zap, Cpu, ChevronDown, Film, X, AlertCircle, CheckCircle2, Upload, Users, Image, Code } from "lucide-react";
+import { Terminal, Key, Coins, Shield, Eye, MessageCircle, HelpCircle, Server, Zap, Cpu, ChevronDown, Film, X, AlertCircle, CheckCircle2, Upload, Users, Image, Code, ToggleLeft, ToggleRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import CyberLayout from "@/components/CyberLayout";
 import MobileBottomNav from "@/components/MobileBottomNav";
@@ -9,6 +9,7 @@ import { lazyWithRetry } from "@/lib/lazyWithRetry";
 const GrokOrb = lazyWithRetry(() => import("@/components/GrokOrb"), "grok-orb");
 import GlitchText from "@/components/GlitchText";
 import ModeSelector from "@/components/ModeSelector";
+import SimpleMode from "@/components/SimpleMode";
 import PromptForm from "@/components/PromptForm";
 import SettingsPanel from "@/components/SettingsPanel";
 import {
@@ -47,6 +48,7 @@ const SFW_LORA_KEYWORDS = ["skin", "angle"];
 const isNsfwLora = (name: string) => !SFW_LORA_KEYWORDS.some(k => name.toLowerCase().includes(k));
 
 const Index = () => {
+  const [simpleMode, setSimpleMode] = useState(() => localStorage.getItem("ui-mode") !== "advanced");
   const [mode, setMode] = useState<GrokMode>("text-to-image");
   const [dismissedAnnouncements, setDismissedAnnouncements] = useState<string[]>(() => {
     try {
@@ -978,6 +980,27 @@ const Index = () => {
             {/* Theme Picker */}
             <ThemePicker />
 
+            {/* Simple / Advanced toggle */}
+            <button
+              onClick={() => {
+                const next = !simpleMode;
+                setSimpleMode(next);
+                localStorage.setItem("ui-mode", next ? "simple" : "advanced");
+                if (next && !["edit-image", "text-to-image", "image-to-video"].includes(mode)) {
+                  setMode("edit-image");
+                }
+              }}
+              className={`flex items-center gap-1 px-2 py-1 text-[9px] sm:text-[10px] font-mono-share transition-colors rounded border ${
+                simpleMode
+                  ? "border-primary/30 bg-primary/10 text-primary"
+                  : "border-border/50 bg-card/40 text-muted-foreground/60 hover:text-muted-foreground"
+              }`}
+              title={simpleMode ? "Switch to Advanced mode" : "Switch to Simple mode"}
+            >
+              {simpleMode ? <ToggleLeft className="w-3 h-3" /> : <ToggleRight className="w-3 h-3" />}
+              {simpleMode ? "SIMPLE" : "ADVANCED"}
+            </button>
+
             {/* Auth: login/logout */}
             {auth.enabled && (
               <AuthDialog
@@ -1041,6 +1064,35 @@ const Index = () => {
           </div>
         )}
 
+        {simpleMode ? (
+          /* ── SIMPLE MODE ─────────────────────────────────────── */
+          <section className="animate-slide-up border border-border rounded bg-card/40 backdrop-blur-sm overflow-hidden" style={{ animationDelay: "100ms" }}>
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50 bg-card/60">
+              <div className="flex items-center gap-1.5">
+                <div className="w-2 h-2 rounded-full bg-neon-red/60" />
+                <div className="w-2 h-2 rounded-full bg-neon-yellow/60" />
+                <div className="w-2 h-2 rounded-full bg-primary/60" />
+              </div>
+              <span className="font-orbitron text-sm sm:text-base font-bold text-foreground tracking-wide leading-tight">
+                Quick Create
+              </span>
+              <div className={`w-2 h-2 rounded-full transition-colors duration-500 shrink-0 ml-auto ${isLoading ? "bg-secondary animate-pulse" : "bg-primary animate-pulse-glow"}`} />
+            </div>
+            <div className="p-3 sm:p-5">
+              <SimpleMode
+                onSubmit={handleSubmit}
+                isLoading={isLoading}
+                creditCost={previewCreditCost}
+                totalCredits={effectiveApiMode === "credits" ? creditsHook.totalCredits : undefined}
+                onModeChange={(m) => { setMode(m); setActiveImageUrl(""); }}
+                onImageUrlChange={setActiveImageUrl}
+                currentMode={mode}
+              />
+            </div>
+          </section>
+        ) : (
+          /* ── ADVANCED MODE ───────────────────────────────────── */
+          <>
         {/* Mode selector */}
         <section className="animate-slide-up" style={{ animationDelay: "100ms" }}>
           <div className="flex items-center gap-2 mb-3">
@@ -1945,6 +1997,8 @@ const Index = () => {
             )}
           </div>
         </section>
+          </>
+        )}
 
         {/* Error display */}
         {error && (
