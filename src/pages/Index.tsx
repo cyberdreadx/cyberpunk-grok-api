@@ -921,34 +921,36 @@ const Index = () => {
                 }`}
             />
 
-            {/* API Mode toggle: BYOK vs Credits */}
-            <div className="flex items-center bg-card/60 border border-border/50 rounded overflow-hidden">
-              <button
-                onClick={() => setApiMode("byok")}
-                className={`flex items-center gap-1 px-2 py-1 text-[9px] sm:text-[10px] font-mono-share transition-colors ${effectiveApiMode === "byok"
-                  ? "bg-primary/20 text-primary"
-                  : "text-muted-foreground/50 hover:text-muted-foreground"
-                  }`}
-              >
-                <Key className="w-2.5 h-2.5" />
-                BYOK
-              </button>
-              {canUseCredits && (
+            {/* API Mode toggle: BYOK vs Credits — hidden in simple mode */}
+            {!simpleMode && (
+              <div className="flex items-center bg-card/60 border border-border/50 rounded overflow-hidden">
                 <button
-                  onClick={() => setApiMode("credits")}
-                  className={`flex items-center gap-1 px-2 py-1 text-[9px] sm:text-[10px] font-mono-share transition-colors ${effectiveApiMode === "credits"
-                    ? "bg-secondary/20 text-secondary"
+                  onClick={() => setApiMode("byok")}
+                  className={`flex items-center gap-1 px-2 py-1 text-[9px] sm:text-[10px] font-mono-share transition-colors ${effectiveApiMode === "byok"
+                    ? "bg-primary/20 text-primary"
                     : "text-muted-foreground/50 hover:text-muted-foreground"
                     }`}
                 >
-                  <Coins className="w-2.5 h-2.5" />
-                  CREDITS
+                  <Key className="w-2.5 h-2.5" />
+                  BYOK
                 </button>
-              )}
-            </div>
+                {canUseCredits && (
+                  <button
+                    onClick={() => setApiMode("credits")}
+                    className={`flex items-center gap-1 px-2 py-1 text-[9px] sm:text-[10px] font-mono-share transition-colors ${effectiveApiMode === "credits"
+                      ? "bg-secondary/20 text-secondary"
+                      : "text-muted-foreground/50 hover:text-muted-foreground"
+                      }`}
+                  >
+                    <Coins className="w-2.5 h-2.5" />
+                    CREDITS
+                  </button>
+                )}
+              </div>
+            )}
 
-            {/* BYOK: API key dialog */}
-            {effectiveApiMode === "byok" && (
+            {/* BYOK: API key dialog — hidden in simple mode */}
+            {!simpleMode && effectiveApiMode === "byok" && (
               <ApiKeyDialog
                 hasKey={apiKeySet}
                 onSave={handleSaveApiKey}
