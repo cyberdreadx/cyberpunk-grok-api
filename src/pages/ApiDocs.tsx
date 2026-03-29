@@ -349,7 +349,7 @@ export default function ApiDocs() {
             <GlitchText text="API DOCUMENTATION" />
           </h1>
           <p className="text-sm text-muted-foreground font-mono">
-            Generate images programmatically using our public API. Pay with credits from your account.
+            Generate images and videos programmatically using GROK, GLTCH, and GLTCH PRO engines. Pay with credits from your account.
           </p>
         </div>
 
