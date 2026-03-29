@@ -17,6 +17,10 @@
     "api/cron-reset-daily.ts": {
       "maxDuration": 300
     },
+    "api/v1/generate.ts": {
+      "maxDuration": 120,
+      "memory": 1024
+    },
     "api/**/*.ts": {
       "maxDuration": 30
     }
