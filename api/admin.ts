@@ -623,7 +623,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       default:
-        return res.status(400).json({ error: "Unknown action. Expected: overview, revenue, revenue-breakdown, users, usage, transactions, top-users, referrals, sync-subscriptions, grant-credits, email-logs" });
+        return res.status(400).json({ error: "Unknown action. Expected: overview, revenue, revenue-breakdown, users, usage, transactions, top-users, referrals, sync-subscriptions, grant-credits, email-logs, api-analytics" });
     }
   } catch (err: any) {
     console.error("[admin]", err.message);
