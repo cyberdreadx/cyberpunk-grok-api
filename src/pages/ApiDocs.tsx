@@ -41,7 +41,7 @@ function ApiPlayground({ baseUrl }: { baseUrl: string }) {
   const [prompt, setPrompt] = useState("a cyberpunk cityscape at sunset, neon lights");
   const [engine, setEngine] = useState<"grok" | "gltch" | "comfy">("grok");
   const [genType, setGenType] = useState<"image" | "video">("image");
-  const [model, setModel] = useState("grok-2-image");
+  const [model, setModel] = useState("grok-imagine-image");
   const [n, setN] = useState(1);
   const [duration, setDuration] = useState(5);
   const [imageUrl, setImageUrl] = useState("");
@@ -230,8 +230,8 @@ function ApiPlayground({ baseUrl }: { baseUrl: string }) {
                 onChange={(e) => setModel(e.target.value)}
                 className="bg-muted/50 border border-primary/20 rounded-lg px-2 py-1.5 text-xs font-mono text-foreground focus:outline-none focus:border-primary/50"
               >
-                <option value="grok-2-image">grok-2-image (2 cr)</option>
-                <option value="grok-2-image-pro">grok-2-image-pro (5 cr)</option>
+                <option value="grok-imagine-image">grok-imagine-image (2 cr)</option>
+                <option value="grok-imagine-image-pro">grok-imagine-image-pro (5 cr)</option>
               </select>
             </div>
             <div className="space-y-1">
@@ -433,7 +433,7 @@ export default function ApiDocs() {
                         <tr className="border-b border-primary/5">
                           <td className="py-1.5 pr-3 text-primary">model</td>
                           <td className="py-1.5 pr-3">string</td>
-                          <td className="py-1.5 pr-3">grok-2-image</td>
+                          <td className="py-1.5 pr-3">grok-imagine-image</td>
                           <td className="py-1.5">Model to use (see below)</td>
                         </tr>
                         <tr className="border-b border-primary/5">
@@ -466,12 +466,12 @@ export default function ApiDocs() {
                       </thead>
                       <tbody className="text-foreground/80">
                         <tr className="border-b border-primary/5">
-                          <td className="py-1.5 pr-3 text-primary">grok-2-image</td>
+                          <td className="py-1.5 pr-3 text-primary">grok-imagine-image</td>
                           <td className="py-1.5 pr-3">2 cr</td>
                           <td className="py-1.5">Standard quality, fast generation</td>
                         </tr>
                         <tr>
-                          <td className="py-1.5 pr-3 text-primary">grok-2-image-pro</td>
+                          <td className="py-1.5 pr-3 text-primary">grok-imagine-image-pro</td>
                           <td className="py-1.5 pr-3">5 cr</td>
                           <td className="py-1.5">Higher quality, more detail</td>
                         </tr>
@@ -735,7 +735,7 @@ export default function ApiDocs() {
   -H "X-API-Key: gltch_sk_your_key_here" \\
   -d '{
     "prompt": "a cyberpunk cityscape at sunset, neon lights",
-    "model": "grok-2-image",
+    "model": "grok-imagine-image",
     "n": 2
   }'`} />
             </div>
@@ -764,7 +764,7 @@ response = requests.post(
     },
     json={
         "prompt": "a cyberpunk cityscape at sunset",
-        "model": "grok-2-image",
+        "model": "grok-imagine-image",
         "n": 1,
     },
 )
@@ -809,7 +809,7 @@ print(f"Credits used: {data['credits_used']}")`} />
   },
   body: JSON.stringify({
     prompt: "a cyberpunk cityscape at sunset",
-    model: "grok-2-image",
+    model: "grok-imagine-image",
     n: 1,
   }),
 });

@@ -20,10 +20,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // Grok models
   const grokModels = [
-    { id: "grok-2-image", type: "image", credits_per_unit: 2, description: "Standard quality image generation" },
-    { id: "grok-2-image-pro", type: "image", credits_per_unit: 5, description: "Higher quality image generation" },
-    { id: "grok-video-5s", type: "video", credits_per_unit: 15, description: "5-second video generation (3 cr/sec)" },
-    { id: "grok-video-10s", type: "video", credits_per_unit: 30, description: "10-second video generation (3 cr/sec)" },
+    { id: "grok-imagine-image", type: "image", credits_per_unit: 2, description: "Standard quality image generation" },
+    { id: "grok-imagine-image-pro", type: "image", credits_per_unit: 5, description: "Higher quality image generation" },
+    { id: "grok-imagine-video", type: "video", credits_per_unit: 15, description: "5-second video generation (3 cr/sec)" },
+    { id: "grok-imagine-video-10s", type: "video", credits_per_unit: 30, description: "10-second video generation (3 cr/sec)" },
   ];
 
   // GLTCH models

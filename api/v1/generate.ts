@@ -7,7 +7,7 @@
  * Image body:
  *   prompt: string (required)
  *   type?: "image" (default)
- *   model?: "grok-2-image" | "grok-2-image-pro"
+ *   model?: "grok-imagine-image" | "grok-imagine-image-pro"
  *   n?: 1-4
  *   response_format?: "url" | "b64_json"
  *
@@ -26,12 +26,12 @@ import { deductCredits, refundCredits, logUsage, getUserCredits } from "./_lib/c
 
 const XAI_BASE = "https://api.x.ai/v1";
 
-const IMAGE_MODELS = ["grok-2-image", "grok-2-image-pro"] as const;
+const IMAGE_MODELS = ["grok-imagine-image", "grok-imagine-image-pro"] as const;
 const CREDITS_PER_VIDEO_SECOND = 3;
 
 const IMAGE_CREDIT_COSTS: Record<string, number> = {
-  "grok-2-image": 2,
-  "grok-2-image-pro": 5,
+  "grok-imagine-image": 2,
+  "grok-imagine-image-pro": 5,
 };
 
 export const config = {
@@ -82,7 +82,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // IMAGE GENERATION
     // ═══════════════════════════════════════════════════════════════════
     if (type === "image") {
-      const model = (body.model as string) || "grok-2-image";
+      const model = (body.model as string) || "grok-imagine-image";
       if (!IMAGE_MODELS.includes(model as any)) {
         return res.status(400).json({ error: `model must be one of: ${IMAGE_MODELS.join(", ")}` });
       }
@@ -112,7 +112,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (xaiRes.status === 400 && errText.includes("safety")) {
           return res.status(400).json({ error: "Content policy violation" });
         }
-        return res.status(502).json({ error: "Generation failed. Credits refunded.", upstream_status: xaiRes.status, detail: errText.slice(0, 500) });
+        return res.status(502).json({ error: "Generation failed. Credits refunded." });
       }
 
       const result = await xaiRes.json();
@@ -137,7 +137,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const d = await deductCredits(sql, auth.userId, totalCost, user);
 
       // Build xAI request
-      const videoBody: any = { prompt, duration };
+      const videoBody: any = { model: "grok-imagine-video", prompt, duration };
       if (imageUrl) videoBody.image_url = imageUrl;
 
       const xaiRes = await fetch(`${XAI_BASE}/videos/generations`, {
