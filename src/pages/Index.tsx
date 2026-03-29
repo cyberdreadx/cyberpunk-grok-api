@@ -22,6 +22,7 @@ import PromptHistory from "@/components/PromptHistory";
 import GalleryChunkLoader from "@/components/GalleryChunkLoader";
 const ResultsGrid = lazyWithRetry(() => import("@/components/ResultsGrid"), "results-grid");
 import ApiKeyDialog from "@/components/ApiKeyDialog";
+import ApiKeysPanel from "@/components/ApiKeysPanel";
 import AuthDialog from "@/components/AuthDialog";
 import CreditDisplay from "@/components/CreditDisplay";
 import LegalDialog from "@/components/LegalDialog";
