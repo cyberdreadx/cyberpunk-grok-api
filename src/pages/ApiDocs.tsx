@@ -344,7 +344,8 @@ function ApiPlayground({ baseUrl }: { baseUrl: string }) {
 }
 
 export default function ApiDocs() {
-  const baseUrl = "https://grokrunner.gltch.app";
+  const apiUrl = import.meta.env.VITE_API_URL as string | undefined;
+  const baseUrl = apiUrl ? apiUrl.replace(/\/api\/?$/, "") : (typeof window !== "undefined" ? window.location.origin : "https://grokrunner.gltch.app");
 
   return (
     <CyberLayout>
