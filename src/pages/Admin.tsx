@@ -283,6 +283,8 @@ export default function Admin() {
   const [emailStats, setEmailStats] = useState<any>(null);
   const [emailFilter, setEmailFilter] = useState<{ type?: string; status?: string }>({});
   const [emailLoading, setEmailLoading] = useState(false);
+  const [apiAnalytics, setApiAnalytics] = useState<any>(null);
+  const [apiAnalyticsLoading, setApiAnalyticsLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<any>(null);
