@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from "react";
-import { LogIn, UserPlus, LogOut, Mail, Lock, Loader2, ShieldCheck, ArrowLeft, RefreshCw, KeyRound, Trash2, AlertTriangle } from "lucide-react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import { LogIn, UserPlus, LogOut, Mail, Lock, Loader2, ShieldCheck, ArrowLeft, RefreshCw, KeyRound, Trash2, AlertTriangle, CheckCircle2, Clock, AlertCircle, XCircle, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -347,7 +347,40 @@ function AuthForm({
   );
 }
 
-/** 6-digit verification code form. */
+type VerifyStatus = "idle" | "sending" | "sent" | "expired" | "rate_limited" | "invalid" | "too_many_attempts" | "send_failed";
+
+function classifyError(msg: string): VerifyStatus {
+  const lower = msg.toLowerCase();
+  if (lower.includes("expired")) return "expired";
+  if (lower.includes("too many") || lower.includes("rate") || lower.includes("wait") || lower.includes("limit")) return "rate_limited";
+  if (lower.includes("too many failed") || lower.includes("request a new")) return "too_many_attempts";
+  if (lower.includes("send") || lower.includes("deliver")) return "send_failed";
+  return "invalid";
+}
+
+const STATUS_CONFIG: Record<VerifyStatus, { icon: React.ReactNode; color: string; bg: string; border: string } | null> = {
+  idle: null,
+  sending: null,
+  sent: { icon: <CheckCircle2 className="w-3.5 h-3.5" />, color: "text-primary", bg: "bg-primary/10", border: "border-primary/30" },
+  expired: { icon: <Clock className="w-3.5 h-3.5" />, color: "text-amber-400", bg: "bg-amber-400/10", border: "border-amber-400/30" },
+  rate_limited: { icon: <AlertCircle className="w-3.5 h-3.5" />, color: "text-amber-400", bg: "bg-amber-400/10", border: "border-amber-400/30" },
+  invalid: { icon: <XCircle className="w-3.5 h-3.5" />, color: "text-destructive", bg: "bg-destructive/10", border: "border-destructive/30" },
+  too_many_attempts: { icon: <AlertTriangle className="w-3.5 h-3.5" />, color: "text-destructive", bg: "bg-destructive/10", border: "border-destructive/30" },
+  send_failed: { icon: <AlertTriangle className="w-3.5 h-3.5" />, color: "text-destructive", bg: "bg-destructive/10", border: "border-destructive/30" },
+};
+
+const STATUS_MESSAGES: Record<VerifyStatus, { title: string; hint: string } | null> = {
+  idle: null,
+  sending: null,
+  sent: { title: "Code sent successfully", hint: "Check your inbox (and spam folder) for the 6-digit code." },
+  expired: { title: "Code expired", hint: "Click RESEND CODE below to get a fresh code. Codes are valid for 30 minutes." },
+  rate_limited: { title: "Too many requests", hint: "Please wait a few minutes before requesting another code." },
+  invalid: { title: "Incorrect code", hint: "Double-check the code from your latest email. Older codes are invalidated when you resend." },
+  too_many_attempts: { title: "Code invalidated", hint: "Too many wrong attempts. Click RESEND CODE to get a new one." },
+  send_failed: { title: "Email delivery failed", hint: "We couldn't deliver the email. Check your address is correct, then try resending." },
+};
+
+/** 6-digit verification code form with status-aware troubleshooting. */
 function VerificationForm({
   email,
   onVerify,
@@ -365,8 +398,16 @@ function VerificationForm({
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [resendMsg, setResendMsg] = useState<string | null>(null);
+  const [status, setStatus] = useState<VerifyStatus>("idle");
+  const [resendCooldown, setResendCooldown] = useState(0);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  // Resend cooldown timer
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const t = setInterval(() => setResendCooldown((c) => Math.max(0, c - 1)), 1000);
+    return () => clearInterval(t);
+  }, [resendCooldown]);
 
   // Focus first input on mount
   useEffect(() => {
@@ -417,11 +458,14 @@ function VerificationForm({
   const submitCode = async (fullCode: string) => {
     setLoading(true);
     setError(null);
+    setStatus("idle");
     try {
       await onVerify(email, fullCode);
       onSuccess();
     } catch (err: any) {
-      setError(err.message || "Verification failed");
+      const msg = err.message || "Verification failed";
+      setError(msg);
+      setStatus(classifyError(msg));
       setCode(["", "", "", "", "", ""]);
       inputRefs.current[0]?.focus();
     } finally {
@@ -433,16 +477,24 @@ function VerificationForm({
     if (!onResendCode) return;
     setResending(true);
     setError(null);
-    setResendMsg(null);
+    setStatus("sending");
     try {
       await onResendCode(email);
-      setResendMsg("New code sent. Check your inbox.");
+      setStatus("sent");
+      setResendCooldown(60);
+      setCode(["", "", "", "", "", ""]);
+      inputRefs.current[0]?.focus();
     } catch (err: any) {
-      setError(err.message || "Failed to resend code");
+      const msg = err.message || "Failed to resend code";
+      setError(msg);
+      setStatus(classifyError(msg));
     } finally {
       setResending(false);
     }
   };
+
+  const statusConfig = STATUS_CONFIG[status];
+  const statusMessage = STATUS_MESSAGES[status];
 
   return (
     <div className="space-y-4">
@@ -485,15 +537,21 @@ function VerificationForm({
         </div>
       )}
 
-      {error && (
-        <div className="bg-destructive/10 border border-destructive/30 rounded px-3 py-2">
-          <p className="font-mono-share text-xs text-destructive">{error}</p>
-        </div>
-      )}
-
-      {resendMsg && (
-        <div className="bg-primary/10 border border-primary/30 rounded px-3 py-2">
-          <p className="font-mono-share text-xs text-primary">{resendMsg}</p>
+      {/* Status-aware feedback panel */}
+      {statusConfig && statusMessage && (
+        <div className={`${statusConfig.bg} border ${statusConfig.border} rounded-lg px-3 py-2.5 space-y-1.5`}>
+          <div className={`flex items-center gap-2 ${statusConfig.color}`}>
+            {statusConfig.icon}
+            <span className="font-orbitron text-[10px] tracking-wider uppercase">{statusMessage.title}</span>
+          </div>
+          <p className="font-mono-share text-[11px] text-muted-foreground leading-relaxed pl-5.5">
+            {statusMessage.hint}
+          </p>
+          {error && status !== "sent" && (
+            <p className="font-mono-share text-[10px] text-muted-foreground/50 pl-5.5 italic">
+              {error}
+            </p>
+          )}
         </div>
       )}
 
@@ -514,19 +572,30 @@ function VerificationForm({
             variant="ghost"
             size="sm"
             onClick={handleResend}
-            disabled={resending}
-            className="font-mono-share text-xs gap-1.5 text-muted-foreground hover:text-primary ml-auto"
+            disabled={resending || resendCooldown > 0}
+            className="font-mono-share text-xs gap-1.5 text-muted-foreground hover:text-primary ml-auto disabled:opacity-50"
           >
             {resending ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
-            RESEND_CODE
+            {resendCooldown > 0 ? `WAIT ${resendCooldown}s` : "RESEND_CODE"}
           </Button>
         )}
       </div>
 
       <div className="border-t border-border pt-3">
-        <p className="text-[10px] font-mono-share text-muted-foreground/60 leading-relaxed">
-          Code expires in 10 minutes. Check your spam folder if you don't see it.
-        </p>
+        <div className="space-y-1.5">
+          <div className="flex items-start gap-1.5">
+            <Info className="w-3 h-3 text-muted-foreground/40 mt-0.5 shrink-0" />
+            <p className="text-[10px] font-mono-share text-muted-foreground/60 leading-relaxed">
+              Codes expire in 30 minutes. Only the most recent code works — older codes are invalidated when you resend.
+            </p>
+          </div>
+          <div className="flex items-start gap-1.5">
+            <Mail className="w-3 h-3 text-muted-foreground/40 mt-0.5 shrink-0" />
+            <p className="text-[10px] font-mono-share text-muted-foreground/60 leading-relaxed">
+              Not seeing the email? Check spam/junk. The sender is <span className="text-muted-foreground/80">noreply@grokrunner.gltch.app</span>.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
