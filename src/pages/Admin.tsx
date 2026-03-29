@@ -981,7 +981,120 @@ export default function Admin() {
           </section>
         )}
 
-        {/* ═══ SYSTEM TAB ═══ */}
+        {/* ═══ EMAILS TAB ═══ */}
+        {activeTab === "emails" && (
+          <section className="space-y-4">
+            {/* Fetch on tab open */}
+            {!emailStats && !emailLoading && (() => { fetchEmailLogs(); return null; })()}
+
+            {/* KPI cards */}
+            {emailStats && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
+                <KpiCard icon={<Mail className="w-4 h-4" />} label="TOTAL_EMAILS" value={emailStats.total} sub={`${emailStats.last_24h} in last 24h`} />
+                <KpiCard icon={<Zap className="w-4 h-4" />} label="SENT" value={emailStats.sent} sub={`${emailStats.total > 0 ? Math.round((emailStats.sent / emailStats.total) * 100) : 0}% success rate`} accent="secondary" />
+                <KpiCard icon={<AlertTriangle className="w-4 h-4" />} label="FAILED" value={emailStats.failed} sub={`${emailStats.failed_24h} in last 24h`} accent="destructive" />
+                <KpiCard icon={<Ban className="w-4 h-4" />} label="FAIL_RATE" value={`${emailStats.total > 0 ? ((emailStats.failed / emailStats.total) * 100).toFixed(1) : 0}%`} sub="lifetime failure rate" accent={emailStats.failed > 0 ? "destructive" : "primary"} />
+              </div>
+            )}
+
+            {/* Filters */}
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                value={emailFilter.type || ""}
+                onChange={(e) => {
+                  const f = { ...emailFilter, type: e.target.value || undefined };
+                  setEmailFilter(f);
+                  fetchEmailLogs(f);
+                }}
+                className="bg-card/60 border border-border/30 rounded px-2 py-1.5 font-mono-share text-xs text-foreground focus:outline-none focus:border-primary/50"
+              >
+                <option value="">ALL TYPES</option>
+                <option value="verification">VERIFICATION</option>
+                <option value="password_reset">PASSWORD RESET</option>
+                <option value="daily_credits">DAILY CREDITS</option>
+                <option value="webhook">WEBHOOK</option>
+              </select>
+              <select
+                value={emailFilter.status || ""}
+                onChange={(e) => {
+                  const f = { ...emailFilter, status: e.target.value || undefined };
+                  setEmailFilter(f);
+                  fetchEmailLogs(f);
+                }}
+                className="bg-card/60 border border-border/30 rounded px-2 py-1.5 font-mono-share text-xs text-foreground focus:outline-none focus:border-primary/50"
+              >
+                <option value="">ALL STATUS</option>
+                <option value="sent">SENT</option>
+                <option value="failed">FAILED</option>
+                <option value="delivered">DELIVERED</option>
+                <option value="bounced">BOUNCED</option>
+                <option value="complained">COMPLAINED</option>
+              </select>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => fetchEmailLogs(emailFilter)}
+                disabled={emailLoading}
+                className="font-mono-share text-xs gap-1.5 border-primary/30 hover:bg-primary/10"
+              >
+                {emailLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                REFRESH
+              </Button>
+            </div>
+
+            {/* Log table */}
+            <div className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm overflow-hidden">
+              <div className="overflow-x-auto overscroll-x-contain">
+                <table className="w-full min-w-[600px]">
+                  <thead>
+                    <tr className="border-b border-border/20">
+                      {["TIME", "RECIPIENT", "TYPE", "STATUS", "RESEND_ID", "ERROR"].map((h) => (
+                        <th key={h} className="px-2.5 py-2 text-left font-mono-share text-[9px] text-muted-foreground/50 tracking-wider">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {emailLogs.length === 0 && !emailLoading && (
+                      <tr><td colSpan={6} className="px-4 py-8 text-center font-mono-share text-xs text-muted-foreground/50">No email logs found</td></tr>
+                    )}
+                    {emailLoading && (
+                      <tr><td colSpan={6} className="px-4 py-8 text-center"><Loader2 className="w-4 h-4 animate-spin mx-auto text-primary" /></td></tr>
+                    )}
+                    {emailLogs.map((log: any, i: number) => (
+                      <tr key={i} className="border-b border-border/10 hover:bg-primary/5 transition-colors">
+                        <td className="px-2.5 py-2 font-mono-share text-[10px] text-muted-foreground/60 whitespace-nowrap">
+                          {new Date(log.created_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                        </td>
+                        <td className="px-2.5 py-2 font-mono-share text-xs text-foreground/80 max-w-[180px] truncate">{log.recipient}</td>
+                        <td className="px-2.5 py-2">
+                          <span className={`font-orbitron text-[9px] tracking-wider px-2 py-0.5 rounded border ${
+                            log.email_type === "verification" ? "bg-primary/20 text-primary border-primary/30"
+                            : log.email_type === "password_reset" ? "bg-secondary/20 text-secondary border-secondary/30"
+                            : log.email_type === "daily_credits" ? "bg-green-500/20 text-green-400 border-green-500/30"
+                            : "bg-muted/20 text-muted-foreground border-border/30"
+                          }`}>{log.email_type?.toUpperCase()}</span>
+                        </td>
+                        <td className="px-2.5 py-2">
+                          <span className={`font-mono-share text-[10px] font-bold px-2 py-0.5 rounded ${
+                            log.status === "sent" || log.status === "delivered" ? "bg-green-500/20 text-green-400"
+                            : log.status === "failed" ? "bg-destructive/20 text-destructive"
+                            : log.status === "bounced" ? "bg-orange-500/20 text-orange-400"
+                            : log.status === "complained" ? "bg-red-500/20 text-red-400"
+                            : "bg-muted/20 text-muted-foreground"
+                          }`}>{log.status?.toUpperCase()}</span>
+                        </td>
+                        <td className="px-2.5 py-2 font-mono-share text-[9px] text-muted-foreground/40 max-w-[120px] truncate">{log.resend_id || "—"}</td>
+                        <td className="px-2.5 py-2 font-mono-share text-[10px] text-destructive/80 max-w-[200px] truncate">{log.error_message || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+        )}
+
+
         {activeTab === "system" && (
           <div className="space-y-4">
           {/* ── RunPod Worker Status ── */}
