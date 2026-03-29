@@ -548,8 +548,82 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json({ logs: rows, stats });
       }
 
+      // -- API usage analytics --
+      case "api-analytics": {
+        // KPI overview
+        const [kpis] = await sql`
+          SELECT
+            COUNT(DISTINCT ak.user_id)::int AS total_api_users,
+            COUNT(*)::int AS total_keys,
+            COUNT(*) FILTER (WHERE ak.is_active)::int AS active_keys,
+            COALESCE(SUM(ak.total_requests), 0)::bigint AS total_requests,
+            COALESCE(SUM(ak.total_credits), 0)::bigint AS total_credits_used
+          FROM api_keys ak
+        `;
+
+        // Requests last 30 days by day
+        const dailyVolume = await sql`
+          SELECT
+            date_trunc('day', created_at)::date AS day,
+            COUNT(*)::int AS requests,
+            SUM(credits_used)::int AS credits,
+            COUNT(DISTINCT api_key_id)::int AS unique_keys
+          FROM api_usage_log
+          WHERE created_at > now() - interval '30 days'
+          GROUP BY 1
+          ORDER BY 1
+        `;
+
+        // Top API consumers
+        const topConsumers = await sql`
+          SELECT
+            u.email,
+            ak.name AS key_name,
+            ak.key_prefix,
+            ak.total_requests::int,
+            ak.total_credits::int,
+            ak.last_used_at,
+            ak.created_at
+          FROM api_keys ak
+          JOIN users u ON u.id = ak.user_id
+          WHERE ak.is_active = true
+          ORDER BY ak.total_credits DESC
+          LIMIT 20
+        `;
+
+        // Revenue from API usage (credits × avg credit price ~$0.075)
+        const [apiRevenue] = await sql`
+          SELECT
+            COALESCE(SUM(credits_used), 0)::int AS total_credits,
+            COALESCE(SUM(credits_used) FILTER (WHERE created_at > now() - interval '30 days'), 0)::int AS credits_30d,
+            COALESCE(SUM(credits_used) FILTER (WHERE created_at > now() - interval '7 days'), 0)::int AS credits_7d,
+            COALESCE(SUM(credits_used) FILTER (WHERE created_at > now() - interval '24 hours'), 0)::int AS credits_today
+          FROM api_usage_log
+        `;
+
+        // Usage by action type
+        const byAction = await sql`
+          SELECT
+            action,
+            COUNT(*)::int AS count,
+            SUM(credits_used)::int AS credits
+          FROM api_usage_log
+          WHERE created_at > now() - interval '30 days'
+          GROUP BY action
+          ORDER BY credits DESC
+        `;
+
+        return res.status(200).json({
+          kpis,
+          dailyVolume,
+          topConsumers,
+          apiRevenue,
+          byAction,
+        });
+      }
+
       default:
-        return res.status(400).json({ error: "Unknown action. Expected: overview, revenue, revenue-breakdown, users, usage, transactions, top-users, referrals, sync-subscriptions, grant-credits, email-logs" });
+        return res.status(400).json({ error: "Unknown action. Expected: overview, revenue, revenue-breakdown, users, usage, transactions, top-users, referrals, sync-subscriptions, grant-credits, email-logs, api-analytics" });
     }
   } catch (err: any) {
     console.error("[admin]", err.message);

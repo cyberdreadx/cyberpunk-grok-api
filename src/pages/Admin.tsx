@@ -25,6 +25,7 @@ import {
   Cpu,
   Mail,
   AlertTriangle,
+  Key,
 } from "lucide-react";
 import {
   AreaChart,
@@ -118,7 +119,7 @@ function CyberTooltip({ active, payload, label }: any) {
 
 // ── Tab Definitions ──
 
-type TabId = "overview" | "revenue" | "users" | "usage" | "moderation" | "referrals" | "emails" | "system";
+type TabId = "overview" | "revenue" | "users" | "usage" | "moderation" | "referrals" | "emails" | "api" | "system";
 
 const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
   { id: "overview", label: "OVERVIEW", icon: <Eye className="w-3.5 h-3.5" /> },
@@ -128,6 +129,7 @@ const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
   { id: "moderation", label: "DEFENSE", icon: <ShieldX className="w-3.5 h-3.5" /> },
   { id: "referrals", label: "REFERRALS", icon: <Share2 className="w-3.5 h-3.5" /> },
   { id: "emails", label: "EMAILS", icon: <Mail className="w-3.5 h-3.5" /> },
+  { id: "api", label: "API", icon: <Key className="w-3.5 h-3.5" /> },
   { id: "system", label: "SYSTEM", icon: <Server className="w-3.5 h-3.5" /> },
 ];
 
@@ -281,6 +283,8 @@ export default function Admin() {
   const [emailStats, setEmailStats] = useState<any>(null);
   const [emailFilter, setEmailFilter] = useState<{ type?: string; status?: string }>({});
   const [emailLoading, setEmailLoading] = useState(false);
+  const [apiAnalytics, setApiAnalytics] = useState<any>(null);
+  const [apiAnalyticsLoading, setApiAnalyticsLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<any>(null);
@@ -389,6 +393,24 @@ export default function Admin() {
       fetchEmailLogs();
     }
   }, [activeTab, emailStats, emailLoading, authorized, fetchEmailLogs]);
+
+  const fetchApiAnalytics = useCallback(async () => {
+    setApiAnalyticsLoading(true);
+    try {
+      const res = await apiFetch("/admin", { method: "POST", body: { action: "api-analytics" } });
+      setApiAnalytics(res);
+    } catch (err: any) {
+      console.error("[admin] api-analytics failed:", err.message);
+    } finally {
+      setApiAnalyticsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === "api" && !apiAnalytics && !apiAnalyticsLoading && authorized) {
+      fetchApiAnalytics();
+    }
+  }, [activeTab, apiAnalytics, apiAnalyticsLoading, authorized, fetchApiAnalytics]);
 
   const usagePivot = React.useMemo(() => {
     const map = new Map<string, { day: string } & Record<string, number>>();
@@ -1097,6 +1119,130 @@ export default function Admin() {
           </section>
         )}
 
+
+        {/* ═══════ API ANALYTICS TAB ═══════ */}
+        {activeTab === "api" && (
+          <div className="space-y-4">
+            {apiAnalyticsLoading && !apiAnalytics && (
+              <div className="flex justify-center py-12">
+                <Loader2 className="w-6 h-6 text-primary animate-spin" />
+              </div>
+            )}
+
+            {apiAnalytics && (
+              <>
+                {/* KPI Cards */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
+                  <KpiCard icon={<Users className="w-3.5 h-3.5" />} label="API USERS" value={apiAnalytics.kpis?.total_api_users || 0} sub={`${apiAnalytics.kpis?.active_keys || 0} active keys`} />
+                  <KpiCard icon={<Zap className="w-3.5 h-3.5" />} label="TOTAL REQUESTS" value={(apiAnalytics.kpis?.total_requests || 0).toLocaleString()} />
+                  <KpiCard icon={<CreditCard className="w-3.5 h-3.5" />} label="CREDITS VIA API" value={(apiAnalytics.kpis?.total_credits_used || 0).toLocaleString()} />
+                  <KpiCard icon={<TrendingUp className="w-3.5 h-3.5" />} label="30D CREDITS" value={(apiAnalytics.apiRevenue?.credits_30d || 0).toLocaleString()} sub={`7d: ${apiAnalytics.apiRevenue?.credits_7d || 0}`} />
+                  <KpiCard icon={<DollarSign className="w-3.5 h-3.5" />} label="EST. API REV (30D)" value={fmt$(Math.round((apiAnalytics.apiRevenue?.credits_30d || 0) * 7.5))} sub="@ ~$0.075/credit" accent="secondary" />
+                </div>
+
+                {/* Daily Volume Chart */}
+                {apiAnalytics.dailyVolume?.length > 0 && (
+                  <section className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm p-3 sm:p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <BarChart3 className="w-3.5 h-3.5 text-primary" />
+                      <span className="font-orbitron text-[10px] tracking-wider text-muted-foreground">DAILY_API_VOLUME (30D)</span>
+                    </div>
+                    <ResponsiveContainer width="100%" height={220}>
+                      <AreaChart data={apiAnalytics.dailyVolume.map((r: any) => ({ ...r, day: fmtDate(r.day) }))}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.2} />
+                        <XAxis dataKey="day" tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} />
+                        <YAxis tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} />
+                        <Tooltip content={<CyberTooltip />} />
+                        <Area type="monotone" dataKey="requests" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.15} strokeWidth={2} name="Requests" />
+                        <Area type="monotone" dataKey="credits" stroke="hsl(var(--secondary))" fill="hsl(var(--secondary))" fillOpacity={0.1} strokeWidth={2} name="Credits" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </section>
+                )}
+
+                {/* Usage by Action */}
+                {apiAnalytics.byAction?.length > 0 && (
+                  <section className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm p-3 sm:p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Activity className="w-3.5 h-3.5 text-primary" />
+                      <span className="font-orbitron text-[10px] tracking-wider text-muted-foreground">USAGE_BY_ACTION (30D)</span>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left">
+                        <thead>
+                          <tr className="border-b border-border/20">
+                            <th className="px-2.5 py-1.5 font-orbitron text-[9px] tracking-wider text-muted-foreground/50">ACTION</th>
+                            <th className="px-2.5 py-1.5 font-orbitron text-[9px] tracking-wider text-muted-foreground/50 text-right">REQUESTS</th>
+                            <th className="px-2.5 py-1.5 font-orbitron text-[9px] tracking-wider text-muted-foreground/50 text-right">CREDITS</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {apiAnalytics.byAction.map((row: any, i: number) => (
+                            <tr key={i} className="border-b border-border/10">
+                              <td className="px-2.5 py-2 font-mono-share text-xs text-primary">{row.action}</td>
+                              <td className="px-2.5 py-2 font-mono-share text-xs text-right">{row.count}</td>
+                              <td className="px-2.5 py-2 font-mono-share text-xs text-right text-secondary">{row.credits}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </section>
+                )}
+
+                {/* Top API Consumers */}
+                <section className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm p-3 sm:p-4">
+                  <div className="flex items-center justify-between gap-2 mb-3">
+                    <div className="flex items-center gap-2">
+                      <Crown className="w-3.5 h-3.5 text-secondary" />
+                      <span className="font-orbitron text-[10px] tracking-wider text-muted-foreground">TOP_API_CONSUMERS</span>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={fetchApiAnalytics} disabled={apiAnalyticsLoading}
+                      className="font-mono-share text-xs gap-1.5">
+                      {apiAnalyticsLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                      REFRESH
+                    </Button>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                      <thead>
+                        <tr className="border-b border-border/20">
+                          <th className="px-2.5 py-1.5 font-orbitron text-[9px] tracking-wider text-muted-foreground/50">USER</th>
+                          <th className="px-2.5 py-1.5 font-orbitron text-[9px] tracking-wider text-muted-foreground/50">KEY</th>
+                          <th className="px-2.5 py-1.5 font-orbitron text-[9px] tracking-wider text-muted-foreground/50 text-right">REQUESTS</th>
+                          <th className="px-2.5 py-1.5 font-orbitron text-[9px] tracking-wider text-muted-foreground/50 text-right">CREDITS</th>
+                          <th className="px-2.5 py-1.5 font-orbitron text-[9px] tracking-wider text-muted-foreground/50 text-right">LAST USED</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(apiAnalytics.topConsumers || []).map((c: any, i: number) => (
+                          <tr key={i} className="border-b border-border/10">
+                            <td className="px-2.5 py-2 font-mono-share text-[10px] text-foreground/80 max-w-[160px] truncate">{c.email}</td>
+                            <td className="px-2.5 py-2 font-mono-share text-[9px] text-muted-foreground/60">
+                              {c.key_prefix} <span className="text-primary/50">({c.key_name})</span>
+                            </td>
+                            <td className="px-2.5 py-2 font-mono-share text-xs text-right">{(c.total_requests || 0).toLocaleString()}</td>
+                            <td className="px-2.5 py-2 font-mono-share text-xs text-right text-secondary">{(c.total_credits || 0).toLocaleString()}</td>
+                            <td className="px-2.5 py-2 font-mono-share text-[9px] text-muted-foreground/40 text-right">
+                              {c.last_used_at ? new Date(c.last_used_at).toLocaleDateString() : "never"}
+                            </td>
+                          </tr>
+                        ))}
+                        {(!apiAnalytics.topConsumers || apiAnalytics.topConsumers.length === 0) && (
+                          <tr>
+                            <td colSpan={5} className="px-2.5 py-4 text-center font-mono-share text-xs text-muted-foreground/40">
+                              No API keys created yet
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+              </>
+            )}
+          </div>
+        )}
 
         {activeTab === "system" && (
           <div className="space-y-4">
