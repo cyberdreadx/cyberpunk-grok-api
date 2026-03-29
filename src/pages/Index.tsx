@@ -935,8 +935,6 @@ const Index = () => {
               />
             )}
 
-            {/* Developer API keys */}
-            {effectiveApiMode === "credits" && canUseCredits && <ApiKeysPanel />}
 
             {/* Credits: balance display */}
             {effectiveApiMode === "credits" && canUseCredits && (
