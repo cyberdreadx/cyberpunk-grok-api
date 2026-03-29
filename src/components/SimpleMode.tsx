@@ -102,6 +102,17 @@ const SimpleMode: React.FC<SimpleModeProps> = ({
   });
   const isTourActive = tourStep >= 0 && tourStep < WALKTHROUGH_STEPS.length;
 
+  // Ensure tour starts on edit-image so the upload step makes sense
+  const tourInitRef = useRef(false);
+  useEffect(() => {
+    if (tourStep === 0 && !tourInitRef.current) {
+      tourInitRef.current = true;
+      if (currentMode !== "edit-image") {
+        onModeChange("edit-image" as GrokMode);
+      }
+    }
+  }, [tourStep, currentMode, onModeChange]);
+
   const advanceTour = useCallback(() => {
     setTourStep(prev => {
       const next = prev + 1;
@@ -391,6 +402,8 @@ const SimpleMode: React.FC<SimpleModeProps> = ({
           onClick={() => {
             localStorage.removeItem(TOUR_STORAGE_KEY);
             localStorage.removeItem("results-tip-seen");
+            tourInitRef.current = false;
+            onModeChange("edit-image" as GrokMode);
             setTourStep(0);
           }}
           className="mx-auto flex items-center gap-1 font-mono-share text-[9px] text-muted-foreground/30 hover:text-primary/60 transition-colors"
