@@ -123,10 +123,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
-    // Send the verification email (non-blocking — don't let email failure block signup)
-    sendVerificationEmail(normalizedEmail, code).catch((e) => {
-      console.error("[signup] verification email failed:", e.message);
-    });
+    // Send the verification email — await it so we can warn the user if it fails
+    try {
+      await sendVerificationEmail(normalizedEmail, code);
+    } catch (emailErr: any) {
+      console.error("[signup] verification email failed:", emailErr.message);
+      // Account was created but email failed — return success with a warning
+      return res.status(201).json({
+        token,
+        user: { id: userId, email: normalizedEmail },
+        email_verified: false,
+        needsVerification: true,
+        emailWarning: "Account created but we couldn't send the verification email. Please try 'Resend Code' in a moment.",
+      });
+    }
 
     // Issue a token so the user can browse immediately (0 credits until verified)
     const token = signToken({ userId, email: normalizedEmail });

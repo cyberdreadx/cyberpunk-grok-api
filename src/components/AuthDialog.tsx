@@ -80,7 +80,10 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
         await onSignIn(email, password);
         setOpen(false);
       } else {
-        await onSignUp(email, password, referralCode);
+        const result = await onSignUp(email, password, referralCode);
+        if (result?.emailWarning) {
+          setError(result.emailWarning);
+        }
         // User is now logged in (even if unverified) — close dialog
         setOpen(false);
       }

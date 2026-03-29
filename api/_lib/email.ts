@@ -53,7 +53,7 @@ export async function sendVerificationEmail(
             </span>
           </div>
           <p style="font-size: 12px; color: #666; margin: 0;">
-            This code expires in 10 minutes. If you didn't create an account, ignore this email.
+            This code expires in 30 minutes. If you didn't create an account, ignore this email.
           </p>
         </div>
       </div>
