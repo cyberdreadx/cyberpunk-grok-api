@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Coins, ShoppingCart, Loader2, Crown, Settings, XCircle, AlertTriangle, Share2, Copy, Check, Gift, Users } from "lucide-react";
+import { Coins, ShoppingCart, Loader2, Crown, Settings, XCircle, AlertTriangle, Share2, Copy, Check, Gift, Users, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
 import {
@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import PricingCards from "@/components/PricingCards";
 import XrgePaymentDialog from "@/components/XrgePaymentDialog";
+import XrgeBankDialog from "@/components/XrgeBankDialog";
 import type { CreditPackage, SubscriptionTier } from "@/lib/api";
 import { XRGE_DEXSCREENER_URL, XRGE_CHAIN_NAME } from "@/lib/xrgePublic";
 
@@ -67,6 +68,7 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
   };
   const [xrgeOpen, setXrgeOpen] = useState(false);
   const [xrgePackageId, setXrgePackageId] = useState<string | null>(null);
+  const [bankOpen, setBankOpen] = useState(false);
 
   const handleXrgePurchase = (packageId: string) => {
     setXrgePackageId(packageId);
@@ -127,23 +129,35 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
             <DialogDescription className="font-rajdhani text-muted-foreground">
               10 free credits daily — subscribe or buy packs for more. Images: 1-2 cr · Videos: 5 cr · HD upscale: 7 cr.
             </DialogDescription>
-            <a
-              href={XRGE_DEXSCREENER_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-3 flex items-center gap-2 rounded-lg border border-pink-500/25 bg-gradient-to-r from-pink-500/10 to-violet-500/10 px-3 py-2.5 transition-colors hover:border-pink-400/40 hover:bg-pink-500/15"
-            >
+            <div className="mt-3 flex items-center gap-2 rounded-lg border border-pink-500/25 bg-gradient-to-r from-pink-500/10 to-violet-500/10 px-3 py-2.5">
               <img src="/xrge-logo.png" alt="" className="h-8 w-8 shrink-0 rounded-full" />
               <div className="min-w-0 flex-1 text-left">
                 <p className="font-orbitron text-[10px] tracking-wide text-pink-200">
-                  Pay with $XRGE on {XRGE_CHAIN_NAME}
+                  $XRGE on {XRGE_CHAIN_NAME} — Bank, Buy & Earn
                 </p>
                 <p className="font-mono-share text-[9px] text-muted-foreground/90 leading-snug">
-                  Bonus credits on packs · holders unlock NSFW LoRAs. Need tokens?{" "}
-                  <span className="text-pink-300 underline underline-offset-2">View pair on DexScreener →</span>
+                  Deposit XRGE to your bank · loyalty tiers up to +50% bonus · withdraw anytime
                 </p>
               </div>
-            </a>
+              <div className="flex flex-col gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setBankOpen(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-pink-400/40 bg-pink-500/15 hover:bg-pink-500/25 transition-colors font-orbitron text-[8px] tracking-wider text-pink-300"
+                >
+                  <Wallet className="w-3 h-3" />
+                  XRGE_BANK
+                </button>
+                <a
+                  href={XRGE_DEXSCREENER_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-1 font-mono-share text-[7px] text-pink-400/60 hover:text-pink-400"
+                >
+                  DexScreener →
+                </a>
+              </div>
+            </div>
           </DialogHeader>
 
           {/* Current balance summary */}
@@ -300,6 +314,13 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
         onClose={() => setXrgeOpen(false)}
         packageId={xrgePackageId}
         onSuccess={handleXrgeSuccess}
+      />
+
+      {/* XRGE Bank Dialog */}
+      <XrgeBankDialog
+        open={bankOpen}
+        onClose={() => setBankOpen(false)}
+        onCreditsRefresh={onCreditsRefresh}
       />
     </div>
   );

@@ -7,6 +7,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getDb } from "./_lib/db";
 import { getUserFromRequest } from "./_lib/auth";
 import { getXrgeConfig, verifyXrgeTransfer } from "./_lib/xrge";
+import { getTierForSpend, refreshLoyaltyTier } from "./v1/_lib/xrge-bank";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS
@@ -113,7 +114,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const creditsAdded = result[0].credits;
-    console.log(`[xrge-verify] Added ${creditsAdded} pack credits (incl. 15% bonus) to ${auth.userId} via XRGE tx ${txHash}`);
+
+    // Track lifetime XRGE spend and update loyalty tier
+    const xrgeSpent = parseFloat(order.xrge_amount) || 0;
+    if (xrgeSpent > 0) {
+      await sql`
+        UPDATE users SET
+          xrge_lifetime_spend = xrge_lifetime_spend + ${order.xrge_amount}::numeric
+        WHERE id = ${auth.userId}::uuid
+      `;
+      await refreshLoyaltyTier(sql, auth.userId);
+    }
+
+    console.log(`[xrge-verify] Added ${creditsAdded} pack credits to ${auth.userId} via XRGE tx ${txHash}`);
 
     return res.status(200).json({
       success: true,

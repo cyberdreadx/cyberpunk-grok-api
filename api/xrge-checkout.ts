@@ -8,6 +8,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getDb } from "./_lib/db";
 import { getUserFromRequest } from "./_lib/auth";
 import { getXrgeConfig, centsToXrge } from "./_lib/xrge";
+import { getTierForSpend } from "./v1/_lib/xrge-bank";
 
 const PACKAGES: Record<string, { credits: number; priceCents: number }> = {
   starter: { credits: 50, priceCents: 500 },
@@ -16,8 +17,6 @@ const PACKAGES: Record<string, { credits: number; priceCents: number }> = {
   ultra: { credits: 1800, priceCents: 15000 },
   enterprise: { credits: 4000, priceCents: 30000 },
 };
-
-const BONUS_MULTIPLIER = 0.30; // 30% bonus for XRGE payments
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS
@@ -35,13 +34,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const pkg = PACKAGES[packageId];
     if (!pkg) return res.status(400).json({ error: "Unknown package: " + packageId });
 
+    const sql = getDb();
     const config = await getXrgeConfig();
     const xrgeAmount = centsToXrge(pkg.priceCents, config.usdRate);
-    const bonusCredits = Math.floor(pkg.credits * BONUS_MULTIPLIER);
+
+    // Loyalty-tier-aware bonus: look up user's lifetime XRGE spend
+    const [spendRow] = await sql`
+      SELECT xrge_lifetime_spend FROM users WHERE id = ${auth.userId}::uuid
+    `;
+    const lifetimeSpend = parseFloat(spendRow?.xrge_lifetime_spend || "0");
+    const tier = getTierForSpend(lifetimeSpend);
+    const bonusCredits = Math.floor(pkg.credits * (tier.bonusPercent / 100));
     const totalCredits = pkg.credits + bonusCredits;
 
     // Expire any existing pending orders for this user+package
-    const sql = getDb();
     await sql`
       UPDATE xrge_orders
       SET status = 'cancelled'
@@ -77,7 +83,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       bonusCredits,
       totalCredits,
       packageName: packageId.toUpperCase(),
-      bonusPercent: 30,
+      bonusPercent: tier.bonusPercent,
+      loyaltyTier: tier.id,
+      loyaltyTierName: tier.name,
     });
   } catch (err: any) {
     console.error("[xrge-checkout]", err.message);

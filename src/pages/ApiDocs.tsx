@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from "react";
-import { Copy, Check, Key, Zap, Shield, ArrowLeft, ExternalLink, Play, Loader2, Image, Video, Wand2, Cpu } from "lucide-react";
+import { Copy, Check, Key, Zap, Shield, ArrowLeft, ExternalLink, Play, Loader2, Image, Video, Wand2, Cpu, Wallet } from "lucide-react";
 import { Link } from "react-router-dom";
 import CyberLayout from "@/components/CyberLayout";
 import GlitchText from "@/components/GlitchText";
@@ -1022,6 +1022,99 @@ print(f"Credits used: {data['credits_used']}")`} />
             <div className="border border-primary/20 rounded-lg p-3 text-center">
               <div className="text-2xl font-mono font-bold text-primary">15 cr</div>
               <div className="text-xs text-muted-foreground font-mono">GLTCH PRO video</div>
+            </div>
+          </div>
+        </Section>
+
+        {/* XRGE Bank */}
+        <Section title="🏦 XRGE BANK & LOYALTY">
+          <p className="text-sm text-foreground/80 font-mono">
+            Deposit <strong className="text-pink-400">$XRGE</strong> tokens (Base chain) into your custodial bank, then spend them on credits
+            with loyalty-tier bonuses — or withdraw back to your wallet at any time.
+          </p>
+
+          <div className="space-y-4">
+            {/* Loyalty Tiers */}
+            <div>
+              <h3 className="text-sm font-mono font-bold text-primary/80 mb-2">Loyalty Tiers</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div className="border border-amber-600/30 rounded-lg p-3 text-center bg-amber-900/10">
+                  <div className="text-lg font-mono font-bold text-amber-500">+30%</div>
+                  <div className="text-xs text-amber-400 font-orbitron tracking-wider">BRONZE</div>
+                  <div className="text-[10px] text-muted-foreground font-mono mt-1">Default</div>
+                </div>
+                <div className="border border-slate-400/30 rounded-lg p-3 text-center bg-slate-700/10">
+                  <div className="text-lg font-mono font-bold text-slate-300">+35%</div>
+                  <div className="text-xs text-slate-300 font-orbitron tracking-wider">SILVER</div>
+                  <div className="text-[10px] text-muted-foreground font-mono mt-1">50K XRGE spent</div>
+                </div>
+                <div className="border border-yellow-500/30 rounded-lg p-3 text-center bg-yellow-900/10">
+                  <div className="text-lg font-mono font-bold text-yellow-400">+42%</div>
+                  <div className="text-xs text-yellow-400 font-orbitron tracking-wider">GOLD</div>
+                  <div className="text-[10px] text-muted-foreground font-mono mt-1">200K XRGE spent</div>
+                </div>
+                <div className="border border-cyan-400/30 rounded-lg p-3 text-center bg-cyan-900/10">
+                  <div className="text-lg font-mono font-bold text-cyan-300">+50%</div>
+                  <div className="text-xs text-cyan-300 font-orbitron tracking-wider">DIAMOND</div>
+                  <div className="text-[10px] text-muted-foreground font-mono mt-1">1M XRGE spent</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Endpoints */}
+            <div>
+              <h3 className="text-sm font-mono font-bold text-primary/80 mb-2">Endpoints</h3>
+              <table className="w-full text-xs font-mono">
+                <thead>
+                  <tr className="border-b border-primary/20 text-primary/60">
+                    <th className="text-left py-1.5 pr-3">Method</th>
+                    <th className="text-left py-1.5 pr-3">Endpoint</th>
+                    <th className="text-left py-1.5">Description</th>
+                  </tr>
+                </thead>
+                <tbody className="text-foreground/80">
+                  <tr className="border-b border-primary/5">
+                    <td className="py-1.5 pr-3 text-green-400">GET</td>
+                    <td className="py-1.5 pr-3 text-primary">/api/v1/xrge-balance</td>
+                    <td className="py-1.5">Bank balance, loyalty tier, transaction history</td>
+                  </tr>
+                  <tr className="border-b border-primary/5">
+                    <td className="py-1.5 pr-3 text-yellow-400">POST</td>
+                    <td className="py-1.5 pr-3 text-primary">/api/v1/xrge-deposit</td>
+                    <td className="py-1.5">Verify on-chain transfer & credit bank</td>
+                  </tr>
+                  <tr className="border-b border-primary/5">
+                    <td className="py-1.5 pr-3 text-yellow-400">POST</td>
+                    <td className="py-1.5 pr-3 text-primary">/api/v1/xrge-purchase</td>
+                    <td className="py-1.5">Spend XRGE bank balance for credits</td>
+                  </tr>
+                  <tr>
+                    <td className="py-1.5 pr-3 text-yellow-400">POST</td>
+                    <td className="py-1.5 pr-3 text-primary">/api/v1/xrge-withdraw</td>
+                    <td className="py-1.5">Withdraw XRGE to wallet (min 100 XRGE)</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* Code examples */}
+            <div>
+              <h3 className="text-sm font-mono font-bold text-primary/80 mb-2">Examples</h3>
+              <p className="text-xs text-muted-foreground font-mono mb-2">Deposit XRGE (after sending tokens on-chain):</p>
+              <CopyBlock language="bash" code={`curl -X POST ${baseUrl}/api/v1/xrge-deposit \\
+  -H "X-API-Key: gltch_sk_YOUR_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{"txHash": "0xabc...your_tx_hash"}'`} />
+
+              <p className="text-xs text-muted-foreground font-mono mb-2 mt-3">Buy credits from bank balance:</p>
+              <CopyBlock language="bash" code={`curl -X POST ${baseUrl}/api/v1/xrge-purchase \\
+  -H "X-API-Key: gltch_sk_YOUR_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{"package": "pro"}'`} />
+
+              <p className="text-xs text-muted-foreground font-mono mb-2 mt-3">Check balance & tier:</p>
+              <CopyBlock language="bash" code={`curl ${baseUrl}/api/v1/xrge-balance \\
+  -H "X-API-Key: gltch_sk_YOUR_KEY"`} />
             </div>
           </div>
         </Section>

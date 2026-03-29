@@ -343,10 +343,10 @@ function PackCard({
             >
               <img src="/xrge-logo.png" alt="" className="w-5 h-5 rounded-full" />
               <span className="font-orbitron text-[10px] tracking-wider text-white/90">PAY WITH $XRGE</span>
-              <span className="text-green-400 font-mono-share text-[8px] font-bold bg-green-400/10 px-1.5 py-0.5 rounded-full leading-none">+15%</span>
+              <span className="text-green-400 font-mono-share text-[8px] font-bold bg-green-400/10 px-1.5 py-0.5 rounded-full leading-none">+30% bonus</span>
             </button>
             <p className="font-mono-share text-[8px] text-center text-muted-foreground/55 leading-tight">
-              Base chain · unlocks NSFW LoRAs when you complete a pack
+              Base chain · loyalty tiers up to +50% bonus
             </p>
           </>
         )}
