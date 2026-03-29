@@ -384,6 +384,12 @@ export default function Admin() {
     fetchAll();
   }, [fetchAll]);
 
+  useEffect(() => {
+    if (activeTab === "emails" && !emailStats && !emailLoading && authorized) {
+      fetchEmailLogs();
+    }
+  }, [activeTab, emailStats, emailLoading, authorized, fetchEmailLogs]);
+
   const usagePivot = React.useMemo(() => {
     const map = new Map<string, { day: string } & Record<string, number>>();
     for (const row of usage) {
