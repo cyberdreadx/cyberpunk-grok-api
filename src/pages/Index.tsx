@@ -9,6 +9,7 @@ import { lazyWithRetry } from "@/lib/lazyWithRetry";
 const GrokOrb = lazyWithRetry(() => import("@/components/GrokOrb"), "grok-orb");
 import GlitchText from "@/components/GlitchText";
 import ModeSelector from "@/components/ModeSelector";
+import SimpleMode from "@/components/SimpleMode";
 import PromptForm from "@/components/PromptForm";
 import SettingsPanel from "@/components/SettingsPanel";
 import {
