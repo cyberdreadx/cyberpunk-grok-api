@@ -49,6 +49,7 @@ const isNsfwLora = (name: string) => !SFW_LORA_KEYWORDS.some(k => name.toLowerCa
 
 const Index = () => {
   const [simpleMode, setSimpleMode] = useState(() => localStorage.getItem("ui-mode") !== "advanced");
+  const [showToggleTooltip, setShowToggleTooltip] = useState(() => !localStorage.getItem("onboarding-toggle-seen"));
   const [mode, setMode] = useState<GrokMode>("text-to-image");
   const [dismissedAnnouncements, setDismissedAnnouncements] = useState<string[]>(() => {
     try {
@@ -981,25 +982,52 @@ const Index = () => {
             <ThemePicker />
 
             {/* Simple / Advanced toggle */}
-            <button
-              onClick={() => {
-                const next = !simpleMode;
-                setSimpleMode(next);
-                localStorage.setItem("ui-mode", next ? "simple" : "advanced");
-                if (next && !["edit-image", "text-to-image", "image-to-video"].includes(mode)) {
-                  setMode("edit-image");
-                }
-              }}
-              className={`flex items-center gap-1 px-2 py-1 text-[9px] sm:text-[10px] font-mono-share transition-colors rounded border ${
-                simpleMode
-                  ? "border-primary/30 bg-primary/10 text-primary"
-                  : "border-border/50 bg-card/40 text-muted-foreground/60 hover:text-muted-foreground"
-              }`}
-              title={simpleMode ? "Switch to Advanced mode" : "Switch to Simple mode"}
-            >
-              {simpleMode ? <ToggleLeft className="w-3 h-3" /> : <ToggleRight className="w-3 h-3" />}
-              {simpleMode ? "SIMPLE" : "ADVANCED"}
-            </button>
+            <div className="relative">
+              <button
+                onClick={() => {
+                  const next = !simpleMode;
+                  setSimpleMode(next);
+                  localStorage.setItem("ui-mode", next ? "simple" : "advanced");
+                  localStorage.setItem("onboarding-toggle-seen", "1");
+                  setShowToggleTooltip(false);
+                  if (next && !["edit-image", "text-to-image", "image-to-video"].includes(mode)) {
+                    setMode("edit-image");
+                  }
+                }}
+                className={`flex items-center gap-1 px-2 py-1 text-[9px] sm:text-[10px] font-mono-share transition-colors rounded border ${
+                  simpleMode
+                    ? "border-primary/30 bg-primary/10 text-primary"
+                    : "border-border/50 bg-card/40 text-muted-foreground/60 hover:text-muted-foreground"
+                }${showToggleTooltip ? " ring-2 ring-primary/50 ring-offset-1 ring-offset-background" : ""}`}
+                title={simpleMode ? "Switch to Advanced mode" : "Switch to Simple mode"}
+              >
+                {simpleMode ? <ToggleLeft className="w-3 h-3" /> : <ToggleRight className="w-3 h-3" />}
+                {simpleMode ? "SIMPLE" : "ADVANCED"}
+              </button>
+
+              {/* First-time onboarding tooltip */}
+              {showToggleTooltip && (
+                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 animate-slide-up">
+                  <div className="relative bg-card border border-primary/40 rounded-lg px-3 py-2.5 shadow-lg shadow-primary/10 max-w-[220px]">
+                    {/* Arrow */}
+                    <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 bg-card border-l border-t border-primary/40" />
+                    <p className="font-mono-share text-[10px] text-foreground/80 leading-relaxed relative z-10">
+                      💡 <span className="text-primary font-bold">New!</span> Switch between Simple &amp; Advanced mode anytime.
+                    </p>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowToggleTooltip(false);
+                        localStorage.setItem("onboarding-toggle-seen", "1");
+                      }}
+                      className="mt-1.5 font-mono-share text-[9px] text-primary/60 hover:text-primary transition-colors relative z-10"
+                    >
+                      GOT IT ✓
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Auth: login/logout */}
             {auth.enabled && (
