@@ -5,7 +5,7 @@
  *
  * Body:
  *   prompt: string (required)
- *   workflow: "txt2img" | "klein" (default "klein")
+ *   workflow: "txt2img" | "klein" | "wan-video" (default "klein")
  *   image_url?: string (required for klein)
  *   width?: number (256-2048, default 832)
  *   height?: number (256-2048, default 1216)
@@ -29,9 +29,10 @@ const COMFY_COSTS: Record<string, number> = {
   "txt2img": 3,
   "klein": 3,
   "klein-hd": 4,
+  "wan-video": 15,
 };
 
-const VALID_WORKFLOWS = ["txt2img", "klein"];
+const VALID_WORKFLOWS = ["txt2img", "klein", "wan-video"];
 
 export const config = {
   api: { bodyParser: { sizeLimit: "2mb" } },
@@ -301,6 +302,93 @@ function buildKleinEditWorkflow(p: {
   return workflow;
 }
 
+const WAN_DEFAULT_NEGATIVE =
+  "色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走";
+
+function buildWanVideoWorkflow(p: {
+  prompt: string;
+  negativePrompt: string;
+  imageFilename: string;
+  width: number;
+  height: number;
+  seed: number;
+  steps: number;
+  cfg: number;
+  frameCount: number;
+}): Record<string, any> {
+  const splitStep = Math.max(1, Math.floor(p.steps / 2));
+
+  const highModel = process.env.COMFYUI_WAN_HIGH_MODEL
+    || "Wan2.2_Remix_NSFW_i2v_14b_high_lighting_fp8_e4m3fn_v2.1.safetensors";
+  const lowModel = process.env.COMFYUI_WAN_LOW_MODEL
+    || "Wan2.2_Remix_NSFW_i2v_14b_low_lighting_fp8_e4m3fn_v2.1.safetensors";
+  const clipModel = process.env.COMFYUI_WAN_CLIP
+    || "umt5_xxl_fp8_e4m3fn_scaled.safetensors";
+
+  let highModelSource: [string, number] = ["95", 0];
+  let lowModelSource: [string, number] = ["96", 0];
+
+  const workflow: Record<string, any> = {
+    "84": { class_type: "CLIPLoader", inputs: { clip_name: clipModel, type: "wan", device: "cpu" } },
+    "90": { class_type: "VAELoader", inputs: { vae_name: "wan_2.1_vae.safetensors" } },
+    "95": { class_type: "UNETLoader", inputs: { unet_name: highModel, weight_dtype: "fp8_e4m3fn" } },
+    "96": { class_type: "UNETLoader", inputs: { unet_name: lowModel, weight_dtype: "fp8_e4m3fn" } },
+    "97": { class_type: "LoadImage", inputs: { image: p.imageFilename } },
+    "93": { class_type: "CLIPTextEncode", inputs: { clip: ["84", 0], text: p.prompt } },
+    "89": { class_type: "CLIPTextEncode", inputs: { clip: ["84", 0], text: p.negativePrompt } },
+  };
+
+  workflow["104"] = { class_type: "ModelSamplingSD3", inputs: { model: highModelSource, shift: 12 } };
+  workflow["103"] = { class_type: "ModelSamplingSD3", inputs: { model: lowModelSource, shift: 12 } };
+
+  workflow["113"] = {
+    class_type: "WanImageToVideo",
+    inputs: {
+      positive: ["93", 0], negative: ["89", 0], vae: ["90", 0],
+      start_image: ["97", 0], width: p.width, height: p.height,
+      length: p.frameCount, batch_size: 1,
+    },
+  };
+
+  // Pass 1: high-noise
+  workflow["86"] = {
+    class_type: "KSamplerAdvanced",
+    inputs: {
+      model: ["104", 0], positive: ["113", 0], negative: ["113", 1],
+      latent_image: ["113", 2], add_noise: "enable", noise_seed: p.seed,
+      steps: p.steps, cfg: p.cfg, sampler_name: "uni_pc", scheduler: "beta",
+      start_at_step: 0, end_at_step: splitStep, return_with_leftover_noise: "enable",
+    },
+  };
+
+  workflow["120"] = { class_type: "easy cleanGpuUsed", inputs: { anything: ["86", 0] } };
+
+  // Pass 2: low-noise
+  workflow["85"] = {
+    class_type: "KSamplerAdvanced",
+    inputs: {
+      model: ["103", 0], positive: ["113", 0], negative: ["113", 1],
+      latent_image: ["120", 0], add_noise: "disable", noise_seed: p.seed,
+      steps: p.steps, cfg: p.cfg, sampler_name: "uni_pc", scheduler: "beta",
+      start_at_step: splitStep, end_at_step: 10000, return_with_leftover_noise: "disable",
+    },
+  };
+
+  workflow["87"] = { class_type: "VAEDecode", inputs: { samples: ["85", 0], vae: ["90", 0] } };
+
+  workflow["94"] = {
+    class_type: "VHS_VideoCombine",
+    inputs: {
+      images: ["87", 0], frame_rate: 24, loop_count: 0,
+      filename_prefix: "GrokRunner", format: "video/h264-mp4",
+      pix_fmt: "yuv420p", crf: 19, save_metadata: true,
+      trim_to_audio: false, pingpong: false, save_output: true,
+    },
+  };
+
+  return workflow;
+}
+
 // Strip data URI prefix from base64 if present
 function cleanBase64(b64: string): string {
   const idx = b64.indexOf(",");
@@ -358,14 +446,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     let rpEndpoint = fallbackEndpoint;
     if (workflowType === "klein") {
       rpEndpoint = process.env.RUNPOD_QWEN_EDIT_ENDPOINT_ID || fallbackEndpoint;
+    } else if (workflowType === "wan-video") {
+      rpEndpoint = process.env.RUNPOD_WAN_ENDPOINT_ID || fallbackEndpoint;
     }
 
     if (!rpEndpoint || !rpApiKey) {
       return res.status(503).json({ error: "GLTCH PRO service not configured" });
     }
 
-    // Fetch image for edit workflows
-    const needsImage = workflowType === "klein";
+    // Fetch image for edit/video workflows
+    const needsImage = ["klein", "wan-video"].includes(workflowType);
     const imageUrl = (body.image_url as string || "").trim();
     if (needsImage && !imageUrl) {
       return res.status(400).json({ error: `image_url is required for ${workflowType} workflow` });
@@ -402,6 +492,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Build the actual ComfyUI workflow JSON
     let comfyWorkflow: Record<string, any>;
+    const isVideo = workflowType === "wan-video";
 
     if (workflowType === "klein") {
       const loras: { name: string; strengthModel: number; strengthClip: number }[] = [];
@@ -417,6 +508,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         steps,
         cfg,
         loras,
+      });
+    } else if (workflowType === "wan-video") {
+      const width = Math.min(1024, Math.max(256, Number(body.width) || 832));
+      const height = Math.min(1024, Math.max(256, Number(body.height) || 480));
+      const frameCount = Math.min(241, Math.max(17, Number(body.frame_count) || 81));
+      comfyWorkflow = buildWanVideoWorkflow({
+        prompt,
+        negativePrompt: body.negative_prompt || WAN_DEFAULT_NEGATIVE,
+        imageFilename,
+        width,
+        height,
+        seed,
+        steps,
+        cfg,
+        frameCount,
       });
     } else {
       const width = Math.min(2048, Math.max(256, Number(body.width) || 832));
@@ -480,6 +586,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         if (pollData.status === "COMPLETED" && pollData.output) {
           const out = pollData.output;
+
+          if (isVideo) {
+            const videoUrl = out.video_url || out.video || out.output ||
+              (typeof out === "string" ? out : null);
+            if (!videoUrl) {
+              await refundCredits(sql, auth.userId, d);
+              return res.status(502).json({ error: "Generation completed but no video URL returned. Credits refunded." });
+            }
+            await logUsage(sql, auth, `comfy:${workflowType}`, totalCost, ip);
+            return res.status(200).json({
+              type: "comfy-video",
+              workflow: workflowType,
+              video_url: videoUrl,
+              seed,
+              credits_used: totalCost,
+              credits_remaining: available - totalCost,
+            });
+          }
+
           let image = out.image_url || out.output ||
             (typeof out === "string" ? out : null) ||
             (out.images?.length ? out.images[out.images.length - 1] : null);
