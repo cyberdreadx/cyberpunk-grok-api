@@ -1064,6 +1064,35 @@ const Index = () => {
           </div>
         )}
 
+        {simpleMode ? (
+          /* ── SIMPLE MODE ─────────────────────────────────────── */
+          <section className="animate-slide-up border border-border rounded bg-card/40 backdrop-blur-sm overflow-hidden" style={{ animationDelay: "100ms" }}>
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50 bg-card/60">
+              <div className="flex items-center gap-1.5">
+                <div className="w-2 h-2 rounded-full bg-neon-red/60" />
+                <div className="w-2 h-2 rounded-full bg-neon-yellow/60" />
+                <div className="w-2 h-2 rounded-full bg-primary/60" />
+              </div>
+              <span className="font-orbitron text-sm sm:text-base font-bold text-foreground tracking-wide leading-tight">
+                Quick Create
+              </span>
+              <div className={`w-2 h-2 rounded-full transition-colors duration-500 shrink-0 ml-auto ${isLoading ? "bg-secondary animate-pulse" : "bg-primary animate-pulse-glow"}`} />
+            </div>
+            <div className="p-3 sm:p-5">
+              <SimpleMode
+                onSubmit={handleSubmit}
+                isLoading={isLoading}
+                creditCost={previewCreditCost}
+                totalCredits={effectiveApiMode === "credits" ? creditsHook.totalCredits : undefined}
+                onModeChange={(m) => { setMode(m); setActiveImageUrl(""); }}
+                onImageUrlChange={setActiveImageUrl}
+                currentMode={mode}
+              />
+            </div>
+          </section>
+        ) : (
+          /* ── ADVANCED MODE ───────────────────────────────────── */
+          <>
         {/* Mode selector */}
         <section className="animate-slide-up" style={{ animationDelay: "100ms" }}>
           <div className="flex items-center gap-2 mb-3">
