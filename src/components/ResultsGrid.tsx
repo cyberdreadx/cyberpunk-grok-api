@@ -893,11 +893,14 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
 
   // Share CTA state — show after results appear
   const [shareCTADismissed, setShareCTADismissed] = useState(false);
+  const [lastShareUrl, setLastShareUrl] = useState<string | null>(null);
   const showShareCTA = !isLoading && results.length > 0 && !shareCTADismissed;
-  // Reset dismissed state when new results come in
   const prevResultsCount = useRef(results.length);
   useEffect(() => {
-    if (results.length > prevResultsCount.current) setShareCTADismissed(false);
+    if (results.length > prevResultsCount.current) {
+      setShareCTADismissed(false);
+      setLastShareUrl(null);
+    }
     prevResultsCount.current = results.length;
   }, [results.length]);
 
@@ -1078,6 +1081,8 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
       ? `${data.shareUrl}?ref=${refCodeRef.current}`
       : data.shareUrl;
 
+    setLastShareUrl(shareLink);
+
     const mobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
 
     if (mobile && navigator.share) {
@@ -1108,7 +1113,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
     }
 
     if (copied) {
-      toast.success("Share link copied to clipboard!");
+      toast.success("Link copied! Share it on X or Reddit to show it off.");
     } else if (navigator.share) {
       try {
         await navigator.share({ title: "Grok Runner", url: shareLink });
@@ -1614,6 +1619,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
         latestResult={results[0] ?? null}
         onShareResult={handleShare}
         sharingId={sharingId}
+        lastShareUrl={lastShareUrl}
       />
 
       {/* Loading state — CSS-only, zero WebGL */}
