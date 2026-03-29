@@ -384,6 +384,21 @@ const SimpleMode: React.FC<SimpleModeProps> = ({
           Not enough credits — you need {creditCost} but have {totalCredits}
         </p>
       )}
+
+      {/* Restart Tour */}
+      {!isTourActive && (
+        <button
+          onClick={() => {
+            localStorage.removeItem(TOUR_STORAGE_KEY);
+            localStorage.removeItem("results-tip-seen");
+            setTourStep(0);
+          }}
+          className="mx-auto flex items-center gap-1 font-mono-share text-[9px] text-muted-foreground/30 hover:text-primary/60 transition-colors"
+        >
+          <HelpCircle className="w-3 h-3" />
+          Restart tour
+        </button>
+      )}
     </div>
   );
 };
