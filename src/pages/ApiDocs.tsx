@@ -400,10 +400,15 @@ console.log(\`Credits remaining: \${data.credits_remaining}\`);`} />
                   <td className="py-1.5 pr-3">Rate limited</td>
                   <td className="py-1.5">Wait and retry (30 req/min default)</td>
                 </tr>
-                <tr>
+                <tr className="border-b border-primary/5">
                   <td className="py-1.5 pr-3 text-primary">502</td>
                   <td className="py-1.5 pr-3">Generation failed</td>
                   <td className="py-1.5">Retry — credits are auto-refunded</td>
+                </tr>
+                <tr>
+                  <td className="py-1.5 pr-3 text-primary">504</td>
+                  <td className="py-1.5 pr-3">Timeout</td>
+                  <td className="py-1.5">Video took too long — credits refunded</td>
                 </tr>
               </tbody>
             </table>
