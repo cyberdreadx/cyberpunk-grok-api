@@ -452,6 +452,22 @@ const Index = () => {
     if (storageReady) prevResultsLenRef.current = results.length;
   }, [storageReady, results.length]);
 
+  // Show results walkthrough tip after first generation in simple mode
+  const prevResultsCountForTip = useRef(results.length);
+  React.useEffect(() => {
+    if (!simpleMode || hasShownResultsTip.current) return;
+    if (results.length > prevResultsCountForTip.current && results.length > 0) {
+      setShowResultsTip(true);
+      hasShownResultsTip.current = true;
+      localStorage.setItem("results-tip-seen", "1");
+      // Auto-scroll to results
+      setTimeout(() => {
+        document.getElementById("results-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 300);
+    }
+    prevResultsCountForTip.current = results.length;
+  }, [results.length, simpleMode]);
+
   // Preview credit cost shown on the GENERATE button
   const previewCreditCost = React.useMemo((): number | undefined => {
     if (effectiveApiMode !== "credits") return undefined;
