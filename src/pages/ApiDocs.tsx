@@ -873,6 +873,27 @@ print(f"Credits used: {data['credits_used']}")`} />
   "credits_remaining": 131
 }`} />
             </div>
+            <div>
+              <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">GLTCH EDIT RESPONSE</h4>
+              <CopyBlock language="json" code={`{
+  "type": "gltch-edit",
+  "image_url": "https://...",
+  "seed": 1234567890,
+  "hd": false,
+  "credits_used": 5,
+  "credits_remaining": 141
+}`} />
+            </div>
+            <div>
+              <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">GLTCH PRO IMAGE RESPONSE</h4>
+              <CopyBlock language="json" code={`{
+  "type": "comfy-image",
+  "workflow": "txt2img",
+  "image_url": "https://...",
+  "credits_used": 3,
+  "credits_remaining": 138
+}`} />
+            </div>
           </div>
         </Section>
 
