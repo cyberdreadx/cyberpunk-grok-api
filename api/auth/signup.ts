@@ -123,6 +123,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
+    // Issue a token so the user can continue even if email delivery fails.
+    const token = signToken({ userId, email: normalizedEmail });
+
     // Send the verification email — await it so we can warn the user if it fails
     try {
       await sendVerificationEmail(normalizedEmail, code);
@@ -137,9 +140,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         emailWarning: "Account created but we couldn't send the verification email. Please try 'Resend Code' in a moment.",
       });
     }
-
-    // Issue a token so the user can browse immediately (0 credits until verified)
-    const token = signToken({ userId, email: normalizedEmail });
 
     return res.status(201).json({
       token,
