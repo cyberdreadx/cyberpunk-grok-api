@@ -1,0 +1,56 @@
+/**
+ * /api/v1/models — List available models and their credit costs.
+ *
+ * Auth: X-API-Key header.
+ */
+
+import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { getUserFromApiKey } from "../_lib/apikey-auth";
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-API-Key");
+  if (req.method === "OPTIONS") return res.status(200).end();
+  if (req.method !== "GET") return res.status(405).json({ error: "GET only" });
+
+  const auth = await getUserFromApiKey(req);
+  if (!auth) {
+    return res.status(401).json({ error: "Invalid or missing API key." });
+  }
+
+  // Grok models
+  const grokModels = [
+    { id: "grok-2-image", type: "image", credits_per_unit: 2, description: "Standard quality image generation" },
+    { id: "grok-2-image-pro", type: "image", credits_per_unit: 5, description: "Higher quality image generation" },
+    { id: "grok-video-5s", type: "video", credits_per_unit: 15, description: "5-second video generation (3 cr/sec)" },
+    { id: "grok-video-10s", type: "video", credits_per_unit: 30, description: "10-second video generation (3 cr/sec)" },
+  ];
+
+  // GLTCH models
+  const gltchModels = [
+    { id: "gltch-edit", type: "image-edit", credits_per_unit: 5, description: "GLTCH image editing" },
+    { id: "gltch-edit-hd", type: "image-edit", credits_per_unit: 7, description: "GLTCH HD image editing with upscale" },
+  ];
+
+  // ComfyUI / GLTCH PRO models
+  const comfyAvailable = !!(process.env.RUNPOD_ENDPOINT_ID && process.env.RUNPOD_API_KEY);
+  const comfyModels = comfyAvailable ? [
+    { id: "comfy-txt2img", type: "image", credits_per_unit: 3, description: "GLTCH PRO text-to-image (Stable Diffusion / Flux)" },
+    { id: "comfy-klein", type: "image-edit", credits_per_unit: 3, description: "GLTCH PRO Flux Klein image editing" },
+    { id: "comfy-klein-hd", type: "image-edit", credits_per_unit: 4, description: "GLTCH PRO Flux Klein HD image editing" },
+    { id: "comfy-wan-video", type: "video", credits_per_unit: 15, description: "GLTCH PRO WAN video generation" },
+    { id: "comfy-gltch-wan", type: "video", credits_per_unit: 15, description: "GLTCH PRO GLTCH WAN video generation" },
+    { id: "comfy-gltch-wan-hd", type: "video", credits_per_unit: 18, description: "GLTCH PRO GLTCH WAN HD video generation" },
+  ] : [];
+
+  // Available checkpoints (for txt2img)
+  const checkpoints = (process.env.COMFYUI_MODELS || "").split(",").map(m => m.trim()).filter(Boolean);
+
+  return res.status(200).json({
+    engines: [
+      { id: "grok", name: "GROK", description: "xAI Grok image & video generation", models: grokModels },
+      { id: "gltch", name: "GLTCH", description: "AI-powered image editing", models: gltchModels },
+      ...(comfyAvailable ? [{ id: "gltch-pro", name: "GLTCH PRO", description: "Advanced ComfyUI pipelines", models: comfyModels, checkpoints }] : []),
+    ],
+  });
+}
