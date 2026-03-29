@@ -1,9 +1,11 @@
 /**
  * Email sending utility using Resend.
  * Verification codes, password resets, and daily credit notifications.
+ * All sends are logged to the email_log table for delivery tracking.
  */
 
 import { Resend } from "resend";
+import { getDb } from "./db";
 
 export type { Resend };
 
@@ -27,6 +29,34 @@ export function generateVerificationCode(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
+/** Log an email send attempt to the database. */
+async function logEmail(
+  recipient: string,
+  emailType: string,
+  status: "sent" | "failed",
+  resendId?: string | null,
+  errorMessage?: string | null,
+  metadata?: Record<string, any>,
+): Promise<void> {
+  try {
+    const sql = getDb();
+    await sql`
+      INSERT INTO email_log (recipient, email_type, resend_id, status, error_message, metadata)
+      VALUES (
+        ${recipient},
+        ${emailType},
+        ${resendId ?? null},
+        ${status},
+        ${errorMessage ?? null},
+        ${JSON.stringify(metadata ?? {})}::jsonb
+      )
+    `;
+  } catch (logErr: any) {
+    // Don't let logging failures break email sending
+    console.error("[email-log] Failed to log email:", logErr.message);
+  }
+}
+
 /** Send a verification code email. */
 export async function sendVerificationEmail(
   to: string,
@@ -34,7 +64,7 @@ export async function sendVerificationEmail(
 ): Promise<void> {
   const fromAddress = getFromAddress();
 
-  const { error } = await getResend().emails.send({
+  const { data, error } = await getResend().emails.send({
     from: `Grok Runner <${fromAddress}>`,
     to: [to],
     subject: `Your verification code: ${code}`,
@@ -61,9 +91,12 @@ export async function sendVerificationEmail(
   });
 
   if (error) {
+    await logEmail(to, "verification", "failed", null, error.message);
     console.error("[email] Failed to send verification email:", error);
     throw new Error("Failed to send verification email");
   }
+
+  await logEmail(to, "verification", "sent", data?.id);
 }
 
 /** Send a password reset code email. */
@@ -73,7 +106,7 @@ export async function sendPasswordResetEmail(
 ): Promise<void> {
   const fromAddress = getFromAddress();
 
-  const { error } = await getResend().emails.send({
+  const { data, error } = await getResend().emails.send({
     from: `Grok Runner <${fromAddress}>`,
     to: [to],
     subject: `Password reset code: ${code}`,
@@ -100,9 +133,36 @@ export async function sendPasswordResetEmail(
   });
 
   if (error) {
+    await logEmail(to, "password_reset", "failed", null, error.message);
     console.error("[email] Failed to send password reset email:", error);
     throw new Error("Failed to send password reset email");
   }
+
+  await logEmail(to, "password_reset", "sent", data?.id);
+}
+
+/** Send a daily credits notification email. */
+export async function sendDailyCreditsEmail(
+  to: string,
+  amount: number,
+): Promise<void> {
+  const fromAddress = getFromAddress();
+
+  const { data, error } = await getResend().emails.send({
+    from: `Grok Runner <${fromAddress}>`,
+    to: [to],
+    subject: `Your daily credits are ready!`,
+    html: buildDailyCreditsHtml(amount),
+  });
+
+  if (error) {
+    await logEmail(to, "daily_credits", "failed", null, error.message, { amount });
+    console.error("[email] Failed to send daily credits email:", error);
+    // Don't throw for daily credits — it's non-critical
+    return;
+  }
+
+  await logEmail(to, "daily_credits", "sent", data?.id, null, { amount });
 }
 
 /** Build the HTML body for the daily credits refill notification. */
