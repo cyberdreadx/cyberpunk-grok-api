@@ -530,10 +530,188 @@ export default function ApiDocs() {
                 </div>
               </div>
             </div>
+
+            {/* GLTCH Edit */}
+            <div className="border border-primary/20 rounded-lg overflow-hidden">
+              <div className="bg-primary/5 px-4 py-2 flex items-center gap-2">
+                <span className="text-xs font-mono font-bold bg-primary/20 text-primary px-2 py-0.5 rounded">POST</span>
+                <code className="text-sm font-mono text-foreground">/api/v1/gltch</code>
+                <span className="text-[10px] font-mono text-muted-foreground ml-auto">GLTCH EDIT</span>
+              </div>
+              <div className="p-4 space-y-4">
+                <p className="text-sm text-foreground/80 font-mono">
+                  AI-powered image editing. Provide an image URL and a prompt describing the edit.
+                </p>
+                <div>
+                  <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">REQUEST BODY</h4>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs font-mono">
+                      <thead>
+                        <tr className="border-b border-primary/10">
+                          <th className="text-left py-1.5 pr-3 text-muted-foreground">Parameter</th>
+                          <th className="text-left py-1.5 pr-3 text-muted-foreground">Type</th>
+                          <th className="text-left py-1.5 pr-3 text-muted-foreground">Default</th>
+                          <th className="text-left py-1.5 text-muted-foreground">Description</th>
+                        </tr>
+                      </thead>
+                      <tbody className="text-foreground/80">
+                        <tr className="border-b border-primary/5">
+                          <td className="py-1.5 pr-3 text-primary">prompt *</td>
+                          <td className="py-1.5 pr-3">string</td>
+                          <td className="py-1.5 pr-3">—</td>
+                          <td className="py-1.5">Edit description (max 5000 chars)</td>
+                        </tr>
+                        <tr className="border-b border-primary/5">
+                          <td className="py-1.5 pr-3 text-primary">image_url *</td>
+                          <td className="py-1.5 pr-3">string</td>
+                          <td className="py-1.5 pr-3">—</td>
+                          <td className="py-1.5">Public URL of image to edit</td>
+                        </tr>
+                        <tr className="border-b border-primary/5">
+                          <td className="py-1.5 pr-3 text-primary">aspect_ratio</td>
+                          <td className="py-1.5 pr-3">string</td>
+                          <td className="py-1.5 pr-3">1:1</td>
+                          <td className="py-1.5">1:1, 16:9, 9:16, 4:3, 3:4, 3:2, 2:3</td>
+                        </tr>
+                        <tr>
+                          <td className="py-1.5 pr-3 text-primary">hd</td>
+                          <td className="py-1.5 pr-3">boolean</td>
+                          <td className="py-1.5 pr-3">false</td>
+                          <td className="py-1.5">HD upscale (5 cr → 7 cr)</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* GLTCH PRO */}
+            <div className="border border-primary/20 rounded-lg overflow-hidden">
+              <div className="bg-primary/5 px-4 py-2 flex items-center gap-2">
+                <span className="text-xs font-mono font-bold bg-primary/20 text-primary px-2 py-0.5 rounded">POST</span>
+                <code className="text-sm font-mono text-foreground">/api/v1/comfy</code>
+                <span className="text-[10px] font-mono text-muted-foreground ml-auto">GLTCH PRO</span>
+              </div>
+              <div className="p-4 space-y-4">
+                <p className="text-sm text-foreground/80 font-mono">
+                  Advanced generation pipelines — text-to-image, Flux Klein editing, and WAN video generation via ComfyUI.
+                </p>
+                <div>
+                  <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">REQUEST BODY</h4>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs font-mono">
+                      <thead>
+                        <tr className="border-b border-primary/10">
+                          <th className="text-left py-1.5 pr-3 text-muted-foreground">Parameter</th>
+                          <th className="text-left py-1.5 pr-3 text-muted-foreground">Type</th>
+                          <th className="text-left py-1.5 pr-3 text-muted-foreground">Default</th>
+                          <th className="text-left py-1.5 text-muted-foreground">Description</th>
+                        </tr>
+                      </thead>
+                      <tbody className="text-foreground/80">
+                        <tr className="border-b border-primary/5">
+                          <td className="py-1.5 pr-3 text-primary">prompt *</td>
+                          <td className="py-1.5 pr-3">string</td>
+                          <td className="py-1.5 pr-3">—</td>
+                          <td className="py-1.5">Text description (max 5000 chars)</td>
+                        </tr>
+                        <tr className="border-b border-primary/5">
+                          <td className="py-1.5 pr-3 text-primary">workflow</td>
+                          <td className="py-1.5 pr-3">string</td>
+                          <td className="py-1.5 pr-3">txt2img</td>
+                          <td className="py-1.5">txt2img, klein, wan-video, gltch-wan</td>
+                        </tr>
+                        <tr className="border-b border-primary/5">
+                          <td className="py-1.5 pr-3 text-primary">image_url</td>
+                          <td className="py-1.5 pr-3">string</td>
+                          <td className="py-1.5 pr-3">—</td>
+                          <td className="py-1.5">Required for klein, wan-video, gltch-wan</td>
+                        </tr>
+                        <tr className="border-b border-primary/5">
+                          <td className="py-1.5 pr-3 text-primary">width / height</td>
+                          <td className="py-1.5 pr-3">integer</td>
+                          <td className="py-1.5 pr-3">832×1216</td>
+                          <td className="py-1.5">Image dimensions (256–2048)</td>
+                        </tr>
+                        <tr className="border-b border-primary/5">
+                          <td className="py-1.5 pr-3 text-primary">steps</td>
+                          <td className="py-1.5 pr-3">integer</td>
+                          <td className="py-1.5 pr-3">20</td>
+                          <td className="py-1.5">Sampling steps (1–100)</td>
+                        </tr>
+                        <tr className="border-b border-primary/5">
+                          <td className="py-1.5 pr-3 text-primary">checkpoint</td>
+                          <td className="py-1.5 pr-3">string</td>
+                          <td className="py-1.5 pr-3">auto</td>
+                          <td className="py-1.5">Model checkpoint (use /api/v1/models to list)</td>
+                        </tr>
+                        <tr>
+                          <td className="py-1.5 pr-3 text-primary">upscale</td>
+                          <td className="py-1.5 pr-3">boolean</td>
+                          <td className="py-1.5 pr-3">false</td>
+                          <td className="py-1.5">HD upscale (adds 1 cr for edits, 3 cr for video)</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">WORKFLOWS & COSTS</h4>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs font-mono">
+                      <thead>
+                        <tr className="border-b border-primary/10">
+                          <th className="text-left py-1.5 pr-3 text-muted-foreground">Workflow</th>
+                          <th className="text-left py-1.5 pr-3 text-muted-foreground">Credits</th>
+                          <th className="text-left py-1.5 text-muted-foreground">Description</th>
+                        </tr>
+                      </thead>
+                      <tbody className="text-foreground/80">
+                        <tr className="border-b border-primary/5">
+                          <td className="py-1.5 pr-3 text-primary">txt2img</td>
+                          <td className="py-1.5 pr-3">3 cr</td>
+                          <td className="py-1.5">Text-to-image (SD / Flux models)</td>
+                        </tr>
+                        <tr className="border-b border-primary/5">
+                          <td className="py-1.5 pr-3 text-primary">klein</td>
+                          <td className="py-1.5 pr-3">3–4 cr</td>
+                          <td className="py-1.5">Flux Klein image editing (+1 for HD)</td>
+                        </tr>
+                        <tr className="border-b border-primary/5">
+                          <td className="py-1.5 pr-3 text-primary">wan-video</td>
+                          <td className="py-1.5 pr-3">15 cr</td>
+                          <td className="py-1.5">WAN image-to-video generation</td>
+                        </tr>
+                        <tr>
+                          <td className="py-1.5 pr-3 text-primary">gltch-wan</td>
+                          <td className="py-1.5 pr-3">15–18 cr</td>
+                          <td className="py-1.5">GLTCH WAN video (+3 for HD)</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Models Discovery */}
+            <div className="border border-primary/20 rounded-lg overflow-hidden">
+              <div className="bg-primary/5 px-4 py-2 flex items-center gap-2">
+                <span className="text-xs font-mono font-bold bg-primary/20 text-primary px-2 py-0.5 rounded">GET</span>
+                <code className="text-sm font-mono text-foreground">/api/v1/models</code>
+                <span className="text-[10px] font-mono text-muted-foreground ml-auto">DISCOVERY</span>
+              </div>
+              <div className="p-4 space-y-2">
+                <p className="text-sm text-foreground/80 font-mono">
+                  List all available engines, models, and their credit costs. Returns available checkpoints for GLTCH PRO.
+                </p>
+                <CopyBlock code={`curl -H "X-API-Key: gltch_sk_..." ${baseUrl}/api/v1/models`} />
+              </div>
+            </div>
           </div>
         </Section>
-
-        {/* Examples */}
         <Section title="💻 CODE EXAMPLES">
           <div className="space-y-4">
             <div>
