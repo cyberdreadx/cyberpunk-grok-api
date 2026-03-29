@@ -1,7 +1,7 @@
 /**
- * XRGE Bank & Loyalty Tier logic for v1 API endpoints.
+ * XRGE Loyalty Tier logic.
  *
- * Loyalty tiers are determined by cumulative XRGE spent (lifetime_spend).
+ * Tiers are determined by cumulative XRGE spent (lifetime_spend).
  * Each tier grants a higher bonus percentage on credit purchases.
  *
  *   Bronze  (default)      → 30% bonus
@@ -31,39 +31,8 @@ export function getTierForSpend(lifetimeSpend: number): LoyaltyTier {
   return LOYALTY_TIERS[LOYALTY_TIERS.length - 1];
 }
 
-export function getNextTier(currentTier: string): LoyaltyTier | null {
-  const idx = LOYALTY_TIERS.findIndex((t) => t.id === currentTier);
-  if (idx <= 0) return null;
-  return LOYALTY_TIERS[idx - 1];
-}
-
-export const CREDIT_PACKAGES: Record<string, { credits: number; priceCents: number }> = {
-  starter:    { credits: 50,   priceCents: 500 },
-  pro:        { credits: 175,  priceCents: 1500 },
-  mega:       { credits: 450,  priceCents: 3500 },
-  ultra:      { credits: 1800, priceCents: 15000 },
-  enterprise: { credits: 4000, priceCents: 30000 },
-};
-
-export interface BankUser {
-  id: string;
-  xrge_bank_balance: string;
-  xrge_lifetime_spend: string;
-  loyalty_tier: string;
-  wallet_address: string | null;
-}
-
-export async function getBankUser(sql: any, userId: string): Promise<BankUser | null> {
-  const rows = await sql`
-    SELECT id, xrge_bank_balance, xrge_lifetime_spend, loyalty_tier, wallet_address
-    FROM users WHERE id = ${userId}
-  `;
-  return rows[0] || null;
-}
-
 /**
  * Recalculate and persist the user's loyalty tier based on lifetime spend.
- * Returns the new tier.
  */
 export async function refreshLoyaltyTier(sql: any, userId: string): Promise<LoyaltyTier> {
   const [row] = await sql`

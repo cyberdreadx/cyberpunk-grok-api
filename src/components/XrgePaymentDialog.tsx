@@ -36,6 +36,8 @@ interface XrgeOrder {
   totalCredits: number;
   packageName: string;
   bonusPercent: number;
+  loyaltyTier?: string;
+  loyaltyTierName?: string;
 }
 
 interface XrgePaymentDialogProps {
@@ -241,7 +243,7 @@ const XrgePaymentDialog: React.FC<XrgePaymentDialogProps> = ({
               <div className="flex items-center gap-1 mt-1">
                 <Gift className="w-3 h-3 text-green-400" />
                 <span className="font-mono-share text-[10px] text-green-400">
-                  Includes {order.bonusCredits} bonus credits ({order.bonusPercent}% XRGE bonus!)
+                  +{order.bonusCredits} bonus ({order.bonusPercent}%{order.loyaltyTierName ? ` · ${order.loyaltyTierName} tier` : ""})
                 </span>
               </div>
             </div>
