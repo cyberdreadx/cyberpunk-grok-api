@@ -63,7 +63,7 @@ export default function ApiDocs() {
         {/* Quick start */}
         <Section title="⚡ QUICK START">
           <ol className="list-decimal list-inside space-y-2 text-sm text-foreground/80 font-mono">
-            <li>Create an account and purchase credits at <a href={baseUrl} className="text-primary underline">{baseUrl}</a></li>
+            <li><a href={baseUrl} className="text-primary underline">{baseUrl}</a></li>
             <li>Generate an API key from the <strong className="text-primary">API KEYS</strong> button on the main page</li>
             <li>Use the key in your requests via the <code className="text-primary bg-muted/50 px-1 rounded">X-API-Key</code> header</li>
           </ol>
