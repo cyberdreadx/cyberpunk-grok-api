@@ -293,6 +293,22 @@ export default function Admin() {
   const [granting, setGranting] = useState(false);
   const [grantResult, setGrantResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
+  const fetchEmailLogs = useCallback(async (filters?: { type?: string; status?: string }) => {
+    setEmailLoading(true);
+    try {
+      const body: any = { action: "email-logs", limit: 100 };
+      if (filters?.type) body.email_type = filters.type;
+      if (filters?.status) body.status = filters.status;
+      const res = await apiFetch("/admin", { method: "POST", body });
+      setEmailLogs(res.logs || []);
+      setEmailStats(res.stats || null);
+    } catch (err: any) {
+      console.error("[admin] email-logs failed:", err.message);
+    } finally {
+      setEmailLoading(false);
+    }
+  }, []);
+
   const fetchAll = useCallback(async () => {
     setRefreshing(true);
     const errors: string[] = [];
