@@ -96,6 +96,15 @@ function ApiPlayground({ baseUrl }: { baseUrl: string }) {
         headers: { "Content-Type": "application/json", "X-API-Key": apiKey.trim() },
         body: JSON.stringify(body),
       });
+
+      const contentType = res.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) {
+        const text = await res.text();
+        setError(`API returned non-JSON (${res.status}). Make sure you're on the deployed site (grokrunner.gltch.app), not a preview. Raw: ${text.slice(0, 200)}`);
+        setLoading(false);
+        return;
+      }
+
       const data = await res.json();
       setResponse(JSON.stringify(data, null, 2));
 
@@ -107,7 +116,12 @@ function ApiPlayground({ baseUrl }: { baseUrl: string }) {
         setError(`${res.status}: ${data.error || "Request failed"}`);
       }
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Network error");
+      const msg = e instanceof Error ? e.message : "Network error";
+      if (msg.includes("Failed to fetch")) {
+        setError("Failed to fetch — the API playground only works on the deployed site (grokrunner.gltch.app). Preview environments cannot reach the backend.");
+      } else {
+        setError(msg);
+      }
     } finally {
       setLoading(false);
     }
