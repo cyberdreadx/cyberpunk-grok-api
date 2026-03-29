@@ -62,9 +62,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       WHERE id = ${user.id}
     `;
 
-    await sendVerificationEmail(normalizedEmail, code);
+    try {
+      await sendVerificationEmail(normalizedEmail, code);
+    } catch (emailErr: any) {
+      console.error("[resend-code] email send failed:", emailErr.message);
+      return res.status(500).json({ error: "Failed to send verification email. Please try again shortly." });
+    }
 
-    return res.status(200).json({ message: "If an account exists, a new code has been sent." });
+    return res.status(200).json({ message: "A new verification code has been sent to your email." });
   } catch (err: any) {
     console.error("[resend-code]", err.message);
     return res.status(500).json({ error: "Failed to resend code" });
