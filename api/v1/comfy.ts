@@ -178,7 +178,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       await refundCredits(sql, auth.userId, d);
       const errText = await rpResp.text().catch(() => "");
       console.error("[v1/comfy] RunPod submit failed:", rpResp.status, errText.slice(0, 300));
-      return res.status(502).json({ error: "Generation failed. Credits refunded." });
+      return res.status(502).json({ error: "Generation failed. Credits refunded.", upstream_status: rpResp.status, detail: errText.slice(0, 500) });
     }
 
     const submitResult: any = await rpResp.json();
@@ -243,7 +243,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         if (["FAILED", "CANCELLED", "TIMED_OUT"].includes(pollData.status)) {
           await refundCredits(sql, auth.userId, d);
-          return res.status(502).json({ error: `Generation ${pollData.status.toLowerCase()}. Credits refunded.` });
+          return res.status(502).json({ error: `Generation ${pollData.status.toLowerCase()}. Credits refunded.`, detail: JSON.stringify(pollData).slice(0, 500) });
         }
       } catch { continue; }
     }
