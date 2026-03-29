@@ -23,6 +23,21 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
     {
+        version: "2026.03.29",
+        date: "March 29, 2026",
+        title: "Simple Mode, Guided Walkthrough & Developer API",
+        items: [
+            { icon: <Eye className="w-3.5 h-3.5" />, text: "Simple Mode — beginner-friendly UI with three tabs: Edit Image, Create Image, Make Video. Toggle in the header anytime", tag: "new" },
+            { icon: <HelpCircle className="w-3.5 h-3.5" />, text: "Guided walkthrough — step-by-step onboarding tour in Simple Mode walks new users through their first edit", tag: "new" },
+            { icon: <HelpCircle className="w-3.5 h-3.5" />, text: "Restart Tour button — replay the walkthrough anytime from Simple Mode", tag: "new" },
+            { icon: <Sparkles className="w-3.5 h-3.5" />, text: "Post-generation results tip — auto-shows after first generation to explain download, re-edit, and Library", tag: "new" },
+            { icon: <Zap className="w-3.5 h-3.5" />, text: "BYOK toggle hidden in Simple Mode — credits-only for a cleaner experience", tag: "improve" },
+            { icon: <BookOpen className="w-3.5 h-3.5" />, text: "Developer docs page at /docs — endpoint specs, auth guide, code examples in Python/JS/curl, and interactive API playground", tag: "new" },
+            { icon: <Code className="w-3.5 h-3.5" />, text: "/api/v1/generate now supports GLTCH and ComfyUI engines — access all generation engines via the API", tag: "new" },
+            { icon: <Code className="w-3.5 h-3.5" />, text: "/api/v1/models endpoint — discover all available models and their credit costs", tag: "new" },
+        ],
+    },
+    {
         version: "2026.03.16d",
         date: "March 16, 2026",
         title: "LongLook Fixes & UI Polish",
