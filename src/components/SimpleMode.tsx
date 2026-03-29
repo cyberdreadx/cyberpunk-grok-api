@@ -402,6 +402,8 @@ const SimpleMode: React.FC<SimpleModeProps> = ({
           onClick={() => {
             localStorage.removeItem(TOUR_STORAGE_KEY);
             localStorage.removeItem("results-tip-seen");
+            tourInitRef.current = false;
+            onModeChange("edit-image" as GrokMode);
             setTourStep(0);
           }}
           className="mx-auto flex items-center gap-1 font-mono-share text-[9px] text-muted-foreground/30 hover:text-primary/60 transition-colors"
