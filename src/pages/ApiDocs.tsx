@@ -633,14 +633,14 @@ export default function ApiDocs() {
                         <tr className="border-b border-primary/5">
                           <td className="py-1.5 pr-3 text-primary">workflow</td>
                           <td className="py-1.5 pr-3">string</td>
-                          <td className="py-1.5 pr-3">txt2img</td>
-                          <td className="py-1.5">txt2img, klein, wan-video, gltch-wan</td>
+                          <td className="py-1.5 pr-3">klein</td>
+                          <td className="py-1.5">klein, txt2img, wan-video</td>
                         </tr>
                         <tr className="border-b border-primary/5">
                           <td className="py-1.5 pr-3 text-primary">image_url</td>
                           <td className="py-1.5 pr-3">string</td>
                           <td className="py-1.5 pr-3">—</td>
-                          <td className="py-1.5">Required for klein, wan-video, gltch-wan</td>
+                          <td className="py-1.5">Required for klein and wan-video</td>
                         </tr>
                         <tr className="border-b border-primary/5">
                           <td className="py-1.5 pr-3 text-primary">width / height</td>
@@ -660,11 +660,29 @@ export default function ApiDocs() {
                           <td className="py-1.5 pr-3">auto</td>
                           <td className="py-1.5">Model checkpoint (use /api/v1/models to list)</td>
                         </tr>
+                        <tr className="border-b border-primary/5">
+                          <td className="py-1.5 pr-3 text-primary">negative_prompt</td>
+                          <td className="py-1.5 pr-3">string</td>
+                          <td className="py-1.5 pr-3">auto</td>
+                          <td className="py-1.5">What to avoid in the output</td>
+                        </tr>
+                        <tr className="border-b border-primary/5">
+                          <td className="py-1.5 pr-3 text-primary">lora</td>
+                          <td className="py-1.5 pr-3">string</td>
+                          <td className="py-1.5 pr-3">—</td>
+                          <td className="py-1.5">Optional LoRA model name</td>
+                        </tr>
+                        <tr className="border-b border-primary/5">
+                          <td className="py-1.5 pr-3 text-primary">lora_strength</td>
+                          <td className="py-1.5 pr-3">number</td>
+                          <td className="py-1.5 pr-3">0.8</td>
+                          <td className="py-1.5">LoRA strength (0–2)</td>
+                        </tr>
                         <tr>
-                          <td className="py-1.5 pr-3 text-primary">upscale</td>
-                          <td className="py-1.5 pr-3">boolean</td>
-                          <td className="py-1.5 pr-3">false</td>
-                          <td className="py-1.5">HD upscale (adds 1 cr for edits, 3 cr for video)</td>
+                          <td className="py-1.5 pr-3 text-primary">frame_count</td>
+                          <td className="py-1.5 pr-3">integer</td>
+                          <td className="py-1.5 pr-3">81</td>
+                          <td className="py-1.5">Video frames (17–241, wan-video only)</td>
                         </tr>
                       </tbody>
                     </table>
@@ -693,15 +711,10 @@ export default function ApiDocs() {
                           <td className="py-1.5 pr-3">3–4 cr</td>
                           <td className="py-1.5">Flux Klein image editing (+1 for HD)</td>
                         </tr>
-                        <tr className="border-b border-primary/5">
+                        <tr>
                           <td className="py-1.5 pr-3 text-primary">wan-video</td>
                           <td className="py-1.5 pr-3">15 cr</td>
-                          <td className="py-1.5">WAN image-to-video generation</td>
-                        </tr>
-                        <tr>
-                          <td className="py-1.5 pr-3 text-primary">gltch-wan</td>
-                          <td className="py-1.5 pr-3">15–18 cr</td>
-                          <td className="py-1.5">GLTCH WAN video (+3 for HD)</td>
+                          <td className="py-1.5">WAN image-to-video (requires image_url)</td>
                         </tr>
                       </tbody>
                     </table>
@@ -833,7 +846,19 @@ console.log(\`Credits remaining: \${data.credits_remaining}\`);`} />
             </div>
 
             <div>
-              <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">Python — GLTCH PRO (txt2img)</h4>
+              <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">cURL — GLTCH PRO Klein Edit</h4>
+              <CopyBlock code={`curl -X POST ${baseUrl}/api/v1/comfy \\
+  -H "Content-Type: application/json" \\
+  -H "X-API-Key: gltch_sk_your_key_here" \\
+  -d '{
+    "prompt": "cyberpunk style, neon lighting, futuristic",
+    "workflow": "klein",
+    "image_url": "https://example.com/photo.jpg"
+  }'`} />
+            </div>
+
+            <div>
+              <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">Python — GLTCH PRO WAN Video</h4>
               <CopyBlock language="python" code={`import requests
 
 response = requests.post(
@@ -843,17 +868,17 @@ response = requests.post(
         "X-API-Key": "gltch_sk_your_key_here",
     },
     json={
-        "prompt": "ethereal forest scene, volumetric lighting",
-        "workflow": "txt2img",
-        "width": 832,
-        "height": 1216,
-        "steps": 25,
+        "prompt": "girl walking through a neon-lit alley, cinematic",
+        "workflow": "wan-video",
+        "image_url": "https://example.com/photo.jpg",
+        "frame_count": 81,
+        "steps": 20,
     },
-    timeout=120,
+    timeout=300,  # video generation takes 2-5 minutes
 )
 
 data = response.json()
-print(data["image_url"])
+print(data["video_url"])
 print(f"Credits used: {data['credits_used']}")`} />
             </div>
           </div>
