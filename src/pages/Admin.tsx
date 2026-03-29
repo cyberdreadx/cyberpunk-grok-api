@@ -394,6 +394,24 @@ export default function Admin() {
     }
   }, [activeTab, emailStats, emailLoading, authorized, fetchEmailLogs]);
 
+  const fetchApiAnalytics = useCallback(async () => {
+    setApiAnalyticsLoading(true);
+    try {
+      const res = await apiFetch("/admin", { method: "POST", body: { action: "api-analytics" } });
+      setApiAnalytics(res);
+    } catch (err: any) {
+      console.error("[admin] api-analytics failed:", err.message);
+    } finally {
+      setApiAnalyticsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === "api" && !apiAnalytics && !apiAnalyticsLoading && authorized) {
+      fetchApiAnalytics();
+    }
+  }, [activeTab, apiAnalytics, apiAnalyticsLoading, authorized, fetchApiAnalytics]);
+
   const usagePivot = React.useMemo(() => {
     const map = new Map<string, { day: string } & Record<string, number>>();
     for (const row of usage) {
