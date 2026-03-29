@@ -24,7 +24,7 @@ interface ApiKeyRow {
   created_at: string;
 }
 
-export default function ApiKeysPanel() {
+export default function ApiKeysPanel({ triggerClassName }: { triggerClassName?: string }) {
   const [keys, setKeys] = useState<ApiKeyRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [newKeyName, setNewKeyName] = useState("");
