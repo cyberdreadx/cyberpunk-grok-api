@@ -21,6 +21,14 @@
       "maxDuration": 120,
       "memory": 1024
     },
+    "api/v1/gltch.ts": {
+      "maxDuration": 120,
+      "memory": 1024
+    },
+    "api/v1/comfy.ts": {
+      "maxDuration": 300,
+      "memory": 1024
+    },
     "api/**/*.ts": {
       "maxDuration": 30
     }
@@ -80,7 +88,7 @@
         },
         {
           "key": "Access-Control-Allow-Headers",
-          "value": "Content-Type, Authorization"
+          "value": "Content-Type, Authorization, X-API-Key"
         },
         {
           "key": "Access-Control-Max-Age",

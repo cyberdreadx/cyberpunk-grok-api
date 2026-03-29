@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from "react";
-import { Copy, Check, Key, Zap, Shield, ArrowLeft, ExternalLink, Play, Loader2, Image, Video } from "lucide-react";
+import { Copy, Check, Key, Zap, Shield, ArrowLeft, ExternalLink, Play, Loader2, Image, Video, Wand2, Cpu } from "lucide-react";
 import { Link } from "react-router-dom";
 import CyberLayout from "@/components/CyberLayout";
 import GlitchText from "@/components/GlitchText";
@@ -39,10 +39,15 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function ApiPlayground({ baseUrl }: { baseUrl: string }) {
   const [apiKey, setApiKey] = useState("");
   const [prompt, setPrompt] = useState("a cyberpunk cityscape at sunset, neon lights");
+  const [engine, setEngine] = useState<"grok" | "gltch" | "comfy">("grok");
   const [genType, setGenType] = useState<"image" | "video">("image");
   const [model, setModel] = useState("grok-2-image");
   const [n, setN] = useState(1);
   const [duration, setDuration] = useState(5);
+  const [imageUrl, setImageUrl] = useState("");
+  const [aspectRatio, setAspectRatio] = useState("1:1");
+  const [hd, setHd] = useState(false);
+  const [comfyWorkflow, setComfyWorkflow] = useState("txt2img");
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -58,17 +63,35 @@ function ApiPlayground({ baseUrl }: { baseUrl: string }) {
     setResultImages([]);
     setResultVideo(null);
 
-    const body: Record<string, unknown> = { prompt: prompt.trim() };
-    if (genType === "video") {
-      body.type = "video";
-      body.duration = duration;
+    let url = "";
+    let body: Record<string, unknown> = { prompt: prompt.trim() };
+
+    if (engine === "grok") {
+      url = `${baseUrl}/api/v1/generate`;
+      if (genType === "video") {
+        body.type = "video";
+        body.duration = duration;
+      } else {
+        body.model = model;
+        body.n = n;
+      }
+    } else if (engine === "gltch") {
+      url = `${baseUrl}/api/v1/gltch`;
+      if (!imageUrl.trim()) { setError("GLTCH requires an image_url"); setLoading(false); return; }
+      body.image_url = imageUrl.trim();
+      body.aspect_ratio = aspectRatio;
+      body.hd = hd;
     } else {
-      body.model = model;
-      body.n = n;
+      url = `${baseUrl}/api/v1/comfy`;
+      body.workflow = comfyWorkflow;
+      if (["klein", "wan-video", "gltch-wan"].includes(comfyWorkflow)) {
+        if (!imageUrl.trim()) { setError("This workflow requires an image_url"); setLoading(false); return; }
+        body.image_url = imageUrl.trim();
+      }
     }
 
     try {
-      const res = await fetch(`${baseUrl}/api/v1/generate`, {
+      const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-API-Key": apiKey.trim() },
         body: JSON.stringify(body),
@@ -78,6 +101,7 @@ function ApiPlayground({ baseUrl }: { baseUrl: string }) {
 
       if (res.ok) {
         if (data.data) setResultImages(data.data.map((d: { url?: string }) => d.url).filter(Boolean));
+        if (data.image_url) setResultImages([data.image_url]);
         if (data.video_url) setResultVideo(data.video_url);
       } else {
         setError(`${res.status}: ${data.error || "Request failed"}`);
@@ -87,7 +111,7 @@ function ApiPlayground({ baseUrl }: { baseUrl: string }) {
     } finally {
       setLoading(false);
     }
-  }, [apiKey, prompt, genType, model, n, duration, baseUrl]);
+  }, [apiKey, prompt, engine, genType, model, n, duration, imageUrl, aspectRatio, hd, comfyWorkflow, baseUrl]);
 
   return (
     <div className="space-y-4">
@@ -109,29 +133,52 @@ function ApiPlayground({ baseUrl }: { baseUrl: string }) {
         />
       </div>
 
-      {/* Type toggle */}
-      <div className="flex gap-2">
-        <button
-          onClick={() => setGenType("image")}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono border transition-colors ${
-            genType === "image"
-              ? "bg-primary/20 border-primary/40 text-primary"
-              : "bg-muted/30 border-primary/10 text-muted-foreground hover:border-primary/20"
-          }`}
-        >
-          <Image className="w-3 h-3" /> IMAGE
-        </button>
-        <button
-          onClick={() => setGenType("video")}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono border transition-colors ${
-            genType === "video"
-              ? "bg-primary/20 border-primary/40 text-primary"
-              : "bg-muted/30 border-primary/10 text-muted-foreground hover:border-primary/20"
-          }`}
-        >
-          <Video className="w-3 h-3" /> VIDEO
-        </button>
+      {/* Engine toggle */}
+      <div className="flex gap-2 flex-wrap">
+        {([
+          { id: "grok" as const, icon: Zap, label: "GROK" },
+          { id: "gltch" as const, icon: Wand2, label: "GLTCH" },
+          { id: "comfy" as const, icon: Cpu, label: "GLTCH PRO" },
+        ]).map(({ id, icon: Icon, label }) => (
+          <button
+            key={id}
+            onClick={() => setEngine(id)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono border transition-colors ${
+              engine === id
+                ? "bg-primary/20 border-primary/40 text-primary"
+                : "bg-muted/30 border-primary/10 text-muted-foreground hover:border-primary/20"
+            }`}
+          >
+            <Icon className="w-3 h-3" /> {label}
+          </button>
+        ))}
       </div>
+
+      {/* Grok sub-type toggle */}
+      {engine === "grok" && (
+        <div className="flex gap-2">
+          <button
+            onClick={() => setGenType("image")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono border transition-colors ${
+              genType === "image"
+                ? "bg-primary/20 border-primary/40 text-primary"
+                : "bg-muted/30 border-primary/10 text-muted-foreground hover:border-primary/20"
+            }`}
+          >
+            <Image className="w-3 h-3" /> IMAGE
+          </button>
+          <button
+            onClick={() => setGenType("video")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono border transition-colors ${
+              genType === "video"
+                ? "bg-primary/20 border-primary/40 text-primary"
+                : "bg-muted/30 border-primary/10 text-muted-foreground hover:border-primary/20"
+            }`}
+          >
+            <Video className="w-3 h-3" /> VIDEO
+          </button>
+        </div>
+      )}
 
       {/* Prompt */}
       <div className="space-y-1">
@@ -144,9 +191,23 @@ function ApiPlayground({ baseUrl }: { baseUrl: string }) {
         />
       </div>
 
+      {/* Image URL (for GLTCH and some ComfyUI workflows) */}
+      {(engine === "gltch" || (engine === "comfy" && ["klein", "wan-video", "gltch-wan"].includes(comfyWorkflow))) && (
+        <div className="space-y-1">
+          <label className="text-xs font-mono text-muted-foreground">IMAGE URL</label>
+          <input
+            type="url"
+            placeholder="https://example.com/image.jpg"
+            value={imageUrl}
+            onChange={(e) => setImageUrl(e.target.value)}
+            className="w-full bg-muted/50 border border-primary/20 rounded-lg px-3 py-2 text-xs font-mono text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50"
+          />
+        </div>
+      )}
+
       {/* Options */}
       <div className="flex flex-wrap gap-3">
-        {genType === "image" ? (
+        {engine === "grok" && genType === "image" && (
           <>
             <div className="space-y-1">
               <label className="text-xs font-mono text-muted-foreground">MODEL</label>
@@ -170,7 +231,8 @@ function ApiPlayground({ baseUrl }: { baseUrl: string }) {
               </select>
             </div>
           </>
-        ) : (
+        )}
+        {engine === "grok" && genType === "video" && (
           <div className="space-y-1">
             <label className="text-xs font-mono text-muted-foreground">DURATION</label>
             <select
@@ -180,6 +242,46 @@ function ApiPlayground({ baseUrl }: { baseUrl: string }) {
             >
               <option value={5}>5s (15 cr)</option>
               <option value={10}>10s (30 cr)</option>
+            </select>
+          </div>
+        )}
+        {engine === "gltch" && (
+          <>
+            <div className="space-y-1">
+              <label className="text-xs font-mono text-muted-foreground">ASPECT RATIO</label>
+              <select
+                value={aspectRatio}
+                onChange={(e) => setAspectRatio(e.target.value)}
+                className="bg-muted/50 border border-primary/20 rounded-lg px-2 py-1.5 text-xs font-mono text-foreground focus:outline-none focus:border-primary/50"
+              >
+                {["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3"].map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-mono text-muted-foreground">HD</label>
+              <select
+                value={hd ? "yes" : "no"}
+                onChange={(e) => setHd(e.target.value === "yes")}
+                className="bg-muted/50 border border-primary/20 rounded-lg px-2 py-1.5 text-xs font-mono text-foreground focus:outline-none focus:border-primary/50"
+              >
+                <option value="no">Standard (5 cr)</option>
+                <option value="yes">HD (7 cr)</option>
+              </select>
+            </div>
+          </>
+        )}
+        {engine === "comfy" && (
+          <div className="space-y-1">
+            <label className="text-xs font-mono text-muted-foreground">WORKFLOW</label>
+            <select
+              value={comfyWorkflow}
+              onChange={(e) => setComfyWorkflow(e.target.value)}
+              className="bg-muted/50 border border-primary/20 rounded-lg px-2 py-1.5 text-xs font-mono text-foreground focus:outline-none focus:border-primary/50"
+            >
+              <option value="txt2img">txt2img (3 cr)</option>
+              <option value="klein">klein edit (3 cr)</option>
+              <option value="wan-video">wan-video (15 cr)</option>
+              <option value="gltch-wan">gltch-wan (15 cr)</option>
             </select>
           </div>
         )}
@@ -247,7 +349,7 @@ export default function ApiDocs() {
             <GlitchText text="API DOCUMENTATION" />
           </h1>
           <p className="text-sm text-muted-foreground font-mono">
-            Generate images programmatically using our public API. Pay with credits from your account.
+            Generate images and videos programmatically using GROK, GLTCH, and GLTCH PRO engines. Pay with credits from your account.
           </p>
         </div>
 
@@ -428,10 +530,188 @@ export default function ApiDocs() {
                 </div>
               </div>
             </div>
+
+            {/* GLTCH Edit */}
+            <div className="border border-primary/20 rounded-lg overflow-hidden">
+              <div className="bg-primary/5 px-4 py-2 flex items-center gap-2">
+                <span className="text-xs font-mono font-bold bg-primary/20 text-primary px-2 py-0.5 rounded">POST</span>
+                <code className="text-sm font-mono text-foreground">/api/v1/gltch</code>
+                <span className="text-[10px] font-mono text-muted-foreground ml-auto">GLTCH EDIT</span>
+              </div>
+              <div className="p-4 space-y-4">
+                <p className="text-sm text-foreground/80 font-mono">
+                  AI-powered image editing. Provide an image URL and a prompt describing the edit.
+                </p>
+                <div>
+                  <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">REQUEST BODY</h4>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs font-mono">
+                      <thead>
+                        <tr className="border-b border-primary/10">
+                          <th className="text-left py-1.5 pr-3 text-muted-foreground">Parameter</th>
+                          <th className="text-left py-1.5 pr-3 text-muted-foreground">Type</th>
+                          <th className="text-left py-1.5 pr-3 text-muted-foreground">Default</th>
+                          <th className="text-left py-1.5 text-muted-foreground">Description</th>
+                        </tr>
+                      </thead>
+                      <tbody className="text-foreground/80">
+                        <tr className="border-b border-primary/5">
+                          <td className="py-1.5 pr-3 text-primary">prompt *</td>
+                          <td className="py-1.5 pr-3">string</td>
+                          <td className="py-1.5 pr-3">—</td>
+                          <td className="py-1.5">Edit description (max 5000 chars)</td>
+                        </tr>
+                        <tr className="border-b border-primary/5">
+                          <td className="py-1.5 pr-3 text-primary">image_url *</td>
+                          <td className="py-1.5 pr-3">string</td>
+                          <td className="py-1.5 pr-3">—</td>
+                          <td className="py-1.5">Public URL of image to edit</td>
+                        </tr>
+                        <tr className="border-b border-primary/5">
+                          <td className="py-1.5 pr-3 text-primary">aspect_ratio</td>
+                          <td className="py-1.5 pr-3">string</td>
+                          <td className="py-1.5 pr-3">1:1</td>
+                          <td className="py-1.5">1:1, 16:9, 9:16, 4:3, 3:4, 3:2, 2:3</td>
+                        </tr>
+                        <tr>
+                          <td className="py-1.5 pr-3 text-primary">hd</td>
+                          <td className="py-1.5 pr-3">boolean</td>
+                          <td className="py-1.5 pr-3">false</td>
+                          <td className="py-1.5">HD upscale (5 cr → 7 cr)</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* GLTCH PRO */}
+            <div className="border border-primary/20 rounded-lg overflow-hidden">
+              <div className="bg-primary/5 px-4 py-2 flex items-center gap-2">
+                <span className="text-xs font-mono font-bold bg-primary/20 text-primary px-2 py-0.5 rounded">POST</span>
+                <code className="text-sm font-mono text-foreground">/api/v1/comfy</code>
+                <span className="text-[10px] font-mono text-muted-foreground ml-auto">GLTCH PRO</span>
+              </div>
+              <div className="p-4 space-y-4">
+                <p className="text-sm text-foreground/80 font-mono">
+                  Advanced generation pipelines — text-to-image, Flux Klein editing, and WAN video generation via ComfyUI.
+                </p>
+                <div>
+                  <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">REQUEST BODY</h4>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs font-mono">
+                      <thead>
+                        <tr className="border-b border-primary/10">
+                          <th className="text-left py-1.5 pr-3 text-muted-foreground">Parameter</th>
+                          <th className="text-left py-1.5 pr-3 text-muted-foreground">Type</th>
+                          <th className="text-left py-1.5 pr-3 text-muted-foreground">Default</th>
+                          <th className="text-left py-1.5 text-muted-foreground">Description</th>
+                        </tr>
+                      </thead>
+                      <tbody className="text-foreground/80">
+                        <tr className="border-b border-primary/5">
+                          <td className="py-1.5 pr-3 text-primary">prompt *</td>
+                          <td className="py-1.5 pr-3">string</td>
+                          <td className="py-1.5 pr-3">—</td>
+                          <td className="py-1.5">Text description (max 5000 chars)</td>
+                        </tr>
+                        <tr className="border-b border-primary/5">
+                          <td className="py-1.5 pr-3 text-primary">workflow</td>
+                          <td className="py-1.5 pr-3">string</td>
+                          <td className="py-1.5 pr-3">txt2img</td>
+                          <td className="py-1.5">txt2img, klein, wan-video, gltch-wan</td>
+                        </tr>
+                        <tr className="border-b border-primary/5">
+                          <td className="py-1.5 pr-3 text-primary">image_url</td>
+                          <td className="py-1.5 pr-3">string</td>
+                          <td className="py-1.5 pr-3">—</td>
+                          <td className="py-1.5">Required for klein, wan-video, gltch-wan</td>
+                        </tr>
+                        <tr className="border-b border-primary/5">
+                          <td className="py-1.5 pr-3 text-primary">width / height</td>
+                          <td className="py-1.5 pr-3">integer</td>
+                          <td className="py-1.5 pr-3">832×1216</td>
+                          <td className="py-1.5">Image dimensions (256–2048)</td>
+                        </tr>
+                        <tr className="border-b border-primary/5">
+                          <td className="py-1.5 pr-3 text-primary">steps</td>
+                          <td className="py-1.5 pr-3">integer</td>
+                          <td className="py-1.5 pr-3">20</td>
+                          <td className="py-1.5">Sampling steps (1–100)</td>
+                        </tr>
+                        <tr className="border-b border-primary/5">
+                          <td className="py-1.5 pr-3 text-primary">checkpoint</td>
+                          <td className="py-1.5 pr-3">string</td>
+                          <td className="py-1.5 pr-3">auto</td>
+                          <td className="py-1.5">Model checkpoint (use /api/v1/models to list)</td>
+                        </tr>
+                        <tr>
+                          <td className="py-1.5 pr-3 text-primary">upscale</td>
+                          <td className="py-1.5 pr-3">boolean</td>
+                          <td className="py-1.5 pr-3">false</td>
+                          <td className="py-1.5">HD upscale (adds 1 cr for edits, 3 cr for video)</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">WORKFLOWS & COSTS</h4>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs font-mono">
+                      <thead>
+                        <tr className="border-b border-primary/10">
+                          <th className="text-left py-1.5 pr-3 text-muted-foreground">Workflow</th>
+                          <th className="text-left py-1.5 pr-3 text-muted-foreground">Credits</th>
+                          <th className="text-left py-1.5 text-muted-foreground">Description</th>
+                        </tr>
+                      </thead>
+                      <tbody className="text-foreground/80">
+                        <tr className="border-b border-primary/5">
+                          <td className="py-1.5 pr-3 text-primary">txt2img</td>
+                          <td className="py-1.5 pr-3">3 cr</td>
+                          <td className="py-1.5">Text-to-image (SD / Flux models)</td>
+                        </tr>
+                        <tr className="border-b border-primary/5">
+                          <td className="py-1.5 pr-3 text-primary">klein</td>
+                          <td className="py-1.5 pr-3">3–4 cr</td>
+                          <td className="py-1.5">Flux Klein image editing (+1 for HD)</td>
+                        </tr>
+                        <tr className="border-b border-primary/5">
+                          <td className="py-1.5 pr-3 text-primary">wan-video</td>
+                          <td className="py-1.5 pr-3">15 cr</td>
+                          <td className="py-1.5">WAN image-to-video generation</td>
+                        </tr>
+                        <tr>
+                          <td className="py-1.5 pr-3 text-primary">gltch-wan</td>
+                          <td className="py-1.5 pr-3">15–18 cr</td>
+                          <td className="py-1.5">GLTCH WAN video (+3 for HD)</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Models Discovery */}
+            <div className="border border-primary/20 rounded-lg overflow-hidden">
+              <div className="bg-primary/5 px-4 py-2 flex items-center gap-2">
+                <span className="text-xs font-mono font-bold bg-primary/20 text-primary px-2 py-0.5 rounded">GET</span>
+                <code className="text-sm font-mono text-foreground">/api/v1/models</code>
+                <span className="text-[10px] font-mono text-muted-foreground ml-auto">DISCOVERY</span>
+              </div>
+              <div className="p-4 space-y-2">
+                <p className="text-sm text-foreground/80 font-mono">
+                  List all available engines, models, and their credit costs. Returns available checkpoints for GLTCH PRO.
+                </p>
+                <CopyBlock code={`curl -H "X-API-Key: gltch_sk_..." ${baseUrl}/api/v1/models`} />
+              </div>
+            </div>
           </div>
         </Section>
-
-        {/* Examples */}
         <Section title="💻 CODE EXAMPLES">
           <div className="space-y-4">
             <div>
@@ -525,6 +805,43 @@ console.log(data.data[0].url);
 console.log(\`Credits used: \${data.credits_used}\`);
 console.log(\`Credits remaining: \${data.credits_remaining}\`);`} />
             </div>
+
+            <div>
+              <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">cURL — GLTCH Edit</h4>
+              <CopyBlock code={`curl -X POST ${baseUrl}/api/v1/gltch \\
+  -H "Content-Type: application/json" \\
+  -H "X-API-Key: gltch_sk_your_key_here" \\
+  -d '{
+    "prompt": "make it look like a watercolor painting",
+    "image_url": "https://example.com/photo.jpg",
+    "aspect_ratio": "16:9"
+  }'`} />
+            </div>
+
+            <div>
+              <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">Python — GLTCH PRO (txt2img)</h4>
+              <CopyBlock language="python" code={`import requests
+
+response = requests.post(
+    "${baseUrl}/api/v1/comfy",
+    headers={
+        "Content-Type": "application/json",
+        "X-API-Key": "gltch_sk_your_key_here",
+    },
+    json={
+        "prompt": "ethereal forest scene, volumetric lighting",
+        "workflow": "txt2img",
+        "width": 832,
+        "height": 1216,
+        "steps": 25,
+    },
+    timeout=120,
+)
+
+data = response.json()
+print(data["image_url"])
+print(f"Credits used: {data['credits_used']}")`} />
+            </div>
           </div>
         </Section>
 
@@ -554,6 +871,27 @@ console.log(\`Credits remaining: \${data.credits_remaining}\`);`} />
   "duration": 5,
   "credits_used": 15,
   "credits_remaining": 131
+}`} />
+            </div>
+            <div>
+              <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">GLTCH EDIT RESPONSE</h4>
+              <CopyBlock language="json" code={`{
+  "type": "gltch-edit",
+  "image_url": "https://...",
+  "seed": 1234567890,
+  "hd": false,
+  "credits_used": 5,
+  "credits_remaining": 141
+}`} />
+            </div>
+            <div>
+              <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">GLTCH PRO IMAGE RESPONSE</h4>
+              <CopyBlock language="json" code={`{
+  "type": "comfy-image",
+  "workflow": "txt2img",
+  "image_url": "https://...",
+  "credits_used": 3,
+  "credits_remaining": 138
 }`} />
             </div>
           </div>
@@ -621,18 +959,30 @@ console.log(\`Credits remaining: \${data.credits_remaining}\`);`} />
             Purchase credits or subscribe at{" "}
             <a href={baseUrl} className="text-primary underline">{baseUrl}</a>.
           </p>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <div className="border border-primary/20 rounded-lg p-3 text-center">
               <div className="text-2xl font-mono font-bold text-primary">2 cr</div>
-              <div className="text-xs text-muted-foreground font-mono">per standard image</div>
+              <div className="text-xs text-muted-foreground font-mono">Grok image</div>
             </div>
             <div className="border border-primary/20 rounded-lg p-3 text-center">
               <div className="text-2xl font-mono font-bold text-primary">5 cr</div>
-              <div className="text-xs text-muted-foreground font-mono">per pro image</div>
+              <div className="text-xs text-muted-foreground font-mono">Grok pro image</div>
+            </div>
+            <div className="border border-primary/20 rounded-lg p-3 text-center">
+              <div className="text-2xl font-mono font-bold text-primary">3 cr/s</div>
+              <div className="text-xs text-muted-foreground font-mono">Grok video</div>
+            </div>
+            <div className="border border-primary/20 rounded-lg p-3 text-center">
+              <div className="text-2xl font-mono font-bold text-primary">5 cr</div>
+              <div className="text-xs text-muted-foreground font-mono">GLTCH edit</div>
             </div>
             <div className="border border-primary/20 rounded-lg p-3 text-center">
               <div className="text-2xl font-mono font-bold text-primary">3 cr</div>
-              <div className="text-xs text-muted-foreground font-mono">per second of video</div>
+              <div className="text-xs text-muted-foreground font-mono">GLTCH PRO image</div>
+            </div>
+            <div className="border border-primary/20 rounded-lg p-3 text-center">
+              <div className="text-2xl font-mono font-bold text-primary">15 cr</div>
+              <div className="text-xs text-muted-foreground font-mono">GLTCH PRO video</div>
             </div>
           </div>
         </Section>
