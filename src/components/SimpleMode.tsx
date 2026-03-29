@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import { Upload, Sparkles, Pencil, Image, Film, X, Loader2, ChevronRight } from "lucide-react";
+import { Upload, Sparkles, Pencil, Image, Film, X, Loader2, ChevronRight, HelpCircle } from "lucide-react";
 import type { GrokMode } from "@/hooks/useGrokApi";
 
 interface SimpleModeProps {
