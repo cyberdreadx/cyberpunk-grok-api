@@ -105,6 +105,20 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
   if (isAuthenticated) {
     return (
       <div className="flex items-center gap-2">
+        {/* Verification dialog for authenticated but unverified users */}
+        {pendingVerificationEmail && onVerify && (
+          <Dialog open={!!pendingVerificationEmail} onOpenChange={(v) => { if (!v && onCancelVerification) onCancelVerification(); }}>
+            <DialogContent className="bg-card border-border sm:max-w-md">
+              <VerificationForm
+                email={pendingVerificationEmail}
+                onVerify={onVerify}
+                onResendCode={onResendCode}
+                onBack={onCancelVerification}
+                onSuccess={handleVerified}
+              />
+            </DialogContent>
+          </Dialog>
+        )}
         <span className="font-mono-share text-[10px] text-primary/70 hidden sm:inline truncate max-w-[120px]">
           {userEmail}
         </span>
