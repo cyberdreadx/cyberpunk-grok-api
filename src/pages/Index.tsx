@@ -2215,7 +2215,53 @@ const Index = () => {
         )}
 
         {/* Results */}
-        <section id="results-section" className="animate-slide-up" style={{ animationDelay: "300ms" }}>
+        <section id="results-section" className="animate-slide-up relative" style={{ animationDelay: "300ms" }}>
+          {/* Post-generation walkthrough tip */}
+          {showResultsTip && simpleMode && results.length > 0 && (
+            <div className="mb-4 animate-slide-up">
+              <div className="relative bg-card border border-primary/40 rounded-lg px-4 py-3 shadow-lg shadow-primary/10">
+                {/* Step dots showing this is step 5 */}
+                <div className="flex items-center gap-1.5 mb-2">
+                  {[0,1,2,3,4].map(i => (
+                    <div key={i} className={`w-1.5 h-1.5 rounded-full ${i < 4 ? "bg-primary/40" : "bg-primary"}`} />
+                  ))}
+                  <span className="ml-auto font-mono-share text-[8px] text-muted-foreground/40">5/5</span>
+                </div>
+                <h4 className="font-orbitron text-xs font-bold text-primary tracking-wide mb-1">
+                  🎉 5. Your result is ready!
+                </h4>
+                <p className="font-mono-share text-[11px] text-foreground/70 leading-relaxed mb-1">
+                  Here's what you can do with it:
+                </p>
+                <ul className="font-mono-share text-[10px] text-foreground/60 leading-relaxed space-y-1 ml-1">
+                  <li className="flex items-start gap-1.5">
+                    <span className="text-primary/60 mt-px">▸</span>
+                    <span><span className="text-foreground/80 font-bold">Download</span> — click the image, then hit the download icon</span>
+                  </li>
+                  <li className="flex items-start gap-1.5">
+                    <span className="text-secondary/60 mt-px">▸</span>
+                    <span><span className="text-foreground/80 font-bold">Edit again</span> — click "Edit" on any result to refine it further</span>
+                  </li>
+                  <li className="flex items-start gap-1.5">
+                    <span className="text-accent/60 mt-px">▸</span>
+                    <span><span className="text-foreground/80 font-bold">Animate</span> — turn your image into a short video clip</span>
+                  </li>
+                  <li className="flex items-start gap-1.5">
+                    <span className="text-muted-foreground/60 mt-px">▸</span>
+                    <span><span className="text-foreground/80 font-bold">Library</span> — all your creations are saved automatically</span>
+                  </li>
+                </ul>
+                <div className="flex items-center justify-end mt-3">
+                  <button
+                    onClick={() => setShowResultsTip(false)}
+                    className="font-mono-share text-[10px] font-bold text-primary hover:text-primary/80 transition-colors"
+                  >
+                    GOT IT ✓
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
           <div className="flex items-center gap-2 mb-4">
             <span className="font-mono-share text-secondary/40 text-xs">❯</span>
             <GlitchText
