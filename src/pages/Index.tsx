@@ -2253,6 +2253,20 @@ const Index = () => {
                 </Link>
               </>
             )}
+            {effectiveApiMode === "credits" && canUseCredits && (
+              <>
+                <span className="text-border/50">|</span>
+                <Link
+                  to="/docs"
+                  className="flex items-center gap-1 text-muted-foreground/40 hover:text-cyan-400 transition-colors"
+                >
+                  <Code className="w-3 h-3" />
+                  API DOCS
+                </Link>
+                <span className="text-border/50">|</span>
+                <ApiKeysPanel />
+              </>
+            )}
             {auth.user?.email === "cyberdreadx@proton.me" && (
               <>
                 <span className="text-border/50">|</span>
