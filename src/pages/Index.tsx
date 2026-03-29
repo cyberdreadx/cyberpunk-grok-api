@@ -980,6 +980,27 @@ const Index = () => {
             {/* Theme Picker */}
             <ThemePicker />
 
+            {/* Simple / Advanced toggle */}
+            <button
+              onClick={() => {
+                const next = !simpleMode;
+                setSimpleMode(next);
+                localStorage.setItem("ui-mode", next ? "simple" : "advanced");
+                if (next && !["edit-image", "text-to-image", "image-to-video"].includes(mode)) {
+                  setMode("edit-image");
+                }
+              }}
+              className={`flex items-center gap-1 px-2 py-1 text-[9px] sm:text-[10px] font-mono-share transition-colors rounded border ${
+                simpleMode
+                  ? "border-primary/30 bg-primary/10 text-primary"
+                  : "border-border/50 bg-card/40 text-muted-foreground/60 hover:text-muted-foreground"
+              }`}
+              title={simpleMode ? "Switch to Advanced mode" : "Switch to Simple mode"}
+            >
+              {simpleMode ? <ToggleLeft className="w-3 h-3" /> : <ToggleRight className="w-3 h-3" />}
+              {simpleMode ? "SIMPLE" : "ADVANCED"}
+            </button>
+
             {/* Auth: login/logout */}
             {auth.enabled && (
               <AuthDialog
