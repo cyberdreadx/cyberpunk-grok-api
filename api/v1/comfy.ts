@@ -395,6 +395,73 @@ function cleanBase64(b64: string): string {
   return idx >= 0 ? b64.slice(idx + 1) : b64;
 }
 
+// ── Output extraction ─────────────────────────────────────────────────
+
+function extractFileData(file: any): string | null {
+  if (typeof file === "string" && file.length > 50) return file;
+  if (!file || typeof file !== "object") return null;
+  return file.data || file.url || file.image_url || file.video_url || null;
+}
+
+function extractComfyOutput(
+  out: any,
+  isVideo: boolean,
+): { type: "video" | "image"; data: string } | null {
+  if (!out || typeof out !== "object") return null;
+
+  // Check flat top-level fields first
+  const flatVideo = out.video_url || out.video || out.output;
+  if (isVideo && typeof flatVideo === "string" && flatVideo.length > 50) {
+    return { type: "video", data: flatVideo };
+  }
+  const flatImage = out.image_url || out.image || out.output;
+  if (!isVideo && typeof flatImage === "string" && flatImage.length > 50) {
+    return { type: "image", data: flatImage };
+  }
+
+  // Scan node outputs (ComfyUI returns { "94": { gifs: [...] }, "9": { images: [...] } })
+  const keys = Object.keys(out).sort((a, b) => {
+    const na = parseInt(a, 10);
+    const nb = parseInt(b, 10);
+    if (!isNaN(na) && !isNaN(nb)) return nb - na;
+    return 0;
+  });
+
+  for (const key of keys) {
+    const node = out[key];
+    if (!node || typeof node !== "object") continue;
+
+    // Video arrays: gifs, videos
+    if (isVideo) {
+      for (const arrKey of ["videos", "gifs"]) {
+        const arr = node[arrKey];
+        if (!Array.isArray(arr) || !arr.length) continue;
+        const data = extractFileData(arr[arr.length - 1]);
+        if (data) return { type: "video", data };
+      }
+    }
+
+    // Image arrays: images
+    const images = node.images;
+    if (Array.isArray(images) && images.length) {
+      const data = extractFileData(images[images.length - 1]);
+      if (data) return { type: "image", data };
+    }
+
+    // Generic message field
+    if (typeof node.message === "string" && node.message.length > 50) {
+      return { type: isVideo ? "video" : "image", data: node.message };
+    }
+  }
+
+  // Last resort: if top-level output is a long string (raw base64/URL)
+  if (typeof out === "string" && out.length > 50) {
+    return { type: isVideo ? "video" : "image", data: out };
+  }
+
+  return null;
+}
+
 // ── Handler ───────────────────────────────────────────────────────────
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -586,38 +653,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         if (pollData.status === "COMPLETED" && pollData.output) {
           const out = pollData.output;
+          const result = extractComfyOutput(out, isVideo);
 
-          if (isVideo) {
-            const videoUrl = out.video_url || out.video || out.output ||
-              (typeof out === "string" ? out : null);
-            if (!videoUrl) {
-              await refundCredits(sql, auth.userId, d);
-              return res.status(502).json({ error: "Generation completed but no video URL returned. Credits refunded." });
-            }
-            await logUsage(sql, auth, `comfy:${workflowType}`, totalCost, ip);
+          if (!result) {
+            await refundCredits(sql, auth.userId, d);
+            const outputType = isVideo ? "video" : "image";
+            return res.status(502).json({ error: `Generation completed but no ${outputType} returned. Credits refunded.` });
+          }
+
+          await logUsage(sql, auth, `comfy:${workflowType}`, totalCost, ip);
+
+          if (result.type === "video") {
             return res.status(200).json({
               type: "comfy-video",
               workflow: workflowType,
-              video_url: videoUrl,
+              video_url: result.data,
               seed,
               credits_used: totalCost,
               credits_remaining: available - totalCost,
             });
           }
-
-          let image = out.image_url || out.output ||
-            (typeof out === "string" ? out : null) ||
-            (out.images?.length ? out.images[out.images.length - 1] : null);
-          if (image && typeof image === "object") image = image.url || image.image_url || image.data;
-          if (!image) {
-            await refundCredits(sql, auth.userId, d);
-            return res.status(502).json({ error: "Generation completed but no image URL returned. Credits refunded." });
-          }
-          await logUsage(sql, auth, `comfy:${workflowType}`, totalCost, ip);
           return res.status(200).json({
             type: "comfy-image",
             workflow: workflowType,
-            image_url: image,
+            image_url: result.data,
             seed,
             credits_used: totalCost,
             credits_remaining: available - totalCost,
