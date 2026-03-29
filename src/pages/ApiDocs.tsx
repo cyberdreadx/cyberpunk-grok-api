@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from "react";
-import { Copy, Check, Key, Zap, Shield, ArrowLeft, ExternalLink, Play, Loader2, Image, Video } from "lucide-react";
+import { Copy, Check, Key, Zap, Shield, ArrowLeft, ExternalLink, Play, Loader2, Image, Video, Wand2, Cpu } from "lucide-react";
 import { Link } from "react-router-dom";
 import CyberLayout from "@/components/CyberLayout";
 import GlitchText from "@/components/GlitchText";
