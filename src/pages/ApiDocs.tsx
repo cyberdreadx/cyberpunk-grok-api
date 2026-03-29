@@ -39,10 +39,15 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function ApiPlayground({ baseUrl }: { baseUrl: string }) {
   const [apiKey, setApiKey] = useState("");
   const [prompt, setPrompt] = useState("a cyberpunk cityscape at sunset, neon lights");
+  const [engine, setEngine] = useState<"grok" | "gltch" | "comfy">("grok");
   const [genType, setGenType] = useState<"image" | "video">("image");
   const [model, setModel] = useState("grok-2-image");
   const [n, setN] = useState(1);
   const [duration, setDuration] = useState(5);
+  const [imageUrl, setImageUrl] = useState("");
+  const [aspectRatio, setAspectRatio] = useState("1:1");
+  const [hd, setHd] = useState(false);
+  const [comfyWorkflow, setComfyWorkflow] = useState("txt2img");
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -58,17 +63,35 @@ function ApiPlayground({ baseUrl }: { baseUrl: string }) {
     setResultImages([]);
     setResultVideo(null);
 
-    const body: Record<string, unknown> = { prompt: prompt.trim() };
-    if (genType === "video") {
-      body.type = "video";
-      body.duration = duration;
+    let url = "";
+    let body: Record<string, unknown> = { prompt: prompt.trim() };
+
+    if (engine === "grok") {
+      url = `${baseUrl}/api/v1/generate`;
+      if (genType === "video") {
+        body.type = "video";
+        body.duration = duration;
+      } else {
+        body.model = model;
+        body.n = n;
+      }
+    } else if (engine === "gltch") {
+      url = `${baseUrl}/api/v1/gltch`;
+      if (!imageUrl.trim()) { setError("GLTCH requires an image_url"); setLoading(false); return; }
+      body.image_url = imageUrl.trim();
+      body.aspect_ratio = aspectRatio;
+      body.hd = hd;
     } else {
-      body.model = model;
-      body.n = n;
+      url = `${baseUrl}/api/v1/comfy`;
+      body.workflow = comfyWorkflow;
+      if (["klein", "wan-video", "gltch-wan"].includes(comfyWorkflow)) {
+        if (!imageUrl.trim()) { setError("This workflow requires an image_url"); setLoading(false); return; }
+        body.image_url = imageUrl.trim();
+      }
     }
 
     try {
-      const res = await fetch(`${baseUrl}/api/v1/generate`, {
+      const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-API-Key": apiKey.trim() },
         body: JSON.stringify(body),
@@ -78,6 +101,7 @@ function ApiPlayground({ baseUrl }: { baseUrl: string }) {
 
       if (res.ok) {
         if (data.data) setResultImages(data.data.map((d: { url?: string }) => d.url).filter(Boolean));
+        if (data.image_url) setResultImages([data.image_url]);
         if (data.video_url) setResultVideo(data.video_url);
       } else {
         setError(`${res.status}: ${data.error || "Request failed"}`);
@@ -87,7 +111,7 @@ function ApiPlayground({ baseUrl }: { baseUrl: string }) {
     } finally {
       setLoading(false);
     }
-  }, [apiKey, prompt, genType, model, n, duration, baseUrl]);
+  }, [apiKey, prompt, engine, genType, model, n, duration, imageUrl, aspectRatio, hd, comfyWorkflow, baseUrl]);
 
   return (
     <div className="space-y-4">
@@ -109,29 +133,52 @@ function ApiPlayground({ baseUrl }: { baseUrl: string }) {
         />
       </div>
 
-      {/* Type toggle */}
-      <div className="flex gap-2">
-        <button
-          onClick={() => setGenType("image")}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono border transition-colors ${
-            genType === "image"
-              ? "bg-primary/20 border-primary/40 text-primary"
-              : "bg-muted/30 border-primary/10 text-muted-foreground hover:border-primary/20"
-          }`}
-        >
-          <Image className="w-3 h-3" /> IMAGE
-        </button>
-        <button
-          onClick={() => setGenType("video")}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono border transition-colors ${
-            genType === "video"
-              ? "bg-primary/20 border-primary/40 text-primary"
-              : "bg-muted/30 border-primary/10 text-muted-foreground hover:border-primary/20"
-          }`}
-        >
-          <Video className="w-3 h-3" /> VIDEO
-        </button>
+      {/* Engine toggle */}
+      <div className="flex gap-2 flex-wrap">
+        {([
+          { id: "grok" as const, icon: Zap, label: "GROK" },
+          { id: "gltch" as const, icon: Wand2, label: "GLTCH" },
+          { id: "comfy" as const, icon: Cpu, label: "GLTCH PRO" },
+        ]).map(({ id, icon: Icon, label }) => (
+          <button
+            key={id}
+            onClick={() => setEngine(id)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono border transition-colors ${
+              engine === id
+                ? "bg-primary/20 border-primary/40 text-primary"
+                : "bg-muted/30 border-primary/10 text-muted-foreground hover:border-primary/20"
+            }`}
+          >
+            <Icon className="w-3 h-3" /> {label}
+          </button>
+        ))}
       </div>
+
+      {/* Grok sub-type toggle */}
+      {engine === "grok" && (
+        <div className="flex gap-2">
+          <button
+            onClick={() => setGenType("image")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono border transition-colors ${
+              genType === "image"
+                ? "bg-primary/20 border-primary/40 text-primary"
+                : "bg-muted/30 border-primary/10 text-muted-foreground hover:border-primary/20"
+            }`}
+          >
+            <Image className="w-3 h-3" /> IMAGE
+          </button>
+          <button
+            onClick={() => setGenType("video")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono border transition-colors ${
+              genType === "video"
+                ? "bg-primary/20 border-primary/40 text-primary"
+                : "bg-muted/30 border-primary/10 text-muted-foreground hover:border-primary/20"
+            }`}
+          >
+            <Video className="w-3 h-3" /> VIDEO
+          </button>
+        </div>
+      )}
 
       {/* Prompt */}
       <div className="space-y-1">
@@ -144,9 +191,23 @@ function ApiPlayground({ baseUrl }: { baseUrl: string }) {
         />
       </div>
 
+      {/* Image URL (for GLTCH and some ComfyUI workflows) */}
+      {(engine === "gltch" || (engine === "comfy" && ["klein", "wan-video", "gltch-wan"].includes(comfyWorkflow))) && (
+        <div className="space-y-1">
+          <label className="text-xs font-mono text-muted-foreground">IMAGE URL</label>
+          <input
+            type="url"
+            placeholder="https://example.com/image.jpg"
+            value={imageUrl}
+            onChange={(e) => setImageUrl(e.target.value)}
+            className="w-full bg-muted/50 border border-primary/20 rounded-lg px-3 py-2 text-xs font-mono text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50"
+          />
+        </div>
+      )}
+
       {/* Options */}
       <div className="flex flex-wrap gap-3">
-        {genType === "image" ? (
+        {engine === "grok" && genType === "image" && (
           <>
             <div className="space-y-1">
               <label className="text-xs font-mono text-muted-foreground">MODEL</label>
@@ -170,7 +231,8 @@ function ApiPlayground({ baseUrl }: { baseUrl: string }) {
               </select>
             </div>
           </>
-        ) : (
+        )}
+        {engine === "grok" && genType === "video" && (
           <div className="space-y-1">
             <label className="text-xs font-mono text-muted-foreground">DURATION</label>
             <select
@@ -180,6 +242,46 @@ function ApiPlayground({ baseUrl }: { baseUrl: string }) {
             >
               <option value={5}>5s (15 cr)</option>
               <option value={10}>10s (30 cr)</option>
+            </select>
+          </div>
+        )}
+        {engine === "gltch" && (
+          <>
+            <div className="space-y-1">
+              <label className="text-xs font-mono text-muted-foreground">ASPECT RATIO</label>
+              <select
+                value={aspectRatio}
+                onChange={(e) => setAspectRatio(e.target.value)}
+                className="bg-muted/50 border border-primary/20 rounded-lg px-2 py-1.5 text-xs font-mono text-foreground focus:outline-none focus:border-primary/50"
+              >
+                {["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3"].map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-mono text-muted-foreground">HD</label>
+              <select
+                value={hd ? "yes" : "no"}
+                onChange={(e) => setHd(e.target.value === "yes")}
+                className="bg-muted/50 border border-primary/20 rounded-lg px-2 py-1.5 text-xs font-mono text-foreground focus:outline-none focus:border-primary/50"
+              >
+                <option value="no">Standard (5 cr)</option>
+                <option value="yes">HD (7 cr)</option>
+              </select>
+            </div>
+          </>
+        )}
+        {engine === "comfy" && (
+          <div className="space-y-1">
+            <label className="text-xs font-mono text-muted-foreground">WORKFLOW</label>
+            <select
+              value={comfyWorkflow}
+              onChange={(e) => setComfyWorkflow(e.target.value)}
+              className="bg-muted/50 border border-primary/20 rounded-lg px-2 py-1.5 text-xs font-mono text-foreground focus:outline-none focus:border-primary/50"
+            >
+              <option value="txt2img">txt2img (3 cr)</option>
+              <option value="klein">klein edit (3 cr)</option>
+              <option value="wan-video">wan-video (15 cr)</option>
+              <option value="gltch-wan">gltch-wan (15 cr)</option>
             </select>
           </div>
         )}
