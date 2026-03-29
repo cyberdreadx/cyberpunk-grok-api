@@ -244,7 +244,7 @@ export default function ApiDocs() {
         <Section title="💻 CODE EXAMPLES">
           <div className="space-y-4">
             <div>
-              <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">cURL</h4>
+              <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">cURL — Image</h4>
               <CopyBlock code={`curl -X POST ${baseUrl}/api/v1/generate \\
   -H "Content-Type: application/json" \\
   -H "X-API-Key: gltch_sk_your_key_here" \\
@@ -256,7 +256,19 @@ export default function ApiDocs() {
             </div>
 
             <div>
-              <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">Python</h4>
+              <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">cURL — Video</h4>
+              <CopyBlock code={`curl -X POST ${baseUrl}/api/v1/generate \\
+  -H "Content-Type: application/json" \\
+  -H "X-API-Key: gltch_sk_your_key_here" \\
+  -d '{
+    "prompt": "a drone flyover of a neon city at night",
+    "type": "video",
+    "duration": 5
+  }'`} />
+            </div>
+
+            <div>
+              <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">Python — Image</h4>
               <CopyBlock language="python" code={`import requests
 
 response = requests.post(
@@ -275,6 +287,31 @@ response = requests.post(
 data = response.json()
 for image in data["data"]:
     print(image["url"])`} />
+            </div>
+
+            <div>
+              <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">Python — Video (image-to-video)</h4>
+              <CopyBlock language="python" code={`import requests
+
+# Generate a video from a source image
+response = requests.post(
+    "${baseUrl}/api/v1/generate",
+    headers={
+        "Content-Type": "application/json",
+        "X-API-Key": "gltch_sk_your_key_here",
+    },
+    json={
+        "prompt": "camera slowly zooms in, cinematic lighting",
+        "type": "video",
+        "duration": 10,
+        "image_url": "https://example.com/my-image.jpg",
+    },
+    timeout=300,  # videos can take a few minutes
+)
+
+data = response.json()
+print(data["video_url"])
+print(f"Credits used: {data['credits_used']}")`} />
             </div>
 
             <div>
@@ -302,7 +339,10 @@ console.log(\`Credits remaining: \${data.credits_remaining}\`);`} />
 
         {/* Response */}
         <Section title="📦 RESPONSE FORMAT">
-          <CopyBlock language="json" code={`{
+          <div className="space-y-3">
+            <div>
+              <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">IMAGE RESPONSE</h4>
+              <CopyBlock language="json" code={`{
   "created": 1234567890,
   "data": [
     {
@@ -310,9 +350,22 @@ console.log(\`Credits remaining: \${data.credits_remaining}\`);`} />
       "revised_prompt": "expanded prompt used for generation"
     }
   ],
+  "type": "image",
   "credits_used": 4,
   "credits_remaining": 146
 }`} />
+            </div>
+            <div>
+              <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">VIDEO RESPONSE</h4>
+              <CopyBlock language="json" code={`{
+  "type": "video",
+  "video_url": "https://...",
+  "duration": 5,
+  "credits_used": 15,
+  "credits_remaining": 131
+}`} />
+            </div>
+          </div>
         </Section>
 
         {/* Errors */}
