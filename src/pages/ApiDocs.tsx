@@ -37,7 +37,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 export default function ApiDocs() {
-  const baseUrl = window.location.origin;
+  const baseUrl = "https://grokrunner.gltch.app";
 
   return (
     <CyberLayout>
