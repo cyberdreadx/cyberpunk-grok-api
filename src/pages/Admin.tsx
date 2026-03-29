@@ -984,9 +984,6 @@ export default function Admin() {
         {/* ═══ EMAILS TAB ═══ */}
         {activeTab === "emails" && (
           <section className="space-y-4">
-            {/* Fetch on tab open */}
-            {!emailStats && !emailLoading && (() => { fetchEmailLogs(); return null; })()}
-
             {/* KPI cards */}
             {emailStats && (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
