@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Copy, Check, Key, Zap, Shield, ArrowLeft, ExternalLink } from "lucide-react";
+import React, { useState, useCallback } from "react";
+import { Copy, Check, Key, Zap, Shield, ArrowLeft, ExternalLink, Play, Loader2, Image, Video } from "lucide-react";
 import { Link } from "react-router-dom";
 import CyberLayout from "@/components/CyberLayout";
 import GlitchText from "@/components/GlitchText";
@@ -33,6 +33,197 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       <h2 className="text-lg font-mono font-bold text-primary tracking-wide">{title}</h2>
       {children}
     </section>
+  );
+}
+
+function ApiPlayground({ baseUrl }: { baseUrl: string }) {
+  const [apiKey, setApiKey] = useState("");
+  const [prompt, setPrompt] = useState("a cyberpunk cityscape at sunset, neon lights");
+  const [genType, setGenType] = useState<"image" | "video">("image");
+  const [model, setModel] = useState("grok-2-image");
+  const [n, setN] = useState(1);
+  const [duration, setDuration] = useState(5);
+  const [loading, setLoading] = useState(false);
+  const [response, setResponse] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [resultImages, setResultImages] = useState<string[]>([]);
+  const [resultVideo, setResultVideo] = useState<string | null>(null);
+
+  const handleRun = useCallback(async () => {
+    if (!apiKey.trim()) { setError("Enter your API key first"); return; }
+    if (!prompt.trim()) { setError("Enter a prompt"); return; }
+    setLoading(true);
+    setError(null);
+    setResponse(null);
+    setResultImages([]);
+    setResultVideo(null);
+
+    const body: Record<string, unknown> = { prompt: prompt.trim() };
+    if (genType === "video") {
+      body.type = "video";
+      body.duration = duration;
+    } else {
+      body.model = model;
+      body.n = n;
+    }
+
+    try {
+      const res = await fetch(`${baseUrl}/api/v1/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-API-Key": apiKey.trim() },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      setResponse(JSON.stringify(data, null, 2));
+
+      if (res.ok) {
+        if (data.data) setResultImages(data.data.map((d: { url?: string }) => d.url).filter(Boolean));
+        if (data.video_url) setResultVideo(data.video_url);
+      } else {
+        setError(`${res.status}: ${data.error || "Request failed"}`);
+      }
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Network error");
+    } finally {
+      setLoading(false);
+    }
+  }, [apiKey, prompt, genType, model, n, duration, baseUrl]);
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-foreground/80 font-mono">
+        Test the API directly from your browser. Enter your API key and hit run — credits will be deducted from your account.
+      </p>
+
+      {/* API Key */}
+      <div className="space-y-1">
+        <label className="text-xs font-mono text-muted-foreground flex items-center gap-1.5">
+          <Key className="w-3 h-3" /> API KEY
+        </label>
+        <input
+          type="password"
+          placeholder="gltch_sk_..."
+          value={apiKey}
+          onChange={(e) => setApiKey(e.target.value)}
+          className="w-full bg-muted/50 border border-primary/20 rounded-lg px-3 py-2 text-xs font-mono text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50"
+        />
+      </div>
+
+      {/* Type toggle */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => setGenType("image")}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono border transition-colors ${
+            genType === "image"
+              ? "bg-primary/20 border-primary/40 text-primary"
+              : "bg-muted/30 border-primary/10 text-muted-foreground hover:border-primary/20"
+          }`}
+        >
+          <Image className="w-3 h-3" /> IMAGE
+        </button>
+        <button
+          onClick={() => setGenType("video")}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono border transition-colors ${
+            genType === "video"
+              ? "bg-primary/20 border-primary/40 text-primary"
+              : "bg-muted/30 border-primary/10 text-muted-foreground hover:border-primary/20"
+          }`}
+        >
+          <Video className="w-3 h-3" /> VIDEO
+        </button>
+      </div>
+
+      {/* Prompt */}
+      <div className="space-y-1">
+        <label className="text-xs font-mono text-muted-foreground">PROMPT</label>
+        <textarea
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          rows={3}
+          className="w-full bg-muted/50 border border-primary/20 rounded-lg px-3 py-2 text-xs font-mono text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50 resize-none"
+        />
+      </div>
+
+      {/* Options */}
+      <div className="flex flex-wrap gap-3">
+        {genType === "image" ? (
+          <>
+            <div className="space-y-1">
+              <label className="text-xs font-mono text-muted-foreground">MODEL</label>
+              <select
+                value={model}
+                onChange={(e) => setModel(e.target.value)}
+                className="bg-muted/50 border border-primary/20 rounded-lg px-2 py-1.5 text-xs font-mono text-foreground focus:outline-none focus:border-primary/50"
+              >
+                <option value="grok-2-image">grok-2-image (2 cr)</option>
+                <option value="grok-2-image-pro">grok-2-image-pro (5 cr)</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-mono text-muted-foreground">COUNT (n)</label>
+              <select
+                value={n}
+                onChange={(e) => setN(Number(e.target.value))}
+                className="bg-muted/50 border border-primary/20 rounded-lg px-2 py-1.5 text-xs font-mono text-foreground focus:outline-none focus:border-primary/50"
+              >
+                {[1, 2, 3, 4].map((v) => <option key={v} value={v}>{v}</option>)}
+              </select>
+            </div>
+          </>
+        ) : (
+          <div className="space-y-1">
+            <label className="text-xs font-mono text-muted-foreground">DURATION</label>
+            <select
+              value={duration}
+              onChange={(e) => setDuration(Number(e.target.value))}
+              className="bg-muted/50 border border-primary/20 rounded-lg px-2 py-1.5 text-xs font-mono text-foreground focus:outline-none focus:border-primary/50"
+            >
+              <option value={5}>5s (15 cr)</option>
+              <option value={10}>10s (30 cr)</option>
+            </select>
+          </div>
+        )}
+      </div>
+
+      {/* Run */}
+      <button
+        onClick={handleRun}
+        disabled={loading}
+        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground font-mono text-xs font-bold hover:bg-primary/90 disabled:opacity-50 transition-colors"
+      >
+        {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
+        {loading ? "GENERATING..." : "RUN REQUEST"}
+      </button>
+
+      {/* Error */}
+      {error && (
+        <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg text-xs font-mono text-destructive">
+          {error}
+        </div>
+      )}
+
+      {/* Results */}
+      {resultImages.length > 0 && (
+        <div className="grid grid-cols-2 gap-2">
+          {resultImages.map((url, i) => (
+            <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="block rounded-lg overflow-hidden border border-primary/20 hover:border-primary/40 transition-colors">
+              <img src={url} alt={`Generated ${i + 1}`} className="w-full h-auto" />
+            </a>
+          ))}
+        </div>
+      )}
+      {resultVideo && (
+        <video src={resultVideo} controls autoPlay muted className="w-full rounded-lg border border-primary/20" />
+      )}
+
+      {/* Raw response */}
+      {response && (
+        <div className="space-y-1">
+          <h4 className="text-xs font-mono font-bold text-muted-foreground">RAW RESPONSE</h4>
+          <CopyBlock code={response} language="json" />
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -444,6 +635,11 @@ console.log(\`Credits remaining: \${data.credits_remaining}\`);`} />
               <div className="text-xs text-muted-foreground font-mono">per second of video</div>
             </div>
           </div>
+        </Section>
+
+        {/* API Playground */}
+        <Section title="🧪 API PLAYGROUND">
+          <ApiPlayground baseUrl={baseUrl} />
         </Section>
 
         {/* Footer */}
