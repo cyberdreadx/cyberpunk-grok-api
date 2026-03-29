@@ -46,6 +46,7 @@ const App = () => (
           <Route path="/characters" element={<PageShell><Characters /></PageShell>} />
           <Route path="/library" element={<PageShell><Library /></PageShell>} />
           <Route path="/s/:shareId" element={<PageShell><ShareView /></PageShell>} />
+          <Route path="/docs" element={<PageShell><ApiDocs /></PageShell>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
