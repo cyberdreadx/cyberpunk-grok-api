@@ -1997,6 +1997,8 @@ const Index = () => {
             )}
           </div>
         </section>
+          </>
+        )}
 
         {/* Error display */}
         {error && (
