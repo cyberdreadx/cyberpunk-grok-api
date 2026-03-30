@@ -12,19 +12,19 @@ const PACKAGES: Record<string, { priceEnvKey: string; credits: number }> = {
   starter: { priceEnvKey: "STRIPE_PRICE_STARTER", credits: 50 },
   pro: { priceEnvKey: "STRIPE_PRICE_PRO", credits: 175 },
   mega: { priceEnvKey: "STRIPE_PRICE_MEGA", credits: 450 },
-  ultra: { priceEnvKey: "STRIPE_PRICE_ULTRA", credits: 1800 },
-  enterprise: { priceEnvKey: "STRIPE_PRICE_ENTERPRISE", credits: 4000 },
+  ultra: { priceEnvKey: "STRIPE_PRICE_ULTRA", credits: 2200 },
+  enterprise: { priceEnvKey: "STRIPE_PRICE_ENTERPRISE", credits: 4500 },
 };
 
 const SUBSCRIPTIONS: Record<string, { priceEnvKey: string; creditsPerMonth: number }> = {
   basic: { priceEnvKey: "STRIPE_PRICE_SUB_BASIC", creditsPerMonth: 150 },
   premium: { priceEnvKey: "STRIPE_PRICE_SUB_PREMIUM", creditsPerMonth: 500 },
-  pro: { priceEnvKey: "STRIPE_PRICE_SUB_PRO", creditsPerMonth: 1200 },
-  elite: { priceEnvKey: "STRIPE_PRICE_SUB_ELITE", creditsPerMonth: 5000 },
+  pro: { priceEnvKey: "STRIPE_PRICE_SUB_PRO", creditsPerMonth: 2000 },
+  elite: { priceEnvKey: "STRIPE_PRICE_SUB_ELITE", creditsPerMonth: 10000 },
   "basic-yearly": { priceEnvKey: "STRIPE_PRICE_SUB_BASIC_YEARLY", creditsPerMonth: 150 },
   "premium-yearly": { priceEnvKey: "STRIPE_PRICE_SUB_PREMIUM_YEARLY", creditsPerMonth: 500 },
-  "pro-yearly": { priceEnvKey: "STRIPE_PRICE_SUB_PRO_YEARLY", creditsPerMonth: 1200 },
-  "elite-yearly": { priceEnvKey: "STRIPE_PRICE_SUB_ELITE_YEARLY", creditsPerMonth: 5000 },
+  "pro-yearly": { priceEnvKey: "STRIPE_PRICE_SUB_PRO_YEARLY", creditsPerMonth: 2000 },
+  "elite-yearly": { priceEnvKey: "STRIPE_PRICE_SUB_ELITE_YEARLY", creditsPerMonth: 10000 },
 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {

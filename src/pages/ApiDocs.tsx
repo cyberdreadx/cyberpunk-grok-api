@@ -1026,11 +1026,11 @@ print(f"Credits used: {data['credits_used']}")`} />
           </div>
         </Section>
 
-        {/* XRGE Loyalty */}
-        <Section title="🏆 XRGE LOYALTY TIERS">
+        {/* XRGE Bank & Loyalty */}
+        <Section title="🏦 XRGE BANK & LOYALTY">
           <p className="text-sm text-foreground/80 font-mono">
-            Pay with <strong className="text-pink-400">$XRGE</strong> (Base chain) for bonus credits.
-            The more XRGE you spend lifetime, the higher your tier and bonus:
+            Deposit <strong className="text-pink-400">$XRGE</strong> (Base chain) into your bank, buy credits from your balance,
+            or withdraw anytime. The more XRGE you spend, the higher your loyalty tier and bonus:
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             <div className="border border-amber-600/30 rounded-lg p-3 text-center bg-amber-900/10">
@@ -1054,9 +1054,44 @@ print(f"Credits used: {data['credits_used']}")`} />
               <div className="text-[10px] text-muted-foreground font-mono mt-1">1M XRGE spent</div>
             </div>
           </div>
+
+          <p className="text-xs text-pink-300/80 font-orbitron tracking-wider mt-3">BANK API ENDPOINTS</p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs font-mono border border-border/30 rounded">
+              <thead>
+                <tr className="border-b border-border/30 bg-card/40">
+                  <th className="px-3 py-2 text-left text-muted-foreground">Method</th>
+                  <th className="px-3 py-2 text-left text-muted-foreground">Endpoint</th>
+                  <th className="px-3 py-2 text-left text-muted-foreground">Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-b border-border/20">
+                  <td className="px-3 py-2 text-green-400">GET</td>
+                  <td className="px-3 py-2 text-foreground/80">/v1/xrge-balance</td>
+                  <td className="px-3 py-2 text-muted-foreground/70">Bank balance, loyalty tier, transactions</td>
+                </tr>
+                <tr className="border-b border-border/20">
+                  <td className="px-3 py-2 text-blue-400">POST</td>
+                  <td className="px-3 py-2 text-foreground/80">/v1/xrge-deposit</td>
+                  <td className="px-3 py-2 text-muted-foreground/70">Verify on-chain deposit → credit bank</td>
+                </tr>
+                <tr className="border-b border-border/20">
+                  <td className="px-3 py-2 text-blue-400">POST</td>
+                  <td className="px-3 py-2 text-foreground/80">/v1/xrge-purchase</td>
+                  <td className="px-3 py-2 text-muted-foreground/70">Buy credits from bank balance</td>
+                </tr>
+                <tr>
+                  <td className="px-3 py-2 text-blue-400">POST</td>
+                  <td className="px-3 py-2 text-foreground/80">/v1/xrge-withdraw</td>
+                  <td className="px-3 py-2 text-muted-foreground/70">Request XRGE withdrawal to wallet</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
           <p className="text-xs text-muted-foreground/70 font-mono">
-            Your tier is calculated automatically when you pay with XRGE via the credit store.
-            Tiers are permanent — once you reach a tier, you keep it.
+            Tiers are permanent — once you reach a tier, you keep it. Open the XRGE Bank from the credit store.
           </p>
         </Section>
 

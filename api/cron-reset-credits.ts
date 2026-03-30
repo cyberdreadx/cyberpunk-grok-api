@@ -15,8 +15,8 @@ import { getDb } from "./_lib/db";
 const YEARLY_TIER_CREDITS: Record<string, number> = {
   "basic-yearly": 150,
   "premium-yearly": 500,
-  "pro-yearly": 1200,
-  "elite-yearly": 5000,
+  "pro-yearly": 2000,
+  "elite-yearly": 10000,
 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {

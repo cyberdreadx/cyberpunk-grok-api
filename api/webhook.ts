@@ -63,12 +63,12 @@ async function detectPaymentMethod(stripe: Stripe, session: any): Promise<string
 const TIER_CREDITS: Record<string, number> = {
   basic: 150,
   premium: 500,
-  pro: 1200,
-  elite: 5000,
+  pro: 2000,
+  elite: 10000,
   "basic-yearly": 150,
   "premium-yearly": 500,
-  "pro-yearly": 1200,
-  "elite-yearly": 5000,
+  "pro-yearly": 2000,
+  "elite-yearly": 10000,
 };
 
 /**
