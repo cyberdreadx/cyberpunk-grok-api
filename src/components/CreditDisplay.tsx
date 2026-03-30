@@ -92,7 +92,7 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
       {/* Credit balance badge */}
       <div
         className="flex items-center gap-1.5 bg-card/60 border border-border/50 rounded px-2 py-1 cursor-default"
-        title={`Daily: ${dailyCredits} | Subscription: ${subCredits} | Pack: ${packCredits}`}
+        title={`Subscription: ${subCredits} | Pack: ${packCredits}`}
       >
         <Coins className="w-3 h-3 text-secondary" />
         <span className="font-mono-share text-xs text-secondary font-bold">
@@ -125,7 +125,7 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
               CREDIT_STORE
             </DialogTitle>
             <DialogDescription className="font-rajdhani text-muted-foreground">
-              10 free credits daily — subscribe or buy packs for more. Images: 1-2 cr · Videos: 5 cr · HD upscale: 7 cr.
+              Subscribe or buy packs for credits. Images: 1-2 cr · Videos: 5 cr · HD upscale: 7 cr.
             </DialogDescription>
             <div className="mt-3 flex items-center gap-2 rounded-lg border border-pink-500/25 bg-gradient-to-r from-pink-500/10 to-violet-500/10 px-3 py-2.5">
               <img src="/xrge-logo.png" alt="" className="h-8 w-8 shrink-0 rounded-full" />
