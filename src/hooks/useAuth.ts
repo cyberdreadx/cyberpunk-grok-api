@@ -78,7 +78,7 @@ export function useAuth() {
     return data;
   }, []);
 
-  /** Verify email with the 6-digit code. Refreshes token and grants daily credits. */
+  /** Verify email with the 6-digit code. Refreshes token. */
   const verifyEmail = useCallback(async (email: string, code: string) => {
     const data = await apiFetch<{ token: string; user: AuthUser }>("/auth/verify", {
       method: "POST",
