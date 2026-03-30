@@ -56,7 +56,7 @@ export function useAuth() {
       setAuthToken(data.token);
       setUser({ ...data.user, email_verified: data.email_verified });
     }
-    // Still show verification prompt so they verify for daily credits
+    // Still show verification prompt so they verify their account
     if (data.needsVerification) {
       setPendingVerificationEmail(data.user?.email ?? email);
     }
@@ -71,14 +71,14 @@ export function useAuth() {
     });
     setAuthToken(data.token);
     setUser({ ...data.user, email_verified: data.email_verified });
-    // If unverified, prompt for verification so they can unlock daily credits
+    // If unverified, prompt for verification
     if (!data.email_verified) {
       setPendingVerificationEmail(data.user.email);
     }
     return data;
   }, []);
 
-  /** Verify email with the 6-digit code. Refreshes token and grants daily credits. */
+  /** Verify email with the 6-digit code. Refreshes token. */
   const verifyEmail = useCallback(async (email: string, code: string) => {
     const data = await apiFetch<{ token: string; user: AuthUser }>("/auth/verify", {
       method: "POST",
