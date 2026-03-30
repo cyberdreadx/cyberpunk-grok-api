@@ -879,7 +879,7 @@ const Index = () => {
           <div className="flex items-center gap-3 bg-secondary/10 border border-secondary/30 rounded-lg px-4 py-3 animate-slide-up">
             <AlertCircle className="w-4 h-4 text-secondary shrink-0" />
             <p className="font-mono-share text-xs text-secondary flex-1">
-              Verify your email to unlock <span className="font-bold">10 free daily credits</span>.
+              Verify your email to secure your account.
               Check your inbox for a 6-digit code.
             </p>
             <button

@@ -56,7 +56,7 @@ export function useAuth() {
       setAuthToken(data.token);
       setUser({ ...data.user, email_verified: data.email_verified });
     }
-    // Still show verification prompt so they verify for daily credits
+    // Still show verification prompt so they verify their account
     if (data.needsVerification) {
       setPendingVerificationEmail(data.user?.email ?? email);
     }
