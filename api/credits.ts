@@ -11,7 +11,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const auth = getUserFromRequest(req);
     if (!auth) return res.status(401).json({ error: "Unauthorized" });
 
-    await checkRateLimit(auth.userId, "credits", { max: 60, windowSeconds: 60 });
+    const { allowed } = await checkRateLimit(auth.userId, "credits", { max: 60, windowSeconds: 60 });
+    if (!allowed) return res.status(429).json({ error: "Rate limit reached" });
 
     const sql = getDb();
     const rows = await sql`

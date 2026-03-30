@@ -15,35 +15,42 @@ export interface CreditDeduction {
  * Returns breakdown for potential refund. Throws on insufficient credits.
  */
 export async function deductCredits(sql: any, userId: string, totalCost: number, _user?: any): Promise<CreditDeduction> {
+  // Atomic deduction: CTE locks the row, computes the split, then UPDATE applies it.
+  // WHERE guard on total prevents concurrent double-spend.
   const [row] = await sql`
-    SELECT daily_credits, sub_credits, pack_credits
-    FROM users WHERE id = ${userId}
+    WITH snapshot AS (
+      SELECT id, daily_credits, sub_credits, pack_credits
+      FROM users
+      WHERE id = ${userId}
+        AND (daily_credits + sub_credits + pack_credits) >= ${totalCost}
+      FOR UPDATE
+    ), splits AS (
+      SELECT
+        LEAST(daily_credits, ${totalCost})::int AS d_daily,
+        LEAST(sub_credits, GREATEST(${totalCost} - daily_credits, 0))::int AS d_sub,
+        GREATEST(${totalCost} - daily_credits - sub_credits, 0)::int AS d_pack
+      FROM snapshot
+    )
+    UPDATE users SET
+      daily_credits = daily_credits - (SELECT d_daily FROM splits),
+      sub_credits   = sub_credits   - (SELECT d_sub   FROM splits),
+      pack_credits  = pack_credits  - (SELECT d_pack  FROM splits),
+      updated_at = now()
+    WHERE id = ${userId} AND EXISTS (SELECT 1 FROM snapshot)
+    RETURNING
+      (SELECT d_daily FROM splits) AS d_daily,
+      (SELECT d_sub   FROM splits) AS d_sub,
+      (SELECT d_pack  FROM splits) AS d_pack
   `;
-  if (!row) throw new Error("User not found");
 
-  const daily = row.daily_credits || 0;
-  const sub = row.sub_credits || 0;
-  const pack = row.pack_credits || 0;
-  const total = daily + sub + pack;
-
-  if (total < totalCost) {
+  if (!row) {
+    const [check] = await sql`SELECT daily_credits, sub_credits, pack_credits FROM users WHERE id = ${userId}`;
+    if (!check) throw new Error("User not found");
+    const total = (check.daily_credits || 0) + (check.sub_credits || 0) + (check.pack_credits || 0);
     throw new Error(`Insufficient credits. Need ${totalCost}, have ${total}`);
   }
 
-  let remaining = totalCost;
-  const dDaily = Math.min(remaining, daily); remaining -= dDaily;
-  const dSub = Math.min(remaining, sub); remaining -= dSub;
-  const dPack = remaining;
-
-  await sql`
-    UPDATE users SET
-      daily_credits = GREATEST(daily_credits - ${dDaily}, 0),
-      sub_credits = GREATEST(sub_credits - ${dSub}, 0),
-      pack_credits = GREATEST(pack_credits - ${dPack}, 0),
-      updated_at = now()
-    WHERE id = ${userId}
-  `;
-  return { dDaily, dSub, dPack };
+  return { dDaily: row.d_daily || 0, dSub: row.d_sub || 0, dPack: row.d_pack || 0 };
 }
 
 export async function refundCredits(sql: any, userId: string, d: CreditDeduction) {

@@ -11,7 +11,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getDb } from "./_lib/db";
 import { getUserFromRequest, ADMIN_EMAIL } from "./_lib/auth";
-import { checkRateLimit } from "./_lib/ratelimit";
+import { checkRateLimit, getClientIp } from "./_lib/ratelimit";
 
 const XAI_API_BASE = "https://api.x.ai/v1";
 
@@ -103,6 +103,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // If the client sends a byokKey, skip auth/credits entirely and proxy as-is.
     const byokKey = typeof req.body?.byokKey === "string" ? req.body.byokKey.trim() : null;
     if (byokKey) {
+      const byokIp = getClientIp(req);
+      const { allowed: byokAllowed } = await checkRateLimit(`byok:${byokIp}`, "generate", { max: 30, windowSeconds: 300 });
+      if (!byokAllowed) {
+        return res.status(429).json({ error: "Rate limit reached. Please wait before generating again." });
+      }
+
       const { action, byokKey: _omit, ...params } = req.body || {};
       if (!action || !ALLOWED_ACTIONS.includes(action as AllowedAction)) {
         return res.status(400).json({ error: "Invalid action." });
@@ -137,7 +143,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       if (!byokResp.ok) {
         const errText = await byokResp.text();
-        return res.status(byokResp.status).json({ error: errText });
+        let safeError = `Upstream error (${byokResp.status})`;
+        try {
+          const parsed = JSON.parse(errText);
+          if (parsed.error?.message) safeError = parsed.error.message;
+          else if (typeof parsed.error === "string") safeError = parsed.error;
+        } catch { /* non-JSON — use generic message */ }
+        return res.status(byokResp.status).json({ error: safeError });
       }
 
       let byokData: any = await byokResp.json();

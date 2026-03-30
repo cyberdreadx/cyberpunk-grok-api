@@ -25,27 +25,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const sql = getDb();
 
-    const rows = await sql`
-      SELECT lc.telegram_user_id, tu.telegram_id, tu.username, tu.first_name
-      FROM telegram_link_codes lc
-      JOIN telegram_users tu ON tu.id = lc.telegram_user_id
-      WHERE lc.code = ${code.trim().toUpperCase()}
-        AND lc.used = false
-        AND lc.expires_at > now()
+    const normalizedCode = code.trim().toUpperCase();
+
+    // Atomic: mark code as used in one statement to prevent race conditions
+    const claimed = await sql`
+      UPDATE telegram_link_codes SET used = true
+      WHERE code = ${normalizedCode} AND used = false AND expires_at > now()
+      RETURNING telegram_user_id
     `;
 
-    if (rows.length === 0) {
+    if (claimed.length === 0) {
       return res.status(400).json({ error: "Invalid or expired link code" });
     }
 
-    const { telegram_user_id, telegram_id, username, first_name } = rows[0];
+    const telegram_user_id = claimed[0].telegram_user_id;
 
-    await sql`UPDATE telegram_link_codes SET used = true WHERE code = ${code.trim().toUpperCase()}`;
     await sql`
       UPDATE telegram_users
       SET linked_user_id = ${auth.userId}::uuid, updated_at = now()
       WHERE id = ${telegram_user_id}::uuid
     `;
+
+    const rows = await sql`
+      SELECT telegram_id, username, first_name FROM telegram_users WHERE id = ${telegram_user_id}::uuid
+    `;
+    const { telegram_id, username, first_name } = rows[0] || {};
 
     return res.status(200).json({
       success: true,

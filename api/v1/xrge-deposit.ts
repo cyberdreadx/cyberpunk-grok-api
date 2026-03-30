@@ -31,14 +31,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const sql = getDb();
     const xrgeConfig = await getXrgeConfig();
-
-    // Check for duplicate tx_hash
-    const dupes = await sql`
-      SELECT id FROM xrge_bank_txns WHERE tx_hash = ${txHash.trim().toLowerCase()} AND type = 'deposit'
-    `;
-    if (dupes.length > 0) {
-      return res.status(400).json({ error: "This transaction has already been credited" });
-    }
+    const normalizedHash = txHash.trim().toLowerCase();
 
     // Verify on-chain — pass "0" as expected amount (deposits accept any amount)
     const transfer = await verifyXrgeTransfer(txHash, "0", xrgeConfig.depositAddress, xrgeConfig.rpcUrl);
@@ -49,34 +42,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: "Zero-value transfer" });
     }
 
-    // Credit bank balance atomically
-    const [updated] = await sql`
-      UPDATE users
-      SET xrge_bank_balance = xrge_bank_balance + ${depositAmount}::numeric,
-          wallet_address = COALESCE(${walletAddress || null}, wallet_address),
-          updated_at = now()
-      WHERE id = ${userId}
-      RETURNING xrge_bank_balance
-    `;
-
-    const newBalance = parseFloat(updated.xrge_bank_balance);
-
-    // Record transaction
-    await sql`
-      INSERT INTO xrge_bank_txns (user_id, type, amount, balance_after, tx_hash, metadata)
-      VALUES (
-        ${userId}, 'deposit', ${depositAmount}::numeric, ${newBalance},
-        ${txHash.trim().toLowerCase()},
-        ${JSON.stringify({ from: transfer.from, block: transfer.blockNumber, confirmations: transfer.confirmations })}
+    // Atomically: insert txn record (unique tx_hash prevents double-credit),
+    // then credit balance — all in one CTE so concurrent requests can't both succeed
+    const result = await sql`
+      WITH new_txn AS (
+        INSERT INTO xrge_bank_txns (user_id, type, amount, balance_after, tx_hash, metadata)
+        SELECT
+          ${userId}, 'deposit', ${depositAmount}::numeric, 0,
+          ${normalizedHash},
+          ${JSON.stringify({ from: transfer.from, block: transfer.blockNumber, confirmations: transfer.confirmations })}::jsonb
+        WHERE NOT EXISTS (
+          SELECT 1 FROM xrge_bank_txns WHERE tx_hash = ${normalizedHash} AND type = 'deposit'
+        )
+        RETURNING id
+      ), credit AS (
+        UPDATE users
+        SET xrge_bank_balance = xrge_bank_balance + ${depositAmount}::numeric,
+            wallet_address = COALESCE(${walletAddress || null}, wallet_address),
+            updated_at = now()
+        WHERE id = ${userId} AND EXISTS (SELECT 1 FROM new_txn)
+        RETURNING xrge_bank_balance
       )
+      SELECT
+        (SELECT xrge_bank_balance FROM credit) AS new_balance,
+        EXISTS(SELECT 1 FROM new_txn) AS inserted
     `;
 
-    // Optionally save wallet address
-    if (walletAddress) {
-      await sql`
-        UPDATE users SET wallet_address = ${walletAddress.trim().toLowerCase()} WHERE id = ${userId} AND wallet_address IS NULL
-      `;
+    if (!result[0]?.inserted) {
+      return res.status(400).json({ error: "This transaction has already been credited" });
     }
+
+    const newBalance = parseFloat(result[0].new_balance);
 
     console.log(`[xrge-deposit] ${depositAmount} XRGE deposited for user ${userId} (tx: ${txHash})`);
 
@@ -88,6 +84,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   } catch (err: any) {
     console.error("[xrge-deposit]", err.message);
-    return res.status(400).json({ error: err.message || "Deposit verification failed" });
+    const safeMessages = ["Invalid transaction hash", "Transaction not found", "Transaction failed", "confirmation", "No XRGE transfer", "not sent to the correct", "Insufficient amount", "Zero-value"];
+    const isSafe = safeMessages.some(m => err.message?.includes(m));
+    return res.status(400).json({ error: isSafe ? err.message : "Deposit verification failed" });
   }
 }

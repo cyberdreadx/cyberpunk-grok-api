@@ -547,9 +547,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     let imageBase64: string | undefined;
     if (needsImage) {
       try {
-        const imgResp = await fetch(imageUrl, { signal: AbortSignal.timeout(15000) });
+        const parsedImgUrl = new URL(imageUrl);
+        if (parsedImgUrl.protocol !== "https:") {
+          await refundCredits(sql, auth.userId, d);
+          return res.status(400).json({ error: "image_url must use HTTPS" });
+        }
+        if (/^(127\.|10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|0\.|169\.254\.|::1|fc|fd|fe80|localhost)/i.test(parsedImgUrl.hostname)) {
+          await refundCredits(sql, auth.userId, d);
+          return res.status(400).json({ error: "image_url cannot point to private/internal addresses" });
+        }
+        const imgResp = await fetch(imageUrl, { signal: AbortSignal.timeout(15000), redirect: "error" });
         if (!imgResp.ok) throw new Error(`HTTP ${imgResp.status}`);
+        const contentType = imgResp.headers.get("content-type") || "";
+        if (!contentType.startsWith("image/")) throw new Error(`Not an image (${contentType})`);
         const buf = Buffer.from(await imgResp.arrayBuffer());
+        if (buf.length > 20 * 1024 * 1024) throw new Error("Image too large (max 20MB)");
         imageBase64 = cleanBase64(buf.toString("base64"));
       } catch (err: any) {
         await refundCredits(sql, auth.userId, d);

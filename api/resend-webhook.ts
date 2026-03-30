@@ -34,10 +34,10 @@ function verifySignature(
     .createHmac("sha256", secret)
     .update(payload)
     .digest("hex");
-  return crypto.timingSafeEqual(
-    Buffer.from(signature),
-    Buffer.from(expected),
-  );
+  const sigBuf = Buffer.from(signature);
+  const expBuf = Buffer.from(expected);
+  if (sigBuf.length !== expBuf.length) return false;
+  return crypto.timingSafeEqual(sigBuf, expBuf);
 }
 
 export default async function handler(
@@ -51,18 +51,20 @@ export default async function handler(
     const rawBody =
       typeof req.body === "string" ? req.body : JSON.stringify(req.body);
 
-    // Verify webhook signature if secret is configured
     const secret = process.env.RESEND_WEBHOOK_SECRET;
-    if (secret) {
-      const signature =
-        (req.headers["svix-signature"] as string) ||
-        (req.headers["resend-signature"] as string) ||
-        null;
+    if (!secret) {
+      console.error("[resend-webhook] RESEND_WEBHOOK_SECRET not configured — rejecting");
+      return res.status(503).json({ error: "Webhook not configured" });
+    }
 
-      if (!verifySignature(rawBody, signature, secret)) {
-        console.error("[resend-webhook] Invalid signature");
-        return res.status(401).json({ error: "Invalid signature" });
-      }
+    const signature =
+      (req.headers["svix-signature"] as string) ||
+      (req.headers["resend-signature"] as string) ||
+      null;
+
+    if (!verifySignature(rawBody, signature, secret)) {
+      console.error("[resend-webhook] Invalid signature");
+      return res.status(401).json({ error: "Invalid signature" });
     }
 
     const event = typeof req.body === "string" ? JSON.parse(req.body) : req.body;

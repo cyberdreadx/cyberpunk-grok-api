@@ -1,13 +1,19 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import crypto from "crypto";
+import { getUserFromRequest } from "./_lib/auth";
 
 export const config = { maxDuration: 30 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
   if (req.method === "OPTIONS") return res.status(200).end();
 
   if (req.method === "POST") {
     try {
+      const auth = getUserFromRequest(req);
+      if (!auth) return res.status(401).json({ error: "Unauthorized" });
+
       const { mediaBase64, mediaUrl, mediaType, prompt } = req.body || {};
       if (!mediaType || (!mediaBase64 && !mediaUrl)) {
         return res.status(400).json({ error: "mediaType and either mediaBase64 or mediaUrl required" });
