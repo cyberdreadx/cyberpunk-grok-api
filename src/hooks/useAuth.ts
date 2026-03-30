@@ -71,7 +71,7 @@ export function useAuth() {
     });
     setAuthToken(data.token);
     setUser({ ...data.user, email_verified: data.email_verified });
-    // If unverified, prompt for verification so they can unlock daily credits
+    // If unverified, prompt for verification
     if (!data.email_verified) {
       setPendingVerificationEmail(data.user.email);
     }
