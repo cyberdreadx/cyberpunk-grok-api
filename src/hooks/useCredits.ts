@@ -128,28 +128,20 @@ export function useCredits(user: AuthUser | null) {
     }
   }, [user]);
 
-  // Optimistic local deduction (mirrors server logic: daily → sub → pack)
+  // Optimistic local deduction (mirrors server logic: sub → pack)
   const deductCreditsLocally = useCallback((amount: number) => {
-    setDailyCredits((prevDaily) => {
-      const fromDaily = Math.min(prevDaily, amount);
-      let remainder = amount - fromDaily;
-      if (remainder > 0) {
-        setSubCredits((prevSub) => {
-          const fromSub = Math.min(prevSub, remainder);
-          const packRemainder = remainder - fromSub;
-          if (packRemainder > 0) {
-            setPackCredits((prevPack) => Math.max(0, prevPack - packRemainder));
-          }
-          return prevSub - fromSub;
-        });
+    setSubCredits((prevSub) => {
+      const fromSub = Math.min(prevSub, amount);
+      const packRemainder = amount - fromSub;
+      if (packRemainder > 0) {
+        setPackCredits((prevPack) => Math.max(0, prevPack - packRemainder));
       }
-      return prevDaily - fromDaily;
+      return prevSub - fromSub;
     });
   }, []);
 
   return {
     totalCredits,
-    dailyCredits,
     subCredits,
     packCredits,
     subscriptionTier,

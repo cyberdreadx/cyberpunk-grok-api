@@ -161,11 +161,6 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
               </span>
               <span className="font-mono-share text-[10px] text-muted-foreground">total</span>
             </div>
-            {dailyCredits > 0 && (
-              <span className="font-mono-share text-[10px] text-muted-foreground/60">
-                {dailyCredits} daily
-              </span>
-            )}
             {subCredits > 0 && (
               <span className="font-mono-share text-[10px] text-muted-foreground/60">
                 {subCredits} sub{renewsLabel && ` (resets ${renewsLabel})`}
