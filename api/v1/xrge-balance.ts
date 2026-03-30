@@ -86,7 +86,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       })),
     });
   } catch (err: any) {
-    console.error("[xrge-balance]", err.message);
+    console.error("[xrge-balance]", err.message, err.stack);
     return res.status(500).json({ error: "Failed to fetch balance" });
   }
 }
