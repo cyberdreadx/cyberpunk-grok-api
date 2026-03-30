@@ -633,8 +633,8 @@ export default function ApiDocs() {
                         <tr className="border-b border-primary/5">
                           <td className="py-1.5 pr-3 text-primary">workflow</td>
                           <td className="py-1.5 pr-3">string</td>
-                          <td className="py-1.5 pr-3">klein</td>
-                          <td className="py-1.5">klein, txt2img, wan-video</td>
+                          <td className="py-1.5 pr-3">txt2img</td>
+                          <td className="py-1.5">txt2img, klein, wan-video, gltch-wan</td>
                         </tr>
                         <tr className="border-b border-primary/5">
                           <td className="py-1.5 pr-3 text-primary">image_url</td>
@@ -711,10 +711,15 @@ export default function ApiDocs() {
                           <td className="py-1.5 pr-3">3–4 cr</td>
                           <td className="py-1.5">Flux Klein image editing (+1 for HD)</td>
                         </tr>
-                        <tr>
+                        <tr className="border-b border-primary/5">
                           <td className="py-1.5 pr-3 text-primary">wan-video</td>
                           <td className="py-1.5 pr-3">15 cr</td>
                           <td className="py-1.5">WAN image-to-video (requires image_url)</td>
+                        </tr>
+                        <tr>
+                          <td className="py-1.5 pr-3 text-primary">gltch-wan</td>
+                          <td className="py-1.5 pr-3">15 cr</td>
+                          <td className="py-1.5">GLTCH + WAN image-to-video (requires image_url)</td>
                         </tr>
                       </tbody>
                     </table>
@@ -1041,17 +1046,17 @@ print(f"Credits used: {data['credits_used']}")`} />
             <div className="border border-slate-400/30 rounded-lg p-3 text-center bg-slate-700/10">
               <div className="text-lg font-mono font-bold text-slate-300">+35%</div>
               <div className="text-xs text-slate-300 font-orbitron tracking-wider">SILVER</div>
-              <div className="text-[10px] text-muted-foreground font-mono mt-1">50K XRGE spent</div>
+              <div className="text-[10px] text-muted-foreground font-mono mt-1">50M XRGE spent</div>
             </div>
             <div className="border border-yellow-500/30 rounded-lg p-3 text-center bg-yellow-900/10">
               <div className="text-lg font-mono font-bold text-yellow-400">+42%</div>
               <div className="text-xs text-yellow-400 font-orbitron tracking-wider">GOLD</div>
-              <div className="text-[10px] text-muted-foreground font-mono mt-1">200K XRGE spent</div>
+              <div className="text-[10px] text-muted-foreground font-mono mt-1">200M XRGE spent</div>
             </div>
             <div className="border border-cyan-400/30 rounded-lg p-3 text-center bg-cyan-900/10">
               <div className="text-lg font-mono font-bold text-cyan-300">+50%</div>
               <div className="text-xs text-cyan-300 font-orbitron tracking-wider">DIAMOND</div>
-              <div className="text-[10px] text-muted-foreground font-mono mt-1">1M XRGE spent</div>
+              <div className="text-[10px] text-muted-foreground font-mono mt-1">500M XRGE spent</div>
             </div>
           </div>
 
