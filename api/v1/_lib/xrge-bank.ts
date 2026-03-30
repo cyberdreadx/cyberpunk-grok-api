@@ -4,10 +4,10 @@
  * Custodial bank: users deposit XRGE, spend from balance, withdraw.
  * Loyalty tiers: determined by cumulative XRGE spent (lifetime_spend).
  *
- *   Bronze  (default)      → 30% bonus
- *   Silver  (≥ 50,000)     → 35% bonus
- *   Gold    (≥ 200,000)    → 42% bonus
- *   Diamond (≥ 1,000,000)  → 50% bonus
+ *   Bronze  (default)           → 30% bonus
+ *   Silver  (≥ 100,000,000)     → 35% bonus
+ *   Gold    (≥ 500,000,000)     → 42% bonus
+ *   Diamond (≥ 2,000,000,000)   → 50% bonus
  */
 
 export interface LoyaltyTier {
@@ -18,10 +18,10 @@ export interface LoyaltyTier {
 }
 
 export const LOYALTY_TIERS: LoyaltyTier[] = [
-  { id: "diamond", name: "Diamond", minSpend: 1_000_000, bonusPercent: 50 },
-  { id: "gold",    name: "Gold",    minSpend: 200_000,   bonusPercent: 42 },
-  { id: "silver",  name: "Silver",  minSpend: 50_000,    bonusPercent: 35 },
-  { id: "bronze",  name: "Bronze",  minSpend: 0,         bonusPercent: 30 },
+  { id: "diamond", name: "Diamond", minSpend: 2_000_000_000, bonusPercent: 50 },
+  { id: "gold",    name: "Gold",    minSpend: 500_000_000,   bonusPercent: 42 },
+  { id: "silver",  name: "Silver",  minSpend: 100_000_000,   bonusPercent: 35 },
+  { id: "bronze",  name: "Bronze",  minSpend: 0,             bonusPercent: 30 },
 ];
 
 export function getTierForSpend(lifetimeSpend: number): LoyaltyTier {

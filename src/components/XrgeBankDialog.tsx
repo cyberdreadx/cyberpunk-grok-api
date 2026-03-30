@@ -336,7 +336,7 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                         <p className="font-mono-share text-[10px] font-bold mt-0.5">+{tier.bonusPercent}%</p>
                         {tier.minSpend > 0 && (
                           <p className="font-mono-share text-[7px] text-muted-foreground/40 mt-0.5">
-                            ≥{(tier.minSpend / 1000).toFixed(0)}k
+                            ≥{tier.minSpend >= 1_000_000_000 ? `${(tier.minSpend / 1_000_000_000).toFixed(0)}B` : tier.minSpend >= 1_000_000 ? `${(tier.minSpend / 1_000_000).toFixed(0)}M` : `${(tier.minSpend / 1000).toFixed(0)}K`}
                           </p>
                         )}
                       </div>
