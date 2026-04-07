@@ -938,7 +938,6 @@ export function useGrokApi() {
 
           if (pollData.status === "done" && pollData.image) {
             comfyJobStarts.current.delete(jobId);
-            comfyJobStarts.current.delete(jobId);
             removeActiveJob(submitData.promptId);
             const newResults: GrokResult[] = [{
               id: `gltch-${Date.now()}`,
