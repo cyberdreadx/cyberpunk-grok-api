@@ -134,7 +134,7 @@ const Index = () => {
   // Auth & Credits
   const auth = useAuth();
   const creditsHook = useCredits(auth.user);
-  const isAdmin = auth.user?.email === "cyberdreadx@proton.me";
+  const isAdmin = !!auth.user?.is_admin;
   const [adminTestCredits, setAdminTestCredits] = useState(false);
   const adminBypass = isAdmin && !adminTestCredits;
 
@@ -2416,7 +2416,7 @@ const Index = () => {
                 <ApiKeysPanel triggerClassName="flex items-center gap-1 text-muted-foreground/40 hover:text-primary transition-colors" />
               </>
             )}
-            {auth.user?.email === "cyberdreadx@proton.me" && (
+            {auth.user?.is_admin && (
               <>
                 <span className="text-border/50">|</span>
                 <Link

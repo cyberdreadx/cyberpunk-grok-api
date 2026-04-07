@@ -706,7 +706,6 @@ export function useGrokApi() {
         }
 
         comfyJobStarts.current.delete(jobId);
-        comfyJobStarts.current.delete(jobId);
 
         const newResults: GrokResult[] = data.data.map((item: any, i: number) => ({
           id: `edit-${Date.now()}-${i}`,
@@ -722,7 +721,6 @@ export function useGrokApi() {
         persistNewResults(newResults);
         setComfyJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "done", phase: null } : j));
       } catch (err: any) {
-        comfyJobStarts.current.delete(jobId);
         comfyJobStarts.current.delete(jobId);
         setComfyJobs(prev => prev.map(j => j.id === jobId
           ? { ...j, status: "error", error: friendlyError(err.message), phase: null }
@@ -907,7 +905,6 @@ export function useGrokApi() {
         if (submitData.syncResult?.status === "done" && submitData.syncResult.image) {
           removeActiveJob(submitData.promptId);
           comfyJobStarts.current.delete(jobId);
-          comfyJobStarts.current.delete(jobId);
           const newResults: GrokResult[] = [{
             id: `gltch-${Date.now()}`,
             url: submitData.syncResult.image,
@@ -941,7 +938,6 @@ export function useGrokApi() {
 
           if (pollData.status === "done" && pollData.image) {
             comfyJobStarts.current.delete(jobId);
-            comfyJobStarts.current.delete(jobId);
             removeActiveJob(submitData.promptId);
             const newResults: GrokResult[] = [{
               id: `gltch-${Date.now()}`,
@@ -965,7 +961,6 @@ export function useGrokApi() {
         removeActiveJob(submitData.promptId);
         throw new Error("GLTCH edit timed out after 4 minutes");
       } catch (err: any) {
-        comfyJobStarts.current.delete(jobId);
         comfyJobStarts.current.delete(jobId);
         setComfyJobs(prev => prev.map(j => j.id === jobId
           ? { ...j, status: "error", error: err.message || "GLTCH edit failed", phase: null }
@@ -1229,7 +1224,6 @@ export function useGrokApi() {
           ...(params.testCredits ? { testCredits: true } : {}),
         }, { onPromptId: (pid) => comfyPromptIds.current.set(jobId, pid) });
 
-        comfyJobStarts.current.delete(jobId);
         comfyJobStarts.current.delete(jobId);
 
         if (!result.image) throw new Error("No image returned from ComfyUI");
