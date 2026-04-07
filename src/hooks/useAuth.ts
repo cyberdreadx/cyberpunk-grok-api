@@ -18,6 +18,7 @@ export interface AuthUser {
   id: string;
   email: string;
   email_verified?: boolean;
+  is_admin?: boolean;
 }
 
 export function useAuth() {
