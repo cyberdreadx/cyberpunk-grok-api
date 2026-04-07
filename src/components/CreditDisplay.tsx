@@ -41,6 +41,7 @@ interface CreditDisplayProps {
 
 const CreditDisplay: React.FC<CreditDisplayProps> = ({
   totalCredits,
+  dailyCredits,
   subCredits,
   packCredits,
   subscriptionTier,
