@@ -905,7 +905,6 @@ export function useGrokApi() {
         if (submitData.syncResult?.status === "done" && submitData.syncResult.image) {
           removeActiveJob(submitData.promptId);
           comfyJobStarts.current.delete(jobId);
-          comfyJobStarts.current.delete(jobId);
           const newResults: GrokResult[] = [{
             id: `gltch-${Date.now()}`,
             url: submitData.syncResult.image,
