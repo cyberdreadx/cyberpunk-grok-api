@@ -962,7 +962,6 @@ export function useGrokApi() {
         throw new Error("GLTCH edit timed out after 4 minutes");
       } catch (err: any) {
         comfyJobStarts.current.delete(jobId);
-        comfyJobStarts.current.delete(jobId);
         setComfyJobs(prev => prev.map(j => j.id === jobId
           ? { ...j, status: "error", error: err.message || "GLTCH edit failed", phase: null }
           : j
