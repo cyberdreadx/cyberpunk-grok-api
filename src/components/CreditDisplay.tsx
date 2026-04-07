@@ -18,6 +18,7 @@ import { XRGE_DEXSCREENER_URL, XRGE_CHAIN_NAME } from "@/lib/xrgePublic";
 
 interface CreditDisplayProps {
   totalCredits: number;
+  dailyCredits: number;
   subCredits: number;
   packCredits: number;
   subscriptionTier: string | null;
