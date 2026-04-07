@@ -16,6 +16,7 @@ import {
 import type { AuthUser } from "@/hooks/useAuth";
 
 export function useCredits(user: AuthUser | null) {
+  const [dailyCredits, setDailyCredits] = useState<number>(0);
   const [subCredits, setSubCredits] = useState<number>(0);
   const [packCredits, setPackCredits] = useState<number>(0);
   const [subscriptionTier, setSubscriptionTier] = useState<string | null>(null);
@@ -25,7 +26,7 @@ export function useCredits(user: AuthUser | null) {
   const [purchasing, setPurchasing] = useState(false);
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
 
-  const totalCredits = subCredits + packCredits;
+  const totalCredits = dailyCredits + subCredits + packCredits;
 
   // Fetch credit balance
   const fetchCredits = useCallback(async () => {
