@@ -706,7 +706,6 @@ export function useGrokApi() {
         }
 
         comfyJobStarts.current.delete(jobId);
-        comfyJobStarts.current.delete(jobId);
 
         const newResults: GrokResult[] = data.data.map((item: any, i: number) => ({
           id: `edit-${Date.now()}-${i}`,
