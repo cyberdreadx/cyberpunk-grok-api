@@ -94,7 +94,7 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
       {/* Credit balance badge */}
       <div
         className="flex items-center gap-1.5 bg-card/60 border border-border/50 rounded px-2 py-1 cursor-default"
-        title={`Subscription: ${subCredits} | Pack: ${packCredits}`}
+        title={`Daily: ${dailyCredits} | Subscription: ${subCredits} | Pack: ${packCredits}`}
       >
         <Coins className="w-3 h-3 text-secondary" />
         <span className="font-mono-share text-xs text-secondary font-bold">
