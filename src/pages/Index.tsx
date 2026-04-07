@@ -134,7 +134,7 @@ const Index = () => {
   // Auth & Credits
   const auth = useAuth();
   const creditsHook = useCredits(auth.user);
-  const isAdmin = auth.user?.email === "cyberdreadx@proton.me";
+  const isAdmin = !!auth.user?.is_admin;
   const [adminTestCredits, setAdminTestCredits] = useState(false);
   const adminBypass = isAdmin && !adminTestCredits;
 
