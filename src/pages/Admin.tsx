@@ -494,7 +494,7 @@ export default function Admin() {
             </h1>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <span className="font-mono-share text-[9px] text-muted-foreground/40 hidden md:inline">{ADMIN_EMAIL}</span>
+            <span className="font-mono-share text-[9px] text-muted-foreground/40 hidden md:inline">Admin</span>
             <Button
               variant="outline"
               size="sm"
