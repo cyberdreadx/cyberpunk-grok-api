@@ -31,6 +31,7 @@ export function useCredits(user: AuthUser | null) {
   // Fetch credit balance
   const fetchCredits = useCallback(async () => {
     if (!user) {
+      setDailyCredits(0);
       setSubCredits(0);
       setPackCredits(0);
       setSubscriptionTier(null);
@@ -41,6 +42,7 @@ export function useCredits(user: AuthUser | null) {
     setLoading(true);
     try {
       const data = await apiFetch("/credits");
+      setDailyCredits(data.daily_credits ?? 0);
       setSubCredits(data.sub_credits ?? 0);
       setPackCredits(data.pack_credits ?? 0);
       setSubscriptionTier(data.subscription_tier ?? null);
