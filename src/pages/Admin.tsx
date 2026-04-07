@@ -42,7 +42,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { apiFetch, hasAuthToken } from "@/lib/api";
 
-const ADMIN_EMAIL = "cyberdreadx@proton.me";
+// Admin check is now server-side via /api/auth/me is_admin flag
 
 function fmt$(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`;
