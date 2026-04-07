@@ -125,7 +125,7 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
               CREDIT_STORE
             </DialogTitle>
             <DialogDescription className="font-rajdhani text-muted-foreground">
-              Subscribe or buy packs for credits. Images: 1-2 cr · Videos: 5 cr · HD upscale: 7 cr.
+              10 free credits daily + subscribe or buy packs. Images: 1-2 cr · Videos: 5 cr · HD upscale: 7 cr.
             </DialogDescription>
             <div className="mt-3 flex items-center gap-2 rounded-lg border border-pink-500/25 bg-gradient-to-r from-pink-500/10 to-violet-500/10 px-3 py-2.5">
               <img src="/xrge-logo.png" alt="" className="h-8 w-8 shrink-0 rounded-full" />

@@ -153,6 +153,7 @@ export function useCredits(user: AuthUser | null) {
 
   return {
     totalCredits,
+    dailyCredits,
     subCredits,
     packCredits,
     subscriptionTier,
