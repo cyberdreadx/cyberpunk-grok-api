@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getDb } from "../_lib/db";
-import { getUserFromRequest } from "../_lib/auth";
+import { getUserFromRequest, ADMIN_EMAIL } from "../_lib/auth";
 import { checkRateLimit } from "../_lib/ratelimit";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
