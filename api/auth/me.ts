@@ -29,6 +29,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       id: user.id,
       email: user.email,
       email_verified: !!user.email_verified,
+      is_admin: user.email === ADMIN_EMAIL,
       sub_credits: user.sub_credits,
       pack_credits: user.pack_credits,
       subscription_tier: user.subscription_tier,

@@ -1225,7 +1225,6 @@ export function useGrokApi() {
         }, { onPromptId: (pid) => comfyPromptIds.current.set(jobId, pid) });
 
         comfyJobStarts.current.delete(jobId);
-        comfyJobStarts.current.delete(jobId);
 
         if (!result.image) throw new Error("No image returned from ComfyUI");
 
