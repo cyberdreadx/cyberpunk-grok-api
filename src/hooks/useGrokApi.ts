@@ -722,7 +722,6 @@ export function useGrokApi() {
         setComfyJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "done", phase: null } : j));
       } catch (err: any) {
         comfyJobStarts.current.delete(jobId);
-        comfyJobStarts.current.delete(jobId);
         setComfyJobs(prev => prev.map(j => j.id === jobId
           ? { ...j, status: "error", error: friendlyError(err.message), phase: null }
           : j
