@@ -131,15 +131,23 @@ export function useCredits(user: AuthUser | null) {
     }
   }, [user]);
 
-  // Optimistic local deduction (mirrors server logic: sub → pack)
+  // Optimistic local deduction (mirrors server logic: daily → sub → pack)
   const deductCreditsLocally = useCallback((amount: number) => {
-    setSubCredits((prevSub) => {
-      const fromSub = Math.min(prevSub, amount);
-      const packRemainder = amount - fromSub;
-      if (packRemainder > 0) {
-        setPackCredits((prevPack) => Math.max(0, prevPack - packRemainder));
+    setDailyCredits((prevDaily) => {
+      let remaining = amount;
+      const fromDaily = Math.min(prevDaily, remaining);
+      remaining -= fromDaily;
+      if (remaining > 0) {
+        setSubCredits((prevSub) => {
+          const fromSub = Math.min(prevSub, remaining);
+          remaining -= fromSub;
+          if (remaining > 0) {
+            setPackCredits((prevPack) => Math.max(0, prevPack - remaining));
+          }
+          return prevSub - fromSub;
+        });
       }
-      return prevSub - fromSub;
+      return prevDaily - fromDaily;
     });
   }, []);
 
