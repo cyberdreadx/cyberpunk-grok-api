@@ -29,13 +29,6 @@ interface HowToUseDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-interface Step {
-  icon: React.ReactNode;
-  title: string;
-  subtitle: string;
-  body: React.ReactNode;
-}
-
 export default function HowToUseDialog({ open, onOpenChange }: HowToUseDialogProps) {
   const { t } = useTranslation();
   const [step, setStep] = useState(0);
@@ -49,12 +42,154 @@ export default function HowToUseDialog({ open, onOpenChange }: HowToUseDialogPro
   }, [open]);
 
   const steps = [
-    { icon: <Sparkles className="w-8 h-8 text-primary" />, titleKey: "howToUse.welcome.title", subtitleKey: "howToUse.welcome.subtitle", body: <div className="space-y-3"><p>{t("howToUse.welcome.body1")}</p><p className="text-muted-foreground text-sm">{t("howToUse.welcome.body2")}</p></div> },
-    { icon: <Key className="w-8 h-8 text-primary" />, titleKey: "howToUse.twoWays.title", subtitleKey: "howToUse.twoWays.subtitle", body: <div className="space-y-4"><div className="border border-primary/20 rounded-lg p-3 bg-primary/5"><div className="flex items-center gap-2 mb-1.5"><Key className="w-4 h-4 text-primary" /><span className="font-semibold text-sm">{t("howToUse.twoWays.optionA")}</span></div><p className="text-sm text-muted-foreground">{t("howToUse.twoWays.optionADesc")}</p><p className="text-xs text-muted-foreground/60 mt-1">{t("howToUse.twoWays.optionANote")}</p></div><div className="border border-secondary/20 rounded-lg p-3 bg-secondary/5"><div className="flex items-center gap-2 mb-1.5"><Coins className="w-4 h-4 text-secondary" /><span className="font-semibold text-sm">{t("howToUse.twoWays.optionB")}</span></div><p className="text-sm text-muted-foreground">{t("howToUse.twoWays.optionBDesc")}</p></div></div> },
-    { icon: <UserPlus className="w-8 h-8 text-primary" />, titleKey: "howToUse.gettingStarted.title", subtitleKey: "howToUse.gettingStarted.subtitle", body: <div className="space-y-3"><div className="flex gap-3 items-start"><span className="shrink-0 w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold flex items-center justify-center">1</span><p className="text-sm">{t("howToUse.gettingStarted.byok1")}</p></div><div className="flex gap-3 items-start"><span className="shrink-0 w-6 h-6 rounded-full bg-secondary/20 text-secondary text-xs font-bold flex items-center justify-center">1</span><p className="text-sm">{t("howToUse.gettingStarted.credits1")}</p></div><div className="flex gap-3 items-start"><span className="shrink-0 w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold flex items-center justify-center">2</span><p className="text-sm">{t("howToUse.gettingStarted.step2")}</p></div></div> },
-    { icon: <Image className="w-8 h-8 text-primary" />, titleKey: "howToUse.generating.title", subtitleKey: "howToUse.generating.subtitle", body: <div className="space-y-3"><div className="flex gap-3 items-start"><span className="shrink-0 w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold flex items-center justify-center">1</span><p className="text-sm">{t("howToUse.generating.step1")}</p></div><div className="flex gap-3 items-start"><span className="shrink-0 w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold flex items-center justify-center">2</span><p className="text-sm">{t("howToUse.generating.step2")} <em>{t("howToUse.generating.example")}</em></p></div><div className="flex gap-3 items-start"><span className="shrink-0 w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold flex items-center justify-center">3</span><p className="text-sm">{t("howToUse.generating.step3")}</p></div><p className="text-xs text-muted-foreground/60">{t("howToUse.generating.tip")}</p></div> },
-    { icon: <Pencil className="w-8 h-8 text-secondary" />, titleKey: "howToUse.editing.title", subtitleKey: "howToUse.editing.subtitle", body: <div className="space-y-4"><div className="border border-border/30 rounded-lg p-3"><div className="flex items-center gap-2 mb-1.5"><Pencil className="w-4 h-4 text-secondary" /><span className="font-semibold text-sm">{t("howToUse.editing.editLabel")}</span></div><p className="text-sm text-muted-foreground">{t("howToUse.editing.editDesc")} <em>{t("howToUse.editing.editExample")}</em></p><p className="text-xs text-muted-foreground/60 mt-1">{t("howToUse.editing.editTip")}</p></div><div className="border border-border/30 rounded-lg p-3"><div className="flex items-center gap-2 mb-1.5"><Film className="w-4 h-4 text-secondary" /><span className="font-semibold text-sm">{t("howToUse.editing.videoLabel")}</span></div><p className="text-sm text-muted-foreground">{t("howToUse.editing.videoDesc")}</p></div></div> },
-    { icon: <FolderOpen className="w-8 h-8 text-primary" />, titleKey: "howToUse.organizing.title", subtitleKey: "howToUse.organizing.subtitle", body: <div className="space-y-3"><div className="flex gap-3 items-start"><Download className="w-5 h-5 text-primary shrink-0 mt-0.5" /><p className="text-sm">{t("howToUse.organizing.download")}</p></div><div className="flex gap-3 items-start"><FolderOpen className="w-5 h-5 text-primary shrink-0 mt-0.5" /><p className="text-sm">{t("howToUse.organizing.folders")}</p></div><div className="border border-amber-500/20 rounded-lg p-3 bg-amber-500/5 mt-2"><p className="text-sm text-amber-200/80"><strong>{t("howToUse.organizing.warning")}</strong></p></div></div> },
+    {
+      icon: <Sparkles className="w-8 h-8 text-primary" />,
+      title: t("howToUse.welcome.title", "Welcome to Grok Runner"),
+      subtitle: t("howToUse.welcome.subtitle", "AI image & video generation powered by xAI"),
+      body: (
+        <div className="space-y-3">
+          <p>{t("howToUse.welcome.body1", "Grok Runner lets you generate, edit, and animate images and video using cutting-edge AI models.")}</p>
+          <p className="text-muted-foreground text-sm">
+            {t("howToUse.welcome.body2", "This quick guide will walk you through the basics. You can revisit it anytime from the help menu.")}
+          </p>
+        </div>
+      ),
+    },
+    {
+      icon: <Key className="w-8 h-8 text-primary" />,
+      title: t("howToUse.twoWays.title", "Two Ways to Use"),
+      subtitle: t("howToUse.twoWays.subtitle", "Bring your own key or use credits"),
+      body: (
+        <div className="space-y-4">
+          <div className="border border-primary/20 rounded-lg p-3 bg-primary/5">
+            <div className="flex items-center gap-2 mb-1.5">
+              <Key className="w-4 h-4 text-primary" />
+              <span className="font-semibold text-sm">{t("howToUse.twoWays.optionA", "Option A: BYOK (Bring Your Own Key)")}</span>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {t("howToUse.twoWays.optionADesc", "Paste your xAI API key and generate for free — you pay xAI directly.")}
+            </p>
+            <p className="text-xs text-muted-foreground/60 mt-1">
+              {t("howToUse.twoWays.optionANote", "Get an API key at console.x.ai")}
+            </p>
+          </div>
+          <div className="border border-secondary/20 rounded-lg p-3 bg-secondary/5">
+            <div className="flex items-center gap-2 mb-1.5">
+              <Coins className="w-4 h-4 text-secondary" />
+              <span className="font-semibold text-sm">{t("howToUse.twoWays.optionB", "Option B: Credits")}</span>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {t("howToUse.twoWays.optionBDesc", "Sign up for 10 free credits daily. Buy packs or subscribe for more.")}
+            </p>
+          </div>
+        </div>
+      ),
+    },
+    {
+      icon: <UserPlus className="w-8 h-8 text-primary" />,
+      title: t("howToUse.gettingStarted.title", "Getting Started"),
+      subtitle: t("howToUse.gettingStarted.subtitle", "Set up in under a minute"),
+      body: (
+        <div className="space-y-3">
+          <div className="flex gap-3 items-start">
+            <span className="shrink-0 w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold flex items-center justify-center">1</span>
+            <p className="text-sm">{t("howToUse.gettingStarted.byok1", "BYOK: Tap the key icon in the status bar, paste your xAI API key, and you're ready.")}</p>
+          </div>
+          <div className="flex gap-3 items-start">
+            <span className="shrink-0 w-6 h-6 rounded-full bg-secondary/20 text-secondary text-xs font-bold flex items-center justify-center">1</span>
+            <p className="text-sm">{t("howToUse.gettingStarted.credits1", "Credits: Create an account to get 10 free credits each day.")}</p>
+          </div>
+          <div className="flex gap-3 items-start">
+            <span className="shrink-0 w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold flex items-center justify-center">2</span>
+            <p className="text-sm">{t("howToUse.gettingStarted.step2", "Choose a mode — Generate, Edit, or Animate — and type a prompt.")}</p>
+          </div>
+        </div>
+      ),
+    },
+    {
+      icon: <Image className="w-8 h-8 text-primary" />,
+      title: t("howToUse.generating.title", "Generating Images"),
+      subtitle: t("howToUse.generating.subtitle", "Text-to-image in seconds"),
+      body: (
+        <div className="space-y-3">
+          <div className="flex gap-3 items-start">
+            <span className="shrink-0 w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold flex items-center justify-center">1</span>
+            <p className="text-sm">{t("howToUse.generating.step1", "Select the GENERATE mode from the mode selector.")}</p>
+          </div>
+          <div className="flex gap-3 items-start">
+            <span className="shrink-0 w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold flex items-center justify-center">2</span>
+            <p className="text-sm">
+              {t("howToUse.generating.step2", "Type a detailed prompt, e.g.")}{" "}
+              <em>{t("howToUse.generating.example", "\"A cyberpunk city at night with neon lights\"")}</em>
+            </p>
+          </div>
+          <div className="flex gap-3 items-start">
+            <span className="shrink-0 w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold flex items-center justify-center">3</span>
+            <p className="text-sm">{t("howToUse.generating.step3", "Hit Generate and wait for your image to appear below.")}</p>
+          </div>
+          <p className="text-xs text-muted-foreground/60">
+            {t("howToUse.generating.tip", "Tip: Use the Enhance button to automatically improve your prompt.")}
+          </p>
+        </div>
+      ),
+    },
+    {
+      icon: <Pencil className="w-8 h-8 text-secondary" />,
+      title: t("howToUse.editing.title", "Editing & Animating"),
+      subtitle: t("howToUse.editing.subtitle", "Transform existing images"),
+      body: (
+        <div className="space-y-4">
+          <div className="border border-border/30 rounded-lg p-3">
+            <div className="flex items-center gap-2 mb-1.5">
+              <Pencil className="w-4 h-4 text-secondary" />
+              <span className="font-semibold text-sm">{t("howToUse.editing.editLabel", "Edit Mode")}</span>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {t("howToUse.editing.editDesc", "Upload an image and describe the change, e.g.")}{" "}
+              <em>{t("howToUse.editing.editExample", "\"Make it anime style\"")}</em>
+            </p>
+            <p className="text-xs text-muted-foreground/60 mt-1">
+              {t("howToUse.editing.editTip", "Works with JPG, PNG, WebP, and HEIC photos.")}
+            </p>
+          </div>
+          <div className="border border-border/30 rounded-lg p-3">
+            <div className="flex items-center gap-2 mb-1.5">
+              <Film className="w-4 h-4 text-secondary" />
+              <span className="font-semibold text-sm">{t("howToUse.editing.videoLabel", "Animate Mode")}</span>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {t("howToUse.editing.videoDesc", "Upload an image and describe the motion to bring it to life as a short video.")}
+            </p>
+          </div>
+        </div>
+      ),
+    },
+    {
+      icon: <FolderOpen className="w-8 h-8 text-primary" />,
+      title: t("howToUse.organizing.title", "Your Library"),
+      subtitle: t("howToUse.organizing.subtitle", "Manage your creations"),
+      body: (
+        <div className="space-y-3">
+          <div className="flex gap-3 items-start">
+            <Download className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+            <p className="text-sm">{t("howToUse.organizing.download", "Download any result by clicking the download icon.")}</p>
+          </div>
+          <div className="flex gap-3 items-start">
+            <FolderOpen className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+            <p className="text-sm">
+              {t("howToUse.organizing.folders", "Organize results into folders. Create, rename, and pin folders from the Library page.")}
+            </p>
+          </div>
+          <div className="border border-amber-500/20 rounded-lg p-3 bg-amber-500/5 mt-2">
+            <p className="text-sm text-amber-200/80">
+              <strong>
+                {t("howToUse.organizing.warning", "Important: Results are stored in your browser. Clearing browser data will delete them. Use folders and downloads to keep your work safe.")}
+              </strong>
+            </p>
+          </div>
+        </div>
+      ),
+    },
   ];
 
   const current = steps[step];
@@ -64,7 +199,6 @@ export default function HowToUseDialog({ open, onOpenChange }: HowToUseDialogPro
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-card border-border sm:max-w-lg max-h-[85vh] !flex flex-col gap-0 p-0 overflow-hidden">
-        {/* Progress bar */}
         <div className="h-1 bg-border/30">
           <div
             className="h-full bg-gradient-to-r from-primary to-secondary transition-all duration-300"
@@ -78,10 +212,10 @@ export default function HowToUseDialog({ open, onOpenChange }: HowToUseDialogPro
               {current.icon}
             </div>
             <DialogTitle className="font-orbitron text-base tracking-wider">
-              {t(current.titleKey)}
+              {current.title}
             </DialogTitle>
             <DialogDescription className="font-rajdhani text-muted-foreground text-sm">
-              {t(current.subtitleKey)}
+              {current.subtitle}
             </DialogDescription>
           </DialogHeader>
 
@@ -90,7 +224,6 @@ export default function HowToUseDialog({ open, onOpenChange }: HowToUseDialogPro
           </div>
         </div>
 
-        {/* Navigation footer */}
         <div className="border-t border-border/30 px-6 py-4 flex items-center justify-between bg-card/80">
           <div className="font-mono-share text-[10px] text-muted-foreground/40">
             {step + 1} / {steps.length}
@@ -104,7 +237,7 @@ export default function HowToUseDialog({ open, onOpenChange }: HowToUseDialogPro
                 className="font-mono-share text-xs gap-1"
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
-                {t("howToUse.back")}
+                {t("howToUse.back", "Back")}
               </Button>
             )}
             {isFirst && (
@@ -114,7 +247,7 @@ export default function HowToUseDialog({ open, onOpenChange }: HowToUseDialogPro
                 onClick={() => onOpenChange(false)}
                 className="font-mono-share text-xs text-muted-foreground/60"
               >
-                {t("howToUse.skip")}
+                {t("howToUse.skip", "Skip")}
               </Button>
             )}
             {isLast ? (
@@ -123,7 +256,7 @@ export default function HowToUseDialog({ open, onOpenChange }: HowToUseDialogPro
                 onClick={() => onOpenChange(false)}
                 className="font-orbitron text-xs tracking-wider gap-1 bg-primary text-primary-foreground hover:bg-primary/90"
               >
-                {t("howToUse.gotIt")}
+                {t("howToUse.gotIt", "Got it!")}
                 <Sparkles className="w-3.5 h-3.5" />
               </Button>
             ) : (
@@ -132,7 +265,7 @@ export default function HowToUseDialog({ open, onOpenChange }: HowToUseDialogPro
                 onClick={() => setStep((s) => s + 1)}
                 className="font-mono-share text-xs gap-1 bg-primary text-primary-foreground hover:bg-primary/90"
               >
-                {t("howToUse.next")}
+                {t("howToUse.next", "Next")}
                 <ChevronRight className="w-3.5 h-3.5" />
               </Button>
             )}
