@@ -2300,7 +2300,11 @@ Rules:
             const sql = getDb();
             const rows = await sql`SELECT 1 FROM xrge_orders WHERE user_id = ${auth.userId} AND status = 'verified' LIMIT 1`;
             if (rows.length === 0) {
-              return res.status(403).json({ error: "NSFW LoRAs require $XRGE token holding. Purchase credits with $XRGE to unlock." });
+              // Also check direct bank deposits
+              const bankRows = await sql`SELECT 1 FROM xrge_bank_txns WHERE user_id = ${auth.userId} AND type = 'deposit' LIMIT 1`;
+              if (bankRows.length === 0) {
+                return res.status(403).json({ error: "NSFW LoRAs require $XRGE token holding. Purchase credits with $XRGE to unlock." });
+              }
             }
           } catch (e: any) {
             console.error("[comfyui] NSFW gate DB check failed:", e.message);
