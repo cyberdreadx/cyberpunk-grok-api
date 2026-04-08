@@ -61,4 +61,8 @@ i18n
     },
   });
 
+// Apply direction on init and on every language change
+i18n.on("languageChanged", applyDirection);
+applyDirection(i18n.language || "en");
+
 export default i18n;
