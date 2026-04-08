@@ -121,7 +121,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
                     ${(tier.priceCents / 100).toFixed(2)}
                   </p>
                   <p className="font-mono-share text-[10px] uppercase tracking-wide text-muted-foreground">
-                    per {tier.interval === "year" ? "year" : "month"}
+                    {tier.interval === "year" ? t("pricing.perYear") : t("pricing.perMonth")}
                   </p>
                 </div>
 
