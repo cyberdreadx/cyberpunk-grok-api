@@ -2130,13 +2130,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           ? editLorasEnv.split(",").map((m) => m.trim()).filter(Boolean)
           : [];
 
-        // Check if user is an XRGE holder (has any completed XRGE purchase)
+        // Check if user is an XRGE holder (verified purchase OR bank deposit)
         let xrgeHolder = isAdminUser;
         if (!xrgeHolder) {
           try {
             const sql = getDb();
-            const rows = await sql`SELECT 1 FROM xrge_orders WHERE user_id = ${auth.userId} AND status = 'verified' LIMIT 1`;
-            xrgeHolder = rows.length > 0;
+            const rows = await sql`
+              SELECT 1 FROM xrge_orders WHERE user_id = ${auth.userId} AND status = 'verified' LIMIT 1
+            `;
+            if (rows.length === 0) {
+              // Also check bank deposits
+              const bankRows = await sql`
+                SELECT 1 FROM xrge_bank_txns WHERE user_id = ${auth.userId} AND type = 'deposit' LIMIT 1
+              `;
+              xrgeHolder = bankRows.length > 0;
+            } else {
+              xrgeHolder = true;
+            }
           } catch { /* If DB fails, default to non-holder */ }
         }
 
