@@ -747,7 +747,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
           ) : (
             <Send className="w-5 h-5" />
           )}
-          <span>{isLoading ? "GENERATING…" : "GENERATE"}</span>
+          <span>{isLoading ? t("prompt.generating").toUpperCase() : t("prompt.generate").toUpperCase()}</span>
           {!isLoading && creditCost != null && (
             <span className={`inline-flex items-center gap-1 rounded px-2 py-1 font-mono-share text-xs font-bold leading-none tabular-nums tracking-normal border ${isLowCredits ? "bg-destructive/30 border-destructive/50 text-destructive-foreground" : "bg-primary-foreground/20 border-primary-foreground/40"}`}>
               {creditCost} cr
