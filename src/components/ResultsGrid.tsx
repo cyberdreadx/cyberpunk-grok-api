@@ -1208,7 +1208,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
       await copyOrShareLink(data, result);
     } catch (err: any) {
       console.error("[share] error:", err);
-      toast.error("Failed to create share link", {
+      toast.error(t("results.shareError"), {
         description: err?.message || "Unknown error",
       });
     } finally {
