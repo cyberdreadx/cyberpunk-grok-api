@@ -1115,7 +1115,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
     }
 
     if (copied) {
-      toast.success("Link copied! Share it on X or Reddit to show it off.");
+      toast.success(t("results.copyLink"));
     } else if (navigator.share) {
       try {
         await navigator.share({ title: "Grok Runner", url: shareLink });
