@@ -22,6 +22,7 @@ import type { GrokResult } from "@/hooks/useGrokApi";
 
 const Library: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const auth = useAuth();
   const { toast } = useToast();
   const foldersHook = useFolders();
