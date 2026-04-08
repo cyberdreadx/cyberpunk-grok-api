@@ -1132,9 +1132,13 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
       // For external URLs (videos, remote images) let the server download directly
       // to avoid Vercel's ~4.5MB request body limit
       if (result.url.startsWith("https://")) {
+        const token = localStorage.getItem("auth-token");
         const res = await fetch(`${shareBase}/share`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
           body: JSON.stringify({
             mediaUrl: result.url,
             mediaType: result.type,
