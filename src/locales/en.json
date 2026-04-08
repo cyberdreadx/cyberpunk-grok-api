@@ -100,7 +100,11 @@
     "folders": "Folders",
     "trash": "Trash",
     "assetsIndexed": "{{count}} assets indexed",
-    "top": "Top"
+    "top": "Top",
+    "folderError": "Failed to move item",
+    "folderErrorBulk": "Failed to move items",
+    "deleteError": "Failed to delete items",
+    "trashError": "Failed to empty trash"
   },
   "simple": {
     "editImage": "Edit Image",
