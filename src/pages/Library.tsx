@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Image, Film, ArrowLeft, ChevronsUp } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import CyberLayout from "@/components/CyberLayout";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import GlitchText from "@/components/GlitchText";
