@@ -1,10 +1,12 @@
 import React from "react";
-import { Settings, Maximize, Hash, Clock, Monitor, Zap } from "lucide-react";
+import { Settings, Maximize, Hash, Clock, Monitor, Zap, Globe } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { SUPPORTED_LANGUAGES } from "@/lib/i18n";
 import type {
   GenerationSettings,
   VideoSettings,
