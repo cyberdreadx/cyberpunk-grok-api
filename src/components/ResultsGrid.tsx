@@ -850,6 +850,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
   typeFilter = "all",
   onTypeFilterChange,
 }) => {
+  const { t } = useTranslation();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [mobileIndex, setMobileIndex] = useState(0);
   const [copiedId, setCopiedId] = useState<string | null>(null);
