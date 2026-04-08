@@ -110,7 +110,7 @@ const Library: React.FC = () => {
       await foldersHook.bulkMoveToFolder(ids, folderId);
       for (const id of ids) updateResultFolder(id, folderId);
     } catch {
-      toast({ title: "FOLDER ERROR", description: "Failed to move items.", variant: "destructive" });
+      toast({ title: t("common.error"), description: t("library.folderErrorBulk"), variant: "destructive" });
     }
   }, [foldersHook, updateResultFolder, toast]);
 
