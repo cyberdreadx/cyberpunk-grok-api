@@ -1,0 +1,97 @@
+{
+  "nav": {
+    "home": "Home",
+    "library": "Library",
+    "characters": "Characters",
+    "docs": "API Docs",
+    "settings": "Settings",
+    "store": "Store",
+    "more": "More"
+  },
+  "modes": {
+    "generate": "Generate",
+    "edit": "Edit Image",
+    "video": "Make Video",
+    "textToImage": "Text → Image",
+    "imageToImage": "Image → Image",
+    "textToVideo": "Text → Video",
+    "imageToVideo": "Image → Video"
+  },
+  "prompt": {
+    "placeholder": "Describe what you want to create…",
+    "enhance": "Enhance",
+    "generate": "Generate",
+    "generating": "Generating…",
+    "history": "Prompt History",
+    "suggestions": "Suggestions"
+  },
+  "settings": {
+    "title": "Settings",
+    "renderConfig": "render_config",
+    "aspectRatio": "Aspect Ratio",
+    "resolution": "Resolution",
+    "batchCount": "Batch Count",
+    "duration": "Duration",
+    "language": "Language",
+    "theme": "Theme",
+    "autoDetect": "Auto-detect"
+  },
+  "auth": {
+    "signIn": "Sign In",
+    "signUp": "Sign Up",
+    "logout": "Log Out",
+    "email": "Email",
+    "password": "Password",
+    "forgotPassword": "Forgot password?",
+    "verifyEmail": "Verify Email",
+    "deleteAccount": "Delete Account"
+  },
+  "credits": {
+    "credits": "Credits",
+    "balance": "Balance",
+    "buy": "Buy Credits",
+    "free": "Free",
+    "perGeneration": "per generation",
+    "lowCredits": "Low credits",
+    "noCredits": "No credits remaining"
+  },
+  "results": {
+    "download": "Download",
+    "share": "Share",
+    "delete": "Delete",
+    "edit": "Edit",
+    "animate": "Animate",
+    "noResults": "No results yet",
+    "copyLink": "Link copied!",
+    "shareError": "Failed to create share link"
+  },
+  "library": {
+    "title": "Library",
+    "search": "Search…",
+    "all": "All",
+    "images": "Images",
+    "videos": "Videos",
+    "empty": "Your library is empty",
+    "clearAll": "Clear All",
+    "folders": "Folders",
+    "trash": "Trash"
+  },
+  "simple": {
+    "editImage": "Edit Image",
+    "createImage": "Create Image",
+    "makeVideo": "Make Video",
+    "dropImage": "Drop an image here or click to upload",
+    "pasteImage": "Or paste from clipboard"
+  },
+  "common": {
+    "loading": "Loading…",
+    "error": "Something went wrong",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "save": "Save",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "retry": "Retry"
+  }
+}

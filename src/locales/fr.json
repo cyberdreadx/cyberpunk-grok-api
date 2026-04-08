@@ -1,0 +1,97 @@
+{
+  "nav": {
+    "home": "Accueil",
+    "library": "Bibliothèque",
+    "characters": "Personnages",
+    "docs": "Docs API",
+    "settings": "Paramètres",
+    "store": "Boutique",
+    "more": "Plus"
+  },
+  "modes": {
+    "generate": "Générer",
+    "edit": "Modifier l'image",
+    "video": "Créer une vidéo",
+    "textToImage": "Texte → Image",
+    "imageToImage": "Image → Image",
+    "textToVideo": "Texte → Vidéo",
+    "imageToVideo": "Image → Vidéo"
+  },
+  "prompt": {
+    "placeholder": "Décrivez ce que vous voulez créer…",
+    "enhance": "Améliorer",
+    "generate": "Générer",
+    "generating": "Génération…",
+    "history": "Historique des prompts",
+    "suggestions": "Suggestions"
+  },
+  "settings": {
+    "title": "Paramètres",
+    "renderConfig": "render_config",
+    "aspectRatio": "Rapport d'aspect",
+    "resolution": "Résolution",
+    "batchCount": "Nombre",
+    "duration": "Durée",
+    "language": "Langue",
+    "theme": "Thème",
+    "autoDetect": "Détection auto"
+  },
+  "auth": {
+    "signIn": "Connexion",
+    "signUp": "Inscription",
+    "logout": "Déconnexion",
+    "email": "E-mail",
+    "password": "Mot de passe",
+    "forgotPassword": "Mot de passe oublié ?",
+    "verifyEmail": "Vérifier l'e-mail",
+    "deleteAccount": "Supprimer le compte"
+  },
+  "credits": {
+    "credits": "Crédits",
+    "balance": "Solde",
+    "buy": "Acheter des crédits",
+    "free": "Gratuit",
+    "perGeneration": "par génération",
+    "lowCredits": "Crédits faibles",
+    "noCredits": "Plus de crédits"
+  },
+  "results": {
+    "download": "Télécharger",
+    "share": "Partager",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "animate": "Animer",
+    "noResults": "Aucun résultat",
+    "copyLink": "Lien copié !",
+    "shareError": "Erreur de partage"
+  },
+  "library": {
+    "title": "Bibliothèque",
+    "search": "Rechercher…",
+    "all": "Tout",
+    "images": "Images",
+    "videos": "Vidéos",
+    "empty": "Votre bibliothèque est vide",
+    "clearAll": "Tout effacer",
+    "folders": "Dossiers",
+    "trash": "Corbeille"
+  },
+  "simple": {
+    "editImage": "Modifier l'image",
+    "createImage": "Créer une image",
+    "makeVideo": "Créer une vidéo",
+    "dropImage": "Déposez une image ici ou cliquez pour télécharger",
+    "pasteImage": "Ou collez depuis le presse-papiers"
+  },
+  "common": {
+    "loading": "Chargement…",
+    "error": "Une erreur est survenue",
+    "cancel": "Annuler",
+    "confirm": "Confirmer",
+    "save": "Enregistrer",
+    "close": "Fermer",
+    "back": "Retour",
+    "next": "Suivant",
+    "retry": "Réessayer"
+  }
+}

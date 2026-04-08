@@ -1,0 +1,97 @@
+{
+  "nav": {
+    "home": "होम",
+    "library": "लाइब्रेरी",
+    "characters": "पात्र",
+    "docs": "API दस्तावेज़",
+    "settings": "सेटिंग्स",
+    "store": "स्टोर",
+    "more": "और देखें"
+  },
+  "modes": {
+    "generate": "जनरेट",
+    "edit": "इमेज एडिट",
+    "video": "वीडियो बनाएं",
+    "textToImage": "टेक्स्ट → इमेज",
+    "imageToImage": "इमेज → इमेज",
+    "textToVideo": "टेक्स्ट → वीडियो",
+    "imageToVideo": "इमेज → वीडियो"
+  },
+  "prompt": {
+    "placeholder": "बताएं कि आप क्या बनाना चाहते हैं…",
+    "enhance": "बेहतर करें",
+    "generate": "जनरेट",
+    "generating": "जनरेट हो रहा है…",
+    "history": "प्रॉम्प्ट इतिहास",
+    "suggestions": "सुझाव"
+  },
+  "settings": {
+    "title": "सेटिंग्स",
+    "renderConfig": "render_config",
+    "aspectRatio": "आस्पेक्ट रेशियो",
+    "resolution": "रेज़ोल्यूशन",
+    "batchCount": "बैच संख्या",
+    "duration": "अवधि",
+    "language": "भाषा",
+    "theme": "थीम",
+    "autoDetect": "स्वतः पहचान"
+  },
+  "auth": {
+    "signIn": "साइन इन",
+    "signUp": "साइन अप",
+    "logout": "लॉग आउट",
+    "email": "ईमेल",
+    "password": "पासवर्ड",
+    "forgotPassword": "पासवर्ड भूल गए?",
+    "verifyEmail": "ईमेल सत्यापित करें",
+    "deleteAccount": "खाता हटाएं"
+  },
+  "credits": {
+    "credits": "क्रेडिट",
+    "balance": "शेष राशि",
+    "buy": "क्रेडिट खरीदें",
+    "free": "मुफ़्त",
+    "perGeneration": "प्रति जनरेशन",
+    "lowCredits": "कम क्रेडिट",
+    "noCredits": "कोई क्रेडिट नहीं"
+  },
+  "results": {
+    "download": "डाउनलोड",
+    "share": "शेयर",
+    "delete": "हटाएं",
+    "edit": "एडिट",
+    "animate": "एनिमेट",
+    "noResults": "अभी तक कोई परिणाम नहीं",
+    "copyLink": "लिंक कॉपी हो गया!",
+    "shareError": "शेयर लिंक बनाने में विफल"
+  },
+  "library": {
+    "title": "लाइब्रेरी",
+    "search": "खोजें…",
+    "all": "सभी",
+    "images": "इमेज",
+    "videos": "वीडियो",
+    "empty": "आपकी लाइब्रेरी खाली है",
+    "clearAll": "सब हटाएं",
+    "folders": "फ़ोल्डर",
+    "trash": "ट्रैश"
+  },
+  "simple": {
+    "editImage": "इमेज एडिट",
+    "createImage": "इमेज बनाएं",
+    "makeVideo": "वीडियो बनाएं",
+    "dropImage": "इमेज यहां छोड़ें या अपलोड के लिए क्लिक करें",
+    "pasteImage": "या क्लिपबोर्ड से पेस्ट करें"
+  },
+  "common": {
+    "loading": "लोड हो रहा है…",
+    "error": "कुछ गलत हो गया",
+    "cancel": "रद्द करें",
+    "confirm": "पुष्टि करें",
+    "save": "सेव करें",
+    "close": "बंद करें",
+    "back": "वापस",
+    "next": "अगला",
+    "retry": "पुनः प्रयास"
+  }
+}
