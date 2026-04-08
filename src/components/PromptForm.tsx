@@ -707,7 +707,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
                 )}
                 {!isLoading && !isLowCredits && (
                   <span className="font-mono-share text-[8px] text-muted-foreground/35 pr-1">
-                    {hasSubscription ? "⚡ Priority queue" : "Subscribe for faster renders"}
+                    {hasSubscription ? `⚡ ${t("prompt.priorityQueue")}` : t("prompt.subscribeFaster")}
                   </span>
                 )}
               </div>
