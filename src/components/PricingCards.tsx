@@ -158,7 +158,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
                         variant="outline"
                         className="w-full rounded-md font-orbitron text-[10px] tracking-wider gap-1 border-primary/50 text-primary"
                       >
-                        MANAGE_PLAN
+                        {t("pricing.managePlan")}
                       </Button>
                     );
                   }
