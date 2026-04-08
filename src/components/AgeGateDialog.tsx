@@ -1,4 +1,7 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
+import { SUPPORTED_LANGUAGES } from "@/lib/i18n";
+import { Globe } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -9,18 +12,22 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
-import { ShieldAlert, Shield, Eye } from "lucide-react";
+import { ShieldAlert, Shield, Eye, ChevronDown } from "lucide-react";
 import LegalDialog from "@/components/LegalDialog";
 
 const AGE_VERIFIED_KEY = "age-verified";
 
 export default function AgeGateDialog() {
+  const { i18n } = useTranslation();
   const [open, setOpen] = useState(false);
   const [ageChecked, setAgeChecked] = useState(false);
   const [tosChecked, setTosChecked] = useState(false);
   const [privacyChecked, setPrivacyChecked] = useState(false);
   const [tosOpen, setTosOpen] = useState(false);
   const [privacyOpen, setPrivacyOpen] = useState(false);
+  const [langOpen, setLangOpen] = useState(false);
+
+  const currentLang = SUPPORTED_LANGUAGES.find(l => l.code === i18n.language?.split("-")[0]) || SUPPORTED_LANGUAGES[0];
 
   const allChecked = ageChecked && tosChecked && privacyChecked;
 
@@ -48,6 +55,37 @@ export default function AgeGateDialog() {
       <AlertDialog open={open}>
         <AlertDialogContent className="bg-card border-secondary/40 sm:max-w-md shadow-lg shadow-secondary/10">
           <AlertDialogHeader className="text-center sm:text-center">
+            {/* Language selector */}
+            <div className="absolute top-3 right-3">
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setLangOpen(!langOpen)}
+                  className="flex items-center gap-1 px-2 py-1 rounded border border-border/40 bg-background/60 hover:bg-background/80 text-[11px] font-mono-share text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <Globe className="w-3 h-3" />
+                  <span>{currentLang.flag}</span>
+                  <ChevronDown className={`w-3 h-3 transition-transform ${langOpen ? "rotate-180" : ""}`} />
+                </button>
+                {langOpen && (
+                  <div className="absolute right-0 top-full mt-1 z-50 bg-card border border-border/50 rounded shadow-lg max-h-48 overflow-y-auto w-36">
+                    {SUPPORTED_LANGUAGES.map((lang) => (
+                      <button
+                        key={lang.code}
+                        type="button"
+                        onClick={() => { i18n.changeLanguage(lang.code); setLangOpen(false); }}
+                        className={`w-full text-left px-3 py-1.5 text-[11px] font-mono-share hover:bg-secondary/10 transition-colors flex items-center gap-2 ${
+                          lang.code === currentLang.code ? "text-secondary bg-secondary/5" : "text-muted-foreground"
+                        }`}
+                      >
+                        <span>{lang.flag}</span>
+                        <span>{lang.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
             <div className="flex justify-center mb-3">
               <div className="w-16 h-16 rounded-full border-2 border-secondary/50 flex items-center justify-center bg-secondary/10 animate-pulse-glow">
                 <ShieldAlert className="w-8 h-8 text-secondary" />
