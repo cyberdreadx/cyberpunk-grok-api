@@ -45,21 +45,28 @@ const Library: React.FC = () => {
   // Header collapse — hide on scroll-down, reveal on scroll-up
   const [headerVisible, setHeaderVisible] = useState(true);
   const lastScrollY = useRef(0);
+  const rafId = useRef(0);
 
   useEffect(() => {
     const onScroll = () => {
-      const y = window.scrollY;
-      setShowScrollTop(y > 300);
-      // Only collapse after scrolling past the header (~80px) to avoid flicker at top
-      if (y > 80) {
-        setHeaderVisible(y < lastScrollY.current);
-      } else {
-        setHeaderVisible(true);
-      }
-      lastScrollY.current = y;
+      if (rafId.current) return;
+      rafId.current = requestAnimationFrame(() => {
+        rafId.current = 0;
+        const y = window.scrollY;
+        setShowScrollTop(y > 300);
+        if (y > 80) {
+          setHeaderVisible(y < lastScrollY.current);
+        } else {
+          setHeaderVisible(true);
+        }
+        lastScrollY.current = y;
+      });
     };
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      cancelAnimationFrame(rafId.current);
+    };
   }, []);
 
   useEffect(() => {

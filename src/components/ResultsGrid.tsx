@@ -1379,7 +1379,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
       {hasFolders && onSelectFilter && onCreateFolder && (
         <div
           id="library-folder-bar"
-          className="sticky z-30 bg-card/90 backdrop-blur-md -mx-4 px-4 pt-1.5 pb-1 border-b border-border/40"
+          className="sticky z-30 bg-card -mx-4 px-4 pt-1.5 pb-1 border-b border-border/40 sm:bg-card/90 sm:backdrop-blur-md"
           style={{ top: 'calc(env(safe-area-inset-top, 0px) + 28px)' }}
         >
           <FolderBar
@@ -1404,7 +1404,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
           Folder bar = terminal(28px) + pt-1.5(6px) + button(~36px) + pb-1(4px) + border(1px) = ~47px */}
       {onSearchChange && onTypeFilterChange && (
         <div
-          className="sticky z-20 bg-card/95 backdrop-blur-md -mx-4 px-4 py-2 border-b border-border/40"
+          className="sticky z-20 bg-card -mx-4 px-4 py-2 border-b border-border/40 sm:bg-card/95 sm:backdrop-blur-md"
           style={{ top: `calc(env(safe-area-inset-top, 0px) + 28px + ${hasFolders ? "47px" : "0px"})` }}
         >
           <div className="flex items-center gap-2">
@@ -2051,7 +2051,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
       {/* Floating multi-select action bar */}
       {selectMode && selectedIds.size > 0 && (
         <div
-          className="fixed left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 bg-card/95 backdrop-blur border border-primary/30 rounded-lg shadow-[0_0_20px_rgba(168,85,247,0.15)] px-4 py-2.5"
+          className="fixed left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 bg-card border border-primary/30 rounded-lg shadow-[0_0_20px_rgba(168,85,247,0.15)] px-4 py-2.5 sm:bg-card/95 sm:backdrop-blur"
           style={{ bottom: 'calc(70px + env(safe-area-inset-bottom, 0px))' }}
         >
           <span className="font-mono-share text-xs text-primary mr-1">{selectedIds.size} selected</span>

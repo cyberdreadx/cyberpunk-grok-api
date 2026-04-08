@@ -19,7 +19,7 @@ const CyberLayout: React.FC<CyberLayoutProps> = ({ children }) => {
   }, []);
 
   return (
-    <div className="relative min-h-dvh cyber-gradient overflow-x-hidden immersion-screen-host">
+    <div className="relative min-h-svh cyber-gradient overflow-x-hidden immersion-screen-host">
       {/* Static pulse tint only — no CSS animation (full-viewport keyframes = main-thread cost) */}
       <div className="fixed inset-0 z-[25] pointer-events-none immersion-pulse-layer" aria-hidden />
 
