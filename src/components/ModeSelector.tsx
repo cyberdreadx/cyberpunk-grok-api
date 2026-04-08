@@ -1,6 +1,7 @@
 import React from "react";
 import { Image, Pencil, Video, Film, Scissors, Users } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import type { GrokMode } from "@/hooks/useGrokApi";
 
 interface ModeSelectorProps {
@@ -9,15 +10,16 @@ interface ModeSelectorProps {
   isAuthenticated?: boolean;
 }
 
-const modes: { id: GrokMode; label: string; icon: React.ElementType; description: string; shortcut: string }[] = [
-  { id: "text-to-image", label: "GENERATE", icon: Image, description: "Text → Image", shortcut: "01" },
-  { id: "edit-image", label: "MODIFY", icon: Pencil, description: "Image Edit", shortcut: "02" },
-  { id: "text-to-video", label: "RENDER", icon: Video, description: "Text → Video", shortcut: "03" },
-  { id: "image-to-video", label: "ANIMATE", icon: Film, description: "Image → Video", shortcut: "04" },
-  { id: "edit-video", label: "REMIX", icon: Scissors, description: "Video Edit", shortcut: "05" },
+const modes: { id: GrokMode; labelKey: string; icon: React.ElementType; descKey: string; shortcut: string }[] = [
+  { id: "text-to-image", labelKey: "modes.generate", icon: Image, descKey: "modes.descGenerate", shortcut: "01" },
+  { id: "edit-image", labelKey: "modes.modify", icon: Pencil, descKey: "modes.descModify", shortcut: "02" },
+  { id: "text-to-video", labelKey: "modes.render", icon: Video, descKey: "modes.descRender", shortcut: "03" },
+  { id: "image-to-video", labelKey: "modes.animate", icon: Film, descKey: "modes.descAnimate", shortcut: "04" },
+  { id: "edit-video", labelKey: "modes.remix", icon: Scissors, descKey: "modes.descRemix", shortcut: "05" },
 ];
 
 const ModeSelector: React.FC<ModeSelectorProps> = ({ activeMode, onModeChange, isAuthenticated }) => {
+  const { t } = useTranslation();
   return (
     <>
       {/* Mobile: horizontal scroll pills */}
@@ -39,7 +41,7 @@ const ModeSelector: React.FC<ModeSelectorProps> = ({ activeMode, onModeChange, i
             >
               <Icon className={`w-3.5 h-3.5 ${isActive ? "text-primary" : "text-muted-foreground/60"}`} />
               <span className={`font-orbitron text-[9px] tracking-wider ${isActive ? "text-primary" : "text-foreground/70"}`}>
-                {mode.label}
+                {t(mode.labelKey)}
               </span>
             </button>
           );
@@ -50,7 +52,7 @@ const ModeSelector: React.FC<ModeSelectorProps> = ({ activeMode, onModeChange, i
             className="flex items-center gap-1.5 px-3 py-2 rounded border whitespace-nowrap transition-all duration-200 shrink-0 border-secondary/30 bg-card/50 active:bg-secondary/10"
           >
             <Users className="w-3.5 h-3.5 text-secondary/70" />
-            <span className="font-orbitron text-[9px] tracking-wider text-secondary/80">CHARS</span>
+            <span className="font-orbitron text-[9px] tracking-wider text-secondary/80">{t("modes.chars")}</span>
           </a>
         )}
       </div>
@@ -99,10 +101,10 @@ const ModeSelector: React.FC<ModeSelectorProps> = ({ activeMode, onModeChange, i
                   isActive ? "neon-text-cyan" : "text-foreground/80"
                 }`}
               >
-                {mode.label}
+                {t(mode.labelKey)}
               </div>
               <div className="font-mono-share text-[9px] text-muted-foreground/40 mt-0.5">
-                {mode.description}
+                {t(mode.descKey)}
               </div>
             </button>
           );
@@ -120,10 +122,10 @@ const ModeSelector: React.FC<ModeSelectorProps> = ({ activeMode, onModeChange, i
               <Users className="w-4 h-4 transition-colors text-muted-foreground/50 group-hover:text-secondary/70" />
             </div>
             <div className="font-orbitron text-[10px] font-bold tracking-wider text-foreground/80 group-hover:text-secondary transition-colors">
-              CHARACTERS
+              {t("modes.characters")}
             </div>
             <div className="font-mono-share text-[9px] text-muted-foreground/40 mt-0.5">
-              AI Chat
+              {t("modes.descCharacters")}
             </div>
           </Link>
         )}

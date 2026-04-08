@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { Coins, ShoppingCart, Loader2, Crown, Settings, XCircle, AlertTriangle, Share2, Copy, Check, Gift, Users, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
@@ -60,6 +61,7 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
   externalOpen,
   onExternalOpenChange,
 }) => {
+  const { t } = useTranslation();
   const [internalOpen, setInternalOpen] = useState(false);
   const open = externalOpen !== undefined ? externalOpen : internalOpen;
   const setOpen = (v: boolean) => {
@@ -102,7 +104,7 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
         </span>
         {subscriptionTier && (
           <span className={`font-orbitron text-[7px] uppercase tracking-wider ml-0.5 ${isCancelling ? "text-destructive/70" : "text-primary/70"}`}>
-            {isCancelling ? `${subscriptionTier} (ending)` : subscriptionTier}
+            {isCancelling ? `${subscriptionTier} (${t("store.ending")})` : subscriptionTier}
           </span>
         )}
       </div>
@@ -116,7 +118,7 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
             className="font-mono-share text-xs gap-1.5 text-secondary hover:text-secondary/80"
           >
             <ShoppingCart className="w-3 h-3" />
-            <span className="hidden sm:inline">STORE</span>
+            <span className="hidden sm:inline">{t("nav.store")}</span>
           </Button>
         </DialogTrigger>
         <DialogContent className="bg-card border-border border-primary/20 shadow-[0_0_48px_hsl(var(--primary)/0.08)] w-[min(96vw,72rem)] max-w-6xl max-h-[85vh] overflow-hidden p-0 gap-0 flex flex-col">
@@ -124,21 +126,21 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
           <div className="credit-store-scroll scrollbar-cyber min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-6 py-6 [color-scheme:dark]">
           <DialogHeader>
             <DialogTitle className="font-orbitron text-sm tracking-wider neon-text-cyan">
-              CREDIT_STORE
+              {t("store.title")}
             </DialogTitle>
             <DialogDescription className="font-rajdhani text-muted-foreground">
-              10 free credits daily + subscribe or buy packs. Images: 1-2 cr · Videos: 5 cr · HD upscale: 7 cr.
+              {t("store.description")}
             </DialogDescription>
             <div className="mt-3 flex items-center gap-2 rounded-lg border border-pink-500/25 bg-gradient-to-r from-pink-500/10 to-violet-500/10 px-3 py-2.5">
               <img src="/xrge-logo.png" alt="" className="h-8 w-8 shrink-0 rounded-full" />
               <div className="min-w-0 flex-1 text-left">
                 <p className="font-orbitron text-[10px] tracking-wide text-pink-200">
-                  $XRGE Bank — Deposit · Buy Credits · Earn Loyalty Rewards
+                  {t("store.xrgeBankTitle")}
                 </p>
                 <p className="font-mono-share text-[9px] text-muted-foreground/90 leading-snug">
-                  Deposit XRGE, buy credits from your balance, earn up to +50% bonus.{" "}
+                  {t("store.xrgeBankDesc")}{" "}
                   <a href={XRGE_DEXSCREENER_URL} target="_blank" rel="noopener noreferrer" className="text-pink-300 underline underline-offset-2">
-                    Get XRGE →
+                    {t("store.getXrge")}
                   </a>
                 </p>
               </div>
@@ -149,7 +151,7 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
                 className="shrink-0 font-orbitron text-[9px] tracking-wider gap-1.5 border-pink-500/30 text-pink-300 hover:bg-pink-500/15 hover:text-pink-200"
               >
                 <Wallet className="w-3 h-3" />
-                BANK
+                {t("store.bank")}
               </Button>
             </div>
           </DialogHeader>
@@ -161,16 +163,16 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
               <span className="font-mono-share text-sm text-secondary font-bold">
                 {totalCredits}
               </span>
-              <span className="font-mono-share text-[10px] text-muted-foreground">total</span>
+              <span className="font-mono-share text-[10px] text-muted-foreground">{t("store.total")}</span>
             </div>
             {subCredits > 0 && (
               <span className="font-mono-share text-[10px] text-muted-foreground/60">
-                {subCredits} sub{renewsLabel && ` (resets ${renewsLabel})`}
+                {subCredits} {t("store.sub")}{renewsLabel && ` (${t("store.resets", { date: renewsLabel })})`}
               </span>
             )}
             {packCredits > 0 && (
               <span className="font-mono-share text-[10px] text-muted-foreground/60">
-                {packCredits} pack
+                {packCredits} {t("store.pack")}
               </span>
             )}
           </div>
@@ -187,18 +189,18 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
                   <div className="flex items-center gap-2">
                     <AlertTriangle className="w-4 h-4 text-destructive" />
                     <span className="font-orbitron text-xs tracking-wider text-destructive">
-                      CANCELLING: {(subscriptionTier ?? "").toUpperCase()}
+                      {t("store.cancellingPlan", { plan: (subscriptionTier ?? "").toUpperCase() })}
                     </span>
                     {cancelLabel && (
                       <span className="font-mono-share text-[10px] text-destructive/60 ml-auto">
-                        ends {cancelLabel}
+                        {t("store.ends", { date: cancelLabel })}
                       </span>
                     )}
                   </div>
                   <p className="font-mono-share text-[10px] text-destructive/70 leading-relaxed">
-                    Your subscription is scheduled for cancellation. You can still use your remaining {subCredits} sub credits
-                    until {cancelLabel || "the end of your billing period"}.
-                    Reactivate anytime before then to keep your plan.
+                    {cancelLabel
+                      ? t("store.cancelNotice", { count: subCredits, date: cancelLabel })
+                      : t("store.cancelNoticeNoDates")}
                   </p>
                   <Button
                     variant="outline"
@@ -207,7 +209,7 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
                     className="font-mono-share text-xs gap-1.5 border-primary/30 hover:bg-primary/10"
                   >
                     <Settings className="w-3.5 h-3.5" />
-                    REACTIVATE_SUBSCRIPTION
+                    {t("store.reactivate")}
                   </Button>
                 </>
               ) : (
@@ -215,11 +217,11 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
                   <div className="flex items-center gap-2">
                     <Crown className="w-4 h-4 text-primary" />
                     <span className="font-orbitron text-xs tracking-wider text-primary">
-                      ACTIVE_PLAN: {(subscriptionTier ?? "").toUpperCase()}
+                      {t("store.activePlan", { plan: (subscriptionTier ?? "").toUpperCase() })}
                     </span>
                     {renewsLabel && (
                       <span className="font-mono-share text-[10px] text-muted-foreground/60 ml-auto">
-                        renews {renewsLabel}
+                        {t("store.renews", { date: renewsLabel })}
                       </span>
                     )}
                   </div>
@@ -231,7 +233,7 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
                       className="font-mono-share text-xs gap-1.5 border-primary/30 hover:bg-primary/10"
                     >
                       <Settings className="w-3.5 h-3.5" />
-                      MANAGE_BILLING
+                      {t("store.manageBilling")}
                     </Button>
                     <Button
                       variant="outline"
@@ -240,12 +242,11 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
                       className="font-mono-share text-xs gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
                     >
                       <XCircle className="w-3.5 h-3.5" />
-                      CANCEL_SUBSCRIPTION
+                      {t("store.cancelSubscription")}
                     </Button>
                   </div>
                   <p className="font-mono-share text-[10px] text-muted-foreground/50 leading-relaxed">
-                    Manage billing, update payment method, or cancel your subscription via the Stripe portal.
-                    Cancellation takes effect at the end of your current billing period.
+                    {t("store.manageDesc")}
                   </p>
                 </>
               )}
@@ -290,7 +291,7 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
 
           <div className="border-t border-border pt-3 mt-2">
             <p className="text-[10px] font-mono-share text-muted-foreground/80 leading-relaxed">
-              Payments: Stripe (card) or $XRGE on Base (pack cards). Pack credits never expire. Subscription credits reset each billing cycle (no rollover).
+              {t("store.paymentInfo")}
             </p>
           </div>
           </div>
@@ -317,6 +318,7 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
 
 /** Referral card — shows inside the credit store dialog. */
 function ReferralCard() {
+  const { t } = useTranslation();
   const [code, setCode] = useState<string | null>(null);
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -353,12 +355,11 @@ function ReferralCard() {
     <div className="border border-green-500/30 rounded-lg bg-green-950/10 p-3 mt-3 space-y-2.5">
       <div className="flex items-center gap-2">
         <Share2 className="w-3.5 h-3.5 text-green-400" />
-        <span className="font-orbitron text-[10px] tracking-wider text-green-400">REFERRAL_PROGRAM</span>
+        <span className="font-orbitron text-[10px] tracking-wider text-green-400">{t("referral.title")}</span>
       </div>
 
       <p className="font-mono-share text-[10px] text-muted-foreground/70 leading-relaxed">
-        Share your link — friends get <span className="text-green-400">3 free credits</span> on signup.
-        When they make their first purchase, you get <span className="text-secondary">10 credits</span> and they get <span className="text-secondary">5 bonus</span>.
+        {t("referral.descriptionSimple")}
       </p>
 
       {loading ? (
@@ -376,20 +377,20 @@ function ReferralCard() {
               className="font-mono-share text-[10px] gap-1 px-2 border-green-500/30 hover:bg-green-500/10 shrink-0"
             >
               {copied ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
-              {copied ? "COPIED" : "COPY"}
+              {copied ? t("common.copied") : t("common.copy")}
             </Button>
           </div>
 
           {stats && (stats.totalReferred > 0 || stats.creditsEarned > 0) && (
             <div className="flex items-center gap-3 pt-1 font-mono-share text-[10px] text-muted-foreground/60">
               <span className="flex items-center gap-1">
-                <Users className="w-3 h-3" /> {stats.totalReferred} referred
+                <Users className="w-3 h-3" /> {t("referral.referred", { count: stats.totalReferred })}
               </span>
               <span className="flex items-center gap-1">
-                <Gift className="w-3 h-3" /> {stats.totalPurchased} converted
+                <Gift className="w-3 h-3" /> {t("referral.converted", { count: stats.totalPurchased })}
               </span>
               <span className="flex items-center gap-1 text-green-400">
-                +{stats.creditsEarned} credits earned
+                {t("referral.earned", { count: stats.creditsEarned })}
               </span>
             </div>
           )}

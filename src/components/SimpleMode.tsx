@@ -13,71 +13,53 @@ interface SimpleModeProps {
   currentMode: GrokMode;
 }
 
-const SIMPLE_TABS = [
-  { id: "edit-image" as GrokMode, label: "Edit Image", icon: Pencil, description: "Upload an image and describe changes" },
-  { id: "text-to-image" as GrokMode, label: "Create Image", icon: Image, description: "Describe what you want to create" },
-  { id: "image-to-video" as GrokMode, label: "Make Video", icon: Film, description: "Turn an image into a short video" },
-] as const;
+type SimpleTab = { id: GrokMode; labelKey: string; icon: React.ElementType; descKey: string };
 
-const SIMPLE_SUGGESTIONS: Record<string, string[]> = {
+const SIMPLE_TABS: SimpleTab[] = [
+  { id: "edit-image" as GrokMode, labelKey: "simple.editImage", icon: Pencil, descKey: "simple.descEdit" },
+  { id: "text-to-image" as GrokMode, labelKey: "simple.createImage", icon: Image, descKey: "simple.descCreate" },
+  { id: "image-to-video" as GrokMode, labelKey: "simple.makeVideo", icon: Film, descKey: "simple.descVideo" },
+];
+
+const SIMPLE_SUGGESTION_KEYS: Record<string, string[]> = {
   "edit-image": [
-    "Make it look like a painting",
-    "Change the background to a sunset",
-    "Add neon glow effects",
-    "Make it anime style",
-    "Remove the background",
-    "Add dramatic lighting",
+    "simple.suggestEditPainting",
+    "simple.suggestEditSunset",
+    "simple.suggestEditNeon",
+    "simple.suggestEditAnime",
+    "simple.suggestEditRemoveBg",
+    "simple.suggestEditLighting",
   ],
   "text-to-image": [
-    "A cyberpunk city at night with neon lights",
-    "A beautiful landscape with mountains and a lake",
-    "A cute cat wearing sunglasses",
-    "Abstract art with vibrant colors",
-    "A futuristic spaceship in deep space",
-    "A cozy coffee shop on a rainy day",
+    "simple.suggestCreateCyber",
+    "simple.suggestCreateLandscape",
+    "simple.suggestCreateCat",
+    "simple.suggestCreateAbstract",
+    "simple.suggestCreateSpace",
+    "simple.suggestCreateCoffee",
   ],
   "image-to-video": [
-    "Slow zoom in with gentle movement",
-    "Camera pans across the scene",
-    "Dramatic wind and motion",
-    "Subtle animation with floating particles",
+    "simple.suggestVideoZoom",
+    "simple.suggestVideoPan",
+    "simple.suggestVideoWind",
+    "simple.suggestVideoParticles",
   ],
 };
 
 /* ── Walkthrough Steps ────────────────────────────────────── */
 
 interface WalkthroughStep {
-  target: string; // data-tour attribute value
-  title: string;
-  description: string;
+  target: string;
+  titleKey: string;
+  descKey: string;
   position: "top" | "bottom";
 }
 
 const WALKTHROUGH_STEPS: WalkthroughStep[] = [
-  {
-    target: "tour-tabs",
-    title: "1. Pick what to do",
-    description: "Choose Edit Image, Create Image, or Make Video. We'll start with editing.",
-    position: "bottom",
-  },
-  {
-    target: "tour-upload",
-    title: "2. Upload your image",
-    description: "Drag & drop, click to browse, or paste from clipboard. Supports JPG, PNG, WebP, and HEIC.",
-    position: "bottom",
-  },
-  {
-    target: "tour-prompt",
-    title: "3. Describe the change",
-    description: "Tell the AI what to do — e.g. \"Make it anime style\" or \"Add neon glow effects\". Try a suggestion chip!",
-    position: "top",
-  },
-  {
-    target: "tour-generate",
-    title: "4. Hit Generate!",
-    description: "Once you've uploaded an image and typed a prompt, press this button. Your edited image appears below.",
-    position: "top",
-  },
+  { target: "tour-tabs", titleKey: "simple.tourPickTab", descKey: "simple.tourPickTabDesc", position: "bottom" },
+  { target: "tour-upload", titleKey: "simple.tourUpload", descKey: "simple.tourUploadDesc", position: "bottom" },
+  { target: "tour-prompt", titleKey: "simple.tourDescribe", descKey: "simple.tourDescribeDesc", position: "top" },
+  { target: "tour-generate", titleKey: "simple.tourGenerate", descKey: "simple.tourGenerateDesc", position: "top" },
 ];
 
 const TOUR_STORAGE_KEY = "simple-walkthrough-done";
@@ -91,6 +73,7 @@ const SimpleMode: React.FC<SimpleModeProps> = ({
   onImageUrlChange,
   currentMode,
 }) => {
+  const { t } = useTranslation();
   const [prompt, setPrompt] = useState("");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -204,7 +187,7 @@ const SimpleMode: React.FC<SimpleModeProps> = ({
   const canGenerate = prompt.trim().length > 0 && (!needsImage || !!imagePreview) && !isLoading;
   const insufficientCredits = creditCost !== undefined && totalCredits !== undefined && totalCredits < creditCost;
 
-  const suggestions = SIMPLE_SUGGESTIONS[activeTab] || [];
+  const suggestionKeys = SIMPLE_SUGGESTION_KEYS[activeTab] || [];
 
   return (
     <div className="space-y-4 relative">
@@ -236,7 +219,7 @@ const SimpleMode: React.FC<SimpleModeProps> = ({
                 `}
               >
                 <Icon className="w-4 h-4" />
-                <span className="hidden sm:inline">{tab.label}</span>
+                <span className="hidden sm:inline">{t(tab.labelKey)}</span>
               </button>
             );
           })}
@@ -245,7 +228,7 @@ const SimpleMode: React.FC<SimpleModeProps> = ({
 
       {/* Description */}
       <p className="font-mono-share text-xs text-muted-foreground/60 text-center">
-        {SIMPLE_TABS.find(t => t.id === activeTab)?.description}
+        {t(SIMPLE_TABS.find(tb => tb.id === activeTab)?.descKey ?? "")}
       </p>
 
       {/* Image upload area (for edit & video modes) */}
@@ -291,10 +274,10 @@ const SimpleMode: React.FC<SimpleModeProps> = ({
                 </div>
                 <div className="text-center">
                   <p className="font-mono-share text-sm text-foreground/70">
-                    Drop an image here or click to upload
+                    {t("simple.dropImage")}
                   </p>
                   <p className="font-mono-share text-[10px] text-muted-foreground/40 mt-1">
-                    JPG, PNG, WebP, HEIC supported · Paste from clipboard works too
+                    {t("simple.fileSupport")}
                   </p>
                 </div>
               </button>
@@ -322,10 +305,10 @@ const SimpleMode: React.FC<SimpleModeProps> = ({
           }}
           placeholder={
             activeTab === "edit-image"
-              ? "Describe how to change the image..."
+              ? t("simple.placeholderEdit")
               : activeTab === "image-to-video"
-                ? "Describe the motion or animation..."
-                : "Describe what you want to create..."
+                ? t("simple.placeholderAnimate")
+                : t("simple.placeholderCreate")
           }
           rows={3}
           className={`w-full bg-card/60 border border-border/50 rounded-lg px-4 py-3 text-sm font-mono-share text-foreground placeholder:text-muted-foreground/30 resize-none outline-none focus:border-primary/50 transition-colors ${isTourActive && tourStep === 2 ? "relative z-50 ring-2 ring-primary/50 ring-offset-2 ring-offset-background" : ""}`}
@@ -341,18 +324,21 @@ const SimpleMode: React.FC<SimpleModeProps> = ({
       {/* Suggestion chips */}
       {!prompt && (
         <div className={`flex flex-wrap gap-1.5 ${isTourActive && tourStep === 2 ? "relative z-50" : ""}`}>
-          {suggestions.slice(0, 4).map((s) => (
-            <button
-              key={s}
-              onClick={() => {
-                setPrompt(s);
-                if (tourStep === 2) advanceTour();
-              }}
-              className="px-2.5 py-1.5 rounded-full border border-border/40 bg-card/30 font-mono-share text-[10px] text-muted-foreground/60 hover:text-foreground hover:border-primary/30 hover:bg-primary/5 transition-all"
-            >
-              {s}
-            </button>
-          ))}
+          {suggestionKeys.slice(0, 4).map((key) => {
+            const label = t(key);
+            return (
+              <button
+                key={key}
+                onClick={() => {
+                  setPrompt(label);
+                  if (tourStep === 2) advanceTour();
+                }}
+                className="px-2.5 py-1.5 rounded-full border border-border/40 bg-card/30 font-mono-share text-[10px] text-muted-foreground/60 hover:text-foreground hover:border-primary/30 hover:bg-primary/5 transition-all"
+              >
+                {label}
+              </button>
+            );
+          })}
         </div>
       )}
 
@@ -374,12 +360,12 @@ const SimpleMode: React.FC<SimpleModeProps> = ({
           {isLoading ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
-              GENERATING...
+              {t("simple.generatingBtn")}
             </>
           ) : (
             <>
               <Sparkles className="w-4 h-4" />
-              {activeTab === "edit-image" ? "APPLY EDIT" : activeTab === "image-to-video" ? "ANIMATE" : "GENERATE"}
+              {activeTab === "edit-image" ? t("simple.applyEdit") : activeTab === "image-to-video" ? t("simple.animateBtn") : t("simple.generateBtn")}
               {creditCost !== undefined && (
                 <span className="ml-1 text-xs font-mono-share opacity-60">
                   ({creditCost} cr)
@@ -393,7 +379,7 @@ const SimpleMode: React.FC<SimpleModeProps> = ({
       {/* Insufficient credits warning */}
       {insufficientCredits && (
         <p className="text-center font-mono-share text-[10px] text-destructive/70">
-          Not enough credits — you need {creditCost} but have {totalCredits}
+          {t("simple.insufficientCredits", { cost: creditCost, balance: totalCredits })}
         </p>
       )}
 
@@ -410,7 +396,7 @@ const SimpleMode: React.FC<SimpleModeProps> = ({
           className="mx-auto flex items-center gap-1 font-mono-share text-[9px] text-muted-foreground/30 hover:text-primary/60 transition-colors"
         >
           <HelpCircle className="w-3 h-3" />
-          Restart tour
+          {t("simple.restartTour")}
         </button>
       )}
     </div>
@@ -428,6 +414,7 @@ interface TourTooltipProps {
 }
 
 const TourTooltip: React.FC<TourTooltipProps> = ({ step, onNext, onDismiss, stepNum, totalSteps }) => {
+  const { t } = useTranslation();
   const isLast = stepNum === totalSteps - 1;
   const isTop = step.position === "top";
 
@@ -456,10 +443,10 @@ const TourTooltip: React.FC<TourTooltipProps> = ({ step, onNext, onDismiss, step
 
         {/* Content */}
         <h4 className="font-orbitron text-xs font-bold text-primary tracking-wide mb-1 relative z-10">
-          {step.title}
+          {t(step.titleKey)}
         </h4>
         <p className="font-mono-share text-[11px] text-foreground/70 leading-relaxed relative z-10">
-          {step.description}
+          {t(step.descKey)}
         </p>
 
         {/* Actions */}
@@ -468,13 +455,13 @@ const TourTooltip: React.FC<TourTooltipProps> = ({ step, onNext, onDismiss, step
             onClick={onDismiss}
             className="font-mono-share text-[9px] text-muted-foreground/50 hover:text-foreground transition-colors"
           >
-            SKIP TOUR
+            {t("simple.tourSkip")}
           </button>
           <button
             onClick={onNext}
             className="flex items-center gap-1 font-mono-share text-[10px] font-bold text-primary hover:text-primary/80 transition-colors"
           >
-            {isLast ? "FINISH ✓" : "NEXT"}
+            {isLast ? t("simple.tourFinish") : t("simple.tourNext")}
             {!isLast && <ChevronRight className="w-3 h-3" />}
           </button>
         </div>

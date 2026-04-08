@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect, Suspense } from "react";
+import { useTranslation } from "react-i18next";
 import { Terminal, Key, Coins, Shield, Eye, MessageCircle, HelpCircle, Server, Zap, Cpu, ChevronDown, Film, X, AlertCircle, CheckCircle2, Upload, Users, Image, Code, ToggleLeft, ToggleRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import CyberLayout from "@/components/CyberLayout";
@@ -96,6 +97,7 @@ const Index = () => {
   };
 
   const { toast } = useToast();
+  const { t } = useTranslation();
   const {
     isLoading,
     error,
@@ -148,10 +150,10 @@ const Index = () => {
         immersionSaveTimer.current = null;
         try {
           await saveMasterImmersion(next);
-          toast({ title: "Global UI saved", description: "Applied for all visitors." });
+          toast({ title: t("toast.globalSaved"), description: t("toast.globalSavedDesc") });
         } catch (e) {
           toast({
-            title: "Could not save globally",
+            title: t("toast.globalSaveError"),
             description: (e as Error).message || "Check API / database.",
             variant: "destructive",
           });
@@ -348,7 +350,7 @@ const Index = () => {
     setActiveImageUrl(imageUrl);
     setActivePrompt("");
     window.scrollTo({ top: 0, behavior: "smooth" });
-    toast({ title: "EDIT MODE", description: "Image loaded — enter your modification prompt." });
+    toast({ title: t("toast.editMode"), description: t("toast.editModeDesc") });
   }, [toast]);
 
   const handleAnimateImage = useCallback((imageUrl: string) => {
@@ -356,7 +358,7 @@ const Index = () => {
     setActiveImageUrl(imageUrl);
     setActivePrompt("");
     window.scrollTo({ top: 0, behavior: "smooth" });
-    toast({ title: "ANIMATE MODE", description: "Image loaded — describe the motion to apply." });
+    toast({ title: t("toast.animateMode"), description: t("toast.animateModeDesc") });
   }, [toast]);
 
   const handleGltchImage2 = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -385,7 +387,7 @@ const Index = () => {
       setGltchImage2(canvas.toDataURL("image/jpeg", 0.9));
       setGltchImage2Name(file.name.replace(/\.[^.]+$/, "") + ".jpg");
     } catch {
-      toast({ title: "Image error", description: "Could not process image. Try JPG or PNG.", variant: "destructive" });
+      toast({ title: t("toast.imageError"), description: t("toast.imageErrorDesc"), variant: "destructive" });
     }
   }, [toast]);
 
@@ -401,7 +403,7 @@ const Index = () => {
       await foldersHook.moveToFolder(resultId, folderId);
       updateResultFolder(resultId, folderId);
     } catch {
-      toast({ title: "FOLDER ERROR", description: "Failed to move item.", variant: "destructive" });
+      toast({ title: t("toast.folderError"), description: t("toast.folderErrorDesc"), variant: "destructive" });
     }
   }, [foldersHook, updateResultFolder, toast]);
 
@@ -410,7 +412,7 @@ const Index = () => {
       await foldersHook.bulkMoveToFolder(ids, folderId);
       for (const id of ids) updateResultFolder(id, folderId);
     } catch {
-      toast({ title: "FOLDER ERROR", description: "Failed to move items.", variant: "destructive" });
+      toast({ title: t("toast.folderError"), description: t("toast.folderErrorBulkDesc"), variant: "destructive" });
     }
   }, [foldersHook, updateResultFolder, toast]);
 
@@ -419,7 +421,7 @@ const Index = () => {
       await foldersHook.bulkDelete(ids);
       for (const id of ids) deleteResult(id);
     } catch {
-      toast({ title: "DELETE ERROR", description: "Failed to delete items.", variant: "destructive" });
+      toast({ title: t("toast.deleteError"), description: t("toast.deleteErrorDesc"), variant: "destructive" });
     }
   }, [foldersHook, deleteResult, toast]);
 
@@ -428,7 +430,7 @@ const Index = () => {
       const deletedIds = await foldersHook.emptyTrashFolder();
       for (const id of deletedIds) deleteResult(id);
     } catch {
-      toast({ title: "TRASH ERROR", description: "Failed to empty trash.", variant: "destructive" });
+      toast({ title: t("toast.trashError"), description: t("toast.trashErrorDesc"), variant: "destructive" });
     }
   }, [foldersHook, deleteResult, toast]);
 
@@ -517,8 +519,8 @@ const Index = () => {
     // Check access: need either API key (BYOK) or credits
     if (!isQueued && effectiveApiMode === "byok" && !apiKeySet) {
       toast({
-        title: "API KEY REQUIRED",
-        description: "Enter your xAI API key in Settings, or switch to CREDITS mode.",
+        title: t("toast.apiKeyRequired"),
+        description: t("toast.apiKeyRequiredDesc"),
         variant: "destructive",
       });
       return;
@@ -531,8 +533,8 @@ const Index = () => {
       // All other queued jobs require auth (server-side processing)
       if (!auth.isAuthenticated) {
         toast({
-          title: "ACCOUNT REQUIRED",
-          description: "GLTCH & ComfyUI engines run on our servers and require an account. Sign in or switch to the GROK engine for BYOK mode.",
+          title: t("toast.accountRequired"),
+          description: t("toast.accountRequiredDesc"),
           variant: "destructive",
         });
         return;
@@ -541,7 +543,7 @@ const Index = () => {
 
     if ((effectiveApiMode === "credits" || isQueued) && !isGrokEditByok && !adminBypass) {
       if (!auth.isAuthenticated) {
-        toast({ title: "ACCESS DENIED", description: "Sign in to use credits.", variant: "destructive" });
+        toast({ title: t("toast.accessDenied"), description: t("toast.accessDeniedDesc"), variant: "destructive" });
         return;
       }
 
@@ -580,8 +582,8 @@ const Index = () => {
 
       if (!creditsHook.hasEnoughCredits(cost)) {
         toast({
-          title: "INSUFFICIENT CREDITS",
-          description: `This requires ${cost} credit${cost !== 1 ? "s" : ""}. Purchase more to continue.`,
+          title: t("toast.insufficientCredits"),
+          description: t("toast.insufficientCreditsDesc", { cost }),
           variant: "destructive",
         });
         return;
@@ -806,9 +808,9 @@ const Index = () => {
             ...(adminTestCredits ? { testCredits: true } : {}),
           });
         }
-        toast({ title: "JOB QUEUED", description: "Generation started — you can queue more." });
+        toast({ title: t("toast.jobQueued"), description: t("toast.jobQueuedDesc") });
       } catch (err: any) {
-        toast({ title: "SYSTEM_ERROR", description: err.message || "Failed to queue job.", variant: "destructive" });
+        toast({ title: t("toast.systemError"), description: err.message || t("toast.systemErrorDefault"), variant: "destructive" });
       }
       return;
     }
@@ -847,14 +849,14 @@ const Index = () => {
       }
 
       toast({
-        title: "RENDER COMPLETE",
-        description: "Output generated successfully.",
+        title: t("toast.renderComplete"),
+        description: t("toast.renderCompleteDesc"),
       });
     } catch (err: any) {
       const msg = err.message || "Generation failed.";
       const lines = msg.split("\n").filter((l: string) => l.trim());
       toast({
-        title: "SYSTEM_ERROR",
+        title: t("toast.systemError"),
         description: lines[0],
         variant: "destructive",
         duration: lines.length > 1 ? 12000 : 5000,
@@ -862,7 +864,7 @@ const Index = () => {
       if (lines.length > 1) {
         setTimeout(() => {
           toast({
-            title: "HINT",
+            title: t("toast.hint"),
             description: lines.slice(1).join(" "),
             duration: 15000,
           });
@@ -879,14 +881,13 @@ const Index = () => {
           <div className="flex items-center gap-3 bg-secondary/10 border border-secondary/30 rounded-lg px-4 py-3 animate-slide-up">
             <AlertCircle className="w-4 h-4 text-secondary shrink-0" />
             <p className="font-mono-share text-xs text-secondary flex-1">
-               Verify your email to unlock 10 free daily credits.
-              Check your inbox for a 6-digit code.
+              {t("header.verifyEmailNotice")}
             </p>
             <button
               onClick={() => auth.requestVerification()}
               className="shrink-0 px-3 py-1.5 bg-secondary/20 border border-secondary/40 rounded text-[10px] font-mono-share text-secondary hover:bg-secondary/30 transition-colors"
             >
-              VERIFY NOW
+              {t("header.verifyNow")}
             </button>
           </div>
         )}
@@ -907,7 +908,7 @@ const Index = () => {
             glitchIntensity="medium"
           />
           <p className="font-mono-share text-xs sm:text-sm text-muted-foreground animate-flicker">
-            <span className="text-primary/50">$</span> xAI Neural Rendering Interface // v{APP_VERSION}
+            <span className="text-primary/50">$</span> {t("header.subtitle")} // v{APP_VERSION}
             <span className="inline-block w-2 h-4 bg-primary/70 ml-1 animate-pulse align-middle" />
           </p>
 
@@ -915,7 +916,7 @@ const Index = () => {
           <div className="flex items-center justify-center gap-2 sm:gap-4 font-mono-share text-[9px] sm:text-[10px] text-muted-foreground/50 pt-2 flex-wrap">
             <span className="flex items-center gap-1">
               <Terminal className="w-3 h-3" />
-              SYS_ONLINE
+              {t("header.sysOnline")}
             </span>
             <span
               className={`w-1.5 h-1.5 rounded-full transition-colors duration-500 ${isLoading ? "bg-secondary animate-pulse" : "bg-primary animate-pulse-glow"
@@ -933,7 +934,7 @@ const Index = () => {
                     }`}
                 >
                   <Key className="w-2.5 h-2.5" />
-                  BYOK
+                  {t("header.byok")}
                 </button>
                 {canUseCredits && (
                   <button
@@ -944,7 +945,7 @@ const Index = () => {
                       }`}
                   >
                     <Coins className="w-2.5 h-2.5" />
-                    CREDITS
+                    {t("credits.credits")}
                   </button>
                 )}
               </div>
@@ -1020,10 +1021,10 @@ const Index = () => {
                     ? "border-primary/30 bg-primary/10 text-primary"
                     : "border-border/50 bg-card/40 text-muted-foreground/60 hover:text-muted-foreground"
                 }${showToggleTooltip ? " ring-2 ring-primary/50 ring-offset-1 ring-offset-background" : ""}`}
-                title={simpleMode ? "Switch to Advanced mode" : "Switch to Simple mode"}
+                title={simpleMode ? t("header.switchToAdvanced") : t("header.switchToSimple")}
               >
                 {simpleMode ? <ToggleLeft className="w-3 h-3" /> : <ToggleRight className="w-3 h-3" />}
-                {simpleMode ? "SIMPLE" : "ADVANCED"}
+                {simpleMode ? t("header.simple") : t("header.advanced")}
               </button>
 
               {/* First-time onboarding tooltip */}
@@ -1033,7 +1034,7 @@ const Index = () => {
                     {/* Arrow */}
                     <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 bg-card border-l border-t border-primary/40" />
                     <p className="font-mono-share text-[10px] text-foreground/80 leading-relaxed relative z-10">
-                      💡 <span className="text-primary font-bold">New!</span> Switch between Simple &amp; Advanced mode anytime.
+                      💡 <span className="text-primary font-bold">{t("header.onboardingNew")}</span> {t("header.onboardingTip")}
                     </p>
                     <button
                       onClick={(e) => {
@@ -1043,7 +1044,7 @@ const Index = () => {
                       }}
                       className="mt-1.5 font-mono-share text-[9px] text-primary/60 hover:text-primary transition-colors relative z-10"
                     >
-                      GOT IT ✓
+                      {t("header.onboardingGotIt")}
                     </button>
                   </div>
                 </div>
@@ -1073,10 +1074,10 @@ const Index = () => {
         {/* Value prop strip */}
         <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 py-1.5 animate-slide-up">
           {[
-            { icon: "⚡", label: "Fast" },
-            { icon: "🔞", label: "NSFW OK" },
-            { icon: "🎬", label: "Image & Video" },
-            { icon: "💳", label: "Pay-per-credit" },
+            { icon: "⚡", label: t("header.valueFast") },
+            { icon: "🔞", label: t("header.valueNsfw") },
+            { icon: "🎬", label: t("header.valueMedia") },
+            { icon: "💳", label: t("header.valuePayPerCredit") },
           ].map(({ icon, label }) => (
             <span key={label} className="flex items-center gap-1 font-mono-share text-[10px] text-muted-foreground/50">
               <span className="text-primary/60">{icon}</span>
