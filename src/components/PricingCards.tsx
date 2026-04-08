@@ -221,7 +221,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
         <div className="flex items-center gap-2 mb-3">
           <Zap className="w-3 h-3 text-primary/60" />
           <h4 className="font-orbitron text-[10px] tracking-widest text-muted-foreground">
-            TOP_UP_PACKS
+            {t("pricing.topUpPacks")}
           </h4>
           <div className="h-px flex-1 bg-border/30" />
         </div>
