@@ -55,7 +55,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
         <div className="flex items-center gap-2 mb-3">
           <RefreshCw className="w-3 h-3 text-primary/60" />
           <h4 className="font-orbitron text-[10px] tracking-widest text-muted-foreground">
-            SUBSCRIPTION_PLANS
+            {t("pricing.subscriptionPlans")}
           </h4>
           <div className="h-px flex-1 bg-border/30" />
         </div>
