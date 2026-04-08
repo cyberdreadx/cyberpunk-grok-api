@@ -204,7 +204,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
                       {purchasing ? (
                         <Loader2 className="w-3 h-3 animate-spin" />
                       ) : (
-                        "SUBSCRIBE"
+                        t("pricing.subscribe")
                       )}
                     </Button>
                   );
