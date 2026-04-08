@@ -1,0 +1,97 @@
+{
+  "nav": {
+    "home": "ホーム",
+    "library": "ライブラリ",
+    "characters": "キャラクター",
+    "docs": "APIドキュメント",
+    "settings": "設定",
+    "store": "ストア",
+    "more": "もっと見る"
+  },
+  "modes": {
+    "generate": "生成",
+    "edit": "画像編集",
+    "video": "動画作成",
+    "textToImage": "テキスト → 画像",
+    "imageToImage": "画像 → 画像",
+    "textToVideo": "テキスト → 動画",
+    "imageToVideo": "画像 → 動画"
+  },
+  "prompt": {
+    "placeholder": "作成したいものを説明してください…",
+    "enhance": "強化",
+    "generate": "生成",
+    "generating": "生成中…",
+    "history": "プロンプト履歴",
+    "suggestions": "提案"
+  },
+  "settings": {
+    "title": "設定",
+    "renderConfig": "render_config",
+    "aspectRatio": "アスペクト比",
+    "resolution": "解像度",
+    "batchCount": "バッチ数",
+    "duration": "長さ",
+    "language": "言語",
+    "theme": "テーマ",
+    "autoDetect": "自動検出"
+  },
+  "auth": {
+    "signIn": "ログイン",
+    "signUp": "新規登録",
+    "logout": "ログアウト",
+    "email": "メール",
+    "password": "パスワード",
+    "forgotPassword": "パスワードを忘れた？",
+    "verifyEmail": "メール認証",
+    "deleteAccount": "アカウント削除"
+  },
+  "credits": {
+    "credits": "クレジット",
+    "balance": "残高",
+    "buy": "クレジット購入",
+    "free": "無料",
+    "perGeneration": "生成ごと",
+    "lowCredits": "クレジット残少",
+    "noCredits": "クレジットなし"
+  },
+  "results": {
+    "download": "ダウンロード",
+    "share": "共有",
+    "delete": "削除",
+    "edit": "編集",
+    "animate": "アニメーション",
+    "noResults": "まだ結果がありません",
+    "copyLink": "リンクをコピーしました！",
+    "shareError": "共有リンクの作成に失敗しました"
+  },
+  "library": {
+    "title": "ライブラリ",
+    "search": "検索…",
+    "all": "すべて",
+    "images": "画像",
+    "videos": "動画",
+    "empty": "ライブラリは空です",
+    "clearAll": "すべて削除",
+    "folders": "フォルダ",
+    "trash": "ゴミ箱"
+  },
+  "simple": {
+    "editImage": "画像編集",
+    "createImage": "画像作成",
+    "makeVideo": "動画作成",
+    "dropImage": "画像をここにドロップまたはクリックしてアップロード",
+    "pasteImage": "またはクリップボードから貼り付け"
+  },
+  "common": {
+    "loading": "読み込み中…",
+    "error": "エラーが発生しました",
+    "cancel": "キャンセル",
+    "confirm": "確認",
+    "save": "保存",
+    "close": "閉じる",
+    "back": "戻る",
+    "next": "次へ",
+    "retry": "再試行"
+  }
+}

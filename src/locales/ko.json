@@ -1,0 +1,97 @@
+{
+  "nav": {
+    "home": "홈",
+    "library": "라이브러리",
+    "characters": "캐릭터",
+    "docs": "API 문서",
+    "settings": "설정",
+    "store": "스토어",
+    "more": "더보기"
+  },
+  "modes": {
+    "generate": "생성",
+    "edit": "이미지 편집",
+    "video": "비디오 제작",
+    "textToImage": "텍스트 → 이미지",
+    "imageToImage": "이미지 → 이미지",
+    "textToVideo": "텍스트 → 비디오",
+    "imageToVideo": "이미지 → 비디오"
+  },
+  "prompt": {
+    "placeholder": "만들고 싶은 것을 설명하세요…",
+    "enhance": "향상",
+    "generate": "생성",
+    "generating": "생성 중…",
+    "history": "프롬프트 기록",
+    "suggestions": "제안"
+  },
+  "settings": {
+    "title": "설정",
+    "renderConfig": "render_config",
+    "aspectRatio": "화면 비율",
+    "resolution": "해상도",
+    "batchCount": "배치 수",
+    "duration": "길이",
+    "language": "언어",
+    "theme": "테마",
+    "autoDetect": "자동 감지"
+  },
+  "auth": {
+    "signIn": "로그인",
+    "signUp": "회원가입",
+    "logout": "로그아웃",
+    "email": "이메일",
+    "password": "비밀번호",
+    "forgotPassword": "비밀번호를 잊으셨나요?",
+    "verifyEmail": "이메일 인증",
+    "deleteAccount": "계정 삭제"
+  },
+  "credits": {
+    "credits": "크레딧",
+    "balance": "잔액",
+    "buy": "크레딧 구매",
+    "free": "무료",
+    "perGeneration": "생성당",
+    "lowCredits": "크레딧 부족",
+    "noCredits": "크레딧 없음"
+  },
+  "results": {
+    "download": "다운로드",
+    "share": "공유",
+    "delete": "삭제",
+    "edit": "편집",
+    "animate": "애니메이션",
+    "noResults": "아직 결과가 없습니다",
+    "copyLink": "링크가 복사되었습니다!",
+    "shareError": "공유 링크 생성 실패"
+  },
+  "library": {
+    "title": "라이브러리",
+    "search": "검색…",
+    "all": "전체",
+    "images": "이미지",
+    "videos": "비디오",
+    "empty": "라이브러리가 비어있습니다",
+    "clearAll": "전체 삭제",
+    "folders": "폴더",
+    "trash": "휴지통"
+  },
+  "simple": {
+    "editImage": "이미지 편집",
+    "createImage": "이미지 생성",
+    "makeVideo": "비디오 제작",
+    "dropImage": "이미지를 여기에 놓거나 클릭하여 업로드",
+    "pasteImage": "또는 클립보드에서 붙여넣기"
+  },
+  "common": {
+    "loading": "로딩 중…",
+    "error": "문제가 발생했습니다",
+    "cancel": "취소",
+    "confirm": "확인",
+    "save": "저장",
+    "close": "닫기",
+    "back": "뒤로",
+    "next": "다음",
+    "retry": "재시도"
+  }
+}

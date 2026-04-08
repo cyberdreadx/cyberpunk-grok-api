@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { createPortal } from "react-dom";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Sparkles, Image, Users, ShoppingCart, MoreHorizontal, HelpCircle, FileText, Shield, ScrollText } from "lucide-react";
 
 interface MobileBottomNavProps {
@@ -22,6 +23,7 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
 }) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [moreOpen, setMoreOpen] = useState(false);
 
   const isHome = location.pathname === "/" || location.pathname === "";
@@ -31,35 +33,35 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   const tabs = [
     {
       id: "create",
-      label: "CREATE",
+      label: t("modes.generate").toUpperCase(),
       icon: Sparkles,
       active: isHome,
       onClick: () => { if (!isHome) navigate("/"); setMoreOpen(false); },
     },
     {
       id: "library",
-      label: "LIBRARY",
+      label: t("nav.library").toUpperCase(),
       icon: Image,
       active: isLibrary,
       onClick: () => { if (!isLibrary) navigate("/library"); setMoreOpen(false); },
     },
     ...(isAuthenticated ? [{
       id: "characters",
-      label: "CHARS",
+      label: t("nav.characters").toUpperCase().slice(0, 5),
       icon: Users,
       active: isCharacters,
       onClick: () => { navigate("/characters"); setMoreOpen(false); },
     }] : []),
     {
       id: "store",
-      label: "STORE",
+      label: t("nav.store").toUpperCase(),
       icon: ShoppingCart,
       active: false,
       onClick: () => { onOpenStore?.(); setMoreOpen(false); },
     },
     {
       id: "more",
-      label: "MORE",
+      label: t("nav.more").toUpperCase(),
       icon: MoreHorizontal,
       active: moreOpen,
       onClick: () => setMoreOpen(!moreOpen),

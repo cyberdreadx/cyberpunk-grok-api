@@ -1,0 +1,97 @@
+{
+  "nav": {
+    "home": "الرئيسية",
+    "library": "المكتبة",
+    "characters": "الشخصيات",
+    "docs": "وثائق API",
+    "settings": "الإعدادات",
+    "store": "المتجر",
+    "more": "المزيد"
+  },
+  "modes": {
+    "generate": "توليد",
+    "edit": "تعديل الصورة",
+    "video": "إنشاء فيديو",
+    "textToImage": "نص → صورة",
+    "imageToImage": "صورة → صورة",
+    "textToVideo": "نص → فيديو",
+    "imageToVideo": "صورة → فيديو"
+  },
+  "prompt": {
+    "placeholder": "صف ما تريد إنشاءه…",
+    "enhance": "تحسين",
+    "generate": "توليد",
+    "generating": "جارٍ التوليد…",
+    "history": "سجل الأوامر",
+    "suggestions": "اقتراحات"
+  },
+  "settings": {
+    "title": "الإعدادات",
+    "renderConfig": "render_config",
+    "aspectRatio": "نسبة العرض",
+    "resolution": "الدقة",
+    "batchCount": "العدد",
+    "duration": "المدة",
+    "language": "اللغة",
+    "theme": "المظهر",
+    "autoDetect": "اكتشاف تلقائي"
+  },
+  "auth": {
+    "signIn": "تسجيل الدخول",
+    "signUp": "إنشاء حساب",
+    "logout": "تسجيل الخروج",
+    "email": "البريد الإلكتروني",
+    "password": "كلمة المرور",
+    "forgotPassword": "نسيت كلمة المرور؟",
+    "verifyEmail": "تأكيد البريد",
+    "deleteAccount": "حذف الحساب"
+  },
+  "credits": {
+    "credits": "أرصدة",
+    "balance": "الرصيد",
+    "buy": "شراء أرصدة",
+    "free": "مجاني",
+    "perGeneration": "لكل توليد",
+    "lowCredits": "رصيد منخفض",
+    "noCredits": "لا يوجد رصيد"
+  },
+  "results": {
+    "download": "تحميل",
+    "share": "مشاركة",
+    "delete": "حذف",
+    "edit": "تعديل",
+    "animate": "تحريك",
+    "noResults": "لا توجد نتائج بعد",
+    "copyLink": "تم نسخ الرابط!",
+    "shareError": "فشل إنشاء رابط المشاركة"
+  },
+  "library": {
+    "title": "المكتبة",
+    "search": "بحث…",
+    "all": "الكل",
+    "images": "صور",
+    "videos": "فيديو",
+    "empty": "المكتبة فارغة",
+    "clearAll": "مسح الكل",
+    "folders": "مجلدات",
+    "trash": "سلة المحذوفات"
+  },
+  "simple": {
+    "editImage": "تعديل الصورة",
+    "createImage": "إنشاء صورة",
+    "makeVideo": "إنشاء فيديو",
+    "dropImage": "أسقط صورة هنا أو انقر للتحميل",
+    "pasteImage": "أو الصق من الحافظة"
+  },
+  "common": {
+    "loading": "جارٍ التحميل…",
+    "error": "حدث خطأ ما",
+    "cancel": "إلغاء",
+    "confirm": "تأكيد",
+    "save": "حفظ",
+    "close": "إغلاق",
+    "back": "رجوع",
+    "next": "التالي",
+    "retry": "إعادة المحاولة"
+  }
+}
