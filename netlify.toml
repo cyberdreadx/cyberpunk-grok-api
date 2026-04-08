@@ -2,6 +2,17 @@
   command = "npm run build"
   publish = "dist"
 
+# Prevent caching on API proxy responses and service worker
+[[headers]]
+  for = "/api/*"
+  [headers.values]
+    Cache-Control = "no-store, no-cache, must-revalidate"
+
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+
 # Proxy API requests to Vercel backend (must come BEFORE the SPA catch-all)
 [[redirects]]
   from = "/api/*"
