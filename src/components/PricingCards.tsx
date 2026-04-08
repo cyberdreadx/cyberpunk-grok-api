@@ -80,7 +80,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
                 : "bg-card/40 text-muted-foreground border-border hover:bg-secondary/10"
             }`}
           >
-            YEARLY
+            {t("pricing.yearly")}
             <span className="absolute -top-2 -right-2 bg-green-500 text-white font-mono text-[7px] px-1.5 py-0.5 rounded-full leading-none">
               -12%
             </span>
