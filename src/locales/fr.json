@@ -100,7 +100,11 @@
     "folders": "Dossiers",
     "trash": "Corbeille",
     "assetsIndexed": "{{count}} fichiers indexés",
-    "top": "Haut"
+    "top": "Haut",
+    "folderError": "Échec du déplacement",
+    "folderErrorBulk": "Échec du déplacement des éléments",
+    "deleteError": "Échec de la suppression",
+    "trashError": "Échec du vidage de la corbeille"
   },
   "simple": {
     "editImage": "Modifier l'image",

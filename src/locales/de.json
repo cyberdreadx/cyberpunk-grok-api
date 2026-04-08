@@ -100,7 +100,11 @@
     "folders": "Ordner",
     "trash": "Papierkorb",
     "assetsIndexed": "{{count}} Dateien indexiert",
-    "top": "Oben"
+    "top": "Oben",
+    "folderError": "Verschieben fehlgeschlagen",
+    "folderErrorBulk": "Verschieben fehlgeschlagen",
+    "deleteError": "Löschen fehlgeschlagen",
+    "trashError": "Papierkorb leeren fehlgeschlagen"
   },
   "simple": {
     "editImage": "Bild bearbeiten",

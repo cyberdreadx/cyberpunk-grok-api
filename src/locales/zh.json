@@ -100,7 +100,11 @@
     "folders": "文件夹",
     "trash": "回收站",
     "assetsIndexed": "{{count}} 个资源已索引",
-    "top": "顶部"
+    "top": "顶部",
+    "folderError": "移动项目失败",
+    "folderErrorBulk": "移动项目失败",
+    "deleteError": "删除项目失败",
+    "trashError": "清空回收站失败"
   },
   "simple": {
     "editImage": "编辑图片",

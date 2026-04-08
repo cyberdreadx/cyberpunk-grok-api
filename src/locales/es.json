@@ -100,7 +100,11 @@
     "folders": "Carpetas",
     "trash": "Papelera",
     "assetsIndexed": "{{count}} activos indexados",
-    "top": "Arriba"
+    "top": "Arriba",
+    "folderError": "Error al mover elemento",
+    "folderErrorBulk": "Error al mover elementos",
+    "deleteError": "Error al eliminar elementos",
+    "trashError": "Error al vaciar papelera"
   },
   "simple": {
     "editImage": "Editar Imagen",

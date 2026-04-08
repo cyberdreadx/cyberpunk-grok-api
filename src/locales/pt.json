@@ -100,7 +100,11 @@
     "folders": "Pastas",
     "trash": "Lixeira",
     "assetsIndexed": "{{count}} arquivos indexados",
-    "top": "Topo"
+    "top": "Topo",
+    "folderError": "Falha ao mover item",
+    "folderErrorBulk": "Falha ao mover itens",
+    "deleteError": "Falha ao excluir itens",
+    "trashError": "Falha ao esvaziar lixeira"
   },
   "simple": {
     "editImage": "Editar Imagem",
