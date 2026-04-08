@@ -371,6 +371,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
               >
                 <Film className="w-3 h-3 inline mr-1" />
                 UPLOAD
+                {t("prompt.upload").toUpperCase()}
               </button>
               <button
                 type="button"
