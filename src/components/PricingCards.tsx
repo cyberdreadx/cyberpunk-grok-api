@@ -142,7 +142,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
                   {tier.perCredit}/credit
                 </p>
                 <p className="mb-4 flex-1 font-mono-share text-[9px] leading-snug text-muted-foreground/75">
-                  Credits reset each billing cycle
+                  {t("pricing.creditsReset")}
                 </p>
 
                 {(() => {
