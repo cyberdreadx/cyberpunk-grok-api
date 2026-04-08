@@ -283,6 +283,34 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
           </>
         )}
 
+        {/* Language Selector */}
+        <div className="space-y-2">
+          <label className="font-orbitron text-[10px] tracking-wider text-muted-foreground flex items-center gap-1.5">
+            <Globe className="w-3 h-3" />
+            {t("settings.language").toUpperCase()}
+          </label>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+            {SUPPORTED_LANGUAGES.map((lang) => (
+              <button
+                key={lang.code}
+                type="button"
+                onClick={() => i18n.changeLanguage(lang.code)}
+                className={`
+                  p-2 border rounded text-center transition-all duration-200
+                  ${i18n.language?.startsWith(lang.code)
+                    ? "border-primary neon-border bg-primary/5"
+                    : "border-border bg-card/30 hover:border-primary/40"
+                  }
+                `}
+              >
+                <div className={`text-sm ${i18n.language?.startsWith(lang.code) ? "text-primary" : "text-foreground"}`}>
+                  {lang.flag} {lang.label}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* ADMIN ONLY - Immersion Control */}
         {isAdmin && onImmersionChange && (
           <div className="pt-6 border-t border-red-500/20 mt-6">
