@@ -1173,9 +1173,13 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
         }
       }
 
+      const token2 = localStorage.getItem("auth-token");
       const res = await fetch(`${shareBase}/share`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token2 ? { Authorization: `Bearer ${token2}` } : {}),
+        },
         body: JSON.stringify({
           mediaBase64,
           mediaType: result.type,
