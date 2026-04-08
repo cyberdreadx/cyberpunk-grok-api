@@ -480,7 +480,7 @@ export default function Admin() {
   return (
     <div className="min-h-screen bg-background w-full overflow-x-hidden">
       {/* Header */}
-      <header className="border-b border-border/30 bg-card/40 backdrop-blur-sm sticky top-0 z-20">
+      <header className="border-b border-border/30 bg-card/40 backdrop-blur-sm sticky top-0 z-20" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
         <div className="max-w-7xl mx-auto px-3 sm:px-4 py-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
             <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="gap-1 font-mono-share text-xs shrink-0 px-2">
