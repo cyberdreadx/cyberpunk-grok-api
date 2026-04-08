@@ -195,7 +195,7 @@ const Library: React.FC = () => {
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-border/40 bg-card/40">
               <Image className="w-3.5 h-3.5 text-primary/60" />
               <span className="font-mono-share text-[11px] text-foreground/70">{totalImages}</span>
-              <span className="font-mono-share text-[9px] text-muted-foreground/40">IMAGES</span>
+              <span className="font-mono-share text-[9px] text-muted-foreground/40">{t("library.images").toUpperCase()}</span>
             </div>
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-border/40 bg-card/40">
               <Film className="w-3.5 h-3.5 text-secondary/60" />
