@@ -25,6 +25,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
   onManageSubscription,
   onXrgePurchase,
 }) => {
+  const { t } = useTranslation();
   const [billingInterval, setBillingInterval] = useState<"month" | "year">("month");
 
   const activeTiers =
