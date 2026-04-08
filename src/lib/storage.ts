@@ -127,11 +127,72 @@ function blobToDataUrl(blob: Blob): Promise<string> {
  * Videos keep their original URL since they're served externally.
  */
 export async function saveResult(result: GrokResult): Promise<void> {
+  const record: StoredResult = {
+    id: result.id,
+    type: result.type,
+    revised_prompt: result.revised_prompt,
+    timestamp: result.timestamp,
+    blob: null,
+    url: "",
+    folderId: result.folderId || null,
+  };
+
+  if (result.url.startsWith("data:")) {
+    record.blob = dataUrlToBlob(result.url);
+    record.url = "";
+  } else if (result.url.startsWith("blob:")) {
+    // blob: URLs are session-scoped and die on page reload — fetch the blob
+    // and persist it so the video/image survives across sessions.
+    try {
+      const resp = await fetch(result.url);
+      if (resp.ok) {
+        record.blob = await resp.blob();
+      }
+    } catch { /* blob URL already revoked — store URL as fallback */ }
+    if (!record.blob || record.blob.size === 0) {
+      record.url = result.url;
+    }
+  } else if (result.url && result.type === "video" && result.url.startsWith("http")) {
+    // External video URLs (e.g. signed S3) expire — fetch and persist the blob
+    // so playback works long after the URL expires.
+    try {
+      const resp = await fetch(result.url);
+      if (resp.ok) {
+        const blob = await resp.blob();
+        if (blob.size > 0 && blob.size < 200 * 1024 * 1024) {
+          record.blob = blob;
+        } else {
+          record.url = result.url;
+        }
+      } else {
+        record.url = result.url;
+      }
+    } catch {
+      record.url = result.url;
+    }
+  } else {
+    record.url = result.url;
+  }
+
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, "readwrite");
-    const store = tx.objectStore(STORE_NAME);
+    tx.objectStore(STORE_NAME).put(record);
+    tx.oncomplete = () => { db.close(); resolve(); };
+    tx.onerror = () => { db.close(); reject(tx.error); };
+  });
+}
 
+/**
+ * Save multiple GrokResults at once (single transaction).
+ */
+export async function saveResults(results: GrokResult[]): Promise<void> {
+  if (results.length === 0) return;
+
+  // Pre-fetch any blob:/video URLs before opening the IDB transaction
+  // (IDB transactions auto-commit if they go idle during async work)
+  const records: StoredResult[] = [];
+  for (const result of results) {
     const record: StoredResult = {
       id: result.id,
       type: result.type,
@@ -143,51 +204,40 @@ export async function saveResult(result: GrokResult): Promise<void> {
     };
 
     if (result.url.startsWith("data:")) {
-      // Convert any data URL (image or video) to a Blob for compact storage
       record.blob = dataUrlToBlob(result.url);
-      record.url = "";
+    } else if (result.url.startsWith("blob:")) {
+      try {
+        const resp = await fetch(result.url);
+        if (resp.ok) record.blob = await resp.blob();
+      } catch { /* fallback */ }
+      if (!record.blob || record.blob.size === 0) record.url = result.url;
+    } else if (result.url && result.type === "video" && result.url.startsWith("http")) {
+      try {
+        const resp = await fetch(result.url);
+        if (resp.ok) {
+          const blob = await resp.blob();
+          if (blob.size > 0 && blob.size < 200 * 1024 * 1024) {
+            record.blob = blob;
+          } else {
+            record.url = result.url;
+          }
+        } else {
+          record.url = result.url;
+        }
+      } catch {
+        record.url = result.url;
+      }
     } else {
-      // External URLs — store the URL string directly
       record.url = result.url;
     }
+    records.push(record);
+  }
 
-    store.put(record);
-    tx.oncomplete = () => { db.close(); resolve(); };
-    tx.onerror = () => { db.close(); reject(tx.error); };
-  });
-}
-
-/**
- * Save multiple GrokResults at once (single transaction).
- */
-export async function saveResults(results: GrokResult[]): Promise<void> {
-  if (results.length === 0) return;
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, "readwrite");
     const store = tx.objectStore(STORE_NAME);
-
-    for (const result of results) {
-      const record: StoredResult = {
-        id: result.id,
-        type: result.type,
-        revised_prompt: result.revised_prompt,
-        timestamp: result.timestamp,
-        blob: null,
-        url: "",
-        folderId: result.folderId || null,
-      };
-
-      if (result.url.startsWith("data:")) {
-        record.blob = dataUrlToBlob(result.url);
-        record.url = "";
-      } else {
-        record.url = result.url;
-      }
-
-      store.put(record);
-    }
-
+    for (const record of records) store.put(record);
     tx.oncomplete = () => { db.close(); resolve(); };
     tx.onerror = () => { db.close(); reject(tx.error); };
   });
