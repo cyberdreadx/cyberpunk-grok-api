@@ -134,7 +134,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
                 <div className="mb-2 flex items-center gap-1">
                   <Zap className="h-3 w-3 shrink-0 text-secondary" />
                   <span className="font-mono-share text-sm font-bold text-secondary">
-                    {tier.creditsPerMonth} credits/mo
+                    {t("pricing.creditsPerMonth", { count: tier.creditsPerMonth })}
                   </span>
                 </div>
 
