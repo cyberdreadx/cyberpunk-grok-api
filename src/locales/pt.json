@@ -119,5 +119,23 @@
     "back": "Voltar",
     "next": "Próximo",
     "retry": "Tentar novamente"
+  },
+  "ageGate": {
+    "title": "VERIFICAÇÃO DE LINK NEURAL",
+    "subtitle": "// SETOR_RESTRITO // AUTH_NECESSÁRIA //",
+    "description": "Este setor da rede é restrito a operadores com {age} anos ou mais. Ao continuar, você confirma ter completado pelo menos 18 rotações solares.",
+    "warning": "Menores encontrados nesta zona serão escoltados por drones de segurança. Sem exceções. Sem recursos.",
+    "ageCheck": "Confirmo que tenho {age} anos ou mais",
+    "tosCheck": "Li e concordo com os",
+    "tosLink": "Termos de Serviço",
+    "privacyCheck": "Li e reconheço a",
+    "privacyLink": "Política de Privacidade",
+    "confirm": "CONECTAR",
+    "confirmDisabled": "COMPLETE TODAS AS VERIFICAÇÕES",
+    "decline": "ME TIRE DAQUI",
+    "terminalAge": "verif_idade --estrito --sem-bypass",
+    "terminalTos": "aceitação_tos --necessária",
+    "terminalReady": "verificações_ok -- pronto_para_conectar",
+    "terminalWaiting": "aguardando_confirmação..."
   }
 }

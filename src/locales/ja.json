@@ -119,5 +119,23 @@
     "back": "戻る",
     "next": "次へ",
     "retry": "再試行"
+  },
+  "ageGate": {
+    "title": "ニューラルリンク認証",
+    "subtitle": "// セクター制限 // 認証必須 //",
+    "description": "このネットセクターは{age}歳以上のオペレーターに制限されています。続行することで、18回以上の太陽周回を完了していることを確認します。",
+    "warning": "未成年者はセキュリティドローンによって退出させられます。例外なし。異議なし。",
+    "ageCheck": "{age}歳以上であることを確認します",
+    "tosCheck": "以下を読み、同意しました：",
+    "tosLink": "利用規約",
+    "privacyCheck": "以下を読み、承認しました：",
+    "privacyLink": "プライバシーポリシー",
+    "confirm": "接続する",
+    "confirmDisabled": "すべての確認を完了してください",
+    "decline": "ここから出る",
+    "terminalAge": "年齢確認 --厳格 --バイパス不可",
+    "terminalTos": "利用規約同意 --必須",
+    "terminalReady": "全確認完了 -- 接続準備完了",
+    "terminalWaiting": "確認待機中..."
   }
 }

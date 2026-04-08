@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { SUPPORTED_LANGUAGES } from "@/lib/i18n";
-import { Globe } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -12,13 +11,15 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
-import { ShieldAlert, Shield, Eye, ChevronDown } from "lucide-react";
+import { ShieldAlert, Shield, Eye, ChevronDown, Globe } from "lucide-react";
 import LegalDialog from "@/components/LegalDialog";
+
+const AGE = "18";
 
 const AGE_VERIFIED_KEY = "age-verified";
 
 export default function AgeGateDialog() {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [open, setOpen] = useState(false);
   const [ageChecked, setAgeChecked] = useState(false);
   const [tosChecked, setTosChecked] = useState(false);
@@ -92,22 +93,22 @@ export default function AgeGateDialog() {
               </div>
             </div>
             <AlertDialogTitle className="font-orbitron text-lg tracking-wider text-secondary text-center">
-              NEURAL LINK VERIFICATION
+              {t("ageGate.title")}
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-3 text-center" asChild>
               <div>
                 <p className="font-mono-share text-[10px] text-primary/50 animate-flicker">
-                  {"// SECTOR_RESTRICTED // AUTH_REQUIRED //"}
+                  {t("ageGate.subtitle")}
                 </p>
                 <p className="font-rajdhani text-sm text-foreground/70 leading-relaxed">
-                  This sector of the net is restricted to operatives aged{" "}
-                  <span className="text-secondary font-bold">18 cycles or older</span>.
-                  By proceeding, you confirm your biological chassis has completed
-                  at least 18 solar rotations around the nearest star.
+                  {t("ageGate.description", { age: AGE }).split(AGE).map((part, i, arr) =>
+                    i < arr.length - 1 ? (
+                      <span key={i}>{part}<span className="text-secondary font-bold">{AGE}</span></span>
+                    ) : <span key={i}>{part}</span>
+                  )}
                 </p>
                 <p className="font-rajdhani text-sm text-foreground/50 leading-relaxed">
-                  Minors caught in this zone will be escorted out by corporate
-                  security drones. No exceptions. No appeals.
+                  {t("ageGate.warning")}
                 </p>
 
                 {/* Checkboxes */}
@@ -120,7 +121,11 @@ export default function AgeGateDialog() {
                       className="mt-0.5 w-4 h-4 rounded border-2 border-secondary/40 bg-background accent-secondary cursor-pointer"
                     />
                     <span className="font-mono-share text-[11px] text-muted-foreground group-hover:text-foreground/80 transition-colors leading-snug">
-                      I confirm I am <span className="text-secondary font-bold">18 years or older</span>
+                      {t("ageGate.ageCheck", { age: AGE }).split(AGE).map((part, i, arr) =>
+                        i < arr.length - 1 ? (
+                          <span key={i}>{part}<span className="text-secondary font-bold">{AGE}</span></span>
+                        ) : <span key={i}>{part}</span>
+                      )}
                     </span>
                   </label>
 
@@ -132,14 +137,14 @@ export default function AgeGateDialog() {
                       className="mt-0.5 w-4 h-4 rounded border-2 border-primary/40 bg-background accent-primary cursor-pointer"
                     />
                     <span className="font-mono-share text-[11px] text-muted-foreground group-hover:text-foreground/80 transition-colors leading-snug">
-                      I have read and agree to the{" "}
+                      {t("ageGate.tosCheck")}{" "}
                       <button
                         type="button"
                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); setTosOpen(true); }}
                         className="text-primary underline underline-offset-2 hover:text-primary/80 inline-flex items-center gap-0.5"
                       >
                         <Shield className="w-3 h-3" />
-                        Terms of Service
+                        {t("ageGate.tosLink")}
                       </button>
                     </span>
                   </label>
@@ -152,23 +157,23 @@ export default function AgeGateDialog() {
                       className="mt-0.5 w-4 h-4 rounded border-2 border-secondary/40 bg-background accent-secondary cursor-pointer"
                     />
                     <span className="font-mono-share text-[11px] text-muted-foreground group-hover:text-foreground/80 transition-colors leading-snug">
-                      I have read and acknowledge the{" "}
+                      {t("ageGate.privacyCheck")}{" "}
                       <button
                         type="button"
                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); setPrivacyOpen(true); }}
                         className="text-secondary underline underline-offset-2 hover:text-secondary/80 inline-flex items-center gap-0.5"
                       >
                         <Eye className="w-3 h-3" />
-                        Privacy Policy
+                        {t("ageGate.privacyLink")}
                       </button>
                     </span>
                   </label>
                 </div>
 
                 <div className="font-mono-share text-[9px] text-muted-foreground/30 border border-border/30 rounded p-2 bg-background/50 mt-2">
-                  <div>{">"} age_check --strict --no-bypass</div>
-                  <div>{">"} tos_acceptance --required</div>
-                  <div>{">"} {allChecked ? "all_checks_passed -- ready_to_jack_in" : "awaiting_confirmation..."}</div>
+                  <div>{">"} {t("ageGate.terminalAge")}</div>
+                  <div>{">"} {t("ageGate.terminalTos")}</div>
+                  <div>{">"} {allChecked ? t("ageGate.terminalReady") : t("ageGate.terminalWaiting")}</div>
                 </div>
               </div>
             </AlertDialogDescription>
@@ -183,13 +188,13 @@ export default function AgeGateDialog() {
                   : "bg-muted/20 border border-border/30 text-muted-foreground/30 cursor-not-allowed"
               }`}
             >
-              {allChecked ? "JACK IN" : "COMPLETE ALL CHECKS TO PROCEED"}
+              {allChecked ? t("ageGate.confirm") : t("ageGate.confirmDisabled")}
             </AlertDialogAction>
             <AlertDialogCancel
               onClick={handleDecline}
               className="w-full bg-destructive/10 border border-destructive/30 text-destructive hover:bg-destructive/20 font-orbitron text-xs tracking-wider"
             >
-              GET ME OUT OF HERE
+              {t("ageGate.decline")}
             </AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
