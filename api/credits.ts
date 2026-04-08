@@ -16,7 +16,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const sql = getDb();
     const rows = await sql`
-      SELECT daily_credits, sub_credits, pack_credits, subscription_tier, subscription_renews_at, subscription_cancel_at
+      SELECT daily_credits, sub_credits, pack_credits, subscription_tier, subscription_renews_at, subscription_cancel_at, lora_unlocked
       FROM users
       WHERE id = ${auth.userId}
     `;

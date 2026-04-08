@@ -22,6 +22,7 @@ export function useCredits(user: AuthUser | null) {
   const [subscriptionTier, setSubscriptionTier] = useState<string | null>(null);
   const [subscriptionRenewsAt, setSubscriptionRenewsAt] = useState<string | null>(null);
   const [subscriptionCancelAt, setSubscriptionCancelAt] = useState<string | null>(null);
+  const [loraUnlocked, setLoraUnlocked] = useState(false);
   const [loading, setLoading] = useState(false);
   const [purchasing, setPurchasing] = useState(false);
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
@@ -37,6 +38,7 @@ export function useCredits(user: AuthUser | null) {
       setSubscriptionTier(null);
       setSubscriptionRenewsAt(null);
       setSubscriptionCancelAt(null);
+      setLoraUnlocked(false);
       return;
     }
     setLoading(true);
@@ -48,6 +50,7 @@ export function useCredits(user: AuthUser | null) {
       setSubscriptionTier(data.subscription_tier ?? null);
       setSubscriptionRenewsAt(data.subscription_renews_at ?? null);
       setSubscriptionCancelAt(data.subscription_cancel_at ?? null);
+      setLoraUnlocked(data.lora_unlocked ?? false);
     } catch (err: any) {
       console.warn("[useCredits] Error fetching:", err.message);
     } finally {
@@ -107,6 +110,30 @@ export function useCredits(user: AuthUser | null) {
     }
   }, [user]);
 
+  // Purchase LoRA unlock ($30 one-time)
+  const purchaseLoraUnlock = useCallback(async () => {
+    if (!user) throw new Error("Not authenticated");
+    setPurchasing(true);
+    setPurchaseError(null);
+    try {
+      const data = await apiFetch("/checkout", {
+        method: "POST",
+        body: { action: "lora_unlock" },
+      });
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error("No checkout URL returned");
+      }
+    } catch (err: any) {
+      const msg = err.message || "Purchase failed. Please try again.";
+      setPurchaseError(msg);
+      throw err;
+    } finally {
+      setPurchasing(false);
+    }
+  }, [user]);
+
   // Open Stripe Customer Portal
   const manageSubscription = useCallback(async () => {
     if (!user) throw new Error("Not authenticated");
@@ -159,6 +186,7 @@ export function useCredits(user: AuthUser | null) {
     subscriptionTier,
     subscriptionRenewsAt,
     subscriptionCancelAt,
+    loraUnlocked,
     hasSubscription: !!subscriptionTier,
     isCancelling: !!subscriptionTier && !!subscriptionCancelAt,
     loading,
@@ -170,6 +198,7 @@ export function useCredits(user: AuthUser | null) {
     enabled: backendEnabled && !!user,
     hasEnoughCredits: (cost: number) => totalCredits >= cost,
     purchaseCredits,
+    purchaseLoraUnlock,
     subscribeToPlan,
     manageSubscription,
     deductCreditsLocally,

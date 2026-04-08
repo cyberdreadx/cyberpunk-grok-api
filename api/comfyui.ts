@@ -2130,8 +2130,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           ? editLorasEnv.split(",").map((m) => m.trim()).filter(Boolean)
           : [];
 
-        // Check if user is an XRGE holder (verified purchase OR bank deposit)
+        // Check if user has LoRA access (XRGE holder OR $30 Stripe unlock)
         let xrgeHolder = isAdminUser;
+        let loraUnlocked = isAdminUser;
         if (!xrgeHolder) {
           try {
             const sql = getDb();
@@ -2139,7 +2140,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               SELECT 1 FROM xrge_orders WHERE user_id = ${auth.userId} AND status = 'verified' LIMIT 1
             `;
             if (rows.length === 0) {
-              // Also check bank deposits
               const bankRows = await sql`
                 SELECT 1 FROM xrge_bank_txns WHERE user_id = ${auth.userId} AND type = 'deposit' LIMIT 1
               `;
@@ -2149,8 +2149,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
           } catch { /* If DB fails, default to non-holder */ }
         }
+        if (!loraUnlocked) {
+          try {
+            const sql = getDb();
+            const [row] = await sql`SELECT lora_unlocked FROM users WHERE id = ${auth.userId}`;
+            loraUnlocked = !!row?.lora_unlocked;
+          } catch { /* default false */ }
+        }
 
-        return res.status(200).json({ checkpoints, loras, videoLoras, editLoras, xrgeHolder });
+        const hasLoraAccess = xrgeHolder || loraUnlocked;
+        return res.status(200).json({ checkpoints, loras, videoLoras, editLoras, xrgeHolder: hasLoraAccess, loraUnlocked });
       } else {
         const resp = await fetch(
           `${backend.comfyUrl}/object_info/CheckpointLoaderSimple`,

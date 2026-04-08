@@ -140,6 +140,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json({ received: true, pending: true });
       }
 
+      // ── LoRA unlock (one-time purchase) ──
+      if (session.metadata?.type === "lora_unlock") {
+        const userId = session.client_reference_id || session.metadata?.user_id;
+        if (userId) {
+          await sql`UPDATE users SET lora_unlocked = true, updated_at = now() WHERE id = ${userId}::uuid`;
+          await sql`
+            INSERT INTO transactions (user_id, credits, amount_cents, stripe_session_id, package, type, payment_method)
+            VALUES (${userId}::uuid, 0, ${session.amount_total || 0}, ${session.id}, 'lora_unlock', 'pack', ${await detectPaymentMethod(stripe, session)})
+            ON CONFLICT DO NOTHING
+          `;
+          console.log(`[webhook] LoRA unlock granted for ${userId}`);
+        }
+        return res.status(200).json({ received: true });
+      }
+
       if (session.mode === "subscription") {
 
         // NOTE: Do NOT grant credits or log transactions here!

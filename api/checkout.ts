@@ -56,6 +56,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const body = req.body || {};
 
+    // ── LoRA Unlock: one-time $30 payment ──
+    if (body.action === "lora_unlock") {
+      const priceId = process.env.STRIPE_PRICE_LORA_UNLOCK;
+      if (!priceId) return res.status(500).json({ error: "LoRA unlock price not configured" });
+
+      const [already] = await sql`SELECT lora_unlocked FROM users WHERE id = ${auth.userId}`;
+      if (already?.lora_unlocked) {
+        return res.status(400).json({ error: "LoRAs already unlocked" });
+      }
+
+      const session = await stripe.checkout.sessions.create({
+        mode: "payment",
+        line_items: [{ price: priceId, quantity: 1 }],
+        client_reference_id: auth.userId,
+        metadata: { user_id: auth.userId, type: "lora_unlock" },
+        success_url: `${SITE_URL}?checkout=success&lora=unlocked`,
+        cancel_url: `${SITE_URL}?checkout=cancelled`,
+      });
+      return res.status(200).json({ url: session.url });
+    }
+
     // ── Portal: redirect to Stripe Customer Portal ──
     if (body.action === "portal") {
       const rows = await sql`
