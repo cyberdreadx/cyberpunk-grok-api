@@ -184,7 +184,7 @@ const Library: React.FC = () => {
                   glitchIntensity="low"
                 />
                 <p className="font-mono-share text-[10px] text-muted-foreground/50 mt-0.5">
-                  <span className="text-primary/30">$</span> ls -la ~/output/ — {totalImages + totalVideos} assets indexed
+                  <span className="text-primary/30">$</span> ls -la ~/output/ — {t("library.assetsIndexed", { count: totalImages + totalVideos })}
                 </p>
               </div>
             </div>
