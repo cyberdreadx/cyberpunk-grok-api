@@ -1123,8 +1123,18 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
     }
   }, []);
 
+  // Cache: resultId → shareUrl (avoids duplicate uploads)
+  const shareCacheRef = useRef<Map<string, string>>(new Map());
+
   /** Upload media to Blob and copy/share the link */
   const handleShare = useCallback(async (result: GrokResult) => {
+    // Return cached link if already shared
+    const cached = shareCacheRef.current.get(result.id);
+    if (cached) {
+      await copyOrShareLink({ shareUrl: cached }, result);
+      return;
+    }
+
     setSharingId(result.id);
     try {
       const shareBase = (import.meta.env.VITE_API_URL as string) || "/api";
@@ -1150,6 +1160,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
           throw new Error(errData.error || `Upload failed (${res.status})`);
         }
         const data = await res.json();
+        shareCacheRef.current.set(result.id, data.shareUrl);
         await copyOrShareLink(data, result);
         return;
       }
@@ -1191,6 +1202,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
         throw new Error(errData.error || `Upload failed (${res.status})`);
       }
       const data = await res.json();
+      shareCacheRef.current.set(result.id, data.shareUrl);
       await copyOrShareLink(data, result);
     } catch (err: any) {
       console.error("[share] error:", err);
