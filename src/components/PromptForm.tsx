@@ -693,7 +693,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
                 {/* Low-credits warning */}
                 {!isLoading && isLowCredits && (
                   <div className="flex items-center gap-1.5 text-[9px] font-mono-share text-destructive/80 bg-destructive/10 border border-destructive/25 rounded px-2 py-1 w-full justify-between">
-                    <span>⚠ Need {creditCost! - totalCredits!} more cr</span>
+                    <span>⚠ {t("prompt.needMore", { count: creditCost! - totalCredits! })}</span>
                     {onOpenStore && (
                       <button
                         type="button"
