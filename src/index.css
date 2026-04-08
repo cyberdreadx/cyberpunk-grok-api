@@ -485,3 +485,25 @@
   .blur-3xl { filter: blur(24px) !important; }
   .animate-hud-scan { animation: none !important; }
 }
+
+/* RTL support */
+[dir="rtl"] {
+  direction: rtl;
+  text-align: right;
+}
+
+[dir="rtl"] .flex-row { flex-direction: row-reverse; }
+[dir="rtl"] .space-x-1 > :not(:first-child),
+[dir="rtl"] .space-x-2 > :not(:first-child),
+[dir="rtl"] .space-x-3 > :not(:first-child),
+[dir="rtl"] .space-x-4 > :not(:first-child) {
+  margin-right: var(--tw-space-x-reverse-amt, 0);
+  margin-left: 0;
+}
+
+[dir="rtl"] .ml-auto { margin-left: 0; margin-right: auto; }
+[dir="rtl"] .mr-auto { margin-right: 0; margin-left: auto; }
+[dir="rtl"] .pl-8 { padding-left: 0; padding-right: 2rem; }
+[dir="rtl"] .left-2 { left: auto; right: 0.5rem; }
+[dir="rtl"] .text-left { text-align: right; }
+[dir="rtl"] .text-right { text-align: left; }
