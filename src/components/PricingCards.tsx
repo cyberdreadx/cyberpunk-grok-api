@@ -185,7 +185,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
                         ) : (
                           <>
                             <ArrowUp className="w-3 h-3" />
-                            UPGRADE
+                            {t("pricing.upgrade")}
                           </>
                         )}
                       </Button>
