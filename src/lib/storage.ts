@@ -146,11 +146,18 @@ export async function saveResult(result: GrokResult): Promise<void> {
     try {
       const resp = await fetch(result.url);
       if (resp.ok) {
-        record.blob = await resp.blob();
+        const blob = await resp.blob();
+        if (blob.size > 0) {
+          record.blob = blob;
+        }
       }
-    } catch { /* blob URL already revoked — store URL as fallback */ }
-    if (!record.blob || record.blob.size === 0) {
-      record.url = result.url;
+    } catch { /* blob URL already revoked */ }
+    // Never store a raw blob: URL — it won't survive page reload.
+    // If we failed to persist the blob, store nothing (the result will be lost
+    // rather than broken — better than sending a dead URL as fake base64 later).
+    if (!record.blob) {
+      console.warn(`[storage] Failed to persist blob: URL for ${result.id}, result may not survive reload`);
+      record.url = "";
     }
   } else if (result.url && result.type === "video" && result.url.startsWith("http")) {
     // External video URLs (e.g. signed S3) expire — fetch and persist the blob
@@ -208,9 +215,15 @@ export async function saveResults(results: GrokResult[]): Promise<void> {
     } else if (result.url.startsWith("blob:")) {
       try {
         const resp = await fetch(result.url);
-        if (resp.ok) record.blob = await resp.blob();
-      } catch { /* fallback */ }
-      if (!record.blob || record.blob.size === 0) record.url = result.url;
+        if (resp.ok) {
+          const blob = await resp.blob();
+          if (blob.size > 0) record.blob = blob;
+        }
+      } catch { /* blob already revoked */ }
+      if (!record.blob) {
+        console.warn(`[storage] Failed to persist blob: URL for ${result.id}`);
+        record.url = "";
+      }
     } else if (result.url && result.type === "video" && result.url.startsWith("http")) {
       try {
         const resp = await fetch(result.url);

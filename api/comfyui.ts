@@ -22,7 +22,8 @@ import { checkRateLimit } from "./_lib/ratelimit";
 
 // ── Strip data URI prefix and fix base64 padding ───────────────────────
 function cleanBase64(b64: string): string {
-  let clean = b64.replace(/^data:[^;]+;base64,/, "").replace(/\s/g, "");
+  // Handle both data:image/png;base64,... and data:;base64,... (empty MIME)
+  let clean = b64.replace(/^data:[^,]*,/, "").replace(/\s/g, "");
   const pad = clean.length % 4;
   if (pad) clean += "=".repeat(4 - pad);
   return clean;
@@ -2377,8 +2378,13 @@ Rules:
       let imageFilename2: string | undefined;
 
       if (needsImage) {
-        if (!imageBase64 && !clientFilename) {
-          return res.status(400).json({ error: `Image is required for ${workflowType}` });
+        if (!imageBase64) {
+          return res.status(400).json({ error: `Image data (imageBase64) is required for ${workflowType}` });
+        }
+        // Reject non-base64 inputs (e.g. blob: or http: URLs sent by mistake)
+        if (typeof imageBase64 === "string" && /^(blob:|https?:)/.test(imageBase64)) {
+          console.error(`[comfyui] imageBase64 is a URL, not base64 data: ${imageBase64.slice(0, 80)}`);
+          return res.status(400).json({ error: "Image data is invalid — received a URL instead of base64. Please re-select the image." });
         }
 
         if (backend.mode === "runpod") {
@@ -2386,7 +2392,13 @@ Rules:
           if (imageBase64_2 || clientFilename2) {
             imageFilename2 = clientFilename2 || `input_${workflowType}_2_${Date.now()}.jpg`;
           }
-          console.log(`[comfyui] images: primary=${imageFilename} (${imageBase64 ? Math.round(imageBase64.length / 1024) + 'KB' : 'none'}), second=${imageFilename2 || 'none'} (${imageBase64_2 ? Math.round(imageBase64_2.length / 1024) + 'KB' : 'none'})`);
+          // Validate cleaned base64 is substantial enough to be a real image (>1KB)
+          const cleanedLen = cleanBase64(imageBase64).length;
+          if (cleanedLen < 1000) {
+            console.error(`[comfyui] imageBase64 too small after cleaning: ${cleanedLen} chars`);
+            return res.status(400).json({ error: "Image data appears corrupt or empty. Please re-select the image." });
+          }
+          console.log(`[comfyui] images: primary=${imageFilename} (${Math.round(cleanedLen / 1024)}KB b64), second=${imageFilename2 || 'none'} (${imageBase64_2 ? Math.round(imageBase64_2.length / 1024) + 'KB' : 'none'})`);
         } else {
           if (imageBase64) {
             imageFilename = await uploadImageToLocal(

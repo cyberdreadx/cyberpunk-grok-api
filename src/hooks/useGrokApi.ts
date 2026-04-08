@@ -272,6 +272,11 @@ export async function urlToBase64(url: string): Promise<string> {
       );
     });
   } catch {
+    // If conversion fails and the original is a blob:/http: URL (not data:),
+    // don't return it raw — it would be sent as fake "base64" and corrupt the file.
+    if (url.startsWith("blob:") || url.startsWith("http")) {
+      throw new Error("Failed to convert image to base64. The image may be expired — please re-upload or re-generate it.");
+    }
     return url;
   }
 }
