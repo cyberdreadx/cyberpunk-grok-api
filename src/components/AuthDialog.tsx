@@ -198,14 +198,14 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
                   <div className="flex items-center gap-2 bg-primary/10 border border-primary/25 rounded-md px-3 py-2">
                     <span className="text-base">⚡</span>
                     <div>
-                      <p className="font-orbitron text-[10px] tracking-wider text-primary">10 FREE CREDITS EVERY DAY</p>
+                      <p className="font-orbitron text-[10px] tracking-wider text-primary">{t("auth.freeCreditsDaily")}</p>
                       <p className="font-mono-share text-[10px] text-muted-foreground/70 leading-snug">
-                        Free on login — no card needed. Generate images &amp; video daily.
+                        {t("auth.freeOnLogin")}
                       </p>
                     </div>
                   </div>
                   <p className="font-rajdhani text-muted-foreground text-xs">
-                    Sign in to use credits, or use your own API key for free.
+                    {t("auth.signInPrompt")}
                   </p>
                 </div>
               </DialogDescription>
