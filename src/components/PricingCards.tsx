@@ -106,7 +106,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
                 )}
                 {isActive && (
                   <div className="border-b border-primary/40 bg-primary/20 py-1.5 text-center font-orbitron text-[8px] tracking-[0.18em] text-primary">
-                    ACTIVE PLAN
+                    {t("pricing.activePlan")}
                   </div>
                 )}
 
