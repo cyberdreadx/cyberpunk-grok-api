@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { SUPPORTED_LANGUAGES } from "@/lib/i18n";
-import { Globe } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogContent,
