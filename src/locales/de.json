@@ -23,7 +23,22 @@
     "generate": "Generieren",
     "generating": "Wird generiert…",
     "history": "Prompt-Verlauf",
-    "suggestions": "Vorschläge"
+    "suggestions": "Vorschläge",
+    "placeholderEdit": "Beschreiben Sie die Änderungen...",
+    "placeholderVideo": "Beschreiben Sie die Videoszene...",
+    "placeholderAnimate": "Beschreiben Sie die Animation / Bewegung...",
+    "upload": "Hochladen",
+    "url": "URL",
+    "imgRequired": "Bild erforderlich",
+    "imgLoaded": "Bild geladen",
+    "vidRequired": "Video erforderlich",
+    "vidLoaded": "Video geladen",
+    "topUp": "Aufladen",
+    "needMore": "{{count}} cr mehr nötig",
+    "priorityQueue": "Prioritätswarteschlange",
+    "subscribeFaster": "Abonnieren für schnellere Renders",
+    "uploadClick": "Klicken zum Hochladen oder Einfügen (Strg+V)",
+    "uploadVideo": "Klicken zum Hochladen"
   },
   "settings": {
     "title": "Einstellungen",
@@ -44,7 +59,16 @@
     "password": "Passwort",
     "forgotPassword": "Passwort vergessen?",
     "verifyEmail": "E-Mail bestätigen",
-    "deleteAccount": "Konto löschen"
+    "deleteAccount": "Konto löschen",
+    "neuralAuth": "NEURAL_AUTH",
+    "freeCreditsDaily": "10 KOSTENLOSE CREDITS TÄGLICH",
+    "freeOnLogin": "Kostenlos bei Anmeldung — keine Karte nötig.",
+    "signInPrompt": "Anmelden um Credits zu nutzen, oder eigenen API-Schlüssel verwenden.",
+    "authenticate": "Authentifizieren",
+    "createAccount": "Konto erstellen",
+    "register": "Registrieren",
+    "noAccountNeeded": "Kein Konto nötig im BYOK-Modus.",
+    "login": "Anmelden"
   },
   "credits": {
     "credits": "Credits",
@@ -74,7 +98,9 @@
     "empty": "Ihre Bibliothek ist leer",
     "clearAll": "Alles löschen",
     "folders": "Ordner",
-    "trash": "Papierkorb"
+    "trash": "Papierkorb",
+    "assetsIndexed": "{{count}} Dateien indexiert",
+    "top": "Oben"
   },
   "simple": {
     "editImage": "Bild bearbeiten",

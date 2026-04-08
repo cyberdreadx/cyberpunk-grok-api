@@ -23,7 +23,22 @@
     "generate": "Generar",
     "generating": "Generando…",
     "history": "Historial de prompts",
-    "suggestions": "Sugerencias"
+    "suggestions": "Sugerencias",
+    "placeholderEdit": "Describe las modificaciones a aplicar...",
+    "placeholderVideo": "Describe la escena de vídeo a renderizar...",
+    "placeholderAnimate": "Describe la animación / movimiento a aplicar...",
+    "upload": "Subir",
+    "url": "URL",
+    "imgRequired": "Imagen requerida",
+    "imgLoaded": "Imagen cargada",
+    "vidRequired": "Vídeo requerido",
+    "vidLoaded": "Vídeo cargado",
+    "topUp": "Recargar",
+    "needMore": "Necesitas {{count}} cr más",
+    "priorityQueue": "Cola prioritaria",
+    "subscribeFaster": "Suscríbete para renders más rápidos",
+    "uploadClick": "Clic para subir o pegar (Ctrl+V)",
+    "uploadVideo": "Clic para subir vídeo"
   },
   "settings": {
     "title": "Ajustes",
@@ -44,7 +59,16 @@
     "password": "Contraseña",
     "forgotPassword": "¿Olvidaste tu contraseña?",
     "verifyEmail": "Verificar correo",
-    "deleteAccount": "Eliminar cuenta"
+    "deleteAccount": "Eliminar cuenta",
+    "neuralAuth": "NEURAL_AUTH",
+    "freeCreditsDaily": "10 CRÉDITOS GRATIS AL DÍA",
+    "freeOnLogin": "Gratis al iniciar sesión — sin tarjeta. Genera imágenes y vídeos diariamente.",
+    "signInPrompt": "Inicia sesión para usar créditos, o usa tu propia clave API gratis.",
+    "authenticate": "Autenticar",
+    "createAccount": "Crear Cuenta",
+    "register": "Registrarse",
+    "noAccountNeeded": "No necesitas cuenta para modo BYOK — solo ingresa tu clave API de xAI.",
+    "login": "Iniciar sesión"
   },
   "credits": {
     "credits": "Créditos",
@@ -74,7 +98,9 @@
     "empty": "Tu biblioteca está vacía",
     "clearAll": "Borrar todo",
     "folders": "Carpetas",
-    "trash": "Papelera"
+    "trash": "Papelera",
+    "assetsIndexed": "{{count}} activos indexados",
+    "top": "Arriba"
   },
   "simple": {
     "editImage": "Editar Imagen",

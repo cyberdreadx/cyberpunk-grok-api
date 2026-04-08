@@ -23,7 +23,22 @@
     "generate": "توليد",
     "generating": "جارٍ التوليد…",
     "history": "سجل الأوامر",
-    "suggestions": "اقتراحات"
+    "suggestions": "اقتراحات",
+    "placeholderEdit": "صف التعديلات المراد تطبيقها...",
+    "placeholderVideo": "صف مشهد الفيديو المراد إنشاؤه...",
+    "placeholderAnimate": "صف الحركة / الأنيميشن المراد تطبيقه...",
+    "upload": "تحميل",
+    "url": "رابط",
+    "imgRequired": "صورة مطلوبة",
+    "imgLoaded": "تم تحميل الصورة",
+    "vidRequired": "فيديو مطلوب",
+    "vidLoaded": "تم تحميل الفيديو",
+    "topUp": "شحن الرصيد",
+    "needMore": "تحتاج {{count}} رصيد إضافي",
+    "priorityQueue": "أولوية في الطابور",
+    "subscribeFaster": "اشترك لعرض أسرع",
+    "uploadClick": "انقر للتحميل أو اللصق",
+    "uploadVideo": "انقر لتحميل فيديو"
   },
   "settings": {
     "title": "الإعدادات",
@@ -44,7 +59,16 @@
     "password": "كلمة المرور",
     "forgotPassword": "نسيت كلمة المرور؟",
     "verifyEmail": "تأكيد البريد",
-    "deleteAccount": "حذف الحساب"
+    "deleteAccount": "حذف الحساب",
+    "neuralAuth": "NEURAL_AUTH",
+    "freeCreditsDaily": "10 أرصدة مجانية يومياً",
+    "freeOnLogin": "مجاناً عند تسجيل الدخول — بدون بطاقة",
+    "signInPrompt": "سجل دخول لاستخدام الأرصدة، أو استخدم مفتاح API الخاص بك.",
+    "authenticate": "مصادقة",
+    "createAccount": "إنشاء حساب",
+    "register": "تسجيل",
+    "noAccountNeeded": "لا حاجة لحساب في وضع BYOK.",
+    "login": "تسجيل الدخول"
   },
   "credits": {
     "credits": "أرصدة",
@@ -74,7 +98,9 @@
     "empty": "المكتبة فارغة",
     "clearAll": "مسح الكل",
     "folders": "مجلدات",
-    "trash": "سلة المحذوفات"
+    "trash": "سلة المحذوفات",
+    "assetsIndexed": "{{count}} ملف مفهرس",
+    "top": "الأعلى"
   },
   "simple": {
     "editImage": "تعديل الصورة",

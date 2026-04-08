@@ -23,7 +23,22 @@
     "generate": "生成",
     "generating": "生成中…",
     "history": "提示词历史",
-    "suggestions": "建议"
+    "suggestions": "建议",
+    "placeholderEdit": "描述要应用的修改...",
+    "placeholderVideo": "描述要渲染的视频场景...",
+    "placeholderAnimate": "描述要应用的动画/运动...",
+    "upload": "上传",
+    "url": "URL",
+    "imgRequired": "需要图片",
+    "imgLoaded": "图片已加载",
+    "vidRequired": "需要视频",
+    "vidLoaded": "视频已加载",
+    "topUp": "充值",
+    "needMore": "还需 {{count}} cr",
+    "priorityQueue": "优先队列",
+    "subscribeFaster": "订阅以获得更快渲染",
+    "uploadClick": "点击上传或粘贴 (Ctrl+V)",
+    "uploadVideo": "点击上传视频"
   },
   "settings": {
     "title": "设置",
@@ -44,7 +59,16 @@
     "password": "密码",
     "forgotPassword": "忘记密码？",
     "verifyEmail": "验证邮箱",
-    "deleteAccount": "删除账户"
+    "deleteAccount": "删除账户",
+    "neuralAuth": "NEURAL_AUTH",
+    "freeCreditsDaily": "每天10积分免费",
+    "freeOnLogin": "登录即免费 — 无需信用卡",
+    "signInPrompt": "登录使用积分，或使用自己的API密钥。",
+    "authenticate": "认证",
+    "createAccount": "创建账户",
+    "register": "注册",
+    "noAccountNeeded": "BYOK模式无需账户。",
+    "login": "登录"
   },
   "credits": {
     "credits": "积分",
@@ -74,7 +98,9 @@
     "empty": "素材库为空",
     "clearAll": "全部清除",
     "folders": "文件夹",
-    "trash": "回收站"
+    "trash": "回收站",
+    "assetsIndexed": "{{count}} 个资源已索引",
+    "top": "顶部"
   },
   "simple": {
     "editImage": "编辑图片",
