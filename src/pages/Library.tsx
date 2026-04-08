@@ -289,7 +289,7 @@ const Library: React.FC = () => {
         style={{ bottom: 'calc(56px + env(safe-area-inset-bottom, 0px) + 12px)' }}
       >
         <ChevronsUp className="w-3.5 h-3.5" />
-        TOP
+        {t("library.top").toUpperCase()}
       </button>
     </CyberLayout>
   );
