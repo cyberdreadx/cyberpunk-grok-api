@@ -102,7 +102,7 @@ export default function ShareView() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="border-b border-border/40 bg-card/50 backdrop-blur-sm">
+      <div className="border-b border-border/40 bg-card/50 backdrop-blur-sm" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
           <Link to={homeUrl} className="flex items-center gap-2 group">
             <div className="font-orbitron text-sm tracking-wider text-primary group-hover:text-primary/80 transition-colors">
