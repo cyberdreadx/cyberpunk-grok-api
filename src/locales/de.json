@@ -119,5 +119,23 @@
     "back": "Zurück",
     "next": "Weiter",
     "retry": "Erneut versuchen"
+  },
+  "ageGate": {
+    "title": "NEURALE VERBINDUNGSPRÜFUNG",
+    "subtitle": "// SEKTOR_BESCHRÄNKT // AUTH_ERFORDERLICH //",
+    "description": "Dieser Netzsektor ist auf Operateure ab {age} Jahren beschränkt. Durch Fortfahren bestätigen Sie mindestens 18 Sonnenumläufe.",
+    "warning": "Minderjährige werden von Sicherheitsdrohnen eskortiert. Keine Ausnahmen. Keine Einsprüche.",
+    "ageCheck": "Ich bestätige, dass ich {age} Jahre oder älter bin",
+    "tosCheck": "Ich habe die folgenden gelesen und stimme zu:",
+    "tosLink": "Nutzungsbedingungen",
+    "privacyCheck": "Ich habe die folgende gelesen und anerkannt:",
+    "privacyLink": "Datenschutzrichtlinie",
+    "confirm": "EINLOGGEN",
+    "confirmDisabled": "ALLE PRÜFUNGEN ABSCHLIESSEN",
+    "decline": "HIER RAUS",
+    "terminalAge": "alters_check --strikt --kein-bypass",
+    "terminalTos": "tos_akzeptanz --erforderlich",
+    "terminalReady": "alle_checks_bestanden -- bereit",
+    "terminalWaiting": "warte_auf_bestätigung..."
   }
 }
