@@ -650,7 +650,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
                 ) : (
                   <Sparkles className="w-3 h-3" />
                 )}
-                <span className="hidden sm:inline">ENHANCE</span>
+                <span className="hidden sm:inline">{t("prompt.enhance").toUpperCase()}</span>
               </Button>
               <div className="flex flex-col items-end gap-1">
                 <TooltipProvider delayDuration={300}>
