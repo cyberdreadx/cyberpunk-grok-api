@@ -66,6 +66,7 @@ interface PromptFormProps {
 }
 
 const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, settings, initialPrompt, initialImageUrl, hideExtraImages, creditCost, totalCredits, videoDuration, hasSubscription, onOpenStore }) => {
+  const { t } = useTranslation();
   const isLowCredits = creditCost != null && totalCredits != null && totalCredits < creditCost;
   const [prompt, setPrompt] = useState(initialPrompt || "");
   const [imageUrl, setImageUrl] = useState(initialImageUrl || "");
