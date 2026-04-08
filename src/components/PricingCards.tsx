@@ -239,7 +239,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
             <div className="flex items-center gap-2 my-3">
               <Sparkles className="w-3 h-3 text-secondary/60" />
               <h4 className="font-orbitron text-[10px] tracking-widest text-muted-foreground/60">
-                BULK_PACKS
+                {t("pricing.bulkPacks")}
               </h4>
               <div className="h-px flex-1 bg-border/20" />
             </div>
