@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import {
     Dialog,
     DialogContent,
@@ -250,16 +251,7 @@ export default function ChangelogDialog({
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-lg bg-card border-primary/30 text-foreground p-0 overflow-hidden">
-                {/* Header */}
-                <DialogHeader className="px-6 pt-6 pb-3">
-                    <DialogTitle className="font-orbitron text-lg tracking-wider text-primary flex items-center gap-2">
-                        <Zap className="w-5 h-5" />
-                        CHANGELOG
-                    </DialogTitle>
-                    <p className="font-mono-share text-[10px] text-muted-foreground/50 tracking-wider mt-1">
-                        What's new in Grok Runner
-                    </p>
-                </DialogHeader>
+                <ChangelogHeader />
 
                 {/* Entries */}
                 <ScrollArea className="max-h-[60vh]">
@@ -299,13 +291,34 @@ export default function ChangelogDialog({
                     </div>
                 </ScrollArea>
 
-                {/* Footer */}
-                <div className="px-6 py-3 border-t border-border/30 bg-muted/20">
-                    <p className="font-mono-share text-[9px] text-muted-foreground/30 text-center tracking-wider">
-                        GROK RUNNER // POWERED BY xAI
-                    </p>
-                </div>
+                <ChangelogFooter />
             </DialogContent>
         </Dialog>
+    );
+}
+
+function ChangelogHeader() {
+    const { t } = useTranslation();
+    return (
+        <DialogHeader className="px-6 pt-6 pb-3">
+            <DialogTitle className="font-orbitron text-lg tracking-wider text-primary flex items-center gap-2">
+                <Zap className="w-5 h-5" />
+                {t("changelog.title")}
+            </DialogTitle>
+            <p className="font-mono-share text-[10px] text-muted-foreground/50 tracking-wider mt-1">
+                {t("changelog.subtitle")}
+            </p>
+        </DialogHeader>
+    );
+}
+
+function ChangelogFooter() {
+    const { t } = useTranslation();
+    return (
+        <div className="px-6 py-3 border-t border-border/30 bg-muted/20">
+            <p className="font-mono-share text-[9px] text-muted-foreground/30 text-center tracking-wider">
+                {t("changelog.footer")}
+            </p>
+        </div>
     );
 }
