@@ -13,6 +13,8 @@ import ko from "@/locales/ko.json";
 import ar from "@/locales/ar.json";
 import hi from "@/locales/hi.json";
 
+export const RTL_LANGUAGES = new Set(["ar"]);
+
 export const SUPPORTED_LANGUAGES = [
   { code: "en", label: "English", flag: "🇺🇸" },
   { code: "es", label: "Español", flag: "🇪🇸" },
@@ -25,6 +27,14 @@ export const SUPPORTED_LANGUAGES = [
   { code: "ar", label: "العربية", flag: "🇸🇦" },
   { code: "hi", label: "हिन्दी", flag: "🇮🇳" },
 ] as const;
+
+/** Update <html dir> and lang when language changes */
+function applyDirection(lng: string) {
+  const lang = lng.split("-")[0];
+  const dir = RTL_LANGUAGES.has(lang) ? "rtl" : "ltr";
+  document.documentElement.dir = dir;
+  document.documentElement.lang = lang;
+}
 
 i18n
   .use(LanguageDetector)
@@ -50,5 +60,9 @@ i18n
       lookupLocalStorage: "gltch-language",
     },
   });
+
+// Apply direction on init and on every language change
+i18n.on("languageChanged", applyDirection);
+applyDirection(i18n.language || "en");
 
 export default i18n;
