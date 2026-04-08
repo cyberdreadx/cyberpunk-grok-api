@@ -23,6 +23,19 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
     {
+        version: "2026.04.08",
+        date: "April 8, 2026",
+        title: "Security Fixes, Daily Credits & Code Cleanup",
+        items: [
+            { icon: <Shield className="w-3.5 h-3.5" />, text: "Admin check moved server-side — no more hardcoded email in client code; uses is_admin flag from /auth/me", tag: "fix" },
+            { icon: <Zap className="w-3.5 h-3.5" />, text: "Daily free credits restored — 10 free credits per day after email verification", tag: "new" },
+            { icon: <Bug className="w-3.5 h-3.5" />, text: "Duplicate cleanup calls removed — fixed redundant comfyJobStarts delete calls in generation hook", tag: "fix" },
+            { icon: <Wrench className="w-3.5 h-3.5" />, text: "Telegram Ultra pack synced — bot now correctly shows 2200 credits matching the web store", tag: "fix" },
+            { icon: <Code className="w-3.5 h-3.5" />, text: "API catch-all rewrite — /api/v1/* routes no longer fall through to the SPA on Vercel", tag: "fix" },
+            { icon: <Globe className="w-3.5 h-3.5" />, text: "API playground base URL fixed — playground now calls the correct backend endpoint", tag: "fix" },
+        ],
+    },
+    {
         version: "2026.03.29",
         date: "March 29, 2026",
         title: "Simple Mode, Guided Walkthrough & Developer API",
