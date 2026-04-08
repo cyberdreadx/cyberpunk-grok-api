@@ -2050,7 +2050,10 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
 
       {/* Floating multi-select action bar */}
       {selectMode && selectedIds.size > 0 && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 bg-card/95 backdrop-blur border border-primary/30 rounded-lg shadow-[0_0_20px_rgba(168,85,247,0.15)] px-4 py-2.5">
+        <div
+          className="fixed left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 bg-card/95 backdrop-blur border border-primary/30 rounded-lg shadow-[0_0_20px_rgba(168,85,247,0.15)] px-4 py-2.5"
+          style={{ bottom: 'calc(70px + env(safe-area-inset-bottom, 0px))' }}
+        >
           <span className="font-mono-share text-xs text-primary mr-1">{selectedIds.size} selected</span>
 
           {/* Select all / none */}
