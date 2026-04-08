@@ -127,7 +127,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
 
                 {tier.interval === "year" && tier.monthlyEquivalentCents && (
                   <p className="font-mono-share text-[10px] text-green-400 mb-1">
-                    ${(tier.monthlyEquivalentCents / 100).toFixed(2)}/mo &mdash; save {tier.savingsPercent}%
+                    ${(tier.monthlyEquivalentCents / 100).toFixed(2)}/mo &mdash; {t("pricing.savePercent", { percent: tier.savingsPercent })}
                   </p>
                 )}
 
