@@ -23,7 +23,22 @@
     "generate": "जनरेट",
     "generating": "जनरेट हो रहा है…",
     "history": "प्रॉम्प्ट इतिहास",
-    "suggestions": "सुझाव"
+    "suggestions": "सुझाव",
+    "placeholderEdit": "लागू करने के लिए संशोधन बताएं...",
+    "placeholderVideo": "रेंडर करने के लिए वीडियो दृश्य बताएं...",
+    "placeholderAnimate": "लागू करने के लिए एनीमेशन/गति बताएं...",
+    "upload": "अपलोड",
+    "url": "URL",
+    "imgRequired": "इमेज आवश्यक",
+    "imgLoaded": "इमेज लोड हुई",
+    "vidRequired": "वीडियो आवश्यक",
+    "vidLoaded": "वीडियो लोड हुआ",
+    "topUp": "रिचार्ज",
+    "needMore": "{{count}} cr और चाहिए",
+    "priorityQueue": "प्राथमिकता कतार",
+    "subscribeFaster": "तेज रेंडर के लिए सब्सक्राइब करें",
+    "uploadClick": "अपलोड या पेस्ट करने के लिए क्लिक करें",
+    "uploadVideo": "वीडियो अपलोड करने के लिए क्लिक करें"
   },
   "settings": {
     "title": "सेटिंग्स",
@@ -44,7 +59,16 @@
     "password": "पासवर्ड",
     "forgotPassword": "पासवर्ड भूल गए?",
     "verifyEmail": "ईमेल सत्यापित करें",
-    "deleteAccount": "खाता हटाएं"
+    "deleteAccount": "खाता हटाएं",
+    "neuralAuth": "NEURAL_AUTH",
+    "freeCreditsDaily": "हर दिन 10 मुफ्त क्रेडिट",
+    "freeOnLogin": "लॉगिन पर मुफ्त — कार्ड की जरूरत नहीं",
+    "signInPrompt": "क्रेडिट उपयोग करने के लिए साइन इन करें, या अपनी API कुंजी उपयोग करें।",
+    "authenticate": "प्रमाणित करें",
+    "createAccount": "खाता बनाएं",
+    "register": "पंजीकरण",
+    "noAccountNeeded": "BYOK मोड में खाते की जरूरत नहीं।",
+    "login": "लॉगिन"
   },
   "credits": {
     "credits": "क्रेडिट",
@@ -74,7 +98,9 @@
     "empty": "आपकी लाइब्रेरी खाली है",
     "clearAll": "सब हटाएं",
     "folders": "फ़ोल्डर",
-    "trash": "ट्रैश"
+    "trash": "ट्रैश",
+    "assetsIndexed": "{{count}} एसेट इंडेक्स किए",
+    "top": "शीर्ष"
   },
   "simple": {
     "editImage": "इमेज एडिट",

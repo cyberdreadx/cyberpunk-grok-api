@@ -23,7 +23,22 @@
     "generate": "Generate",
     "generating": "Generating…",
     "history": "Prompt History",
-    "suggestions": "Suggestions"
+    "suggestions": "Suggestions",
+    "placeholderEdit": "Describe the modifications to apply...",
+    "placeholderVideo": "Describe the video scene to render...",
+    "placeholderAnimate": "Describe the animation / motion to apply...",
+    "upload": "Upload",
+    "url": "URL",
+    "imgRequired": "Image required",
+    "imgLoaded": "Image loaded",
+    "vidRequired": "Video required",
+    "vidLoaded": "Video loaded",
+    "topUp": "Top up",
+    "needMore": "Need {{count}} more cr",
+    "priorityQueue": "Priority queue",
+    "subscribeFaster": "Subscribe for faster renders",
+    "uploadClick": "Click to upload or paste (Ctrl+V)",
+    "uploadVideo": "Click to upload video"
   },
   "settings": {
     "title": "Settings",
@@ -44,7 +59,16 @@
     "password": "Password",
     "forgotPassword": "Forgot password?",
     "verifyEmail": "Verify Email",
-    "deleteAccount": "Delete Account"
+    "deleteAccount": "Delete Account",
+    "neuralAuth": "NEURAL_AUTH",
+    "freeCreditsDaily": "10 FREE CREDITS EVERY DAY",
+    "freeOnLogin": "Free on login — no card needed. Generate images & video daily.",
+    "signInPrompt": "Sign in to use credits, or use your own API key for free.",
+    "authenticate": "Authenticate",
+    "createAccount": "Create Account",
+    "register": "Register",
+    "noAccountNeeded": "No account needed for BYOK mode — just enter your own xAI API key.",
+    "login": "Login"
   },
   "credits": {
     "credits": "Credits",
@@ -74,7 +98,9 @@
     "empty": "Your library is empty",
     "clearAll": "Clear All",
     "folders": "Folders",
-    "trash": "Trash"
+    "trash": "Trash",
+    "assetsIndexed": "{{count}} assets indexed",
+    "top": "Top"
   },
   "simple": {
     "editImage": "Edit Image",

@@ -23,7 +23,22 @@
     "generate": "생성",
     "generating": "생성 중…",
     "history": "프롬프트 기록",
-    "suggestions": "제안"
+    "suggestions": "제안",
+    "placeholderEdit": "적용할 수정 사항을 설명하세요...",
+    "placeholderVideo": "렌더링할 비디오 장면을 설명하세요...",
+    "placeholderAnimate": "적용할 애니메이션/동작을 설명하세요...",
+    "upload": "업로드",
+    "url": "URL",
+    "imgRequired": "이미지 필요",
+    "imgLoaded": "이미지 로드됨",
+    "vidRequired": "비디오 필요",
+    "vidLoaded": "비디오 로드됨",
+    "topUp": "충전",
+    "needMore": "{{count}} cr 더 필요",
+    "priorityQueue": "우선 대기열",
+    "subscribeFaster": "더 빠른 렌더를 위해 구독",
+    "uploadClick": "클릭하여 업로드 또는 붙여넣기",
+    "uploadVideo": "클릭하여 비디오 업로드"
   },
   "settings": {
     "title": "설정",
@@ -44,7 +59,16 @@
     "password": "비밀번호",
     "forgotPassword": "비밀번호를 잊으셨나요?",
     "verifyEmail": "이메일 인증",
-    "deleteAccount": "계정 삭제"
+    "deleteAccount": "계정 삭제",
+    "neuralAuth": "NEURAL_AUTH",
+    "freeCreditsDaily": "매일 10크레딧 무료",
+    "freeOnLogin": "로그인 시 무료 — 카드 불필요",
+    "signInPrompt": "크레딧을 사용하려면 로그인하거나 자체 API 키를 사용하세요.",
+    "authenticate": "인증",
+    "createAccount": "계정 생성",
+    "register": "가입",
+    "noAccountNeeded": "BYOK 모드에서는 계정이 필요 없습니다.",
+    "login": "로그인"
   },
   "credits": {
     "credits": "크레딧",
@@ -74,7 +98,9 @@
     "empty": "라이브러리가 비어있습니다",
     "clearAll": "전체 삭제",
     "folders": "폴더",
-    "trash": "휴지통"
+    "trash": "휴지통",
+    "assetsIndexed": "{{count}}개 에셋 색인됨",
+    "top": "맨 위"
   },
   "simple": {
     "editImage": "이미지 편집",

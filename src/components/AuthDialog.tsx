@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { LogIn, UserPlus, LogOut, Mail, Lock, Loader2, ShieldCheck, ArrowLeft, RefreshCw, KeyRound, Trash2, AlertTriangle, CheckCircle2, Clock, AlertCircle, XCircle, Info } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -41,6 +42,7 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
   onResetPassword,
   onDeleteAccount,
 }) => {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -146,7 +148,7 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
           className="font-mono-share text-xs gap-1.5 text-muted-foreground hover:text-destructive"
         >
           <LogOut className="w-3 h-3" />
-          <span className="hidden sm:inline">LOGOUT</span>
+          <span className="hidden sm:inline">{t("auth.logout").toUpperCase()}</span>
         </Button>
       </div>
     );
@@ -161,7 +163,7 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
           className="font-mono-share text-xs gap-1 text-secondary hover:text-secondary/80 relative"
         >
           <LogIn className="w-3 h-3" />
-          <span>LOGIN</span>
+          <span>{t("auth.login").toUpperCase()}</span>
           <span className="font-mono-share text-[8px] text-primary/80 bg-primary/10 border border-primary/25 rounded px-1 py-0 leading-4 hidden sm:inline">
             10 FREE / DAY
           </span>
@@ -196,14 +198,14 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
                   <div className="flex items-center gap-2 bg-primary/10 border border-primary/25 rounded-md px-3 py-2">
                     <span className="text-base">⚡</span>
                     <div>
-                      <p className="font-orbitron text-[10px] tracking-wider text-primary">10 FREE CREDITS EVERY DAY</p>
+                      <p className="font-orbitron text-[10px] tracking-wider text-primary">{t("auth.freeCreditsDaily")}</p>
                       <p className="font-mono-share text-[10px] text-muted-foreground/70 leading-snug">
-                        Free on login — no card needed. Generate images &amp; video daily.
+                        {t("auth.freeOnLogin")}
                       </p>
                     </div>
                   </div>
                   <p className="font-rajdhani text-muted-foreground text-xs">
-                    Sign in to use credits, or use your own API key for free.
+                    {t("auth.signInPrompt")}
                   </p>
                 </div>
               </DialogDescription>
@@ -277,7 +279,7 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
 
             <div className="border-t border-border pt-3 mt-2">
               <p className="text-[10px] font-mono-share text-muted-foreground/60 leading-relaxed">
-                No account needed for BYOK mode — just enter your own xAI API key.
+                {t("auth.noAccountNeeded")}
               </p>
             </div>
           </>

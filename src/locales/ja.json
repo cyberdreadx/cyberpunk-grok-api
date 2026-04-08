@@ -23,7 +23,22 @@
     "generate": "生成",
     "generating": "生成中…",
     "history": "プロンプト履歴",
-    "suggestions": "提案"
+    "suggestions": "提案",
+    "placeholderEdit": "適用する修正を説明してください...",
+    "placeholderVideo": "レンダリングするビデオシーンを説明してください...",
+    "placeholderAnimate": "適用するアニメーション/動きを説明してください...",
+    "upload": "アップロード",
+    "url": "URL",
+    "imgRequired": "画像が必要です",
+    "imgLoaded": "画像読み込み済み",
+    "vidRequired": "動画が必要です",
+    "vidLoaded": "動画読み込み済み",
+    "topUp": "チャージ",
+    "needMore": "あと{{count}}cr必要",
+    "priorityQueue": "優先キュー",
+    "subscribeFaster": "高速レンダリングのためにサブスクリプション",
+    "uploadClick": "クリックしてアップロードまたは貼り付け",
+    "uploadVideo": "クリックして動画をアップロード"
   },
   "settings": {
     "title": "設定",
@@ -44,7 +59,16 @@
     "password": "パスワード",
     "forgotPassword": "パスワードを忘れた？",
     "verifyEmail": "メール認証",
-    "deleteAccount": "アカウント削除"
+    "deleteAccount": "アカウント削除",
+    "neuralAuth": "NEURAL_AUTH",
+    "freeCreditsDaily": "毎日10クレジット無料",
+    "freeOnLogin": "ログインで無料 — カード不要",
+    "signInPrompt": "クレジットを使用するにはログインするか、自分のAPIキーを使用してください。",
+    "authenticate": "認証",
+    "createAccount": "アカウント作成",
+    "register": "登録",
+    "noAccountNeeded": "BYOKモードではアカウント不要です。",
+    "login": "ログイン"
   },
   "credits": {
     "credits": "クレジット",
@@ -74,7 +98,9 @@
     "empty": "ライブラリは空です",
     "clearAll": "すべて削除",
     "folders": "フォルダ",
-    "trash": "ゴミ箱"
+    "trash": "ゴミ箱",
+    "assetsIndexed": "{{count}}件のアセット",
+    "top": "トップ"
   },
   "simple": {
     "editImage": "画像編集",

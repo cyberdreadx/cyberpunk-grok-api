@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Image, Film, ArrowLeft, ChevronsUp } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import CyberLayout from "@/components/CyberLayout";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import GlitchText from "@/components/GlitchText";
@@ -21,6 +22,7 @@ import type { GrokResult } from "@/hooks/useGrokApi";
 
 const Library: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const auth = useAuth();
   const { toast } = useToast();
   const foldersHook = useFolders();
@@ -182,7 +184,7 @@ const Library: React.FC = () => {
                   glitchIntensity="low"
                 />
                 <p className="font-mono-share text-[10px] text-muted-foreground/50 mt-0.5">
-                  <span className="text-primary/30">$</span> ls -la ~/output/ — {totalImages + totalVideos} assets indexed
+                  <span className="text-primary/30">$</span> ls -la ~/output/ — {t("library.assetsIndexed", { count: totalImages + totalVideos })}
                 </p>
               </div>
             </div>
@@ -193,16 +195,16 @@ const Library: React.FC = () => {
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-border/40 bg-card/40">
               <Image className="w-3.5 h-3.5 text-primary/60" />
               <span className="font-mono-share text-[11px] text-foreground/70">{totalImages}</span>
-              <span className="font-mono-share text-[9px] text-muted-foreground/40">IMAGES</span>
+              <span className="font-mono-share text-[9px] text-muted-foreground/40">{t("library.images").toUpperCase()}</span>
             </div>
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-border/40 bg-card/40">
               <Film className="w-3.5 h-3.5 text-secondary/60" />
               <span className="font-mono-share text-[11px] text-foreground/70">{totalVideos}</span>
-              <span className="font-mono-share text-[9px] text-muted-foreground/40">VIDEOS</span>
+              <span className="font-mono-share text-[9px] text-muted-foreground/40">{t("library.videos").toUpperCase()}</span>
             </div>
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-border/40 bg-card/40">
               <span className="font-mono-share text-[11px] text-foreground/70">{totalFolders}</span>
-              <span className="font-mono-share text-[9px] text-muted-foreground/40">FOLDERS</span>
+              <span className="font-mono-share text-[9px] text-muted-foreground/40">{t("library.folders").toUpperCase()}</span>
             </div>
           </div>
 
@@ -287,7 +289,7 @@ const Library: React.FC = () => {
         style={{ bottom: 'calc(56px + env(safe-area-inset-bottom, 0px) + 12px)' }}
       >
         <ChevronsUp className="w-3.5 h-3.5" />
-        TOP
+        {t("library.top").toUpperCase()}
       </button>
     </CyberLayout>
   );

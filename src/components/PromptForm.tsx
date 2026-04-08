@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Send, Upload, Loader2, ImagePlus, Link, X, Film, Sparkles, Info } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -65,6 +66,7 @@ interface PromptFormProps {
 }
 
 const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, settings, initialPrompt, initialImageUrl, hideExtraImages, creditCost, totalCredits, videoDuration, hasSubscription, onOpenStore }) => {
+  const { t } = useTranslation();
   const isLowCredits = creditCost != null && totalCredits != null && totalCredits < creditCost;
   const [prompt, setPrompt] = useState(initialPrompt || "");
   const [imageUrl, setImageUrl] = useState(initialImageUrl || "");
@@ -330,11 +332,11 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
   }, [prompt, mode, enhancing]);
 
   const placeholders: Record<GrokMode, string> = {
-    "text-to-image": "Describe the image you want to generate...",
-    "edit-image": "Describe the modifications to apply...",
-    "text-to-video": "Describe the video scene to render...",
-    "image-to-video": "Describe the animation / motion to apply...",
-    "edit-video": "Describe the edits to apply to the video...",
+    "text-to-image": t("prompt.placeholder"),
+    "edit-image": t("prompt.placeholderEdit"),
+    "text-to-video": t("prompt.placeholderVideo"),
+    "image-to-video": t("prompt.placeholderAnimate"),
+    "edit-video": t("prompt.placeholderEdit"),
   };
 
   const suggestedPrompts: Record<GrokMode, string[]> = {
@@ -369,6 +371,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
               >
                 <Film className="w-3 h-3 inline mr-1" />
                 UPLOAD
+                {t("prompt.upload").toUpperCase()}
               </button>
               <button
                 type="button"
@@ -647,7 +650,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
                 ) : (
                   <Sparkles className="w-3 h-3" />
                 )}
-                <span className="hidden sm:inline">ENHANCE</span>
+                <span className="hidden sm:inline">{t("prompt.enhance").toUpperCase()}</span>
               </Button>
               <div className="flex flex-col items-end gap-1">
                 <TooltipProvider delayDuration={300}>
@@ -661,7 +664,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
                     ) : (
                       <Send className="w-4 h-4" />
                     )}
-                    {isLoading ? "GENERATING…" : "GENERATE"}
+                    {isLoading ? t("prompt.generating").toUpperCase() : t("prompt.generate").toUpperCase()}
                     {!isLoading && creditCost != null && (() => {
                       const bd = creditCostBreakdown(mode, creditCost, settings.count ?? 1, videoDuration ?? 5);
                       return (
@@ -690,7 +693,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
                 {/* Low-credits warning */}
                 {!isLoading && isLowCredits && (
                   <div className="flex items-center gap-1.5 text-[9px] font-mono-share text-destructive/80 bg-destructive/10 border border-destructive/25 rounded px-2 py-1 w-full justify-between">
-                    <span>⚠ Need {creditCost! - totalCredits!} more cr</span>
+                    <span>⚠ {t("prompt.needMore", { count: creditCost! - totalCredits! })}</span>
                     {onOpenStore && (
                       <button
                         type="button"
@@ -704,7 +707,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
                 )}
                 {!isLoading && !isLowCredits && (
                   <span className="font-mono-share text-[8px] text-muted-foreground/35 pr-1">
-                    {hasSubscription ? "⚡ Priority queue" : "Subscribe for faster renders"}
+                    {hasSubscription ? `⚡ ${t("prompt.priorityQueue")}` : t("prompt.subscribeFaster")}
                   </span>
                 )}
               </div>
@@ -744,7 +747,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
           ) : (
             <Send className="w-5 h-5" />
           )}
-          <span>{isLoading ? "GENERATING…" : "GENERATE"}</span>
+          <span>{isLoading ? t("prompt.generating").toUpperCase() : t("prompt.generate").toUpperCase()}</span>
           {!isLoading && creditCost != null && (
             <span className={`inline-flex items-center gap-1 rounded px-2 py-1 font-mono-share text-xs font-bold leading-none tabular-nums tracking-normal border ${isLowCredits ? "bg-destructive/30 border-destructive/50 text-destructive-foreground" : "bg-primary-foreground/20 border-primary-foreground/40"}`}>
               {creditCost} cr

@@ -23,7 +23,22 @@
     "generate": "Générer",
     "generating": "Génération…",
     "history": "Historique des prompts",
-    "suggestions": "Suggestions"
+    "suggestions": "Suggestions",
+    "placeholderEdit": "Décrivez les modifications à appliquer...",
+    "placeholderVideo": "Décrivez la scène vidéo à créer...",
+    "placeholderAnimate": "Décrivez l'animation / mouvement à appliquer...",
+    "upload": "Télécharger",
+    "url": "URL",
+    "imgRequired": "Image requise",
+    "imgLoaded": "Image chargée",
+    "vidRequired": "Vidéo requise",
+    "vidLoaded": "Vidéo chargée",
+    "topUp": "Recharger",
+    "needMore": "{{count}} cr manquants",
+    "priorityQueue": "File prioritaire",
+    "subscribeFaster": "Abonnez-vous pour des rendus plus rapides",
+    "uploadClick": "Cliquez pour télécharger ou coller (Ctrl+V)",
+    "uploadVideo": "Cliquez pour télécharger une vidéo"
   },
   "settings": {
     "title": "Paramètres",
@@ -44,7 +59,16 @@
     "password": "Mot de passe",
     "forgotPassword": "Mot de passe oublié ?",
     "verifyEmail": "Vérifier l'e-mail",
-    "deleteAccount": "Supprimer le compte"
+    "deleteAccount": "Supprimer le compte",
+    "neuralAuth": "NEURAL_AUTH",
+    "freeCreditsDaily": "10 CRÉDITS GRATUITS PAR JOUR",
+    "freeOnLogin": "Gratuit à la connexion — pas de carte nécessaire.",
+    "signInPrompt": "Connectez-vous pour utiliser vos crédits, ou entrez votre clé API.",
+    "authenticate": "Authentifier",
+    "createAccount": "Créer un Compte",
+    "register": "S'inscrire",
+    "noAccountNeeded": "Pas besoin de compte en mode BYOK.",
+    "login": "Connexion"
   },
   "credits": {
     "credits": "Crédits",
@@ -74,7 +98,9 @@
     "empty": "Votre bibliothèque est vide",
     "clearAll": "Tout effacer",
     "folders": "Dossiers",
-    "trash": "Corbeille"
+    "trash": "Corbeille",
+    "assetsIndexed": "{{count}} fichiers indexés",
+    "top": "Haut"
   },
   "simple": {
     "editImage": "Modifier l'image",

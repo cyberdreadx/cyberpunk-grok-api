@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Download, Maximize2, X, Trash2, ExternalLink, ChevronLeft, ChevronRight, Pencil, Film, Copy, Check, FolderPlus, FolderOpen, MoreVertical, FolderInput, Lock, LockOpen, ShieldCheck, Eye, EyeOff, ChevronDown, Sparkles, Archive, Loader2, Link2, CheckSquare, Square, ListChecks, RotateCcw, XCircle, Search } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 
 import {
@@ -849,6 +850,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
   typeFilter = "all",
   onTypeFilterChange,
 }) => {
+  const { t } = useTranslation();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [mobileIndex, setMobileIndex] = useState(0);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -1113,7 +1115,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
     }
 
     if (copied) {
-      toast.success("Link copied! Share it on X or Reddit to show it off.");
+      toast.success(t("results.copyLink"));
     } else if (navigator.share) {
       try {
         await navigator.share({ title: "Grok Runner", url: shareLink });
@@ -1206,7 +1208,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
       await copyOrShareLink(data, result);
     } catch (err: any) {
       console.error("[share] error:", err);
-      toast.error("Failed to create share link", {
+      toast.error(t("results.shareError"), {
         description: err?.message || "Unknown error",
       });
     } finally {
