@@ -119,7 +119,7 @@ const Library: React.FC = () => {
       await foldersHook.bulkDelete(ids);
       for (const id of ids) deleteResult(id);
     } catch {
-      toast({ title: "DELETE ERROR", description: "Failed to delete items.", variant: "destructive" });
+      toast({ title: t("common.error"), description: t("library.deleteError"), variant: "destructive" });
     }
   }, [foldersHook, deleteResult, toast]);
 
