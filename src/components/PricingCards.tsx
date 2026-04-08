@@ -169,7 +169,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
                         variant="outline"
                         className="w-full rounded-md font-orbitron text-[10px] tracking-wider gap-1 opacity-40 cursor-not-allowed"
                       >
-                        CURRENT_PLAN_HIGHER
+                        {t("pricing.currentPlanHigher")}
                       </Button>
                     );
                   }
