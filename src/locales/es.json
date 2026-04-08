@@ -100,7 +100,11 @@
     "folders": "Carpetas",
     "trash": "Papelera",
     "assetsIndexed": "{{count}} activos indexados",
-    "top": "Arriba"
+    "top": "Arriba",
+    "folderError": "Error al mover elemento",
+    "folderErrorBulk": "Error al mover elementos",
+    "deleteError": "Error al eliminar elementos",
+    "trashError": "Error al vaciar papelera"
   },
   "simple": {
     "editImage": "Editar Imagen",
@@ -137,5 +141,34 @@
     "terminalTos": "aceptación_tos --requerida",
     "terminalReady": "verificaciones_ok -- listo_para_conectar",
     "terminalWaiting": "esperando_confirmación..."
+  },
+  "pricing": {
+    "subscriptionPlans": "PLANES_SUSCRIPCIÓN",
+    "monthly": "MENSUAL",
+    "yearly": "ANUAL",
+    "bestValue": "MEJOR VALOR",
+    "activePlan": "PLAN ACTIVO",
+    "perMonth": "por mes",
+    "perYear": "por año",
+    "savePercent": "ahorra {{percent}}%",
+    "creditsPerMonth": "{{count}} créditos/mes",
+    "perCredit": "{{price}}/crédito",
+    "creditsReset": "Los créditos se reinician cada ciclo",
+    "managePlan": "GESTIONAR_PLAN",
+    "currentPlanHigher": "PLAN_ACTUAL_SUPERIOR",
+    "upgrade": "MEJORAR",
+    "subscribe": "SUSCRIBIRSE",
+    "topUpPacks": "PACKS_RECARGA",
+    "bulkPacks": "PACKS_VOLUMEN",
+    "popular": "POPULAR",
+    "bulk": "VOLUMEN",
+    "oneTime": "único",
+    "credits": "{{count}} créditos",
+    "neverExpires": "no caduca",
+    "purchase": "COMPRAR",
+    "orCrypto": "O_CRYPTO",
+    "payWithXrge": "PAGAR CON $XRGE",
+    "bonusPercent": "+{{percent}}% bonus",
+    "baseChain": "Base chain · niveles de lealtad hasta +50% bonus"
   }
 }

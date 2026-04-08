@@ -100,7 +100,11 @@
     "folders": "フォルダ",
     "trash": "ゴミ箱",
     "assetsIndexed": "{{count}}件のアセット",
-    "top": "トップ"
+    "top": "トップ",
+    "folderError": "移動に失敗しました",
+    "folderErrorBulk": "移動に失敗しました",
+    "deleteError": "削除に失敗しました",
+    "trashError": "ゴミ箱を空にできませんでした"
   },
   "simple": {
     "editImage": "画像編集",
@@ -137,5 +141,34 @@
     "terminalTos": "利用規約同意 --必須",
     "terminalReady": "全確認完了 -- 接続準備完了",
     "terminalWaiting": "確認待機中..."
+  },
+  "pricing": {
+    "subscriptionPlans": "サブスクリプション",
+    "monthly": "月額",
+    "yearly": "年額",
+    "bestValue": "最もお得",
+    "activePlan": "利用中プラン",
+    "perMonth": "月額",
+    "perYear": "年額",
+    "savePercent": "{{percent}}%お得",
+    "creditsPerMonth": "{{count}} クレジット/月",
+    "perCredit": "{{price}}/クレジット",
+    "creditsReset": "クレジットは請求サイクルごとにリセットされます",
+    "managePlan": "プラン管理",
+    "currentPlanHigher": "現在のプランが上位です",
+    "upgrade": "アップグレード",
+    "subscribe": "登録する",
+    "topUpPacks": "チャージパック",
+    "bulkPacks": "大容量パック",
+    "popular": "人気",
+    "bulk": "大容量",
+    "oneTime": "買い切り",
+    "credits": "{{count}} クレジット",
+    "neverExpires": "有効期限なし",
+    "purchase": "購入",
+    "orCrypto": "または暗号通貨",
+    "payWithXrge": "$XRGEで支払う",
+    "bonusPercent": "+{{percent}}%ボーナス",
+    "baseChain": "Baseチェーン · ロイヤリティ最大+50%ボーナス"
   }
 }

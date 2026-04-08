@@ -100,7 +100,11 @@
     "folders": "Ordner",
     "trash": "Papierkorb",
     "assetsIndexed": "{{count}} Dateien indexiert",
-    "top": "Oben"
+    "top": "Oben",
+    "folderError": "Verschieben fehlgeschlagen",
+    "folderErrorBulk": "Verschieben fehlgeschlagen",
+    "deleteError": "Löschen fehlgeschlagen",
+    "trashError": "Papierkorb leeren fehlgeschlagen"
   },
   "simple": {
     "editImage": "Bild bearbeiten",
@@ -137,5 +141,34 @@
     "terminalTos": "tos_akzeptanz --erforderlich",
     "terminalReady": "alle_checks_bestanden -- bereit",
     "terminalWaiting": "warte_auf_bestätigung..."
+  },
+  "pricing": {
+    "subscriptionPlans": "ABO_PLÄNE",
+    "monthly": "MONATLICH",
+    "yearly": "JÄHRLICH",
+    "bestValue": "BESTER WERT",
+    "activePlan": "AKTIVER PLAN",
+    "perMonth": "pro Monat",
+    "perYear": "pro Jahr",
+    "savePercent": "spare {{percent}}%",
+    "creditsPerMonth": "{{count}} Credits/Monat",
+    "perCredit": "{{price}}/Credit",
+    "creditsReset": "Credits werden jeden Abrechnungszyklus zurückgesetzt",
+    "managePlan": "PLAN_VERWALTEN",
+    "currentPlanHigher": "AKTUELLER_PLAN_HÖHER",
+    "upgrade": "UPGRADE",
+    "subscribe": "ABONNIEREN",
+    "topUpPacks": "AUFLADE_PAKETE",
+    "bulkPacks": "GROSSPAKETE",
+    "popular": "BELIEBT",
+    "bulk": "GROSS",
+    "oneTime": "einmalig",
+    "credits": "{{count}} Credits",
+    "neverExpires": "läuft nie ab",
+    "purchase": "KAUFEN",
+    "orCrypto": "ODER_CRYPTO",
+    "payWithXrge": "MIT $XRGE ZAHLEN",
+    "bonusPercent": "+{{percent}}% Bonus",
+    "baseChain": "Base Chain · Treuestufen bis +50% Bonus"
   }
 }

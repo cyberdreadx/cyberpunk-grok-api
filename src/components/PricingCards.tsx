@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Loader2, Zap, Crown, RefreshCw, Sparkles, ArrowUp } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { SUBSCRIPTION_TIERS_MONTHLY, SUBSCRIPTION_TIERS_YEARLY, TIER_RANK } from "@/lib/api";
 import type { CreditPackage, SubscriptionTier } from "@/lib/api";
@@ -24,6 +25,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
   onManageSubscription,
   onXrgePurchase,
 }) => {
+  const { t } = useTranslation();
   const [billingInterval, setBillingInterval] = useState<"month" | "year">("month");
 
   const activeTiers =
@@ -53,7 +55,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
         <div className="flex items-center gap-2 mb-3">
           <RefreshCw className="w-3 h-3 text-primary/60" />
           <h4 className="font-orbitron text-[10px] tracking-widest text-muted-foreground">
-            SUBSCRIPTION_PLANS
+            {t("pricing.subscriptionPlans")}
           </h4>
           <div className="h-px flex-1 bg-border/30" />
         </div>
@@ -68,7 +70,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
                 : "bg-card/40 text-muted-foreground border-border hover:bg-primary/10"
             }`}
           >
-            MONTHLY
+            {t("pricing.monthly")}
           </button>
           <button
             onClick={() => setBillingInterval("year")}
@@ -78,7 +80,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
                 : "bg-card/40 text-muted-foreground border-border hover:bg-secondary/10"
             }`}
           >
-            YEARLY
+            {t("pricing.yearly")}
             <span className="absolute -top-2 -right-2 bg-green-500 text-white font-mono text-[7px] px-1.5 py-0.5 rounded-full leading-none">
               -12%
             </span>
@@ -99,12 +101,12 @@ const PricingCards: React.FC<PricingCardsProps> = ({
               >
                 {tier.popular && !isActive && (
                   <div className="border-b border-secondary/50 bg-secondary/85 py-1.5 text-center font-orbitron text-[8px] tracking-[0.18em] text-secondary-foreground">
-                    BEST VALUE
+                    {t("pricing.bestValue")}
                   </div>
                 )}
                 {isActive && (
                   <div className="border-b border-primary/40 bg-primary/20 py-1.5 text-center font-orbitron text-[8px] tracking-[0.18em] text-primary">
-                    ACTIVE PLAN
+                    {t("pricing.activePlan")}
                   </div>
                 )}
 
@@ -119,20 +121,20 @@ const PricingCards: React.FC<PricingCardsProps> = ({
                     ${(tier.priceCents / 100).toFixed(2)}
                   </p>
                   <p className="font-mono-share text-[10px] uppercase tracking-wide text-muted-foreground">
-                    per {tier.interval === "year" ? "year" : "month"}
+                    {tier.interval === "year" ? t("pricing.perYear") : t("pricing.perMonth")}
                   </p>
                 </div>
 
                 {tier.interval === "year" && tier.monthlyEquivalentCents && (
                   <p className="font-mono-share text-[10px] text-green-400 mb-1">
-                    ${(tier.monthlyEquivalentCents / 100).toFixed(2)}/mo &mdash; save {tier.savingsPercent}%
+                    ${(tier.monthlyEquivalentCents / 100).toFixed(2)}/mo &mdash; {t("pricing.savePercent", { percent: tier.savingsPercent })}
                   </p>
                 )}
 
                 <div className="mb-2 flex items-center gap-1">
                   <Zap className="h-3 w-3 shrink-0 text-secondary" />
                   <span className="font-mono-share text-sm font-bold text-secondary">
-                    {tier.creditsPerMonth} credits/mo
+                    {t("pricing.creditsPerMonth", { count: tier.creditsPerMonth })}
                   </span>
                 </div>
 
@@ -140,7 +142,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
                   {tier.perCredit}/credit
                 </p>
                 <p className="mb-4 flex-1 font-mono-share text-[9px] leading-snug text-muted-foreground/75">
-                  Credits reset each billing cycle
+                  {t("pricing.creditsReset")}
                 </p>
 
                 {(() => {
@@ -156,7 +158,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
                         variant="outline"
                         className="w-full rounded-md font-orbitron text-[10px] tracking-wider gap-1 border-primary/50 text-primary"
                       >
-                        MANAGE_PLAN
+                        {t("pricing.managePlan")}
                       </Button>
                     );
                   }
@@ -167,7 +169,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
                         variant="outline"
                         className="w-full rounded-md font-orbitron text-[10px] tracking-wider gap-1 opacity-40 cursor-not-allowed"
                       >
-                        CURRENT_PLAN_HIGHER
+                        {t("pricing.currentPlanHigher")}
                       </Button>
                     );
                   }
@@ -183,7 +185,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
                         ) : (
                           <>
                             <ArrowUp className="w-3 h-3" />
-                            UPGRADE
+                            {t("pricing.upgrade")}
                           </>
                         )}
                       </Button>
@@ -202,7 +204,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
                       {purchasing ? (
                         <Loader2 className="w-3 h-3 animate-spin" />
                       ) : (
-                        "SUBSCRIBE"
+                        t("pricing.subscribe")
                       )}
                     </Button>
                   );
@@ -219,7 +221,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
         <div className="flex items-center gap-2 mb-3">
           <Zap className="w-3 h-3 text-primary/60" />
           <h4 className="font-orbitron text-[10px] tracking-widest text-muted-foreground">
-            TOP_UP_PACKS
+            {t("pricing.topUpPacks")}
           </h4>
           <div className="h-px flex-1 bg-border/30" />
         </div>
@@ -237,7 +239,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
             <div className="flex items-center gap-2 my-3">
               <Sparkles className="w-3 h-3 text-secondary/60" />
               <h4 className="font-orbitron text-[10px] tracking-widest text-muted-foreground/60">
-                BULK_PACKS
+                {t("pricing.bulkPacks")}
               </h4>
               <div className="h-px flex-1 bg-border/20" />
             </div>
@@ -267,6 +269,7 @@ function PackCard({
   onXrgePurchase?: (id: string) => void;
   isBulk?: boolean;
 }) {
+  const { t } = useTranslation();
   return (
     <div
       className={`relative flex min-w-0 max-w-full flex-col overflow-hidden rounded-lg border-2 transition-all ${
@@ -279,12 +282,12 @@ function PackCard({
     >
       {pkg.popular && (
         <div className="border-b border-secondary/50 bg-secondary/85 py-1.5 text-center font-orbitron text-[8px] tracking-[0.18em] text-secondary-foreground">
-          POPULAR
+          {t("pricing.popular")}
         </div>
       )}
       {isBulk && !pkg.popular && (
         <div className="border-b border-primary/40 bg-primary/20 py-1.5 text-center font-orbitron text-[8px] tracking-[0.18em] text-primary">
-          BULK
+          {t("pricing.bulk")}
         </div>
       )}
 
@@ -295,18 +298,18 @@ function PackCard({
         <p className="font-orbitron text-xl font-bold tabular-nums leading-none text-foreground sm:text-2xl break-words">
           ${(pkg.priceCents / 100).toFixed(0)}
         </p>
-        <p className="font-mono-share text-[10px] uppercase tracking-wide text-muted-foreground">one-time</p>
+        <p className="font-mono-share text-[10px] uppercase tracking-wide text-muted-foreground">{t("pricing.oneTime")}</p>
       </div>
 
       <div className="mb-3 flex items-center gap-1">
         <Zap className="h-3 w-3 shrink-0 text-secondary" />
         <span className="font-mono-share text-sm font-bold text-secondary">
-          {pkg.credits.toLocaleString()} credits
+          {t("pricing.credits", { count: pkg.credits.toLocaleString() })}
         </span>
       </div>
 
       <p className="mb-1 flex-1 font-mono-share text-[10px] text-muted-foreground">
-        {pkg.perCredit}/credit &mdash; never expires
+        {t("pricing.perCredit", { price: pkg.perCredit })} &mdash; {t("pricing.neverExpires")}
       </p>
 
       <div className="space-y-2">
@@ -324,15 +327,14 @@ function PackCard({
           {purchasing ? (
             <Loader2 className="w-3 h-3 animate-spin" />
           ) : (
-            "PURCHASE"
+            t("pricing.purchase")
           )}
         </Button>
-        {/* XRGE first — one tap to crypto checkout (Base) */}
         {onXrgePurchase && (
           <>
             <div className="flex items-center gap-2 my-1">
               <div className="h-px flex-1 bg-border/30" />
-              <span className="font-mono-share text-[8px] text-pink-400/70 tracking-widest">OR_CRYPTO</span>
+              <span className="font-mono-share text-[8px] text-pink-400/70 tracking-widest">{t("pricing.orCrypto")}</span>
               <div className="h-px flex-1 bg-border/30" />
             </div>
             <button
@@ -342,11 +344,11 @@ function PackCard({
               className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-md border border-[#c44b8b]/50 bg-gradient-to-r from-[#8b2fc0]/10 via-[#c44b8b]/10 to-[#e8445a]/10 hover:from-[#8b2fc0]/20 hover:via-[#c44b8b]/20 hover:to-[#e8445a]/20 hover:border-[#c44b8b]/70 transition-all disabled:opacity-50"
             >
               <img src="/xrge-logo.png" alt="" className="w-5 h-5 rounded-full" />
-              <span className="font-orbitron text-[10px] tracking-wider text-white/90">PAY WITH $XRGE</span>
-              <span className="text-green-400 font-mono-share text-[8px] font-bold bg-green-400/10 px-1.5 py-0.5 rounded-full leading-none">+30% bonus</span>
+              <span className="font-orbitron text-[10px] tracking-wider text-white/90">{t("pricing.payWithXrge")}</span>
+              <span className="text-green-400 font-mono-share text-[8px] font-bold bg-green-400/10 px-1.5 py-0.5 rounded-full leading-none">{t("pricing.bonusPercent", { percent: 30 })}</span>
             </button>
             <p className="font-mono-share text-[8px] text-center text-muted-foreground/55 leading-tight">
-              Base chain · loyalty tiers up to +50% bonus
+              {t("pricing.baseChain")}
             </p>
           </>
         )}

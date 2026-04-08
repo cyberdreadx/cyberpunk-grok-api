@@ -100,7 +100,11 @@
     "folders": "Dossiers",
     "trash": "Corbeille",
     "assetsIndexed": "{{count}} fichiers indexés",
-    "top": "Haut"
+    "top": "Haut",
+    "folderError": "Échec du déplacement",
+    "folderErrorBulk": "Échec du déplacement des éléments",
+    "deleteError": "Échec de la suppression",
+    "trashError": "Échec du vidage de la corbeille"
   },
   "simple": {
     "editImage": "Modifier l'image",
@@ -137,5 +141,34 @@
     "terminalTos": "acceptation_cgu --requise",
     "terminalReady": "vérifications_ok -- prêt_à_se_connecter",
     "terminalWaiting": "en_attente_de_confirmation..."
+  },
+  "pricing": {
+    "subscriptionPlans": "ABONNEMENTS",
+    "monthly": "MENSUEL",
+    "yearly": "ANNUEL",
+    "bestValue": "MEILLEUR RAPPORT",
+    "activePlan": "PLAN ACTIF",
+    "perMonth": "par mois",
+    "perYear": "par an",
+    "savePercent": "économisez {{percent}}%",
+    "creditsPerMonth": "{{count}} crédits/mois",
+    "perCredit": "{{price}}/crédit",
+    "creditsReset": "Les crédits sont réinitialisés à chaque cycle",
+    "managePlan": "GÉRER_PLAN",
+    "currentPlanHigher": "PLAN_ACTUEL_SUPÉRIEUR",
+    "upgrade": "AMÉLIORER",
+    "subscribe": "S'ABONNER",
+    "topUpPacks": "PACKS_RECHARGE",
+    "bulkPacks": "PACKS_VOLUME",
+    "popular": "POPULAIRE",
+    "bulk": "VOLUME",
+    "oneTime": "unique",
+    "credits": "{{count}} crédits",
+    "neverExpires": "n'expire jamais",
+    "purchase": "ACHETER",
+    "orCrypto": "OU_CRYPTO",
+    "payWithXrge": "PAYER EN $XRGE",
+    "bonusPercent": "+{{percent}}% bonus",
+    "baseChain": "Base chain · paliers fidélité jusqu'à +50% bonus"
   }
 }

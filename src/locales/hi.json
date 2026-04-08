@@ -100,7 +100,11 @@
     "folders": "फ़ोल्डर",
     "trash": "ट्रैश",
     "assetsIndexed": "{{count}} एसेट इंडेक्स किए",
-    "top": "शीर्ष"
+    "top": "शीर्ष",
+    "folderError": "आइटम स्थानांतरण विफल",
+    "folderErrorBulk": "आइटम स्थानांतरण विफल",
+    "deleteError": "आइटम हटाना विफल",
+    "trashError": "ट्रैश खाली करना विफल"
   },
   "simple": {
     "editImage": "इमेज एडिट",
@@ -137,5 +141,34 @@
     "terminalTos": "शर्तें_स्वीकृति --आवश्यक",
     "terminalReady": "सभी_जाँच_पास -- कनेक्ट_तैयार",
     "terminalWaiting": "पुष्टि_प्रतीक्षा..."
+  },
+  "pricing": {
+    "subscriptionPlans": "सदस्यता_योजनाएं",
+    "monthly": "मासिक",
+    "yearly": "वार्षिक",
+    "bestValue": "सर्वोत्तम मूल्य",
+    "activePlan": "सक्रिय योजना",
+    "perMonth": "प्रति माह",
+    "perYear": "प्रति वर्ष",
+    "savePercent": "{{percent}}% बचाएं",
+    "creditsPerMonth": "{{count}} क्रेडिट/माह",
+    "perCredit": "{{price}}/क्रेडिट",
+    "creditsReset": "क्रेडिट हर बिलिंग चक्र में रीसेट होते हैं",
+    "managePlan": "योजना_प्रबंधित_करें",
+    "currentPlanHigher": "वर्तमान_योजना_ऊपर",
+    "upgrade": "अपग्रेड",
+    "subscribe": "सदस्यता लें",
+    "topUpPacks": "रिचार्ज_पैक",
+    "bulkPacks": "बड़े_पैक",
+    "popular": "लोकप्रिय",
+    "bulk": "बड़ा",
+    "oneTime": "एक बार",
+    "credits": "{{count}} क्रेडिट",
+    "neverExpires": "कभी समाप्त नहीं होता",
+    "purchase": "खरीदें",
+    "orCrypto": "या_क्रिप्टो",
+    "payWithXrge": "$XRGE से भुगतान करें",
+    "bonusPercent": "+{{percent}}% बोनस",
+    "baseChain": "Base चेन · लॉयल्टी +50% बोनस तक"
   }
 }

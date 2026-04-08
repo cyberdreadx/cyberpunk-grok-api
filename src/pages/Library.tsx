@@ -101,7 +101,7 @@ const Library: React.FC = () => {
       await foldersHook.moveToFolder(resultId, folderId);
       updateResultFolder(resultId, folderId);
     } catch {
-      toast({ title: "FOLDER ERROR", description: "Failed to move item.", variant: "destructive" });
+      toast({ title: t("common.error"), description: t("library.folderError"), variant: "destructive" });
     }
   }, [foldersHook, updateResultFolder, toast]);
 
@@ -110,7 +110,7 @@ const Library: React.FC = () => {
       await foldersHook.bulkMoveToFolder(ids, folderId);
       for (const id of ids) updateResultFolder(id, folderId);
     } catch {
-      toast({ title: "FOLDER ERROR", description: "Failed to move items.", variant: "destructive" });
+      toast({ title: t("common.error"), description: t("library.folderErrorBulk"), variant: "destructive" });
     }
   }, [foldersHook, updateResultFolder, toast]);
 
@@ -119,7 +119,7 @@ const Library: React.FC = () => {
       await foldersHook.bulkDelete(ids);
       for (const id of ids) deleteResult(id);
     } catch {
-      toast({ title: "DELETE ERROR", description: "Failed to delete items.", variant: "destructive" });
+      toast({ title: t("common.error"), description: t("library.deleteError"), variant: "destructive" });
     }
   }, [foldersHook, deleteResult, toast]);
 
@@ -128,7 +128,7 @@ const Library: React.FC = () => {
       const deletedIds = await foldersHook.emptyTrashFolder();
       for (const id of deletedIds) deleteResult(id);
     } catch {
-      toast({ title: "TRASH ERROR", description: "Failed to empty trash.", variant: "destructive" });
+      toast({ title: t("common.error"), description: t("library.trashError"), variant: "destructive" });
     }
   }, [foldersHook, deleteResult, toast]);
 

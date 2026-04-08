@@ -100,7 +100,11 @@
     "folders": "Folders",
     "trash": "Trash",
     "assetsIndexed": "{{count}} assets indexed",
-    "top": "Top"
+    "top": "Top",
+    "folderError": "Failed to move item",
+    "folderErrorBulk": "Failed to move items",
+    "deleteError": "Failed to delete items",
+    "trashError": "Failed to empty trash"
   },
   "simple": {
     "editImage": "Edit Image",
@@ -137,5 +141,34 @@
     "terminalTos": "tos_acceptance --required",
     "terminalReady": "all_checks_passed -- ready_to_jack_in",
     "terminalWaiting": "awaiting_confirmation..."
+  },
+  "pricing": {
+    "subscriptionPlans": "SUBSCRIPTION_PLANS",
+    "monthly": "MONTHLY",
+    "yearly": "YEARLY",
+    "bestValue": "BEST VALUE",
+    "activePlan": "ACTIVE PLAN",
+    "perMonth": "per month",
+    "perYear": "per year",
+    "savePercent": "save {{percent}}%",
+    "creditsPerMonth": "{{count}} credits/mo",
+    "perCredit": "{{price}}/credit",
+    "creditsReset": "Credits reset each billing cycle",
+    "managePlan": "MANAGE_PLAN",
+    "currentPlanHigher": "CURRENT_PLAN_HIGHER",
+    "upgrade": "UPGRADE",
+    "subscribe": "SUBSCRIBE",
+    "topUpPacks": "TOP_UP_PACKS",
+    "bulkPacks": "BULK_PACKS",
+    "popular": "POPULAR",
+    "bulk": "BULK",
+    "oneTime": "one-time",
+    "credits": "{{count}} credits",
+    "neverExpires": "never expires",
+    "purchase": "PURCHASE",
+    "orCrypto": "OR_CRYPTO",
+    "payWithXrge": "PAY WITH $XRGE",
+    "bonusPercent": "+{{percent}}% bonus",
+    "baseChain": "Base chain · loyalty tiers up to +50% bonus"
   }
 }

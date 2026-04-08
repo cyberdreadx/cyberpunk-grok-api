@@ -100,7 +100,11 @@
     "folders": "文件夹",
     "trash": "回收站",
     "assetsIndexed": "{{count}} 个资源已索引",
-    "top": "顶部"
+    "top": "顶部",
+    "folderError": "移动项目失败",
+    "folderErrorBulk": "移动项目失败",
+    "deleteError": "删除项目失败",
+    "trashError": "清空回收站失败"
   },
   "simple": {
     "editImage": "编辑图片",
@@ -137,5 +141,34 @@
     "terminalTos": "条款接受 --必需",
     "terminalReady": "全部通过 -- 准备接入",
     "terminalWaiting": "等待确认..."
+  },
+  "pricing": {
+    "subscriptionPlans": "订阅方案",
+    "monthly": "月付",
+    "yearly": "年付",
+    "bestValue": "最优惠",
+    "activePlan": "当前方案",
+    "perMonth": "每月",
+    "perYear": "每年",
+    "savePercent": "节省{{percent}}%",
+    "creditsPerMonth": "{{count}} 积分/月",
+    "perCredit": "{{price}}/积分",
+    "creditsReset": "积分在每个计费周期重置",
+    "managePlan": "管理方案",
+    "currentPlanHigher": "当前方案更高",
+    "upgrade": "升级",
+    "subscribe": "订阅",
+    "topUpPacks": "充值包",
+    "bulkPacks": "大容量包",
+    "popular": "热门",
+    "bulk": "大容量",
+    "oneTime": "一次性",
+    "credits": "{{count}} 积分",
+    "neverExpires": "永不过期",
+    "purchase": "购买",
+    "orCrypto": "或加密货币",
+    "payWithXrge": "用 $XRGE 支付",
+    "bonusPercent": "+{{percent}}% 奖励",
+    "baseChain": "Base链 · 忠诚度最高+50%奖励"
   }
 }
