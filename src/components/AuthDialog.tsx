@@ -279,7 +279,7 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
 
             <div className="border-t border-border pt-3 mt-2">
               <p className="text-[10px] font-mono-share text-muted-foreground/60 leading-relaxed">
-                No account needed for BYOK mode — just enter your own xAI API key.
+                {t("auth.noAccountNeeded")}
               </p>
             </div>
           </>
