@@ -163,7 +163,7 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
           className="font-mono-share text-xs gap-1 text-secondary hover:text-secondary/80 relative"
         >
           <LogIn className="w-3 h-3" />
-          <span>LOGIN</span>
+          <span>{t("auth.login").toUpperCase()}</span>
           <span className="font-mono-share text-[8px] text-primary/80 bg-primary/10 border border-primary/25 rounded px-1 py-0 leading-4 hidden sm:inline">
             10 FREE / DAY
           </span>
