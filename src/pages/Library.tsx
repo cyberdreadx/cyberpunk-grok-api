@@ -101,7 +101,7 @@ const Library: React.FC = () => {
       await foldersHook.moveToFolder(resultId, folderId);
       updateResultFolder(resultId, folderId);
     } catch {
-      toast({ title: "FOLDER ERROR", description: "Failed to move item.", variant: "destructive" });
+      toast({ title: t("common.error"), description: t("library.folderError"), variant: "destructive" });
     }
   }, [foldersHook, updateResultFolder, toast]);
 
