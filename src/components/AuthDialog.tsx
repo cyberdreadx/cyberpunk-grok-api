@@ -148,7 +148,7 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
           className="font-mono-share text-xs gap-1.5 text-muted-foreground hover:text-destructive"
         >
           <LogOut className="w-3 h-3" />
-          <span className="hidden sm:inline">LOGOUT</span>
+          <span className="hidden sm:inline">{t("auth.logout").toUpperCase()}</span>
         </Button>
       </div>
     );
