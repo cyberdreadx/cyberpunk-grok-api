@@ -664,7 +664,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
                     ) : (
                       <Send className="w-4 h-4" />
                     )}
-                    {isLoading ? "GENERATING…" : "GENERATE"}
+                    {isLoading ? t("prompt.generating").toUpperCase() : t("prompt.generate").toUpperCase()}
                     {!isLoading && creditCost != null && (() => {
                       const bd = creditCostBreakdown(mode, creditCost, settings.count ?? 1, videoDuration ?? 5);
                       return (
