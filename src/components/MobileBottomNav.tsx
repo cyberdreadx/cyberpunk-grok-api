@@ -23,6 +23,7 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
 }) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [moreOpen, setMoreOpen] = useState(false);
 
   const isHome = location.pathname === "/" || location.pathname === "";
