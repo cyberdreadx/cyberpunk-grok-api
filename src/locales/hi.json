@@ -100,7 +100,11 @@
     "folders": "फ़ोल्डर",
     "trash": "ट्रैश",
     "assetsIndexed": "{{count}} एसेट इंडेक्स किए",
-    "top": "शीर्ष"
+    "top": "शीर्ष",
+    "folderError": "आइटम स्थानांतरण विफल",
+    "folderErrorBulk": "आइटम स्थानांतरण विफल",
+    "deleteError": "आइटम हटाना विफल",
+    "trashError": "ट्रैश खाली करना विफल"
   },
   "simple": {
     "editImage": "इमेज एडिट",

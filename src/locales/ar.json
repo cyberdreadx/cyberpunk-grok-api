@@ -100,7 +100,11 @@
     "folders": "مجلدات",
     "trash": "سلة المحذوفات",
     "assetsIndexed": "{{count}} ملف مفهرس",
-    "top": "الأعلى"
+    "top": "الأعلى",
+    "folderError": "فشل نقل العنصر",
+    "folderErrorBulk": "فشل نقل العناصر",
+    "deleteError": "فشل حذف العناصر",
+    "trashError": "فشل تفريغ سلة المحذوفات"
   },
   "simple": {
     "editImage": "تعديل الصورة",

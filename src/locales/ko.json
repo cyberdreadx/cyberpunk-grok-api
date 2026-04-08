@@ -100,7 +100,11 @@
     "folders": "폴더",
     "trash": "휴지통",
     "assetsIndexed": "{{count}}개 에셋 색인됨",
-    "top": "맨 위"
+    "top": "맨 위",
+    "folderError": "항목 이동 실패",
+    "folderErrorBulk": "항목 이동 실패",
+    "deleteError": "항목 삭제 실패",
+    "trashError": "휴지통 비우기 실패"
   },
   "simple": {
     "editImage": "이미지 편집",

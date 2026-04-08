@@ -100,7 +100,11 @@
     "folders": "フォルダ",
     "trash": "ゴミ箱",
     "assetsIndexed": "{{count}}件のアセット",
-    "top": "トップ"
+    "top": "トップ",
+    "folderError": "移動に失敗しました",
+    "folderErrorBulk": "移動に失敗しました",
+    "deleteError": "削除に失敗しました",
+    "trashError": "ゴミ箱を空にできませんでした"
   },
   "simple": {
     "editImage": "画像編集",
