@@ -70,7 +70,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
                 : "bg-card/40 text-muted-foreground border-border hover:bg-primary/10"
             }`}
           >
-            MONTHLY
+            {t("pricing.monthly")}
           </button>
           <button
             onClick={() => setBillingInterval("year")}
