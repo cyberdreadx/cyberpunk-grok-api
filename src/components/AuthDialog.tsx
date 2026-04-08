@@ -42,6 +42,7 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
   onResetPassword,
   onDeleteAccount,
 }) => {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
