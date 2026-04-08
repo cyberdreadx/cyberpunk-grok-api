@@ -40,32 +40,6 @@ const Library: React.FC = () => {
   const [tosOpen, setTosOpen] = useState(false);
   const [privacyOpen, setPrivacyOpen] = useState(false);
 
-  // Header collapse — hide on scroll-down, reveal on scroll-up
-  const [headerVisible, setHeaderVisible] = useState(true);
-  const lastScrollY = useRef(0);
-  const rafId = useRef(0);
-
-  useEffect(() => {
-    const onScroll = () => {
-      if (rafId.current) return;
-      rafId.current = requestAnimationFrame(() => {
-        rafId.current = 0;
-        const y = window.scrollY;
-        if (y > 80) {
-          setHeaderVisible(y < lastScrollY.current);
-        } else {
-          setHeaderVisible(true);
-        }
-        lastScrollY.current = y;
-      });
-    };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-      cancelAnimationFrame(rafId.current);
-    };
-  }, []);
-
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -168,11 +142,7 @@ const Library: React.FC = () => {
     <CyberLayout>
       <div className="max-w-6xl mx-auto px-4 py-6 sm:pb-8 space-y-6" style={{ paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 0px))' }}>
         {/* Header — collapses on scroll-down, snaps back on scroll-up */}
-        <div
-          className={`space-y-4 transition-all duration-300 overflow-hidden ${
-            headerVisible ? "max-h-40 opacity-100" : "max-h-0 opacity-0 pointer-events-none"
-          }`}
-        >
+        <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <button
