@@ -269,6 +269,7 @@ function PackCard({
   onXrgePurchase?: (id: string) => void;
   isBulk?: boolean;
 }) {
+  const { t } = useTranslation();
   return (
     <div
       className={`relative flex min-w-0 max-w-full flex-col overflow-hidden rounded-lg border-2 transition-all ${
@@ -281,12 +282,12 @@ function PackCard({
     >
       {pkg.popular && (
         <div className="border-b border-secondary/50 bg-secondary/85 py-1.5 text-center font-orbitron text-[8px] tracking-[0.18em] text-secondary-foreground">
-          POPULAR
+          {t("pricing.popular")}
         </div>
       )}
       {isBulk && !pkg.popular && (
         <div className="border-b border-primary/40 bg-primary/20 py-1.5 text-center font-orbitron text-[8px] tracking-[0.18em] text-primary">
-          BULK
+          {t("pricing.bulk")}
         </div>
       )}
 
@@ -297,18 +298,18 @@ function PackCard({
         <p className="font-orbitron text-xl font-bold tabular-nums leading-none text-foreground sm:text-2xl break-words">
           ${(pkg.priceCents / 100).toFixed(0)}
         </p>
-        <p className="font-mono-share text-[10px] uppercase tracking-wide text-muted-foreground">one-time</p>
+        <p className="font-mono-share text-[10px] uppercase tracking-wide text-muted-foreground">{t("pricing.oneTime")}</p>
       </div>
 
       <div className="mb-3 flex items-center gap-1">
         <Zap className="h-3 w-3 shrink-0 text-secondary" />
         <span className="font-mono-share text-sm font-bold text-secondary">
-          {pkg.credits.toLocaleString()} credits
+          {t("pricing.credits", { count: pkg.credits.toLocaleString() })}
         </span>
       </div>
 
       <p className="mb-1 flex-1 font-mono-share text-[10px] text-muted-foreground">
-        {pkg.perCredit}/credit &mdash; never expires
+        {t("pricing.perCredit", { price: pkg.perCredit })} &mdash; {t("pricing.neverExpires")}
       </p>
 
       <div className="space-y-2">
@@ -326,15 +327,14 @@ function PackCard({
           {purchasing ? (
             <Loader2 className="w-3 h-3 animate-spin" />
           ) : (
-            "PURCHASE"
+            t("pricing.purchase")
           )}
         </Button>
-        {/* XRGE first — one tap to crypto checkout (Base) */}
         {onXrgePurchase && (
           <>
             <div className="flex items-center gap-2 my-1">
               <div className="h-px flex-1 bg-border/30" />
-              <span className="font-mono-share text-[8px] text-pink-400/70 tracking-widest">OR_CRYPTO</span>
+              <span className="font-mono-share text-[8px] text-pink-400/70 tracking-widest">{t("pricing.orCrypto")}</span>
               <div className="h-px flex-1 bg-border/30" />
             </div>
             <button
@@ -344,11 +344,11 @@ function PackCard({
               className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-md border border-[#c44b8b]/50 bg-gradient-to-r from-[#8b2fc0]/10 via-[#c44b8b]/10 to-[#e8445a]/10 hover:from-[#8b2fc0]/20 hover:via-[#c44b8b]/20 hover:to-[#e8445a]/20 hover:border-[#c44b8b]/70 transition-all disabled:opacity-50"
             >
               <img src="/xrge-logo.png" alt="" className="w-5 h-5 rounded-full" />
-              <span className="font-orbitron text-[10px] tracking-wider text-white/90">PAY WITH $XRGE</span>
-              <span className="text-green-400 font-mono-share text-[8px] font-bold bg-green-400/10 px-1.5 py-0.5 rounded-full leading-none">+30% bonus</span>
+              <span className="font-orbitron text-[10px] tracking-wider text-white/90">{t("pricing.payWithXrge")}</span>
+              <span className="text-green-400 font-mono-share text-[8px] font-bold bg-green-400/10 px-1.5 py-0.5 rounded-full leading-none">{t("pricing.bonusPercent", { percent: 30 })}</span>
             </button>
             <p className="font-mono-share text-[8px] text-center text-muted-foreground/55 leading-tight">
-              Base chain · loyalty tiers up to +50% bonus
+              {t("pricing.baseChain")}
             </p>
           </>
         )}

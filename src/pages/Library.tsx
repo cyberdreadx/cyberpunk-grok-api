@@ -128,7 +128,7 @@ const Library: React.FC = () => {
       const deletedIds = await foldersHook.emptyTrashFolder();
       for (const id of deletedIds) deleteResult(id);
     } catch {
-      toast({ title: "TRASH ERROR", description: "Failed to empty trash.", variant: "destructive" });
+      toast({ title: t("common.error"), description: t("library.trashError"), variant: "destructive" });
     }
   }, [foldersHook, deleteResult, toast]);
 
