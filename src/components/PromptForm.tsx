@@ -332,11 +332,11 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
   }, [prompt, mode, enhancing]);
 
   const placeholders: Record<GrokMode, string> = {
-    "text-to-image": "Describe the image you want to generate...",
-    "edit-image": "Describe the modifications to apply...",
-    "text-to-video": "Describe the video scene to render...",
-    "image-to-video": "Describe the animation / motion to apply...",
-    "edit-video": "Describe the edits to apply to the video...",
+    "text-to-image": t("prompt.placeholder"),
+    "edit-image": t("prompt.placeholderEdit"),
+    "text-to-video": t("prompt.placeholderVideo"),
+    "image-to-video": t("prompt.placeholderAnimate"),
+    "edit-video": t("prompt.placeholderEdit"),
   };
 
   const suggestedPrompts: Record<GrokMode, string[]> = {
