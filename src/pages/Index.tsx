@@ -1,9 +1,14 @@
 import React, { useState, useCallback, useRef, useEffect, Suspense } from "react";
 import { useTranslation } from "react-i18next";
-import { Terminal, Key, Coins, Shield, Eye, MessageCircle, HelpCircle, Server, Zap, Cpu, ChevronDown, Film, X, AlertCircle, CheckCircle2, Upload, Users, Image, Code, ToggleLeft, ToggleRight } from "lucide-react";
+import { Terminal, Key, Coins, Shield, Eye, MessageCircle, HelpCircle, Server, Zap, Cpu, ChevronDown, Film, X, AlertCircle, CheckCircle2, Upload, Users, Image, Code, ToggleLeft, ToggleRight, Gift } from "lucide-react";
 import { Link } from "react-router-dom";
 import CyberLayout from "@/components/CyberLayout";
 import MobileBottomNav from "@/components/MobileBottomNav";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 import { lazyWithRetry } from "@/lib/lazyWithRetry";
 // Lazy-load the 3D orb — Three.js is ~800 KB and not needed for initial render
@@ -38,7 +43,7 @@ import { useCredits } from "@/hooks/useCredits";
 import { useFolders } from "@/hooks/useFolders";
 import { usePromptHistory } from "@/hooks/usePromptHistory";
 import { useToast } from "@/hooks/use-toast";
-import { calculateCreditCost, type CreditMode } from "@/lib/api";
+import { apiFetch, calculateCreditCost, type CreditMode } from "@/lib/api";
 import { APP_VERSION } from "@/lib/version";
 
 const ANNOUNCEMENTS: { id: string; message: string; type?: "info" | "warning" | "success" }[] = [
@@ -67,6 +72,17 @@ const Index = () => {
     });
   }, []);
   const visibleAnnouncements = ANNOUNCEMENTS.filter(a => !dismissedAnnouncements.includes(a.id));
+
+  // Reddit reward banner
+  const [redditRewardDismissed, setRedditRewardDismissed] = useState(() =>
+    localStorage.getItem("reddit_reward_dismissed") === "1"
+  );
+  const [redditRewardClaimed, setRedditRewardClaimed] = useState(false);
+  const [redditCodeOpen, setRedditCodeOpen] = useState(false);
+  const [redditCode, setRedditCode] = useState("");
+  const [redditClaimLoading, setRedditClaimLoading] = useState(false);
+  const [redditClaimError, setRedditClaimError] = useState("");
+
   const [settings, setSettings] = useState<GenerationSettings>(() => {
     try {
       const saved = localStorage.getItem("grok-settings");
@@ -360,6 +376,24 @@ const Index = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
     toast({ title: t("toast.animateMode"), description: t("toast.animateModeDesc") });
   }, [toast]);
+
+  const handleRedditClaim = useCallback(async () => {
+    if (!redditCode.trim()) return;
+    setRedditClaimLoading(true);
+    setRedditClaimError("");
+    try {
+      await apiFetch("/reddit-reward", { method: "POST", body: { code: redditCode.trim() } });
+      setRedditRewardClaimed(true);
+      setRedditRewardDismissed(true);
+      localStorage.setItem("reddit_reward_dismissed", "1");
+      creditsHook.refreshCredits();
+      toast({ title: "10 credits claimed!", description: "Thanks for joining r/GrokRunner." });
+    } catch (err: any) {
+      setRedditClaimError(err.message || "Failed to claim");
+    } finally {
+      setRedditClaimLoading(false);
+    }
+  }, [redditCode, creditsHook, toast]);
 
   const handleGltchImage2 = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1072,19 +1106,28 @@ const Index = () => {
         </header>
 
         {/* Value prop strip */}
-        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 py-1.5 animate-slide-up">
-          {[
-            { icon: "⚡", label: t("header.valueFast") },
-            { icon: "🔞", label: t("header.valueNsfw") },
-            { icon: "🎬", label: t("header.valueMedia") },
-            { icon: "💳", label: t("header.valuePayPerCredit") },
-          ].map(({ icon, label }) => (
-            <span key={label} className="flex items-center gap-1 font-mono-share text-[10px] text-muted-foreground/50">
-              <span className="text-primary/60">{icon}</span>
-              {label}
-            </span>
-          ))}
-        </div>
+        <Collapsible defaultOpen={false}>
+          <CollapsibleTrigger className="flex items-center gap-2 w-full group py-1">
+            <span className="font-mono-share text-primary/40 text-[9px] group-data-[state=open]:text-primary/60">▸</span>
+            <span className="font-mono-share text-[9px] tracking-widest text-muted-foreground/40 group-hover:text-muted-foreground/60 transition-colors">STATUS</span>
+            <div className="h-px flex-1 bg-primary/5" />
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 py-1.5 animate-slide-up">
+              {[
+                { icon: "⚡", label: t("header.valueFast") },
+                { icon: "🔞", label: t("header.valueNsfw") },
+                { icon: "🎬", label: t("header.valueMedia") },
+                { icon: "💳", label: t("header.valuePayPerCredit") },
+              ].map(({ icon, label }) => (
+                <span key={label} className="flex items-center gap-1 font-mono-share text-[10px] text-muted-foreground/50">
+                  <span className="text-primary/60">{icon}</span>
+                  {label}
+                </span>
+              ))}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
 
         {/* Announcements */}
         {visibleAnnouncements.length > 0 && (
@@ -1111,6 +1154,68 @@ const Index = () => {
                 </button>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Reddit reward banner */}
+        {auth.isAuthenticated && !redditRewardDismissed && !redditRewardClaimed && (
+          <div className="mb-4 animate-slide-up rounded border border-orange-500/30 bg-orange-500/5 px-4 py-3 font-mono-share">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <Gift className="w-4 h-4 text-orange-400 flex-shrink-0" />
+                <span className="text-[11px] text-orange-300">
+                  Join{" "}
+                  <a href="https://reddit.com/r/GrokRunner" target="_blank" rel="noopener noreferrer"
+                    className="underline underline-offset-2 hover:text-orange-200 transition-colors">
+                    r/GrokRunner
+                  </a>
+                  {" "}and claim 10 free credits!
+                </span>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {!redditCodeOpen ? (
+                  <button
+                    onClick={() => setRedditCodeOpen(true)}
+                    className="px-2.5 py-1 text-[10px] rounded border border-orange-500/40 bg-orange-500/10 text-orange-300 hover:bg-orange-500/20 transition-colors"
+                  >
+                    CLAIM
+                  </button>
+                ) : null}
+                <button
+                  onClick={() => {
+                    setRedditRewardDismissed(true);
+                    localStorage.setItem("reddit_reward_dismissed", "1");
+                  }}
+                  className="text-orange-400/50 hover:text-orange-300 transition-colors"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+            {redditCodeOpen && (
+              <div className="mt-2.5 flex items-center gap-2">
+                <input
+                  type="text"
+                  value={redditCode}
+                  onChange={e => { setRedditCode(e.target.value); setRedditClaimError(""); }}
+                  onKeyDown={e => e.key === "Enter" && handleRedditClaim()}
+                  placeholder="Enter code from subreddit..."
+                  className="flex-1 px-2.5 py-1.5 rounded border border-orange-500/30 bg-background/50 text-[11px] text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-orange-400/60"
+                  disabled={redditClaimLoading}
+                  autoFocus
+                />
+                <button
+                  onClick={handleRedditClaim}
+                  disabled={redditClaimLoading || !redditCode.trim()}
+                  className="px-3 py-1.5 text-[10px] rounded border border-orange-500/40 bg-orange-500/15 text-orange-300 hover:bg-orange-500/25 transition-colors disabled:opacity-40"
+                >
+                  {redditClaimLoading ? "..." : "SUBMIT"}
+                </button>
+              </div>
+            )}
+            {redditClaimError && (
+              <p className="mt-1.5 text-[10px] text-red-400">{redditClaimError}</p>
+            )}
           </div>
         )}
 
@@ -1221,6 +1326,21 @@ const Index = () => {
                 </React.Fragment>
               ))}
             </div>
+
+            {/* Engine + mode settings (collapsible) */}
+            <Collapsible defaultOpen={false} className="rounded-md overflow-hidden">
+              <CollapsibleTrigger className="flex items-center gap-2 w-full group py-1.5">
+                <span className="font-mono-share text-primary/40 text-[9px] group-data-[state=open]:text-primary/60">▸</span>
+                <Zap className="w-3 h-3 text-muted-foreground group-hover:text-primary transition-colors group-data-[state=open]:text-primary" />
+                <span className="font-mono-share text-[10px] tracking-widest text-muted-foreground group-hover:text-primary transition-colors group-data-[state=open]:text-primary">
+                  ENGINE_CONFIG
+                </span>
+                <div className="h-px flex-1 bg-primary/10" />
+                <span className="font-mono-share text-[9px] text-muted-foreground/30">
+                  {mode === "edit-image" ? editEngine : mode === "text-to-image" ? genEngine : mode === "text-to-video" ? renderEngine : animateEngine}
+                </span>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-2 space-y-3 animate-slide-up">
 
             {/* Engine selector — shows in edit-image mode */}
             {mode === "edit-image" && (
@@ -2041,6 +2161,9 @@ const Index = () => {
               </div>
             )}
 
+              </CollapsibleContent>
+            </Collapsible>
+
             <PromptHistory history={history} onSelect={handleSelectPrompt} onRemove={removeEntry} onClear={clearHistory} />
             <PromptForm
               mode={mode}
@@ -2100,17 +2223,18 @@ const Index = () => {
 
         {/* ComfyUI Job Queue */}
         {comfyJobs.length > 0 && (
+          <Collapsible defaultOpen={true} asChild>
           <section className="animate-slide-up space-y-2">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="font-mono-share text-purple-400/60 text-xs">❯</span>
+              <CollapsibleTrigger className="flex items-center gap-2 group cursor-pointer">
+                <span className="font-mono-share text-purple-400/40 text-[9px] group-data-[state=open]:text-purple-400/60">▸</span>
                 <span className="font-orbitron text-[10px] tracking-widest text-purple-400/80">
                   COMFY_QUEUE
                 </span>
                 <span className="font-mono-share text-[9px] text-muted-foreground/50">
                   [{comfyJobs.filter(j => j.status === "submitting" || j.status === "generating").length} active]
                 </span>
-              </div>
+              </CollapsibleTrigger>
               {comfyJobs.some(j => j.status === "done" || j.status === "error") && (
                 <button
                   onClick={clearFinishedComfyJobs}
@@ -2120,6 +2244,7 @@ const Index = () => {
                 </button>
               )}
             </div>
+            <CollapsibleContent>
 
             <div className="grid gap-2 sm:grid-cols-2">
               {comfyJobs.map(job => {
@@ -2243,10 +2368,13 @@ const Index = () => {
                 );
               })}
             </div>
+            </CollapsibleContent>
           </section>
+          </Collapsible>
         )}
 
         {/* Results */}
+        <Collapsible defaultOpen={true} asChild>
         <section id="results-section" className="animate-slide-up relative" style={{ animationDelay: "300ms" }}>
           {/* Post-generation walkthrough tip */}
           {showResultsTip && simpleMode && results.length > 0 && (
@@ -2294,22 +2422,27 @@ const Index = () => {
               </div>
             </div>
           )}
-          <div className="flex items-center gap-2 mb-4">
-            <span className="font-mono-share text-secondary/40 text-xs">❯</span>
+          <CollapsibleTrigger className="flex items-center gap-2 mb-4 w-full group cursor-pointer">
+            <span className="font-mono-share text-secondary/40 text-[9px] group-data-[state=open]:text-secondary/60">▸</span>
             <GlitchText
               text="OUTPUT_STREAM"
               className="font-orbitron text-[10px] tracking-widest text-muted-foreground"
               glitchIntensity="low"
             />
+            {results.length > 0 && (
+              <span className="font-mono-share text-[9px] text-muted-foreground/40">[{results.length}]</span>
+            )}
             <div className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
             <Link
               to="/library"
+              onClick={(e) => e.stopPropagation()}
               className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded border border-primary/20 hover:border-primary/50 bg-primary/5 hover:bg-primary/10 transition-all font-mono-share text-[10px] text-primary/70 hover:text-primary tracking-wider"
             >
               <Image className="w-3 h-3" />
               FULL LIBRARY
             </Link>
-          </div>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
           <Suspense fallback={<GalleryChunkLoader />}>
             <ResultsGrid
               results={results}
@@ -2351,10 +2484,20 @@ const Index = () => {
               </button>
             </div>
           )}
+          </CollapsibleContent>
         </section>
+        </Collapsible>
 
         {/* Footer */}
-        <footer className="text-center py-6 border-t border-border/30 space-y-3 overflow-hidden">
+        <Collapsible defaultOpen={false}>
+        <footer className="text-center py-4 border-t border-border/30 overflow-hidden">
+          <CollapsibleTrigger className="flex items-center gap-2 w-full justify-center group cursor-pointer py-1">
+            <span className="font-mono-share text-primary/30 text-[9px] group-data-[state=open]:text-primary/50">▸</span>
+            <span className="font-mono-share text-[9px] tracking-widest text-muted-foreground/30 group-hover:text-muted-foreground/50 transition-colors">
+              SYSTEM_INFO v{APP_VERSION}
+            </span>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="space-y-3 mt-2 animate-slide-up">
           <p className="font-mono-share text-[10px] text-muted-foreground/40 animate-flicker">
             <span className="text-primary/30">$</span>{" "}
             echo "POWERED BY xAI // {effectiveApiMode === "credits" ? "CREDIT-BASED" : "CLIENT-SIDE"} RENDERING"
@@ -2458,7 +2601,9 @@ const Index = () => {
               </>
             )}
           </div>
+          </CollapsibleContent>
         </footer>
+        </Collapsible>
 
         {/* Dialogs */}
         <HowToUseDialog open={guideOpen} onOpenChange={setGuideOpen} />
