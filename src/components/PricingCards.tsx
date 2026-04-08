@@ -101,7 +101,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
               >
                 {tier.popular && !isActive && (
                   <div className="border-b border-secondary/50 bg-secondary/85 py-1.5 text-center font-orbitron text-[8px] tracking-[0.18em] text-secondary-foreground">
-                    BEST VALUE
+                    {t("pricing.bestValue")}
                   </div>
                 )}
                 {isActive && (
