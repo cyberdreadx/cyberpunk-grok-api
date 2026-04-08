@@ -1202,6 +1202,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
         throw new Error(errData.error || `Upload failed (${res.status})`);
       }
       const data = await res.json();
+      shareCacheRef.current.set(result.id, data.shareUrl);
       await copyOrShareLink(data, result);
     } catch (err: any) {
       console.error("[share] error:", err);
