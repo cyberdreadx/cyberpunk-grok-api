@@ -1270,14 +1270,14 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
 
       // If it's already a public URL, use it directly
       if (!mediaUrl.startsWith("https://")) {
-        // Upload via share endpoint to get public URL
         let mediaBase64 = result.url;
         if (!mediaBase64.startsWith("data:")) {
           const stored = await getResultDataUrl(result.id).catch(() => null);
           if (stored && stored.startsWith("data:")) {
             mediaBase64 = stored;
-          } else if (mediaBase64.startsWith("blob:")) {
+          } else if (mediaBase64.startsWith("http") || mediaBase64.startsWith("blob:")) {
             const resp = await fetch(mediaBase64);
+            if (!resp.ok) throw new Error("Failed to fetch media for upload");
             const blob = await resp.blob();
             mediaBase64 = await new Promise<string>((resolve, reject) => {
               const reader = new FileReader();
@@ -1300,7 +1300,10 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
             prompt: result.revised_prompt || "",
           }),
         });
-        if (!uploadRes.ok) throw new Error("Upload failed");
+        if (!uploadRes.ok) {
+          const errBody = await uploadRes.json().catch(() => null);
+          throw new Error(errBody?.error || `Upload failed (${uploadRes.status})`);
+        }
         const uploadData = await uploadRes.json();
         mediaUrl = uploadData.r2Url;
       }
