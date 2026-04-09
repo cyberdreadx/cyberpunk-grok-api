@@ -48,6 +48,10 @@
     {
       "path": "/api/cron-reset-daily",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron-cleanup-stories",
+      "schedule": "0 */6 * * *"
     }
   ],
   "headers": [
