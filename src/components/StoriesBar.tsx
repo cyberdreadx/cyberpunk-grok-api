@@ -53,7 +53,6 @@ const StoriesBar: React.FC = () => {
   };
 
   const handleViewed = (storyId: string) => {
-    // Mark locally
     setUsers(prev =>
       prev.map(u => ({
         ...u,
@@ -61,30 +60,77 @@ const StoriesBar: React.FC = () => {
         hasUnviewed: u.stories.some(s => s.id !== storyId && !s.viewed),
       }))
     );
-    // Fire-and-forget API call
     apiFetch("/stories", { method: "PUT", body: { storyId } }).catch(() => {});
   };
 
   return (
     <>
-      <div className="flex gap-3 overflow-x-auto pb-2 px-1 scrollbar-hide">
+      <style>{`
+        @keyframes story-ring-spin {
+          to { --story-angle: 360deg; }
+        }
+        @property --story-angle {
+          syntax: "<angle>";
+          initial-value: 0deg;
+          inherits: false;
+        }
+        .story-ring-active {
+          background: conic-gradient(
+            from var(--story-angle),
+            hsl(var(--primary)),
+            hsl(var(--secondary)),
+            hsl(var(--primary))
+          );
+          animation: story-ring-spin 3s linear infinite;
+        }
+        .story-ring-viewed {
+          background: hsl(var(--muted-foreground) / 0.25);
+        }
+      `}</style>
+
+      <div className="flex gap-4 overflow-x-auto pb-3 px-1 scrollbar-hide">
         {users.map((u, idx) => (
           <button
             key={u.userId}
             onClick={() => openStory(idx)}
-            className="flex flex-col items-center gap-1 shrink-0 group"
+            className="flex flex-col items-center gap-1.5 shrink-0 group"
           >
+            {/* Outer gradient ring */}
             <div
-              className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center text-xs font-bold uppercase
-                ${u.hasUnviewed
-                  ? "ring-2 ring-primary ring-offset-2 ring-offset-background"
-                  : "ring-2 ring-muted-foreground/30 ring-offset-2 ring-offset-background opacity-70"
-                }
-                bg-gradient-to-br from-primary/30 to-secondary/30 transition-all group-hover:scale-105`}
+              className={`relative w-[62px] h-[62px] sm:w-[70px] sm:h-[70px] rounded-full p-[2.5px] transition-transform duration-200 group-hover:scale-110 group-active:scale-95 ${
+                u.hasUnviewed ? "story-ring-active" : "story-ring-viewed"
+              }`}
             >
-              <span className="text-foreground text-sm">{u.username.slice(0, 2)}</span>
+              {/* Inner avatar */}
+              <div className="w-full h-full rounded-full bg-background flex items-center justify-center overflow-hidden">
+                <div
+                  className={`w-full h-full rounded-full flex items-center justify-center transition-all ${
+                    u.hasUnviewed
+                      ? "bg-gradient-to-br from-primary/20 via-background to-secondary/20"
+                      : "bg-muted/40"
+                  }`}
+                >
+                  <span
+                    className={`font-mono-share text-sm sm:text-base font-bold uppercase tracking-wider ${
+                      u.hasUnviewed ? "text-primary" : "text-muted-foreground/60"
+                    }`}
+                  >
+                    {u.username.slice(0, 2)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Unviewed dot indicator */}
+              {u.hasUnviewed && (
+                <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-primary shadow-[0_0_6px_hsl(var(--primary))]" />
+              )}
             </div>
-            <span className="text-[10px] font-mono text-muted-foreground truncate max-w-[60px]">
+
+            <span
+              className={`font-mono-share text-[10px] truncate max-w-[64px] transition-colors ${
+                u.hasUnviewed ? "text-foreground/80" : "text-muted-foreground/50"
+              }`}
+            >
               {u.username}
             </span>
           </button>
