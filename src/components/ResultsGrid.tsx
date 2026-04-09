@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import { Download, Maximize2, X, Trash2, ExternalLink, ChevronLeft, ChevronRight, Pencil, Film, Copy, Check, FolderPlus, FolderOpen, MoreVertical, FolderInput, Lock, LockOpen, ShieldCheck, Eye, EyeOff, ChevronDown, Sparkles, Archive, Loader2, Link2, CheckSquare, Square, ListChecks, RotateCcw, XCircle, Search } from "lucide-react";
+import { Download, Maximize2, X, Trash2, ExternalLink, ChevronLeft, ChevronRight, Pencil, Film, Copy, Check, FolderPlus, FolderOpen, MoreVertical, FolderInput, Lock, LockOpen, ShieldCheck, Eye, EyeOff, ChevronDown, Sparkles, Archive, Loader2, Link2, CheckSquare, Square, ListChecks, RotateCcw, XCircle, Search, CirclePlus } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -1255,6 +1255,77 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
       toast.error("Failed to upload media for Grokker");
     } finally {
       setSharingId(null);
+    }
+  }, []);
+
+  // ── Post as Story ──────────────────────────────────────────────────────
+  const [storyPostingId, setStoryPostingId] = useState<string | null>(null);
+
+  const handlePostStory = useCallback(async (result: GrokResult) => {
+    setStoryPostingId(result.id);
+    try {
+      // Reuse the share upload flow to get a public URL
+      const shareBase = (import.meta.env.VITE_API_URL as string) || "/api";
+      let mediaUrl = result.url;
+
+      // If it's already a public URL, use it directly
+      if (!mediaUrl.startsWith("https://")) {
+        // Upload via share endpoint to get public URL
+        let mediaBase64 = result.url;
+        if (!mediaBase64.startsWith("data:")) {
+          const stored = await getResultDataUrl(result.id).catch(() => null);
+          if (stored && stored.startsWith("data:")) {
+            mediaBase64 = stored;
+          } else if (mediaBase64.startsWith("blob:")) {
+            const resp = await fetch(mediaBase64);
+            const blob = await resp.blob();
+            mediaBase64 = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result as string);
+              reader.onerror = () => reject(new Error("FileReader failed"));
+              reader.readAsDataURL(blob);
+            });
+          }
+        }
+        const token = localStorage.getItem("auth-token");
+        const uploadRes = await fetch(`${shareBase}/share`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({
+            mediaBase64,
+            mediaType: result.type,
+            prompt: result.revised_prompt || "",
+          }),
+        });
+        if (!uploadRes.ok) throw new Error("Upload failed");
+        const uploadData = await uploadRes.json();
+        mediaUrl = uploadData.r2Url;
+      }
+
+      // Post story
+      const token = localStorage.getItem("auth-token");
+      const storyRes = await fetch(`${shareBase}/stories`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          mediaUrl,
+          mediaType: result.type,
+          caption: result.revised_prompt || "",
+          prompt: result.revised_prompt || "",
+        }),
+      });
+      if (!storyRes.ok) throw new Error("Failed to post story");
+      toast.success("Story posted! It'll be visible for 24 hours.");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to post story");
+    } finally {
+      setStoryPostingId(null);
     }
   }, []);
 
