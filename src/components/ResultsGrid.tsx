@@ -1316,6 +1316,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
             access: "public",
             handleUploadUrl: `${shareBase}/blob-upload`,
             clientPayload: authToken,
+            addRandomSuffix: true,
           });
           mediaUrl = blobUrl;
         }
