@@ -22,6 +22,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const jwt = clientPayload ? verifyToken(clientPayload) : null;
         if (!jwt) throw new Error("Unauthorized");
         return {
+          addRandomSuffix: true,
           allowedContentTypes: [
             "image/png", "image/jpeg", "image/webp",
             "video/mp4", "video/webm",
