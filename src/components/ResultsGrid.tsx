@@ -27,6 +27,7 @@ import { exportLibraryAsZip, getResultDataUrl } from "@/lib/storage";
 import type { FolderFilter } from "@/hooks/useFolders";
 import { useSwipe } from "@/hooks/useSwipe";
 import ShareCTA from "@/components/ShareCTA";
+import { upload } from "@vercel/blob/client";
 
 // ── PIN Utilities ────────────────────────────────────────────────────────
 
@@ -1270,42 +1271,32 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
 
       // If it's already a public URL, use it directly
       if (!mediaUrl.startsWith("https://")) {
-        let mediaBase64 = result.url;
-        if (!mediaBase64.startsWith("data:")) {
+        // Resolve the media to a Blob for client-side upload (bypasses 4.5MB body limit)
+        let mediaBlob: Blob | null = null;
+        const src = result.url;
+
+        if (src.startsWith("data:")) {
+          mediaBlob = await fetch(src).then((r) => r.blob());
+        } else {
           const stored = await getResultDataUrl(result.id).catch(() => null);
           if (stored && stored.startsWith("data:")) {
-            mediaBase64 = stored;
-          } else if (mediaBase64.startsWith("http") || mediaBase64.startsWith("blob:")) {
-            const resp = await fetch(mediaBase64);
+            mediaBlob = await fetch(stored).then((r) => r.blob());
+          } else if (src.startsWith("http") || src.startsWith("blob:")) {
+            const resp = await fetch(src);
             if (!resp.ok) throw new Error("Failed to fetch media for upload");
-            const blob = await resp.blob();
-            mediaBase64 = await new Promise<string>((resolve, reject) => {
-              const reader = new FileReader();
-              reader.onloadend = () => resolve(reader.result as string);
-              reader.onerror = () => reject(new Error("FileReader failed"));
-              reader.readAsDataURL(blob);
-            });
+            mediaBlob = await resp.blob();
           }
         }
-        const token = localStorage.getItem("auth-token");
-        const uploadRes = await fetch(`${shareBase}/share`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify({
-            mediaBase64,
-            mediaType: result.type,
-            prompt: result.revised_prompt || "",
-          }),
+        if (!mediaBlob) throw new Error("Cannot resolve media for upload");
+
+        const ext = result.type === "video" ? "mp4" : "png";
+        const authToken = localStorage.getItem("auth-token") || "";
+        const { url: blobUrl } = await upload(`stories/story.${ext}`, mediaBlob, {
+          access: "public",
+          handleUploadUrl: `${shareBase}/blob-upload`,
+          clientPayload: authToken,
         });
-        if (!uploadRes.ok) {
-          const errBody = await uploadRes.json().catch(() => null);
-          throw new Error(errBody?.error || `Upload failed (${uploadRes.status})`);
-        }
-        const uploadData = await uploadRes.json();
-        mediaUrl = uploadData.r2Url;
+        mediaUrl = blobUrl;
       }
 
       // Post story
