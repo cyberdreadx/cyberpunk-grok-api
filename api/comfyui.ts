@@ -2307,12 +2307,16 @@ Rules:
         if (isNsfwLora) {
           try {
             const sql = getDb();
-            const rows = await sql`SELECT 1 FROM xrge_orders WHERE user_id = ${auth.userId} AND status = 'verified' LIMIT 1`;
-            if (rows.length === 0) {
-              // Also check direct bank deposits
-              const bankRows = await sql`SELECT 1 FROM xrge_bank_txns WHERE user_id = ${auth.userId} AND type = 'deposit' LIMIT 1`;
-              if (bankRows.length === 0) {
-                return res.status(403).json({ error: "NSFW LoRAs require $XRGE token holding. Purchase credits with $XRGE to unlock." });
+            // Check Stripe unlock first (fastest single-row check)
+            const [stripeRow] = await sql`SELECT lora_unlocked FROM users WHERE id = ${auth.userId}`;
+            if (!stripeRow?.lora_unlocked) {
+              // Fall back to XRGE order or bank deposit checks
+              const rows = await sql`SELECT 1 FROM xrge_orders WHERE user_id = ${auth.userId} AND status = 'verified' LIMIT 1`;
+              if (rows.length === 0) {
+                const bankRows = await sql`SELECT 1 FROM xrge_bank_txns WHERE user_id = ${auth.userId} AND type = 'deposit' LIMIT 1`;
+                if (bankRows.length === 0) {
+                  return res.status(403).json({ error: "NSFW LoRAs require unlocking. Use the $30 Stripe unlock or hold $XRGE tokens." });
+                }
               }
             }
           } catch (e: any) {
