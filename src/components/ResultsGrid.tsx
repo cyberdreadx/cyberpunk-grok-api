@@ -2066,6 +2066,16 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
               <Button
                 size="icon"
                 variant="ghost"
+                className="text-accent hover:bg-accent/20"
+                onClick={() => handlePostStory(result)}
+                disabled={storyPostingId === result.id}
+                title="Post as Story"
+              >
+                {storyPostingId === result.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CirclePlus className="w-4 h-4" />}
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
                 className="text-secondary hover:bg-secondary/20"
                 onClick={() => handleGrokkerPost(result)}
                 disabled={sharingId === result.id}
