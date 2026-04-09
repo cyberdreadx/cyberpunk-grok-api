@@ -1918,6 +1918,16 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
               <Button
                 size="icon"
                 variant="ghost"
+                className="text-accent h-9 w-9"
+                onClick={() => currentResult && handlePostStory(currentResult)}
+                disabled={!!currentResult && storyPostingId === currentResult.id}
+                title="Post as Story"
+              >
+                {currentResult && storyPostingId === currentResult.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CirclePlus className="w-4 h-4" />}
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
                 className="text-secondary h-9 w-9"
                 onClick={() => currentResult && handleGrokkerPost(currentResult)}
                 disabled={!!currentResult && sharingId === currentResult.id}
@@ -2305,6 +2315,16 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
                 >
                   {sharingId === expandedResult.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Link2 className="w-3 h-3" />}
                   Share
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-accent border-accent/30 hover:bg-accent/10 text-xs gap-1.5"
+                  onClick={() => handlePostStory(expandedResult)}
+                  disabled={storyPostingId === expandedResult.id}
+                >
+                  {storyPostingId === expandedResult.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <CirclePlus className="w-3 h-3" />}
+                  Story
                 </Button>
                 <Button
                   size="sm"
