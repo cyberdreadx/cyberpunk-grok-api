@@ -357,16 +357,35 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         sql`UPDATE characters SET llm_backend = 'grok' WHERE id = ${characterId}`.catch(() => {});
       }
 
-      // Deduct 1 credit per message (DB requires integers)
+      // Subscribers get 30 free chat messages per day before credits are deducted
+      const FREE_CHAT_LIMIT = 30;
       const testCredits = req.body.testCredits && isAdmin;
       if (!isAdmin || testCredits) {
-        const rows = await sql`SELECT daily_credits, sub_credits, pack_credits FROM users WHERE id = ${auth.userId}`;
+        const rows = await sql`SELECT daily_credits, sub_credits, pack_credits, subscription_tier FROM users WHERE id = ${auth.userId}`;
         if (rows.length === 0) return res.status(404).json({ error: "User not found" });
-        const total = (rows[0].daily_credits || 0) + (rows[0].sub_credits || 0) + (rows[0].pack_credits || 0);
-        if (total < 1) {
-          return res.status(402).json({ error: "Insufficient credits. Each chat message costs 1 credit." });
+
+        let skipDeduction = false;
+        if (rows[0].subscription_tier) {
+          // Count today's chat messages from usage_log
+          const countRows = await sql`
+            SELECT COUNT(*)::int AS cnt FROM usage_log
+            WHERE user_id = ${auth.userId}::uuid
+              AND mode = 'chat-message'
+              AND created_at >= CURRENT_DATE
+          `;
+          const todayCount = countRows[0]?.cnt || 0;
+          if (todayCount < FREE_CHAT_LIMIT) {
+            skipDeduction = true;
+          }
         }
-        await sql`SELECT deduct_credits(${auth.userId}::uuid, 1)`;
+
+        if (!skipDeduction) {
+          const total = (rows[0].daily_credits || 0) + (rows[0].sub_credits || 0) + (rows[0].pack_credits || 0);
+          if (total < 1) {
+            return res.status(402).json({ error: "Insufficient credits. Each chat message costs 1 credit." });
+          }
+          await sql`SELECT deduct_credits(${auth.userId}::uuid, 1)`;
+        }
       }
 
       // Build system prompt with emotional memory layered in
