@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { apiFetch } from "@/lib/api";
+import { useAuth } from "@/hooks/useAuth";
 import StoryViewer from "@/components/StoryViewer";
 
 interface Story {
@@ -21,6 +22,7 @@ interface StoryUser {
 }
 
 const StoriesBar: React.FC = () => {
+  const auth = useAuth();
   const [users, setUsers] = useState<StoryUser[]>([]);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [activeUserIdx, setActiveUserIdx] = useState(0);
@@ -62,6 +64,22 @@ const StoriesBar: React.FC = () => {
     );
     apiFetch("/stories", { method: "PUT", body: { storyId } }).catch(() => {});
   };
+
+  const handleDelete = useCallback(async (storyId: string) => {
+    try {
+      await apiFetch(`/stories?id=${storyId}`, { method: "DELETE" });
+      setUsers(prev => {
+        const updated = prev.map(u => ({
+          ...u,
+          stories: u.stories.filter(s => s.id !== storyId),
+        })).filter(u => u.stories.length > 0);
+        return updated;
+      });
+    } catch (err) {
+      console.error("[StoriesBar] delete failed:", err);
+      throw err;
+    }
+  }, []);
 
   return (
     <>
@@ -141,8 +159,11 @@ const StoriesBar: React.FC = () => {
         <StoryViewer
           users={users}
           initialUserIdx={activeUserIdx}
+          currentUserId={auth.user?.id}
+          isAdmin={auth.user?.is_admin}
           onClose={() => setViewerOpen(false)}
           onViewed={handleViewed}
+          onDelete={handleDelete}
         />
       )}
     </>

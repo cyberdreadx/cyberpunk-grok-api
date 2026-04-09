@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { X, ChevronLeft, ChevronRight, Volume2, VolumeX } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Volume2, VolumeX, Trash2, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface Story {
   id: string;
@@ -22,18 +23,22 @@ interface StoryUser {
 interface StoryViewerProps {
   users: StoryUser[];
   initialUserIdx: number;
+  currentUserId?: string;
+  isAdmin?: boolean;
   onClose: () => void;
   onViewed: (storyId: string) => void;
+  onDelete?: (storyId: string) => Promise<void>;
 }
 
-const STORY_DURATION = 5000; // 5 seconds per image story
+const STORY_DURATION = 5000;
 
-const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, onClose, onViewed }) => {
+const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, currentUserId, isAdmin, onClose, onViewed, onDelete }) => {
   const [userIdx, setUserIdx] = useState(initialUserIdx);
   const [storyIdx, setStoryIdx] = useState(0);
   const [progress, setProgress] = useState(0);
   const [paused, setPaused] = useState(false);
   const [muted, setMuted] = useState(true);
+  const [deleting, setDeleting] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval>>();
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -118,6 +123,30 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, onClos
     return () => window.removeEventListener("keydown", handler);
   }, [goNext, goPrev, onClose]);
 
+  const canDelete = onDelete && currentUser && currentStory &&
+    (currentUser.userId === currentUserId || isAdmin);
+
+  const handleDelete = useCallback(async () => {
+    if (!onDelete || !currentStory || deleting) return;
+    setDeleting(true);
+    setPaused(true);
+    try {
+      await onDelete(currentStory.id);
+      toast.success("Story deleted");
+      const remaining = currentUser.stories.length - 1;
+      if (remaining <= 0 && userIdx >= users.length - 1) {
+        onClose();
+      } else if (storyIdx >= remaining) {
+        setStoryIdx(Math.max(0, remaining - 1));
+      }
+    } catch {
+      toast.error("Failed to delete story");
+    } finally {
+      setDeleting(false);
+      setPaused(false);
+    }
+  }, [onDelete, currentStory, currentUser, deleting, storyIdx, userIdx, users.length, onClose]);
+
   // Touch: tap left = prev, tap right = next, hold = pause
   const handleTap = (e: React.MouseEvent) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -155,13 +184,22 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, onClos
             {new Date(currentStory.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
           </span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           {currentStory.mediaType === "video" && (
-            <button onClick={() => setMuted(m => !m)} className="text-white/80 hover:text-white p-1">
+            <button onClick={() => setMuted(m => !m)} className="text-white/80 hover:text-white p-2">
               {muted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
             </button>
           )}
-          <button onClick={onClose} className="text-white/80 hover:text-white p-1">
+          {canDelete && (
+            <button
+              onClick={(e) => { e.stopPropagation(); handleDelete(); }}
+              disabled={deleting}
+              className="text-red-400/80 hover:text-red-400 p-2 transition-colors"
+            >
+              {deleting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Trash2 className="w-5 h-5" />}
+            </button>
+          )}
+          <button onClick={onClose} className="text-white/80 hover:text-white p-2">
             <X className="w-6 h-6" />
           </button>
         </div>

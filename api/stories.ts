@@ -1,11 +1,12 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { getUserFromRequest } from "./_lib/auth";
+import { getUserFromRequest, ADMIN_EMAIL } from "./_lib/auth";
 import { getDb } from "./_lib/db";
 
 export const config = { maxDuration: 30 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
   if (req.method === "OPTIONS") return res.status(200).end();
 
@@ -106,6 +107,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     } catch (err: any) {
       console.error("[stories] PUT error:", err.message);
       return res.status(500).json({ error: "Failed to mark viewed" });
+    }
+  }
+
+  // DELETE — delete a story (owner or admin)
+  if (req.method === "DELETE") {
+    try {
+      const auth = getUserFromRequest(req);
+      if (!auth) return res.status(401).json({ error: "Unauthorized" });
+
+      const storyId = (req.query.id || req.body?.storyId) as string;
+      if (!storyId) return res.status(400).json({ error: "storyId required" });
+
+      const isAdmin = auth.email === ADMIN_EMAIL;
+
+      const rows = await sql`
+        SELECT user_id FROM stories WHERE id = ${storyId}::uuid
+      `;
+      if (rows.length === 0) return res.status(404).json({ error: "Story not found" });
+
+      const isOwner = rows[0].user_id === auth.userId;
+      if (!isOwner && !isAdmin) {
+        return res.status(403).json({ error: "Not allowed to delete this story" });
+      }
+
+      await sql`DELETE FROM stories WHERE id = ${storyId}::uuid`;
+
+      return res.status(200).json({ ok: true });
+    } catch (err: any) {
+      console.error("[stories] DELETE error:", err.message);
+      return res.status(500).json({ error: "Failed to delete story" });
     }
   }
 
