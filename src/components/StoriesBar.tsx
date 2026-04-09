@@ -36,8 +36,13 @@ const StoriesBar: React.FC = () => {
 
   useEffect(() => {
     fetchStories();
-    const interval = setInterval(fetchStories, 60000); // refresh every minute
-    return () => clearInterval(interval);
+    const interval = setInterval(fetchStories, 60000);
+    const onPosted = () => fetchStories();
+    window.addEventListener("story-posted", onPosted);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("story-posted", onPosted);
+    };
   }, [fetchStories]);
 
   if (users.length === 0) return null;

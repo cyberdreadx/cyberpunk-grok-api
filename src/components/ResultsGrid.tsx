@@ -1269,9 +1269,9 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
       const shareBase = (import.meta.env.VITE_API_URL as string) || "/api";
       let mediaUrl = result.url;
 
-      // If it's already a public URL, use it directly
-      if (!mediaUrl.startsWith("https://")) {
-        // Resolve the media to a Blob for client-side upload (bypasses 4.5MB body limit)
+      // Only skip upload if the URL is already in permanent blob storage
+      const isPermanent = mediaUrl.includes("blob.vercel-storage.com");
+      if (!isPermanent) {
         let mediaBlob: Blob | null = null;
         const src = result.url;
 
@@ -1282,21 +1282,43 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
           if (stored && stored.startsWith("data:")) {
             mediaBlob = await fetch(stored).then((r) => r.blob());
           } else if (src.startsWith("http") || src.startsWith("blob:")) {
-            const resp = await fetch(src);
-            if (!resp.ok) throw new Error("Failed to fetch media for upload");
-            mediaBlob = await resp.blob();
+            // For https:// URLs (e.g. xAI API), use server-side download to avoid CORS
+            if (src.startsWith("https://") || src.startsWith("http://")) {
+              const token = localStorage.getItem("auth-token");
+              const dlRes = await fetch(`${shareBase}/share`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                },
+                body: JSON.stringify({ mediaUrl: src, mediaType: result.type, prompt: result.revised_prompt || "" }),
+              });
+              if (!dlRes.ok) {
+                const errBody = await dlRes.json().catch(() => null);
+                throw new Error(errBody?.error || `Upload failed (${dlRes.status})`);
+              }
+              const dlData = await dlRes.json();
+              mediaUrl = dlData.r2Url;
+              mediaBlob = null; // already uploaded via server
+            } else {
+              const resp = await fetch(src);
+              if (!resp.ok) throw new Error("Failed to fetch media for upload");
+              mediaBlob = await resp.blob();
+            }
           }
         }
-        if (!mediaBlob) throw new Error("Cannot resolve media for upload");
 
-        const ext = result.type === "video" ? "mp4" : "png";
-        const authToken = localStorage.getItem("auth-token") || "";
-        const { url: blobUrl } = await upload(`stories/story.${ext}`, mediaBlob, {
-          access: "public",
-          handleUploadUrl: `${shareBase}/blob-upload`,
-          clientPayload: authToken,
-        });
-        mediaUrl = blobUrl;
+        // Client-side upload for blob:/data: sources
+        if (mediaBlob) {
+          const ext = result.type === "video" ? "mp4" : "png";
+          const authToken = localStorage.getItem("auth-token") || "";
+          const { url: blobUrl } = await upload(`stories/story.${ext}`, mediaBlob, {
+            access: "public",
+            handleUploadUrl: `${shareBase}/blob-upload`,
+            clientPayload: authToken,
+          });
+          mediaUrl = blobUrl;
+        }
       }
 
       // Post story
@@ -1316,6 +1338,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
       });
       if (!storyRes.ok) throw new Error("Failed to post story");
       toast.success("Story posted! It'll be visible for 24 hours.");
+      window.dispatchEvent(new Event("story-posted"));
     } catch (err: any) {
       toast.error(err.message || "Failed to post story");
     } finally {
