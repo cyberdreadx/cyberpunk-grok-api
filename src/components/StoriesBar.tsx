@@ -39,6 +39,33 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUserId, isAdmin }) => {
     }
   }, []);
 
+  const handleDelete = useCallback(async (storyId: string) => {
+    try {
+      await apiFetch(`/stories?id=${storyId}`, { method: "DELETE" });
+      setUsers(prev => {
+        const updated = prev.map(u => ({
+          ...u,
+          stories: u.stories.filter(s => s.id !== storyId),
+        })).filter(u => u.stories.length > 0);
+        return updated;
+      });
+    } catch (err) {
+      console.error("[StoriesBar] delete failed:", err);
+      throw err;
+    }
+  }, []);
+
+  const handleViewed = useCallback((storyId: string) => {
+    setUsers(prev =>
+      prev.map(u => ({
+        ...u,
+        stories: u.stories.map(s => s.id === storyId ? { ...s, viewed: true } : s),
+        hasUnviewed: u.stories.some(s => s.id !== storyId && !s.viewed),
+      }))
+    );
+    apiFetch("/stories", { method: "PUT", body: { storyId } }).catch(() => {});
+  }, []);
+
   useEffect(() => {
     fetchStories();
     const interval = setInterval(fetchStories, 60000);
@@ -56,33 +83,6 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUserId, isAdmin }) => {
     setActiveUserIdx(idx);
     setViewerOpen(true);
   };
-
-  const handleViewed = (storyId: string) => {
-    setUsers(prev =>
-      prev.map(u => ({
-        ...u,
-        stories: u.stories.map(s => s.id === storyId ? { ...s, viewed: true } : s),
-        hasUnviewed: u.stories.some(s => s.id !== storyId && !s.viewed),
-      }))
-    );
-    apiFetch("/stories", { method: "PUT", body: { storyId } }).catch(() => {});
-  };
-
-  const handleDelete = useCallback(async (storyId: string) => {
-    try {
-      await apiFetch(`/stories?id=${storyId}`, { method: "DELETE" });
-      setUsers(prev => {
-        const updated = prev.map(u => ({
-          ...u,
-          stories: u.stories.filter(s => s.id !== storyId),
-        })).filter(u => u.stories.length > 0);
-        return updated;
-      });
-    } catch (err) {
-      console.error("[StoriesBar] delete failed:", err);
-      throw err;
-    }
-  }, []);
 
   return (
     <>

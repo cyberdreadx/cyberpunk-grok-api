@@ -4,7 +4,7 @@
  * No Supabase dependency. No realtime — uses polling after actions.
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   apiFetch,
   backendEnabled,
@@ -178,7 +178,10 @@ export function useCredits(user: AuthUser | null) {
     });
   }, []);
 
-  return {
+  const clearPurchaseError = useCallback(() => setPurchaseError(null), []);
+  const hasEnoughCredits = useCallback((cost: number) => totalCredits >= cost, [totalCredits]);
+
+  return useMemo(() => ({
     totalCredits,
     dailyCredits,
     subCredits,
@@ -192,16 +195,23 @@ export function useCredits(user: AuthUser | null) {
     loading,
     purchasing,
     purchaseError,
-    clearPurchaseError: () => setPurchaseError(null),
+    clearPurchaseError,
     packages: CREDIT_PACKAGES,
     subscriptionTiers: SUBSCRIPTION_TIERS,
     enabled: backendEnabled && !!user,
-    hasEnoughCredits: (cost: number) => totalCredits >= cost,
+    hasEnoughCredits,
     purchaseCredits,
     purchaseLoraUnlock,
     subscribeToPlan,
     manageSubscription,
     deductCreditsLocally,
     refreshCredits: fetchCredits,
-  };
+  }), [
+    totalCredits, dailyCredits, subCredits, packCredits,
+    subscriptionTier, subscriptionRenewsAt, subscriptionCancelAt,
+    loraUnlocked, loading, purchasing, purchaseError,
+    clearPurchaseError, hasEnoughCredits,
+    user, purchaseCredits, purchaseLoraUnlock, subscribeToPlan,
+    manageSubscription, deductCreditsLocally, fetchCredits,
+  ]);
 }
