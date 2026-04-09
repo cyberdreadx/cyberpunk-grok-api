@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Terminal, Key, Coins, Shield, Eye, MessageCircle, HelpCircle, Server, Zap, Cpu, ChevronDown, Film, X, AlertCircle, CheckCircle2, Upload, Users, Image, Code, ToggleLeft, ToggleRight, Gift } from "lucide-react";
 import { Link } from "react-router-dom";
 import CyberLayout from "@/components/CyberLayout";
+import StoriesBar from "@/components/StoriesBar";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import {
   Collapsible,
@@ -925,6 +926,9 @@ const Index = () => {
             </button>
           </div>
         )}
+
+        {/* Stories */}
+        <StoriesBar />
 
         {/* Header with Orb */}
         <header className="text-center space-y-2 animate-slide-up">
