@@ -29,8 +29,8 @@ const StoriesBar: React.FC = () => {
     try {
       const data = await apiFetch<{ users: StoryUser[] }>("/stories");
       setUsers(data.users || []);
-    } catch {
-      // silent — stories are non-critical
+    } catch (err) {
+      console.error("[StoriesBar] fetch failed:", err);
     }
   }, []);
 
