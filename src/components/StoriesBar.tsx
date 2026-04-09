@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { apiFetch } from "@/lib/api";
-import { useAuth } from "@/hooks/useAuth";
 import StoryViewer from "@/components/StoryViewer";
 
 interface Story {
@@ -21,8 +20,12 @@ interface StoryUser {
   hasUnviewed: boolean;
 }
 
-const StoriesBar: React.FC = () => {
-  const auth = useAuth();
+interface StoriesBarProps {
+  currentUserId?: string;
+  isAdmin?: boolean;
+}
+
+const StoriesBar: React.FC<StoriesBarProps> = ({ currentUserId, isAdmin }) => {
   const [users, setUsers] = useState<StoryUser[]>([]);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [activeUserIdx, setActiveUserIdx] = useState(0);
@@ -159,8 +162,8 @@ const StoriesBar: React.FC = () => {
         <StoryViewer
           users={users}
           initialUserIdx={activeUserIdx}
-          currentUserId={auth.user?.id}
-          isAdmin={auth.user?.is_admin}
+          currentUserId={currentUserId}
+          isAdmin={isAdmin}
           onClose={() => setViewerOpen(false)}
           onViewed={handleViewed}
           onDelete={handleDelete}

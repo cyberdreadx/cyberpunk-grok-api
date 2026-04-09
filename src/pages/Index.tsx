@@ -928,7 +928,7 @@ const Index = () => {
         )}
 
         {/* Stories */}
-        <StoriesBar />
+        <StoriesBar currentUserId={auth.user?.id} isAdmin={auth.user?.is_admin} />
 
         {/* Header with Orb */}
         <header className="text-center space-y-2 animate-slide-up">
