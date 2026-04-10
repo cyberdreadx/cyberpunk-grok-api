@@ -301,13 +301,14 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
       </div>
 
       {/* Bottom bar: caption + view count */}
-      <div className="absolute bottom-12 left-0 right-0 px-6 z-10 flex flex-col items-center gap-2">
+      <div className="absolute left-0 right-0 px-6 z-10 flex flex-col items-center gap-2"
+        style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 48px)" }}
+      >
         {currentStory.caption && (
-          <p className="text-white text-sm bg-black/40 rounded-lg px-4 py-2 inline-block backdrop-blur-sm">
+          <p className="text-white text-sm bg-black/40 rounded-lg px-4 py-2 inline-block backdrop-blur-sm max-w-[90%] text-center">
             {currentStory.caption}
           </p>
         )}
-        {/* View count - visible to story owner or admin */}
         {(isOwner || isAdmin) && typeof currentStory.viewCount === "number" && (
           <div className="flex items-center gap-1.5 text-white/60 text-xs">
             <Eye className="w-3.5 h-3.5" />
