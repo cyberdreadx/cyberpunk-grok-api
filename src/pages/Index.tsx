@@ -1391,8 +1391,7 @@ const Index = () => {
                   </button>
                 </div>
 
-                {/* GROK maintenance notice */}
-                {editEngine === "grok" && (() => { setEditEngine("gltch"); return null; })()}
+                {/* GROK disabled — maintenance */}
 
                 {/* GLTCH edit controls — LoRA selector + upscale */}
                 {editEngine === "gltch" && (
@@ -1552,9 +1551,7 @@ const Index = () => {
                     </button>
                   )}
                 </div>
-
-                {/* Auto-switch away from grok if selected */}
-                {genEngine === "grok" && (() => { setGenEngine("gltch"); return null; })()}
+                {/* GROK disabled — maintenance */}
 
                 {/* GROK warning removed — maintenance */}
               </div>
@@ -1587,9 +1584,7 @@ const Index = () => {
                     </div>
                   </button>
                 </div>
-
-                {/* Auto-switch away from grok */}
-                {renderEngine === "grok" && (() => { setRenderEngine("comfy"); return null; })()}
+                {/* GROK disabled — maintenance */}
 
                 {/* Comfy RENDER settings */}
                 {renderEngine === "comfy" && (
@@ -1722,9 +1717,7 @@ const Index = () => {
                     </div>
                   </button>
                 </div>
-
-                {/* Auto-switch away from grok */}
-                {animateEngine === "grok" && (() => { setAnimateEngine("gltch"); setLongLookEnabled(false); return null; })()}
+                {/* GROK disabled — maintenance */}
 
                 {/* GLTCH WAN settings */}
                 {animateEngine === "gltch" && (
