@@ -47,7 +47,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           s.id, s.user_id, s.media_url, s.media_type, s.caption, s.prompt,
           s.created_at, s.expires_at,
           u.email,
-          CASE WHEN sv.viewer_id IS NOT NULL THEN true ELSE false END AS viewed
+          CASE WHEN sv.viewer_id IS NOT NULL THEN true ELSE false END AS viewed,
+          (SELECT COUNT(*)::int FROM story_views sv2 WHERE sv2.story_id = s.id) AS view_count
         FROM stories s
         JOIN users u ON u.id = s.user_id
         LEFT JOIN story_views sv ON sv.story_id = s.id AND sv.viewer_id = ${viewerId}::uuid
@@ -77,6 +78,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           createdAt: r.created_at,
           expiresAt: r.expires_at,
           viewed: r.viewed,
+          viewCount: r.view_count || 0,
         });
         if (!r.viewed) grouped[r.user_id].hasUnviewed = true;
       }
