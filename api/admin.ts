@@ -19,6 +19,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import Stripe from "stripe";
 import { getDb } from "./_lib/db";
 import { getUserFromRequest, ADMIN_EMAIL } from "./_lib/auth";
+import { sendAnnouncementEmail } from "./_lib/email";
 
 function isAdmin(req: VercelRequest): boolean {
   const auth = getUserFromRequest(req);
@@ -622,8 +623,66 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
 
+      case "send-announcement": {
+        const batchSize = req.body.batchSize || 10;
+        const offset = req.body.offset || 0;
+        const dryRun = req.body.dryRun || false;
+
+        // Get all verified users
+        const users = await sql`
+          SELECT email FROM users
+          WHERE email_verified = true
+          ORDER BY created_at ASC
+          LIMIT ${batchSize} OFFSET ${offset}
+        `;
+
+        // Get total count for progress tracking
+        const [{ count }] = await sql`
+          SELECT COUNT(*)::int AS count FROM users WHERE email_verified = true
+        `;
+
+        if (dryRun) {
+          return res.status(200).json({
+            dryRun: true,
+            totalUsers: count,
+            batchSize,
+            offset,
+            batchEmails: users.map((u: any) => u.email),
+            nextOffset: offset + batchSize,
+            hasMore: offset + batchSize < count,
+          });
+        }
+
+        let sent = 0;
+        let failed = 0;
+        const errors: string[] = [];
+
+        for (const user of users) {
+          try {
+            const ok = await sendAnnouncementEmail(user.email);
+            if (ok) sent++;
+            else { failed++; errors.push(user.email); }
+            // Small delay to avoid rate limits
+            await new Promise((r) => setTimeout(r, 200));
+          } catch (err: any) {
+            failed++;
+            errors.push(user.email);
+          }
+        }
+
+        return res.status(200).json({
+          sent,
+          failed,
+          errors: errors.slice(0, 20),
+          totalUsers: count,
+          offset,
+          nextOffset: offset + batchSize,
+          hasMore: offset + batchSize < count,
+        });
+      }
+
       default:
-        return res.status(400).json({ error: "Unknown action. Expected: overview, revenue, revenue-breakdown, users, usage, transactions, top-users, referrals, sync-subscriptions, grant-credits, email-logs, api-analytics" });
+        return res.status(400).json({ error: "Unknown action. Expected: overview, revenue, revenue-breakdown, users, usage, transactions, top-users, referrals, sync-subscriptions, grant-credits, email-logs, api-analytics, send-announcement" });
     }
   } catch (err: any) {
     console.error("[admin]", err.message);
