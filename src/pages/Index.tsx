@@ -263,7 +263,7 @@ const Index = () => {
 
   const [animateEngine, setAnimateEngineRaw] = useState<ComfyEngine>(() => {
     const v = localStorage.getItem("engine-image-to-video");
-    return (v === "grok" || v === "comfy" || v === "gltch") ? v : "gltch";
+    return (v === "comfy" || v === "gltch") ? v : "gltch";
   });
   const setAnimateEngine = useCallback((v: ComfyEngine) => {
     localStorage.setItem("engine-image-to-video", v);
