@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { X, ChevronLeft, ChevronRight, Volume2, VolumeX, Trash2, Loader2 } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Volume2, VolumeX, Trash2, Loader2, Eye } from "lucide-react";
 import { toast } from "sonner";
 
 interface Story {
@@ -11,6 +11,7 @@ interface Story {
   createdAt: string;
   expiresAt: string;
   viewed: boolean;
+  viewCount?: number;
 }
 
 interface StoryUser {
@@ -42,8 +43,13 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
   const timerRef = useRef<ReturnType<typeof setInterval>>();
   const videoRef = useRef<HTMLVideoElement>(null);
 
+  // Swipe-down-to-close state
+  const swipeRef = useRef({ startY: 0, currentY: 0, swiping: false });
+  const [swipeOffset, setSwipeOffset] = useState(0);
+
   const currentUser = users[userIdx];
   const currentStory = currentUser?.stories[storyIdx];
+  const isOwner = currentUser?.userId === currentUserId;
 
   // Mark as viewed
   useEffect(() => {
@@ -55,7 +61,7 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
   // Progress timer
   useEffect(() => {
     if (!currentStory || paused) return;
-    if (currentStory.mediaType === "video") return; // video controls its own progress
+    if (currentStory.mediaType === "video") return;
 
     setProgress(0);
     const interval = 50;
@@ -98,12 +104,10 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
     }
   }, [storyIdx, userIdx, users]);
 
-  // Video ended → next
   const handleVideoEnd = useCallback(() => {
     goNext();
   }, [goNext]);
 
-  // Video time update for progress
   const handleVideoTime = useCallback(() => {
     const v = videoRef.current;
     if (v && v.duration) {
@@ -147,8 +151,51 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
     }
   }, [onDelete, currentStory, currentUser, deleting, storyIdx, userIdx, users.length, onClose]);
 
-  // Touch: tap left = prev, tap right = next, hold = pause
-  const handleTap = (e: React.MouseEvent) => {
+  // Touch handlers for media area: tap left/right = nav, long press = pause, swipe down = close
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    swipeRef.current = { startY: touch.clientY, currentY: touch.clientY, swiping: false };
+    setPaused(true);
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    const deltaY = touch.clientY - swipeRef.current.startY;
+    swipeRef.current.currentY = touch.clientY;
+
+    // Only track downward swipes
+    if (deltaY > 10) {
+      swipeRef.current.swiping = true;
+      setSwipeOffset(Math.min(deltaY, 300));
+    }
+  }, []);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    const deltaY = swipeRef.current.currentY - swipeRef.current.startY;
+
+    if (swipeRef.current.swiping && deltaY > 100) {
+      // Swipe down threshold met → close
+      onClose();
+      return;
+    }
+
+    setSwipeOffset(0);
+
+    if (!swipeRef.current.swiping) {
+      // It was a tap, not a swipe
+      const touch = e.changedTouches[0];
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = touch.clientX - rect.left;
+      if (x < rect.width / 3) goPrev();
+      else goNext();
+    }
+
+    setPaused(false);
+    swipeRef.current.swiping = false;
+  }, [onClose, goPrev, goNext]);
+
+  // Desktop click handler
+  const handleClick = (e: React.MouseEvent) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
     if (x < rect.width / 3) goPrev();
@@ -157,10 +204,17 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
 
   if (!currentUser || !currentStory) return null;
 
+  const opacity = Math.max(1 - swipeOffset / 300, 0.3);
+
   return (
-    <div className="fixed inset-0 z-[9999] bg-black flex items-center justify-center">
+    <div className="fixed inset-0 z-[9999] bg-black flex items-center justify-center"
+      style={{ opacity }}
+    >
+      {/* Swipe-down hint indicator */}
+      <div className="absolute top-1 left-1/2 -translate-x-1/2 w-10 h-1 rounded-full bg-white/30 z-20 sm:hidden" />
+
       {/* Progress bars */}
-      <div className="absolute top-0 left-0 right-0 flex gap-0.5 p-2 z-10">
+      <div className="absolute top-0 left-0 right-0 flex gap-0.5 p-2 pt-3 z-10">
         {currentUser.stories.map((s, i) => (
           <div key={s.id} className="flex-1 h-0.5 bg-white/20 rounded-full overflow-hidden">
             <div
@@ -174,7 +228,7 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
       </div>
 
       {/* Header */}
-      <div className="absolute top-4 left-0 right-0 flex items-center justify-between px-4 z-10">
+      <div className="absolute top-5 left-0 right-0 flex items-center justify-between px-4 z-20">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/50 to-secondary/50 flex items-center justify-center text-xs font-bold text-white uppercase">
             {currentUser.username.slice(0, 2)}
@@ -199,20 +253,26 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
               {deleting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Trash2 className="w-5 h-5" />}
             </button>
           )}
-          <button onClick={onClose} className="text-white/80 hover:text-white p-2">
-            <X className="w-6 h-6" />
+          <button
+            onClick={(e) => { e.stopPropagation(); onClose(); }}
+            className="text-white/80 hover:text-white p-3 -mr-1"
+            aria-label="Close stories"
+          >
+            <X className="w-7 h-7" />
           </button>
         </div>
       </div>
 
       {/* Media */}
       <div
-        className="w-full h-full flex items-center justify-center cursor-pointer"
-        onClick={handleTap}
+        className="w-full h-full flex items-center justify-center cursor-pointer select-none"
+        style={{ transform: `translateY(${swipeOffset}px)` }}
+        onClick={handleClick}
         onMouseDown={() => setPaused(true)}
         onMouseUp={() => setPaused(false)}
-        onTouchStart={() => setPaused(true)}
-        onTouchEnd={() => setPaused(false)}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
         {currentStory.mediaType === "video" ? (
           <video
@@ -234,14 +294,21 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
         )}
       </div>
 
-      {/* Caption */}
-      {currentStory.caption && (
-        <div className="absolute bottom-16 left-0 right-0 text-center px-8 z-10">
+      {/* Bottom bar: caption + view count */}
+      <div className="absolute bottom-12 left-0 right-0 px-6 z-10 flex flex-col items-center gap-2">
+        {currentStory.caption && (
           <p className="text-white text-sm bg-black/40 rounded-lg px-4 py-2 inline-block backdrop-blur-sm">
             {currentStory.caption}
           </p>
-        </div>
-      )}
+        )}
+        {/* View count - visible to story owner or admin */}
+        {(isOwner || isAdmin) && typeof currentStory.viewCount === "number" && (
+          <div className="flex items-center gap-1.5 text-white/60 text-xs">
+            <Eye className="w-3.5 h-3.5" />
+            <span>{currentStory.viewCount} {currentStory.viewCount === 1 ? "view" : "views"}</span>
+          </div>
+        )}
+      </div>
 
       {/* Nav arrows (desktop) */}
       {userIdx > 0 && (
