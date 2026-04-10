@@ -264,6 +264,136 @@ function WorkerStatusPanel() {
   );
 }
 
+// ── Announcement Panel ──
+
+function AnnouncementPanel() {
+  const [sending, setSending] = useState(false);
+  const [dryRunning, setDryRunning] = useState(false);
+  const [result, setResult] = useState<any>(null);
+  const [progress, setProgress] = useState<{ sent: number; failed: number; total: number } | null>(null);
+  const abortRef = useRef(false);
+
+  const handleDryRun = async () => {
+    setDryRunning(true);
+    setResult(null);
+    try {
+      const res = await apiFetch("/admin", {
+        method: "POST",
+        body: { action: "send-announcement", dryRun: true, batchSize: 999999, offset: 0 },
+      });
+      setResult({ dryRun: true, totalUsers: res.totalUsers, emails: res.batchEmails });
+    } catch (err: any) {
+      setResult({ error: err.message });
+    } finally {
+      setDryRunning(false);
+    }
+  };
+
+  const handleSend = async () => {
+    if (!confirm("Send the announcement email to ALL verified users? This cannot be undone.")) return;
+    setSending(true);
+    setResult(null);
+    abortRef.current = false;
+    const batchSize = 10;
+    let offset = 0;
+    let totalSent = 0;
+    let totalFailed = 0;
+    let totalUsers = 0;
+
+    try {
+      while (true) {
+        if (abortRef.current) break;
+        const res = await apiFetch("/admin", {
+          method: "POST",
+          body: { action: "send-announcement", batchSize, offset },
+        });
+        totalSent += res.sent;
+        totalFailed += res.failed;
+        totalUsers = res.totalUsers;
+        setProgress({ sent: totalSent, failed: totalFailed, total: totalUsers });
+
+        if (!res.hasMore) break;
+        offset = res.nextOffset;
+        // small pause between batches
+        await new Promise((r) => setTimeout(r, 1000));
+      }
+      setResult({ done: true, sent: totalSent, failed: totalFailed, total: totalUsers });
+    } catch (err: any) {
+      setResult({ error: err.message, sent: totalSent, failed: totalFailed });
+    } finally {
+      setSending(false);
+      setProgress(null);
+    }
+  };
+
+  return (
+    <section className="border border-primary/20 rounded-lg bg-card/40 backdrop-blur-sm p-3 sm:p-4 space-y-3">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-2">
+          <Send className="w-3.5 h-3.5 text-primary" />
+          <span className="font-orbitron text-[10px] tracking-wider text-muted-foreground">MASS_ANNOUNCEMENT</span>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={handleDryRun} disabled={dryRunning || sending}
+            className="font-mono-share text-xs gap-1.5 border-primary/30 hover:bg-primary/10">
+            {dryRunning ? <Loader2 className="w-3 h-3 animate-spin" /> : <Eye className="w-3 h-3" />}
+            DRY_RUN
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleSend} disabled={sending || dryRunning}
+            className="font-mono-share text-xs gap-1.5 border-secondary/30 hover:bg-secondary/10 text-secondary">
+            {sending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+            {sending ? "SENDING..." : "SEND_TO_ALL"}
+          </Button>
+          {sending && (
+            <Button variant="outline" size="sm" onClick={() => { abortRef.current = true; }}
+              className="font-mono-share text-xs gap-1.5 border-destructive/30 hover:bg-destructive/10 text-destructive">
+              ABORT
+            </Button>
+          )}
+        </div>
+      </div>
+
+      <p className="font-mono-share text-[10px] text-muted-foreground/50">
+        Sends the Grok Runner update announcement (10 daily credits, Stories, upcoming Live Feed) to all verified users via Resend.
+      </p>
+
+      {progress && (
+        <div className="space-y-1">
+          <div className="flex justify-between font-mono-share text-[10px]">
+            <span className="text-primary">{progress.sent} sent</span>
+            {progress.failed > 0 && <span className="text-destructive">{progress.failed} failed</span>}
+            <span className="text-muted-foreground">{progress.sent + progress.failed} / {progress.total}</span>
+          </div>
+          <div className="w-full bg-muted/30 rounded-full h-1.5">
+            <div className="bg-primary h-1.5 rounded-full transition-all" style={{ width: `${Math.round(((progress.sent + progress.failed) / progress.total) * 100)}%` }} />
+          </div>
+        </div>
+      )}
+
+      {result?.dryRun && (
+        <div className="bg-primary/5 border border-primary/20 rounded p-3 space-y-2">
+          <div className="font-mono-share text-xs text-primary">DRY RUN: {result.totalUsers} verified users would receive the email</div>
+          <div className="font-mono-share text-[9px] text-muted-foreground/60 max-h-32 overflow-y-auto">
+            {result.emails?.slice(0, 20).join(", ")}{result.emails?.length > 20 ? ` ...and ${result.emails.length - 20} more` : ""}
+          </div>
+        </div>
+      )}
+
+      {result?.done && (
+        <div className="bg-secondary/5 border border-secondary/20 rounded p-3 font-mono-share text-xs">
+          <span className="text-secondary">✓ Complete:</span> {result.sent} sent, {result.failed} failed out of {result.total} users
+        </div>
+      )}
+
+      {result?.error && (
+        <div className="bg-destructive/5 border border-destructive/20 rounded p-3 font-mono-share text-xs text-destructive">
+          Error: {result.error}{result.sent > 0 ? ` (${result.sent} sent before error)` : ""}
+        </div>
+      )}
+    </section>
+  );
+}
+
 // ── Main Admin Page ──
 
 export default function Admin() {
