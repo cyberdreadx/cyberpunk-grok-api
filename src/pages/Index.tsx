@@ -236,7 +236,7 @@ const Index = () => {
 
   const [editEngine, setEditEngineRaw] = useState<EditEngine>(() => {
     const v = localStorage.getItem("engine-edit-image");
-    return (v === "grok" || v === "gltch") ? v : "gltch";
+    return (v === "gltch") ? v : "gltch";
   });
   const setEditEngine = useCallback((v: EditEngine) => {
     localStorage.setItem("engine-edit-image", v);
@@ -245,7 +245,7 @@ const Index = () => {
 
   const [genEngine, setGenEngineRaw] = useState<ComfyEngine>(() => {
     const v = localStorage.getItem("engine-text-to-image");
-    return (v === "grok" || v === "comfy" || v === "gltch") ? v : "gltch";
+    return (v === "comfy" || v === "gltch") ? v : "gltch";
   });
   const setGenEngine = useCallback((v: ComfyEngine) => {
     localStorage.setItem("engine-text-to-image", v);
@@ -254,7 +254,7 @@ const Index = () => {
 
   const [renderEngine, setRenderEngineRaw] = useState<ComfyEngine>(() => {
     const v = localStorage.getItem("engine-text-to-video");
-    return (v === "grok" || v === "comfy" || v === "gltch") ? v : "comfy";
+    return (v === "comfy" || v === "gltch") ? v : "comfy";
   });
   const setRenderEngine = useCallback((v: ComfyEngine) => {
     localStorage.setItem("engine-text-to-video", v);
