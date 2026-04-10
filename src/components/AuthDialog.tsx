@@ -179,7 +179,7 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
             onBack={onCancelVerification}
             onSuccess={handleVerified}
           />
-        ) : resetEmail && onForgotPassword && onResetPassword ? (
+        ) : resetEmail !== null && onForgotPassword && onResetPassword ? (
           <ResetPasswordForm
             email={resetEmail}
             onRequestCode={onForgotPassword}
