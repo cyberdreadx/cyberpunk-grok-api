@@ -211,10 +211,14 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
       style={{ opacity }}
     >
       {/* Swipe-down hint indicator */}
-      <div className="absolute top-1 left-1/2 -translate-x-1/2 w-10 h-1 rounded-full bg-white/30 z-20 sm:hidden" />
+      <div className="absolute left-1/2 -translate-x-1/2 w-10 h-1 rounded-full bg-white/30 z-20 sm:hidden"
+        style={{ top: "calc(env(safe-area-inset-top, 0px) + 4px)" }}
+      />
 
       {/* Progress bars */}
-      <div className="absolute top-0 left-0 right-0 flex gap-0.5 p-2 pt-3 z-10">
+      <div className="absolute left-0 right-0 flex gap-0.5 px-2 z-10"
+        style={{ top: "calc(env(safe-area-inset-top, 0px) + 10px)" }}
+      >
         {currentUser.stories.map((s, i) => (
           <div key={s.id} className="flex-1 h-0.5 bg-white/20 rounded-full overflow-hidden">
             <div
@@ -228,17 +232,19 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
       </div>
 
       {/* Header */}
-      <div className="absolute top-5 left-0 right-0 flex items-center justify-between px-4 z-20">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/50 to-secondary/50 flex items-center justify-center text-xs font-bold text-white uppercase">
+      <div className="absolute left-0 right-0 flex items-center justify-between px-3 z-20"
+        style={{ top: "calc(env(safe-area-inset-top, 0px) + 20px)" }}
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-8 h-8 shrink-0 rounded-full bg-gradient-to-br from-primary/50 to-secondary/50 flex items-center justify-center text-xs font-bold text-white uppercase">
             {currentUser.username.slice(0, 2)}
           </div>
-          <span className="text-white text-sm font-medium">{currentUser.username}</span>
-          <span className="text-white/50 text-xs">
+          <span className="text-white text-sm font-medium truncate">{currentUser.username}</span>
+          <span className="text-white/50 text-xs shrink-0">
             {new Date(currentStory.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
           </span>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0 shrink-0">
           {currentStory.mediaType === "video" && (
             <button onClick={() => setMuted(m => !m)} className="text-white/80 hover:text-white p-2">
               {muted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
@@ -255,7 +261,7 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
           )}
           <button
             onClick={(e) => { e.stopPropagation(); onClose(); }}
-            className="text-white/80 hover:text-white p-3 -mr-1"
+            className="text-white/80 hover:text-white p-3"
             aria-label="Close stories"
           >
             <X className="w-7 h-7" />
