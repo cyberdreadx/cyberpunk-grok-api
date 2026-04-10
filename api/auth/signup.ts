@@ -46,9 +46,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           AND email_verified = true
       `;
       const fpCount = Number(fpRows[0]?.cnt ?? 0);
-      if (fpCount >= 3) {
+      if (fpCount >= 5) {
         return res.status(429).json({
-          error: "Account limit reached for this device. Max 3 accounts per device.",
+          error: "Account limit reached for this device. Max 5 accounts per device.",
         });
       }
     }
