@@ -1557,6 +1557,7 @@ const Index = () => {
                 {genEngine === "grok" && (() => { setGenEngine("gltch"); return null; })()}
 
                 {/* GROK warning removed — maintenance */}
+              </div>
             )}
 
             {/* Engine selector — RENDER (text-to-video) mode */}
