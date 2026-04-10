@@ -165,6 +165,100 @@ export async function sendDailyCreditsEmail(
   await logEmail(to, "daily_credits", "sent", data?.id, null, { amount });
 }
 
+/** Send the Grok Runner announcement email. */
+export async function sendAnnouncementEmail(to: string): Promise<boolean> {
+  const fromAddress = getFromAddress();
+
+  const { data, error } = await getResend().emails.send({
+    from: `Grok Runner <${fromAddress}>`,
+    to: [to],
+    subject: `🚀 Grok Runner just got a massive upgrade`,
+    html: buildAnnouncementHtml(),
+  });
+
+  if (error) {
+    await logEmail(to, "announcement", "failed", null, error.message);
+    console.error("[email] Failed to send announcement to", to, error.message);
+    return false;
+  }
+
+  await logEmail(to, "announcement", "sent", data?.id);
+  return true;
+}
+
+/** Build HTML for the big announcement email. */
+export function buildAnnouncementHtml(): string {
+  return `
+    <div style="font-family: 'Courier New', monospace; background: #0a0a0f; color: #e0e0e0; padding: 32px; max-width: 520px; margin: 0 auto;">
+      <div style="border: 1px solid #00f0ff33; padding: 28px; border-radius: 4px;">
+
+        <h1 style="color: #00f0ff; font-size: 20px; letter-spacing: 3px; margin: 0 0 8px; text-align: center;">
+          GROK RUNNER
+        </h1>
+        <p style="color: #00f0ff99; font-size: 12px; letter-spacing: 4px; text-align: center; margin: 0 0 28px;">
+          SYSTEM UPDATE // MAJOR PATCH
+        </p>
+
+        <div style="background: #111; border: 1px solid #00f0ff44; padding: 20px; border-radius: 4px; margin: 0 0 20px;">
+          <h2 style="color: #00f0ff; font-size: 15px; margin: 0 0 12px; letter-spacing: 1px;">
+            🎁 10 FREE DAILY CREDITS
+          </h2>
+          <p style="font-size: 13px; color: #b0b0b0; margin: 0; line-height: 1.6;">
+            Every verified account now gets <span style="color: #00f0ff; font-weight: bold;">10 free credits every single day</span>.
+            Generate images, create AI videos, edit photos, and chat with AI characters — all on us.
+            Credits reset at midnight UTC so use them or lose them!
+          </p>
+        </div>
+
+        <div style="background: #111; border: 1px solid #ff00e544; padding: 20px; border-radius: 4px; margin: 0 0 20px;">
+          <h2 style="color: #ff00e5; font-size: 15px; margin: 0 0 12px; letter-spacing: 1px;">
+            📸 NEW: STORIES MODE
+          </h2>
+          <p style="font-size: 13px; color: #b0b0b0; margin: 0; line-height: 1.6;">
+            Share your best AI generations with the community! Post your edits, renders, and videos
+            as <span style="color: #ff00e5; font-weight: bold;">Stories</span> that appear on the main page for 24 hours.
+            See what other Grok Runners are creating, get inspired, and connect with fellow creators.
+          </p>
+        </div>
+
+        <div style="background: #111; border: 1px solid #39ff1444; padding: 20px; border-radius: 4px; margin: 0 0 20px;">
+          <h2 style="color: #39ff14; font-size: 15px; margin: 0 0 12px; letter-spacing: 1px;">
+            ⚡ MORE UPDATES
+          </h2>
+          <ul style="font-size: 13px; color: #b0b0b0; margin: 0; padding-left: 18px; line-height: 1.8;">
+            <li>Improved image generation quality</li>
+            <li>Faster video rendering pipeline</li>
+            <li>New AI character interactions</li>
+            <li>Better mobile experience</li>
+            <li>Bug fixes & performance boosts</li>
+          </ul>
+        </div>
+
+        <div style="background: #0d0d15; border: 1px solid #ffaa0044; padding: 20px; border-radius: 4px; margin: 0 0 24px;">
+          <h2 style="color: #ffaa00; font-size: 15px; margin: 0 0 12px; letter-spacing: 1px;">
+            🔮 COMING SOON
+          </h2>
+          <p style="font-size: 13px; color: #b0b0b0; margin: 0; line-height: 1.6;">
+            We're working on a <span style="color: #ffaa00; font-weight: bold;">Live Feed</span> — think social network
+            for AI creators. Post statuses, share your work in real-time, react to other Grok Runners' creations,
+            and build your creative community. Stay tuned. 👀
+          </p>
+        </div>
+
+        <div style="text-align: center; margin: 0 0 20px;">
+          <a href="https://grokrunner.gltch.app" style="display: inline-block; background: linear-gradient(135deg, #00f0ff22, #ff00e522); border: 1px solid #00f0ff55; color: #00f0ff; text-decoration: none; padding: 14px 36px; border-radius: 4px; font-size: 14px; letter-spacing: 3px; font-weight: bold;">
+            LAUNCH GROK RUNNER →
+          </a>
+        </div>
+
+        <p style="font-size: 11px; color: #444; margin: 0; text-align: center;">
+          You're receiving this because you have a verified Grok Runner account.
+        </p>
+      </div>
+    </div>
+  `;
+}
+
 /** Build the HTML body for the daily credits refill notification. */
 export function buildDailyCreditsHtml(amount: number): string {
   return `
