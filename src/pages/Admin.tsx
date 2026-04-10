@@ -1023,6 +1023,9 @@ export default function Admin() {
               </div>
             )}
 
+            {/* ── Mass Announcement ── */}
+            <AnnouncementPanel />
+
             {/* Filters */}
             <div className="flex flex-wrap items-center gap-2">
               <select
