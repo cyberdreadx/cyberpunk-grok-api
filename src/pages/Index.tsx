@@ -236,7 +236,7 @@ const Index = () => {
 
   const [editEngine, setEditEngineRaw] = useState<EditEngine>(() => {
     const v = localStorage.getItem("engine-edit-image");
-    return (v === "grok" || v === "gltch") ? v : "gltch";
+    return (v === "gltch") ? v : "gltch";
   });
   const setEditEngine = useCallback((v: EditEngine) => {
     localStorage.setItem("engine-edit-image", v);
@@ -245,7 +245,7 @@ const Index = () => {
 
   const [genEngine, setGenEngineRaw] = useState<ComfyEngine>(() => {
     const v = localStorage.getItem("engine-text-to-image");
-    return (v === "grok" || v === "comfy" || v === "gltch") ? v : "gltch";
+    return (v === "comfy" || v === "gltch") ? v : "gltch";
   });
   const setGenEngine = useCallback((v: ComfyEngine) => {
     localStorage.setItem("engine-text-to-image", v);
@@ -254,7 +254,7 @@ const Index = () => {
 
   const [renderEngine, setRenderEngineRaw] = useState<ComfyEngine>(() => {
     const v = localStorage.getItem("engine-text-to-video");
-    return (v === "grok" || v === "comfy" || v === "gltch") ? v : "comfy";
+    return (v === "comfy" || v === "gltch") ? v : "comfy";
   });
   const setRenderEngine = useCallback((v: ComfyEngine) => {
     localStorage.setItem("engine-text-to-video", v);
@@ -263,7 +263,7 @@ const Index = () => {
 
   const [animateEngine, setAnimateEngineRaw] = useState<ComfyEngine>(() => {
     const v = localStorage.getItem("engine-image-to-video");
-    return (v === "grok" || v === "comfy" || v === "gltch") ? v : "gltch";
+    return (v === "comfy" || v === "gltch") ? v : "gltch";
   });
   const setAnimateEngine = useCallback((v: ComfyEngine) => {
     localStorage.setItem("engine-image-to-video", v);
@@ -1378,65 +1378,20 @@ const Index = () => {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setEditEngine("grok")}
-                    className={`
-                      p-2.5 border rounded text-left transition-all duration-200
-                      ${editEngine === "grok"
-                        ? "border-primary neon-border bg-primary/5"
-                        : "border-border bg-card/30 hover:border-primary/40"
-                      }
-                    `}
+                    disabled
+                    className="p-2.5 border rounded text-left transition-all duration-200 border-border bg-card/30 opacity-50 cursor-not-allowed"
                   >
-                    <div className={`font-orbitron text-[11px] flex items-center gap-1.5 ${editEngine === "grok" ? "text-primary" : "text-foreground"}`}>
+                    <div className="font-orbitron text-[11px] flex items-center gap-1.5 text-muted-foreground">
                       GROK
-                      <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-amber-400/80 border-amber-500/30 bg-amber-500/10">⚠ RISK</span>
+                      <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-red-400/80 border-red-500/30 bg-red-500/10">MAINTENANCE</span>
                     </div>
-                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
-                      <span>xAI</span>
-                      <span className={editEngine === "grok" ? "text-primary/70" : "text-muted-foreground/50"}>
-                        {grokPro ? `${settings.count * 4} cr` : `${settings.count * 2} cr`}
-                      </span>
+                    <div className="font-mono-share text-[9px] text-muted-foreground/50 mt-0.5">
+                      <span>Down for maintenance</span>
                     </div>
                   </button>
                 </div>
 
-                {/* GROK warning */}
-                {editEngine === "grok" && (
-                  <div className="flex items-start gap-2 px-3 py-2 bg-amber-500/5 border border-amber-500/30 rounded">
-                    <span className="text-amber-400 text-[11px] mt-px shrink-0">⚠</span>
-                    <p className="font-mono-share text-[9px] text-amber-400/80 leading-relaxed">
-                      GROK engine has ~95% chance of being blocked by xAI moderation — credits may be wasted. Use <span className="text-secondary font-bold">GLTCH</span> for reliable results.
-                    </p>
-                  </div>
-                )}
-
-                {/* PRO quality toggle — Grok edit */}
-                {editEngine === "grok" && (
-                  <button
-                    type="button"
-                    onClick={() => setGrokPro(!grokPro)}
-                    className={`
-                      w-full flex items-center justify-between px-3 py-2 border rounded
-                      font-mono-share text-[10px] transition-all duration-200
-                      ${grokPro
-                        ? "border-amber-500/50 bg-amber-500/5 text-amber-300"
-                        : "border-border bg-card/30 text-muted-foreground hover:border-amber-500/30"
-                      }
-                    `}
-                  >
-                    <span className="flex items-center gap-1.5">
-                      <span className={`w-3 h-3 border rounded-sm flex items-center justify-center text-[8px]
-                        ${grokPro ? "border-amber-500 bg-amber-500 text-white" : "border-muted-foreground/30"}
-                      `}>
-                        {grokPro && "✓"}
-                      </span>
-                      PRO QUALITY (enhanced detail)
-                    </span>
-                    <span className="text-[9px]">
-                      {grokPro ? "4 cr/img" : "+2 cr/img"}
-                    </span>
-                  </button>
-                )}
+                {/* GROK disabled — maintenance */}
 
                 {/* GLTCH edit controls — LoRA selector + upscale */}
                 {editEngine === "gltch" && (
@@ -1578,15 +1533,14 @@ const Index = () => {
                       <span className={genEngine === "gltch" ? "text-secondary/70" : "text-muted-foreground/50"}>3 cr</span>
                     </div>
                   </button>
-                  <button type="button" onClick={() => setGenEngine("grok")}
-                    className={`p-2.5 border rounded text-left transition-all duration-200 ${genEngine === "grok" ? "border-primary neon-border bg-primary/5" : "border-border bg-card/30 hover:border-primary/40"}`}>
-                    <div className={`font-orbitron text-[11px] flex items-center gap-1.5 ${genEngine === "grok" ? "text-primary" : "text-foreground"}`}>
+                  <button type="button" disabled
+                    className="p-2.5 border rounded text-left transition-all duration-200 border-border bg-card/30 opacity-50 cursor-not-allowed">
+                    <div className="font-orbitron text-[11px] flex items-center gap-1.5 text-muted-foreground">
                       GROK
-                      <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-amber-400/80 border-amber-500/30 bg-amber-500/10">⚠ RISK</span>
+                      <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-red-400/80 border-red-500/30 bg-red-500/10">MAINTENANCE</span>
                     </div>
-                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
-                      <span>xAI</span>
-                      <span className={genEngine === "grok" ? "text-primary/70" : "text-muted-foreground/50"}>{grokPro ? settings.count * 5 : settings.count * 2} cr</span>
+                    <div className="font-mono-share text-[9px] text-muted-foreground/50 mt-0.5">
+                      <span>Down for maintenance</span>
                     </div>
                   </button>
                   {isAdmin && (
@@ -1597,167 +1551,9 @@ const Index = () => {
                     </button>
                   )}
                 </div>
+                {/* GROK disabled — maintenance */}
 
-                {/* GROK warning */}
-                {genEngine === "grok" && (
-                  <div className="flex items-start gap-2 px-3 py-2 bg-amber-500/5 border border-amber-500/30 rounded">
-                    <span className="text-amber-400 text-[11px] mt-px shrink-0">⚠</span>
-                    <p className="font-mono-share text-[9px] text-amber-400/80 leading-relaxed">
-                      GROK engine has ~95% chance of being blocked by xAI moderation — credits may be wasted. Use <span className="text-secondary font-bold">GLTCH</span> for reliable results.
-                    </p>
-                  </div>
-                )}
-
-                {genEngine === "gltch" && (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-secondary/5 border border-secondary/20 rounded">
-                      <div className="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse" />
-                      <span className="font-mono-share text-[9px] text-secondary/70">
-                        1 cr/img — Z-Image Turbo 6B · 8 steps · {zimageWidth}×{zimageHeight}
-                      </span>
-                    </div>
-                    <div>
-                      <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">DIMENSIONS</label>
-                      <div className="grid grid-cols-4 gap-1">
-                        {([
-                          [1024, 1024, "1:1"],
-                          [768, 1024, "3:4"],
-                          [1024, 768, "4:3"],
-                          [768, 1360, "9:16"],
-                          [1360, 768, "16:9"],
-                          [832, 1216, "2:3"],
-                          [1216, 832, "3:2"],
-                          [512, 512, "SM"],
-                        ] as [number, number, string][]).map(([w, h, label]) => (
-                          <button key={`${w}x${h}`} type="button"
-                            onClick={() => { setZimageWidth(w); setZimageHeight(h); }}
-                            className={`px-1.5 py-1 rounded text-center font-mono-share text-[9px] border transition-all
-                              ${zimageWidth === w && zimageHeight === h
-                                ? "border-secondary bg-secondary/10 text-secondary"
-                                : "border-border bg-card/30 text-muted-foreground hover:border-secondary/40"
-                              }`}
-                          >
-                            {label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    {comfyModels.loras.length > 0 && (
-                      <div>
-                        <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">LORA</label>
-                        <select value={zimageLora} onChange={(e) => {
-                          if (isNsfwLora(e.target.value) && !comfyModels.xrgeHolder && e.target.value !== "none") return;
-                          setZimageLora(e.target.value);
-                        }}
-                          className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-[10px] font-mono-share text-foreground">
-                          <option value="none">None</option>
-                          {comfyModels.loras.map((l) => (
-                            <option key={l} value={l}
-                              disabled={isNsfwLora(l) && !comfyModels.xrgeHolder}
-                              style={isNsfwLora(l) && !comfyModels.xrgeHolder ? { color: '#666', fontStyle: 'italic' } : undefined}>
-                              {isNsfwLora(l) && !comfyModels.xrgeHolder ? "🔒 " : ""}{l.replace(/\.[^.]+$/, "")}
-                            </option>
-                          ))}
-                        </select>
-                        {!comfyModels.xrgeHolder && comfyModels.loras.some(isNsfwLora) && (
-                          <div className="mt-1 font-mono-share text-[8px] text-pink-400/70 space-y-1">
-                            <p>🔒 NSFW LoRAs require unlock</p>
-                            <button
-                              onClick={() => creditsHook.purchaseLoraUnlock()}
-                              disabled={creditsHook.purchasing}
-                              className="px-2 py-1 rounded text-[9px] font-mono-share bg-pink-500/20 border border-pink-500/40 text-pink-300 hover:bg-pink-500/30 transition-colors disabled:opacity-50"
-                            >
-                              {creditsHook.purchasing ? "..." : "UNLOCK ALL LORAS — $30"}
-                            </button>
-                          </div>
-                        )}
-                        {zimageLora !== "none" && (
-                          <div className="mt-1">
-                            <label className="font-mono-share text-[9px] text-muted-foreground/70">Strength: {zimageLoraStrength.toFixed(2)}</label>
-                            <input type="range" min={0} max={2} step={0.05} value={zimageLoraStrength}
-                              onChange={(e) => setZimageLoraStrength(parseFloat(e.target.value))}
-                              className="w-full accent-secondary h-1" />
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-                {/* Comfy GENERATE settings */}
-                {genEngine === "comfy" && (
-                  <div className="space-y-2">
-                    <div>
-                      <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Checkpoint</label>
-                      <select value={comfyCheckpoint} onChange={(e) => setComfyCheckpoint(e.target.value)}
-                        className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-[10px] font-mono-share text-foreground">
-                        {comfyModels.checkpoints.length === 0 && <option value="">No models found</option>}
-                        {comfyModels.checkpoints.map((c) => <option key={c} value={c}>{c}</option>)}
-                      </select>
-                    </div>
-                    {comfyModels.loras.length > 0 && (
-                      <div>
-                        <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">LoRA (optional)</label>
-                        <select value={comfyLora} onChange={(e) => {
-                          if (isNsfwLora(e.target.value) && !comfyModels.xrgeHolder && e.target.value !== "none") return;
-                          setComfyLora(e.target.value);
-                        }}
-                          className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-[10px] font-mono-share text-foreground">
-                          <option value="none">None</option>
-                          {comfyModels.loras.map((l) => (
-                            <option key={l} value={l}
-                              disabled={isNsfwLora(l) && !comfyModels.xrgeHolder}
-                              style={isNsfwLora(l) && !comfyModels.xrgeHolder ? { color: '#666', fontStyle: 'italic' } : undefined}>
-                              {isNsfwLora(l) && !comfyModels.xrgeHolder ? "🔒 " : ""}{l.replace(/\.[^.]+$/, "")}
-                            </option>
-                          ))}
-                        </select>
-                        {comfyLora !== "none" && (
-                          <div className="mt-1">
-                            <label className="font-mono-share text-[9px] text-muted-foreground/70">Strength: {comfyLoraStrength.toFixed(2)}</label>
-                            <input type="range" min={0} max={1.5} step={0.05} value={comfyLoraStrength}
-                              onChange={(e) => setComfyLoraStrength(Number(e.target.value))}
-                              className="w-full accent-purple-500 mt-0.5" />
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-500/5 border border-purple-500/20 rounded">
-                      <Cpu className="w-3 h-3 text-purple-400/70" />
-                      <span className="font-mono-share text-[9px] text-purple-400/70">
-                        Self-hosted GPU — 1 credit per image
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-                {/* PRO quality toggle — Grok generate */}
-                {genEngine === "grok" && (
-                  <button
-                    type="button"
-                    onClick={() => setGrokPro(!grokPro)}
-                    className={`
-                      w-full flex items-center justify-between px-3 py-2 border rounded
-                      font-mono-share text-[10px] transition-all duration-200
-                      ${grokPro
-                        ? "border-amber-500/50 bg-amber-500/5 text-amber-300"
-                        : "border-border bg-card/30 text-muted-foreground hover:border-amber-500/30"
-                      }
-                    `}
-                  >
-                    <span className="flex items-center gap-1.5">
-                      <span className={`w-3 h-3 border rounded-sm flex items-center justify-center text-[8px]
-                        ${grokPro ? "border-amber-500 bg-amber-500 text-white" : "border-muted-foreground/30"}
-                      `}>
-                        {grokPro && "✓"}
-                      </span>
-                      PRO QUALITY (enhanced detail)
-                    </span>
-                    <span className="text-[9px]">
-                      {grokPro ? "3 cr/img" : "+2 cr/img"}
-                    </span>
-                  </button>
-                )}
+                {/* GROK warning removed — maintenance */}
               </div>
             )}
 
@@ -1777,44 +1573,18 @@ const Index = () => {
                       <span className={renderEngine === "comfy" ? "text-purple-400/70" : "text-muted-foreground/50"}>15 cr</span>
                     </div>
                   </button>
-                  <button type="button" onClick={() => setRenderEngine("grok")}
-                    className={`p-2.5 border rounded text-left transition-all duration-200 ${renderEngine === "grok" ? "border-primary neon-border bg-primary/5" : "border-border bg-card/30 hover:border-primary/40"}`}>
-                    <div className={`font-orbitron text-[11px] flex items-center gap-1.5 ${renderEngine === "grok" ? "text-primary" : "text-foreground"}`}>
+                  <button type="button" disabled
+                    className="p-2.5 border rounded text-left transition-all duration-200 border-border bg-card/30 opacity-50 cursor-not-allowed">
+                    <div className="font-orbitron text-[11px] flex items-center gap-1.5 text-muted-foreground">
                       GROK
-                      <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-amber-400/80 border-amber-500/30 bg-amber-500/10">⚠ RISK</span>
+                      <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-red-400/80 border-red-500/30 bg-red-500/10">MAINTENANCE</span>
                     </div>
-                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
-                      <span>xAI</span>
-                      <span className={renderEngine === "grok" ? "text-primary/70" : "text-muted-foreground/50"}>{videoSettings.duration * 3} cr</span>
+                    <div className="font-mono-share text-[9px] text-muted-foreground/50 mt-0.5">
+                      <span>Down for maintenance</span>
                     </div>
                   </button>
                 </div>
-
-                {/* GROK render settings */}
-                {renderEngine === "grok" && (
-                  <div className="space-y-2">
-                    <div className="flex items-start gap-2 px-3 py-2 bg-amber-500/5 border border-amber-500/30 rounded">
-                      <span className="text-amber-400 text-[11px] mt-px shrink-0">⚠</span>
-                      <p className="font-mono-share text-[9px] text-amber-400/80 leading-relaxed">
-                        GROK engine has ~95% chance of being blocked by xAI moderation — credits may be wasted. Use <span className="text-secondary font-bold">GLTCH</span> engines for reliable results.
-                      </p>
-                    </div>
-                    <div>
-                      <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">
-                        Duration — {videoSettings.duration}s × 3 cr/s = <span className="text-primary/80 font-bold">{videoSettings.duration * 3} cr</span>
-                      </label>
-                      <div className="flex flex-wrap gap-1.5">
-                        {[2, 3, 5, 7, 10, 15].map((s) => (
-                          <button key={s} type="button"
-                            onClick={() => handleVideoSettingsChange({ ...videoSettings, duration: s })}
-                            className={`px-2 py-1 rounded text-[9px] font-mono-share transition-all ${videoSettings.duration === s ? "bg-primary/20 border-primary/50 text-primary border" : "bg-card/30 border border-border text-muted-foreground hover:border-primary/30"}`}>
-                            ~{s}s
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
+                {/* GROK disabled — maintenance */}
 
                 {/* Comfy RENDER settings */}
                 {renderEngine === "comfy" && (
@@ -1936,28 +1706,18 @@ const Index = () => {
                       <span className={animateEngine === "gltch" ? "text-secondary/70" : "text-muted-foreground/50"}>15 cr</span>
                     </div>
                   </button>
-                  <button type="button" onClick={() => { setAnimateEngine("grok"); setLongLookEnabled(false); }}
-                    className={`p-2.5 border rounded text-left transition-all duration-200 ${animateEngine === "grok" ? "border-primary neon-border bg-primary/5" : "border-border bg-card/30 hover:border-primary/40"}`}>
-                    <div className={`font-orbitron text-[11px] flex items-center gap-1.5 ${animateEngine === "grok" ? "text-primary" : "text-foreground"}`}>
+                  <button type="button" disabled
+                    className="p-2.5 border rounded text-left transition-all duration-200 border-border bg-card/30 opacity-50 cursor-not-allowed">
+                    <div className="font-orbitron text-[11px] flex items-center gap-1.5 text-muted-foreground">
                       GROK
-                      <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-amber-400/80 border-amber-500/30 bg-amber-500/10">⚠ RISK</span>
+                      <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-red-400/80 border-red-500/30 bg-red-500/10">MAINTENANCE</span>
                     </div>
-                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
-                      <span>xAI</span>
-                      <span className={animateEngine === "grok" ? "text-primary/70" : "text-muted-foreground/50"}>{videoSettings.duration * 3} cr</span>
+                    <div className="font-mono-share text-[9px] text-muted-foreground/50 mt-0.5">
+                      <span>Down for maintenance</span>
                     </div>
                   </button>
                 </div>
-
-                {/* GROK warning */}
-                {animateEngine === "grok" && (
-                  <div className="flex items-start gap-2 px-3 py-2 bg-amber-500/5 border border-amber-500/30 rounded">
-                    <span className="text-amber-400 text-[11px] mt-px shrink-0">⚠</span>
-                    <p className="font-mono-share text-[9px] text-amber-400/80 leading-relaxed">
-                      GROK engine has ~95% chance of being blocked by xAI moderation — credits may be wasted. Use <span className="text-secondary font-bold">GLTCH</span> or <span className="text-purple-400 font-bold">GLTCH PRO</span> for reliable results.
-                    </p>
-                  </div>
-                )}
+                {/* GROK disabled — maintenance */}
 
                 {/* GLTCH WAN settings */}
                 {animateEngine === "gltch" && (
