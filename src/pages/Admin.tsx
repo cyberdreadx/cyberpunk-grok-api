@@ -275,6 +275,23 @@ function AnnouncementPanel() {
   const [result, setResult] = useState<any>(null);
   const [progress, setProgress] = useState<{ sent: number; failed: number; total: number } | null>(null);
   const abortRef = useRef(false);
+  const [stats, setStats] = useState<{ totalVerified: number; alreadySent: number; remaining: number } | null>(null);
+  const [statsLoading, setStatsLoading] = useState(false);
+  const [subject, setSubject] = useState("🚀 Grok Runner just got a massive upgrade");
+  const [showEditor, setShowEditor] = useState(false);
+  const [htmlContent, setHtmlContent] = useState("");
+  const [showPreview, setShowPreview] = useState(false);
+
+  const fetchStats = useCallback(async () => {
+    setStatsLoading(true);
+    try {
+      const res = await apiFetch("/admin", { method: "POST", body: { action: "announcement-stats" } });
+      setStats(res);
+    } catch { /* ignore */ }
+    finally { setStatsLoading(false); }
+  }, []);
+
+  useEffect(() => { fetchStats(); }, [fetchStats]);
 
   const handleDryRun = async () => {
     setDryRunning(true);
@@ -312,10 +329,10 @@ function AnnouncementPanel() {
       while (true) {
         if (abortRef.current) break;
         try {
-          const res = await apiFetch("/admin", {
-            method: "POST",
-            body: { action: "send-announcement", batchSize, offset },
-          });
+          const body: any = { action: "send-announcement", batchSize, offset };
+          if (subject) body.subject = subject;
+          if (htmlContent) body.html = htmlContent;
+          const res = await apiFetch("/admin", { method: "POST", body });
           totalSent += res.sent;
           totalFailed += res.failed;
           totalUsers = res.totalUsers;
@@ -333,6 +350,7 @@ function AnnouncementPanel() {
         }
       }
       setResult({ done: true, sent: totalSent, failed: totalFailed, total: totalUsers });
+      fetchStats();
     } catch (err: any) {
       setResult({ error: `${err.message} (${totalSent} sent before error)`, sent: totalSent, failed: totalFailed, canResume: true });
     } finally {
@@ -368,8 +386,84 @@ function AnnouncementPanel() {
         </div>
       </div>
 
+      {/* Stats counter */}
+      <div className="flex items-center gap-4 font-mono-share text-[11px]">
+        {statsLoading ? (
+          <span className="text-muted-foreground flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Loading stats...</span>
+        ) : stats ? (
+          <>
+            <span className="text-muted-foreground">Verified: <span className="text-foreground font-bold">{stats.totalVerified}</span></span>
+            <span className="text-muted-foreground">Already sent: <span className="text-secondary font-bold">{stats.alreadySent}</span></span>
+            <span className="text-muted-foreground">Remaining: <span className="text-primary font-bold">{stats.remaining}</span></span>
+            <Button variant="ghost" size="sm" onClick={fetchStats} className="h-5 w-5 p-0">
+              <RefreshCw className="w-3 h-3 text-muted-foreground" />
+            </Button>
+          </>
+        ) : null}
+      </div>
+
+      {/* Subject + Email Editor */}
+      <div className="space-y-2">
+        <div className="space-y-1">
+          <label className="font-mono-share text-[10px] text-muted-foreground/70">SUBJECT LINE</label>
+          <input
+            type="text"
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+            className="w-full bg-background/50 border border-primary/20 rounded px-2 py-1.5 font-mono-share text-xs text-foreground focus:outline-none focus:border-primary/50"
+          />
+        </div>
+        <div>
+          <button
+            onClick={() => setShowEditor(!showEditor)}
+            className="flex items-center gap-1.5 font-mono-share text-[10px] text-muted-foreground/70 hover:text-muted-foreground transition-colors"
+          >
+            <Edit className="w-3 h-3" />
+            {showEditor ? "HIDE" : "EDIT"} EMAIL HTML
+            {showEditor ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+          </button>
+          {showEditor && (
+            <div className="mt-2 space-y-2">
+              <textarea
+                value={htmlContent}
+                onChange={(e) => setHtmlContent(e.target.value)}
+                placeholder="Paste custom HTML here, or leave blank to use the default announcement template..."
+                className="w-full h-48 bg-background/50 border border-primary/20 rounded px-2 py-1.5 font-mono text-[11px] text-foreground focus:outline-none focus:border-primary/50 resize-y"
+              />
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => setShowPreview(!showPreview)}
+                  className="font-mono-share text-[10px] gap-1 border-primary/20 hover:bg-primary/10">
+                  <Eye className="w-3 h-3" />
+                  {showPreview ? "HIDE" : "SHOW"} PREVIEW
+                </Button>
+                {!htmlContent && (
+                  <Button variant="outline" size="sm" onClick={() => {
+                    apiFetch("/admin", { method: "POST", body: { action: "get-announcement-html" } })
+                      .then((r) => setHtmlContent(r.html))
+                      .catch(() => setHtmlContent("<!-- Failed to load default template -->"));
+                  }}
+                    className="font-mono-share text-[10px] gap-1 border-primary/20 hover:bg-primary/10">
+                    LOAD DEFAULT TEMPLATE
+                  </Button>
+                )}
+              </div>
+              {showPreview && htmlContent && (
+                <div className="border border-primary/20 rounded bg-background/80 p-1">
+                  <iframe
+                    srcDoc={htmlContent}
+                    className="w-full h-64 rounded border-0"
+                    title="Email Preview"
+                    sandbox=""
+                  />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
       <p className="font-mono-share text-[10px] text-muted-foreground/50">
-        Sends the Grok Runner update announcement (10 daily credits, Stories, upcoming Live Feed) to all verified users via Resend.
+        Sends the announcement to all verified users who haven't received it yet. Edit the subject and HTML above before sending.
       </p>
 
       {progress && (
