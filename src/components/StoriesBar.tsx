@@ -35,14 +35,18 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUserId, isAdmin }) => {
   const [viewerOpen, setViewerOpen] = useState(false);
   const [activeUserIdx, setActiveUserIdx] = useState(0);
 
+  // Only fetch if logged in
+  const loggedIn = hasAuthToken();
+
   const fetchStories = useCallback(async () => {
+    if (!loggedIn) return;
     try {
       const data = await apiFetch<{ users: StoryUser[] }>("/stories");
       setUsers(data.users || []);
     } catch (err) {
       console.error("[StoriesBar] fetch failed:", err);
     }
-  }, []);
+  }, [loggedIn]);
 
   const handleDelete = useCallback(async (storyId: string) => {
     try {
