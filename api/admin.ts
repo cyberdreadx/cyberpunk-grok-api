@@ -624,7 +624,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       case "send-announcement": {
-        const batchSize = req.body.batchSize || 10;
+        const batchSize = req.body.batchSize || 25;
         const offset = req.body.offset || 0;
         const dryRun = req.body.dryRun || false;
 
@@ -663,7 +663,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             if (ok) sent++;
             else { failed++; errors.push(user.email); }
             // Small delay to avoid rate limits
-            await new Promise((r) => setTimeout(r, 200));
+            await new Promise((r) => setTimeout(r, 100));
           } catch (err: any) {
             failed++;
             errors.push(user.email);
