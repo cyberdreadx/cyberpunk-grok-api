@@ -176,6 +176,7 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUserId, isAdmin }) => {
           onClose={() => setViewerOpen(false)}
           onViewed={handleViewed}
           onDelete={handleDelete}
+          onUnlocked={fetchStories}
         />
       )}
     </>
