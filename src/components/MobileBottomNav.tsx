@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { createPortal } from "react-dom";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Sparkles, Image, Users, ShoppingCart, MoreHorizontal, HelpCircle, FileText, Shield, ScrollText } from "lucide-react";
+import { Sparkles, Image, Users, ShoppingCart, MoreHorizontal, HelpCircle, FileText, Shield, ScrollText, Rss } from "lucide-react";
 
 interface MobileBottomNavProps {
   isAuthenticated?: boolean;
@@ -29,6 +29,7 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   const isHome = location.pathname === "/" || location.pathname === "";
   const isCharacters = location.pathname === "/characters";
   const isLibrary = location.pathname === "/library";
+  const isFeed = location.pathname === "/feed";
 
   const tabs = [
     {
@@ -45,13 +46,22 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
       active: isLibrary,
       onClick: () => { if (!isLibrary) navigate("/library"); setMoreOpen(false); },
     },
-    ...(isAuthenticated ? [{
-      id: "characters",
-      label: t("nav.characters").toUpperCase().slice(0, 5),
-      icon: Users,
-      active: isCharacters,
-      onClick: () => { navigate("/characters"); setMoreOpen(false); },
-    }] : []),
+    ...(isAuthenticated ? [
+      {
+        id: "feed",
+        label: "FEED",
+        icon: Rss,
+        active: isFeed,
+        onClick: () => { navigate("/feed"); setMoreOpen(false); },
+      },
+      {
+        id: "characters",
+        label: t("nav.characters").toUpperCase().slice(0, 5),
+        icon: Users,
+        active: isCharacters,
+        onClick: () => { navigate("/characters"); setMoreOpen(false); },
+      },
+    ] : []),
     {
       id: "store",
       label: t("nav.store").toUpperCase(),

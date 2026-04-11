@@ -1,0 +1,145 @@
+import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { getUserFromRequest } from "./_lib/auth";
+import { getDb } from "./_lib/db";
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  if (req.method === "OPTIONS") return res.status(200).end();
+
+  const sql = getDb();
+  const auth = getUserFromRequest(req);
+  if (!auth) return res.status(401).json({ error: "Unauthorized" });
+
+  // GET — list feed posts
+  if (req.method === "GET") {
+    try {
+      const { filter, cursor, userId } = req.query;
+      const limit = 20;
+
+      let rows;
+      if (userId) {
+        // Profile gallery — posts from a specific user
+        rows = cursor
+          ? await sql`
+              SELECT p.*, pr.username, pr.avatar_url,
+                (SELECT count(*)::int FROM reactions WHERE post_id = p.id) AS reaction_count,
+                (SELECT count(*)::int FROM comments WHERE post_id = p.id) AS comment_count,
+                EXISTS(SELECT 1 FROM reactions WHERE post_id = p.id AND user_id = ${auth.userId}) AS user_reacted
+              FROM posts p
+              JOIN profiles pr ON pr.user_id = p.user_id
+              WHERE p.user_id = ${userId} AND p.created_at < ${cursor}
+              ORDER BY p.created_at DESC LIMIT ${limit}
+            `
+          : await sql`
+              SELECT p.*, pr.username, pr.avatar_url,
+                (SELECT count(*)::int FROM reactions WHERE post_id = p.id) AS reaction_count,
+                (SELECT count(*)::int FROM comments WHERE post_id = p.id) AS comment_count,
+                EXISTS(SELECT 1 FROM reactions WHERE post_id = p.id AND user_id = ${auth.userId}) AS user_reacted
+              FROM posts p
+              JOIN profiles pr ON pr.user_id = p.user_id
+              WHERE p.user_id = ${userId}
+              ORDER BY p.created_at DESC LIMIT ${limit}
+            `;
+      } else if (filter === "following") {
+        rows = cursor
+          ? await sql`
+              SELECT p.*, pr.username, pr.avatar_url,
+                (SELECT count(*)::int FROM reactions WHERE post_id = p.id) AS reaction_count,
+                (SELECT count(*)::int FROM comments WHERE post_id = p.id) AS comment_count,
+                EXISTS(SELECT 1 FROM reactions WHERE post_id = p.id AND user_id = ${auth.userId}) AS user_reacted
+              FROM posts p
+              JOIN profiles pr ON pr.user_id = p.user_id
+              WHERE p.user_id IN (SELECT following_id FROM follows WHERE follower_id = ${auth.userId})
+                AND p.created_at < ${cursor}
+              ORDER BY p.created_at DESC LIMIT ${limit}
+            `
+          : await sql`
+              SELECT p.*, pr.username, pr.avatar_url,
+                (SELECT count(*)::int FROM reactions WHERE post_id = p.id) AS reaction_count,
+                (SELECT count(*)::int FROM comments WHERE post_id = p.id) AS comment_count,
+                EXISTS(SELECT 1 FROM reactions WHERE post_id = p.id AND user_id = ${auth.userId}) AS user_reacted
+              FROM posts p
+              JOIN profiles pr ON pr.user_id = p.user_id
+              WHERE p.user_id IN (SELECT following_id FROM follows WHERE follower_id = ${auth.userId})
+              ORDER BY p.created_at DESC LIMIT ${limit}
+            `;
+      } else {
+        // Global feed
+        rows = cursor
+          ? await sql`
+              SELECT p.*, pr.username, pr.avatar_url,
+                (SELECT count(*)::int FROM reactions WHERE post_id = p.id) AS reaction_count,
+                (SELECT count(*)::int FROM comments WHERE post_id = p.id) AS comment_count,
+                EXISTS(SELECT 1 FROM reactions WHERE post_id = p.id AND user_id = ${auth.userId}) AS user_reacted
+              FROM posts p
+              JOIN profiles pr ON pr.user_id = p.user_id
+              WHERE p.created_at < ${cursor}
+              ORDER BY p.created_at DESC LIMIT ${limit}
+            `
+          : await sql`
+              SELECT p.*, pr.username, pr.avatar_url,
+                (SELECT count(*)::int FROM reactions WHERE post_id = p.id) AS reaction_count,
+                (SELECT count(*)::int FROM comments WHERE post_id = p.id) AS comment_count,
+                EXISTS(SELECT 1 FROM reactions WHERE post_id = p.id AND user_id = ${auth.userId}) AS user_reacted
+              FROM posts p
+              JOIN profiles pr ON pr.user_id = p.user_id
+              ORDER BY p.created_at DESC LIMIT ${limit}
+            `;
+      }
+
+      return res.json({
+        posts: rows.map((r: any) => ({
+          id: r.id,
+          userId: r.user_id,
+          username: r.username,
+          avatarUrl: r.avatar_url,
+          text: r.text,
+          imageUrl: r.image_url,
+          createdAt: r.created_at,
+          reactionCount: r.reaction_count,
+          commentCount: r.comment_count,
+          userReacted: r.user_reacted,
+        })),
+        nextCursor: rows.length === limit ? rows[rows.length - 1].created_at : null,
+      });
+    } catch (err: any) {
+      console.error("[feed GET]", err.message);
+      return res.status(500).json({ error: "Failed to fetch feed" });
+    }
+  }
+
+  // POST — create a post
+  if (req.method === "POST") {
+    try {
+      const { text, imageUrl } = req.body || {};
+      if (!text && !imageUrl) return res.status(400).json({ error: "Post must have text or image" });
+      if (text && text.length > 2000) return res.status(400).json({ error: "Text too long (max 2000)" });
+
+      const rows = await sql`
+        INSERT INTO posts (user_id, text, image_url) VALUES (${auth.userId}, ${text || ""}, ${imageUrl || null})
+        RETURNING id, created_at
+      `;
+      return res.status(201).json({ id: rows[0].id, createdAt: rows[0].created_at });
+    } catch (err: any) {
+      console.error("[feed POST]", err.message);
+      return res.status(500).json({ error: "Failed to create post" });
+    }
+  }
+
+  // DELETE — delete own post
+  if (req.method === "DELETE") {
+    try {
+      const { postId } = req.body || {};
+      if (!postId) return res.status(400).json({ error: "postId required" });
+      await sql`DELETE FROM posts WHERE id = ${postId} AND user_id = ${auth.userId}`;
+      return res.json({ success: true });
+    } catch (err: any) {
+      console.error("[feed DELETE]", err.message);
+      return res.status(500).json({ error: "Failed to delete post" });
+    }
+  }
+
+  return res.status(405).json({ error: "Method not allowed" });
+}
