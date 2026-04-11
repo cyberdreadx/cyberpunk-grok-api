@@ -33,6 +33,8 @@ import ApiKeyDialog from "@/components/ApiKeyDialog";
 import ApiKeysPanel from "@/components/ApiKeysPanel";
 import AuthDialog from "@/components/AuthDialog";
 import CreditDisplay from "@/components/CreditDisplay";
+import DailyMissionsDialog from "@/components/DailyMissionsDialog";
+import { useDailyMissions } from "@/hooks/useDailyMissions";
 import LegalDialog from "@/components/LegalDialog";
 import HowToUseDialog from "@/components/HowToUseDialog";
 import ChangelogDialog, { hasUnseenChangelog } from "@/components/ChangelogDialog";
@@ -153,6 +155,7 @@ const Index = () => {
   // Auth & Credits
   const auth = useAuth();
   const creditsHook = useCredits(auth.user);
+  const missionsHook = useDailyMissions(auth.user);
   const isAdmin = !!auth.user?.is_admin;
   const [adminTestCredits, setAdminTestCredits] = useState(false);
   const adminBypass = isAdmin && !adminTestCredits;
@@ -1021,6 +1024,18 @@ const Index = () => {
                 onCreditsRefresh={creditsHook.refreshCredits}
                 externalOpen={storeOpen}
                 onExternalOpenChange={setStoreOpen}
+              />
+            )}
+
+            {/* Daily Missions */}
+            {auth.isAuthenticated && (
+              <DailyMissionsDialog
+                status={missionsHook.status}
+                loading={missionsHook.loading}
+                claiming={missionsHook.claiming}
+                onClaim={missionsHook.claimMission}
+                onClaimStreak={missionsHook.claimStreakBonus}
+                onCreditsRefresh={creditsHook.refreshCredits}
               />
             )}
 
