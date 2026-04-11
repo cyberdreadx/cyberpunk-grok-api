@@ -398,8 +398,17 @@ function AnnouncementPanel() {
       )}
 
       {result?.error && (
-        <div className="bg-destructive/5 border border-destructive/20 rounded p-3 font-mono-share text-xs text-destructive">
-          Error: {result.error}{result.sent > 0 ? ` (${result.sent} sent before error)` : ""}
+        <div className="bg-destructive/5 border border-destructive/20 rounded p-3 space-y-2">
+          <div className="font-mono-share text-xs text-destructive">
+            Error: {result.error}
+          </div>
+          {result.canResume && (
+            <Button variant="outline" size="sm" onClick={() => handleSend(true)} disabled={sending}
+              className="font-mono-share text-xs gap-1.5 border-accent/30 hover:bg-accent/10 text-accent">
+              <RefreshCw className="w-3 h-3" />
+              RESUME (skips already sent)
+            </Button>
+          )}
         </div>
       )}
     </section>
