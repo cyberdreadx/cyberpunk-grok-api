@@ -629,7 +629,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json({ totalVerified: total_verified, alreadySent: already_sent, remaining: total_verified - already_sent });
       }
 
-      case "send-announcement": {
+      case "get-announcement-html": {
+        return res.status(200).json({ html: buildAnnouncementHtml() });
+      }
+
         const batchSize = req.body.batchSize || 25;
         const offset = req.body.offset || 0;
         const dryRun = req.body.dryRun || false;
