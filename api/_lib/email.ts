@@ -165,15 +165,15 @@ export async function sendDailyCreditsEmail(
   await logEmail(to, "daily_credits", "sent", data?.id, null, { amount });
 }
 
-/** Send the Grok Runner announcement email. */
-export async function sendAnnouncementEmail(to: string): Promise<boolean> {
+/** Send the Grok Runner announcement email. Accepts optional custom subject/html. */
+export async function sendAnnouncementEmail(to: string, customSubject?: string, customHtml?: string): Promise<boolean> {
   const fromAddress = getFromAddress();
 
   const { data, error } = await getResend().emails.send({
     from: `Grok Runner <${fromAddress}>`,
     to: [to],
-    subject: `🚀 Grok Runner just got a massive upgrade`,
-    html: buildAnnouncementHtml(),
+    subject: customSubject || `🚀 Grok Runner just got a massive upgrade`,
+    html: customHtml || buildAnnouncementHtml(),
   });
 
   if (error) {
