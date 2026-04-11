@@ -628,11 +628,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const offset = req.body.offset || 0;
         const dryRun = req.body.dryRun || false;
 
-        // Get all verified users
+        // Get verified users who haven't already received this announcement
         const users = await sql`
-          SELECT email FROM users
-          WHERE email_verified = true
-          ORDER BY created_at ASC
+          SELECT u.email FROM users u
+          WHERE u.email_verified = true
+            AND u.email NOT IN (
+              SELECT recipient FROM email_log
+              WHERE email_type = 'announcement' AND status = 'sent'
+            )
+          ORDER BY u.created_at ASC
           LIMIT ${batchSize} OFFSET ${offset}
         `;
 
