@@ -43,7 +43,15 @@ export function useDailyMissions(user: AuthUser | null) {
       await fetchStatus();
       return true;
     } catch (err: any) {
-      console.warn("[claimMission]", err.message);
+      const msg = err.message || "Failed to claim";
+      if (msg.includes("not completed")) {
+        toast.error("Complete the mission first, then claim your reward!");
+      } else if (msg.includes("Already claimed")) {
+        toast.info("Already claimed today");
+      } else {
+        toast.error(msg);
+      }
+      console.warn("[claimMission]", msg);
       return false;
     } finally {
       setClaiming(false);
