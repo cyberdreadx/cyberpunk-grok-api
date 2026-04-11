@@ -289,10 +289,13 @@ function AnnouncementPanel() {
     }
   };
 
-  const handleSend = async () => {
-    if (!confirm("Send the announcement email to ALL verified users? This cannot be undone.")) return;
+  const handleSend = async (isResume = false) => {
+    const msg = isResume
+      ? "Resume sending? Already-sent users will be skipped automatically."
+      : "Send the announcement email to ALL verified users? This cannot be undone.";
+    if (!confirm(msg)) return;
     setSending(true);
-    setResult(null);
+    if (!isResume) setResult(null);
     abortRef.current = false;
     const batchSize = 25;
     let offset = 0;
@@ -314,22 +317,21 @@ function AnnouncementPanel() {
           totalFailed += res.failed;
           totalUsers = res.totalUsers;
           setProgress({ sent: totalSent, failed: totalFailed, total: totalUsers });
-          retries = 0; // reset on success
+          retries = 0;
 
           if (!res.hasMore) break;
           offset = res.nextOffset;
-          // small pause between batches
           await new Promise((r) => setTimeout(r, 500));
         } catch (batchErr: any) {
           retries++;
           if (retries >= MAX_RETRIES) throw batchErr;
           console.warn(`[Announcement] Batch at offset ${offset} failed, retry ${retries}/${MAX_RETRIES}`);
-          await new Promise((r) => setTimeout(r, 2000 * retries)); // backoff
+          await new Promise((r) => setTimeout(r, 2000 * retries));
         }
       }
       setResult({ done: true, sent: totalSent, failed: totalFailed, total: totalUsers });
     } catch (err: any) {
-      setResult({ error: `${err.message} (${totalSent} sent before error)`, sent: totalSent, failed: totalFailed });
+      setResult({ error: `${err.message} (${totalSent} sent before error)`, sent: totalSent, failed: totalFailed, canResume: true });
     } finally {
       setSending(false);
       setProgress(null);
@@ -349,7 +351,7 @@ function AnnouncementPanel() {
             {dryRunning ? <Loader2 className="w-3 h-3 animate-spin" /> : <Eye className="w-3 h-3" />}
             DRY_RUN
           </Button>
-          <Button variant="outline" size="sm" onClick={handleSend} disabled={sending || dryRunning}
+          <Button variant="outline" size="sm" onClick={() => handleSend(false)} disabled={sending || dryRunning}
             className="font-mono-share text-xs gap-1.5 border-secondary/30 hover:bg-secondary/10 text-secondary">
             {sending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
             {sending ? "SENDING..." : "SEND_TO_ALL"}
@@ -396,8 +398,17 @@ function AnnouncementPanel() {
       )}
 
       {result?.error && (
-        <div className="bg-destructive/5 border border-destructive/20 rounded p-3 font-mono-share text-xs text-destructive">
-          Error: {result.error}{result.sent > 0 ? ` (${result.sent} sent before error)` : ""}
+        <div className="bg-destructive/5 border border-destructive/20 rounded p-3 space-y-2">
+          <div className="font-mono-share text-xs text-destructive">
+            Error: {result.error}
+          </div>
+          {result.canResume && (
+            <Button variant="outline" size="sm" onClick={() => handleSend(true)} disabled={sending}
+              className="font-mono-share text-xs gap-1.5 border-accent/30 hover:bg-accent/10 text-accent">
+              <RefreshCw className="w-3 h-3" />
+              RESUME (skips already sent)
+            </Button>
+          )}
         </div>
       )}
     </section>
