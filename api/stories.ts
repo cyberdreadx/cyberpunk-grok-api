@@ -4,9 +4,11 @@ import { getDb } from "./_lib/db";
 
 export const config = { maxDuration: 30 };
 
+const MAX_LOCK_COST = 50;
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
   if (req.method === "OPTIONS") return res.status(200).end();
 
@@ -18,14 +20,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const auth = getUserFromRequest(req);
       if (!auth) return res.status(401).json({ error: "Unauthorized" });
 
-      const { mediaUrl, mediaType, caption, prompt } = req.body || {};
+      const { mediaUrl, mediaType, caption, prompt, lockCost } = req.body || {};
       if (!mediaUrl) return res.status(400).json({ error: "mediaUrl required" });
 
       const type = (mediaType || "image").startsWith("video") ? "video" : "image";
+      const cost = Math.max(0, Math.min(parseInt(lockCost) || 0, MAX_LOCK_COST));
 
       const rows = await sql`
-        INSERT INTO stories (user_id, media_url, media_type, caption, prompt)
-        VALUES (${auth.userId}::uuid, ${mediaUrl}, ${type}, ${caption || ""}, ${prompt || ""})
+        INSERT INTO stories (user_id, media_url, media_type, caption, prompt, lock_cost)
+        VALUES (${auth.userId}::uuid, ${mediaUrl}, ${type}, ${caption || ""}, ${prompt || ""}, ${cost})
         RETURNING id, created_at, expires_at
       `;
 
@@ -36,22 +39,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  // GET — fetch active stories (grouped by user)
+  // GET — fetch active stories (requires auth)
   if (req.method === "GET") {
     try {
       const auth = getUserFromRequest(req);
-      const viewerId = auth?.userId || null;
+      if (!auth) return res.status(401).json({ error: "Login required to view stories" });
+
+      const viewerId = auth.userId;
 
       const rows = await sql`
         SELECT
           s.id, s.user_id, s.media_url, s.media_type, s.caption, s.prompt,
-          s.created_at, s.expires_at,
+          s.created_at, s.expires_at, s.lock_cost,
           u.email,
           CASE WHEN sv.viewer_id IS NOT NULL THEN true ELSE false END AS viewed,
-          (SELECT COUNT(*)::int FROM story_views sv2 WHERE sv2.story_id = s.id) AS view_count
+          (SELECT COUNT(*)::int FROM story_views sv2 WHERE sv2.story_id = s.id) AS view_count,
+          CASE WHEN su.user_id IS NOT NULL THEN true ELSE false END AS unlocked
         FROM stories s
         JOIN users u ON u.id = s.user_id
         LEFT JOIN story_views sv ON sv.story_id = s.id AND sv.viewer_id = ${viewerId}::uuid
+        LEFT JOIN story_unlocks su ON su.story_id = s.id AND su.user_id = ${viewerId}::uuid
         WHERE s.expires_at > now()
         ORDER BY s.created_at DESC
       `;
@@ -60,7 +67,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const grouped: Record<string, any> = {};
       for (const r of rows) {
         if (!grouped[r.user_id]) {
-          // Extract display name from email
           const name = (r.email || "").split("@")[0] || "user";
           grouped[r.user_id] = {
             userId: r.user_id,
@@ -69,16 +75,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             hasUnviewed: false,
           };
         }
+
+        const isOwner = r.user_id === viewerId;
+        const isLocked = r.lock_cost > 0 && !r.unlocked && !isOwner;
+
         grouped[r.user_id].stories.push({
           id: r.id,
-          mediaUrl: r.media_url,
+          // Hide media URL for locked stories
+          mediaUrl: isLocked ? "" : r.media_url,
           mediaType: r.media_type,
-          caption: r.caption,
-          prompt: r.prompt,
+          caption: isLocked ? "" : r.caption,
+          prompt: isLocked ? "" : r.prompt,
           createdAt: r.created_at,
           expiresAt: r.expires_at,
           viewed: r.viewed,
           viewCount: r.view_count || 0,
+          lockCost: r.lock_cost,
+          unlocked: r.unlocked || isOwner,
+          isOwner,
         });
         if (!r.viewed) grouped[r.user_id].hasUnviewed = true;
       }
@@ -87,6 +101,85 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     } catch (err: any) {
       console.error("[stories] GET error:", err.message);
       return res.status(500).json({ error: "Failed to fetch stories" });
+    }
+  }
+
+  // PATCH — unlock a locked story (pay credits)
+  if (req.method === "PATCH") {
+    try {
+      const auth = getUserFromRequest(req);
+      if (!auth) return res.status(401).json({ error: "Unauthorized" });
+
+      const { storyId } = req.body || {};
+      if (!storyId) return res.status(400).json({ error: "storyId required" });
+
+      // Get the story
+      const [story] = await sql`
+        SELECT id, user_id, lock_cost FROM stories WHERE id = ${storyId}::uuid AND expires_at > now()
+      `;
+      if (!story) return res.status(404).json({ error: "Story not found or expired" });
+
+      if (story.user_id === auth.userId) {
+        return res.status(200).json({ ok: true, message: "Own story — no unlock needed" });
+      }
+
+      if (story.lock_cost <= 0) {
+        return res.status(200).json({ ok: true, message: "Story is free" });
+      }
+
+      // Check if already unlocked
+      const [existing] = await sql`
+        SELECT id FROM story_unlocks WHERE story_id = ${storyId}::uuid AND user_id = ${auth.userId}::uuid
+      `;
+      if (existing) {
+        return res.status(200).json({ ok: true, message: "Already unlocked" });
+      }
+
+      // Check user credits (use pack_credits first, then sub_credits, then daily_credits)
+      const [user] = await sql`
+        SELECT daily_credits, sub_credits, pack_credits FROM users WHERE id = ${auth.userId}::uuid
+      `;
+      if (!user) return res.status(404).json({ error: "User not found" });
+
+      const totalCredits = (user.daily_credits || 0) + (user.sub_credits || 0) + (user.pack_credits || 0);
+      if (totalCredits < story.lock_cost) {
+        return res.status(402).json({ error: "Not enough credits", needed: story.lock_cost, available: totalCredits });
+      }
+
+      // Deduct credits (daily first, then sub, then pack)
+      let remaining = story.lock_cost;
+      let deductDaily = Math.min(remaining, user.daily_credits || 0);
+      remaining -= deductDaily;
+      let deductSub = Math.min(remaining, user.sub_credits || 0);
+      remaining -= deductSub;
+      let deductPack = remaining;
+
+      await sql`
+        UPDATE users SET
+          daily_credits = daily_credits - ${deductDaily},
+          sub_credits = sub_credits - ${deductSub},
+          pack_credits = pack_credits - ${deductPack},
+          updated_at = now()
+        WHERE id = ${auth.userId}::uuid
+      `;
+
+      // Record unlock
+      await sql`
+        INSERT INTO story_unlocks (story_id, user_id, credits_paid)
+        VALUES (${storyId}::uuid, ${auth.userId}::uuid, ${story.lock_cost})
+        ON CONFLICT (story_id, user_id) DO NOTHING
+      `;
+
+      // Give credits to the story creator
+      await sql`
+        UPDATE users SET pack_credits = pack_credits + ${story.lock_cost}, updated_at = now()
+        WHERE id = ${story.user_id}::uuid
+      `;
+
+      return res.status(200).json({ ok: true, credited: story.lock_cost });
+    } catch (err: any) {
+      console.error("[stories] PATCH error:", err.message);
+      return res.status(500).json({ error: "Failed to unlock story" });
     }
   }
 
