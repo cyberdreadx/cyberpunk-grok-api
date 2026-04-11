@@ -155,6 +155,7 @@ const Index = () => {
   // Auth & Credits
   const auth = useAuth();
   const creditsHook = useCredits(auth.user);
+  const missionsHook = useDailyMissions(auth.user);
   const isAdmin = !!auth.user?.is_admin;
   const [adminTestCredits, setAdminTestCredits] = useState(false);
   const adminBypass = isAdmin && !adminTestCredits;
