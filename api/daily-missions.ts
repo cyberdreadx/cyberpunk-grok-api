@@ -129,6 +129,12 @@ async function claimMission(sql: any, userId: string, mission: string, res: Verc
     return res.status(409).json({ error: "Already claimed today" });
   }
 
+  // ── Server-side verification ──
+  const verified = await verifyMission(sql, userId, mission, today);
+  if (!verified) {
+    return res.status(403).json({ error: `Mission "${mission}" not completed. Do the action first, then claim.` });
+  }
+
   const creditAmount = MISSION_CREDITS[mission] || 5;
 
   // Insert claim
@@ -151,6 +157,46 @@ async function claimMission(sql: any, userId: string, mission: string, res: Verc
   `;
 
   return res.status(200).json({ credited: creditAmount, mission });
+}
+
+/** Verify that the user actually performed the mission action today. */
+async function verifyMission(sql: any, userId: string, mission: string, today: string): Promise<boolean> {
+  switch (mission) {
+    case "login":
+      // They're authenticated and hitting this endpoint — login verified
+      return true;
+
+    case "story": {
+      // Check if user posted a story today
+      const [story] = await sql`
+        SELECT id FROM stories
+        WHERE user_id = ${userId}::uuid AND created_at::date = ${today}::date
+        LIMIT 1
+      `;
+      return !!story;
+    }
+
+    case "reddit": {
+      // Check if user has claimed the reddit reward (one-time, verified via secret code)
+      const [user] = await sql`
+        SELECT reddit_reward_claimed FROM users WHERE id = ${userId}::uuid
+      `;
+      return !!user?.reddit_reward_claimed;
+    }
+
+    case "share": {
+      // Check if user used the share API today (logged in usage_log with mode='share')
+      const [shareLog] = await sql`
+        SELECT id FROM usage_log
+        WHERE user_id = ${userId}::uuid AND mode = 'share' AND created_at::date = ${today}::date
+        LIMIT 1
+      `;
+      return !!shareLog;
+    }
+
+    default:
+      return false;
+  }
 }
 
 async function claimStreakBonus(sql: any, userId: string, res: VercelResponse) {
