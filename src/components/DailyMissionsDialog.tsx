@@ -29,7 +29,7 @@ export default function DailyMissionsDialog({ status, loading, claiming, onClaim
   const streakDay = status?.streakDay ?? 1;
   const cycleDays = status?.cycleDays ?? 7;
   const claimedToday = status?.claimedToday ?? [];
-  const creditsPerMission = status?.creditsPerMission ?? 10;
+  const missionCredits = status?.missionCredits ?? {};
   const streakBonus = status?.streakBonus ?? 50;
   const streakBonusClaimed = status?.streakBonusClaimed ?? false;
   const missions = status?.missions ?? [];
@@ -150,6 +150,7 @@ export default function DailyMissionsDialog({ status, loading, claiming, onClaim
               {missions.map((m) => {
                 const meta = MISSION_META[m] || { label: m, desc: "", icon: <Circle className="w-4 h-4" /> };
                 const claimed = claimedToday.includes(m);
+                const reward = missionCredits[m] || 5;
                 return (
                   <div
                     key={m}
@@ -177,7 +178,7 @@ export default function DailyMissionsDialog({ status, loading, claiming, onClaim
                           disabled={claiming}
                           className="text-[10px] h-7 px-2 border-primary/30 text-primary hover:bg-primary/10"
                         >
-                          {claiming ? <Loader2 className="w-3 h-3 animate-spin" /> : `+${creditsPerMission} ⚡`}
+                          {claiming ? <Loader2 className="w-3 h-3 animate-spin" /> : `+${reward} ⚡`}
                         </Button>
                       )}
                     </div>
