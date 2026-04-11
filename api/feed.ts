@@ -20,24 +20,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       let rows;
       if (userId) {
-        // Profile gallery — posts from a specific user
         rows = cursor
           ? await sql`
               SELECT p.*, pr.username, pr.avatar_url,
-                (SELECT count(*)::int FROM reactions WHERE post_id = p.id) AS reaction_count,
-                (SELECT count(*)::int FROM comments WHERE post_id = p.id) AS comment_count,
-                EXISTS(SELECT 1 FROM reactions WHERE post_id = p.id AND user_id = ${auth.userId}) AS user_reacted
-              FROM posts p
+                (SELECT count(*)::int FROM feed_reactions WHERE post_id = p.id) AS reaction_count,
+                (SELECT count(*)::int FROM feed_comments WHERE post_id = p.id) AS comment_count,
+                EXISTS(SELECT 1 FROM feed_reactions WHERE post_id = p.id AND user_id = ${auth.userId}) AS user_reacted
+              FROM feed_posts p
               JOIN profiles pr ON pr.user_id = p.user_id
               WHERE p.user_id = ${userId} AND p.created_at < ${cursor}
               ORDER BY p.created_at DESC LIMIT ${limit}
             `
           : await sql`
               SELECT p.*, pr.username, pr.avatar_url,
-                (SELECT count(*)::int FROM reactions WHERE post_id = p.id) AS reaction_count,
-                (SELECT count(*)::int FROM comments WHERE post_id = p.id) AS comment_count,
-                EXISTS(SELECT 1 FROM reactions WHERE post_id = p.id AND user_id = ${auth.userId}) AS user_reacted
-              FROM posts p
+                (SELECT count(*)::int FROM feed_reactions WHERE post_id = p.id) AS reaction_count,
+                (SELECT count(*)::int FROM feed_comments WHERE post_id = p.id) AS comment_count,
+                EXISTS(SELECT 1 FROM feed_reactions WHERE post_id = p.id AND user_id = ${auth.userId}) AS user_reacted
+              FROM feed_posts p
               JOIN profiles pr ON pr.user_id = p.user_id
               WHERE p.user_id = ${userId}
               ORDER BY p.created_at DESC LIMIT ${limit}
@@ -46,10 +45,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         rows = cursor
           ? await sql`
               SELECT p.*, pr.username, pr.avatar_url,
-                (SELECT count(*)::int FROM reactions WHERE post_id = p.id) AS reaction_count,
-                (SELECT count(*)::int FROM comments WHERE post_id = p.id) AS comment_count,
-                EXISTS(SELECT 1 FROM reactions WHERE post_id = p.id AND user_id = ${auth.userId}) AS user_reacted
-              FROM posts p
+                (SELECT count(*)::int FROM feed_reactions WHERE post_id = p.id) AS reaction_count,
+                (SELECT count(*)::int FROM feed_comments WHERE post_id = p.id) AS comment_count,
+                EXISTS(SELECT 1 FROM feed_reactions WHERE post_id = p.id AND user_id = ${auth.userId}) AS user_reacted
+              FROM feed_posts p
               JOIN profiles pr ON pr.user_id = p.user_id
               WHERE p.user_id IN (SELECT following_id FROM follows WHERE follower_id = ${auth.userId})
                 AND p.created_at < ${cursor}
@@ -57,33 +56,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             `
           : await sql`
               SELECT p.*, pr.username, pr.avatar_url,
-                (SELECT count(*)::int FROM reactions WHERE post_id = p.id) AS reaction_count,
-                (SELECT count(*)::int FROM comments WHERE post_id = p.id) AS comment_count,
-                EXISTS(SELECT 1 FROM reactions WHERE post_id = p.id AND user_id = ${auth.userId}) AS user_reacted
-              FROM posts p
+                (SELECT count(*)::int FROM feed_reactions WHERE post_id = p.id) AS reaction_count,
+                (SELECT count(*)::int FROM feed_comments WHERE post_id = p.id) AS comment_count,
+                EXISTS(SELECT 1 FROM feed_reactions WHERE post_id = p.id AND user_id = ${auth.userId}) AS user_reacted
+              FROM feed_posts p
               JOIN profiles pr ON pr.user_id = p.user_id
               WHERE p.user_id IN (SELECT following_id FROM follows WHERE follower_id = ${auth.userId})
               ORDER BY p.created_at DESC LIMIT ${limit}
             `;
       } else {
-        // Global feed
         rows = cursor
           ? await sql`
               SELECT p.*, pr.username, pr.avatar_url,
-                (SELECT count(*)::int FROM reactions WHERE post_id = p.id) AS reaction_count,
-                (SELECT count(*)::int FROM comments WHERE post_id = p.id) AS comment_count,
-                EXISTS(SELECT 1 FROM reactions WHERE post_id = p.id AND user_id = ${auth.userId}) AS user_reacted
-              FROM posts p
+                (SELECT count(*)::int FROM feed_reactions WHERE post_id = p.id) AS reaction_count,
+                (SELECT count(*)::int FROM feed_comments WHERE post_id = p.id) AS comment_count,
+                EXISTS(SELECT 1 FROM feed_reactions WHERE post_id = p.id AND user_id = ${auth.userId}) AS user_reacted
+              FROM feed_posts p
               JOIN profiles pr ON pr.user_id = p.user_id
               WHERE p.created_at < ${cursor}
               ORDER BY p.created_at DESC LIMIT ${limit}
             `
           : await sql`
               SELECT p.*, pr.username, pr.avatar_url,
-                (SELECT count(*)::int FROM reactions WHERE post_id = p.id) AS reaction_count,
-                (SELECT count(*)::int FROM comments WHERE post_id = p.id) AS comment_count,
-                EXISTS(SELECT 1 FROM reactions WHERE post_id = p.id AND user_id = ${auth.userId}) AS user_reacted
-              FROM posts p
+                (SELECT count(*)::int FROM feed_reactions WHERE post_id = p.id) AS reaction_count,
+                (SELECT count(*)::int FROM feed_comments WHERE post_id = p.id) AS comment_count,
+                EXISTS(SELECT 1 FROM feed_reactions WHERE post_id = p.id AND user_id = ${auth.userId}) AS user_reacted
+              FROM feed_posts p
               JOIN profiles pr ON pr.user_id = p.user_id
               ORDER BY p.created_at DESC LIMIT ${limit}
             `;
@@ -118,7 +116,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (text && text.length > 2000) return res.status(400).json({ error: "Text too long (max 2000)" });
 
       const rows = await sql`
-        INSERT INTO posts (user_id, text, image_url) VALUES (${auth.userId}, ${text || ""}, ${imageUrl || null})
+        INSERT INTO feed_posts (user_id, text, image_url) VALUES (${auth.userId}, ${text || ""}, ${imageUrl || null})
         RETURNING id, created_at
       `;
       return res.status(201).json({ id: rows[0].id, createdAt: rows[0].created_at });
@@ -133,7 +131,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
       const { postId } = req.body || {};
       if (!postId) return res.status(400).json({ error: "postId required" });
-      await sql`DELETE FROM posts WHERE id = ${postId} AND user_id = ${auth.userId}`;
+      await sql`DELETE FROM feed_posts WHERE id = ${postId} AND user_id = ${auth.userId}`;
       return res.json({ success: true });
     } catch (err: any) {
       console.error("[feed DELETE]", err.message);

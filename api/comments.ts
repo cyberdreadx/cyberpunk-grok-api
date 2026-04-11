@@ -21,7 +21,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const rows = await sql`
         SELECT c.id, c.post_id, c.user_id, c.parent_id, c.text, c.created_at,
                pr.username, pr.avatar_url
-        FROM comments c
+        FROM feed_comments c
         JOIN profiles pr ON pr.user_id = c.user_id
         WHERE c.post_id = ${postId}
         ORDER BY c.created_at ASC
@@ -49,7 +49,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (text.length > 1000) return res.status(400).json({ error: "Comment too long (max 1000)" });
     try {
       const rows = await sql`
-        INSERT INTO comments (post_id, user_id, parent_id, text)
+        INSERT INTO feed_comments (post_id, user_id, parent_id, text)
         VALUES (${postId}, ${auth.userId}, ${parentId || null}, ${text})
         RETURNING id, created_at
       `;
@@ -65,7 +65,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { commentId } = req.body || {};
     if (!commentId) return res.status(400).json({ error: "commentId required" });
     try {
-      await sql`DELETE FROM comments WHERE id = ${commentId} AND user_id = ${auth.userId}`;
+      await sql`DELETE FROM feed_comments WHERE id = ${commentId} AND user_id = ${auth.userId}`;
       return res.json({ success: true });
     } catch (err: any) {
       console.error("[comments DELETE]", err.message);
