@@ -1027,6 +1027,18 @@ const Index = () => {
               />
             )}
 
+            {/* Daily Missions */}
+            {auth.isAuthenticated && (
+              <DailyMissionsDialog
+                status={missionsHook.status}
+                loading={missionsHook.loading}
+                claiming={missionsHook.claiming}
+                onClaim={missionsHook.claimMission}
+                onClaimStreak={missionsHook.claimStreakBonus}
+                onCreditsRefresh={creditsHook.refreshCredits}
+              />
+            )}
+
             {/* Admin: test credit spending toggle */}
             {isAdmin && (
               <button
