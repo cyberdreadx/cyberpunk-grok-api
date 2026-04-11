@@ -1321,6 +1321,12 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
         }
       }
 
+      // Ask if they want to lock this story
+      let lockCost = 0;
+      const lockAnswer = prompt("Lock this story behind credits? Enter 0 for free, or 1-50 credits to charge viewers:", "0");
+      if (lockAnswer === null) { setStoryPostingId(null); return; }
+      lockCost = Math.max(0, Math.min(parseInt(lockAnswer) || 0, 50));
+
       // Post story
       const token = localStorage.getItem("auth-token");
       const storyRes = await fetch(`${shareBase}/stories`, {
@@ -1334,10 +1340,13 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
           mediaType: result.type,
           caption: result.revised_prompt || "",
           prompt: result.revised_prompt || "",
+          lockCost,
         }),
       });
       if (!storyRes.ok) throw new Error("Failed to post story");
-      toast.success("Story posted! It'll be visible for 24 hours.");
+      toast.success(lockCost > 0
+        ? `Story posted! Locked for ${lockCost} credits.`
+        : "Story posted! It'll be visible for 24 hours.");
       window.dispatchEvent(new Event("story-posted"));
     } catch (err: any) {
       toast.error(err.message || "Failed to post story");
