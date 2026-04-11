@@ -623,10 +623,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
 
+      case "announcement-stats": {
+        const [{ total_verified }] = await sql`SELECT COUNT(*)::int AS total_verified FROM users WHERE email_verified = true`;
+        const [{ already_sent }] = await sql`SELECT COUNT(DISTINCT recipient)::int AS already_sent FROM email_log WHERE email_type = 'announcement' AND status = 'sent'`;
+        return res.status(200).json({ totalVerified: total_verified, alreadySent: already_sent, remaining: total_verified - already_sent });
+      }
+
       case "send-announcement": {
         const batchSize = req.body.batchSize || 25;
         const offset = req.body.offset || 0;
         const dryRun = req.body.dryRun || false;
+        const customSubject = req.body.subject || null;
+        const customHtml = req.body.html || null;
 
         // Get verified users who haven't already received this announcement
         const users = await sql`
@@ -668,7 +676,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         for (const user of users) {
           try {
-            const ok = await sendAnnouncementEmail(user.email);
+            const ok = await sendAnnouncementEmail(user.email, customSubject, customHtml);
             if (ok) sent++;
             else { failed++; errors.push(user.email); }
             // Small delay to avoid rate limits
