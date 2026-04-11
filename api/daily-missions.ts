@@ -3,10 +3,9 @@ import { getDb } from "./_lib/db";
 import { getUserFromRequest } from "./_lib/auth";
 import { checkRateLimit } from "./_lib/ratelimit";
 
-const MISSIONS = ["login", "generate", "story", "reddit", "share"] as const;
+const MISSIONS = ["login", "story", "reddit", "share"] as const;
 const MISSION_CREDITS: Record<string, number> = {
   login: 3,
-  generate: 5,
   story: 7,
   reddit: 10,
   share: 10,

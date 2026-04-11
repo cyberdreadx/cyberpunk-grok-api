@@ -15,7 +15,6 @@ interface Props {
 
 const MISSION_META: Record<string, { label: string; desc: string; icon: React.ReactNode }> = {
   login:    { label: "Daily Check-in",  desc: "Open the app and claim",         icon: <CalendarCheck className="w-4 h-4" /> },
-  generate: { label: "Generate",        desc: "Create at least 1 generation",   icon: <Image className="w-4 h-4" /> },
   story:    { label: "Post a Story",    desc: "Share a creation to Stories",     icon: <MessageCircle className="w-4 h-4" /> },
   reddit:   { label: "Share on Reddit", desc: "Post to r/GrokRunner",           icon: <Share2 className="w-4 h-4" /> },
   share:    { label: "Share Creation",  desc: "Share any result with a link",   icon: <Share2 className="w-4 h-4" /> },

@@ -4,9 +4,11 @@ import { getDb } from "./_lib/db";
 export default async function handler(_req: VercelRequest, res: VercelResponse) {
   try {
     const sql = getDb();
+    // First delete views for expired stories
+    await sql`DELETE FROM story_views WHERE story_id IN (SELECT id FROM stories WHERE expires_at < now())`;
     const result = await sql`DELETE FROM stories WHERE expires_at < now()`;
-    console.log("[cron] Cleaned up expired stories");
-    return res.status(200).json({ ok: true });
+    console.log("[cron] Cleaned up expired stories, deleted:", result.count);
+    return res.status(200).json({ ok: true, deleted: result.count });
   } catch (err: any) {
     console.error("[cron] story cleanup error:", err.message);
     return res.status(500).json({ error: err.message });
