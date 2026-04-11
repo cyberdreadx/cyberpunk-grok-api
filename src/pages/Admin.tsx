@@ -294,32 +294,42 @@ function AnnouncementPanel() {
     setSending(true);
     setResult(null);
     abortRef.current = false;
-    const batchSize = 10;
+    const batchSize = 25;
     let offset = 0;
     let totalSent = 0;
     let totalFailed = 0;
     let totalUsers = 0;
+    let retries = 0;
+    const MAX_RETRIES = 3;
 
     try {
       while (true) {
         if (abortRef.current) break;
-        const res = await apiFetch("/admin", {
-          method: "POST",
-          body: { action: "send-announcement", batchSize, offset },
-        });
-        totalSent += res.sent;
-        totalFailed += res.failed;
-        totalUsers = res.totalUsers;
-        setProgress({ sent: totalSent, failed: totalFailed, total: totalUsers });
+        try {
+          const res = await apiFetch("/admin", {
+            method: "POST",
+            body: { action: "send-announcement", batchSize, offset },
+          });
+          totalSent += res.sent;
+          totalFailed += res.failed;
+          totalUsers = res.totalUsers;
+          setProgress({ sent: totalSent, failed: totalFailed, total: totalUsers });
+          retries = 0; // reset on success
 
-        if (!res.hasMore) break;
-        offset = res.nextOffset;
-        // small pause between batches
-        await new Promise((r) => setTimeout(r, 1000));
+          if (!res.hasMore) break;
+          offset = res.nextOffset;
+          // small pause between batches
+          await new Promise((r) => setTimeout(r, 500));
+        } catch (batchErr: any) {
+          retries++;
+          if (retries >= MAX_RETRIES) throw batchErr;
+          console.warn(`[Announcement] Batch at offset ${offset} failed, retry ${retries}/${MAX_RETRIES}`);
+          await new Promise((r) => setTimeout(r, 2000 * retries)); // backoff
+        }
       }
       setResult({ done: true, sent: totalSent, failed: totalFailed, total: totalUsers });
     } catch (err: any) {
-      setResult({ error: err.message, sent: totalSent, failed: totalFailed });
+      setResult({ error: `${err.message} (${totalSent} sent before error)`, sent: totalSent, failed: totalFailed });
     } finally {
       setSending(false);
       setProgress(null);
