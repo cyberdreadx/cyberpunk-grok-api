@@ -351,7 +351,7 @@ function AnnouncementPanel() {
             {dryRunning ? <Loader2 className="w-3 h-3 animate-spin" /> : <Eye className="w-3 h-3" />}
             DRY_RUN
           </Button>
-          <Button variant="outline" size="sm" onClick={handleSend} disabled={sending || dryRunning}
+          <Button variant="outline" size="sm" onClick={() => handleSend(false)} disabled={sending || dryRunning}
             className="font-mono-share text-xs gap-1.5 border-secondary/30 hover:bg-secondary/10 text-secondary">
             {sending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
             {sending ? "SENDING..." : "SEND_TO_ALL"}
