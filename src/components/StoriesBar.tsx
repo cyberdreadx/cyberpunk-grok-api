@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { apiFetch } from "@/lib/api";
+import { hasAuthToken } from "@/lib/api";
 import StoryViewer from "@/components/StoryViewer";
 
 interface Story {
@@ -11,6 +12,10 @@ interface Story {
   createdAt: string;
   expiresAt: string;
   viewed: boolean;
+  viewCount?: number;
+  lockCost?: number;
+  unlocked?: boolean;
+  isOwner?: boolean;
 }
 
 interface StoryUser {
