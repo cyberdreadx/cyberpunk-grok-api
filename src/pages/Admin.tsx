@@ -289,10 +289,13 @@ function AnnouncementPanel() {
     }
   };
 
-  const handleSend = async () => {
-    if (!confirm("Send the announcement email to ALL verified users? This cannot be undone.")) return;
+  const handleSend = async (isResume = false) => {
+    const msg = isResume
+      ? "Resume sending? Already-sent users will be skipped automatically."
+      : "Send the announcement email to ALL verified users? This cannot be undone.";
+    if (!confirm(msg)) return;
     setSending(true);
-    setResult(null);
+    if (!isResume) setResult(null);
     abortRef.current = false;
     const batchSize = 25;
     let offset = 0;
@@ -314,22 +317,21 @@ function AnnouncementPanel() {
           totalFailed += res.failed;
           totalUsers = res.totalUsers;
           setProgress({ sent: totalSent, failed: totalFailed, total: totalUsers });
-          retries = 0; // reset on success
+          retries = 0;
 
           if (!res.hasMore) break;
           offset = res.nextOffset;
-          // small pause between batches
           await new Promise((r) => setTimeout(r, 500));
         } catch (batchErr: any) {
           retries++;
           if (retries >= MAX_RETRIES) throw batchErr;
           console.warn(`[Announcement] Batch at offset ${offset} failed, retry ${retries}/${MAX_RETRIES}`);
-          await new Promise((r) => setTimeout(r, 2000 * retries)); // backoff
+          await new Promise((r) => setTimeout(r, 2000 * retries));
         }
       }
       setResult({ done: true, sent: totalSent, failed: totalFailed, total: totalUsers });
     } catch (err: any) {
-      setResult({ error: `${err.message} (${totalSent} sent before error)`, sent: totalSent, failed: totalFailed });
+      setResult({ error: `${err.message} (${totalSent} sent before error)`, sent: totalSent, failed: totalFailed, canResume: true });
     } finally {
       setSending(false);
       setProgress(null);
