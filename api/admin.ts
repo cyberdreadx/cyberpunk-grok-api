@@ -633,6 +633,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json({ html: buildAnnouncementHtml() });
       }
 
+      case "send-announcement": {
         const batchSize = req.body.batchSize || 25;
         const offset = req.body.offset || 0;
         const dryRun = req.body.dryRun || false;
