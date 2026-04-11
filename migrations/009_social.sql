@@ -8,10 +8,10 @@ CREATE TABLE IF NOT EXISTS profiles (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_profiles_username ON profiles(username);
+CREATE INDEX IF NOT EXISTS idx_profiles_username ON profiles(username);
 
--- Posts (live feed)
-CREATE TABLE IF NOT EXISTS posts (
+-- Feed posts (separate from Grokker posts table)
+CREATE TABLE IF NOT EXISTS feed_posts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   text TEXT NOT NULL DEFAULT '',
@@ -19,32 +19,32 @@ CREATE TABLE IF NOT EXISTS posts (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_posts_created ON posts(created_at DESC);
-CREATE INDEX idx_posts_user ON posts(user_id);
+CREATE INDEX IF NOT EXISTS idx_feed_posts_created ON feed_posts(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_feed_posts_user ON feed_posts(user_id);
 
 -- Reactions
-CREATE TABLE IF NOT EXISTS reactions (
+CREATE TABLE IF NOT EXISTS feed_reactions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  post_id UUID NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+  post_id UUID NOT NULL REFERENCES feed_posts(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   emoji TEXT NOT NULL DEFAULT '❤️',
   created_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(post_id, user_id, emoji)
 );
 
-CREATE INDEX idx_reactions_post ON reactions(post_id);
+CREATE INDEX IF NOT EXISTS idx_feed_reactions_post ON feed_reactions(post_id);
 
 -- Comments (threaded)
-CREATE TABLE IF NOT EXISTS comments (
+CREATE TABLE IF NOT EXISTS feed_comments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  post_id UUID NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+  post_id UUID NOT NULL REFERENCES feed_posts(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  parent_id UUID REFERENCES comments(id) ON DELETE CASCADE,
+  parent_id UUID REFERENCES feed_comments(id) ON DELETE CASCADE,
   text TEXT NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_comments_post ON comments(post_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_feed_comments_post ON feed_comments(post_id, created_at);
 
 -- Follows
 CREATE TABLE IF NOT EXISTS follows (
@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS follows (
   PRIMARY KEY (follower_id, following_id)
 );
 
-CREATE INDEX idx_follows_following ON follows(following_id);
+CREATE INDEX IF NOT EXISTS idx_follows_following ON follows(following_id);
 
 -- Auto-create profile on user signup (if not exists)
 CREATE OR REPLACE FUNCTION auto_create_profile()

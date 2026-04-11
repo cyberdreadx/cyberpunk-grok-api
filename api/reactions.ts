@@ -18,15 +18,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const e = (emoji || "❤️").slice(0, 4);
 
     try {
-      // Toggle: delete if exists, insert if not
       const existing = await sql`
-        SELECT id FROM reactions WHERE post_id = ${postId} AND user_id = ${auth.userId} AND emoji = ${e}
+        SELECT id FROM feed_reactions WHERE post_id = ${postId} AND user_id = ${auth.userId} AND emoji = ${e}
       `;
       if (existing.length > 0) {
-        await sql`DELETE FROM reactions WHERE id = ${existing[0].id}`;
+        await sql`DELETE FROM feed_reactions WHERE id = ${existing[0].id}`;
         return res.json({ action: "removed" });
       } else {
-        await sql`INSERT INTO reactions (post_id, user_id, emoji) VALUES (${postId}, ${auth.userId}, ${e})`;
+        await sql`INSERT INTO feed_reactions (post_id, user_id, emoji) VALUES (${postId}, ${auth.userId}, ${e})`;
         return res.json({ action: "added" });
       }
     } catch (err: any) {

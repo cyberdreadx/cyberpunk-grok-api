@@ -23,7 +23,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                  u.email,
                  (SELECT count(*)::int FROM follows WHERE following_id = p.user_id) AS followers,
                  (SELECT count(*)::int FROM follows WHERE follower_id = p.user_id) AS following,
-                 (SELECT count(*)::int FROM posts WHERE user_id = p.user_id) AS post_count
+                 (SELECT count(*)::int FROM feed_posts WHERE user_id = p.user_id) AS post_count
           FROM profiles p JOIN users u ON u.id = p.user_id
           WHERE p.username = ${username}
         `;
@@ -33,7 +33,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                  u.email,
                  (SELECT count(*)::int FROM follows WHERE following_id = p.user_id) AS followers,
                  (SELECT count(*)::int FROM follows WHERE follower_id = p.user_id) AS following,
-                 (SELECT count(*)::int FROM posts WHERE user_id = p.user_id) AS post_count
+                 (SELECT count(*)::int FROM feed_posts WHERE user_id = p.user_id) AS post_count
           FROM profiles p JOIN users u ON u.id = p.user_id
           WHERE p.user_id = ${auth.userId}
         `;
