@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { apiFetch } from "@/lib/api";
+import { hasAuthToken } from "@/lib/api";
 import StoryViewer from "@/components/StoryViewer";
 
 interface Story {
@@ -11,6 +12,10 @@ interface Story {
   createdAt: string;
   expiresAt: string;
   viewed: boolean;
+  viewCount?: number;
+  lockCost?: number;
+  unlocked?: boolean;
+  isOwner?: boolean;
 }
 
 interface StoryUser {
@@ -30,14 +35,18 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUserId, isAdmin }) => {
   const [viewerOpen, setViewerOpen] = useState(false);
   const [activeUserIdx, setActiveUserIdx] = useState(0);
 
+  // Only fetch if logged in
+  const loggedIn = hasAuthToken();
+
   const fetchStories = useCallback(async () => {
+    if (!loggedIn) return;
     try {
       const data = await apiFetch<{ users: StoryUser[] }>("/stories");
       setUsers(data.users || []);
     } catch (err) {
       console.error("[StoriesBar] fetch failed:", err);
     }
-  }, []);
+  }, [loggedIn]);
 
   const handleDelete = useCallback(async (storyId: string) => {
     try {
@@ -77,7 +86,7 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUserId, isAdmin }) => {
     };
   }, [fetchStories]);
 
-  if (users.length === 0) return null;
+  if (!loggedIn || users.length === 0) return null;
 
   const openStory = (idx: number) => {
     setActiveUserIdx(idx);
@@ -167,6 +176,7 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUserId, isAdmin }) => {
           onClose={() => setViewerOpen(false)}
           onViewed={handleViewed}
           onDelete={handleDelete}
+          onUnlocked={fetchStories}
         />
       )}
     </>

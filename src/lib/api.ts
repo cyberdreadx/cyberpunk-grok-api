@@ -34,7 +34,7 @@ export function hasAuthToken(): boolean {
 // ── Generic fetch wrapper ────────────────────────────────────────────────
 
 interface ApiOptions {
-  method?: "GET" | "POST" | "PUT" | "DELETE";
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
   auth?: boolean; // include JWT token (default true)
 }

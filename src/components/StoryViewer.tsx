@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { X, ChevronLeft, ChevronRight, Volume2, VolumeX, Trash2, Loader2, Eye } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Volume2, VolumeX, Trash2, Loader2, Eye, Lock, Unlock } from "lucide-react";
 import { toast } from "sonner";
+import { apiFetch } from "@/lib/api";
 
 interface Story {
   id: string;
@@ -12,6 +13,9 @@ interface Story {
   expiresAt: string;
   viewed: boolean;
   viewCount?: number;
+  lockCost?: number;
+  unlocked?: boolean;
+  isOwner?: boolean;
 }
 
 interface StoryUser {
@@ -29,17 +33,19 @@ interface StoryViewerProps {
   onClose: () => void;
   onViewed: (storyId: string) => void;
   onDelete?: (storyId: string) => Promise<void>;
+  onUnlocked?: () => void;
 }
 
 const STORY_DURATION = 5000;
 
-const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, currentUserId, isAdmin, onClose, onViewed, onDelete }) => {
+const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, currentUserId, isAdmin, onClose, onViewed, onDelete, onUnlocked }) => {
   const [userIdx, setUserIdx] = useState(initialUserIdx);
   const [storyIdx, setStoryIdx] = useState(0);
   const [progress, setProgress] = useState(0);
   const [paused, setPaused] = useState(false);
   const [muted, setMuted] = useState(true);
   const [deleting, setDeleting] = useState(false);
+  const [unlocking, setUnlocking] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval>>();
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -50,17 +56,18 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
   const currentUser = users[userIdx];
   const currentStory = currentUser?.stories[storyIdx];
   const isOwner = currentUser?.userId === currentUserId;
+  const isLocked = currentStory && (currentStory.lockCost || 0) > 0 && !currentStory.unlocked && !currentStory.isOwner;
 
   // Mark as viewed
   useEffect(() => {
-    if (currentStory && !currentStory.viewed) {
+    if (currentStory && !currentStory.viewed && !isLocked) {
       onViewed(currentStory.id);
     }
-  }, [currentStory?.id]);
+  }, [currentStory?.id, isLocked]);
 
-  // Progress timer
+  // Progress timer — pause if locked
   useEffect(() => {
-    if (!currentStory || paused) return;
+    if (!currentStory || paused || isLocked) return;
     if (currentStory.mediaType === "video") return;
 
     setProgress(0);
@@ -77,7 +84,7 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
     }, interval);
 
     return () => clearInterval(timerRef.current);
-  }, [currentStory?.id, paused]);
+  }, [currentStory?.id, paused, isLocked]);
 
   const goNext = useCallback(() => {
     if (!currentUser) return;
@@ -151,7 +158,28 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
     }
   }, [onDelete, currentStory, currentUser, deleting, storyIdx, userIdx, users.length, onClose]);
 
-  // Touch handlers for media area: tap left/right = nav, long press = pause, swipe down = close
+  const handleUnlock = useCallback(async () => {
+    if (!currentStory || unlocking) return;
+    setUnlocking(true);
+    try {
+      await apiFetch("/stories", { method: "PATCH", body: { storyId: currentStory.id } });
+      toast.success(`Unlocked for ${currentStory.lockCost} credits!`);
+      // Mutate local state to show unlocked
+      currentStory.unlocked = true;
+      currentStory.mediaUrl = ""; // will refresh on next fetch
+      onUnlocked?.();
+    } catch (err: any) {
+      if (err.message?.includes("Not enough credits")) {
+        toast.error("Not enough credits to unlock this story");
+      } else {
+        toast.error(err.message || "Failed to unlock");
+      }
+    } finally {
+      setUnlocking(false);
+    }
+  }, [currentStory, unlocking, onUnlocked]);
+
+  // Touch handlers
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     const touch = e.touches[0];
     swipeRef.current = { startY: touch.clientY, currentY: touch.clientY, swiping: false };
@@ -162,8 +190,6 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
     const touch = e.touches[0];
     const deltaY = touch.clientY - swipeRef.current.startY;
     swipeRef.current.currentY = touch.clientY;
-
-    // Only track downward swipes
     if (deltaY > 10) {
       swipeRef.current.swiping = true;
       setSwipeOffset(Math.min(deltaY, 300));
@@ -172,30 +198,24 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
 
   const handleTouchEnd = useCallback((e: React.TouchEvent) => {
     const deltaY = swipeRef.current.currentY - swipeRef.current.startY;
-
     if (swipeRef.current.swiping && deltaY > 100) {
-      // Swipe down threshold met → close
       onClose();
       return;
     }
-
     setSwipeOffset(0);
-
-    if (!swipeRef.current.swiping) {
-      // It was a tap, not a swipe
+    if (!swipeRef.current.swiping && !isLocked) {
       const touch = e.changedTouches[0];
       const rect = e.currentTarget.getBoundingClientRect();
       const x = touch.clientX - rect.left;
       if (x < rect.width / 3) goPrev();
       else goNext();
     }
-
     setPaused(false);
     swipeRef.current.swiping = false;
-  }, [onClose, goPrev, goNext]);
+  }, [onClose, goPrev, goNext, isLocked]);
 
-  // Desktop click handler
   const handleClick = (e: React.MouseEvent) => {
+    if (isLocked) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
     if (x < rect.width / 3) goPrev();
@@ -210,7 +230,7 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
     <div className="fixed inset-0 z-[9999] bg-black flex items-center justify-center"
       style={{ opacity }}
     >
-      {/* Swipe-down hint indicator */}
+      {/* Swipe-down hint */}
       <div className="absolute left-1/2 -translate-x-1/2 w-10 h-1 rounded-full bg-white/30 z-20 sm:hidden"
         style={{ top: "calc(env(safe-area-inset-top, 0px) + 4px)" }}
       />
@@ -243,9 +263,15 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
           <span className="text-white/50 text-xs shrink-0">
             {new Date(currentStory.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
           </span>
+          {(currentStory.lockCost || 0) > 0 && (
+            <span className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400">
+              <Lock className="w-3 h-3" />
+              {currentStory.lockCost}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-0 shrink-0">
-          {currentStory.mediaType === "video" && (
+          {currentStory.mediaType === "video" && !isLocked && (
             <button onClick={() => setMuted(m => !m)} className="text-white/80 hover:text-white p-2">
               {muted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
             </button>
@@ -269,18 +295,44 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
         </div>
       </div>
 
-      {/* Media */}
+      {/* Media / Lock overlay */}
       <div
         className="w-full h-full flex items-center justify-center cursor-pointer select-none"
         style={{ transform: `translateY(${swipeOffset}px)` }}
         onClick={handleClick}
-        onMouseDown={() => setPaused(true)}
-        onMouseUp={() => setPaused(false)}
+        onMouseDown={() => !isLocked && setPaused(true)}
+        onMouseUp={() => !isLocked && setPaused(false)}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-        {currentStory.mediaType === "video" ? (
+        {isLocked ? (
+          /* Locked story overlay */
+          <div className="flex flex-col items-center gap-6 text-center px-8">
+            <div className="w-20 h-20 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center">
+              <Lock className="w-10 h-10 text-amber-400" />
+            </div>
+            <div>
+              <p className="text-white text-lg font-semibold mb-1">Locked Story</p>
+              <p className="text-white/60 text-sm">
+                This story costs <span className="text-amber-400 font-bold">{currentStory.lockCost} credits</span> to view
+              </p>
+              <p className="text-white/40 text-xs mt-1">Credits go to the creator</p>
+            </div>
+            <button
+              onClick={(e) => { e.stopPropagation(); handleUnlock(); }}
+              disabled={unlocking}
+              className="flex items-center gap-2 px-8 py-3 rounded-lg bg-gradient-to-r from-amber-500/80 to-amber-600/80 hover:from-amber-500 hover:to-amber-600 text-white font-semibold text-sm transition-all active:scale-95 disabled:opacity-50"
+            >
+              {unlocking ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Unlock className="w-4 h-4" />
+              )}
+              Unlock for {currentStory.lockCost} credits
+            </button>
+          </div>
+        ) : currentStory.mediaType === "video" ? (
           <video
             ref={videoRef}
             src={currentStory.mediaUrl}
@@ -301,24 +353,26 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
       </div>
 
       {/* Bottom bar: caption + view count */}
-      <div className="absolute left-0 right-0 px-6 z-10 flex flex-col items-center gap-2"
-        style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 48px)" }}
-      >
-        {currentStory.caption && (
-          <p className="text-white text-sm bg-black/40 rounded-lg px-4 py-2 inline-block backdrop-blur-sm max-w-[90%] text-center">
-            {currentStory.caption}
-          </p>
-        )}
-        {(isOwner || isAdmin) && typeof currentStory.viewCount === "number" && (
-          <div className="flex items-center gap-1.5 text-white/60 text-xs">
-            <Eye className="w-3.5 h-3.5" />
-            <span>{currentStory.viewCount} {currentStory.viewCount === 1 ? "view" : "views"}</span>
-          </div>
-        )}
-      </div>
+      {!isLocked && (
+        <div className="absolute left-0 right-0 px-6 z-10 flex flex-col items-center gap-2"
+          style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 48px)" }}
+        >
+          {currentStory.caption && (
+            <p className="text-white text-sm bg-black/40 rounded-lg px-4 py-2 inline-block backdrop-blur-sm max-w-[90%] text-center">
+              {currentStory.caption}
+            </p>
+          )}
+          {(isOwner || isAdmin) && typeof currentStory.viewCount === "number" && (
+            <div className="flex items-center gap-1.5 text-white/60 text-xs">
+              <Eye className="w-3.5 h-3.5" />
+              <span>{currentStory.viewCount} {currentStory.viewCount === 1 ? "view" : "views"}</span>
+            </div>
+          )}
+        </div>
+      )}
 
-      {/* Nav arrows (desktop) */}
-      {userIdx > 0 && (
+      {/* Nav arrows (desktop) — hidden when locked */}
+      {!isLocked && userIdx > 0 && (
         <button
           onClick={(e) => { e.stopPropagation(); goPrev(); }}
           className="absolute left-2 top-1/2 -translate-y-1/2 text-white/50 hover:text-white z-10 hidden sm:block"
@@ -326,7 +380,7 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
           <ChevronLeft className="w-8 h-8" />
         </button>
       )}
-      {(storyIdx < currentUser.stories.length - 1 || userIdx < users.length - 1) && (
+      {!isLocked && (storyIdx < currentUser.stories.length - 1 || userIdx < users.length - 1) && (
         <button
           onClick={(e) => { e.stopPropagation(); goNext(); }}
           className="absolute right-2 top-1/2 -translate-y-1/2 text-white/50 hover:text-white z-10 hidden sm:block"
