@@ -10,7 +10,7 @@ export interface MissionStatus {
   totalEarned: number;
   claimedToday: string[];
   missions: string[];
-  creditsPerMission: number;
+  missionCredits: Record<string, number>;
   streakBonus: number;
   cycleDays: number;
 }

@@ -4,7 +4,13 @@ import { getUserFromRequest } from "./_lib/auth";
 import { checkRateLimit } from "./_lib/ratelimit";
 
 const MISSIONS = ["login", "generate", "story", "reddit", "share"] as const;
-const CREDITS_PER_MISSION = 10;
+const MISSION_CREDITS: Record<string, number> = {
+  login: 3,
+  generate: 5,
+  story: 7,
+  reddit: 10,
+  share: 10,
+};
 const STREAK_BONUS = 50;
 const CYCLE_DAYS = 7;
 
@@ -105,7 +111,7 @@ async function getStatus(sql: any, userId: string, res: VercelResponse) {
     totalEarned: progress.total_earned,
     claimedToday,
     missions: MISSIONS,
-    creditsPerMission: CREDITS_PER_MISSION,
+    missionCredits: MISSION_CREDITS,
     streakBonus: STREAK_BONUS,
     cycleDays: CYCLE_DAYS,
   });
@@ -124,26 +130,28 @@ async function claimMission(sql: any, userId: string, mission: string, res: Verc
     return res.status(409).json({ error: "Already claimed today" });
   }
 
+  const creditAmount = MISSION_CREDITS[mission] || 5;
+
   // Insert claim
   await sql`
     INSERT INTO daily_mission_claims (user_id, claim_date, mission, credits)
-    VALUES (${userId}, ${today}, ${mission}, ${CREDITS_PER_MISSION})
+    VALUES (${userId}, ${today}, ${mission}, ${creditAmount})
   `;
 
   // Award credits (add to pack_credits)
   await sql`
-    UPDATE users SET pack_credits = pack_credits + ${CREDITS_PER_MISSION}, updated_at = now()
+    UPDATE users SET pack_credits = pack_credits + ${creditAmount}, updated_at = now()
     WHERE id = ${userId}
   `;
 
   // Update progress
   await sql`
     UPDATE daily_mission_progress
-    SET last_claim_date = ${today}, total_earned = total_earned + ${CREDITS_PER_MISSION}, updated_at = now()
+    SET last_claim_date = ${today}, total_earned = total_earned + ${creditAmount}, updated_at = now()
     WHERE user_id = ${userId}
   `;
 
-  return res.status(200).json({ credited: CREDITS_PER_MISSION, mission });
+  return res.status(200).json({ credited: creditAmount, mission });
 }
 
 async function claimStreakBonus(sql: any, userId: string, res: VercelResponse) {
