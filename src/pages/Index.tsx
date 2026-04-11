@@ -33,6 +33,8 @@ import ApiKeyDialog from "@/components/ApiKeyDialog";
 import ApiKeysPanel from "@/components/ApiKeysPanel";
 import AuthDialog from "@/components/AuthDialog";
 import CreditDisplay from "@/components/CreditDisplay";
+import DailyMissionsDialog from "@/components/DailyMissionsDialog";
+import { useDailyMissions } from "@/hooks/useDailyMissions";
 import LegalDialog from "@/components/LegalDialog";
 import HowToUseDialog from "@/components/HowToUseDialog";
 import ChangelogDialog, { hasUnseenChangelog } from "@/components/ChangelogDialog";
