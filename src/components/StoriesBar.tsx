@@ -86,7 +86,7 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUserId, isAdmin }) => {
     };
   }, [fetchStories]);
 
-  if (users.length === 0) return null;
+  if (!loggedIn || users.length === 0) return null;
 
   const openStory = (idx: number) => {
     setActiveUserIdx(idx);
