@@ -75,6 +75,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       const siteUrl = (process.env.SITE_URL || "https://grokrunner.gltch.app").replace(/\/$/, "");
 
+      // Log share for daily mission verification
+      try {
+        const { getDb } = await import("./_lib/db");
+        const sql = getDb();
+        await sql`
+          INSERT INTO usage_log (user_id, mode, credits_used, prompt)
+          VALUES (${auth.userId}::uuid, 'share', 0, ${`shared:${shareId}`})
+        `;
+      } catch { /* non-critical */ }
+
       return res.status(200).json({
         shareId,
         shareUrl: `${siteUrl}/s/${shareId}`,
