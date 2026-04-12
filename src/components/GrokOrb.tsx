@@ -230,8 +230,7 @@ const GrokOrb = forwardRef<HTMLDivElement, GrokOrbProps>(({ isGenerating, classN
       </div>
     </div>
   );
-};
-
 });
+
 GrokOrb.displayName = "GrokOrb";
 export default GrokOrb;
