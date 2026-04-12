@@ -13,10 +13,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ShieldAlert, Shield, Eye, ChevronDown, Globe } from "lucide-react";
 import LegalDialog from "@/components/LegalDialog";
+import { AGE_VERIFIED_EVENT, AGE_VERIFIED_KEY } from "@/lib/ageGate";
 
 const AGE = "18";
-
-const AGE_VERIFIED_KEY = "age-verified";
 
 export default function AgeGateDialog() {
   const { t, i18n } = useTranslation();
@@ -42,6 +41,7 @@ export default function AgeGateDialog() {
   const handleConfirm = () => {
     if (!allChecked) return;
     localStorage.setItem(AGE_VERIFIED_KEY, "true");
+    window.dispatchEvent(new Event(AGE_VERIFIED_EVENT));
     setOpen(false);
   };
 
