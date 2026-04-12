@@ -1,4 +1,4 @@
-import React, { useRef, useMemo } from "react";
+import React, { useRef, useMemo, forwardRef } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Sphere, MeshDistortMaterial, Float, Stars } from "@react-three/drei";
 import * as THREE from "three";
@@ -177,11 +177,11 @@ interface GrokOrbProps {
   className?: string;
 }
 
-const GrokOrb: React.FC<GrokOrbProps> = ({ isGenerating, className = "" }) => {
+const GrokOrb = forwardRef<HTMLDivElement, GrokOrbProps>(({ isGenerating, className = "" }, ref) => {
   const isMobile = useIsMobile();
 
   return (
-    <div className={`relative ${className}`}>
+    <div ref={ref} className={`relative ${className}`}>
       {isMobile ? (
         <CSSOrb isGenerating={isGenerating} />
       ) : (
@@ -232,4 +232,6 @@ const GrokOrb: React.FC<GrokOrbProps> = ({ isGenerating, className = "" }) => {
   );
 };
 
+});
+GrokOrb.displayName = "GrokOrb";
 export default GrokOrb;
