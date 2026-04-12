@@ -47,6 +47,7 @@ import { useFolders } from "@/hooks/useFolders";
 import { usePromptHistory } from "@/hooks/usePromptHistory";
 import { useToast } from "@/hooks/use-toast";
 import { apiFetch, calculateCreditCost, type CreditMode } from "@/lib/api";
+import { AGE_VERIFIED_EVENT, isAgeVerified } from "@/lib/ageGate";
 import { APP_VERSION } from "@/lib/version";
 
 const ANNOUNCEMENTS: { id: string; message: string; type?: "info" | "warning" | "success" }[] = [
@@ -332,14 +333,33 @@ const Index = () => {
   // Legal & guide dialog state
   const [tosOpen, setTosOpen] = useState(false);
   const [privacyOpen, setPrivacyOpen] = useState(false);
-  const [guideOpen, setGuideOpen] = useState(() => !localStorage.getItem("how-to-use-seen"));
+  const [guideOpen, setGuideOpen] = useState(() => isAgeVerified() && !localStorage.getItem("how-to-use-seen"));
   const [changelogOpen, setChangelogOpen] = useState(() => {
+    if (!isAgeVerified()) return false;
     // Auto-show changelog only if the user has already seen the guide (not first visit)
     if (!localStorage.getItem("how-to-use-seen")) return false;
     return hasUnseenChangelog();
   });
   const [storeOpen, setStoreOpen] = useState(false);
   const [apiKeySet, setApiKeySet] = useState(() => hasApiKey());
+
+  React.useEffect(() => {
+    if (isAgeVerified()) return;
+
+    const handleAgeVerified = () => {
+      if (!localStorage.getItem("how-to-use-seen")) {
+        setGuideOpen(true);
+        return;
+      }
+
+      if (hasUnseenChangelog()) {
+        setChangelogOpen(true);
+      }
+    };
+
+    window.addEventListener(AGE_VERIFIED_EVENT, handleAgeVerified);
+    return () => window.removeEventListener(AGE_VERIFIED_EVENT, handleAgeVerified);
+  }, []);
 
   // Auto-switch to credits mode when user logs in without a BYOK key,
   // or when simple mode is active (simple mode always uses credits)
