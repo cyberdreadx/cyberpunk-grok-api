@@ -74,20 +74,37 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate }) => {
 
   return (
     <div className="relative w-full h-[100dvh] snap-start snap-always bg-black flex items-center justify-center overflow-hidden">
-      {/* Background image or gradient */}
+      {/* Blurred background fill for letterboxing */}
+      {post.imageUrl && (
+        isVideo ? (
+          <video src={post.imageUrl} className="absolute inset-0 w-full h-full object-cover blur-2xl scale-110 opacity-40" muted playsInline autoPlay loop />
+        ) : (
+          <img src={post.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover blur-2xl scale-110 opacity-40" />
+        )
+      )}
+
+      {/* Main media — object-contain to show full dimensions */}
       {post.imageUrl ? (
-        <img
-          src={post.imageUrl}
-          alt=""
-          className="absolute inset-0 w-full h-full object-cover"
-          loading="lazy"
-        />
+        isVideo ? (
+          <video
+            src={post.imageUrl}
+            className="relative z-[1] w-full h-full object-contain"
+            muted playsInline autoPlay loop
+          />
+        ) : (
+          <img
+            src={post.imageUrl}
+            alt=""
+            className="relative z-[1] w-full h-full object-contain"
+            loading="lazy"
+          />
+        )
       ) : (
         <div className="absolute inset-0 bg-gradient-to-b from-background via-card to-background" />
       )}
 
-      {/* Dark overlay for readability */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/70" />
+      {/* Dark overlay for readability on overlaid text */}
+      <div className="absolute inset-0 z-[2] bg-gradient-to-b from-black/40 via-transparent to-black/70 pointer-events-none" />
 
       {/* Text-only posts: centered text */}
       {!post.imageUrl && post.text && (
