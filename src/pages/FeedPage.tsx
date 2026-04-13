@@ -58,14 +58,17 @@ const FeedPage: React.FC = () => {
     }
   }, [filter, toast]);
 
+  const { loading: authLoading } = useAuth();
+
   useEffect(() => {
+    if (authLoading) return;
     if (!isAuthenticated) {
       navigate("/");
       return;
     }
     setLoading(true);
     fetchFeed();
-  }, [isAuthenticated, fetchFeed, navigate]);
+  }, [authLoading, isAuthenticated, fetchFeed, navigate]);
 
   const handlePost = async () => {
     if (!newText.trim()) return;
