@@ -8,7 +8,6 @@ import { Card } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
 import { apiFetch } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
-import AuthDialog from "@/components/AuthDialog";
 
 const SITE_URL = "https://grok.gallery";
 
@@ -98,10 +97,9 @@ export default function ReferralPage() {
           <Card className="p-6 text-center space-y-4 border-border bg-card">
             <Users className="w-12 h-12 mx-auto text-primary opacity-60" />
             <p className="text-muted-foreground text-sm">Sign in to access the referral program</p>
-            <Button onClick={() => setShowAuth(true)} className="bg-primary text-primary-foreground font-semibold">
+            <Button onClick={() => navigate("/")} className="bg-primary text-primary-foreground font-semibold">
               Sign In
             </Button>
-            <AuthDialog open={showAuth} onOpenChange={setShowAuth} />
           </Card>
         ) : loading ? (
           <div className="space-y-4">
