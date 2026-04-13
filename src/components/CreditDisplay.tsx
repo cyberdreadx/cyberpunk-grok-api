@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import { useTranslation } from "react-i18next";
 import { Coins, ShoppingCart, Loader2, Crown, Settings, XCircle, AlertTriangle, Share2, Copy, Check, Gift, Users, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import {
 import PricingCards from "@/components/PricingCards";
 import XrgePaymentDialog from "@/components/XrgePaymentDialog";
 import XrgeBankDialog from "@/components/XrgeBankDialog";
+import SpinWheel from "@/components/SpinWheel";
 import type { CreditPackage, SubscriptionTier } from "@/lib/api";
 import { XRGE_DEXSCREENER_URL, XRGE_CHAIN_NAME } from "@/lib/xrgePublic";
 
@@ -268,6 +269,17 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
               </button>
             </div>
           )}
+
+          {/* Spin Wheel Section */}
+          <div className="mt-4 border border-primary/20 rounded-lg bg-primary/5 p-4">
+            <h3 className="font-orbitron text-xs tracking-wider neon-text-cyan text-center mb-1">
+              🎰 Free Credits
+            </h3>
+            <p className="font-mono-share text-[10px] text-muted-foreground/60 text-center mb-2">
+              Spin the wheel for a chance to win credits! One free spin every 24 hours.
+            </p>
+            <SpinWheel onCreditsRefresh={onCreditsRefresh} />
+          </div>
 
           <div className="mt-4">
             <PricingCards
