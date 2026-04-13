@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import { useTranslation } from "react-i18next";
 import { Coins, ShoppingCart, Loader2, Crown, Settings, XCircle, AlertTriangle, Share2, Copy, Check, Gift, Users, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import {
 import PricingCards from "@/components/PricingCards";
 import XrgePaymentDialog from "@/components/XrgePaymentDialog";
 import XrgeBankDialog from "@/components/XrgeBankDialog";
+import SpinWheel from "@/components/SpinWheel";
 import type { CreditPackage, SubscriptionTier } from "@/lib/api";
 import { XRGE_DEXSCREENER_URL, XRGE_CHAIN_NAME } from "@/lib/xrgePublic";
 
