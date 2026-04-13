@@ -6,6 +6,7 @@ import { apiFetch } from "@/lib/api";
 interface Story {
   id: string;
   mediaUrl: string;
+  previewUrl?: string;
   mediaType: "image" | "video";
   caption: string;
   prompt: string;
@@ -307,30 +308,51 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
         onTouchEnd={handleTouchEnd}
       >
         {isLocked ? (
-          /* Locked story overlay */
-          <div className="flex flex-col items-center gap-6 text-center px-8">
-            <div className="w-20 h-20 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center">
-              <Lock className="w-10 h-10 text-amber-400" />
-            </div>
-            <div>
-              <p className="text-white text-lg font-semibold mb-1">Locked Story</p>
-              <p className="text-white/60 text-sm">
-                This story costs <span className="text-amber-400 font-bold">{currentStory.lockCost} credits</span> to view
-              </p>
-              <p className="text-white/40 text-xs mt-1">Credits go to the creator</p>
-            </div>
-            <button
-              onClick={(e) => { e.stopPropagation(); handleUnlock(); }}
-              disabled={unlocking}
-              className="flex items-center gap-2 px-8 py-3 rounded-lg bg-gradient-to-r from-amber-500/80 to-amber-600/80 hover:from-amber-500 hover:to-amber-600 text-white font-semibold text-sm transition-all active:scale-95 disabled:opacity-50"
-            >
-              {unlocking ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+          /* Locked story overlay with blurred preview */
+          <div className="relative w-full h-full flex items-center justify-center">
+            {/* Blurred preview background */}
+            {currentStory.previewUrl && (
+              currentStory.mediaType === "video" ? (
+                <video
+                  src={currentStory.previewUrl}
+                  className="absolute inset-0 w-full h-full object-cover blur-xl scale-110 opacity-60"
+                  autoPlay muted loop playsInline
+                />
               ) : (
-                <Unlock className="w-4 h-4" />
-              )}
-              Unlock for {currentStory.lockCost} credits
-            </button>
+                <img
+                  src={currentStory.previewUrl}
+                  alt=""
+                  className="absolute inset-0 w-full h-full object-cover blur-xl scale-110 opacity-60"
+                />
+              )
+            )}
+            {/* Dark overlay on top of blur */}
+            <div className="absolute inset-0 bg-black/50" />
+            {/* Unlock card */}
+            <div className="relative z-10 flex flex-col items-center gap-5 text-center px-8">
+              <div className="w-20 h-20 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center backdrop-blur-sm">
+                <Lock className="w-10 h-10 text-amber-400" />
+              </div>
+              <div>
+                <p className="text-white text-lg font-semibold mb-1">Locked Story</p>
+                <p className="text-white/60 text-sm">
+                  This story costs <span className="text-amber-400 font-bold">{currentStory.lockCost} credits</span> to view
+                </p>
+                <p className="text-white/40 text-xs mt-1">Credits go to the creator</p>
+              </div>
+              <button
+                onClick={(e) => { e.stopPropagation(); handleUnlock(); }}
+                disabled={unlocking}
+                className="flex items-center gap-2 px-8 py-3 rounded-lg bg-gradient-to-r from-amber-500/80 to-amber-600/80 hover:from-amber-500 hover:to-amber-600 text-white font-semibold text-sm transition-all active:scale-95 disabled:opacity-50"
+              >
+                {unlocking ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Unlock className="w-4 h-4" />
+                )}
+                Unlock for {currentStory.lockCost} credits
+              </button>
+            </div>
           </div>
         ) : currentStory.mediaType === "video" ? (
           <video

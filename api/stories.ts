@@ -81,8 +81,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         grouped[r.user_id].stories.push({
           id: r.id,
-          // Hide media URL for locked stories
           mediaUrl: isLocked ? "" : r.media_url,
+          previewUrl: isLocked ? r.media_url : undefined,
           mediaType: r.media_type,
           caption: isLocked ? "" : r.caption,
           prompt: isLocked ? "" : r.prompt,
