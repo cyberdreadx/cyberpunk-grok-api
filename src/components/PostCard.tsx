@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Heart, MessageCircle, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import CommentThread from "@/components/CommentThread";
@@ -74,6 +74,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
       <div className="flex items-center gap-3 p-4 pb-2">
         <button onClick={() => navigate(`/profile/${post.username}`)} className="shrink-0">
           <Avatar className="w-8 h-8 border border-primary/20">
+            {post.avatarUrl && <AvatarImage src={post.avatarUrl} alt={post.username} />}
             <AvatarFallback className="bg-primary/10 text-primary font-orbitron text-[10px]">
               {post.username.slice(0, 2).toUpperCase()}
             </AvatarFallback>
