@@ -6,6 +6,7 @@ import StoryViewer from "@/components/StoryViewer";
 interface Story {
   id: string;
   mediaUrl: string;
+  previewUrl?: string;
   mediaType: "image" | "video";
   caption: string;
   prompt: string;
@@ -88,6 +89,18 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUserId, isAdmin }) => {
 
   if (!loggedIn || users.length === 0) return null;
 
+  // Sort: users with free (unlocked) stories first, then locked-only users
+  const sortedUsers = [...users].sort((a, b) => {
+    const aHasFree = a.stories.some(s => !s.lockCost || s.lockCost === 0 || s.unlocked || s.isOwner);
+    const bHasFree = b.stories.some(s => !s.lockCost || s.lockCost === 0 || s.unlocked || s.isOwner);
+    if (aHasFree && !bHasFree) return -1;
+    if (!aHasFree && bHasFree) return 1;
+    // Then unviewed first
+    if (a.hasUnviewed && !b.hasUnviewed) return -1;
+    if (!a.hasUnviewed && b.hasUnviewed) return 1;
+    return 0;
+  });
+
   const openStory = (idx: number) => {
     setActiveUserIdx(idx);
     setViewerOpen(true);
@@ -119,19 +132,20 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUserId, isAdmin }) => {
       `}</style>
 
       <div className="flex gap-4 overflow-x-auto pb-3 px-1 scrollbar-hide">
-        {users.map((u, idx) => (
+        {/* Use sortedUsers but map back to original index for viewer */}
+        {sortedUsers.map((u) => {
+          const originalIdx = users.findIndex(ou => ou.userId === u.userId);
+          return (
           <button
             key={u.userId}
-            onClick={() => openStory(idx)}
+            onClick={() => openStory(originalIdx)}
             className="flex flex-col items-center gap-1.5 shrink-0 group"
           >
-            {/* Outer gradient ring */}
             <div
               className={`relative w-[62px] h-[62px] sm:w-[70px] sm:h-[70px] rounded-full p-[2.5px] transition-transform duration-200 group-hover:scale-110 group-active:scale-95 ${
                 u.hasUnviewed ? "story-ring-active" : "story-ring-viewed"
               }`}
             >
-              {/* Inner avatar */}
               <div className="w-full h-full rounded-full bg-background flex items-center justify-center overflow-hidden">
                 <div
                   className={`w-full h-full rounded-full flex items-center justify-center transition-all ${
@@ -149,13 +163,10 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUserId, isAdmin }) => {
                   </span>
                 </div>
               </div>
-
-              {/* Unviewed dot indicator */}
               {u.hasUnviewed && (
                 <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-primary shadow-[0_0_6px_hsl(var(--primary))]" />
               )}
             </div>
-
             <span
               className={`font-mono-share text-[10px] truncate max-w-[64px] transition-colors ${
                 u.hasUnviewed ? "text-foreground/80" : "text-muted-foreground/50"
@@ -164,7 +175,8 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUserId, isAdmin }) => {
               {u.username}
             </span>
           </button>
-        ))}
+          );
+        })}
       </div>
 
       {viewerOpen && users[activeUserIdx] && (
