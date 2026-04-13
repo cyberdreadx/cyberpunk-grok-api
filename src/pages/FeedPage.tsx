@@ -6,6 +6,7 @@ import CyberLayout from "@/components/CyberLayout";
 import PostCard from "@/components/PostCard";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Send, Users, Globe, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import MobileBottomNav from "@/components/MobileBottomNav";
@@ -149,8 +150,27 @@ const FeedPage: React.FC = () => {
 
         {/* Posts */}
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="font-mono-share text-muted-foreground animate-pulse">LOADING FEED...</div>
+          <div className="space-y-4">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="bg-card/60 border border-border/40 rounded-lg p-4 space-y-3 animate-in fade-in duration-300" style={{ animationDelay: `${i * 80}ms` }}>
+                <div className="flex items-center gap-3">
+                  <Skeleton className="w-8 h-8 rounded-full" />
+                  <div className="space-y-1.5">
+                    <Skeleton className="h-3 w-24 rounded" />
+                    <Skeleton className="h-2 w-16 rounded" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-3 w-full rounded" />
+                  <Skeleton className="h-3 w-3/4 rounded" />
+                </div>
+                {i % 2 === 0 && <Skeleton className="h-40 w-full rounded" />}
+                <div className="flex items-center gap-4 pt-1">
+                  <Skeleton className="h-4 w-16 rounded" />
+                  <Skeleton className="h-4 w-20 rounded" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : posts.length === 0 ? (
           <div className="text-center py-12">
