@@ -71,12 +71,13 @@ const ProfilePage: React.FC = () => {
   }, [username, toast]);
 
   useEffect(() => {
+    if (authLoading) return;
     if (!isAuthenticated) {
       navigate("/");
       return;
     }
     fetchProfile();
-  }, [isAuthenticated, fetchProfile, navigate]);
+  }, [authLoading, isAuthenticated, fetchProfile, navigate]);
 
   const handleSave = async () => {
     setSaving(true);
