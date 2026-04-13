@@ -240,7 +240,7 @@ const Index = () => {
 
   const [editEngine, setEditEngineRaw] = useState<EditEngine>(() => {
     const v = localStorage.getItem("engine-edit-image");
-    return (v === "gltch") ? v : "gltch";
+    return (v === "grok" || v === "gltch") ? v : "gltch";
   });
   const setEditEngine = useCallback((v: EditEngine) => {
     localStorage.setItem("engine-edit-image", v);
@@ -249,7 +249,7 @@ const Index = () => {
 
   const [genEngine, setGenEngineRaw] = useState<ComfyEngine>(() => {
     const v = localStorage.getItem("engine-text-to-image");
-    return (v === "comfy" || v === "gltch") ? v : "gltch";
+    return (v === "grok" || v === "comfy" || v === "gltch") ? v : "gltch";
   });
   const setGenEngine = useCallback((v: ComfyEngine) => {
     localStorage.setItem("engine-text-to-image", v);
@@ -258,7 +258,7 @@ const Index = () => {
 
   const [renderEngine, setRenderEngineRaw] = useState<ComfyEngine>(() => {
     const v = localStorage.getItem("engine-text-to-video");
-    return (v === "comfy" || v === "gltch") ? v : "comfy";
+    return (v === "grok" || v === "comfy" || v === "gltch") ? v : "comfy";
   });
   const setRenderEngine = useCallback((v: ComfyEngine) => {
     localStorage.setItem("engine-text-to-video", v);
@@ -267,7 +267,7 @@ const Index = () => {
 
   const [animateEngine, setAnimateEngineRaw] = useState<ComfyEngine>(() => {
     const v = localStorage.getItem("engine-image-to-video");
-    return (v === "comfy" || v === "gltch") ? v : "gltch";
+    return (v === "grok" || v === "comfy" || v === "gltch") ? v : "gltch";
   });
   const setAnimateEngine = useCallback((v: ComfyEngine) => {
     localStorage.setItem("engine-image-to-video", v);

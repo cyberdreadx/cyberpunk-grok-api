@@ -126,12 +126,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  // DELETE — delete own post
+  // DELETE — delete own post (or any post if admin)
   if (req.method === "DELETE") {
     try {
       const { postId } = req.body || {};
       if (!postId) return res.status(400).json({ error: "postId required" });
-      await sql`DELETE FROM feed_posts WHERE id = ${postId} AND user_id = ${auth.userId}`;
+
+      // Check if user is admin
+      const isAdmin = auth.email === (process.env.ADMIN_EMAIL || "cyberdreadx@proton.me");
+      if (isAdmin) {
+        await sql`DELETE FROM feed_posts WHERE id = ${postId}`;
+      } else {
+        await sql`DELETE FROM feed_posts WHERE id = ${postId} AND user_id = ${auth.userId}`;
+      }
       return res.json({ success: true });
     } catch (err: any) {
       console.error("[feed DELETE]", err.message);
