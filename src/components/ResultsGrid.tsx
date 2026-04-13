@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import { Download, Maximize2, X, Trash2, ExternalLink, ChevronLeft, ChevronRight, Pencil, Film, Copy, Check, FolderPlus, FolderOpen, MoreVertical, FolderInput, Lock, LockOpen, ShieldCheck, Eye, EyeOff, ChevronDown, Sparkles, Archive, Loader2, Link2, CheckSquare, Square, ListChecks, RotateCcw, XCircle, Search, CirclePlus } from "lucide-react";
+import { Download, Maximize2, X, Trash2, ExternalLink, ChevronLeft, ChevronRight, Pencil, Film, Copy, Check, FolderPlus, FolderOpen, MoreVertical, FolderInput, Lock, LockOpen, ShieldCheck, Eye, EyeOff, ChevronDown, Send, Archive, Loader2, Link2, CheckSquare, Square, ListChecks, RotateCcw, XCircle, Search, CirclePlus } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -1217,45 +1217,79 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
     }
   }, []);
 
-  /** Upload to Blob first, then open Grokker with the URL */
-  const handleGrokkerPost = useCallback(async (result: GrokResult) => {
-    setSharingId(result.id);
+  /** Upload media then post to feed */
+  const [feedPostingId, setFeedPostingId] = useState<string | null>(null);
+
+  const handlePostToFeed = useCallback(async (result: GrokResult) => {
+    setFeedPostingId(result.id);
     try {
-      let mediaBase64 = result.url;
-      if (!mediaBase64.startsWith("data:")) {
-        const stored = await getResultDataUrl(result.id).catch(() => null);
-        if (stored && stored.startsWith("data:")) {
-          mediaBase64 = stored;
-        } else if (mediaBase64.startsWith("http") || mediaBase64.startsWith("blob:")) {
-          const resp = await fetch(mediaBase64);
-          if (!resp.ok) throw new Error("Failed to fetch media");
-          const blob = await resp.blob();
-          mediaBase64 = await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.onerror = () => reject(new Error("FileReader failed"));
-            reader.readAsDataURL(blob);
+      const shareBase = (import.meta.env.VITE_API_URL as string) || "/api";
+      let mediaUrl = result.url;
+
+      // Upload if not already in permanent storage
+      const isPermanent = mediaUrl.includes("blob.vercel-storage.com");
+      if (!isPermanent) {
+        let mediaBlob: Blob | null = null;
+        const src = result.url;
+
+        if (src.startsWith("data:")) {
+          mediaBlob = await fetch(src).then((r) => r.blob());
+        } else {
+          const stored = await getResultDataUrl(result.id).catch(() => null);
+          if (stored && stored.startsWith("data:")) {
+            mediaBlob = await fetch(stored).then((r) => r.blob());
+          } else if (src.startsWith("https://") || src.startsWith("http://")) {
+            const token = localStorage.getItem("auth-token");
+            const dlRes = await fetch(`${shareBase}/share`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+              },
+              body: JSON.stringify({ mediaUrl: src, mediaType: result.type, prompt: result.revised_prompt || "" }),
+            });
+            if (!dlRes.ok) throw new Error("Upload failed");
+            const dlData = await dlRes.json();
+            mediaUrl = dlData.r2Url;
+            mediaBlob = null;
+          } else if (src.startsWith("blob:")) {
+            const resp = await fetch(src);
+            if (!resp.ok) throw new Error("Failed to fetch media");
+            mediaBlob = await resp.blob();
+          }
+        }
+
+        if (mediaBlob) {
+          const ext = result.type === "video" ? "mp4" : "png";
+          const authToken = localStorage.getItem("auth-token") || "";
+          const { url: blobUrl } = await upload(`feed/post.${ext}`, mediaBlob, {
+            access: "public",
+            handleUploadUrl: `${shareBase}/blob-upload`,
+            clientPayload: authToken,
           });
+          mediaUrl = blobUrl;
         }
       }
-      const shareBase2 = (import.meta.env.VITE_API_URL as string) || "/api";
-      const res = await fetch(`${shareBase2}/share`, {
+
+      // Create feed post
+      const token = localStorage.getItem("auth-token");
+      const feedRes = await fetch(`${shareBase}/feed`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
-          mediaBase64,
-          mediaType: result.type,
-          prompt: result.revised_prompt || "",
+          text: result.revised_prompt || "",
+          imageUrl: mediaUrl,
         }),
       });
-      if (!res.ok) throw new Error("Upload failed");
-      const data = await res.json();
-      const grokkerUrl = "https://grokker.gltch.app";
-      window.open(`${grokkerUrl}/dashboard/new-post?media=${encodeURIComponent(data.r2Url)}&caption=${encodeURIComponent(result.revised_prompt || "")}`, "_blank");
-    } catch {
-      toast.error("Failed to upload media for Grokker");
+      if (!feedRes.ok) throw new Error("Failed to post to feed");
+      toast.success("Posted to feed!");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to post to feed");
     } finally {
-      setSharingId(null);
+      setFeedPostingId(null);
     }
   }, []);
 
@@ -1955,11 +1989,11 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
                 size="icon"
                 variant="ghost"
                 className="text-secondary h-9 w-9"
-                onClick={() => currentResult && handleGrokkerPost(currentResult)}
-                disabled={!!currentResult && sharingId === currentResult.id}
-                title="Post to Grokker"
+                onClick={() => currentResult && handlePostToFeed(currentResult)}
+                disabled={!!currentResult && feedPostingId === currentResult.id}
+                title="Post to Feed"
               >
-                <Sparkles className="w-4 h-4" />
+                {currentResult && feedPostingId === currentResult.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
               </Button>
               <Button
                 size="icon"
@@ -2113,11 +2147,11 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
                 size="icon"
                 variant="ghost"
                 className="text-secondary hover:bg-secondary/20"
-                onClick={() => handleGrokkerPost(result)}
-                disabled={sharingId === result.id}
-                title="Post to Grokker"
+                onClick={() => handlePostToFeed(result)}
+                disabled={feedPostingId === result.id}
+                title="Post to Feed"
               >
-                <Sparkles className="w-4 h-4" />
+                {feedPostingId === result.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
               </Button>
               <Button
                 size="icon"
@@ -2356,11 +2390,11 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
                   size="sm"
                   variant="outline"
                   className="text-secondary border-secondary/30 hover:bg-secondary/10 text-xs gap-1.5"
-                  onClick={() => handleGrokkerPost(expandedResult)}
-                  disabled={sharingId === expandedResult.id}
+                  onClick={() => handlePostToFeed(expandedResult)}
+                  disabled={feedPostingId === expandedResult.id}
                 >
-                  <Sparkles className="w-3 h-3" />
-                  Grokker
+                  {feedPostingId === expandedResult.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+                  Feed
                 </Button>
                 <Button
                   size="sm"
