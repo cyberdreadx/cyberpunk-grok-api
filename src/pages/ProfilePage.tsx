@@ -132,7 +132,7 @@ const ProfilePage: React.FC = () => {
     }
   }, [toast, fetchProfile]);
 
-
+  const handleFollow = async () => {
     if (!profile) return;
     setFollowLoading(true);
     try {
