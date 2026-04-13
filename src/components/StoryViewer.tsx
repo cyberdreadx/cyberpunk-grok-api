@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { X, ChevronLeft, ChevronRight, Volume2, VolumeX, Trash2, Loader2, Eye, Lock, Unlock } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Volume2, VolumeX, Trash2, Loader2, Eye, Lock, Unlock, Heart } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface Story {
   id: string;
@@ -14,6 +15,8 @@ interface Story {
   expiresAt: string;
   viewed: boolean;
   viewCount?: number;
+  likeCount?: number;
+  userLiked?: boolean;
   lockCost?: number;
   unlocked?: boolean;
   isOwner?: boolean;
@@ -37,6 +40,13 @@ interface StoryViewerProps {
   onUnlocked?: () => void;
 }
 
+interface Viewer {
+  userId: string;
+  username: string;
+  avatarUrl: string | null;
+  viewedAt: string;
+}
+
 const STORY_DURATION = 5000;
 
 const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, currentUserId, isAdmin, onClose, onViewed, onDelete, onUnlocked }) => {
@@ -47,10 +57,14 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
   const [muted, setMuted] = useState(true);
   const [deleting, setDeleting] = useState(false);
   const [unlocking, setUnlocking] = useState(false);
+  const [liked, setLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(0);
+  const [showViewers, setShowViewers] = useState(false);
+  const [viewers, setViewers] = useState<Viewer[]>([]);
+  const [loadingViewers, setLoadingViewers] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval>>();
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // Swipe-down-to-close state
   const swipeRef = useRef({ startY: 0, currentY: 0, swiping: false });
   const [swipeOffset, setSwipeOffset] = useState(0);
 
@@ -59,6 +73,15 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
   const isOwner = currentUser?.userId === currentUserId;
   const isLocked = currentStory && (currentStory.lockCost || 0) > 0 && !currentStory.unlocked && !currentStory.isOwner;
 
+  // Sync like state when story changes
+  useEffect(() => {
+    if (currentStory) {
+      setLiked(currentStory.userLiked || false);
+      setLikeCount(currentStory.likeCount || 0);
+      setShowViewers(false);
+    }
+  }, [currentStory?.id]);
+
   // Mark as viewed
   useEffect(() => {
     if (currentStory && !currentStory.viewed && !isLocked) {
@@ -66,36 +89,28 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
     }
   }, [currentStory?.id, isLocked]);
 
-  // Progress timer — pause if locked
+  // Progress timer
   useEffect(() => {
-    if (!currentStory || paused || isLocked) return;
+    if (!currentStory || paused || isLocked || showViewers) return;
     if (currentStory.mediaType === "video") return;
-
     setProgress(0);
     const interval = 50;
     const steps = STORY_DURATION / interval;
     let step = 0;
-
     timerRef.current = setInterval(() => {
       step++;
       setProgress((step / steps) * 100);
-      if (step >= steps) {
-        goNext();
-      }
+      if (step >= steps) goNext();
     }, interval);
-
     return () => clearInterval(timerRef.current);
-  }, [currentStory?.id, paused, isLocked]);
+  }, [currentStory?.id, paused, isLocked, showViewers]);
 
   const goNext = useCallback(() => {
     if (!currentUser) return;
     if (storyIdx < currentUser.stories.length - 1) {
-      setStoryIdx(s => s + 1);
-      setProgress(0);
+      setStoryIdx(s => s + 1); setProgress(0);
     } else if (userIdx < users.length - 1) {
-      setUserIdx(u => u + 1);
-      setStoryIdx(0);
-      setProgress(0);
+      setUserIdx(u => u + 1); setStoryIdx(0); setProgress(0);
     } else {
       onClose();
     }
@@ -103,29 +118,21 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
 
   const goPrev = useCallback(() => {
     if (storyIdx > 0) {
-      setStoryIdx(s => s - 1);
-      setProgress(0);
+      setStoryIdx(s => s - 1); setProgress(0);
     } else if (userIdx > 0) {
-      setUserIdx(u => u - 1);
-      setStoryIdx(users[userIdx - 1].stories.length - 1);
-      setProgress(0);
+      setUserIdx(u => u - 1); setStoryIdx(users[userIdx - 1].stories.length - 1); setProgress(0);
     }
   }, [storyIdx, userIdx, users]);
 
-  const handleVideoEnd = useCallback(() => {
-    goNext();
-  }, [goNext]);
-
+  const handleVideoEnd = useCallback(() => goNext(), [goNext]);
   const handleVideoTime = useCallback(() => {
     const v = videoRef.current;
-    if (v && v.duration) {
-      setProgress((v.currentTime / v.duration) * 100);
-    }
+    if (v && v.duration) setProgress((v.currentTime / v.duration) * 100);
   }, []);
 
-  // Keyboard
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      if (showViewers) { if (e.key === "Escape") setShowViewers(false); return; }
       if (e.key === "Escape") onClose();
       if (e.key === "ArrowRight") goNext();
       if (e.key === "ArrowLeft") goPrev();
@@ -133,30 +140,21 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [goNext, goPrev, onClose]);
+  }, [goNext, goPrev, onClose, showViewers]);
 
-  const canDelete = onDelete && currentUser && currentStory &&
-    (currentUser.userId === currentUserId || isAdmin);
+  const canDelete = onDelete && currentUser && currentStory && (currentUser.userId === currentUserId || isAdmin);
 
   const handleDelete = useCallback(async () => {
     if (!onDelete || !currentStory || deleting) return;
-    setDeleting(true);
-    setPaused(true);
+    setDeleting(true); setPaused(true);
     try {
       await onDelete(currentStory.id);
       toast.success("Story deleted");
       const remaining = currentUser.stories.length - 1;
-      if (remaining <= 0 && userIdx >= users.length - 1) {
-        onClose();
-      } else if (storyIdx >= remaining) {
-        setStoryIdx(Math.max(0, remaining - 1));
-      }
-    } catch {
-      toast.error("Failed to delete story");
-    } finally {
-      setDeleting(false);
-      setPaused(false);
-    }
+      if (remaining <= 0 && userIdx >= users.length - 1) onClose();
+      else if (storyIdx >= remaining) setStoryIdx(Math.max(0, remaining - 1));
+    } catch { toast.error("Failed to delete story"); }
+    finally { setDeleting(false); setPaused(false); }
   }, [onDelete, currentStory, currentUser, deleting, storyIdx, userIdx, users.length, onClose]);
 
   const handleUnlock = useCallback(async () => {
@@ -165,96 +163,99 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
     try {
       await apiFetch("/stories", { method: "PATCH", body: { storyId: currentStory.id } });
       toast.success(`Unlocked for ${currentStory.lockCost} credits!`);
-      // Mutate local state to show unlocked
       currentStory.unlocked = true;
-      currentStory.mediaUrl = ""; // will refresh on next fetch
+      currentStory.mediaUrl = "";
       onUnlocked?.();
     } catch (err: any) {
-      if (err.message?.includes("Not enough credits")) {
-        toast.error("Not enough credits to unlock this story");
-      } else {
-        toast.error(err.message || "Failed to unlock");
-      }
-    } finally {
-      setUnlocking(false);
-    }
+      toast.error(err.message?.includes("Not enough credits") ? "Not enough credits" : (err.message || "Failed to unlock"));
+    } finally { setUnlocking(false); }
   }, [currentStory, unlocking, onUnlocked]);
+
+  const handleLike = useCallback(async () => {
+    if (!currentStory || isLocked) return;
+    const prevLiked = liked;
+    const prevCount = likeCount;
+    setLiked(!liked);
+    setLikeCount(c => liked ? c - 1 : c + 1);
+    try {
+      await apiFetch("/story-likes", { method: "POST", body: { storyId: currentStory.id } });
+    } catch {
+      setLiked(prevLiked);
+      setLikeCount(prevCount);
+    }
+  }, [currentStory, isLocked, liked, likeCount]);
+
+  const handleShowViewers = useCallback(async () => {
+    if (!currentStory || !isOwner) return;
+    setShowViewers(true);
+    setPaused(true);
+    setLoadingViewers(true);
+    try {
+      const data = await apiFetch<{ viewers: Viewer[] }>(`/story-viewers?storyId=${currentStory.id}`);
+      setViewers(data.viewers || []);
+    } catch { toast.error("Failed to load viewers"); }
+    finally { setLoadingViewers(false); }
+  }, [currentStory, isOwner]);
 
   // Touch handlers
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    const touch = e.touches[0];
-    swipeRef.current = { startY: touch.clientY, currentY: touch.clientY, swiping: false };
+    if (showViewers) return;
+    swipeRef.current = { startY: e.touches[0].clientY, currentY: e.touches[0].clientY, swiping: false };
     setPaused(true);
-  }, []);
+  }, [showViewers]);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    const touch = e.touches[0];
-    const deltaY = touch.clientY - swipeRef.current.startY;
-    swipeRef.current.currentY = touch.clientY;
-    if (deltaY > 10) {
-      swipeRef.current.swiping = true;
-      setSwipeOffset(Math.min(deltaY, 300));
-    }
-  }, []);
+    if (showViewers) return;
+    const deltaY = e.touches[0].clientY - swipeRef.current.startY;
+    swipeRef.current.currentY = e.touches[0].clientY;
+    if (deltaY > 10) { swipeRef.current.swiping = true; setSwipeOffset(Math.min(deltaY, 300)); }
+  }, [showViewers]);
 
   const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (showViewers) return;
     const deltaY = swipeRef.current.currentY - swipeRef.current.startY;
-    if (swipeRef.current.swiping && deltaY > 100) {
-      onClose();
-      return;
-    }
+    if (swipeRef.current.swiping && deltaY > 100) { onClose(); return; }
     setSwipeOffset(0);
     if (!swipeRef.current.swiping) {
       const touch = e.changedTouches[0];
       const rect = e.currentTarget.getBoundingClientRect();
       const x = touch.clientX - rect.left;
-      if (x < rect.width / 3) goPrev();
-      else goNext();
+      if (x < rect.width / 3) goPrev(); else goNext();
     }
     setPaused(false);
     swipeRef.current.swiping = false;
-  }, [onClose, goPrev, goNext, isLocked]);
+  }, [onClose, goPrev, goNext, showViewers]);
 
   const handleClick = (e: React.MouseEvent) => {
+    if (showViewers) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
-    if (x < rect.width / 3) goPrev();
-    else goNext();
+    if (x < rect.width / 3) goPrev(); else goNext();
   };
 
   if (!currentUser || !currentStory) return null;
-
   const opacity = Math.max(1 - swipeOffset / 300, 0.3);
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-black flex items-center justify-center"
-      style={{ opacity }}
-    >
-      {/* Swipe-down hint */}
+    <div className="fixed inset-0 z-[9999] bg-black flex items-center justify-center" style={{ opacity }}>
+      {/* Swipe hint */}
       <div className="absolute left-1/2 -translate-x-1/2 w-10 h-1 rounded-full bg-white/30 z-20 sm:hidden"
-        style={{ top: "calc(env(safe-area-inset-top, 0px) + 4px)" }}
-      />
+        style={{ top: "calc(env(safe-area-inset-top, 0px) + 4px)" }} />
 
       {/* Progress bars */}
       <div className="absolute left-0 right-0 flex gap-0.5 px-2 z-10"
-        style={{ top: "calc(env(safe-area-inset-top, 0px) + 10px)" }}
-      >
+        style={{ top: "calc(env(safe-area-inset-top, 0px) + 10px)" }}>
         {currentUser.stories.map((s, i) => (
           <div key={s.id} className="flex-1 h-0.5 bg-white/20 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-white rounded-full transition-all duration-75"
-              style={{
-                width: i < storyIdx ? "100%" : i === storyIdx ? `${progress}%` : "0%",
-              }}
-            />
+            <div className="h-full bg-white rounded-full transition-all duration-75"
+              style={{ width: i < storyIdx ? "100%" : i === storyIdx ? `${progress}%` : "0%" }} />
           </div>
         ))}
       </div>
 
       {/* Header */}
       <div className="absolute left-0 right-0 flex items-center justify-between px-3 z-20"
-        style={{ top: "calc(env(safe-area-inset-top, 0px) + 20px)" }}
-      >
+        style={{ top: "calc(env(safe-area-inset-top, 0px) + 20px)" }}>
         <div className="flex items-center gap-2 min-w-0">
           <div className="w-8 h-8 shrink-0 rounded-full bg-gradient-to-br from-primary/50 to-secondary/50 flex items-center justify-center text-xs font-bold text-white uppercase">
             {currentUser.username.slice(0, 2)}
@@ -265,8 +266,7 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
           </span>
           {(currentStory.lockCost || 0) > 0 && (
             <span className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400">
-              <Lock className="w-3 h-3" />
-              {currentStory.lockCost}
+              <Lock className="w-3 h-3" />{currentStory.lockCost}
             </span>
           )}
         </div>
@@ -277,57 +277,38 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
             </button>
           )}
           {canDelete && (
-            <button
-              onClick={(e) => { e.stopPropagation(); handleDelete(); }}
-              disabled={deleting}
-              className="text-red-400/80 hover:text-red-400 p-2 transition-colors"
-            >
+            <button onClick={(e) => { e.stopPropagation(); handleDelete(); }} disabled={deleting}
+              className="text-red-400/80 hover:text-red-400 p-2 transition-colors">
               {deleting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Trash2 className="w-5 h-5" />}
             </button>
           )}
-          <button
-            onClick={(e) => { e.stopPropagation(); onClose(); }}
-            className="text-white/80 hover:text-white p-3"
-            aria-label="Close stories"
-          >
+          <button onClick={(e) => { e.stopPropagation(); onClose(); }}
+            className="text-white/80 hover:text-white p-3" aria-label="Close stories">
             <X className="w-7 h-7" />
           </button>
         </div>
       </div>
 
-      {/* Media / Lock overlay */}
-      <div
-        className="w-full h-full flex items-center justify-center cursor-pointer select-none"
+      {/* Media */}
+      <div className="w-full h-full cursor-pointer select-none"
         style={{ transform: `translateY(${swipeOffset}px)` }}
         onClick={handleClick}
-        onMouseDown={() => !isLocked && setPaused(true)}
-        onMouseUp={() => !isLocked && setPaused(false)}
+        onMouseDown={() => !isLocked && !showViewers && setPaused(true)}
+        onMouseUp={() => !isLocked && !showViewers && setPaused(false)}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
         {isLocked ? (
-          /* Locked story overlay with blurred preview */
           <div className="relative w-full h-full flex items-center justify-center">
-            {/* Blurred preview background */}
             {currentStory.previewUrl && (
               currentStory.mediaType === "video" ? (
-                <video
-                  src={currentStory.previewUrl}
-                  className="absolute inset-0 w-full h-full object-cover blur-xl scale-110 opacity-60"
-                  autoPlay muted loop playsInline
-                />
+                <video src={currentStory.previewUrl} className="absolute inset-0 w-full h-full object-cover blur-xl scale-110 opacity-60" autoPlay muted loop playsInline />
               ) : (
-                <img
-                  src={currentStory.previewUrl}
-                  alt=""
-                  className="absolute inset-0 w-full h-full object-cover blur-xl scale-110 opacity-60"
-                />
+                <img src={currentStory.previewUrl} alt="" className="absolute inset-0 w-full h-full object-cover blur-xl scale-110 opacity-60" />
               )
             )}
-            {/* Dark overlay on top of blur */}
             <div className="absolute inset-0 bg-black/50" />
-            {/* Unlock card */}
             <div className="relative z-10 flex flex-col items-center gap-5 text-center px-8">
               <div className="w-20 h-20 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center backdrop-blur-sm">
                 <Lock className="w-10 h-10 text-amber-400" />
@@ -339,54 +320,101 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
                 </p>
                 <p className="text-white/40 text-xs mt-1">Credits go to the creator</p>
               </div>
-              <button
-                onClick={(e) => { e.stopPropagation(); handleUnlock(); }}
-                disabled={unlocking}
-                className="flex items-center gap-2 px-8 py-3 rounded-lg bg-gradient-to-r from-amber-500/80 to-amber-600/80 hover:from-amber-500 hover:to-amber-600 text-white font-semibold text-sm transition-all active:scale-95 disabled:opacity-50"
-              >
-                {unlocking ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Unlock className="w-4 h-4" />
-                )}
+              <button onClick={(e) => { e.stopPropagation(); handleUnlock(); }} disabled={unlocking}
+                className="flex items-center gap-2 px-8 py-3 rounded-lg bg-gradient-to-r from-amber-500/80 to-amber-600/80 hover:from-amber-500 hover:to-amber-600 text-white font-semibold text-sm transition-all active:scale-95 disabled:opacity-50">
+                {unlocking ? <Loader2 className="w-4 h-4 animate-spin" /> : <Unlock className="w-4 h-4" />}
                 Unlock for {currentStory.lockCost} credits
               </button>
             </div>
           </div>
         ) : currentStory.mediaType === "video" ? (
-          <video
-            ref={videoRef}
-            src={currentStory.mediaUrl}
-            className="max-w-full max-h-full object-contain"
-            autoPlay
-            muted={muted}
-            playsInline
-            onEnded={handleVideoEnd}
-            onTimeUpdate={handleVideoTime}
-          />
+          <video ref={videoRef} src={currentStory.mediaUrl}
+            className="w-full h-full object-contain"
+            autoPlay muted={muted} playsInline
+            onEnded={handleVideoEnd} onTimeUpdate={handleVideoTime} />
         ) : (
-          <img
-            src={currentStory.mediaUrl}
-            alt={currentStory.caption || "Story"}
-            className="max-w-full max-h-full object-contain"
-          />
+          <img src={currentStory.mediaUrl} alt={currentStory.caption || "Story"}
+            className="w-full h-full object-contain" />
         )}
       </div>
 
-      {/* Bottom bar: caption + view count */}
-      {!isLocked && (
-        <div className="absolute left-0 right-0 px-6 z-10 flex flex-col items-center gap-2"
-          style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 48px)" }}
-        >
-          {currentStory.caption && (
-            <p className="text-white text-sm bg-black/40 rounded-lg px-4 py-2 inline-block backdrop-blur-sm max-w-[90%] text-center">
-              {currentStory.caption}
-            </p>
-          )}
+      {/* Bottom bar */}
+      {!isLocked && !showViewers && (
+        <div className="absolute left-0 right-0 px-4 z-20 flex flex-col items-center gap-2"
+          style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)" }}>
+          
+          {/* Like + caption row */}
+          <div className="flex items-end gap-3 w-full max-w-md">
+            <div className="flex-1 min-w-0">
+              {currentStory.caption && (
+                <p className="text-white text-sm bg-black/40 rounded-lg px-3 py-2 backdrop-blur-sm break-words line-clamp-3">
+                  {currentStory.caption}
+                </p>
+              )}
+            </div>
+            <div className="flex flex-col items-center gap-1 shrink-0">
+              <button onClick={(e) => { e.stopPropagation(); handleLike(); }}
+                className={`p-2.5 rounded-full backdrop-blur-sm transition-all active:scale-90 ${
+                  liked ? "bg-red-500/20 text-red-400" : "bg-black/30 text-white/70"
+                }`}>
+                <Heart className={`w-6 h-6 ${liked ? "fill-current" : ""}`} />
+              </button>
+              <span className="text-white/60 text-[10px] font-mono-share">{likeCount}</span>
+            </div>
+          </div>
+
+          {/* View count (owner only) */}
           {(isOwner || isAdmin) && typeof currentStory.viewCount === "number" && (
-            <div className="flex items-center gap-1.5 text-white/60 text-xs">
+            <button onClick={(e) => { e.stopPropagation(); handleShowViewers(); }}
+              className="flex items-center gap-1.5 text-white/60 text-xs hover:text-white/80 transition-colors">
               <Eye className="w-3.5 h-3.5" />
               <span>{currentStory.viewCount} {currentStory.viewCount === 1 ? "view" : "views"}</span>
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Viewers panel */}
+      {showViewers && (
+        <div className="absolute inset-x-0 bottom-0 z-30 bg-card/95 backdrop-blur-md rounded-t-2xl max-h-[60dvh] overflow-y-auto"
+          style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)" }}
+          onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center justify-between px-4 pt-3 pb-2 sticky top-0 bg-card/95 backdrop-blur-md z-10 border-b border-border/20">
+            <div className="flex items-center gap-2">
+              <Eye className="w-4 h-4 text-muted-foreground" />
+              <span className="font-orbitron text-xs text-foreground tracking-wider">
+                {currentStory.viewCount} {currentStory.viewCount === 1 ? "VIEWER" : "VIEWERS"}
+              </span>
+            </div>
+            <button onClick={() => { setShowViewers(false); setPaused(false); }}
+              className="font-mono-share text-[10px] text-muted-foreground hover:text-foreground px-2 py-1">
+              CLOSE
+            </button>
+          </div>
+          {loadingViewers ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-5 h-5 animate-spin text-primary" />
+            </div>
+          ) : viewers.length === 0 ? (
+            <p className="text-center text-muted-foreground text-xs py-8 font-mono-share">No viewers yet</p>
+          ) : (
+            <div className="divide-y divide-border/10">
+              {viewers.map((v) => (
+                <div key={v.userId} className="flex items-center gap-3 px-4 py-3">
+                  <Avatar className="w-8 h-8 border border-primary/10">
+                    {v.avatarUrl && <AvatarImage src={v.avatarUrl} alt={v.username} />}
+                    <AvatarFallback className="bg-primary/10 text-primary font-orbitron text-[9px]">
+                      {v.username.slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <span className="font-orbitron text-xs text-foreground truncate block">@{v.username}</span>
+                    <span className="font-mono-share text-[9px] text-muted-foreground">
+                      {new Date(v.viewedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -394,18 +422,14 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
 
       {/* Nav arrows (desktop) */}
       {userIdx > 0 && (
-        <button
-          onClick={(e) => { e.stopPropagation(); goPrev(); }}
-          className="absolute left-2 top-1/2 -translate-y-1/2 text-white/50 hover:text-white z-10 hidden sm:block"
-        >
+        <button onClick={(e) => { e.stopPropagation(); goPrev(); }}
+          className="absolute left-2 top-1/2 -translate-y-1/2 text-white/50 hover:text-white z-10 hidden sm:block">
           <ChevronLeft className="w-8 h-8" />
         </button>
       )}
       {(storyIdx < currentUser.stories.length - 1 || userIdx < users.length - 1) && (
-        <button
-          onClick={(e) => { e.stopPropagation(); goNext(); }}
-          className="absolute right-2 top-1/2 -translate-y-1/2 text-white/50 hover:text-white z-10 hidden sm:block"
-        >
+        <button onClick={(e) => { e.stopPropagation(); goNext(); }}
+          className="absolute right-2 top-1/2 -translate-y-1/2 text-white/50 hover:text-white z-10 hidden sm:block">
           <ChevronRight className="w-8 h-8" />
         </button>
       )}

@@ -54,7 +54,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           u.email,
           CASE WHEN sv.viewer_id IS NOT NULL THEN true ELSE false END AS viewed,
           (SELECT COUNT(*)::int FROM story_views sv2 WHERE sv2.story_id = s.id) AS view_count,
-          CASE WHEN su.user_id IS NOT NULL THEN true ELSE false END AS unlocked
+          CASE WHEN su.user_id IS NOT NULL THEN true ELSE false END AS unlocked,
+          (SELECT COUNT(*)::int FROM story_likes sl WHERE sl.story_id = s.id) AS like_count,
+          CASE WHEN EXISTS (SELECT 1 FROM story_likes sl2 WHERE sl2.story_id = s.id AND sl2.user_id = ${viewerId}::uuid) THEN true ELSE false END AS user_liked
         FROM stories s
         JOIN users u ON u.id = s.user_id
         LEFT JOIN story_views sv ON sv.story_id = s.id AND sv.viewer_id = ${viewerId}::uuid
@@ -90,6 +92,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           expiresAt: r.expires_at,
           viewed: r.viewed,
           viewCount: r.view_count || 0,
+          likeCount: r.like_count || 0,
+          userLiked: r.user_liked || false,
           lockCost: r.lock_cost,
           unlocked: r.unlocked || isOwner,
           isOwner,
