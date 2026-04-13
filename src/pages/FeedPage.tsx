@@ -24,7 +24,7 @@ interface FeedPost {
 }
 
 const FeedPage: React.FC = () => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
