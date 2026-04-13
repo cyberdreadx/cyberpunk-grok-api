@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
@@ -7,9 +7,10 @@ import PostCard from "@/components/PostCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { UserPlus, UserMinus, Edit2, Check, X, ArrowLeft } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { UserPlus, UserMinus, Edit2, Check, X, ArrowLeft, Camera, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { upload } from "@vercel/blob/client";
 
 interface Profile {
   userId: string;
