@@ -54,6 +54,7 @@ const App = () => (
           <Route path="/feed" element={<PageShell><FeedPage /></PageShell>} />
           <Route path="/profile" element={<PageShell><ProfilePage /></PageShell>} />
           <Route path="/profile/:username" element={<PageShell><ProfilePage /></PageShell>} />
+          <Route path="/referral" element={<PageShell><ReferralPage /></PageShell>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
