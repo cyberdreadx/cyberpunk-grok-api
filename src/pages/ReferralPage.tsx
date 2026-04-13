@@ -30,7 +30,6 @@ export default function ReferralPage() {
   const [code, setCode] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
-  const [showAuth, setShowAuth] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!isAuthenticated) { setLoading(false); return; }
