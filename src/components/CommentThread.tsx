@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Send, Trash2, CornerDownRight, Loader2 } from "lucide-react";
@@ -75,6 +75,7 @@ const CommentThread: React.FC<CommentThreadProps> = ({ postId, onCountChange }) 
       <div className="flex items-start gap-2 py-2">
         <button onClick={() => navigate(`/profile/${comment.username}`)} className="shrink-0 mt-0.5">
           <Avatar className="w-5 h-5 border border-primary/10">
+            {comment.avatarUrl && <AvatarImage src={comment.avatarUrl} alt={comment.username} />}
             <AvatarFallback className="bg-primary/5 text-primary font-orbitron text-[7px]">
               {comment.username.slice(0, 2).toUpperCase()}
             </AvatarFallback>
