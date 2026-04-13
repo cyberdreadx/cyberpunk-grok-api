@@ -39,7 +39,7 @@ interface FeedPost {
 
 const ProfilePage: React.FC = () => {
   const { username } = useParams<{ username: string }>();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
