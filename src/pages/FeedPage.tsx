@@ -2,12 +2,14 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
+import { useIsMobile } from "@/hooks/use-mobile";
 import CyberLayout from "@/components/CyberLayout";
 import PostCard from "@/components/PostCard";
+import ReelCard from "@/components/ReelCard";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Send, Users, Globe, Loader2 } from "lucide-react";
+import { Send, Users, Globe, Loader2, Plus, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import MobileBottomNav from "@/components/MobileBottomNav";
 
@@ -28,6 +30,7 @@ const FeedPage: React.FC = () => {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,7 +39,9 @@ const FeedPage: React.FC = () => {
   const [posting, setPosting] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [showCompose, setShowCompose] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const fetchFeed = useCallback(async (cursor?: string) => {
     try {
@@ -59,8 +64,6 @@ const FeedPage: React.FC = () => {
     }
   }, [filter, toast]);
 
-  
-
   useEffect(() => {
     if (authLoading) return;
     if (!isAuthenticated) {
@@ -77,6 +80,7 @@ const FeedPage: React.FC = () => {
     try {
       await apiFetch("/feed", { method: "POST", body: { text: newText.trim() } });
       setNewText("");
+      setShowCompose(false);
       fetchFeed();
     } catch (err: any) {
       toast({ title: err.message, variant: "destructive" });
@@ -91,6 +95,131 @@ const FeedPage: React.FC = () => {
     fetchFeed(nextCursor);
   };
 
+  // Infinite scroll for reels mode
+  const handleReelScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el || !nextCursor || loadingMore) return;
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 400;
+    if (nearBottom) {
+      setLoadingMore(true);
+      fetchFeed(nextCursor);
+    }
+  }, [nextCursor, loadingMore, fetchFeed]);
+
+  /* ───── MOBILE REELS VIEW ───── */
+  if (isMobile) {
+    return (
+      <>
+        {/* Full-screen snap-scroll container */}
+        <div
+          ref={scrollRef}
+          onScroll={handleReelScroll}
+          className="fixed inset-0 z-0 overflow-y-auto snap-y snap-mandatory bg-black"
+          style={{ WebkitOverflowScrolling: "touch" }}
+        >
+          {loading ? (
+            <div className="h-[100dvh] flex items-center justify-center">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            </div>
+          ) : posts.length === 0 ? (
+            <div className="h-[100dvh] flex items-center justify-center">
+              <p className="font-mono-share text-xs text-muted-foreground">
+                {filter === "following" ? "Follow users to see their posts here" : "No posts yet. Be the first!"}
+              </p>
+            </div>
+          ) : (
+            <>
+              {posts.map((post) => (
+                <ReelCard key={post.id} post={post} onUpdate={() => fetchFeed()} />
+              ))}
+              {loadingMore && (
+                <div className="h-[100dvh] snap-start flex items-center justify-center bg-black">
+                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Top bar overlay */}
+        <div
+          className="fixed left-0 right-0 z-40 flex items-center justify-between px-4"
+          style={{ top: "calc(env(safe-area-inset-top, 0px) + 8px)" }}
+        >
+          <h1 className="font-orbitron text-sm tracking-widest text-white drop-shadow-lg">FEED</h1>
+          <div className="flex gap-1.5">
+            <button
+              onClick={() => { setFilter("all"); setLoading(true); }}
+              className={`px-2.5 py-1 rounded-full font-mono-share text-[9px] backdrop-blur-sm transition-colors ${
+                filter === "all"
+                  ? "bg-primary/30 text-primary border border-primary/40"
+                  : "bg-black/30 text-white/70 border border-white/10"
+              }`}
+            >
+              ALL
+            </button>
+            <button
+              onClick={() => { setFilter("following"); setLoading(true); }}
+              className={`px-2.5 py-1 rounded-full font-mono-share text-[9px] backdrop-blur-sm transition-colors ${
+                filter === "following"
+                  ? "bg-primary/30 text-primary border border-primary/40"
+                  : "bg-black/30 text-white/70 border border-white/10"
+              }`}
+            >
+              FOLLOWING
+            </button>
+          </div>
+        </div>
+
+        {/* Floating compose button */}
+        <button
+          onClick={() => setShowCompose(true)}
+          className="fixed z-40 right-4 bg-primary text-primary-foreground w-12 h-12 rounded-full flex items-center justify-center shadow-lg shadow-primary/30 active:scale-90 transition-transform"
+          style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 72px)" }}
+        >
+          <Plus className="w-6 h-6" />
+        </button>
+
+        {/* Compose sheet */}
+        {showCompose && (
+          <div className="fixed inset-0 z-50 flex items-end bg-black/60 backdrop-blur-sm" onClick={() => setShowCompose(false)}>
+            <div
+              className="w-full bg-card rounded-t-2xl p-4 space-y-3 animate-in slide-in-from-bottom duration-200"
+              style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)" }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-orbitron text-xs text-foreground tracking-wider">NEW POST</span>
+                <button onClick={() => setShowCompose(false)} className="text-muted-foreground p-1">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <Textarea
+                value={newText}
+                onChange={(e) => setNewText(e.target.value)}
+                placeholder="Share something..."
+                maxLength={2000}
+                rows={4}
+                autoFocus
+                className="font-mono-share text-sm bg-input/50 resize-none border-border/30 focus:border-primary/50"
+              />
+              <div className="flex items-center justify-between">
+                <span className="font-mono-share text-[9px] text-muted-foreground">{newText.length}/2000</span>
+                <Button size="sm" onClick={handlePost} disabled={posting || !newText.trim()} className="font-mono-share text-[10px]">
+                  {posting ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Send className="w-3 h-3 mr-1" />}
+                  POST
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <MobileBottomNav isAuthenticated={isAuthenticated} />
+      </>
+    );
+  }
+
+  /* ───── DESKTOP VIEW (unchanged) ───── */
   return (
     <CyberLayout>
       <div className="max-w-2xl mx-auto px-4 py-6 space-y-4 pb-24">
