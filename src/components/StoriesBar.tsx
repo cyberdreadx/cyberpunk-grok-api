@@ -6,6 +6,7 @@ import StoryViewer from "@/components/StoryViewer";
 interface Story {
   id: string;
   mediaUrl: string;
+  previewUrl?: string;
   mediaType: "image" | "video";
   caption: string;
   prompt: string;
