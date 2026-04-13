@@ -39,7 +39,7 @@ interface FeedPost {
 
 const ProfilePage: React.FC = () => {
   const { username } = useParams<{ username: string }>();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -71,12 +71,13 @@ const ProfilePage: React.FC = () => {
   }, [username, toast]);
 
   useEffect(() => {
+    if (authLoading) return;
     if (!isAuthenticated) {
       navigate("/");
       return;
     }
     fetchProfile();
-  }, [isAuthenticated, fetchProfile, navigate]);
+  }, [authLoading, isAuthenticated, fetchProfile, navigate]);
 
   const handleSave = async () => {
     setSaving(true);
