@@ -52,7 +52,8 @@ const ProfilePage: React.FC = () => {
   const [editBio, setEditBio] = useState("");
   const [saving, setSaving] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
-
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
   const fetchProfile = useCallback(async () => {
     try {
       const query = username ? `?username=${username}` : "";
