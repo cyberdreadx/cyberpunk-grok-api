@@ -38,6 +38,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           WHERE p.user_id = ${auth.userId}
         `;
       }
+      // Auto-create profile for authenticated user if missing
+      if (rows.length === 0 && !username) {
+        await sql`
+          INSERT INTO profiles (user_id, username)
+          VALUES (${auth.userId}, 'user_' || substr(${auth.userId}::text, 1, 8))
+          ON CONFLICT DO NOTHING
+        `;
+        // Re-fetch
+        rows = await sql`
+          SELECT p.user_id, p.username, p.avatar_url, p.bio, p.created_at,
+                 u.email,
+                 (SELECT count(*)::int FROM follows WHERE following_id = p.user_id) AS followers,
+                 (SELECT count(*)::int FROM follows WHERE follower_id = p.user_id) AS following,
+                 (SELECT count(*)::int FROM feed_posts WHERE user_id = p.user_id) AS post_count
+          FROM profiles p JOIN users u ON u.id = p.user_id
+          WHERE p.user_id = ${auth.userId}
+        `;
+      }
       if (rows.length === 0) return res.status(404).json({ error: "Profile not found" });
 
       const p = rows[0];
