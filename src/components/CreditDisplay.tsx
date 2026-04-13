@@ -270,6 +270,17 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
             </div>
           )}
 
+          {/* Spin Wheel Section */}
+          <div className="mt-4 border border-primary/20 rounded-lg bg-primary/5 p-4">
+            <h3 className="font-orbitron text-xs tracking-wider neon-text-cyan text-center mb-1">
+              🎰 Free Credits
+            </h3>
+            <p className="font-mono-share text-[10px] text-muted-foreground/60 text-center mb-2">
+              Spin the wheel for a chance to win credits! One free spin every 24 hours.
+            </p>
+            <SpinWheel onCreditsRefresh={onCreditsRefresh} />
+          </div>
+
           <div className="mt-4">
             <PricingCards
               packages={packages}
