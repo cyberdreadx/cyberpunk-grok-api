@@ -15,18 +15,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const sql = getDb();
     const { postId, emoji } = req.body || {};
     if (!postId) return res.status(400).json({ error: "postId required" });
-    const e = (emoji || "❤️").slice(0, 4);
+
+    // Normalize: only allow 👍 (upvote) or 👎 (downvote)
+    const vote = emoji === "👎" ? "👎" : "👍";
 
     try {
+      // Check existing vote
       const existing = await sql`
-        SELECT id FROM feed_reactions WHERE post_id = ${postId} AND user_id = ${auth.userId} AND emoji = ${e}
+        SELECT id, emoji FROM feed_reactions WHERE post_id = ${postId} AND user_id = ${auth.userId}
       `;
+
       if (existing.length > 0) {
-        await sql`DELETE FROM feed_reactions WHERE id = ${existing[0].id}`;
-        return res.json({ action: "removed" });
+        if (existing[0].emoji === vote) {
+          // Same vote — toggle off
+          await sql`DELETE FROM feed_reactions WHERE id = ${existing[0].id}`;
+          return res.json({ action: "removed", vote: null });
+        } else {
+          // Different vote — switch
+          await sql`UPDATE feed_reactions SET emoji = ${vote} WHERE id = ${existing[0].id}`;
+          return res.json({ action: "switched", vote });
+        }
       } else {
-        await sql`INSERT INTO feed_reactions (post_id, user_id, emoji) VALUES (${postId}, ${auth.userId}, ${e})`;
-        return res.json({ action: "added" });
+        await sql`INSERT INTO feed_reactions (post_id, user_id, emoji) VALUES (${postId}, ${auth.userId}, ${vote})`;
+        return res.json({ action: "added", vote });
       }
     } catch (err: any) {
       console.error("[reactions]", err.message);

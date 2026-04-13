@@ -27,11 +27,11 @@ import { deductCredits, refundCredits, logUsage, getUserCredits } from "./_lib/c
 const XAI_BASE = "https://api.x.ai/v1";
 
 const IMAGE_MODELS = ["grok-imagine-image", "grok-imagine-image-pro"] as const;
-const CREDITS_PER_VIDEO_SECOND = 6;
+const CREDITS_PER_VIDEO_SECOND = 3;
 
 const IMAGE_CREDIT_COSTS: Record<string, number> = {
-  "grok-imagine-image": 4,
-  "grok-imagine-image-pro": 10,
+  "grok-imagine-image": 2,
+  "grok-imagine-image-pro": 5,
 };
 
 export const config = {

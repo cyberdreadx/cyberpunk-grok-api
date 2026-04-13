@@ -2,6 +2,12 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getUserFromRequest } from "./_lib/auth";
 import { getDb } from "./_lib/db";
 
+const VOTE_COLS = (userId: string) => `
+  COALESCE((SELECT count(*)::int FROM feed_reactions WHERE post_id = p.id AND emoji = '👍'), 0)
+  - COALESCE((SELECT count(*)::int FROM feed_reactions WHERE post_id = p.id AND emoji = '👎'), 0) AS score,
+  (SELECT emoji FROM feed_reactions WHERE post_id = p.id AND user_id = '${userId}' LIMIT 1) AS user_vote
+`;
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
@@ -23,9 +29,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         rows = cursor
           ? await sql`
               SELECT p.*, pr.username, pr.avatar_url,
-                (SELECT count(*)::int FROM feed_reactions WHERE post_id = p.id) AS reaction_count,
-                (SELECT count(*)::int FROM feed_comments WHERE post_id = p.id) AS comment_count,
-                EXISTS(SELECT 1 FROM feed_reactions WHERE post_id = p.id AND user_id = ${auth.userId}) AS user_reacted
+                COALESCE((SELECT count(*)::int FROM feed_reactions WHERE post_id = p.id AND emoji = '👍'), 0)
+                - COALESCE((SELECT count(*)::int FROM feed_reactions WHERE post_id = p.id AND emoji = '👎'), 0) AS score,
+                (SELECT emoji FROM feed_reactions WHERE post_id = p.id AND user_id = ${auth.userId} LIMIT 1) AS user_vote,
+                (SELECT count(*)::int FROM feed_comments WHERE post_id = p.id) AS comment_count
               FROM feed_posts p
               JOIN profiles pr ON pr.user_id = p.user_id
               WHERE p.user_id = ${userId} AND p.created_at < ${cursor}
@@ -33,9 +40,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             `
           : await sql`
               SELECT p.*, pr.username, pr.avatar_url,
-                (SELECT count(*)::int FROM feed_reactions WHERE post_id = p.id) AS reaction_count,
-                (SELECT count(*)::int FROM feed_comments WHERE post_id = p.id) AS comment_count,
-                EXISTS(SELECT 1 FROM feed_reactions WHERE post_id = p.id AND user_id = ${auth.userId}) AS user_reacted
+                COALESCE((SELECT count(*)::int FROM feed_reactions WHERE post_id = p.id AND emoji = '👍'), 0)
+                - COALESCE((SELECT count(*)::int FROM feed_reactions WHERE post_id = p.id AND emoji = '👎'), 0) AS score,
+                (SELECT emoji FROM feed_reactions WHERE post_id = p.id AND user_id = ${auth.userId} LIMIT 1) AS user_vote,
+                (SELECT count(*)::int FROM feed_comments WHERE post_id = p.id) AS comment_count
               FROM feed_posts p
               JOIN profiles pr ON pr.user_id = p.user_id
               WHERE p.user_id = ${userId}
@@ -45,9 +53,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         rows = cursor
           ? await sql`
               SELECT p.*, pr.username, pr.avatar_url,
-                (SELECT count(*)::int FROM feed_reactions WHERE post_id = p.id) AS reaction_count,
-                (SELECT count(*)::int FROM feed_comments WHERE post_id = p.id) AS comment_count,
-                EXISTS(SELECT 1 FROM feed_reactions WHERE post_id = p.id AND user_id = ${auth.userId}) AS user_reacted
+                COALESCE((SELECT count(*)::int FROM feed_reactions WHERE post_id = p.id AND emoji = '👍'), 0)
+                - COALESCE((SELECT count(*)::int FROM feed_reactions WHERE post_id = p.id AND emoji = '👎'), 0) AS score,
+                (SELECT emoji FROM feed_reactions WHERE post_id = p.id AND user_id = ${auth.userId} LIMIT 1) AS user_vote,
+                (SELECT count(*)::int FROM feed_comments WHERE post_id = p.id) AS comment_count
               FROM feed_posts p
               JOIN profiles pr ON pr.user_id = p.user_id
               WHERE p.user_id IN (SELECT following_id FROM follows WHERE follower_id = ${auth.userId})
@@ -56,9 +65,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             `
           : await sql`
               SELECT p.*, pr.username, pr.avatar_url,
-                (SELECT count(*)::int FROM feed_reactions WHERE post_id = p.id) AS reaction_count,
-                (SELECT count(*)::int FROM feed_comments WHERE post_id = p.id) AS comment_count,
-                EXISTS(SELECT 1 FROM feed_reactions WHERE post_id = p.id AND user_id = ${auth.userId}) AS user_reacted
+                COALESCE((SELECT count(*)::int FROM feed_reactions WHERE post_id = p.id AND emoji = '👍'), 0)
+                - COALESCE((SELECT count(*)::int FROM feed_reactions WHERE post_id = p.id AND emoji = '👎'), 0) AS score,
+                (SELECT emoji FROM feed_reactions WHERE post_id = p.id AND user_id = ${auth.userId} LIMIT 1) AS user_vote,
+                (SELECT count(*)::int FROM feed_comments WHERE post_id = p.id) AS comment_count
               FROM feed_posts p
               JOIN profiles pr ON pr.user_id = p.user_id
               WHERE p.user_id IN (SELECT following_id FROM follows WHERE follower_id = ${auth.userId})
@@ -68,9 +78,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         rows = cursor
           ? await sql`
               SELECT p.*, pr.username, pr.avatar_url,
-                (SELECT count(*)::int FROM feed_reactions WHERE post_id = p.id) AS reaction_count,
-                (SELECT count(*)::int FROM feed_comments WHERE post_id = p.id) AS comment_count,
-                EXISTS(SELECT 1 FROM feed_reactions WHERE post_id = p.id AND user_id = ${auth.userId}) AS user_reacted
+                COALESCE((SELECT count(*)::int FROM feed_reactions WHERE post_id = p.id AND emoji = '👍'), 0)
+                - COALESCE((SELECT count(*)::int FROM feed_reactions WHERE post_id = p.id AND emoji = '👎'), 0) AS score,
+                (SELECT emoji FROM feed_reactions WHERE post_id = p.id AND user_id = ${auth.userId} LIMIT 1) AS user_vote,
+                (SELECT count(*)::int FROM feed_comments WHERE post_id = p.id) AS comment_count
               FROM feed_posts p
               JOIN profiles pr ON pr.user_id = p.user_id
               WHERE p.created_at < ${cursor}
@@ -78,9 +89,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             `
           : await sql`
               SELECT p.*, pr.username, pr.avatar_url,
-                (SELECT count(*)::int FROM feed_reactions WHERE post_id = p.id) AS reaction_count,
-                (SELECT count(*)::int FROM feed_comments WHERE post_id = p.id) AS comment_count,
-                EXISTS(SELECT 1 FROM feed_reactions WHERE post_id = p.id AND user_id = ${auth.userId}) AS user_reacted
+                COALESCE((SELECT count(*)::int FROM feed_reactions WHERE post_id = p.id AND emoji = '👍'), 0)
+                - COALESCE((SELECT count(*)::int FROM feed_reactions WHERE post_id = p.id AND emoji = '👎'), 0) AS score,
+                (SELECT emoji FROM feed_reactions WHERE post_id = p.id AND user_id = ${auth.userId} LIMIT 1) AS user_vote,
+                (SELECT count(*)::int FROM feed_comments WHERE post_id = p.id) AS comment_count
               FROM feed_posts p
               JOIN profiles pr ON pr.user_id = p.user_id
               ORDER BY p.created_at DESC LIMIT ${limit}
@@ -96,9 +108,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           text: r.text,
           imageUrl: r.image_url,
           createdAt: r.created_at,
-          reactionCount: r.reaction_count,
+          score: r.score,
+          userVote: r.user_vote || null,
           commentCount: r.comment_count,
-          userReacted: r.user_reacted,
         })),
         nextCursor: rows.length === limit ? rows[rows.length - 1].created_at : null,
       });
@@ -132,7 +144,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const { postId } = req.body || {};
       if (!postId) return res.status(400).json({ error: "postId required" });
 
-      // Check if user is admin
       const isAdmin = auth.email === (process.env.ADMIN_EMAIL || "cyberdreadx@proton.me");
       if (isAdmin) {
         await sql`DELETE FROM feed_posts WHERE id = ${postId}`;

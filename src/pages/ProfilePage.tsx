@@ -33,9 +33,9 @@ interface FeedPost {
   text: string;
   imageUrl: string | null;
   createdAt: string;
-  reactionCount: number;
+  score: number;
+  userVote: string | null;
   commentCount: number;
-  userReacted: boolean;
 }
 
 const ProfilePage: React.FC = () => {
