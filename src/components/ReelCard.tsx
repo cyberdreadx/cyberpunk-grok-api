@@ -72,6 +72,8 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate }) => {
 
   const timeAgo = formatDistanceToNow(new Date(post.createdAt), { addSuffix: true });
 
+  const isVideo = post.imageUrl ? /\.(mp4|webm|mov)(\?|$)/i.test(post.imageUrl) || post.imageUrl.includes("video") : false;
+
   return (
     <div className="relative w-full h-[100dvh] snap-start snap-always bg-black flex items-center justify-center overflow-hidden">
       {/* Blurred background fill for letterboxing */}
