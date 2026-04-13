@@ -190,11 +190,36 @@ const ProfilePage: React.FC = () => {
         {/* Profile header */}
         <div className="bg-card/60 border border-border/40 rounded-lg p-6 space-y-4">
           <div className="flex items-start gap-4">
-            <Avatar className="w-16 h-16 border-2 border-primary/30">
-              <AvatarFallback className="bg-primary/10 text-primary font-orbitron text-lg">
-                {profile.username.slice(0, 2).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
+          <div className="relative group">
+              <Avatar className="w-16 h-16 border-2 border-primary/30">
+                {profile.avatarUrl && <AvatarImage src={profile.avatarUrl} alt={profile.username} />}
+                <AvatarFallback className="bg-primary/10 text-primary font-orbitron text-lg">
+                  {profile.username.slice(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              {profile.isOwn && (
+                <>
+                  <input
+                    ref={avatarInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    className="hidden"
+                    onChange={handleAvatarUpload}
+                  />
+                  <button
+                    onClick={() => avatarInputRef.current?.click()}
+                    disabled={avatarUploading}
+                    className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    {avatarUploading ? (
+                      <Loader2 className="w-5 h-5 text-primary animate-spin" />
+                    ) : (
+                      <Camera className="w-5 h-5 text-primary" />
+                    )}
+                  </button>
+                </>
+              )}
+            </div>
 
             <div className="flex-1 min-w-0">
               {editing ? (
