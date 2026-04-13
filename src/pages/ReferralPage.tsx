@@ -124,7 +124,7 @@ export default function ReferralPage() {
                   {referralLink || "Generating..."}
                 </div>
                 <Button size="sm" variant="outline" onClick={handleCopy} className="shrink-0 border-border">
-                  {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
+                  {copied ? <Check className="w-4 h-4 text-primary" /> : <Copy className="w-4 h-4" />}
                 </Button>
               </div>
               <Button onClick={handleShare} className="w-full bg-primary text-primary-foreground font-semibold gap-2">
