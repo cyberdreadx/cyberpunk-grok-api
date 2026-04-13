@@ -204,7 +204,7 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
       return;
     }
     setSwipeOffset(0);
-    if (!swipeRef.current.swiping && !isLocked) {
+    if (!swipeRef.current.swiping) {
       const touch = e.changedTouches[0];
       const rect = e.currentTarget.getBoundingClientRect();
       const x = touch.clientX - rect.left;
@@ -216,7 +216,6 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
   }, [onClose, goPrev, goNext, isLocked]);
 
   const handleClick = (e: React.MouseEvent) => {
-    if (isLocked) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
     if (x < rect.width / 3) goPrev();
@@ -393,8 +392,8 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
         </div>
       )}
 
-      {/* Nav arrows (desktop) — hidden when locked */}
-      {!isLocked && userIdx > 0 && (
+      {/* Nav arrows (desktop) */}
+      {userIdx > 0 && (
         <button
           onClick={(e) => { e.stopPropagation(); goPrev(); }}
           className="absolute left-2 top-1/2 -translate-y-1/2 text-white/50 hover:text-white z-10 hidden sm:block"
@@ -402,7 +401,7 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
           <ChevronLeft className="w-8 h-8" />
         </button>
       )}
-      {!isLocked && (storyIdx < currentUser.stories.length - 1 || userIdx < users.length - 1) && (
+      {(storyIdx < currentUser.stories.length - 1 || userIdx < users.length - 1) && (
         <button
           onClick={(e) => { e.stopPropagation(); goNext(); }}
           className="absolute right-2 top-1/2 -translate-y-1/2 text-white/50 hover:text-white z-10 hidden sm:block"
