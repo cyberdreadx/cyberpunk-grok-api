@@ -14,6 +14,8 @@ interface Story {
   expiresAt: string;
   viewed: boolean;
   viewCount?: number;
+  likeCount?: number;
+  userLiked?: boolean;
   lockCost?: number;
   unlocked?: boolean;
   isOwner?: boolean;
