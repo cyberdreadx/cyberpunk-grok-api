@@ -18,6 +18,7 @@ const ShareView = lazyWithRetry(() => import("./pages/ShareView"), "share-view")
 const ApiDocs = lazyWithRetry(() => import("./pages/ApiDocs"), "api-docs");
 const FeedPage = lazyWithRetry(() => import("./pages/FeedPage"), "feed");
 const ProfilePage = lazyWithRetry(() => import("./pages/ProfilePage"), "profile");
+const ReferralPage = lazyWithRetry(() => import("./pages/ReferralPage"), "referral");
 import AgeGateDialog from "@/components/AgeGateDialog";
 
 const queryClient = new QueryClient();
@@ -53,6 +54,7 @@ const App = () => (
           <Route path="/feed" element={<PageShell><FeedPage /></PageShell>} />
           <Route path="/profile" element={<PageShell><ProfilePage /></PageShell>} />
           <Route path="/profile/:username" element={<PageShell><ProfilePage /></PageShell>} />
+          <Route path="/referral" element={<PageShell><ReferralPage /></PageShell>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
