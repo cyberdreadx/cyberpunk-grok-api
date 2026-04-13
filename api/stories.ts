@@ -47,6 +47,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       const viewerId = auth.userId;
 
+      // Ensure story_likes table exists (safe for first deploy before migration)
+      await sql`CREATE TABLE IF NOT EXISTS story_likes (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        story_id UUID NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        UNIQUE(story_id, user_id)
+      )`.catch(() => {});
+
       const rows = await sql`
         SELECT
           s.id, s.user_id, s.media_url, s.media_type, s.caption, s.prompt,
