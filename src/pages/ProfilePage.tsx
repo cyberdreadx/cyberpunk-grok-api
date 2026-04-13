@@ -98,7 +98,41 @@ const ProfilePage: React.FC = () => {
     }
   };
 
-  const handleFollow = async () => {
+  const handleAvatarUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Please select an image file", variant: "destructive" });
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "Image must be under 5 MB", variant: "destructive" });
+      return;
+    }
+    setAvatarUploading(true);
+    try {
+      const authToken = localStorage.getItem("auth-token") || "";
+      const apiBase = import.meta.env.VITE_API_URL || "/api";
+      const { url: blobUrl } = await upload(`avatars/avatar.${file.name.split(".").pop()}`, file, {
+        access: "public",
+        handleUploadUrl: `${apiBase}/blob-upload`,
+        clientPayload: authToken,
+      });
+      await apiFetch("/profile", {
+        method: "PUT",
+        body: { avatarUrl: blobUrl },
+      });
+      toast({ title: "Avatar updated!" });
+      fetchProfile();
+    } catch (err: any) {
+      toast({ title: err.message || "Failed to upload avatar", variant: "destructive" });
+    } finally {
+      setAvatarUploading(false);
+      if (avatarInputRef.current) avatarInputRef.current.value = "";
+    }
+  }, [toast, fetchProfile]);
+
+
     if (!profile) return;
     setFollowLoading(true);
     try {
