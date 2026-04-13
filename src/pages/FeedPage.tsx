@@ -24,7 +24,7 @@ interface FeedPost {
 }
 
 const FeedPage: React.FC = () => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -58,14 +58,17 @@ const FeedPage: React.FC = () => {
     }
   }, [filter, toast]);
 
+  
+
   useEffect(() => {
+    if (authLoading) return;
     if (!isAuthenticated) {
       navigate("/");
       return;
     }
     setLoading(true);
     fetchFeed();
-  }, [isAuthenticated, fetchFeed, navigate]);
+  }, [authLoading, isAuthenticated, fetchFeed, navigate]);
 
   const handlePost = async () => {
     if (!newText.trim()) return;
