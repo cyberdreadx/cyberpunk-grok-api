@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
@@ -7,9 +7,10 @@ import PostCard from "@/components/PostCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { UserPlus, UserMinus, Edit2, Check, X, ArrowLeft } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { UserPlus, UserMinus, Edit2, Check, X, ArrowLeft, Camera, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { upload } from "@vercel/blob/client";
 
 interface Profile {
   userId: string;
@@ -51,7 +52,8 @@ const ProfilePage: React.FC = () => {
   const [editBio, setEditBio] = useState("");
   const [saving, setSaving] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
-
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
   const fetchProfile = useCallback(async () => {
     try {
       const query = username ? `?username=${username}` : "";
@@ -95,6 +97,40 @@ const ProfilePage: React.FC = () => {
       setSaving(false);
     }
   };
+
+  const handleAvatarUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Please select an image file", variant: "destructive" });
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "Image must be under 5 MB", variant: "destructive" });
+      return;
+    }
+    setAvatarUploading(true);
+    try {
+      const authToken = localStorage.getItem("auth-token") || "";
+      const apiBase = import.meta.env.VITE_API_URL || "/api";
+      const { url: blobUrl } = await upload(`avatars/avatar.${file.name.split(".").pop()}`, file, {
+        access: "public",
+        handleUploadUrl: `${apiBase}/blob-upload`,
+        clientPayload: authToken,
+      });
+      await apiFetch("/profile", {
+        method: "PUT",
+        body: { avatarUrl: blobUrl },
+      });
+      toast({ title: "Avatar updated!" });
+      fetchProfile();
+    } catch (err: any) {
+      toast({ title: err.message || "Failed to upload avatar", variant: "destructive" });
+    } finally {
+      setAvatarUploading(false);
+      if (avatarInputRef.current) avatarInputRef.current.value = "";
+    }
+  }, [toast, fetchProfile]);
 
   const handleFollow = async () => {
     if (!profile) return;
@@ -154,11 +190,36 @@ const ProfilePage: React.FC = () => {
         {/* Profile header */}
         <div className="bg-card/60 border border-border/40 rounded-lg p-6 space-y-4">
           <div className="flex items-start gap-4">
-            <Avatar className="w-16 h-16 border-2 border-primary/30">
-              <AvatarFallback className="bg-primary/10 text-primary font-orbitron text-lg">
-                {profile.username.slice(0, 2).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
+          <div className="relative group">
+              <Avatar className="w-16 h-16 border-2 border-primary/30">
+                {profile.avatarUrl && <AvatarImage src={profile.avatarUrl} alt={profile.username} />}
+                <AvatarFallback className="bg-primary/10 text-primary font-orbitron text-lg">
+                  {profile.username.slice(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              {profile.isOwn && (
+                <>
+                  <input
+                    ref={avatarInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    className="hidden"
+                    onChange={handleAvatarUpload}
+                  />
+                  <button
+                    onClick={() => avatarInputRef.current?.click()}
+                    disabled={avatarUploading}
+                    className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    {avatarUploading ? (
+                      <Loader2 className="w-5 h-5 text-primary animate-spin" />
+                    ) : (
+                      <Camera className="w-5 h-5 text-primary" />
+                    )}
+                  </button>
+                </>
+              )}
+            </div>
 
             <div className="flex-1 min-w-0">
               {editing ? (
