@@ -58,7 +58,7 @@ const FeedPage: React.FC = () => {
     }
   }, [filter, toast]);
 
-  const { loading: authLoading } = useAuth();
+  
 
   useEffect(() => {
     if (authLoading) return;
