@@ -43,6 +43,7 @@ interface FeedPost {
   userFlagged?: boolean;
   lockCost?: number;
   lockPriceCents?: number;
+  lockXrgeAmount?: string;
   unlocked?: boolean;
   isOwner?: boolean;
 }
