@@ -120,7 +120,7 @@ const EarningsPanel: React.FC = () => {
     );
   }
 
-  if (!data || (data.summary.postUnlocks === 0 && data.summary.storyUnlocks === 0)) {
+  if (!data || (data.summary.postUnlocks === 0 && data.summary.storyUnlocks === 0 && data.summary.xrgeUnlocks === 0)) {
     return null;
   }
 
