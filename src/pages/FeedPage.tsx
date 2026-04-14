@@ -22,6 +22,7 @@ interface FeedPost {
   avatarUrl: string | null;
   text: string;
   imageUrl: string | null;
+  previewImageUrl?: string;
   previewText?: string;
   createdAt: string;
   score: number;

@@ -16,6 +16,7 @@ interface FeedPost {
   avatarUrl: string | null;
   text: string;
   imageUrl: string | null;
+  previewImageUrl?: string;
   previewText?: string;
   createdAt: string;
   score: number;
@@ -143,6 +144,14 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate }) => {
         ) : (
           <img src={post.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover blur-2xl scale-110 opacity-40" />
         )
+      )}
+
+      {/* Blurred preview for locked posts with images */}
+      {isLocked && post.previewImageUrl && (
+        <>
+          <img src={post.previewImageUrl} alt="" className="absolute inset-0 w-full h-full object-cover blur-2xl scale-110 opacity-30" />
+          <img src={post.previewImageUrl} alt="" className="absolute inset-0 w-full h-full object-cover blur-xl brightness-50" />
+        </>
       )}
 
       {!isLocked && post.imageUrl ? (
