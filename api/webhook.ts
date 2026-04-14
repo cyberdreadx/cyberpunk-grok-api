@@ -153,11 +153,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             ON CONFLICT (post_id, user_id) DO NOTHING
           `;
           // Revenue split: 75% creator, 20% platform, 5% charity
-          // Creator gets 75% as pack credits (1 credit per $0.10)
+          // Creator gets 75% as cash balance (real money)
           if (creatorId && amountCents > 0) {
-            const creatorCredits = Math.floor((amountCents * 0.75) / 10);
-            if (creatorCredits > 0) {
-              await sql`UPDATE users SET pack_credits = pack_credits + ${creatorCredits}, updated_at = now() WHERE id = ${creatorId}::uuid`;
+            const creatorCents = Math.floor(amountCents * 0.75);
+            const creatorCredits = Math.floor(creatorCents / 10);
+            if (creatorCents > 0) {
+              await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS cash_balance_cents INT NOT NULL DEFAULT 0`.catch(() => {});
+              await sql`UPDATE users SET cash_balance_cents = COALESCE(cash_balance_cents, 0) + ${creatorCents}, pack_credits = pack_credits + ${creatorCredits}, updated_at = now() WHERE id = ${creatorId}::uuid`;
             }
           }
           console.log(`[webhook] Post ${postId} unlocked by ${userId} via Stripe ($${(amountCents / 100).toFixed(2)}) — 75% creator / 20% platform / 5% charity`);
