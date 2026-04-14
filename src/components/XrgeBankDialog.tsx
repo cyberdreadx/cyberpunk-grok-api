@@ -124,6 +124,9 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
   const [withdrawing, setWithdrawing] = useState(false);
   const [withdrawResult, setWithdrawResult] = useState<{ amount: number; status: string } | null>(null);
 
+  // Flash sale state
+  const [flashSale, setFlashSale] = useState<{ id: string; title: string; discount_percent: number; bonus_credits_percent: number; ends_at: string } | null>(null);
+
   // Copied state for address
   const [copied, setCopied] = useState(false);
 
@@ -150,6 +153,11 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
       setWithdrawResult(null);
       setWithdrawAmount("");
       setWithdrawAddress("");
+      // Fetch active flash sales
+      apiFetch("/flash-sales").then(r => {
+        if (r.sales && r.sales.length > 0) setFlashSale(r.sales[0]);
+        else setFlashSale(null);
+      }).catch(() => setFlashSale(null));
     }
   }, [open, fetchBalance]);
 
