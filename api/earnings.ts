@@ -112,6 +112,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const charityCredits = Math.floor(totalCreditsEarned * 0.05);
     const charityCents = Math.floor(totalCentsEarned * 0.05);
 
+    const totalXrgeEarned = parseFloat(feedXrge[0]?.total_xrge || 0) + parseFloat(storyXrge[0]?.total_xrge || 0);
+    const creatorShareXrge = parseFloat((totalXrgeEarned * 0.80).toFixed(4));
+    const xrgeUnlocks = (feedXrge[0]?.unlock_count || 0) + (storyXrge[0]?.unlock_count || 0);
+
     return res.status(200).json({
       summary: {
         totalCreditsEarned,
@@ -123,11 +127,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         cashBalanceCents: userRow?.cash_balance_cents || 0,
         postUnlocks: (feedCredits[0]?.unlock_count || 0) + (feedCash[0]?.unlock_count || 0),
         storyUnlocks: storyCredits[0]?.unlock_count || 0,
+        totalXrgeEarned,
+        creatorShareXrge,
+        xrgeUnlocks,
       },
       recent: recent.map((r: any) => ({
         type: r.type,
         creditsPaid: r.credits_paid,
         centsPaid: r.cents_paid,
+        xrgePaid: r.xrge_paid || undefined,
         buyerName: r.buyer_name,
         unlockedAt: r.unlocked_at,
       })),
