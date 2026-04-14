@@ -56,6 +56,44 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const body = req.body || {};
 
+    // ── Post Unlock: one-time payment to unlock a locked feed post ──
+    if (body.action === "post_unlock") {
+      const { postId } = body;
+      if (!postId) return res.status(400).json({ error: "postId required" });
+
+      const [post] = await sql`SELECT id, user_id, lock_price_cents FROM feed_posts WHERE id = ${postId}::uuid`;
+      if (!post) return res.status(404).json({ error: "Post not found" });
+      if (post.lock_price_cents <= 0) return res.status(400).json({ error: "Post has no cash price" });
+      if (post.user_id === auth.userId) return res.status(400).json({ error: "Cannot unlock own post" });
+
+      // Check already unlocked
+      const [already] = await sql`SELECT id FROM feed_unlocks WHERE post_id = ${postId}::uuid AND user_id = ${auth.userId}::uuid`.catch(() => [undefined]);
+      if (already) return res.status(400).json({ error: "Already unlocked" });
+
+      const session = await stripe.checkout.sessions.create({
+        mode: "payment",
+        line_items: [{
+          price_data: {
+            currency: "usd",
+            unit_amount: post.lock_price_cents,
+            product_data: { name: `Unlock Post` },
+          },
+          quantity: 1,
+        }],
+        client_reference_id: auth.userId,
+        metadata: {
+          user_id: auth.userId,
+          type: "post_unlock",
+          post_id: postId,
+          creator_id: post.user_id,
+          amount_cents: String(post.lock_price_cents),
+        },
+        success_url: `${SITE_URL}/feed?checkout=success&unlocked=${postId}`,
+        cancel_url: `${SITE_URL}/feed?checkout=cancelled`,
+      });
+      return res.status(200).json({ url: session.url });
+    }
+
     // ── LoRA Unlock: one-time $30 payment ──
     if (body.action === "lora_unlock") {
       const priceId = process.env.STRIPE_PRICE_LORA_UNLOCK;

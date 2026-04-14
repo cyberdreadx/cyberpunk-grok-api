@@ -32,12 +32,17 @@ interface FeedPost {
   avatarUrl: string | null;
   text: string;
   imageUrl: string | null;
+  previewText?: string;
   createdAt: string;
   score: number;
   userVote: string | null;
   commentCount: number;
   flagCount?: number;
   userFlagged?: boolean;
+  lockCost?: number;
+  lockPriceCents?: number;
+  unlocked?: boolean;
+  isOwner?: boolean;
 }
 
 const ProfilePage: React.FC = () => {

@@ -140,6 +140,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json({ received: true, pending: true });
       }
 
+      // ── Post unlock (Stripe payment) ──
+      if (session.metadata?.type === "post_unlock") {
+        const userId = session.client_reference_id || session.metadata?.user_id;
+        const postId = session.metadata?.post_id;
+        const creatorId = session.metadata?.creator_id;
+        const amountCents = parseInt(session.metadata?.amount_cents || "0", 10);
+        if (userId && postId) {
+          await sql`
+            INSERT INTO feed_unlocks (post_id, user_id, cents_paid, unlock_method, stripe_session_id)
+            VALUES (${postId}::uuid, ${userId}::uuid, ${amountCents}, 'stripe', ${session.id})
+            ON CONFLICT (post_id, user_id) DO NOTHING
+          `;
+          // Give 80% of revenue to creator as pack credits (1 credit per $0.10)
+          if (creatorId && amountCents > 0) {
+            const creatorCredits = Math.floor((amountCents * 0.8) / 10);
+            if (creatorCredits > 0) {
+              await sql`UPDATE users SET pack_credits = pack_credits + ${creatorCredits}, updated_at = now() WHERE id = ${creatorId}::uuid`;
+            }
+          }
+          console.log(`[webhook] Post ${postId} unlocked by ${userId} via Stripe ($${(amountCents / 100).toFixed(2)})`);
+        }
+        return res.status(200).json({ received: true });
+      }
+
       // ── LoRA unlock (one-time purchase) ──
       if (session.metadata?.type === "lora_unlock") {
         const userId = session.client_reference_id || session.metadata?.user_id;

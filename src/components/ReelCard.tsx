@@ -3,9 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowBigUp, ArrowBigDown, MessageCircle, Trash2, Flag } from "lucide-react";
+import { ArrowBigUp, ArrowBigDown, MessageCircle, Trash2, Flag, Lock, Coins, CreditCard } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import CommentThread from "@/components/CommentThread";
+import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
 
 interface FeedPost {
@@ -15,12 +16,17 @@ interface FeedPost {
   avatarUrl: string | null;
   text: string;
   imageUrl: string | null;
+  previewText?: string;
   createdAt: string;
   score: number;
   userVote: string | null;
   commentCount: number;
   flagCount?: number;
   userFlagged?: boolean;
+  lockCost?: number;
+  lockPriceCents?: number;
+  unlocked?: boolean;
+  isOwner?: boolean;
 }
 
 interface ReelCardProps {
@@ -40,8 +46,13 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate }) => {
   const [flagCount, setFlagCount] = useState(post.flagCount ?? 0);
   const [userFlagged, setUserFlagged] = useState(post.userFlagged ?? false);
   const [flagging, setFlagging] = useState(false);
+  const [unlocking, setUnlocking] = useState(false);
+  const [isUnlocked, setIsUnlocked] = useState(post.unlocked ?? true);
+
+  const isLocked = !isUnlocked && !post.isOwner && ((post.lockCost || 0) > 0 || (post.lockPriceCents || 0) > 0);
 
   const handleVote = async (emoji: "👍" | "👎") => {
+    if (isLocked) return;
     const prevScore = score;
     const prevVote = userVote;
     if (userVote === emoji) {
@@ -79,10 +90,7 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate }) => {
     if (userFlagged) return;
     setFlagging(true);
     try {
-      const res = await apiFetch("/report", {
-        method: "POST",
-        body: { postId: post.id },
-      });
+      const res = await apiFetch("/report", { method: "POST", body: { postId: post.id } });
       setFlagCount(res.flagCount);
       setUserFlagged(true);
       if (res.removed) {
@@ -98,13 +106,38 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate }) => {
     }
   };
 
+  const handleUnlockCredits = async () => {
+    setUnlocking(true);
+    try {
+      await apiFetch("/feed", { method: "PATCH", body: { postId: post.id } });
+      setIsUnlocked(true);
+      toast({ title: "Post unlocked!" });
+      onUpdate?.();
+    } catch (err: any) {
+      toast({ title: err.message, variant: "destructive" });
+    } finally {
+      setUnlocking(false);
+    }
+  };
+
+  const handleUnlockStripe = async () => {
+    setUnlocking(true);
+    try {
+      const res = await apiFetch("/checkout", { method: "POST", body: { action: "post_unlock", postId: post.id } });
+      if (res.url) window.location.href = res.url;
+    } catch (err: any) {
+      toast({ title: err.message, variant: "destructive" });
+      setUnlocking(false);
+    }
+  };
+
   const timeAgo = formatDistanceToNow(new Date(post.createdAt), { addSuffix: true });
   const isVideo = post.imageUrl ? /\.(mp4|webm|mov)(\?|$)/i.test(post.imageUrl) || post.imageUrl.includes("video") : false;
 
   return (
     <div className="relative w-full h-[100dvh] snap-start snap-always bg-black flex items-center justify-center overflow-hidden">
-      {/* Blurred background fill for letterboxing */}
-      {post.imageUrl && (
+      {/* Background / media */}
+      {!isLocked && post.imageUrl && (
         isVideo ? (
           <video src={post.imageUrl} className="absolute inset-0 w-full h-full object-cover blur-2xl scale-110 opacity-40" muted playsInline autoPlay loop />
         ) : (
@@ -112,41 +145,66 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate }) => {
         )
       )}
 
-      {/* Main media — object-contain to show full dimensions */}
-      {post.imageUrl ? (
+      {!isLocked && post.imageUrl ? (
         isVideo ? (
-          <video
-            src={post.imageUrl}
-            className="relative z-[1] w-full h-full object-contain"
-            muted playsInline autoPlay loop
-          />
+          <video src={post.imageUrl} className="relative z-[1] w-full h-full object-contain" muted playsInline autoPlay loop />
         ) : (
-          <img
-            src={post.imageUrl}
-            alt=""
-            className="relative z-[1] w-full h-full object-contain"
-            loading="lazy"
-          />
+          <img src={post.imageUrl} alt="" className="relative z-[1] w-full h-full object-contain" loading="lazy" />
         )
-      ) : (
+      ) : !isLocked ? (
         <div className="absolute inset-0 bg-gradient-to-b from-background via-card to-background" />
-      )}
+      ) : null}
 
-      {/* Dark overlay for readability */}
       <div className="absolute inset-0 z-[2] bg-gradient-to-b from-black/40 via-transparent to-black/70 pointer-events-none" />
 
-      {/* Text-only posts: centered text */}
-      {!post.imageUrl && post.text && (
-        <div className="relative z-10 px-8 max-w-full">
-          <p className="font-mono-share text-base text-foreground/90 whitespace-pre-wrap break-words text-center leading-relaxed">
-            {post.text}
-          </p>
+      {/* Locked overlay */}
+      {isLocked ? (
+        <div className="relative z-10 flex flex-col items-center gap-4 px-8">
+          <Lock className="w-12 h-12 text-amber-400/70" />
+          <p className="font-orbitron text-sm text-white/80 tracking-wider text-center">LOCKED CONTENT</p>
+          {post.previewText && (
+            <p className="font-mono-share text-xs text-white/50 text-center max-w-xs italic">{post.previewText}</p>
+          )}
+          <div className="flex flex-col gap-2 w-full max-w-xs">
+            {(post.lockCost || 0) > 0 && (
+              <Button
+                onClick={handleUnlockCredits}
+                disabled={unlocking}
+                className="w-full font-mono-share text-xs bg-amber-500/20 border border-amber-400/40 text-amber-300 hover:bg-amber-500/30"
+                variant="outline"
+              >
+                <Coins className="w-4 h-4 mr-2" />
+                Unlock · {post.lockCost} credits
+              </Button>
+            )}
+            {(post.lockPriceCents || 0) > 0 && (
+              <Button
+                onClick={handleUnlockStripe}
+                disabled={unlocking}
+                className="w-full font-mono-share text-xs bg-green-500/20 border border-green-400/40 text-green-300 hover:bg-green-500/30"
+                variant="outline"
+              >
+                <CreditCard className="w-4 h-4 mr-2" />
+                Unlock · ${((post.lockPriceCents || 0) / 100).toFixed(2)}
+              </Button>
+            )}
+          </div>
         </div>
+      ) : (
+        <>
+          {/* Text-only posts */}
+          {!post.imageUrl && post.text && (
+            <div className="relative z-10 px-8 max-w-full">
+              <p className="font-mono-share text-base text-foreground/90 whitespace-pre-wrap break-words text-center leading-relaxed">
+                {post.text}
+              </p>
+            </div>
+          )}
+        </>
       )}
 
-      {/* Right side actions (TikTok style) */}
+      {/* Right side actions */}
       <div className="absolute right-3 bottom-[30%] z-20 flex flex-col items-center gap-5">
-        {/* Upvote */}
         <button onClick={() => handleVote("👍")} className="flex flex-col items-center gap-0.5">
           <div className={`p-2 rounded-full backdrop-blur-sm transition-colors ${
             userVote === "👍" ? "bg-primary/30 text-primary" : "bg-black/30 text-white/80"
@@ -155,14 +213,12 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate }) => {
           </div>
         </button>
 
-        {/* Score */}
         <span className={`font-mono-share text-xs font-bold ${
           score > 0 ? "text-primary" : score < 0 ? "text-destructive" : "text-white/70"
         }`}>
           {score}
         </span>
 
-        {/* Downvote */}
         <button onClick={() => handleVote("👎")} className="flex flex-col items-center gap-0.5">
           <div className={`p-2 rounded-full backdrop-blur-sm transition-colors ${
             userVote === "👎" ? "bg-destructive/30 text-destructive" : "bg-black/30 text-white/80"
@@ -171,19 +227,19 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate }) => {
           </div>
         </button>
 
-        {/* Comments */}
-        <button onClick={() => setShowComments(!showComments)} className="flex flex-col items-center gap-0.5">
-          <div className={`p-2 rounded-full backdrop-blur-sm transition-colors ${
-            showComments ? "bg-primary/30 text-primary" : "bg-black/30 text-white/80"
-          }`}>
-            <MessageCircle className="w-6 h-6" />
-          </div>
-          {commentCount > 0 && (
-            <span className="font-mono-share text-[10px] text-white/70">{commentCount}</span>
-          )}
-        </button>
+        {!isLocked && (
+          <button onClick={() => setShowComments(!showComments)} className="flex flex-col items-center gap-0.5">
+            <div className={`p-2 rounded-full backdrop-blur-sm transition-colors ${
+              showComments ? "bg-primary/30 text-primary" : "bg-black/30 text-white/80"
+            }`}>
+              <MessageCircle className="w-6 h-6" />
+            </div>
+            {commentCount > 0 && (
+              <span className="font-mono-share text-[10px] text-white/70">{commentCount}</span>
+            )}
+          </button>
+        )}
 
-        {/* Flag / Report */}
         {user?.id !== post.userId && (
           <button onClick={handleFlag} disabled={flagging || userFlagged} className="flex flex-col items-center gap-0.5">
             <div className={`p-2 rounded-full backdrop-blur-sm transition-colors ${
@@ -197,7 +253,6 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate }) => {
           </button>
         )}
 
-        {/* Delete */}
         {(user?.id === post.userId || user?.is_admin || user?.is_feed_mod) && (
           <button onClick={handleDelete} disabled={deleting} className="flex flex-col items-center gap-0.5">
             <div className="p-2 rounded-full bg-black/30 text-white/60 hover:text-destructive backdrop-blur-sm transition-colors">
@@ -224,7 +279,7 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate }) => {
           </div>
         </button>
 
-        {post.imageUrl && post.text && (
+        {!isLocked && post.imageUrl && post.text && (
           <p className="font-mono-share text-sm text-white/90 whitespace-pre-wrap break-words line-clamp-3 drop-shadow-md">
             {post.text}
           </p>
@@ -232,7 +287,7 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate }) => {
       </div>
 
       {/* Comments overlay */}
-      {showComments && (
+      {showComments && !isLocked && (
         <div
           className="absolute inset-x-0 bottom-0 z-30 bg-card/95 backdrop-blur-md rounded-t-2xl max-h-[60dvh] overflow-y-auto"
           style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 72px)" }}
