@@ -36,6 +36,8 @@ interface FeedPost {
   score: number;
   userVote: string | null;
   commentCount: number;
+  flagCount?: number;
+  userFlagged?: boolean;
 }
 
 const ProfilePage: React.FC = () => {
