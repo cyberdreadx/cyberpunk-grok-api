@@ -16,11 +16,11 @@ import { checkRateLimit, getClientIp } from "./_lib/ratelimit";
 const XAI_API_BASE = "https://api.x.ai/v1";
 
 const CREDIT_COSTS = {
-  imageGen: 1,
-  imageEdit: 2,
-  imageGenPro: 3,
-  imageEditPro: 4,
-  videoPerSecond: 2,
+  imageGen: 4,
+  imageEdit: 6,
+  imageGenPro: 10,
+  imageEditPro: 12,
+  videoPerSecond: 6,
 };
 
 const PRO_MODEL = "grok-imagine-image-pro";
