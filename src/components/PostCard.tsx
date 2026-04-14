@@ -306,6 +306,16 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
       {showComments && !isLocked && (
         <CommentThread postId={post.id} onCountChange={(count) => setCommentCount(count)} />
       )}
+
+      {post.lockXrgeAmount && (
+        <XrgeUnlockDialog
+          open={xrgeUnlockOpen}
+          onClose={() => setXrgeUnlockOpen(false)}
+          xrgeAmount={post.lockXrgeAmount}
+          postId={post.id}
+          onSuccess={() => { setIsUnlocked(true); onUpdate?.(); }}
+        />
+      )}
     </div>
   );
 };
