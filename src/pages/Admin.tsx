@@ -514,7 +514,117 @@ function AnnouncementPanel() {
   );
 }
 
+// ── Payouts Panel ──
+
+function PayoutsPanel() {
+  const [requests, setRequests] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [acting, setActing] = useState<string | null>(null);
+
+  const fetchPayouts = useCallback(async () => {
+    try {
+      const data = await apiFetch<{ requests: any[] }>("/payouts?admin=1");
+      setRequests(data.requests || []);
+    } catch {
+      // ignore
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchPayouts(); }, [fetchPayouts]);
+
+  const handleAction = async (requestId: string, action: string, adminNote?: string) => {
+    setActing(requestId);
+    try {
+      await apiFetch("/payouts", { method: "PATCH", body: { requestId, action, adminNote } });
+      fetchPayouts();
+    } catch {
+      // ignore
+    } finally {
+      setActing(null);
+    }
+  };
+
+  const STATUS_COLORS: Record<string, string> = {
+    pending: "text-amber-400",
+    approved: "text-blue-400",
+    paid: "text-green-400",
+    rejected: "text-destructive",
+  };
+
+  if (loading) return <div className="py-8 text-center font-mono-share text-muted-foreground animate-pulse">Loading payouts...</div>;
+
+  return (
+    <div className="space-y-4">
+      <h2 className="font-orbitron text-xs tracking-widest text-muted-foreground flex items-center gap-2">
+        <CreditCard className="w-3.5 h-3.5" /> PAYOUT REQUESTS
+      </h2>
+      {requests.length === 0 ? (
+        <p className="font-mono-share text-xs text-muted-foreground text-center py-8">No payout requests yet</p>
+      ) : (
+        <div className="space-y-2">
+          {requests.map((r) => (
+            <div key={r.id} className="border border-border/30 rounded-lg bg-card/40 p-3 space-y-2">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <span className={`font-orbitron text-[10px] font-bold ${STATUS_COLORS[r.status] || "text-muted-foreground"}`}>
+                    {r.status.toUpperCase()}
+                  </span>
+                  <span className="font-orbitron text-sm text-foreground">${(r.amount_cents / 100).toFixed(2)}</span>
+                  <span className="font-mono-share text-[9px] text-muted-foreground">via {r.method}</span>
+                </div>
+                <span className="font-mono-share text-[9px] text-muted-foreground">
+                  {new Date(r.created_at).toLocaleDateString()}
+                </span>
+              </div>
+              <div className="font-mono-share text-[10px] text-muted-foreground space-y-0.5">
+                <div>Creator: <span className="text-foreground">{r.username}</span> ({r.email})</div>
+                <div>Details: <span className="text-foreground">{r.payout_details}</span></div>
+                {r.admin_note && <div>Note: <span className="text-foreground">{r.admin_note}</span></div>}
+              </div>
+              {r.status === "pending" && (
+                <div className="flex gap-2 pt-1">
+                  <Button
+                    size="sm"
+                    onClick={() => handleAction(r.id, "approve")}
+                    disabled={acting === r.id}
+                    className="font-mono-share text-[10px]"
+                  >
+                    APPROVE
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => handleAction(r.id, "reject", "Rejected by admin")}
+                    disabled={acting === r.id}
+                    className="font-mono-share text-[10px]"
+                  >
+                    REJECT
+                  </Button>
+                </div>
+              )}
+              {r.status === "approved" && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleAction(r.id, "paid")}
+                  disabled={acting === r.id}
+                  className="font-mono-share text-[10px] border-green-400/30 text-green-400"
+                >
+                  MARK AS PAID
+                </Button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main Admin Page ──
+
 
 export default function Admin() {
   const navigate = useNavigate();
