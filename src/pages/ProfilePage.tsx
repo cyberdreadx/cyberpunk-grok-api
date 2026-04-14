@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { UserPlus, UserMinus, Edit2, Check, X, ArrowLeft, Camera, Loader2 } from "lucide-react";
+import { UserPlus, UserMinus, Edit2, Check, X, ArrowLeft, Camera, Loader2, Wallet } from "lucide-react";
 import EarningsPanel from "@/components/EarningsPanel";
 import { useToast } from "@/hooks/use-toast";
 import { upload } from "@vercel/blob/client";
@@ -18,6 +18,7 @@ interface Profile {
   username: string;
   avatarUrl: string | null;
   bio: string;
+  walletAddress?: string | null;
   createdAt: string;
   followers: number;
   following: number;

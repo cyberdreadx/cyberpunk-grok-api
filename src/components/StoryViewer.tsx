@@ -458,6 +458,21 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
           <ChevronRight className="w-8 h-8" />
         </button>
       )}
+
+      {currentStory?.lockXrgeAmount && parseFloat(currentStory.lockXrgeAmount) > 0 && (
+        <XrgeUnlockDialog
+          open={xrgeUnlockOpen}
+          onClose={() => setXrgeUnlockOpen(false)}
+          xrgeAmount={currentStory.lockXrgeAmount}
+          storyId={currentStory.id}
+          onSuccess={() => {
+            currentStory.unlocked = true;
+            currentStory.mediaUrl = "";
+            onUnlocked?.();
+            setXrgeUnlockOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 };
