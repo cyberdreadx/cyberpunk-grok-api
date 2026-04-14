@@ -19,6 +19,7 @@ interface Profile {
   avatarUrl: string | null;
   bio: string;
   walletAddress?: string | null;
+  walletTruncated?: string | null;
   createdAt: string;
   followers: number;
   following: number;
@@ -289,6 +290,13 @@ const ProfilePage: React.FC = () => {
                     )}
                   </div>
                   {profile.bio && <p className="font-mono-share text-xs text-muted-foreground mt-1">{profile.bio}</p>}
+                  {!editing && profile.walletTruncated && (
+                    <div className="flex items-center gap-1 mt-1.5">
+                      <Wallet className="w-3 h-3 text-primary/50" />
+                      <span className="font-mono-share text-[10px] text-primary/60">{profile.walletTruncated}</span>
+                      <span className="font-mono-share text-[8px] text-muted-foreground/40">BASE</span>
+                    </div>
+                  )}
                 </>
               )}
             </div>

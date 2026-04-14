@@ -72,6 +72,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         avatarUrl: p.avatar_url,
         bio: p.bio,
         walletAddress: p.user_id === auth.userId ? (p.wallet_address || null) : null,
+        walletTruncated: p.wallet_address ? `${p.wallet_address.slice(0, 6)}...${p.wallet_address.slice(-4)}` : null,
         createdAt: p.created_at,
         followers: p.followers,
         following: p.following,
