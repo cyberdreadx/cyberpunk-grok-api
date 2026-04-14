@@ -507,7 +507,23 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                     </span>
                   </div>
 
-                  <div className={`flex items-center gap-2 px-3 py-2 rounded border ${TIER_COLORS[data.loyaltyTier] || TIER_COLORS.bronze}`}>
+                  {/* Flash Sale Banner */}
+                  {flashSale && (
+                    <div className="rounded-lg border border-orange-500/40 bg-orange-500/10 p-3 space-y-1 animate-pulse-slow">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-orange-400 animate-pulse" />
+                        <span className="font-orbitron text-[10px] tracking-wider text-orange-300">⚡ FLASH SALE — {flashSale.title.toUpperCase()}</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2 font-mono-share text-[9px] text-orange-200/80">
+                        <span>{flashSale.discount_percent}% OFF XRGE prices</span>
+                        {flashSale.bonus_credits_percent > 0 && (
+                          <span>+ {flashSale.bonus_credits_percent}% BONUS credits</span>
+                        )}
+                        <span className="text-orange-400/60">Ends {new Date(flashSale.ends_at).toLocaleTimeString()}</span>
+                      </div>
+                    </div>
+                  )}
+
                     {TIER_ICONS[data.loyaltyTier]}
                     <span className="font-mono-share text-[10px]">
                       {data.loyaltyTierName} tier → <span className="font-bold">+{data.bonusPercent}% bonus credits</span> on every purchase
