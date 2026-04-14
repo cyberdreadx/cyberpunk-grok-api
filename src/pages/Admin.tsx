@@ -653,7 +653,8 @@ export default function Admin() {
       return;
     }
     fetchAll();
-  }, [fetchAll]);
+    fetchMods();
+  }, [fetchAll, fetchMods]);
 
   useEffect(() => {
     if (activeTab === "emails" && !emailStats && !emailLoading && authorized) {
