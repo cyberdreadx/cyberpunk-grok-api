@@ -2,8 +2,10 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getDb } from "./_lib/db";
 import { getUserFromRequest, ADMIN_EMAIL } from "./_lib/auth";
 import { checkRateLimit } from "./_lib/ratelimit";
+import { fetchXrgePrice } from "./_lib/xrge";
 
 const MIN_PAYOUT_CENTS = 2500; // $25
+const MIN_XRGE_PAYOUT_CENTS = 100; // $1 min for instant XRGE
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -75,23 +77,80 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === "POST") {
       const { amountCents, method, payoutDetails } = req.body || {};
       const amount = parseInt(amountCents) || 0;
-      if (amount < MIN_PAYOUT_CENTS) {
-        return res.status(400).json({ error: `Minimum payout is $${(MIN_PAYOUT_CENTS / 100).toFixed(2)}` });
+      const isXrge = method === "xrge";
+      const minAmount = isXrge ? MIN_XRGE_PAYOUT_CENTS : MIN_PAYOUT_CENTS;
+
+      if (amount < minAmount) {
+        return res.status(400).json({ error: `Minimum payout is $${(minAmount / 100).toFixed(2)}` });
       }
-      if (!method || !payoutDetails) {
-        return res.status(400).json({ error: "Payment method and details are required" });
+      if (!method) {
+        return res.status(400).json({ error: "Payment method is required" });
       }
-      if (!["paypal", "bank", "crypto"].includes(method)) {
+      if (!["paypal", "bank", "crypto", "xrge"].includes(method)) {
         return res.status(400).json({ error: "Invalid payout method" });
+      }
+      if (!isXrge && !payoutDetails?.trim()) {
+        return res.status(400).json({ error: "Payment details are required" });
       }
 
       // Check balance
-      const [user] = await sql`SELECT cash_balance_cents FROM users WHERE id = ${auth.userId}::uuid`;
+      const [user] = await sql`SELECT cash_balance_cents, xrge_bank_balance FROM users WHERE id = ${auth.userId}::uuid`;
       if (!user || (user.cash_balance_cents || 0) < amount) {
         return res.status(402).json({ error: "Insufficient cash balance" });
       }
 
-      // Check no pending request
+      // XRGE instant payout — convert cash to XRGE bank balance immediately
+      if (isXrge) {
+        const xrgeRate = await fetchXrgePrice();
+        if (!xrgeRate || xrgeRate <= 0) {
+          return res.status(503).json({ error: "Unable to fetch XRGE price. Try again later." });
+        }
+        const usdAmount = amount / 100;
+        const xrgeAmount = usdAmount / xrgeRate;
+
+        // Deduct cash, credit XRGE bank, log transaction — all atomic
+        const [result] = await sql`
+          WITH deduct AS (
+            UPDATE users
+            SET cash_balance_cents = cash_balance_cents - ${amount},
+                xrge_bank_balance = COALESCE(xrge_bank_balance, 0) + ${xrgeAmount}::numeric,
+                updated_at = now()
+            WHERE id = ${auth.userId}::uuid AND cash_balance_cents >= ${amount}
+            RETURNING id, xrge_bank_balance
+          ), txn AS (
+            INSERT INTO xrge_bank_txns (user_id, type, amount, balance_after, metadata)
+            SELECT id, 'payout_conversion', ${xrgeAmount}::numeric, xrge_bank_balance,
+                   ${JSON.stringify({ fromCashCents: amount, xrgeRate })}::jsonb
+            FROM deduct
+            RETURNING user_id
+          ), payout AS (
+            INSERT INTO payout_requests (user_id, amount_cents, method, payout_details, status, reviewed_at, paid_at)
+            SELECT id, ${amount}, 'xrge', ${'Instant XRGE conversion: ' + xrgeAmount.toFixed(4) + ' XRGE'}, 'paid', now(), now()
+            FROM deduct
+            RETURNING id
+          )
+          SELECT
+            (SELECT xrge_bank_balance FROM deduct) AS new_xrge_balance,
+            (SELECT id FROM payout) AS payout_id,
+            EXISTS(SELECT 1 FROM deduct) AS success
+        `;
+
+        if (!result?.success) {
+          return res.status(402).json({ error: "Insufficient cash balance (race condition)" });
+        }
+
+        return res.status(200).json({
+          id: result.payout_id,
+          instant: true,
+          method: "xrge",
+          cashDeducted: amount,
+          xrgeAmount: parseFloat(xrgeAmount.toFixed(4)),
+          xrgeRate,
+          newXrgeBalance: parseFloat(result.new_xrge_balance),
+        });
+      }
+
+      // Non-XRGE: check no pending request
       const [pending] = await sql`
         SELECT id FROM payout_requests WHERE user_id = ${auth.userId}::uuid AND status = 'pending' LIMIT 1
       `;
