@@ -1580,6 +1580,8 @@ export default function Admin() {
           </div>
         )}
 
+        {activeTab === "payouts" && <PayoutsPanel />}
+
         {activeTab === "system" && (
           <div className="space-y-4">
           {/* ── RunPod Worker Status ── */}
