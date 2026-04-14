@@ -30,6 +30,7 @@ import {
   Edit,
   ChevronDown,
   ChevronUp,
+  Shield,
 } from "lucide-react";
 import {
   AreaChart,
@@ -545,6 +546,23 @@ export default function Admin() {
   const [grantType, setGrantType] = useState<"pack" | "sub">("pack");
   const [granting, setGranting] = useState(false);
   const [grantResult, setGrantResult] = useState<{ ok: boolean; msg: string } | null>(null);
+
+  // Feed moderators
+  const [modEmail, setModEmail] = useState("");
+  const [mods, setMods] = useState<any[]>([]);
+  const [modsLoading, setModsLoading] = useState(false);
+  const [modAction, setModAction] = useState(false);
+  const [modResult, setModResult] = useState<{ ok: boolean; msg: string } | null>(null);
+
+  const fetchMods = useCallback(async () => {
+    setModsLoading(true);
+    try {
+      const res = await apiFetch("/admin", { method: "POST", body: { action: "list-mods" } });
+      setMods(res.mods || []);
+    } catch (err: any) {
+      console.error("[admin] list-mods failed:", err.message);
+    } finally { setModsLoading(false); }
+  }, []);
 
   const fetchEmailLogs = useCallback(async (filters?: { type?: string; status?: string }) => {
     setEmailLoading(true);
