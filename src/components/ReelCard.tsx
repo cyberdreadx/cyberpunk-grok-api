@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowBigUp, ArrowBigDown, MessageCircle, Trash2 } from "lucide-react";
+import { ArrowBigUp, ArrowBigDown, MessageCircle, Trash2, Flag } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import CommentThread from "@/components/CommentThread";
 import { formatDistanceToNow } from "date-fns";
@@ -19,6 +19,8 @@ interface FeedPost {
   score: number;
   userVote: string | null;
   commentCount: number;
+  flagCount?: number;
+  userFlagged?: boolean;
 }
 
 interface ReelCardProps {
@@ -35,6 +37,9 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate }) => {
   const [showComments, setShowComments] = useState(false);
   const [commentCount, setCommentCount] = useState(post.commentCount);
   const [deleting, setDeleting] = useState(false);
+  const [flagCount, setFlagCount] = useState(post.flagCount ?? 0);
+  const [userFlagged, setUserFlagged] = useState(post.userFlagged ?? false);
+  const [flagging, setFlagging] = useState(false);
 
   const handleVote = async (emoji: "👍" | "👎") => {
     const prevScore = score;
@@ -70,8 +75,30 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate }) => {
     }
   };
 
-  const timeAgo = formatDistanceToNow(new Date(post.createdAt), { addSuffix: true });
+  const handleFlag = async () => {
+    if (userFlagged) return;
+    setFlagging(true);
+    try {
+      const res = await apiFetch("/report", {
+        method: "POST",
+        body: { postId: post.id },
+      });
+      setFlagCount(res.flagCount);
+      setUserFlagged(true);
+      if (res.removed) {
+        toast({ title: "Post removed due to reports" });
+        onUpdate?.();
+      } else {
+        toast({ title: "Post reported" });
+      }
+    } catch (err: any) {
+      toast({ title: err.message, variant: "destructive" });
+    } finally {
+      setFlagging(false);
+    }
+  };
 
+  const timeAgo = formatDistanceToNow(new Date(post.createdAt), { addSuffix: true });
   const isVideo = post.imageUrl ? /\.(mp4|webm|mov)(\?|$)/i.test(post.imageUrl) || post.imageUrl.includes("video") : false;
 
   return (
@@ -105,7 +132,7 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate }) => {
         <div className="absolute inset-0 bg-gradient-to-b from-background via-card to-background" />
       )}
 
-      {/* Dark overlay for readability on overlaid text */}
+      {/* Dark overlay for readability */}
       <div className="absolute inset-0 z-[2] bg-gradient-to-b from-black/40 via-transparent to-black/70 pointer-events-none" />
 
       {/* Text-only posts: centered text */}
@@ -156,6 +183,20 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate }) => {
           )}
         </button>
 
+        {/* Flag / Report */}
+        {user?.id !== post.userId && (
+          <button onClick={handleFlag} disabled={flagging || userFlagged} className="flex flex-col items-center gap-0.5">
+            <div className={`p-2 rounded-full backdrop-blur-sm transition-colors ${
+              userFlagged ? "bg-destructive/30 text-destructive" : "bg-black/30 text-white/60 hover:text-destructive"
+            }`}>
+              <Flag className={`w-5 h-5 ${userFlagged ? "fill-current" : ""}`} />
+            </div>
+            {flagCount > 0 && (
+              <span className="font-mono-share text-[10px] text-destructive/80">{flagCount}</span>
+            )}
+          </button>
+        )}
+
         {/* Delete */}
         {(user?.id === post.userId || user?.is_admin || user?.is_feed_mod) && (
           <button onClick={handleDelete} disabled={deleting} className="flex flex-col items-center gap-0.5">
@@ -168,7 +209,6 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate }) => {
 
       {/* Bottom info overlay */}
       <div className="absolute left-0 right-16 bottom-0 z-20 p-4" style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 72px)" }}>
-        {/* User info */}
         <button onClick={() => navigate(`/profile/${post.username}`)} className="flex items-center gap-2 mb-2">
           <Avatar className="w-9 h-9 border-2 border-white/30">
             {post.avatarUrl && <AvatarImage src={post.avatarUrl} alt={post.username} />}
@@ -184,7 +224,6 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate }) => {
           </div>
         </button>
 
-        {/* Caption (for image posts) */}
         {post.imageUrl && post.text && (
           <p className="font-mono-share text-sm text-white/90 whitespace-pre-wrap break-words line-clamp-3 drop-shadow-md">
             {post.text}
