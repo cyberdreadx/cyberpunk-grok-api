@@ -50,6 +50,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Add lock columns if missing (safe for pre-migration)
       await sql`ALTER TABLE feed_posts ADD COLUMN IF NOT EXISTS lock_cost INT NOT NULL DEFAULT 0`.catch(() => {});
       await sql`ALTER TABLE feed_posts ADD COLUMN IF NOT EXISTS lock_price_cents INT NOT NULL DEFAULT 0`.catch(() => {});
+      await sql`ALTER TABLE feed_posts ADD COLUMN IF NOT EXISTS lock_xrge_amount TEXT DEFAULT NULL`.catch(() => {});
 
       const selectCols = (authId: string) => sql`
         p.*, pr.username, pr.avatar_url,
@@ -116,7 +117,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.json({
         posts: rows.map((r: any) => {
           const isOwner = r.user_id === auth.userId;
-          const isLocked = (r.lock_cost > 0 || r.lock_price_cents > 0) && !r.unlocked && !isOwner;
+          const xrgePrice = parseFloat(r.lock_xrge_amount || "0") || 0;
+          const isLocked = (r.lock_cost > 0 || r.lock_price_cents > 0 || xrgePrice > 0) && !r.unlocked && !isOwner;
 
           return {
             id: r.id,
@@ -135,6 +137,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             userFlagged: !!r.user_flagged,
             lockCost: r.lock_cost || 0,
             lockPriceCents: r.lock_price_cents || 0,
+            lockXrgeAmount: xrgePrice > 0 ? r.lock_xrge_amount : undefined,
             unlocked: r.unlocked || isOwner,
             isOwner,
           };
@@ -150,16 +153,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // POST — create a post
   if (req.method === "POST") {
     try {
-      const { text, imageUrl, lockCost, lockPriceCents } = req.body || {};
+      const { text, imageUrl, lockCost, lockPriceCents, lockXrgeAmount } = req.body || {};
       if (!text && !imageUrl) return res.status(400).json({ error: "Post must have text or image" });
       if (text && text.length > 2000) return res.status(400).json({ error: "Text too long (max 2000)" });
 
       const cost = Math.max(0, Math.min(parseInt(lockCost) || 0, MAX_LOCK_COST));
       const priceCents = Math.max(0, Math.min(parseInt(lockPriceCents) || 0, MAX_LOCK_PRICE_CENTS));
+      const xrgeAmount = lockXrgeAmount ? String(Math.max(0, parseFloat(lockXrgeAmount) || 0)) : null;
 
       const rows = await sql`
-        INSERT INTO feed_posts (user_id, text, image_url, lock_cost, lock_price_cents)
-        VALUES (${auth.userId}, ${text || ""}, ${imageUrl || null}, ${cost}, ${priceCents})
+        INSERT INTO feed_posts (user_id, text, image_url, lock_cost, lock_price_cents, lock_xrge_amount)
+        VALUES (${auth.userId}, ${text || ""}, ${imageUrl || null}, ${cost}, ${priceCents}, ${xrgeAmount})
         RETURNING id, created_at
       `;
       return res.status(201).json({ id: rows[0].id, createdAt: rows[0].created_at });
