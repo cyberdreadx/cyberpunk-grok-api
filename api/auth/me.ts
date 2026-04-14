@@ -25,11 +25,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const user = rows[0];
+    const modRows = await sql`SELECT 1 FROM feed_moderators WHERE user_id = ${auth.userId} LIMIT 1`;
     return res.status(200).json({
       id: user.id,
       email: user.email,
       email_verified: !!user.email_verified,
       is_admin: user.email === ADMIN_EMAIL,
+      is_feed_mod: modRows.length > 0,
       sub_credits: user.sub_credits,
       pack_credits: user.pack_credits,
       subscription_tier: user.subscription_tier,

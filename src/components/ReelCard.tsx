@@ -157,7 +157,7 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate }) => {
         </button>
 
         {/* Delete */}
-        {(user?.id === post.userId || user?.is_admin) && (
+        {(user?.id === post.userId || user?.is_admin || user?.is_feed_mod) && (
           <button onClick={handleDelete} disabled={deleting} className="flex flex-col items-center gap-0.5">
             <div className="p-2 rounded-full bg-black/30 text-white/60 hover:text-destructive backdrop-blur-sm transition-colors">
               <Trash2 className="w-5 h-5" />

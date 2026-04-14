@@ -106,7 +106,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
           </button>
           <span className="font-mono-share text-[9px] text-muted-foreground">{timeAgo}</span>
         </div>
-        {(user?.id === post.userId || user?.is_admin) && (
+        {(user?.id === post.userId || user?.is_admin || user?.is_feed_mod) && (
           <button onClick={handleDelete} disabled={deleting} className="text-muted-foreground/40 hover:text-destructive transition-colors">
             <Trash2 className="w-3.5 h-3.5" />
           </button>
