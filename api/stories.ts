@@ -20,15 +20,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const auth = getUserFromRequest(req);
       if (!auth) return res.status(401).json({ error: "Unauthorized" });
 
-      const { mediaUrl, mediaType, caption, prompt, lockCost } = req.body || {};
+      const { mediaUrl, mediaType, caption, prompt, lockCost, lockXrgeAmount } = req.body || {};
       if (!mediaUrl) return res.status(400).json({ error: "mediaUrl required" });
 
       const type = (mediaType || "image").startsWith("video") ? "video" : "image";
       const cost = Math.max(0, Math.min(parseInt(lockCost) || 0, MAX_LOCK_COST));
+      const xrgeAmount = lockXrgeAmount ? String(parseFloat(lockXrgeAmount) || 0) : null;
+
+      // Ensure lock_xrge_amount column exists
+      await sql`ALTER TABLE stories ADD COLUMN IF NOT EXISTS lock_xrge_amount TEXT DEFAULT NULL`.catch(() => {});
 
       const rows = await sql`
-        INSERT INTO stories (user_id, media_url, media_type, caption, prompt, lock_cost)
-        VALUES (${auth.userId}::uuid, ${mediaUrl}, ${type}, ${caption || ""}, ${prompt || ""}, ${cost})
+        INSERT INTO stories (user_id, media_url, media_type, caption, prompt, lock_cost, lock_xrge_amount)
+        VALUES (${auth.userId}::uuid, ${mediaUrl}, ${type}, ${caption || ""}, ${prompt || ""}, ${cost}, ${xrgeAmount})
         RETURNING id, created_at, expires_at
       `;
 
@@ -56,10 +60,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         UNIQUE(story_id, user_id)
       )`.catch(() => {});
 
+      // Ensure lock_xrge_amount column exists
+      await sql`ALTER TABLE stories ADD COLUMN IF NOT EXISTS lock_xrge_amount TEXT DEFAULT NULL`.catch(() => {});
+
       const rows = await sql`
         SELECT
           s.id, s.user_id, s.media_url, s.media_type, s.caption, s.prompt,
           s.created_at, s.expires_at, s.lock_cost,
+          COALESCE(s.lock_xrge_amount, '') AS lock_xrge_amount,
           u.email,
           CASE WHEN sv.viewer_id IS NOT NULL THEN true ELSE false END AS viewed,
           (SELECT COUNT(*)::int FROM story_views sv2 WHERE sv2.story_id = s.id) AS view_count,
@@ -88,7 +96,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         const isOwner = r.user_id === viewerId;
-        const isLocked = r.lock_cost > 0 && !r.unlocked && !isOwner;
+        const xrgePrice = parseFloat(r.lock_xrge_amount) || 0;
+        const isLocked = (r.lock_cost > 0 || xrgePrice > 0) && !r.unlocked && !isOwner;
 
         grouped[r.user_id].stories.push({
           id: r.id,
@@ -104,6 +113,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           likeCount: r.like_count || 0,
           userLiked: r.user_liked || false,
           lockCost: r.lock_cost,
+          lockXrgeAmount: xrgePrice > 0 ? r.lock_xrge_amount : undefined,
           unlocked: r.unlocked || isOwner,
           isOwner,
         });
