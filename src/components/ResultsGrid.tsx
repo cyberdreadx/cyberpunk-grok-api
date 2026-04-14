@@ -1295,6 +1295,14 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
 
   // ── Post as Story ──────────────────────────────────────────────────────
   const [storyPostingId, setStoryPostingId] = useState<string | null>(null);
+  const [storyLockDialog, setStoryLockDialog] = useState<{
+    mediaUrl: string;
+    mediaType: string;
+    caption: string;
+    prompt: string;
+  } | null>(null);
+  const [storyLockCredits, setStoryLockCredits] = useState(0);
+  const [storyLockXrge, setStoryLockXrge] = useState("");
 
   const handlePostStory = useCallback(async (result: GrokResult) => {
     setStoryPostingId(result.id);
@@ -1316,7 +1324,6 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
           if (stored && stored.startsWith("data:")) {
             mediaBlob = await fetch(stored).then((r) => r.blob());
           } else if (src.startsWith("http") || src.startsWith("blob:")) {
-            // For https:// URLs (e.g. xAI API), use server-side download to avoid CORS
             if (src.startsWith("https://") || src.startsWith("http://")) {
               const token = localStorage.getItem("auth-token");
               const dlRes = await fetch(`${shareBase}/share`, {
@@ -1333,7 +1340,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
               }
               const dlData = await dlRes.json();
               mediaUrl = dlData.r2Url;
-              mediaBlob = null; // already uploaded via server
+              mediaBlob = null;
             } else {
               const resp = await fetch(src);
               if (!resp.ok) throw new Error("Failed to fetch media for upload");
@@ -1342,7 +1349,6 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
           }
         }
 
-        // Client-side upload for blob:/data: sources
         if (mediaBlob) {
           const ext = result.type === "video" ? "mp4" : "png";
           const authToken = localStorage.getItem("auth-token") || "";
@@ -1355,14 +1361,29 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
         }
       }
 
-      // Ask if they want to lock this story
-      let lockCost = 0;
-      const lockAnswer = prompt("Lock this story behind credits? Enter 0 for free, or 1-50 credits to charge viewers:", "0");
-      if (lockAnswer === null) { setStoryPostingId(null); return; }
-      lockCost = Math.max(0, Math.min(parseInt(lockAnswer) || 0, 50));
+      // Show lock settings dialog instead of prompt()
+      setStoryLockCredits(0);
+      setStoryLockXrge("");
+      setStoryLockDialog({
+        mediaUrl,
+        mediaType: result.type,
+        caption: result.revised_prompt || "",
+        prompt: result.revised_prompt || "",
+      });
+    } catch (err: any) {
+      toast.error(err.message || "Failed to post story");
+      setStoryPostingId(null);
+    }
+  }, []);
 
-      // Post story
+  const handleStoryLockConfirm = useCallback(async () => {
+    if (!storyLockDialog) return;
+    try {
+      const shareBase = (import.meta.env.VITE_API_URL as string) || "/api";
       const token = localStorage.getItem("auth-token");
+      const lockCost = Math.max(0, Math.min(storyLockCredits, 50));
+      const xrgeAmount = parseFloat(storyLockXrge) > 0 ? storyLockXrge : undefined;
+
       const storyRes = await fetch(`${shareBase}/stories`, {
         method: "POST",
         headers: {
@@ -1370,24 +1391,30 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
-          mediaUrl,
-          mediaType: result.type,
-          caption: result.revised_prompt || "",
-          prompt: result.revised_prompt || "",
+          mediaUrl: storyLockDialog.mediaUrl,
+          mediaType: storyLockDialog.mediaType,
+          caption: storyLockDialog.caption,
+          prompt: storyLockDialog.prompt,
           lockCost,
+          lockXrgeAmount: xrgeAmount,
         }),
       });
       if (!storyRes.ok) throw new Error("Failed to post story");
-      toast.success(lockCost > 0
-        ? `Story posted! Locked for ${lockCost} credits.`
+
+      const parts: string[] = [];
+      if (lockCost > 0) parts.push(`${lockCost} credits`);
+      if (xrgeAmount) parts.push(`${xrgeAmount} XRGE`);
+      toast.success(parts.length > 0
+        ? `Story posted! Locked for ${parts.join(" + ")}.`
         : "Story posted! It'll be visible for 24 hours.");
       window.dispatchEvent(new Event("story-posted"));
     } catch (err: any) {
       toast.error(err.message || "Failed to post story");
     } finally {
+      setStoryLockDialog(null);
       setStoryPostingId(null);
     }
-  }, []);
+  }, [storyLockDialog, storyLockCredits, storyLockXrge]);
 
   const hasFolders = folders.length > 0 || !!onCreateFolder;
 
