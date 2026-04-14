@@ -19,6 +19,7 @@ export interface AuthUser {
   email: string;
   email_verified?: boolean;
   is_admin?: boolean;
+  is_feed_mod?: boolean;
 }
 
 export function useAuth() {
@@ -33,9 +34,9 @@ export function useAuth() {
       setLoading(false);
       return;
     }
-    apiFetch<AuthUser & { email_verified?: boolean; is_admin?: boolean }>("/auth/me")
+    apiFetch<AuthUser & { email_verified?: boolean; is_admin?: boolean; is_feed_mod?: boolean }>("/auth/me")
       .then((data) => {
-        setUser({ id: data.id, email: data.email, email_verified: data.email_verified, is_admin: data.is_admin });
+        setUser({ id: data.id, email: data.email, email_verified: data.email_verified, is_admin: data.is_admin, is_feed_mod: data.is_feed_mod });
       })
       .catch(() => {
         clearAuthToken();
