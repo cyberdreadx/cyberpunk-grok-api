@@ -173,38 +173,55 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
 
       {/* Content */}
       {isLocked ? (
-        <div className="px-4 py-6 space-y-3">
-          {post.previewText && (
-            <p className="font-mono-share text-sm text-muted-foreground/60 italic">{post.previewText}</p>
+        <div className="relative overflow-hidden">
+          {/* Blurred image preview */}
+          {post.previewImageUrl && (
+            <div className="relative w-full h-64 overflow-hidden">
+              <img
+                src={post.previewImageUrl}
+                alt=""
+                className="w-full h-full object-cover blur-xl scale-110 brightness-50"
+                loading="lazy"
+              />
+              <div className="absolute inset-0 bg-background/30" />
+            </div>
           )}
-          <div className="flex flex-col items-center gap-3 py-4">
-            <Lock className="w-8 h-8 text-amber-400/60" />
-            <p className="font-mono-share text-xs text-muted-foreground text-center">This content is locked by the creator</p>
-            <div className="flex gap-2 flex-wrap justify-center">
-              {(post.lockCost || 0) > 0 && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleUnlockCredits}
-                  disabled={unlocking}
-                  className="font-mono-share text-[10px] border-amber-400/30 text-amber-400 hover:bg-amber-400/10"
-                >
-                  <Coins className="w-3 h-3 mr-1" />
-                  Unlock · {post.lockCost} credits
-                </Button>
+          <div className={`${post.previewImageUrl ? "absolute inset-0 flex flex-col items-center justify-center" : "px-4 py-6"} space-y-3`}>
+            {post.previewText && !post.previewImageUrl && (
+              <p className="font-mono-share text-sm text-muted-foreground/60 italic">{post.previewText}</p>
+            )}
+            <div className="flex flex-col items-center gap-3 py-4">
+              <Lock className="w-8 h-8 text-amber-400/60" />
+              <p className="font-mono-share text-xs text-muted-foreground text-center">This content is locked by the creator</p>
+              {post.previewText && post.previewImageUrl && (
+                <p className="font-mono-share text-[10px] text-white/50 italic text-center max-w-xs">{post.previewText}</p>
               )}
-              {(post.lockPriceCents || 0) > 0 && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleUnlockStripe}
-                  disabled={unlocking}
-                  className="font-mono-share text-[10px] border-green-400/30 text-green-400 hover:bg-green-400/10"
-                >
-                  <CreditCard className="w-3 h-3 mr-1" />
-                  Unlock · ${((post.lockPriceCents || 0) / 100).toFixed(2)}
-                </Button>
-              )}
+              <div className="flex gap-2 flex-wrap justify-center">
+                {(post.lockCost || 0) > 0 && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleUnlockCredits}
+                    disabled={unlocking}
+                    className="font-mono-share text-[10px] border-amber-400/30 text-amber-400 hover:bg-amber-400/10"
+                  >
+                    <Coins className="w-3 h-3 mr-1" />
+                    Unlock · {post.lockCost} credits
+                  </Button>
+                )}
+                {(post.lockPriceCents || 0) > 0 && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleUnlockStripe}
+                    disabled={unlocking}
+                    className="font-mono-share text-[10px] border-green-400/30 text-green-400 hover:bg-green-400/10"
+                  >
+                    <CreditCard className="w-3 h-3 mr-1" />
+                    Unlock · ${((post.lockPriceCents || 0) / 100).toFixed(2)}
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </div>

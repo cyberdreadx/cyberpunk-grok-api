@@ -146,6 +146,14 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate }) => {
         )
       )}
 
+      {/* Blurred preview for locked posts with images */}
+      {isLocked && post.previewImageUrl && (
+        <>
+          <img src={post.previewImageUrl} alt="" className="absolute inset-0 w-full h-full object-cover blur-2xl scale-110 opacity-30" />
+          <img src={post.previewImageUrl} alt="" className="absolute inset-0 w-full h-full object-cover blur-xl brightness-50" />
+        </>
+      )}
+
       {!isLocked && post.imageUrl ? (
         isVideo ? (
           <video src={post.imageUrl} className="relative z-[1] w-full h-full object-contain" muted playsInline autoPlay loop />
