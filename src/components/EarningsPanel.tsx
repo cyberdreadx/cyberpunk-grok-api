@@ -196,6 +196,23 @@ const EarningsPanel: React.FC = () => {
         </div>
       </div>
 
+      {/* XRGE earnings card */}
+      {(s.xrgeUnlocks > 0 || s.creatorShareXrge > 0) && (
+        <div className="bg-background/50 rounded-md p-3 border border-border/30">
+          <div className="flex items-center gap-1.5 mb-1">
+            <Zap className="w-3 h-3 text-secondary" />
+            <span className="font-mono-share text-[9px] text-muted-foreground tracking-widest">XRGE EARNINGS</span>
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className="font-orbitron text-lg text-secondary">{s.creatorShareXrge.toFixed(2)}</span>
+            <span className="font-mono-share text-[10px] text-muted-foreground">XRGE (80% of {s.totalXrgeEarned.toFixed(2)})</span>
+          </div>
+          <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5">
+            {s.xrgeUnlocks} unlock{s.xrgeUnlocks !== 1 ? "s" : ""} · instant to your bank
+          </div>
+        </div>
+      )}
+
       {/* Withdraw button */}
       {s.cashBalanceCents >= 100 && !hasPending && (
         <Button
