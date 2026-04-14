@@ -267,9 +267,13 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
           <span className="text-white/50 text-xs shrink-0">
             {new Date(currentStory.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
           </span>
-          {(currentStory.lockCost || 0) > 0 && (
+          {((currentStory.lockCost || 0) > 0 || (currentStory.lockXrgeAmount && parseFloat(currentStory.lockXrgeAmount) > 0)) && (
             <span className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400">
-              <Lock className="w-3 h-3" />{currentStory.lockCost}
+              <Lock className="w-3 h-3" />
+              {(currentStory.lockCost || 0) > 0 ? currentStory.lockCost : ""}
+              {currentStory.lockXrgeAmount && parseFloat(currentStory.lockXrgeAmount) > 0 && (
+                <span className="text-secondary ml-1">{currentStory.lockXrgeAmount} XRGE</span>
+              )}
             </span>
           )}
         </div>
@@ -318,16 +322,34 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
               </div>
               <div>
                 <p className="text-white text-lg font-semibold mb-1">Locked Story</p>
-                <p className="text-white/60 text-sm">
-                  This story costs <span className="text-amber-400 font-bold">{currentStory.lockCost} credits</span> to view
-                </p>
-                <p className="text-white/40 text-xs mt-1">Credits go to the creator</p>
+                {(currentStory.lockCost || 0) > 0 && (
+                  <p className="text-white/60 text-sm">
+                    This story costs <span className="text-amber-400 font-bold">{currentStory.lockCost} credits</span> to view
+                  </p>
+                )}
+                {currentStory.lockXrgeAmount && parseFloat(currentStory.lockXrgeAmount) > 0 && (
+                  <p className="text-white/60 text-sm mt-1">
+                    Or pay <span className="text-secondary font-bold">{currentStory.lockXrgeAmount} XRGE</span> — instant to creator ⚡
+                  </p>
+                )}
+                <p className="text-white/40 text-xs mt-1">Earnings go to the creator</p>
               </div>
-              <button onClick={(e) => { e.stopPropagation(); handleUnlock(); }} disabled={unlocking}
-                className="flex items-center gap-2 px-8 py-3 rounded-lg bg-gradient-to-r from-amber-500/80 to-amber-600/80 hover:from-amber-500 hover:to-amber-600 text-white font-semibold text-sm transition-all active:scale-95 disabled:opacity-50">
-                {unlocking ? <Loader2 className="w-4 h-4 animate-spin" /> : <Unlock className="w-4 h-4" />}
-                Unlock for {currentStory.lockCost} credits
-              </button>
+              <div className="flex flex-col gap-2 w-full max-w-xs">
+                {(currentStory.lockCost || 0) > 0 && (
+                  <button onClick={(e) => { e.stopPropagation(); handleUnlock(); }} disabled={unlocking}
+                    className="flex items-center justify-center gap-2 px-8 py-3 rounded-lg bg-gradient-to-r from-amber-500/80 to-amber-600/80 hover:from-amber-500 hover:to-amber-600 text-white font-semibold text-sm transition-all active:scale-95 disabled:opacity-50">
+                    {unlocking ? <Loader2 className="w-4 h-4 animate-spin" /> : <Unlock className="w-4 h-4" />}
+                    Unlock for {currentStory.lockCost} credits
+                  </button>
+                )}
+                {currentStory.lockXrgeAmount && parseFloat(currentStory.lockXrgeAmount) > 0 && (
+                  <button onClick={(e) => { e.stopPropagation(); setXrgeUnlockOpen(true); }}
+                    className="flex items-center justify-center gap-2 px-8 py-3 rounded-lg bg-gradient-to-r from-secondary/60 to-secondary/80 hover:from-secondary/80 hover:to-secondary text-white font-semibold text-sm transition-all active:scale-95">
+                    <Zap className="w-4 h-4" />
+                    Pay {currentStory.lockXrgeAmount} XRGE ⚡
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         ) : currentStory.mediaType === "video" ? (
