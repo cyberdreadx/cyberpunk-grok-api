@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { X, ChevronLeft, ChevronRight, Volume2, VolumeX, Trash2, Loader2, Eye, Lock, Unlock, Heart } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Volume2, VolumeX, Trash2, Loader2, Eye, Lock, Unlock, Heart, Zap } from "lucide-react";
+import XrgeUnlockDialog from "@/components/XrgeUnlockDialog";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -18,6 +19,7 @@ interface Story {
   likeCount?: number;
   userLiked?: boolean;
   lockCost?: number;
+  lockXrgeAmount?: string;
   unlocked?: boolean;
   isOwner?: boolean;
 }
@@ -57,6 +59,7 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
   const [muted, setMuted] = useState(true);
   const [deleting, setDeleting] = useState(false);
   const [unlocking, setUnlocking] = useState(false);
+  const [xrgeUnlockOpen, setXrgeUnlockOpen] = useState(false);
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   const [showViewers, setShowViewers] = useState(false);
@@ -71,7 +74,7 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
   const currentUser = users[userIdx];
   const currentStory = currentUser?.stories[storyIdx];
   const isOwner = currentUser?.userId === currentUserId;
-  const isLocked = currentStory && (currentStory.lockCost || 0) > 0 && !currentStory.unlocked && !currentStory.isOwner;
+  const isLocked = currentStory && ((currentStory.lockCost || 0) > 0 || (currentStory.lockXrgeAmount && parseFloat(currentStory.lockXrgeAmount) > 0)) && !currentStory.unlocked && !currentStory.isOwner;
 
   // Sync like state when story changes
   useEffect(() => {
