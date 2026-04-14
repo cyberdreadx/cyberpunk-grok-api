@@ -2499,6 +2499,51 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
           </div>
         </div>
       )}
+
+      {/* Story Lock Settings Dialog */}
+      <AlertDialog open={!!storyLockDialog} onOpenChange={(open) => { if (!open) { setStoryLockDialog(null); setStoryPostingId(null); } }}>
+        <AlertDialogContent className="bg-card border-border max-w-sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-orbitron text-foreground">Story Lock Settings</AlertDialogTitle>
+            <AlertDialogDescription className="text-muted-foreground text-sm">
+              Set pricing to lock this story, or leave both at 0 for a free story.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <label className="text-xs font-mono text-muted-foreground mb-1 block">Credit Lock (0–50)</label>
+              <input
+                type="number"
+                min={0}
+                max={50}
+                value={storyLockCredits}
+                onChange={(e) => setStoryLockCredits(Math.max(0, Math.min(parseInt(e.target.value) || 0, 50)))}
+                className="w-full bg-background border border-border rounded px-3 py-2 text-foreground text-sm font-mono focus:outline-none focus:ring-1 focus:ring-primary"
+                placeholder="0"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-mono text-muted-foreground mb-1 block">XRGE Lock Amount</label>
+              <input
+                type="number"
+                min={0}
+                step="0.01"
+                value={storyLockXrge}
+                onChange={(e) => setStoryLockXrge(e.target.value)}
+                className="w-full bg-background border border-border rounded px-3 py-2 text-foreground text-sm font-mono focus:outline-none focus:ring-1 focus:ring-primary"
+                placeholder="0.00"
+              />
+              <p className="text-[10px] text-muted-foreground/60 mt-1">Buyers pay XRGE on-chain — you get 80% instantly to your bank.</p>
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="font-mono text-sm">Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleStoryLockConfirm} className="font-mono text-sm">
+              Post Story
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
