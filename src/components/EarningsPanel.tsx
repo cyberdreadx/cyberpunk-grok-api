@@ -15,12 +15,16 @@ interface EarningsSummary {
   cashBalanceCents: number;
   postUnlocks: number;
   storyUnlocks: number;
+  totalXrgeEarned: number;
+  creatorShareXrge: number;
+  xrgeUnlocks: number;
 }
 
 interface RecentTx {
   type: "post" | "story";
   creditsPaid: number;
   centsPaid: number;
+  xrgePaid?: string;
   buyerName: string;
   unlockedAt: string;
 }
@@ -116,7 +120,7 @@ const EarningsPanel: React.FC = () => {
     );
   }
 
-  if (!data || (data.summary.postUnlocks === 0 && data.summary.storyUnlocks === 0)) {
+  if (!data || (data.summary.postUnlocks === 0 && data.summary.storyUnlocks === 0 && data.summary.xrgeUnlocks === 0)) {
     return null;
   }
 
@@ -191,6 +195,23 @@ const EarningsPanel: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* XRGE earnings card */}
+      {(s.xrgeUnlocks > 0 || s.creatorShareXrge > 0) && (
+        <div className="bg-background/50 rounded-md p-3 border border-border/30">
+          <div className="flex items-center gap-1.5 mb-1">
+            <Zap className="w-3 h-3 text-secondary" />
+            <span className="font-mono-share text-[9px] text-muted-foreground tracking-widest">XRGE EARNINGS</span>
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className="font-orbitron text-lg text-secondary">{s.creatorShareXrge.toFixed(2)}</span>
+            <span className="font-mono-share text-[10px] text-muted-foreground">XRGE (80% of {s.totalXrgeEarned.toFixed(2)})</span>
+          </div>
+          <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5">
+            {s.xrgeUnlocks} unlock{s.xrgeUnlocks !== 1 ? "s" : ""} · instant to your bank
+          </div>
+        </div>
+      )}
 
       {/* Withdraw button */}
       {s.cashBalanceCents >= 100 && !hasPending && (
@@ -322,7 +343,9 @@ const EarningsPanel: React.FC = () => {
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <span className="text-foreground">
-                    {tx.creditsPaid > 0 ? `${Math.floor(tx.creditsPaid * 0.75)} cr` : fmtCents(Math.floor(tx.centsPaid * 0.75))}
+                    {tx.xrgePaid && parseFloat(tx.xrgePaid) > 0
+                      ? `${(parseFloat(tx.xrgePaid) * 0.8).toFixed(2)} XRGE`
+                      : tx.creditsPaid > 0 ? `${Math.floor(tx.creditsPaid * 0.75)} cr` : fmtCents(Math.floor(tx.centsPaid * 0.75))}
                   </span>
                   <span className="text-muted-foreground">{timeAgo(tx.unlockedAt)}</span>
                 </div>
