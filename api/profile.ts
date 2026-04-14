@@ -20,7 +20,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (username) {
         rows = await sql`
           SELECT p.user_id, p.username, p.avatar_url, p.bio, p.created_at,
-                 u.email,
+                 u.email, p.wallet_address,
                  (SELECT count(*)::int FROM follows WHERE following_id = p.user_id) AS followers,
                  (SELECT count(*)::int FROM follows WHERE follower_id = p.user_id) AS following,
                  (SELECT count(*)::int FROM feed_posts WHERE user_id = p.user_id) AS post_count
@@ -30,7 +30,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       } else {
         rows = await sql`
           SELECT p.user_id, p.username, p.avatar_url, p.bio, p.created_at,
-                 u.email,
+                 u.email, p.wallet_address,
                  (SELECT count(*)::int FROM follows WHERE following_id = p.user_id) AS followers,
                  (SELECT count(*)::int FROM follows WHERE follower_id = p.user_id) AS following,
                  (SELECT count(*)::int FROM feed_posts WHERE user_id = p.user_id) AS post_count
@@ -48,7 +48,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // Re-fetch
         rows = await sql`
           SELECT p.user_id, p.username, p.avatar_url, p.bio, p.created_at,
-                 u.email,
+                 u.email, p.wallet_address,
                  (SELECT count(*)::int FROM follows WHERE following_id = p.user_id) AS followers,
                  (SELECT count(*)::int FROM follows WHERE follower_id = p.user_id) AS following,
                  (SELECT count(*)::int FROM feed_posts WHERE user_id = p.user_id) AS post_count
@@ -71,6 +71,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         username: p.username,
         avatarUrl: p.avatar_url,
         bio: p.bio,
+        walletAddress: p.user_id === auth.userId ? (p.wallet_address || null) : null,
         createdAt: p.created_at,
         followers: p.followers,
         following: p.following,
