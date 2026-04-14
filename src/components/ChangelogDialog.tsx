@@ -24,6 +24,20 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
     {
+        version: "2026.04.14",
+        date: "April 14, 2026",
+        title: "Creator Monetization — XRGE Locks, Wallets & Instant Payouts",
+        items: [
+            { icon: <Zap className="w-3.5 h-3.5" />, text: "Creator wallets — set your Base wallet address in your profile to receive instant XRGE payments", tag: "new" },
+            { icon: <Zap className="w-3.5 h-3.5" />, text: "XRGE lock on posts & stories — creators set an XRGE price and buyers pay directly to the creator's wallet", tag: "new" },
+            { icon: <Zap className="w-3.5 h-3.5" />, text: "Instant XRGE payouts — 80% goes straight to the creator's wallet on unlock, 20% platform fee", tag: "new" },
+            { icon: <Sparkles className="w-3.5 h-3.5" />, text: "XRGE earnings breakdown in creator dashboard — track instant crypto income vs credit earnings", tag: "new" },
+            { icon: <Zap className="w-3.5 h-3.5" />, text: "Story lock settings dialog — set both credit and XRGE prices when posting stories from results", tag: "new" },
+            { icon: <Download className="w-3.5 h-3.5" />, text: "Cash-out via XRGE — instant conversion option added to the payout system (lower minimum than bank/PayPal)", tag: "new" },
+            { icon: <Wrench className="w-3.5 h-3.5" />, text: "Credit costs synced — API docs and frontend now show consistent pricing across all generation modes", tag: "improve" },
+        ],
+    },
+    {
         version: "2026.04.08",
         date: "April 8, 2026",
         title: "Security Fixes, Daily Credits & Code Cleanup",
