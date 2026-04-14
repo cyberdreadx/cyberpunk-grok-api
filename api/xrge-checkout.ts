@@ -36,7 +36,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const sql = getDb();
     const config = await getXrgeConfig();
-    const xrgeAmount = centsToXrge(pkg.priceCents, config.usdRate);
+    let xrgeAmount = centsToXrge(pkg.priceCents, config.usdRate);
+
+    // Check for active flash sale
+    let flashSaleId: string | null = null;
+    let flashDiscountPercent = 0;
+    let flashBonusPercent = 0;
+    const [activeSale] = await sql`
+      SELECT id, discount_percent, bonus_credits_percent, packages
+      FROM xrge_flash_sales
+      WHERE active = true AND starts_at <= now() AND ends_at > now()
+        AND (max_uses IS NULL OR uses < max_uses)
+      ORDER BY discount_percent DESC
+      LIMIT 1
+    `;
+    if (activeSale) {
+      const applicablePackages = activeSale.packages;
+      if (!applicablePackages || applicablePackages.includes(packageId)) {
+        flashSaleId = activeSale.id;
+        flashDiscountPercent = activeSale.discount_percent;
+        flashBonusPercent = activeSale.bonus_credits_percent || 0;
+        // Apply discount to XRGE price
+        const discountedCents = Math.round(pkg.priceCents * (1 - flashDiscountPercent / 100));
+        xrgeAmount = centsToXrge(discountedCents, config.usdRate);
+      }
+    }
 
     // Loyalty-tier-aware bonus: look up user's lifetime XRGE spend
     const [spendRow] = await sql`
@@ -44,7 +68,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     `;
     const lifetimeSpend = parseFloat(spendRow?.xrge_lifetime_spend || "0");
     const tier = getTierForSpend(lifetimeSpend);
-    const bonusCredits = Math.floor(pkg.credits * (tier.bonusPercent / 100));
+    const loyaltyBonusCredits = Math.floor(pkg.credits * (tier.bonusPercent / 100));
+    const flashBonusCredits = Math.floor(pkg.credits * (flashBonusPercent / 100));
+    const bonusCredits = loyaltyBonusCredits + flashBonusCredits;
     const totalCredits = pkg.credits + bonusCredits;
 
     // Expire any existing pending orders for this user+package
@@ -74,6 +100,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const order = rows[0];
 
+    // Increment flash sale usage if applicable
+    if (flashSaleId) {
+      await sql`UPDATE xrge_flash_sales SET uses = uses + 1 WHERE id = ${flashSaleId}::uuid`;
+    }
+
     return res.status(200).json({
       orderId: order.id,
       xrgeAmount: order.xrge_amount,
@@ -81,11 +112,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       expiresAt: order.expires_at,
       baseCredits: pkg.credits,
       bonusCredits,
+      loyaltyBonusCredits,
+      flashBonusCredits,
       totalCredits,
       packageName: packageId.toUpperCase(),
       bonusPercent: tier.bonusPercent,
       loyaltyTier: tier.id,
       loyaltyTierName: tier.name,
+      flashSale: flashSaleId ? {
+        id: flashSaleId,
+        discountPercent: flashDiscountPercent,
+        bonusCreditsPercent: flashBonusPercent,
+      } : null,
     });
   } catch (err: any) {
     console.error("[xrge-checkout]", err.message);

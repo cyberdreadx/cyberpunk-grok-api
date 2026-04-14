@@ -38,6 +38,9 @@ interface XrgeOrder {
   bonusPercent: number;
   loyaltyTier?: string;
   loyaltyTierName?: string;
+  flashSale?: { id: string; discountPercent: number; bonusCreditsPercent: number } | null;
+  loyaltyBonusCredits?: number;
+  flashBonusCredits?: number;
 }
 
 interface XrgePaymentDialogProps {
@@ -197,6 +200,16 @@ const XrgePaymentDialog: React.FC<XrgePaymentDialogProps> = ({
         {/* Payment step */}
         {(step === "pay" || step === "verifying") && order && (
           <div className="space-y-4">
+            {/* Flash Sale Banner */}
+            {order.flashSale && (
+              <div className="rounded-lg border border-orange-500/40 bg-orange-500/10 p-2.5 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-orange-400 animate-pulse" />
+                <span className="font-orbitron text-[9px] tracking-wider text-orange-300">⚡ FLASH SALE — {order.flashSale.discountPercent}% OFF</span>
+                {(order.flashBonusCredits || 0) > 0 && (
+                  <span className="font-mono-share text-[9px] text-green-400">+{order.flashBonusCredits} bonus</span>
+                )}
+              </div>
+            )}
             <ol className="list-decimal list-inside space-y-1 rounded border border-border/40 bg-card/40 px-3 py-2 font-mono-share text-[9px] text-muted-foreground leading-relaxed">
               <li>
                 Get XRGE on {XRGE_CHAIN_NAME} if needed —{" "}

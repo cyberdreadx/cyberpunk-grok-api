@@ -124,7 +124,7 @@ function CyberTooltip({ active, payload, label }: any) {
 
 // ── Tab Definitions ──
 
-type TabId = "overview" | "revenue" | "users" | "usage" | "moderation" | "referrals" | "payouts" | "emails" | "api" | "system";
+type TabId = "overview" | "revenue" | "users" | "usage" | "moderation" | "referrals" | "payouts" | "emails" | "api" | "system" | "flash-sales";
 
 const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
   { id: "overview", label: "OVERVIEW", icon: <Eye className="w-3.5 h-3.5" /> },
@@ -134,6 +134,7 @@ const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
   { id: "moderation", label: "DEFENSE", icon: <ShieldX className="w-3.5 h-3.5" /> },
   { id: "referrals", label: "REFERRALS", icon: <Share2 className="w-3.5 h-3.5" /> },
   { id: "payouts", label: "PAYOUTS", icon: <CreditCard className="w-3.5 h-3.5" /> },
+  { id: "flash-sales", label: "FLASH SALES", icon: <Flame className="w-3.5 h-3.5" /> },
   { id: "emails", label: "EMAILS", icon: <Mail className="w-3.5 h-3.5" /> },
   { id: "api", label: "API", icon: <Key className="w-3.5 h-3.5" /> },
   { id: "system", label: "SYSTEM", icon: <Server className="w-3.5 h-3.5" /> },
@@ -511,6 +512,222 @@ function AnnouncementPanel() {
         </div>
       )}
     </section>
+  );
+}
+
+// ── Flash Sales Panel ──────────────────────────────────────
+
+interface FlashSale {
+  id: string;
+  title: string;
+  discount_percent: number;
+  bonus_credits_percent: number;
+  packages: string[] | null;
+  starts_at: string;
+  ends_at: string;
+  max_uses: number | null;
+  uses: number;
+  active: boolean;
+  created_at: string;
+}
+
+function FlashSalesPanel() {
+  const [sales, setSales] = useState<FlashSale[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
+  const [ending, setEnding] = useState<string | null>(null);
+
+  // Form
+  const [title, setTitle] = useState("");
+  const [discountPercent, setDiscountPercent] = useState("20");
+  const [bonusCreditsPercent, setBonusCreditsPercent] = useState("0");
+  const [durationMinutes, setDurationMinutes] = useState("60");
+  const [maxUses, setMaxUses] = useState("");
+
+  const fetchSales = useCallback(async () => {
+    try {
+      const data = await apiFetch("/admin", { method: "POST", body: { action: "flash-sales-list" } });
+      setSales(data.sales || []);
+    } catch { /* ignore */ }
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { fetchSales(); }, [fetchSales]);
+
+  const handleCreate = async () => {
+    setCreating(true);
+    try {
+      await apiFetch("/admin", {
+        method: "POST",
+        body: {
+          action: "flash-sales-create",
+          title,
+          discountPercent,
+          bonusCreditsPercent,
+          durationMinutes,
+          maxUses: maxUses || undefined,
+        },
+      });
+      setTitle("");
+      setDiscountPercent("20");
+      setBonusCreditsPercent("0");
+      setDurationMinutes("60");
+      setMaxUses("");
+      fetchSales();
+    } catch (err: any) {
+      alert("Failed: " + err.message);
+    } finally { setCreating(false); }
+  };
+
+  const handleEnd = async (saleId: string) => {
+    setEnding(saleId);
+    try {
+      await apiFetch("/admin", { method: "POST", body: { action: "flash-sales-end", saleId } });
+      fetchSales();
+    } catch { /* ignore */ }
+    finally { setEnding(null); }
+  };
+
+  const isActive = (s: FlashSale) => s.active && new Date(s.ends_at) > new Date() && (!s.max_uses || s.uses < s.max_uses);
+
+  if (loading) return <div className="flex justify-center py-12"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>;
+
+  return (
+    <div className="space-y-6">
+      {/* Create new sale */}
+      <section className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm p-4 space-y-4">
+        <div className="flex items-center gap-2">
+          <Flame className="w-4 h-4 text-orange-400" />
+          <span className="font-orbitron text-xs tracking-wider text-muted-foreground">CREATE FLASH SALE</span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <label className="font-mono-share text-[9px] text-muted-foreground/60">SALE TITLE</label>
+            <input
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              placeholder="Weekend XRGE Blitz"
+              className="w-full px-3 py-2 rounded border border-border/30 bg-input/50 font-mono-share text-xs text-foreground placeholder:text-muted-foreground/40"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="font-mono-share text-[9px] text-muted-foreground/60">DURATION (MINUTES)</label>
+            <input
+              type="number"
+              value={durationMinutes}
+              onChange={e => setDurationMinutes(e.target.value)}
+              placeholder="60"
+              className="w-full px-3 py-2 rounded border border-border/30 bg-input/50 font-mono-share text-xs text-foreground"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="font-mono-share text-[9px] text-muted-foreground/60">XRGE PRICE DISCOUNT %</label>
+            <input
+              type="number"
+              value={discountPercent}
+              onChange={e => setDiscountPercent(e.target.value)}
+              min="1" max="90"
+              className="w-full px-3 py-2 rounded border border-border/30 bg-input/50 font-mono-share text-xs text-foreground"
+            />
+            <p className="font-mono-share text-[8px] text-muted-foreground/40">Users pay less XRGE per package</p>
+          </div>
+          <div className="space-y-1">
+            <label className="font-mono-share text-[9px] text-muted-foreground/60">BONUS CREDITS %</label>
+            <input
+              type="number"
+              value={bonusCreditsPercent}
+              onChange={e => setBonusCreditsPercent(e.target.value)}
+              min="0" max="500"
+              className="w-full px-3 py-2 rounded border border-border/30 bg-input/50 font-mono-share text-xs text-foreground"
+            />
+            <p className="font-mono-share text-[8px] text-muted-foreground/40">Extra credits on top of base (stacks with loyalty)</p>
+          </div>
+          <div className="space-y-1">
+            <label className="font-mono-share text-[9px] text-muted-foreground/60">MAX USES (BLANK = UNLIMITED)</label>
+            <input
+              type="number"
+              value={maxUses}
+              onChange={e => setMaxUses(e.target.value)}
+              placeholder="∞"
+              className="w-full px-3 py-2 rounded border border-border/30 bg-input/50 font-mono-share text-xs text-foreground"
+            />
+          </div>
+        </div>
+
+        <Button
+          onClick={handleCreate}
+          disabled={creating || !title.trim() || !discountPercent || !durationMinutes}
+          className="font-orbitron text-xs tracking-wider gap-2 bg-orange-500/20 hover:bg-orange-500/30 text-orange-300 border border-orange-500/30"
+        >
+          {creating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Flame className="w-3.5 h-3.5" />}
+          LAUNCH FLASH SALE
+        </Button>
+      </section>
+
+      {/* Sales list */}
+      <section className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm p-4 space-y-3">
+        <div className="flex items-center gap-2">
+          <Activity className="w-4 h-4 text-muted-foreground/60" />
+          <span className="font-orbitron text-xs tracking-wider text-muted-foreground">ALL FLASH SALES</span>
+          <span className="font-mono-share text-[9px] text-muted-foreground/40">({sales.length})</span>
+        </div>
+
+        {sales.length === 0 ? (
+          <p className="font-mono-share text-xs text-muted-foreground/40 py-4 text-center">No flash sales created yet</p>
+        ) : (
+          <div className="space-y-2">
+            {sales.map(s => {
+              const active = isActive(s);
+              const endsAt = new Date(s.ends_at);
+              const remaining = Math.max(0, Math.round((endsAt.getTime() - Date.now()) / 60000));
+              return (
+                <div
+                  key={s.id}
+                  className={`rounded-lg border p-3 space-y-1.5 ${
+                    active
+                      ? "border-orange-500/30 bg-orange-500/5"
+                      : "border-border/20 bg-card/20 opacity-60"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      {active && <span className="w-2 h-2 rounded-full bg-orange-400 animate-pulse" />}
+                      <span className="font-orbitron text-[10px] tracking-wider text-foreground/80">{s.title}</span>
+                    </div>
+                    {active && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEnd(s.id)}
+                        disabled={ending === s.id}
+                        className="font-mono-share text-[9px] gap-1 border-destructive/30 text-destructive hover:bg-destructive/10 h-6 px-2"
+                      >
+                        {ending === s.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Ban className="w-3 h-3" />}
+                        END SALE
+                      </Button>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-3 font-mono-share text-[9px] text-muted-foreground/60">
+                    <span>Discount: <span className="text-orange-400 font-bold">{s.discount_percent}%</span></span>
+                    {s.bonus_credits_percent > 0 && (
+                      <span>Bonus: <span className="text-green-400 font-bold">+{s.bonus_credits_percent}%</span></span>
+                    )}
+                    <span>Uses: <span className="text-foreground">{s.uses}</span>{s.max_uses ? `/${s.max_uses}` : ""}</span>
+                    <span>Packages: {s.packages ? s.packages.join(", ") : "ALL"}</span>
+                    {active ? (
+                      <span>Ends in: <span className="text-orange-300">{remaining}m</span></span>
+                    ) : (
+                      <span className="text-destructive/60">Ended</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+    </div>
   );
 }
 
@@ -1689,6 +1906,8 @@ export default function Admin() {
             )}
           </div>
         )}
+
+        {activeTab === "flash-sales" && <FlashSalesPanel />}
 
         {activeTab === "payouts" && <PayoutsPanel />}
 

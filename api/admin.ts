@@ -729,6 +729,42 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.json({ success: true });
       }
 
+      // ── Flash Sales CRUD ──────────────────────────────────────
+
+      case "flash-sales-list": {
+        const sales = await sql`
+          SELECT * FROM xrge_flash_sales ORDER BY created_at DESC LIMIT 50
+        `;
+        return res.json({ sales });
+      }
+
+      case "flash-sales-create": {
+        const { title, discountPercent, bonusCreditsPercent, packages: pkgs, durationMinutes } = req.body;
+        if (!title || !discountPercent || !durationMinutes) {
+          return res.status(400).json({ error: "title, discountPercent, and durationMinutes required" });
+        }
+        const dp = Math.min(90, Math.max(1, parseInt(discountPercent)));
+        const bp = Math.min(500, Math.max(0, parseInt(bonusCreditsPercent || "0")));
+        const dur = Math.max(1, parseInt(durationMinutes));
+        const maxUses = req.body.maxUses ? parseInt(req.body.maxUses) : null;
+        const packagesArr = pkgs && Array.isArray(pkgs) && pkgs.length > 0 ? pkgs : null;
+
+        const rows = await sql`
+          INSERT INTO xrge_flash_sales (title, discount_percent, bonus_credits_percent, packages, ends_at, max_uses)
+          VALUES (${title}, ${dp}, ${bp}, ${packagesArr}, now() + ${dur + ' minutes'}::interval, ${maxUses})
+          RETURNING *
+        `;
+        console.log(`[admin] Flash sale created: "${title}" ${dp}% off + ${bp}% bonus for ${dur}min`);
+        return res.json({ sale: rows[0] });
+      }
+
+      case "flash-sales-end": {
+        const { saleId } = req.body;
+        if (!saleId) return res.status(400).json({ error: "saleId required" });
+        await sql`UPDATE xrge_flash_sales SET active = false WHERE id = ${saleId}::uuid`;
+        return res.json({ success: true });
+      }
+
       default:
         return res.status(400).json({ error: "Unknown action" });
     }
