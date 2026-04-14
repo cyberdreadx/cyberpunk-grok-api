@@ -255,6 +255,19 @@ const ProfilePage: React.FC = () => {
                     />
                     <span className="font-mono-share text-[9px] text-muted-foreground">{editBio.length}/300</span>
                   </div>
+                  <div>
+                    <label className="font-mono-share text-[10px] text-muted-foreground flex items-center gap-1">
+                      <Wallet className="w-3 h-3" /> WALLET_ADDRESS (Base chain)
+                    </label>
+                    <Input
+                      value={editWallet}
+                      onChange={(e) => setEditWallet(e.target.value.trim())}
+                      placeholder="0x... (for XRGE payouts)"
+                      maxLength={42}
+                      className="h-8 font-mono-share text-xs bg-input/50"
+                    />
+                    <span className="font-mono-share text-[8px] text-muted-foreground/50">Set this to receive instant XRGE payouts from locked content</span>
+                  </div>
                   <div className="flex gap-2">
                     <Button size="sm" onClick={handleSave} disabled={saving} className="font-mono-share text-[10px]">
                       <Check className="w-3 h-3 mr-1" /> {saving ? "SAVING..." : "SAVE"}
