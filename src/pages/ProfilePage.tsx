@@ -19,6 +19,7 @@ interface Profile {
   avatarUrl: string | null;
   bio: string;
   walletAddress?: string | null;
+  walletTruncated?: string | null;
   createdAt: string;
   followers: number;
   following: number;
