@@ -8,8 +8,10 @@ import PostCard from "@/components/PostCard";
 import ReelCard from "@/components/ReelCard";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Send, Users, Globe, Loader2, Plus, X } from "lucide-react";
+import { Send, Users, Globe, Loader2, Plus, X, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import MobileBottomNav from "@/components/MobileBottomNav";
 
@@ -20,12 +22,17 @@ interface FeedPost {
   avatarUrl: string | null;
   text: string;
   imageUrl: string | null;
+  previewText?: string;
   createdAt: string;
   score: number;
   userVote: string | null;
   commentCount: number;
   flagCount?: number;
   userFlagged?: boolean;
+  lockCost?: number;
+  lockPriceCents?: number;
+  unlocked?: boolean;
+  isOwner?: boolean;
 }
 
 const FeedPage: React.FC = () => {
@@ -42,6 +49,9 @@ const FeedPage: React.FC = () => {
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [showCompose, setShowCompose] = useState(false);
+  const [lockEnabled, setLockEnabled] = useState(false);
+  const [lockCredits, setLockCredits] = useState("");
+  const [lockPrice, setLockPrice] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -80,9 +90,17 @@ const FeedPage: React.FC = () => {
     if (!newText.trim()) return;
     setPosting(true);
     try {
-      await apiFetch("/feed", { method: "POST", body: { text: newText.trim() } });
+      const body: any = { text: newText.trim() };
+      if (lockEnabled) {
+        if (lockCredits) body.lockCost = parseInt(lockCredits) || 0;
+        if (lockPrice) body.lockPriceCents = Math.round(parseFloat(lockPrice) * 100) || 0;
+      }
+      await apiFetch("/feed", { method: "POST", body });
       setNewText("");
       setShowCompose(false);
+      setLockEnabled(false);
+      setLockCredits("");
+      setLockPrice("");
       fetchFeed();
     } catch (err: any) {
       toast({ title: err.message, variant: "destructive" });
@@ -97,7 +115,6 @@ const FeedPage: React.FC = () => {
     fetchFeed(nextCursor);
   };
 
-  // Infinite scroll for reels mode
   const handleReelScroll = useCallback(() => {
     const el = scrollRef.current;
     if (!el || !nextCursor || loadingMore) return;
@@ -108,11 +125,50 @@ const FeedPage: React.FC = () => {
     }
   }, [nextCursor, loadingMore, fetchFeed]);
 
+  const lockControls = (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        <Switch checked={lockEnabled} onCheckedChange={setLockEnabled} />
+        <span className="font-mono-share text-[10px] text-muted-foreground flex items-center gap-1">
+          <Lock className="w-3 h-3" /> Lock this post
+        </span>
+      </div>
+      {lockEnabled && (
+        <div className="flex gap-2">
+          <div className="flex-1">
+            <label className="font-mono-share text-[9px] text-muted-foreground block mb-1">Credits to unlock</label>
+            <Input
+              type="number"
+              min="0"
+              max="100"
+              placeholder="e.g. 5"
+              value={lockCredits}
+              onChange={(e) => setLockCredits(e.target.value)}
+              className="font-mono-share text-xs h-8"
+            />
+          </div>
+          <div className="flex-1">
+            <label className="font-mono-share text-[9px] text-muted-foreground block mb-1">USD price ($)</label>
+            <Input
+              type="number"
+              min="0"
+              max="100"
+              step="0.01"
+              placeholder="e.g. 2.99"
+              value={lockPrice}
+              onChange={(e) => setLockPrice(e.target.value)}
+              className="font-mono-share text-xs h-8"
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   /* ───── MOBILE REELS VIEW ───── */
   if (isMobile) {
     return (
       <>
-        {/* Full-screen snap-scroll container */}
         <div
           ref={scrollRef}
           onScroll={handleReelScroll}
@@ -204,6 +260,7 @@ const FeedPage: React.FC = () => {
                 autoFocus
                 className="font-mono-share text-sm bg-input/50 resize-none border-border/30 focus:border-primary/50"
               />
+              {lockControls}
               <div className="flex items-center justify-between">
                 <span className="font-mono-share text-[9px] text-muted-foreground">{newText.length}/2000</span>
                 <Button size="sm" onClick={handlePost} disabled={posting || !newText.trim()} className="font-mono-share text-[10px]">
@@ -220,11 +277,10 @@ const FeedPage: React.FC = () => {
     );
   }
 
-  /* ───── DESKTOP VIEW (unchanged) ───── */
+  /* ───── DESKTOP VIEW ───── */
   return (
     <CyberLayout>
       <div className="max-w-2xl mx-auto px-4 py-6 space-y-4 pb-24">
-        {/* Header */}
         <div className="flex items-center justify-between">
           <h1 className="font-orbitron text-lg tracking-widest text-foreground">LIVE FEED</h1>
           <button
@@ -235,7 +291,6 @@ const FeedPage: React.FC = () => {
           </button>
         </div>
 
-        {/* Compose */}
         <div className="bg-card/60 border border-border/40 rounded-lg p-4 space-y-3">
           <Textarea
             value={newText}
@@ -245,6 +300,7 @@ const FeedPage: React.FC = () => {
             rows={3}
             className="font-mono-share text-sm bg-input/50 resize-none border-border/30 focus:border-primary/50"
           />
+          {lockControls}
           <div className="flex items-center justify-between">
             <span className="font-mono-share text-[9px] text-muted-foreground">{newText.length}/2000</span>
             <Button size="sm" onClick={handlePost} disabled={posting || !newText.trim()} className="font-mono-share text-[10px]">
@@ -254,7 +310,6 @@ const FeedPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Filter tabs */}
         <div className="flex gap-2">
           <button
             onClick={() => setFilter("all")}
@@ -278,7 +333,6 @@ const FeedPage: React.FC = () => {
           </button>
         </div>
 
-        {/* Posts */}
         {loading ? (
           <div className="space-y-4">
             {[...Array(4)].map((_, i) => (
