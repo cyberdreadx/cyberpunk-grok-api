@@ -125,6 +125,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             avatarUrl: r.avatar_url,
             text: isLocked ? "" : r.text,
             imageUrl: isLocked ? null : r.image_url,
+            previewImageUrl: isLocked && r.image_url ? r.image_url : undefined,
             previewText: isLocked && r.text ? r.text.slice(0, 60) + "..." : undefined,
             createdAt: r.created_at,
             score: r.score,
