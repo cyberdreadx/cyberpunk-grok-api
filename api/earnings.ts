@@ -51,10 +51,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       WHERE s.user_id = ${auth.userId}::uuid
     `.catch(() => [{ total_credits: 0, unlock_count: 0 }]);
 
-    // Recent transactions (last 20)
+    // XRGE earnings from feed unlocks
+    const feedXrge = await sql`
+      SELECT
+        COALESCE(SUM(fu.xrge_paid::numeric), 0) AS total_xrge,
+        COUNT(*)::int AS unlock_count
+      FROM feed_unlocks fu
+      JOIN feed_posts fp ON fp.id = fu.post_id
+      WHERE fp.user_id = ${auth.userId}::uuid
+        AND fu.xrge_paid IS NOT NULL
+    `.catch(() => [{ total_xrge: 0, unlock_count: 0 }]);
+
+    // XRGE earnings from story unlocks
+    const storyXrge = await sql`
+      SELECT
+        COALESCE(SUM(su.xrge_paid::numeric), 0) AS total_xrge,
+        COUNT(*)::int AS unlock_count
+      FROM story_unlocks su
+      JOIN stories s ON s.id = su.story_id
+      WHERE s.user_id = ${auth.userId}::uuid
+        AND su.xrge_paid IS NOT NULL
+    `.catch(() => [{ total_xrge: 0, unlock_count: 0 }]);
+
+    // Recent transactions (last 20) — include XRGE
     const recent = await sql`
       (
         SELECT 'post' AS type, fu.credits_paid, fu.cents_paid, fu.unlocked_at,
+               COALESCE(fu.xrge_paid, '') AS xrge_paid,
                u.email AS buyer_email,
                COALESCE(p2.username, LEFT(u.email, 3) || '***') AS buyer_name
         FROM feed_unlocks fu
@@ -66,6 +89,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       UNION ALL
       (
         SELECT 'story' AS type, su.credits_paid, 0 AS cents_paid, su.unlocked_at,
+               COALESCE(su.xrge_paid, '') AS xrge_paid,
                u.email AS buyer_email,
                COALESCE(p2.username, LEFT(u.email, 3) || '***') AS buyer_name
         FROM story_unlocks su
@@ -77,7 +101,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ORDER BY unlocked_at DESC
       LIMIT 20
     `.catch(() => []);
-
     // Get cash balance
     await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS cash_balance_cents INT NOT NULL DEFAULT 0`.catch(() => {});
     const [userRow] = await sql`SELECT cash_balance_cents FROM users WHERE id = ${auth.userId}::uuid`;
