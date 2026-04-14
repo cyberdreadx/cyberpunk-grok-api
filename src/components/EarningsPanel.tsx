@@ -15,12 +15,16 @@ interface EarningsSummary {
   cashBalanceCents: number;
   postUnlocks: number;
   storyUnlocks: number;
+  totalXrgeEarned: number;
+  creatorShareXrge: number;
+  xrgeUnlocks: number;
 }
 
 interface RecentTx {
   type: "post" | "story";
   creditsPaid: number;
   centsPaid: number;
+  xrgePaid?: string;
   buyerName: string;
   unlockedAt: string;
 }
