@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { apiFetch } from "@/lib/api";
-import { DollarSign, Coins, Heart, TrendingUp, Loader2 } from "lucide-react";
+import { DollarSign, Coins, Heart, TrendingUp, Loader2, Wallet, ArrowDownToLine } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
 
 interface EarningsSummary {
   totalCreditsEarned: number;
@@ -9,6 +12,7 @@ interface EarningsSummary {
   creatorShareCents: number;
   charityCredits: number;
   charityCents: number;
+  cashBalanceCents: number;
   postUnlocks: number;
   storyUnlocks: number;
 }
@@ -21,19 +25,46 @@ interface RecentTx {
   unlockedAt: string;
 }
 
+interface PayoutRequest {
+  id: string;
+  amount_cents: number;
+  method: string;
+  payout_details: string;
+  status: string;
+  admin_note: string | null;
+  created_at: string;
+}
+
 interface EarningsData {
   summary: EarningsSummary;
   recent: RecentTx[];
 }
 
-const EarningsPanel: React.FC = () => {
-  const [data, setData] = useState<EarningsData | null>(null);
-  const [loading, setLoading] = useState(true);
+interface PayoutData {
+  cashBalanceCents: number;
+  minPayoutCents: number;
+  requests: PayoutRequest[];
+}
 
-  const fetch = useCallback(async () => {
+const EarningsPanel: React.FC = () => {
+  const { toast } = useToast();
+  const [data, setData] = useState<EarningsData | null>(null);
+  const [payoutData, setPayoutData] = useState<PayoutData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [showWithdraw, setShowWithdraw] = useState(false);
+  const [withdrawAmount, setWithdrawAmount] = useState("");
+  const [withdrawMethod, setWithdrawMethod] = useState<"paypal" | "bank" | "crypto">("paypal");
+  const [withdrawDetails, setWithdrawDetails] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const fetchData = useCallback(async () => {
     try {
-      const d = await apiFetch<EarningsData>("/earnings");
-      setData(d);
+      const [earnings, payouts] = await Promise.all([
+        apiFetch<EarningsData>("/earnings"),
+        apiFetch<PayoutData>("/payouts").catch(() => null),
+      ]);
+      setData(earnings);
+      setPayoutData(payouts);
     } catch {
       // silently fail
     } finally {
@@ -41,7 +72,35 @@ const EarningsPanel: React.FC = () => {
     }
   }, []);
 
-  useEffect(() => { fetch(); }, [fetch]);
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  const handleWithdraw = async () => {
+    const cents = Math.round(parseFloat(withdrawAmount) * 100);
+    if (!cents || cents < (payoutData?.minPayoutCents || 2500)) {
+      toast({ title: `Minimum withdrawal is $${((payoutData?.minPayoutCents || 2500) / 100).toFixed(2)}`, variant: "destructive" });
+      return;
+    }
+    if (!withdrawDetails.trim()) {
+      toast({ title: "Enter your payout details", variant: "destructive" });
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await apiFetch("/payouts", {
+        method: "POST",
+        body: { amountCents: cents, method: withdrawMethod, payoutDetails: withdrawDetails.trim() },
+      });
+      toast({ title: "Withdrawal request submitted!" });
+      setShowWithdraw(false);
+      setWithdrawAmount("");
+      setWithdrawDetails("");
+      fetchData();
+    } catch (err: any) {
+      toast({ title: err.message, variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -52,11 +111,12 @@ const EarningsPanel: React.FC = () => {
   }
 
   if (!data || (data.summary.postUnlocks === 0 && data.summary.storyUnlocks === 0)) {
-    return null; // Don't show panel if no earnings
+    return null;
   }
 
   const s = data.summary;
   const fmtCents = (c: number) => `$${(c / 100).toFixed(2)}`;
+  const hasPending = payoutData?.requests?.some((r) => r.status === "pending");
   const timeAgo = (d: string) => {
     const diff = Date.now() - new Date(d).getTime();
     const mins = Math.floor(diff / 60000);
@@ -64,6 +124,13 @@ const EarningsPanel: React.FC = () => {
     const hrs = Math.floor(mins / 60);
     if (hrs < 24) return `${hrs}h ago`;
     return `${Math.floor(hrs / 24)}d ago`;
+  };
+
+  const STATUS_COLORS: Record<string, string> = {
+    pending: "bg-amber-500/20 text-amber-400",
+    approved: "bg-blue-500/20 text-blue-400",
+    paid: "bg-green-500/20 text-green-400",
+    rejected: "bg-destructive/20 text-destructive",
   };
 
   return (
@@ -83,16 +150,15 @@ const EarningsPanel: React.FC = () => {
           <div className="font-mono-share text-[9px] text-muted-foreground">{s.postUnlocks + s.storyUnlocks} unlocks</div>
         </div>
 
-        {s.totalCentsEarned > 0 && (
-          <div className="bg-background/50 rounded-md p-3 border border-border/30">
-            <div className="flex items-center gap-1.5 mb-1">
-              <DollarSign className="w-3 h-3 text-green-400" />
-              <span className="font-mono-share text-[9px] text-muted-foreground">CASH EARNED</span>
-            </div>
-            <div className="font-orbitron text-lg text-green-400">{fmtCents(s.creatorShareCents)}</div>
-            <div className="font-mono-share text-[9px] text-muted-foreground">75% of {fmtCents(s.totalCentsEarned)}</div>
+        {/* Cash balance — withdrawable */}
+        <div className="bg-background/50 rounded-md p-3 border border-border/30">
+          <div className="flex items-center gap-1.5 mb-1">
+            <Wallet className="w-3 h-3 text-green-400" />
+            <span className="font-mono-share text-[9px] text-muted-foreground">CASH BALANCE</span>
           </div>
-        )}
+          <div className="font-orbitron text-lg text-green-400">{fmtCents(s.cashBalanceCents)}</div>
+          <div className="font-mono-share text-[9px] text-muted-foreground">available to withdraw</div>
+        </div>
 
         <div className="bg-background/50 rounded-md p-3 border border-border/30">
           <div className="flex items-center gap-1.5 mb-1">
@@ -110,17 +176,119 @@ const EarningsPanel: React.FC = () => {
 
         <div className="bg-background/50 rounded-md p-3 border border-border/30">
           <div className="flex items-center gap-1.5 mb-1">
-            <TrendingUp className="w-3 h-3 text-primary" />
-            <span className="font-mono-share text-[9px] text-muted-foreground">BREAKDOWN</span>
+            <DollarSign className="w-3 h-3 text-primary" />
+            <span className="font-mono-share text-[9px] text-muted-foreground">TOTAL EARNED</span>
           </div>
           <div className="font-mono-share text-[10px] text-foreground space-y-0.5">
-            <div>{s.postUnlocks} post unlock{s.postUnlocks !== 1 ? "s" : ""}</div>
-            <div>{s.storyUnlocks} story unlock{s.storyUnlocks !== 1 ? "s" : ""}</div>
+            <div>{fmtCents(s.creatorShareCents)} cash</div>
+            <div>{s.creatorShareCredits} credits</div>
           </div>
         </div>
       </div>
 
-      {/* Recent transactions */}
+      {/* Withdraw button */}
+      {s.cashBalanceCents >= (payoutData?.minPayoutCents || 2500) && !hasPending && (
+        <Button
+          onClick={() => setShowWithdraw(!showWithdraw)}
+          className="w-full font-mono-share text-xs"
+          variant="outline"
+        >
+          <ArrowDownToLine className="w-3.5 h-3.5 mr-2" />
+          REQUEST WITHDRAWAL
+        </Button>
+      )}
+
+      {s.cashBalanceCents > 0 && s.cashBalanceCents < (payoutData?.minPayoutCents || 2500) && (
+        <p className="font-mono-share text-[9px] text-muted-foreground text-center">
+          Min. withdrawal: {fmtCents(payoutData?.minPayoutCents || 2500)} — you need {fmtCents((payoutData?.minPayoutCents || 2500) - s.cashBalanceCents)} more
+        </p>
+      )}
+
+      {/* Withdraw form */}
+      {showWithdraw && (
+        <div className="bg-background/50 border border-border/30 rounded-md p-3 space-y-3">
+          <h3 className="font-mono-share text-[10px] text-muted-foreground tracking-widest">WITHDRAW FUNDS</h3>
+
+          <div>
+            <label className="font-mono-share text-[9px] text-muted-foreground">AMOUNT (USD)</label>
+            <Input
+              type="number"
+              min={0.01}
+              step={0.01}
+              max={(s.cashBalanceCents / 100)}
+              value={withdrawAmount}
+              onChange={(e) => setWithdrawAmount(e.target.value)}
+              placeholder={`Min $${((payoutData?.minPayoutCents || 2500) / 100).toFixed(2)}`}
+              className="h-8 font-mono-share text-sm bg-input/50"
+            />
+          </div>
+
+          <div>
+            <label className="font-mono-share text-[9px] text-muted-foreground">PAYOUT METHOD</label>
+            <div className="flex gap-2 mt-1">
+              {(["paypal", "bank", "crypto"] as const).map((m) => (
+                <button
+                  key={m}
+                  onClick={() => setWithdrawMethod(m)}
+                  className={`px-3 py-1.5 rounded text-[10px] font-mono-share border transition-colors ${
+                    withdrawMethod === m
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border/30 text-muted-foreground hover:border-primary/30"
+                  }`}
+                >
+                  {m.toUpperCase()}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="font-mono-share text-[9px] text-muted-foreground">
+              {withdrawMethod === "paypal" ? "PAYPAL EMAIL" : withdrawMethod === "bank" ? "BANK DETAILS" : "WALLET ADDRESS"}
+            </label>
+            <Input
+              value={withdrawDetails}
+              onChange={(e) => setWithdrawDetails(e.target.value)}
+              placeholder={
+                withdrawMethod === "paypal" ? "your@email.com" : withdrawMethod === "bank" ? "Routing + Account number" : "0x... or wallet address"
+              }
+              className="h-8 font-mono-share text-sm bg-input/50"
+            />
+          </div>
+
+          <div className="flex gap-2">
+            <Button size="sm" onClick={handleWithdraw} disabled={submitting} className="font-mono-share text-[10px]">
+              {submitting ? "SUBMITTING..." : "SUBMIT REQUEST"}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setShowWithdraw(false)} className="font-mono-share text-[10px]">
+              CANCEL
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Payout history */}
+      {payoutData && payoutData.requests.length > 0 && (
+        <div>
+          <h3 className="font-mono-share text-[9px] text-muted-foreground mb-2 tracking-widest">PAYOUT HISTORY</h3>
+          <div className="space-y-1.5 max-h-32 overflow-y-auto">
+            {payoutData.requests.map((r) => (
+              <div key={r.id} className="flex items-center justify-between text-[10px] font-mono-share py-1 px-2 bg-background/30 rounded">
+                <div className="flex items-center gap-2">
+                  <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold ${STATUS_COLORS[r.status] || ""}`}>
+                    {r.status.toUpperCase()}
+                  </span>
+                  <span className="text-foreground">{fmtCents(r.amount_cents)}</span>
+                  <span className="text-muted-foreground">{r.method}</span>
+                </div>
+                <span className="text-muted-foreground">{timeAgo(r.created_at)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Recent sales */}
       {data.recent.length > 0 && (
         <div>
           <h3 className="font-mono-share text-[9px] text-muted-foreground mb-2 tracking-widest">RECENT SALES</h3>
