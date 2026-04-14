@@ -1072,6 +1072,70 @@ export default function Admin() {
               )}
             </section>
 
+            {/* Feed Moderators */}
+            <section className="border border-secondary/30 rounded-lg bg-card/40 backdrop-blur-sm p-3 sm:p-4 space-y-3">
+              <h2 className="font-orbitron text-xs tracking-wider text-secondary/80 flex items-center gap-2">
+                <Shield className="w-3.5 h-3.5" />
+                FEED_MODERATORS
+              </h2>
+              <div className="flex flex-wrap items-end gap-2">
+                <div className="flex-1 min-w-[180px]">
+                  <label className="font-mono-share text-[9px] text-muted-foreground/60 block mb-1">EMAIL</label>
+                  <input type="email" value={modEmail} onChange={e => setModEmail(e.target.value)} placeholder="user@example.com"
+                    className="w-full bg-background/60 border border-border rounded px-2.5 py-1.5 font-mono-share text-xs text-foreground placeholder-muted-foreground/40" />
+                </div>
+                <Button variant="outline" size="sm" disabled={modAction || !modEmail.trim()}
+                  className="font-mono-share text-xs gap-1.5 border-secondary/40 hover:bg-secondary/10 text-secondary"
+                  onClick={async () => {
+                    setModAction(true); setModResult(null);
+                    try {
+                      await apiFetch("/admin", { method: "POST", body: { action: "add-mod", email: modEmail.trim() } });
+                      setModResult({ ok: true, msg: `${modEmail.trim()} is now a feed moderator` });
+                      setModEmail("");
+                      fetchMods();
+                    } catch (err: any) {
+                      setModResult({ ok: false, msg: err.message || "Failed" });
+                    } finally { setModAction(false); }
+                  }}>
+                  {modAction ? <Loader2 className="w-3 h-3 animate-spin" /> : <Shield className="w-3 h-3" />}
+                  ADD MOD
+                </Button>
+              </div>
+              {modResult && (
+                <div className={`font-mono-share text-[10px] px-2 py-1.5 rounded ${modResult.ok ? "bg-green-500/10 text-green-400" : "bg-destructive/10 text-destructive"}`}>
+                  {modResult.msg}
+                </div>
+              )}
+              {modsLoading ? (
+                <div className="text-muted-foreground/60 font-mono-share text-xs">Loading...</div>
+              ) : mods.length === 0 ? (
+                <div className="text-muted-foreground/40 font-mono-share text-xs">No moderators assigned</div>
+              ) : (
+                <div className="space-y-1">
+                  {mods.map((m: any) => (
+                    <div key={m.user_id} className="flex items-center justify-between bg-background/40 rounded px-2.5 py-1.5">
+                      <div>
+                        <span className="font-mono-share text-xs text-foreground">{m.username || m.email}</span>
+                        {m.username && <span className="font-mono-share text-[9px] text-muted-foreground/50 ml-2">{m.email}</span>}
+                      </div>
+                      <Button variant="ghost" size="sm" className="h-6 px-2 text-destructive hover:bg-destructive/10 font-mono-share text-[10px]"
+                        onClick={async () => {
+                          setModAction(true);
+                          try {
+                            await apiFetch("/admin", { method: "POST", body: { action: "remove-mod", userId: m.user_id } });
+                            fetchMods();
+                          } catch (err: any) {
+                            setModResult({ ok: false, msg: err.message || "Failed to remove" });
+                          } finally { setModAction(false); }
+                        }}>
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+
             <section className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm overflow-hidden">
               <div className="px-3 sm:px-4 py-3 border-b border-border/30">
                 <h2 className="font-orbitron text-xs tracking-wider text-primary/80 flex items-center gap-2">
