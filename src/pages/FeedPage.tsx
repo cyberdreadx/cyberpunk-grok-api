@@ -182,10 +182,9 @@ const FeedPage: React.FC = () => {
 
         {/* Compose sheet */}
         {showCompose && (
-          <div className="fixed inset-0 z-50 flex items-end bg-black/60 backdrop-blur-sm" onClick={() => setShowCompose(false)}>
+          <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 backdrop-blur-sm pt-[env(safe-area-inset-top,0px)]" onClick={() => setShowCompose(false)}>
             <div
-              className="w-full bg-card rounded-t-2xl p-4 space-y-3 animate-in slide-in-from-bottom duration-200"
-              style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)" }}
+              className="w-[calc(100%-32px)] mt-16 bg-card rounded-2xl p-4 space-y-3 animate-in fade-in zoom-in-95 duration-200 shadow-xl"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between">
@@ -199,7 +198,7 @@ const FeedPage: React.FC = () => {
                 onChange={(e) => setNewText(e.target.value)}
                 placeholder="Share something..."
                 maxLength={2000}
-                rows={4}
+                rows={3}
                 autoFocus
                 className="font-mono-share text-sm bg-input/50 resize-none border-border/30 focus:border-primary/50"
               />
