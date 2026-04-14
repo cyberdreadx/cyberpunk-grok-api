@@ -309,6 +309,9 @@ const ProfilePage: React.FC = () => {
           </div>
         </div>
 
+        {/* Earnings (own profile only) */}
+        {profile.isOwn && <EarningsPanel />}
+
         {/* Gallery */}
         <div>
           <h2 className="font-orbitron text-xs text-muted-foreground mb-3 tracking-widest">POSTS</h2>
