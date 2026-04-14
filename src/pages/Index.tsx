@@ -1592,9 +1592,6 @@ const Index = () => {
                     </button>
                   )}
                 </div>
-                {/* GROK disabled — maintenance */}
-
-                {/* GROK warning removed — maintenance */}
               </div>
             )}
 
