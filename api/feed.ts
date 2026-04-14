@@ -145,7 +145,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (!postId) return res.status(400).json({ error: "postId required" });
 
       const isAdmin = auth.email === (process.env.ADMIN_EMAIL || "cyberdreadx@proton.me");
-      if (isAdmin) {
+      const modRows = await sql`SELECT 1 FROM feed_moderators WHERE user_id = ${auth.userId} LIMIT 1`;
+      const isMod = modRows.length > 0;
+      if (isAdmin || isMod) {
         await sql`DELETE FROM feed_posts WHERE id = ${postId}`;
       } else {
         await sql`DELETE FROM feed_posts WHERE id = ${postId} AND user_id = ${auth.userId}`;

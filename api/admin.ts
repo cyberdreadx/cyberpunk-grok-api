@@ -702,8 +702,35 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
 
+      case "list-mods": {
+        const mods = await sql`
+          SELECT fm.user_id, fm.created_at, u.email, p.username
+          FROM feed_moderators fm
+          JOIN users u ON u.id = fm.user_id
+          LEFT JOIN profiles p ON p.user_id = fm.user_id
+          ORDER BY fm.created_at DESC
+        `;
+        return res.json({ mods });
+      }
+
+      case "add-mod": {
+        const { email: modEmail } = req.body;
+        if (!modEmail) return res.status(400).json({ error: "email required" });
+        const userRows = await sql`SELECT id FROM users WHERE email = ${modEmail}`;
+        if (userRows.length === 0) return res.status(404).json({ error: "User not found" });
+        await sql`INSERT INTO feed_moderators (user_id, granted_by) VALUES (${userRows[0].id}, ${ADMIN_EMAIL}) ON CONFLICT DO NOTHING`;
+        return res.json({ success: true, userId: userRows[0].id });
+      }
+
+      case "remove-mod": {
+        const { userId: rmUserId } = req.body;
+        if (!rmUserId) return res.status(400).json({ error: "userId required" });
+        await sql`DELETE FROM feed_moderators WHERE user_id = ${rmUserId}`;
+        return res.json({ success: true });
+      }
+
       default:
-        return res.status(400).json({ error: "Unknown action. Expected: overview, revenue, revenue-breakdown, users, usage, transactions, top-users, referrals, sync-subscriptions, grant-credits, email-logs, api-analytics, announcement-stats, get-announcement-html, send-announcement" });
+        return res.status(400).json({ error: "Unknown action" });
     }
   } catch (err: any) {
     console.error("[admin]", err.message);
