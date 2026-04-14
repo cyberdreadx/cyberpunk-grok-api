@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { apiFetch } from "@/lib/api";
-import { DollarSign, Coins, Heart, TrendingUp, Loader2, Wallet, ArrowDownToLine } from "lucide-react";
+import { DollarSign, Coins, Heart, TrendingUp, Loader2, Wallet, ArrowDownToLine, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -53,7 +53,7 @@ const EarningsPanel: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showWithdraw, setShowWithdraw] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState("");
-  const [withdrawMethod, setWithdrawMethod] = useState<"paypal" | "bank" | "crypto">("paypal");
+  const [withdrawMethod, setWithdrawMethod] = useState<"xrge" | "paypal" | "bank" | "crypto">("xrge");
   const [withdrawDetails, setWithdrawDetails] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -75,22 +75,28 @@ const EarningsPanel: React.FC = () => {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const handleWithdraw = async () => {
+    const isXrge = withdrawMethod === "xrge";
+    const minCents = isXrge ? 100 : (payoutData?.minPayoutCents || 2500);
     const cents = Math.round(parseFloat(withdrawAmount) * 100);
-    if (!cents || cents < (payoutData?.minPayoutCents || 2500)) {
-      toast({ title: `Minimum withdrawal is $${((payoutData?.minPayoutCents || 2500) / 100).toFixed(2)}`, variant: "destructive" });
+    if (!cents || cents < minCents) {
+      toast({ title: `Minimum withdrawal is $${(minCents / 100).toFixed(2)}`, variant: "destructive" });
       return;
     }
-    if (!withdrawDetails.trim()) {
+    if (!isXrge && !withdrawDetails.trim()) {
       toast({ title: "Enter your payout details", variant: "destructive" });
       return;
     }
     setSubmitting(true);
     try {
-      await apiFetch("/payouts", {
+      const result = await apiFetch<any>("/payouts", {
         method: "POST",
-        body: { amountCents: cents, method: withdrawMethod, payoutDetails: withdrawDetails.trim() },
+        body: { amountCents: cents, method: withdrawMethod, payoutDetails: isXrge ? "" : withdrawDetails.trim() },
       });
-      toast({ title: "Withdrawal request submitted!" });
+      if (result.instant) {
+        toast({ title: `Instant payout! ${result.xrgeAmount} XRGE added to your bank` });
+      } else {
+        toast({ title: "Withdrawal request submitted!" });
+      }
       setShowWithdraw(false);
       setWithdrawAmount("");
       setWithdrawDetails("");
@@ -187,7 +193,7 @@ const EarningsPanel: React.FC = () => {
       </div>
 
       {/* Withdraw button */}
-      {s.cashBalanceCents >= (payoutData?.minPayoutCents || 2500) && !hasPending && (
+      {s.cashBalanceCents >= 100 && !hasPending && (
         <Button
           onClick={() => setShowWithdraw(!showWithdraw)}
           className="w-full font-mono-share text-xs"
@@ -198,9 +204,9 @@ const EarningsPanel: React.FC = () => {
         </Button>
       )}
 
-      {s.cashBalanceCents > 0 && s.cashBalanceCents < (payoutData?.minPayoutCents || 2500) && (
+      {s.cashBalanceCents > 0 && s.cashBalanceCents < 100 && (
         <p className="font-mono-share text-[9px] text-muted-foreground text-center">
-          Min. withdrawal: {fmtCents(payoutData?.minPayoutCents || 2500)} — you need {fmtCents((payoutData?.minPayoutCents || 2500) - s.cashBalanceCents)} more
+          Min. withdrawal: $1.00 (XRGE instant) — you need {fmtCents(100 - s.cashBalanceCents)} more
         </p>
       )}
 
@@ -208,6 +214,36 @@ const EarningsPanel: React.FC = () => {
       {showWithdraw && (
         <div className="bg-background/50 border border-border/30 rounded-md p-3 space-y-3">
           <h3 className="font-mono-share text-[10px] text-muted-foreground tracking-widest">WITHDRAW FUNDS</h3>
+
+          <div>
+            <label className="font-mono-share text-[9px] text-muted-foreground">PAYOUT METHOD</label>
+            <div className="flex flex-wrap gap-2 mt-1">
+              {(["xrge", "paypal", "bank", "crypto"] as const).map((m) => (
+                <button
+                  key={m}
+                  onClick={() => setWithdrawMethod(m)}
+                  className={`px-3 py-1.5 rounded text-[10px] font-mono-share border transition-colors flex items-center gap-1 ${
+                    withdrawMethod === m
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border/30 text-muted-foreground hover:border-primary/30"
+                  }`}
+                >
+                  {m === "xrge" && <Zap className="w-3 h-3" />}
+                  {m === "xrge" ? "$XRGE INSTANT" : m.toUpperCase()}
+                </button>
+              ))}
+            </div>
+            {withdrawMethod === "xrge" && (
+              <p className="font-mono-share text-[8px] text-primary/70 mt-1">
+                ⚡ Instant — converts cash to XRGE at live rate, credited to your XRGE bank. Min $1.00
+              </p>
+            )}
+            {withdrawMethod !== "xrge" && (
+              <p className="font-mono-share text-[8px] text-muted-foreground mt-1">
+                Manual review — processed within 48h. Min $25.00
+              </p>
+            )}
+          </div>
 
           <div>
             <label className="font-mono-share text-[9px] text-muted-foreground">AMOUNT (USD)</label>
@@ -218,47 +254,30 @@ const EarningsPanel: React.FC = () => {
               max={(s.cashBalanceCents / 100)}
               value={withdrawAmount}
               onChange={(e) => setWithdrawAmount(e.target.value)}
-              placeholder={`Min $${((payoutData?.minPayoutCents || 2500) / 100).toFixed(2)}`}
+              placeholder={withdrawMethod === "xrge" ? "Min $1.00" : `Min $${((payoutData?.minPayoutCents || 2500) / 100).toFixed(2)}`}
               className="h-8 font-mono-share text-sm bg-input/50"
             />
           </div>
 
-          <div>
-            <label className="font-mono-share text-[9px] text-muted-foreground">PAYOUT METHOD</label>
-            <div className="flex gap-2 mt-1">
-              {(["paypal", "bank", "crypto"] as const).map((m) => (
-                <button
-                  key={m}
-                  onClick={() => setWithdrawMethod(m)}
-                  className={`px-3 py-1.5 rounded text-[10px] font-mono-share border transition-colors ${
-                    withdrawMethod === m
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border/30 text-muted-foreground hover:border-primary/30"
-                  }`}
-                >
-                  {m.toUpperCase()}
-                </button>
-              ))}
+          {withdrawMethod !== "xrge" && (
+            <div>
+              <label className="font-mono-share text-[9px] text-muted-foreground">
+                {withdrawMethod === "paypal" ? "PAYPAL EMAIL" : withdrawMethod === "bank" ? "BANK DETAILS" : "WALLET ADDRESS"}
+              </label>
+              <Input
+                value={withdrawDetails}
+                onChange={(e) => setWithdrawDetails(e.target.value)}
+                placeholder={
+                  withdrawMethod === "paypal" ? "your@email.com" : withdrawMethod === "bank" ? "Routing + Account number" : "0x... or wallet address"
+                }
+                className="h-8 font-mono-share text-sm bg-input/50"
+              />
             </div>
-          </div>
-
-          <div>
-            <label className="font-mono-share text-[9px] text-muted-foreground">
-              {withdrawMethod === "paypal" ? "PAYPAL EMAIL" : withdrawMethod === "bank" ? "BANK DETAILS" : "WALLET ADDRESS"}
-            </label>
-            <Input
-              value={withdrawDetails}
-              onChange={(e) => setWithdrawDetails(e.target.value)}
-              placeholder={
-                withdrawMethod === "paypal" ? "your@email.com" : withdrawMethod === "bank" ? "Routing + Account number" : "0x... or wallet address"
-              }
-              className="h-8 font-mono-share text-sm bg-input/50"
-            />
-          </div>
+          )}
 
           <div className="flex gap-2">
             <Button size="sm" onClick={handleWithdraw} disabled={submitting} className="font-mono-share text-[10px]">
-              {submitting ? "SUBMITTING..." : "SUBMIT REQUEST"}
+              {submitting ? "PROCESSING..." : withdrawMethod === "xrge" ? "⚡ INSTANT PAYOUT" : "SUBMIT REQUEST"}
             </Button>
             <Button size="sm" variant="ghost" onClick={() => setShowWithdraw(false)} className="font-mono-share text-[10px]">
               CANCEL
