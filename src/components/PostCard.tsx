@@ -3,11 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowBigUp, ArrowBigDown, MessageCircle, Trash2, Flag, Lock, CreditCard, Coins } from "lucide-react";
+import { ArrowBigUp, ArrowBigDown, MessageCircle, Trash2, Flag, Lock, CreditCard, Coins, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import CommentThread from "@/components/CommentThread";
 import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
+import XrgeUnlockDialog from "@/components/XrgeUnlockDialog";
 
 interface FeedPost {
   id: string;
@@ -26,6 +27,7 @@ interface FeedPost {
   userFlagged?: boolean;
   lockCost?: number;
   lockPriceCents?: number;
+  lockXrgeAmount?: string;
   unlocked?: boolean;
   isOwner?: boolean;
   reactionCount?: number;
@@ -53,8 +55,9 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
   const [isUnlocked, setIsUnlocked] = useState(post.unlocked ?? true);
   const [revealedText, setRevealedText] = useState<string | null>(null);
   const [revealedImage, setRevealedImage] = useState<string | null>(null);
+  const [xrgeUnlockOpen, setXrgeUnlockOpen] = useState(false);
 
-  const isLocked = !isUnlocked && !post.isOwner && ((post.lockCost || 0) > 0 || (post.lockPriceCents || 0) > 0);
+  const isLocked = !isUnlocked && !post.isOwner && ((post.lockCost || 0) > 0 || (post.lockPriceCents || 0) > 0 || !!(post.lockXrgeAmount && parseFloat(post.lockXrgeAmount) > 0));
 
   const handleVote = async (emoji: "👍" | "👎") => {
     if (isLocked) return;
@@ -219,6 +222,18 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
                   >
                     <CreditCard className="w-3 h-3 mr-1" />
                     Unlock · ${((post.lockPriceCents || 0) / 100).toFixed(2)}
+                  </Button>
+                )}
+                {post.lockXrgeAmount && parseFloat(post.lockXrgeAmount) > 0 && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setXrgeUnlockOpen(true)}
+                    disabled={unlocking}
+                    className="font-mono-share text-[10px] border-secondary/30 text-secondary hover:bg-secondary/10"
+                  >
+                    <Zap className="w-3 h-3 mr-1" />
+                    Unlock · {post.lockXrgeAmount} XRGE
                   </Button>
                 )}
               </div>
