@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UserPlus, UserMinus, Edit2, Check, X, ArrowLeft, Camera, Loader2 } from "lucide-react";
+import EarningsPanel from "@/components/EarningsPanel";
 import { useToast } from "@/hooks/use-toast";
 import { upload } from "@vercel/blob/client";
 
