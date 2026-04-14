@@ -59,6 +59,7 @@ const ProfilePage: React.FC = () => {
   const [editing, setEditing] = useState(false);
   const [editUsername, setEditUsername] = useState("");
   const [editBio, setEditBio] = useState("");
+  const [editWallet, setEditWallet] = useState("");
   const [saving, setSaving] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
@@ -70,6 +71,7 @@ const ProfilePage: React.FC = () => {
       setProfile(data);
       setEditUsername(data.username);
       setEditBio(data.bio || "");
+      setEditWallet(data.walletAddress || "");
 
       // Fetch user posts
       const feed = await apiFetch<{ posts: FeedPost[] }>(`/feed?userId=${data.userId}`);
@@ -95,7 +97,7 @@ const ProfilePage: React.FC = () => {
     try {
       await apiFetch("/profile", {
         method: "PUT",
-        body: { username: editUsername, bio: editBio },
+        body: { username: editUsername, bio: editBio, walletAddress: editWallet || null },
       });
       toast({ title: "Profile updated" });
       setEditing(false);
