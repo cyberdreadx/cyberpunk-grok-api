@@ -524,6 +524,7 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                     </div>
                   )}
 
+                  <div className={`flex items-center gap-2 px-3 py-2 rounded border ${TIER_COLORS[data.loyaltyTier] || TIER_COLORS.bronze}`}>
                     {TIER_ICONS[data.loyaltyTier]}
                     <span className="font-mono-share text-[10px]">
                       {data.loyaltyTierName} tier → <span className="font-bold">+{data.bonusPercent}% bonus credits</span> on every purchase
