@@ -183,11 +183,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         ON CONFLICT (story_id, user_id) DO NOTHING
       `;
 
-      // Give credits to the story creator
-      await sql`
-        UPDATE users SET pack_credits = pack_credits + ${story.lock_cost}, updated_at = now()
-        WHERE id = ${story.user_id}::uuid
-      `;
+      // Revenue split: 75% creator, 20% platform, 5% charity
+      const creatorShare = Math.floor(story.lock_cost * 0.75);
+      if (creatorShare > 0) {
+        await sql`
+          UPDATE users SET pack_credits = pack_credits + ${creatorShare}, updated_at = now()
+          WHERE id = ${story.user_id}::uuid
+        `;
+      }
 
       return res.status(200).json({ ok: true, credited: story.lock_cost });
     } catch (err: any) {
