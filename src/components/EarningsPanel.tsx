@@ -343,7 +343,9 @@ const EarningsPanel: React.FC = () => {
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <span className="text-foreground">
-                    {tx.creditsPaid > 0 ? `${Math.floor(tx.creditsPaid * 0.75)} cr` : fmtCents(Math.floor(tx.centsPaid * 0.75))}
+                    {tx.xrgePaid && parseFloat(tx.xrgePaid) > 0
+                      ? `${(parseFloat(tx.xrgePaid) * 0.8).toFixed(2)} XRGE`
+                      : tx.creditsPaid > 0 ? `${Math.floor(tx.creditsPaid * 0.75)} cr` : fmtCents(Math.floor(tx.centsPaid * 0.75))}
                   </span>
                   <span className="text-muted-foreground">{timeAgo(tx.unlockedAt)}</span>
                 </div>
