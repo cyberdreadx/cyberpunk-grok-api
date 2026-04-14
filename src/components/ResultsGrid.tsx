@@ -1295,6 +1295,14 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
 
   // ── Post as Story ──────────────────────────────────────────────────────
   const [storyPostingId, setStoryPostingId] = useState<string | null>(null);
+  const [storyLockDialog, setStoryLockDialog] = useState<{
+    mediaUrl: string;
+    mediaType: string;
+    caption: string;
+    prompt: string;
+  } | null>(null);
+  const [storyLockCredits, setStoryLockCredits] = useState(0);
+  const [storyLockXrge, setStoryLockXrge] = useState("");
 
   const handlePostStory = useCallback(async (result: GrokResult) => {
     setStoryPostingId(result.id);
@@ -1316,7 +1324,6 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
           if (stored && stored.startsWith("data:")) {
             mediaBlob = await fetch(stored).then((r) => r.blob());
           } else if (src.startsWith("http") || src.startsWith("blob:")) {
-            // For https:// URLs (e.g. xAI API), use server-side download to avoid CORS
             if (src.startsWith("https://") || src.startsWith("http://")) {
               const token = localStorage.getItem("auth-token");
               const dlRes = await fetch(`${shareBase}/share`, {
@@ -1333,7 +1340,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
               }
               const dlData = await dlRes.json();
               mediaUrl = dlData.r2Url;
-              mediaBlob = null; // already uploaded via server
+              mediaBlob = null;
             } else {
               const resp = await fetch(src);
               if (!resp.ok) throw new Error("Failed to fetch media for upload");
@@ -1342,7 +1349,6 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
           }
         }
 
-        // Client-side upload for blob:/data: sources
         if (mediaBlob) {
           const ext = result.type === "video" ? "mp4" : "png";
           const authToken = localStorage.getItem("auth-token") || "";
@@ -1355,14 +1361,29 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
         }
       }
 
-      // Ask if they want to lock this story
-      let lockCost = 0;
-      const lockAnswer = prompt("Lock this story behind credits? Enter 0 for free, or 1-50 credits to charge viewers:", "0");
-      if (lockAnswer === null) { setStoryPostingId(null); return; }
-      lockCost = Math.max(0, Math.min(parseInt(lockAnswer) || 0, 50));
+      // Show lock settings dialog instead of prompt()
+      setStoryLockCredits(0);
+      setStoryLockXrge("");
+      setStoryLockDialog({
+        mediaUrl,
+        mediaType: result.type,
+        caption: result.revised_prompt || "",
+        prompt: result.revised_prompt || "",
+      });
+    } catch (err: any) {
+      toast.error(err.message || "Failed to post story");
+      setStoryPostingId(null);
+    }
+  }, []);
 
-      // Post story
+  const handleStoryLockConfirm = useCallback(async () => {
+    if (!storyLockDialog) return;
+    try {
+      const shareBase = (import.meta.env.VITE_API_URL as string) || "/api";
       const token = localStorage.getItem("auth-token");
+      const lockCost = Math.max(0, Math.min(storyLockCredits, 50));
+      const xrgeAmount = parseFloat(storyLockXrge) > 0 ? storyLockXrge : undefined;
+
       const storyRes = await fetch(`${shareBase}/stories`, {
         method: "POST",
         headers: {
@@ -1370,24 +1391,30 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
-          mediaUrl,
-          mediaType: result.type,
-          caption: result.revised_prompt || "",
-          prompt: result.revised_prompt || "",
+          mediaUrl: storyLockDialog.mediaUrl,
+          mediaType: storyLockDialog.mediaType,
+          caption: storyLockDialog.caption,
+          prompt: storyLockDialog.prompt,
           lockCost,
+          lockXrgeAmount: xrgeAmount,
         }),
       });
       if (!storyRes.ok) throw new Error("Failed to post story");
-      toast.success(lockCost > 0
-        ? `Story posted! Locked for ${lockCost} credits.`
+
+      const parts: string[] = [];
+      if (lockCost > 0) parts.push(`${lockCost} credits`);
+      if (xrgeAmount) parts.push(`${xrgeAmount} XRGE`);
+      toast.success(parts.length > 0
+        ? `Story posted! Locked for ${parts.join(" + ")}.`
         : "Story posted! It'll be visible for 24 hours.");
       window.dispatchEvent(new Event("story-posted"));
     } catch (err: any) {
       toast.error(err.message || "Failed to post story");
     } finally {
+      setStoryLockDialog(null);
       setStoryPostingId(null);
     }
-  }, []);
+  }, [storyLockDialog, storyLockCredits, storyLockXrge]);
 
   const hasFolders = folders.length > 0 || !!onCreateFolder;
 
@@ -2472,6 +2499,51 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
           </div>
         </div>
       )}
+
+      {/* Story Lock Settings Dialog */}
+      <AlertDialog open={!!storyLockDialog} onOpenChange={(open) => { if (!open) { setStoryLockDialog(null); setStoryPostingId(null); } }}>
+        <AlertDialogContent className="bg-card border-border max-w-sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-orbitron text-foreground">Story Lock Settings</AlertDialogTitle>
+            <AlertDialogDescription className="text-muted-foreground text-sm">
+              Set pricing to lock this story, or leave both at 0 for a free story.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <label className="text-xs font-mono text-muted-foreground mb-1 block">Credit Lock (0–50)</label>
+              <input
+                type="number"
+                min={0}
+                max={50}
+                value={storyLockCredits}
+                onChange={(e) => setStoryLockCredits(Math.max(0, Math.min(parseInt(e.target.value) || 0, 50)))}
+                className="w-full bg-background border border-border rounded px-3 py-2 text-foreground text-sm font-mono focus:outline-none focus:ring-1 focus:ring-primary"
+                placeholder="0"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-mono text-muted-foreground mb-1 block">XRGE Lock Amount</label>
+              <input
+                type="number"
+                min={0}
+                step="0.01"
+                value={storyLockXrge}
+                onChange={(e) => setStoryLockXrge(e.target.value)}
+                className="w-full bg-background border border-border rounded px-3 py-2 text-foreground text-sm font-mono focus:outline-none focus:ring-1 focus:ring-primary"
+                placeholder="0.00"
+              />
+              <p className="text-[10px] text-muted-foreground/60 mt-1">Buyers pay XRGE on-chain — you get 80% instantly to your bank.</p>
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="font-mono text-sm">Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleStoryLockConfirm} className="font-mono text-sm">
+              Post Story
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
