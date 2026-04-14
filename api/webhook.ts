@@ -152,14 +152,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             VALUES (${postId}::uuid, ${userId}::uuid, ${amountCents}, 'stripe', ${session.id})
             ON CONFLICT (post_id, user_id) DO NOTHING
           `;
-          // Give 80% of revenue to creator as pack credits (1 credit per $0.10)
+          // Revenue split: 75% creator, 20% platform, 5% charity
+          // Creator gets 75% as pack credits (1 credit per $0.10)
           if (creatorId && amountCents > 0) {
-            const creatorCredits = Math.floor((amountCents * 0.8) / 10);
+            const creatorCredits = Math.floor((amountCents * 0.75) / 10);
             if (creatorCredits > 0) {
               await sql`UPDATE users SET pack_credits = pack_credits + ${creatorCredits}, updated_at = now() WHERE id = ${creatorId}::uuid`;
             }
           }
-          console.log(`[webhook] Post ${postId} unlocked by ${userId} via Stripe ($${(amountCents / 100).toFixed(2)})`);
+          console.log(`[webhook] Post ${postId} unlocked by ${userId} via Stripe ($${(amountCents / 100).toFixed(2)}) — 75% creator / 20% platform / 5% charity`);
         }
         return res.status(200).json({ received: true });
       }
