@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Send, Users, Globe, Loader2, Plus, X, Lock } from "lucide-react";
+import { Send, Users, Globe, Loader2, Plus, X, Lock, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import MobileBottomNav from "@/components/MobileBottomNav";
 
@@ -32,6 +32,7 @@ interface FeedPost {
   userFlagged?: boolean;
   lockCost?: number;
   lockPriceCents?: number;
+  lockXrgeAmount?: string;
   unlocked?: boolean;
   isOwner?: boolean;
 }
@@ -53,6 +54,7 @@ const FeedPage: React.FC = () => {
   const [lockEnabled, setLockEnabled] = useState(false);
   const [lockCredits, setLockCredits] = useState("");
   const [lockPrice, setLockPrice] = useState("");
+  const [lockXrge, setLockXrge] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -95,6 +97,7 @@ const FeedPage: React.FC = () => {
       if (lockEnabled) {
         if (lockCredits) body.lockCost = parseInt(lockCredits) || 0;
         if (lockPrice) body.lockPriceCents = Math.round(parseFloat(lockPrice) * 100) || 0;
+        if (lockXrge) body.lockXrgeAmount = lockXrge;
       }
       await apiFetch("/feed", { method: "POST", body });
       setNewText("");
@@ -102,6 +105,7 @@ const FeedPage: React.FC = () => {
       setLockEnabled(false);
       setLockCredits("");
       setLockPrice("");
+      setLockXrge("");
       fetchFeed();
     } catch (err: any) {
       toast({ title: err.message, variant: "destructive" });
@@ -135,9 +139,9 @@ const FeedPage: React.FC = () => {
         </span>
       </div>
       {lockEnabled && (
-        <div className="flex gap-2">
-          <div className="flex-1">
-            <label className="font-mono-share text-[9px] text-muted-foreground block mb-1">Credits to unlock</label>
+        <div className="flex gap-2 flex-wrap">
+          <div className="flex-1 min-w-[80px]">
+            <label className="font-mono-share text-[9px] text-muted-foreground block mb-1">Credits</label>
             <Input
               type="number"
               min="0"
@@ -148,8 +152,8 @@ const FeedPage: React.FC = () => {
               className="font-mono-share text-xs h-8"
             />
           </div>
-          <div className="flex-1">
-            <label className="font-mono-share text-[9px] text-muted-foreground block mb-1">USD price ($)</label>
+          <div className="flex-1 min-w-[80px]">
+            <label className="font-mono-share text-[9px] text-muted-foreground block mb-1">USD ($)</label>
             <Input
               type="number"
               min="0"
@@ -158,6 +162,20 @@ const FeedPage: React.FC = () => {
               placeholder="e.g. 2.99"
               value={lockPrice}
               onChange={(e) => setLockPrice(e.target.value)}
+              className="font-mono-share text-xs h-8"
+            />
+          </div>
+          <div className="flex-1 min-w-[80px]">
+            <label className="font-mono-share text-[9px] text-muted-foreground flex items-center gap-1 block mb-1">
+              <Zap className="w-3 h-3 text-secondary" /> XRGE
+            </label>
+            <Input
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="e.g. 100"
+              value={lockXrge}
+              onChange={(e) => setLockXrge(e.target.value)}
               className="font-mono-share text-xs h-8"
             />
           </div>

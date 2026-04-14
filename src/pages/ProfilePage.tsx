@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { UserPlus, UserMinus, Edit2, Check, X, ArrowLeft, Camera, Loader2 } from "lucide-react";
+import { UserPlus, UserMinus, Edit2, Check, X, ArrowLeft, Camera, Loader2, Wallet } from "lucide-react";
 import EarningsPanel from "@/components/EarningsPanel";
 import { useToast } from "@/hooks/use-toast";
 import { upload } from "@vercel/blob/client";
@@ -18,6 +18,7 @@ interface Profile {
   username: string;
   avatarUrl: string | null;
   bio: string;
+  walletAddress?: string | null;
   createdAt: string;
   followers: number;
   following: number;
@@ -42,6 +43,7 @@ interface FeedPost {
   userFlagged?: boolean;
   lockCost?: number;
   lockPriceCents?: number;
+  lockXrgeAmount?: string;
   unlocked?: boolean;
   isOwner?: boolean;
 }
@@ -58,6 +60,7 @@ const ProfilePage: React.FC = () => {
   const [editing, setEditing] = useState(false);
   const [editUsername, setEditUsername] = useState("");
   const [editBio, setEditBio] = useState("");
+  const [editWallet, setEditWallet] = useState("");
   const [saving, setSaving] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
@@ -69,6 +72,7 @@ const ProfilePage: React.FC = () => {
       setProfile(data);
       setEditUsername(data.username);
       setEditBio(data.bio || "");
+      setEditWallet(data.walletAddress || "");
 
       // Fetch user posts
       const feed = await apiFetch<{ posts: FeedPost[] }>(`/feed?userId=${data.userId}`);
@@ -94,7 +98,7 @@ const ProfilePage: React.FC = () => {
     try {
       await apiFetch("/profile", {
         method: "PUT",
-        body: { username: editUsername, bio: editBio },
+        body: { username: editUsername, bio: editBio, walletAddress: editWallet || null },
       });
       toast({ title: "Profile updated" });
       setEditing(false);
@@ -251,6 +255,19 @@ const ProfilePage: React.FC = () => {
                       className="font-mono-share text-sm bg-input/50 resize-none"
                     />
                     <span className="font-mono-share text-[9px] text-muted-foreground">{editBio.length}/300</span>
+                  </div>
+                  <div>
+                    <label className="font-mono-share text-[10px] text-muted-foreground flex items-center gap-1">
+                      <Wallet className="w-3 h-3" /> WALLET_ADDRESS (Base chain)
+                    </label>
+                    <Input
+                      value={editWallet}
+                      onChange={(e) => setEditWallet(e.target.value.trim())}
+                      placeholder="0x... (for XRGE payouts)"
+                      maxLength={42}
+                      className="h-8 font-mono-share text-xs bg-input/50"
+                    />
+                    <span className="font-mono-share text-[8px] text-muted-foreground/50">Set this to receive instant XRGE payouts from locked content</span>
                   </div>
                   <div className="flex gap-2">
                     <Button size="sm" onClick={handleSave} disabled={saving} className="font-mono-share text-[10px]">

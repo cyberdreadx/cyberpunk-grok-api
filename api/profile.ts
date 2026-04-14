@@ -20,7 +20,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (username) {
         rows = await sql`
           SELECT p.user_id, p.username, p.avatar_url, p.bio, p.created_at,
-                 u.email,
+                 u.email, p.wallet_address,
                  (SELECT count(*)::int FROM follows WHERE following_id = p.user_id) AS followers,
                  (SELECT count(*)::int FROM follows WHERE follower_id = p.user_id) AS following,
                  (SELECT count(*)::int FROM feed_posts WHERE user_id = p.user_id) AS post_count
@@ -30,7 +30,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       } else {
         rows = await sql`
           SELECT p.user_id, p.username, p.avatar_url, p.bio, p.created_at,
-                 u.email,
+                 u.email, p.wallet_address,
                  (SELECT count(*)::int FROM follows WHERE following_id = p.user_id) AS followers,
                  (SELECT count(*)::int FROM follows WHERE follower_id = p.user_id) AS following,
                  (SELECT count(*)::int FROM feed_posts WHERE user_id = p.user_id) AS post_count
@@ -48,7 +48,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // Re-fetch
         rows = await sql`
           SELECT p.user_id, p.username, p.avatar_url, p.bio, p.created_at,
-                 u.email,
+                 u.email, p.wallet_address,
                  (SELECT count(*)::int FROM follows WHERE following_id = p.user_id) AS followers,
                  (SELECT count(*)::int FROM follows WHERE follower_id = p.user_id) AS following,
                  (SELECT count(*)::int FROM feed_posts WHERE user_id = p.user_id) AS post_count
@@ -71,6 +71,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         username: p.username,
         avatarUrl: p.avatar_url,
         bio: p.bio,
+        walletAddress: p.user_id === auth.userId ? (p.wallet_address || null) : null,
         createdAt: p.created_at,
         followers: p.followers,
         following: p.following,
@@ -87,8 +88,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // PUT — update own profile
   if (req.method === "PUT") {
     try {
-      const { username, bio, avatarUrl } = req.body || {};
+      const { username, bio, avatarUrl, walletAddress } = req.body || {};
 
+      // Validate wallet address
+      if (walletAddress !== undefined && walletAddress !== null && walletAddress !== "") {
+        const clean = walletAddress.trim().toLowerCase();
+        if (!/^0x[a-f0-9]{40}$/.test(clean)) {
+          return res.status(400).json({ error: "Invalid wallet address (must be 0x + 40 hex chars)" });
+        }
+      }
       // Validate username
       if (username !== undefined) {
         const clean = (username || "").trim().toLowerCase();
@@ -111,19 +119,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // Upsert profile
       const cleanUsername = username ? username.trim().toLowerCase() : undefined;
+      const cleanWallet = walletAddress !== undefined ? (walletAddress ? walletAddress.trim().toLowerCase() : null) : undefined;
       await sql`
-        INSERT INTO profiles (user_id, username, bio, avatar_url, updated_at)
+        INSERT INTO profiles (user_id, username, bio, avatar_url, wallet_address, updated_at)
         VALUES (
           ${auth.userId},
           COALESCE(${cleanUsername ?? null}, 'user_' || substr(${auth.userId}::text, 1, 8)),
           COALESCE(${bio ?? null}, ''),
           ${avatarUrl ?? null},
+          ${cleanWallet ?? null},
           NOW()
         )
         ON CONFLICT (user_id) DO UPDATE SET
           username = COALESCE(${cleanUsername ?? null}, profiles.username),
           bio = COALESCE(${bio ?? null}, profiles.bio),
           avatar_url = COALESCE(${avatarUrl ?? null}, profiles.avatar_url),
+          wallet_address = COALESCE(${cleanWallet ?? null}, profiles.wallet_address),
           updated_at = NOW()
       `;
 

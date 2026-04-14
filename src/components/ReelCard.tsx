@@ -3,11 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowBigUp, ArrowBigDown, MessageCircle, Trash2, Flag, Lock, Coins, CreditCard } from "lucide-react";
+import { ArrowBigUp, ArrowBigDown, MessageCircle, Trash2, Flag, Lock, Coins, CreditCard, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import CommentThread from "@/components/CommentThread";
 import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
+import XrgeUnlockDialog from "@/components/XrgeUnlockDialog";
 
 interface FeedPost {
   id: string;
@@ -26,6 +27,7 @@ interface FeedPost {
   userFlagged?: boolean;
   lockCost?: number;
   lockPriceCents?: number;
+  lockXrgeAmount?: string;
   unlocked?: boolean;
   isOwner?: boolean;
 }
@@ -49,8 +51,9 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate }) => {
   const [flagging, setFlagging] = useState(false);
   const [unlocking, setUnlocking] = useState(false);
   const [isUnlocked, setIsUnlocked] = useState(post.unlocked ?? true);
+  const [xrgeUnlockOpen, setXrgeUnlockOpen] = useState(false);
 
-  const isLocked = !isUnlocked && !post.isOwner && ((post.lockCost || 0) > 0 || (post.lockPriceCents || 0) > 0);
+  const isLocked = !isUnlocked && !post.isOwner && ((post.lockCost || 0) > 0 || (post.lockPriceCents || 0) > 0 || !!(post.lockXrgeAmount && parseFloat(post.lockXrgeAmount) > 0));
 
   const handleVote = async (emoji: "👍" | "👎") => {
     if (isLocked) return;
@@ -197,6 +200,17 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate }) => {
                 Unlock · ${((post.lockPriceCents || 0) / 100).toFixed(2)}
               </Button>
             )}
+            {post.lockXrgeAmount && parseFloat(post.lockXrgeAmount) > 0 && (
+              <Button
+                onClick={() => setXrgeUnlockOpen(true)}
+                disabled={unlocking}
+                className="w-full font-mono-share text-xs bg-secondary/20 border border-secondary/40 text-secondary hover:bg-secondary/30"
+                variant="outline"
+              >
+                <Zap className="w-4 h-4 mr-2" />
+                Unlock · {post.lockXrgeAmount} XRGE ⚡
+              </Button>
+            )}
           </div>
         </div>
       ) : (
@@ -295,7 +309,6 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate }) => {
         )}
       </div>
 
-      {/* Comments overlay */}
       {showComments && !isLocked && (
         <div
           className="absolute inset-x-0 bottom-0 z-30 bg-card/95 backdrop-blur-md rounded-t-2xl max-h-[60dvh] overflow-y-auto"
@@ -310,6 +323,16 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate }) => {
           </div>
           <CommentThread postId={post.id} onCountChange={(count) => setCommentCount(count)} />
         </div>
+      )}
+
+      {post.lockXrgeAmount && (
+        <XrgeUnlockDialog
+          open={xrgeUnlockOpen}
+          onClose={() => setXrgeUnlockOpen(false)}
+          xrgeAmount={post.lockXrgeAmount}
+          postId={post.id}
+          onSuccess={() => { setIsUnlocked(true); onUpdate?.(); }}
+        />
       )}
     </div>
   );
