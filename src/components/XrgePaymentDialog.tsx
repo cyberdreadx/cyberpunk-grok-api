@@ -38,6 +38,9 @@ interface XrgeOrder {
   bonusPercent: number;
   loyaltyTier?: string;
   loyaltyTierName?: string;
+  flashSale?: { id: string; discountPercent: number; bonusCreditsPercent: number } | null;
+  loyaltyBonusCredits?: number;
+  flashBonusCredits?: number;
 }
 
 interface XrgePaymentDialogProps {
