@@ -915,17 +915,21 @@ export default function Admin() {
     } finally { setBansLoading(false); }
   }, []);
 
-  const handleInspect = useCallback(async () => {
-    if (!inspectEmail.trim()) return;
+  const inspectByEmail = useCallback(async (email: string) => {
     setInspecting(true);
     try {
-      const res = await apiFetch("/admin", { method: "POST", body: { action: "user-inspect", email: inspectEmail.trim() } });
+      const res = await apiFetch("/admin", { method: "POST", body: { action: "user-inspect", email: email.trim() } });
       setInspectData(res);
     } catch (err: any) {
       alert(err.message);
       setInspectData(null);
     } finally { setInspecting(false); }
-  }, [inspectEmail]);
+  }, []);
+
+  const handleInspect = useCallback(async () => {
+    if (!inspectEmail.trim()) return;
+    inspectByEmail(inspectEmail);
+  }, [inspectEmail, inspectByEmail]);
 
   const handleBan = async () => {
     if (!banEmail.trim()) return;
@@ -1843,7 +1847,10 @@ export default function Admin() {
                         const isBanned = bans.some((b: any) => b.email === off.email);
                         return (
                         <tr key={i} className="border-b border-red-500/10 hover:bg-red-500/5 transition-colors">
-                          <td className="px-2.5 py-2 font-mono-share text-xs text-foreground/80">{off.email}</td>
+                          <td className="px-2.5 py-2 font-mono-share text-xs text-primary/80 underline underline-offset-2 cursor-pointer hover:text-primary transition-colors"
+                            onClick={() => { setInspectEmail(off.email); setActiveTab("users"); inspectByEmail(off.email); }}
+                            title="Inspect user"
+                          >{off.email}</td>
                           <td className="px-2.5 py-2 font-mono-share text-xs text-red-400 font-bold">{off.block_count}</td>
                           <td className="px-2.5 py-2 font-mono-share text-xs text-red-400">{off.credits_burned}</td>
                           <td className="px-2.5 py-2 font-mono-share text-[10px] text-muted-foreground/50">
