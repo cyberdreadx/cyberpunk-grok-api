@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Send, Users, Globe, Loader2, Plus, X, Lock, Zap } from "lucide-react";
+import { Send, Users, Globe, Loader2, Plus, X, Lock, Zap, ShieldAlert } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import MobileBottomNav from "@/components/MobileBottomNav";
 
@@ -37,11 +37,23 @@ interface FeedPost {
   isOwner?: boolean;
 }
 
+const FEED_RULES = [
+  "No illegal content of any kind",
+  "No underage or child exploitation content — zero tolerance",
+  "No non-consensual intimate imagery (real or AI-generated)",
+  "No doxxing, harassment, threats, or incitement of violence",
+  "No spam, scams, phishing, or malicious links",
+  "No impersonation of other users or public figures",
+  "No promotion of self-harm, terrorism, or hate speech",
+  "No posting of copyrighted content you don't own",
+];
+
 const FeedPage: React.FC = () => {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const isMobile = useIsMobile();
+  const [rulesAcked, setRulesAcked] = useState(() => localStorage.getItem("feed-rules-acked") === "1");
 
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [loading, setLoading] = useState(true);
