@@ -116,23 +116,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         `;
 
         // RunPod cost from tracked execution times (rate: $0.00155/s = 0.155 cents/s)
-        const [runpodCost] = await sql`
-          SELECT
-            COALESCE(SUM(execution_time_ms) FILTER (WHERE created_at > now() - interval '30 days'), 0)::bigint AS total_ms_30d
-          FROM usage_log
-          WHERE mode LIKE 'comfy-%' AND execution_time_ms IS NOT NULL
-        `;
-        const runpodCost30dCents = Math.round((Number(runpodCost.total_ms_30d) / 1000) * 0.155);
+        let runpodCost30dCents = 0;
+        try {
+          const [runpodCost] = await sql`
+            SELECT
+              COALESCE(SUM(execution_time_ms) FILTER (WHERE created_at > now() - interval '30 days'), 0)::bigint AS total_ms_30d
+            FROM usage_log
+            WHERE mode LIKE 'comfy-%' AND execution_time_ms IS NOT NULL
+          `;
+          runpodCost30dCents = Math.round((Number(runpodCost.total_ms_30d) / 1000) * 0.155);
+        } catch { /* column may not exist yet */ }
 
         // Actual tracked API costs (from api_cost_cents column)
-        const [actualCosts] = await sql`
-          SELECT
-            COALESCE(SUM(api_cost_cents) FILTER (WHERE created_at > now() - interval '30 days'), 0)::numeric AS actual_cost_30d_cents,
-            COALESCE(SUM(api_cost_cents), 0)::numeric AS actual_cost_total_cents,
-            COUNT(api_cost_cents) FILTER (WHERE created_at > now() - interval '30 days')::int AS tracked_30d,
-            COUNT(*) FILTER (WHERE created_at > now() - interval '30 days')::int AS total_30d
-          FROM usage_log
-        `;
+        let actualCosts = { actual_cost_30d_cents: 0, actual_cost_total_cents: 0, tracked_30d: 0, total_30d: 0 };
+        try {
+          const [ac] = await sql`
+            SELECT
+              COALESCE(SUM(api_cost_cents) FILTER (WHERE created_at > now() - interval '30 days'), 0)::numeric AS actual_cost_30d_cents,
+              COALESCE(SUM(api_cost_cents), 0)::numeric AS actual_cost_total_cents,
+              COUNT(api_cost_cents) FILTER (WHERE created_at > now() - interval '30 days')::int AS tracked_30d,
+              COUNT(*) FILTER (WHERE created_at > now() - interval '30 days')::int AS total_30d
+            FROM usage_log
+          `;
+          actualCosts = ac;
+        } catch { /* column may not exist yet */ }
 
         // Moderation stats
         const [moderationStats] = await sql`
@@ -385,22 +392,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // -- Profit per action breakdown (30d) --
       case "profit-breakdown": {
-        const rows = await sql`
-          SELECT
-            mode,
-            COUNT(*)::int AS generations,
-            COALESCE(SUM(credits_used), 0)::int AS credits_used,
-            COALESCE(SUM(execution_time_ms), 0)::bigint AS total_exec_ms,
-            COUNT(execution_time_ms)::int AS tracked_count,
-            COALESCE(SUM(api_cost_cents), 0)::numeric AS actual_cost_cents,
-            COUNT(api_cost_cents)::int AS cost_tracked_count
-          FROM usage_log
-          WHERE created_at > now() - interval '30 days'
-            AND mode NOT LIKE 'moderation-%'
-          GROUP BY mode
-          ORDER BY credits_used DESC
-        `;
-        return res.status(200).json({ profitBreakdown: rows });
+        try {
+          const rows = await sql`
+            SELECT
+              mode,
+              COUNT(*)::int AS generations,
+              COALESCE(SUM(credits_used), 0)::int AS credits_used,
+              COALESCE(SUM(execution_time_ms), 0)::bigint AS total_exec_ms,
+              COUNT(execution_time_ms)::int AS tracked_count,
+              COALESCE(SUM(api_cost_cents), 0)::numeric AS actual_cost_cents,
+              COUNT(api_cost_cents)::int AS cost_tracked_count
+            FROM usage_log
+            WHERE created_at > now() - interval '30 days'
+              AND mode NOT LIKE 'moderation-%'
+            GROUP BY mode
+            ORDER BY credits_used DESC
+          `;
+          return res.status(200).json({ profitBreakdown: rows });
+        } catch {
+          // Columns may not exist yet — return empty
+          const rows = await sql`
+            SELECT mode, COUNT(*)::int AS generations, COALESCE(SUM(credits_used), 0)::int AS credits_used,
+              0::bigint AS total_exec_ms, 0::int AS tracked_count, 0::numeric AS actual_cost_cents, 0::int AS cost_tracked_count
+            FROM usage_log
+            WHERE created_at > now() - interval '30 days' AND mode NOT LIKE 'moderation-%'
+            GROUP BY mode ORDER BY credits_used DESC
+          `;
+          return res.status(200).json({ profitBreakdown: rows });
+        }
       }
 
       // -- Sync subscription cancellation status from Stripe --
