@@ -75,6 +75,7 @@ interface Overview {
   creditPool: { total_sub_credits_outstanding: number; total_pack_credits_outstanding: number };
   apiCost: { estimated30dCents: number; estimatedTotalCents: number };
   runpodCost?: { estimated30dCents: number };
+  actualCost?: { actual30dCents: number; actualTotalCents: number; tracked30d: number; total30d: number };
   moderation: ModerationStats;
 }
 
