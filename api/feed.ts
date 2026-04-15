@@ -170,6 +170,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // POST — create a post
   if (req.method === "POST") {
     try {
+      // Ensure lock columns exist
+      await sql`ALTER TABLE feed_posts ADD COLUMN IF NOT EXISTS lock_cost INT NOT NULL DEFAULT 0`.catch(() => {});
+      await sql`ALTER TABLE feed_posts ADD COLUMN IF NOT EXISTS lock_price_cents INT NOT NULL DEFAULT 0`.catch(() => {});
+      await sql`ALTER TABLE feed_posts ADD COLUMN IF NOT EXISTS lock_xrge_amount TEXT DEFAULT NULL`.catch(() => {});
+
       // Check if user is banned
       const ban = await checkBan(sql, auth.userId);
       if (ban.banned) {
