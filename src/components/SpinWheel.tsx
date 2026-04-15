@@ -95,6 +95,8 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ onCreditsRefresh }) => {
     return () => clearInterval(id);
   }, [nextFreeAt]);
 
+  const rotationRef = useRef(0);
+
   const doSpin = useCallback(async (paid: boolean) => {
     if (spinning) return;
     setSpinning(true);
@@ -110,10 +112,16 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ onCreditsRefresh }) => {
 
       // Find segment index
       const idx = SEGMENTS.findIndex(s => s.id === prize.id);
+      // Segment center in wheel coordinates (0° = top because SVG starts at -90°)
       const segmentCenter = idx * ARC + ARC / 2;
+      // To land on this segment, rotate so its center is at top (0°)
+      // We need to go PAST it: 360 - segmentCenter brings segment to top
       const extraSpins = 5 + Math.floor(Math.random() * 3);
-      const targetRotation = rotation + (extraSpins * 360) + segmentCenter;
+      const currentRot = rotationRef.current;
+      // Normalize: always increase rotation so CSS transition animates forward
+      const targetRotation = currentRot + (extraSpins * 360) + (360 - segmentCenter) - (currentRot % 360);
 
+      rotationRef.current = targetRotation;
       setRotation(targetRotation);
 
       // Show result after animation
@@ -133,7 +141,7 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ onCreditsRefresh }) => {
       setSpinning(false);
       setResult(null);
     }
-  }, [spinning, rotation, onCreditsRefresh, fetchState]);
+  }, [spinning, onCreditsRefresh, fetchState]);
 
   if (loading) {
     return (
