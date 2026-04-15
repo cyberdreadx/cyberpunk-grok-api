@@ -1,6 +1,8 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getUserFromRequest } from "./_lib/auth";
 import { getDb } from "./_lib/db";
+import { notify } from "./_lib/notify";
+import { getDb } from "./_lib/db";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -37,6 +39,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       } else {
         await sql`INSERT INTO feed_reactions (post_id, user_id, emoji) VALUES (${postId}, ${auth.userId}, ${vote})`;
+        
+        // Notify post owner on upvote only
+        if (vote === "👍") {
+          const [postOwner] = await sql`SELECT user_id FROM feed_posts WHERE id = ${postId}`;
+          const [profile] = await sql`SELECT username, avatar_url FROM profiles WHERE user_id = ${auth.userId}`;
+          if (postOwner && postOwner.user_id !== auth.userId) {
+            notify({
+              userId: postOwner.user_id,
+              type: "upvote",
+              title: `${profile?.username || "Someone"} upvoted your post`,
+              actorId: auth.userId,
+              actorUsername: profile?.username,
+              actorAvatarUrl: profile?.avatar_url,
+              refId: postId,
+            });
+          }
+        }
+
         return res.json({ action: "added", vote });
       }
     } catch (err: any) {

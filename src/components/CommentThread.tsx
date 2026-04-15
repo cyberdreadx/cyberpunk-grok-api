@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Send, Trash2, CornerDownRight, Loader2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { toast } from "sonner";
 
 interface Comment {
   id: string;
@@ -55,7 +56,10 @@ const CommentThread: React.FC<CommentThreadProps> = ({ postId, onCountChange }) 
       setNewText("");
       setReplyTo(null);
       fetchComments();
-    } catch { /* silently fail */ }
+      toast.success("Comment posted");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to post comment");
+    }
     finally { setSubmitting(false); }
   };
 
@@ -63,7 +67,10 @@ const CommentThread: React.FC<CommentThreadProps> = ({ postId, onCountChange }) 
     try {
       await apiFetch("/comments", { method: "DELETE", body: { commentId } });
       fetchComments();
-    } catch { /* silently fail */ }
+      toast.success("Comment deleted");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete comment");
+    }
   };
 
   // Build tree

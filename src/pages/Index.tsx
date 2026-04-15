@@ -34,6 +34,7 @@ import ApiKeyDialog from "@/components/ApiKeyDialog";
 import ApiKeysPanel from "@/components/ApiKeysPanel";
 import AuthDialog from "@/components/AuthDialog";
 import CreditDisplay from "@/components/CreditDisplay";
+import NotificationBell from "@/components/NotificationBell";
 import DailyMissionsDialog from "@/components/DailyMissionsDialog";
 import { useDailyMissions } from "@/hooks/useDailyMissions";
 import LegalDialog from "@/components/LegalDialog";
@@ -1124,6 +1125,9 @@ const Index = () => {
                 </div>
               )}
             </div>
+
+            {/* Notification bell */}
+            <NotificationBell isAuthenticated={auth.isAuthenticated} />
 
             {/* Auth: login/logout */}
             {auth.enabled && (

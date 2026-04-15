@@ -166,6 +166,7 @@ const ProfilePage: React.FC = () => {
             }
           : p
       );
+      toast({ title: data.action === "followed" ? `Following @${profile.username}` : `Unfollowed @${profile.username}` });
     } catch (err: any) {
       toast({ title: err.message, variant: "destructive" });
     } finally {
