@@ -847,6 +847,76 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.json({ success: true });
       }
 
+      // ── User Inspector ──
+      case "user-inspect": {
+        const { email: inspectEmail, userId: inspectUserId } = req.body;
+        if (!inspectEmail && !inspectUserId) return res.status(400).json({ error: "email or userId required" });
+
+        let targetId = inspectUserId;
+        let userRow: any;
+        if (inspectEmail) {
+          const rows = await sql`SELECT id, email, created_at, subscription_tier, sub_credits, pack_credits, daily_credits FROM users WHERE email = ${inspectEmail.trim().toLowerCase()} LIMIT 1`;
+          if (rows.length === 0) return res.status(404).json({ error: "User not found" });
+          userRow = rows[0];
+          targetId = userRow.id;
+        } else {
+          const rows = await sql`SELECT id, email, created_at, subscription_tier, sub_credits, pack_credits, daily_credits FROM users WHERE id = ${inspectUserId}::uuid LIMIT 1`;
+          if (rows.length === 0) return res.status(404).json({ error: "User not found" });
+          userRow = rows[0];
+        }
+
+        // Get profile
+        const profileRows = await sql`SELECT username, bio, avatar_url FROM profiles WHERE user_id = ${targetId}::uuid LIMIT 1`.catch(() => []);
+        const profile = profileRows[0] || null;
+
+        // Recent prompts (last 50)
+        const prompts = await sql`
+          SELECT mode, credits_used, prompt, api_cost_cents, created_at
+          FROM usage_log
+          WHERE user_id = ${targetId}::uuid
+          ORDER BY created_at DESC
+          LIMIT 50
+        `.catch(() => []);
+
+        // Feed posts (last 30)
+        const posts = await sql`
+          SELECT id, text, image_url, created_at
+          FROM feed_posts
+          WHERE user_id = ${targetId}::uuid
+          ORDER BY created_at DESC
+          LIMIT 30
+        `.catch(() => []);
+
+        // Stories (last 20)
+        const stories = await sql`
+          SELECT id, media_url, media_type, caption, prompt, created_at, expires_at
+          FROM stories
+          WHERE user_id = ${targetId}::uuid
+          ORDER BY created_at DESC
+          LIMIT 20
+        `.catch(() => []);
+
+        // Ban status
+        const banRows = await sql`SELECT reason, created_at, expires_at FROM user_bans WHERE user_id = ${targetId}::uuid LIMIT 1`.catch(() => []);
+        const ban = banRows.length > 0 ? banRows[0] : null;
+
+        // Moderation flags
+        const [modStats] = await sql`
+          SELECT COUNT(*)::int AS total_flags
+          FROM usage_log
+          WHERE user_id = ${targetId}::uuid AND mode LIKE 'moderation-%'
+        `.catch(() => [{ total_flags: 0 }]);
+
+        return res.json({
+          user: { ...userRow, ...profile },
+          prompts,
+          posts,
+          stories,
+          ban,
+          moderationFlags: modStats.total_flags,
+        });
+      }
+
       default:
         return res.status(400).json({ error: "Unknown action" });
     }
