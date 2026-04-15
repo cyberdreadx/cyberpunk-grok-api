@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import CyberLayout from "@/components/CyberLayout";
 import StoriesBar from "@/components/StoriesBar";
 import MobileBottomNav from "@/components/MobileBottomNav";
+import SocialProofToast from "@/components/SocialProofToast";
 import {
   Collapsible,
   CollapsibleContent,
@@ -2414,6 +2415,9 @@ const Index = () => {
 
       {/* PWA install prompt (mobile only) */}
       <PwaInstallBanner />
+
+      {/* Temu-style social proof */}
+      <SocialProofToast />
 
       {/* Mobile bottom navigation */}
       <MobileBottomNav
