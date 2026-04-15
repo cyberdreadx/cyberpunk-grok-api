@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { getUserFromRequest } from "./_lib/auth";
+import { getUserFromRequest, ADMIN_EMAIL } from "./_lib/auth";
 import { getDb } from "./_lib/db";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -66,6 +66,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         isFollowing = f.length > 0;
       }
 
+      // Check ban status (visible to admins only)
+      let isBanned = false;
+      let banReason: string | null = null;
+      if (auth.email === ADMIN_EMAIL && p.user_id !== auth.userId) {
+        const banRows = await sql`SELECT reason FROM user_bans WHERE user_id = ${p.user_id}::uuid LIMIT 1`.catch(() => []);
+        if (banRows.length > 0) {
+          isBanned = true;
+          banReason = banRows[0].reason;
+        }
+      }
+
       return res.json({
         userId: p.user_id,
         username: p.username,
@@ -79,6 +90,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         postCount: p.post_count,
         isOwn: p.user_id === auth.userId,
         isFollowing,
+        isBanned,
+        banReason,
       });
     } catch (err: any) {
       console.error("[profile GET]", err.message);

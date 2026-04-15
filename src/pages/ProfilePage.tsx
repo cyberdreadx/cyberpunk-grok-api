@@ -26,6 +26,8 @@ interface Profile {
   postCount: number;
   isOwn: boolean;
   isFollowing: boolean;
+  isBanned?: boolean;
+  banReason?: string | null;
 }
 
 interface FeedPost {
@@ -284,6 +286,11 @@ const ProfilePage: React.FC = () => {
                 <>
                   <div className="flex items-center gap-2">
                     <h1 className="font-orbitron text-lg text-foreground truncate">@{profile.username}</h1>
+                    {profile.isBanned && (
+                      <span className="px-1.5 py-0.5 bg-destructive/20 text-destructive font-mono-share text-[9px] rounded tracking-wider" title={profile.banReason || undefined}>
+                        BANNED
+                      </span>
+                    )}
                     {profile.isOwn && (
                       <button onClick={() => setEditing(true)} className="text-muted-foreground hover:text-primary transition-colors">
                         <Edit2 className="w-3.5 h-3.5" />
