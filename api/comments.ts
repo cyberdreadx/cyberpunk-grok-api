@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getUserFromRequest } from "./_lib/auth";
 import { getDb } from "./_lib/db";
+import { notify } from "./_lib/notify";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -53,6 +54,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         VALUES (${postId}, ${auth.userId}, ${parentId || null}, ${text})
         RETURNING id, created_at
       `;
+
+      // Get commenter profile + post owner for notification
+      const [profile] = await sql`SELECT username, avatar_url FROM profiles WHERE user_id = ${auth.userId}`;
+      const [postOwner] = await sql`SELECT user_id FROM feed_posts WHERE id = ${postId}`;
+      if (postOwner && postOwner.user_id !== auth.userId) {
+        notify({
+          userId: postOwner.user_id,
+          type: "comment",
+          title: `${profile?.username || "Someone"} commented on your post`,
+          body: text.slice(0, 100),
+          actorId: auth.userId,
+          actorUsername: profile?.username,
+          actorAvatarUrl: profile?.avatar_url,
+          refId: postId,
+        });
+      }
+
       return res.status(201).json({ id: rows[0].id, createdAt: rows[0].created_at });
     } catch (err: any) {
       console.error("[comments POST]", err.message);

@@ -1,6 +1,8 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getUserFromRequest } from "./_lib/auth";
 import { getDb } from "./_lib/db";
+import { notify } from "./_lib/notify";
+import { getDb } from "./_lib/db";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -26,6 +28,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.json({ action: "unfollowed" });
       } else {
         await sql`INSERT INTO follows (follower_id, following_id) VALUES (${auth.userId}, ${targetUserId})`;
+        
+        // Notify the followed user
+        const [profile] = await sql`SELECT username, avatar_url FROM profiles WHERE user_id = ${auth.userId}`;
+        notify({
+          userId: targetUserId,
+          type: "follow",
+          title: `${profile?.username || "Someone"} started following you`,
+          actorId: auth.userId,
+          actorUsername: profile?.username,
+          actorAvatarUrl: profile?.avatar_url,
+        });
+
         return res.json({ action: "followed" });
       }
     } catch (err: any) {
