@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { getUserFromRequest, ADMIN_EMAIL } from "./_lib/auth";
+import { getUserFromRequest, ADMIN_EMAIL, checkBan } from "./_lib/auth";
 import { getDb } from "./_lib/db";
 
 export const config = { maxDuration: 30 };
@@ -19,6 +19,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
       const auth = getUserFromRequest(req);
       if (!auth) return res.status(401).json({ error: "Unauthorized" });
+
+      // Check if user is banned
+      const ban = await checkBan(sql, auth.userId);
+      if (ban.banned) {
+        return res.status(403).json({ error: "Your account has been suspended.", reason: ban.reason });
+      }
 
       const { mediaUrl, mediaType, caption, prompt, lockCost, lockXrgeAmount } = req.body || {};
       if (!mediaUrl) return res.status(400).json({ error: "mediaUrl required" });

@@ -10,7 +10,7 @@
 
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getDb } from "./_lib/db";
-import { getUserFromRequest, ADMIN_EMAIL } from "./_lib/auth";
+import { getUserFromRequest, ADMIN_EMAIL, checkBan } from "./_lib/auth";
 import { checkRateLimit, getClientIp } from "./_lib/ratelimit";
 
 const XAI_API_BASE = "https://api.x.ai/v1";
@@ -191,6 +191,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const auth = getUserFromRequest(req);
     if (!auth) return res.status(401).json({ error: "Unauthorized" });
+
+    const sql = getDb();
+
+    // Check if user is banned
+    const ban = await checkBan(sql, auth.userId);
+    if (ban.banned) {
+      return res.status(403).json({ error: "Your account has been suspended.", reason: ban.reason });
+    }
 
     // Rate limit: 60 generate requests per user per 5 minutes
     const { allowed } = await checkRateLimit(auth.userId, "generate", { max: 60, windowSeconds: 300 });
