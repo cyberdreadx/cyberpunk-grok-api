@@ -54,6 +54,11 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
   const [flagging, setFlagging] = useState(false);
   const [unlocking, setUnlocking] = useState(false);
   const [isUnlocked, setIsUnlocked] = useState(post.unlocked ?? true);
+
+  // Sync unlock state when props change (e.g. after fetchFeed refresh)
+  React.useEffect(() => {
+    if (post.unlocked !== undefined) setIsUnlocked(post.unlocked);
+  }, [post.unlocked]);
   const [revealedText, setRevealedText] = useState<string | null>(null);
   const [revealedImage, setRevealedImage] = useState<string | null>(null);
   const [xrgeUnlockOpen, setXrgeUnlockOpen] = useState(false);
