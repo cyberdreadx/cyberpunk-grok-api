@@ -420,7 +420,7 @@ const FeedPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <button
             onClick={() => setFilter("all")}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded font-mono-share text-[10px] transition-colors border ${
@@ -440,6 +440,26 @@ const FeedPage: React.FC = () => {
             }`}
           >
             <Users className="w-3 h-3" /> FOLLOWING
+          </button>
+
+          <div className="w-px bg-border/30 mx-1" />
+
+          {(["hot", "top", "new"] as const).map((s) => {
+            const icon = s === "hot" ? <Flame className="w-3 h-3" /> : s === "top" ? <TrendingUp className="w-3 h-3" /> : <Clock className="w-3 h-3" />;
+            return (
+              <button
+                key={s}
+                onClick={() => setSort(s)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded font-mono-share text-[10px] transition-colors border ${
+                  sort === s
+                    ? "border-secondary/50 bg-secondary/10 text-secondary"
+                    : "border-border/30 text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {icon} {s.toUpperCase()}
+              </button>
+            );
+          })}
           </button>
         </div>
 
