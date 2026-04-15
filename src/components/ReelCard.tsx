@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowBigUp, ArrowBigDown, MessageCircle, Trash2, Flag, Lock, Coins, CreditCard, Zap } from "lucide-react";
+import { ArrowBigUp, ArrowBigDown, MessageCircle, Trash2, Flag, Lock, Coins, CreditCard, Zap, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import CommentThread from "@/components/CommentThread";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,7 @@ interface FeedPost {
   lockXrgeAmount?: string;
   unlocked?: boolean;
   isOwner?: boolean;
+  viewCount?: number;
 }
 
 interface ReelCardProps {
@@ -262,6 +263,13 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate }) => {
             )}
           </button>
         )}
+
+        <div className="flex flex-col items-center gap-0.5">
+          <div className="p-2 rounded-full backdrop-blur-sm bg-black/30 text-white/50">
+            <Eye className="w-5 h-5" />
+          </div>
+          <span className="font-mono-share text-[10px] text-white/50">{post.viewCount || 0}</span>
+        </div>
 
         {user?.id !== post.userId && (
           <button onClick={handleFlag} disabled={flagging || userFlagged} className="flex flex-col items-center gap-0.5">

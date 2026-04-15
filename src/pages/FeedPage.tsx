@@ -35,6 +35,7 @@ interface FeedPost {
   lockXrgeAmount?: string;
   unlocked?: boolean;
   isOwner?: boolean;
+  viewCount?: number;
 }
 
 const FEED_RULES = [
