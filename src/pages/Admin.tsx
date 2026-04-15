@@ -848,6 +848,7 @@ export default function Admin() {
   const [bansLoading, setBansLoading] = useState(false);
   const [banEmail, setBanEmail] = useState("");
   const [banReason, setBanReason] = useState("");
+  const [banDuration, setBanDuration] = useState("permanent");
   const [banning, setBanning] = useState(false);
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -911,8 +912,8 @@ export default function Admin() {
     if (!banEmail.trim()) return;
     setBanning(true);
     try {
-      await apiFetch("/admin", { method: "POST", body: { action: "ban-user", email: banEmail.trim(), reason: banReason.trim() || undefined } });
-      setBanEmail(""); setBanReason("");
+      await apiFetch("/admin", { method: "POST", body: { action: "ban-user", email: banEmail.trim(), reason: banReason.trim() || undefined, duration: banDuration === "permanent" ? undefined : banDuration } });
+      setBanEmail(""); setBanReason(""); setBanDuration("permanent");
       fetchBans();
     } catch (err: any) {
       alert(err.message);
@@ -1702,6 +1703,17 @@ export default function Admin() {
                     value={banReason}
                     onChange={(e) => setBanReason(e.target.value)}
                   />
+                  <select
+                    className="bg-background/50 border border-red-500/30 rounded px-2 py-1 font-mono-share text-xs text-foreground"
+                    value={banDuration}
+                    onChange={(e) => setBanDuration(e.target.value)}
+                  >
+                    <option value="1h">1 HOUR</option>
+                    <option value="24h">24 HOURS</option>
+                    <option value="7d">7 DAYS</option>
+                    <option value="30d">30 DAYS</option>
+                    <option value="permanent">PERMANENT</option>
+                  </select>
                   <button
                     className="px-3 py-1 bg-red-600 text-white font-mono-share text-xs rounded hover:bg-red-500 disabled:opacity-50"
                     disabled={banning || !banEmail.trim()}
