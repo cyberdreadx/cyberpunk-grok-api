@@ -124,6 +124,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         `;
         const runpodCost30dCents = Math.round((Number(runpodCost.total_ms_30d) / 1000) * 0.155);
 
+        // Actual tracked API costs (from api_cost_cents column)
+        const [actualCosts] = await sql`
+          SELECT
+            COALESCE(SUM(api_cost_cents) FILTER (WHERE created_at > now() - interval '30 days'), 0)::numeric AS actual_cost_30d_cents,
+            COALESCE(SUM(api_cost_cents), 0)::numeric AS actual_cost_total_cents,
+            COUNT(api_cost_cents) FILTER (WHERE created_at > now() - interval '30 days')::int AS tracked_30d,
+            COUNT(*) FILTER (WHERE created_at > now() - interval '30 days')::int AS total_30d
+          FROM usage_log
+        `;
+
         // Moderation stats
         const [moderationStats] = await sql`
           SELECT
