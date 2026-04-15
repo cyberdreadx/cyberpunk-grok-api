@@ -47,6 +47,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         unlocked_at TIMESTAMPTZ NOT NULL DEFAULT now(),
         UNIQUE(post_id, user_id)
       )`.catch(() => {});
+      await sql`CREATE TABLE IF NOT EXISTS feed_views (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        post_id UUID NOT NULL REFERENCES feed_posts(id) ON DELETE CASCADE,
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        viewed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        UNIQUE(post_id, user_id)
+      )`.catch(() => {});
 
       // Add lock columns if missing (safe for pre-migration)
       await sql`ALTER TABLE feed_posts ADD COLUMN IF NOT EXISTS lock_cost INT NOT NULL DEFAULT 0`.catch(() => {});
