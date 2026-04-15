@@ -1851,7 +1851,6 @@ export default function Admin() {
                             onClick={() => { setInspectEmail(off.email); setActiveTab("users"); inspectByEmail(off.email); }}
                             title="Inspect user"
                           >{off.email}</td>
-                          >{off.email}</td>
                           <td className="px-2.5 py-2 font-mono-share text-xs text-red-400 font-bold">{off.block_count}</td>
                           <td className="px-2.5 py-2 font-mono-share text-xs text-red-400">{off.credits_burned}</td>
                           <td className="px-2.5 py-2 font-mono-share text-[10px] text-muted-foreground/50">
