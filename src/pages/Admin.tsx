@@ -889,6 +889,12 @@ export default function Admin() {
   const [modAction, setModAction] = useState(false);
   const [modResult, setModResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
+  // User inspector
+  const [inspectEmail, setInspectEmail] = useState("");
+  const [inspectData, setInspectData] = useState<any>(null);
+  const [inspecting, setInspecting] = useState(false);
+  const [inspectTab, setInspectTab] = useState<"prompts" | "posts" | "stories">("prompts");
+
   const fetchMods = useCallback(async () => {
     setModsLoading(true);
     try {
