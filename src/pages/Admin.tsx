@@ -1640,12 +1640,14 @@ export default function Admin() {
                 <div className="overflow-x-auto overscroll-x-contain">
                   <table className="w-full min-w-[400px]">
                     <thead><tr className="border-b border-red-500/20">
-                      {["USER", "FLAGS", "CREDITS", "LAST"].map((h) => (
+                      {["USER", "FLAGS", "CREDITS", "LAST", ""].map((h) => (
                         <th key={h} className="px-2.5 py-2 text-left font-mono-share text-[9px] text-red-400/50 tracking-wider">{h}</th>
                       ))}
                     </tr></thead>
                     <tbody>
-                      {o.moderation.offenders.map((off, i) => (
+                      {o.moderation.offenders.map((off, i) => {
+                        const isBanned = bans.some((b: any) => b.email === off.email);
+                        return (
                         <tr key={i} className="border-b border-red-500/10 hover:bg-red-500/5 transition-colors">
                           <td className="px-2.5 py-2 font-mono-share text-xs text-foreground/80">{off.email}</td>
                           <td className="px-2.5 py-2 font-mono-share text-xs text-red-400 font-bold">{off.block_count}</td>
@@ -1653,8 +1655,33 @@ export default function Admin() {
                           <td className="px-2.5 py-2 font-mono-share text-[10px] text-muted-foreground/50">
                             {off.last_block ? new Date(off.last_block).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}
                           </td>
+                          <td className="px-2.5 py-2">
+                            {isBanned ? (
+                              <span className="font-mono-share text-[9px] text-red-400/60 tracking-wider">BANNED</span>
+                            ) : (
+                              <button
+                                className="px-2 py-0.5 bg-red-600 text-white font-mono-share text-[10px] rounded hover:bg-red-500 disabled:opacity-50 flex items-center gap-1"
+                                disabled={banning}
+                                onClick={async () => {
+                                  if (!confirm(`Ban ${off.email}? They will be blocked from all generation, feed posts, and stories.`)) return;
+                                  setBanning(true);
+                                  try {
+                                    await apiFetch("/admin", { method: "POST", body: { action: "ban-user", email: off.email, reason: `Repeat safety violations (${off.block_count} flags)` } });
+                                    fetchBans();
+                                  } catch (err: any) {
+                                    alert(err.message);
+                                  } finally {
+                                    setBanning(false);
+                                  }
+                                }}
+                              >
+                                <Ban className="w-3 h-3" /> BAN
+                              </button>
+                            )}
+                          </td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
