@@ -1,11 +1,11 @@
 /**
- * /api/spin – Spin-the-wheel endpoint.
+ * /api/spin – Spin-the-wheel endpoint (Temu-style gamified).
  *
  * GET  → returns spin state (free spin available, last spin time)
  * POST → spins the wheel. { paid?: boolean }
  *
  * Free spin: 1 per 24h.
- * Paid spin: costs 25 pack_credits (deducted before spin).
+ * Paid spin: costs 10 pack_credits.
  *
  * Prize weights are heavily skewed toward low values.
  */
@@ -28,18 +28,18 @@ interface Prize {
 }
 
 const PRIZES: Prize[] = [
-  { id: "c5",   label: "5 Credits",       credits: 5,   weight: 400, color: "#1e3a5f" },
-  { id: "c10",  label: "10 Credits",      credits: 10,  weight: 250, color: "#0d2847" },
-  { id: "c5b",  label: "5 Credits",       credits: 5,   weight: 400, color: "#162d50" },
-  { id: "c20",  label: "20 Credits",      credits: 20,  weight: 80,  color: "#1e3a5f" },
-  { id: "c5c",  label: "5 Credits",       credits: 5,   weight: 350, color: "#0d2847" },
-  { id: "c30",  label: "30 Credits",      credits: 30,  weight: 30,  color: "#162d50" },
-  { id: "c10b", label: "10 Credits",      credits: 10,  weight: 200, color: "#1e3a5f" },
-  { id: "c50",  label: "50 Credits",      credits: 50,  weight: 8,   color: "#0d2847" },
-  { id: "c5d",  label: "5 Credits",       credits: 5,   weight: 350, color: "#162d50" },
-  { id: "c100", label: "100 Credits",     credits: 100, weight: 2,   color: "#1e3a5f" },
-  { id: "c10c", label: "10 Credits",      credits: 10,  weight: 200, color: "#0d2847" },
-  { id: "c300", label: "300 Credits",     credits: 300, weight: 1,   color: "#0f1d33" },
+  { id: "c1a",  label: "1 Credit",    credits: 1,   weight: 350, color: "#1a2a44" },
+  { id: "c2a",  label: "2 Credits",   credits: 2,   weight: 300, color: "#0d2847" },
+  { id: "c1b",  label: "1 Credit",    credits: 1,   weight: 350, color: "#162d50" },
+  { id: "c3",   label: "3 Credits",   credits: 3,   weight: 200, color: "#1a2a44" },
+  { id: "c1c",  label: "1 Credit",    credits: 1,   weight: 350, color: "#0d2847" },
+  { id: "c5",   label: "5 Credits",   credits: 5,   weight: 100, color: "#162d50" },
+  { id: "c2b",  label: "2 Credits",   credits: 2,   weight: 250, color: "#1a2a44" },
+  { id: "c10",  label: "10 Credits",  credits: 10,  weight: 25,  color: "#0d2847" },
+  { id: "c1d",  label: "1 Credit",    credits: 1,   weight: 350, color: "#162d50" },
+  { id: "c3b",  label: "3 Credits",   credits: 3,   weight: 150, color: "#1a2a44" },
+  { id: "c2c",  label: "2 Credits",   credits: 2,   weight: 250, color: "#0d2847" },
+  { id: "c25",  label: "25 Credits",  credits: 25,  weight: 3,   color: "#0f1d33" },
 ];
 
 const TOTAL_WEIGHT = PRIZES.reduce((s, p) => s + p.weight, 0);
@@ -53,7 +53,7 @@ function pickPrize(): Prize {
   return PRIZES[0]; // fallback
 }
 
-const PAID_SPIN_COST = 25;
+const PAID_SPIN_COST = 10;
 const FREE_SPIN_COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -98,7 +98,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!user) return res.status(404).json({ error: "User not found" });
 
   if (paid) {
-    // Deduct 25 credits: daily → sub → pack
     const total = (user.daily_credits || 0) + (user.sub_credits || 0) + (user.pack_credits || 0);
     if (total < PAID_SPIN_COST) {
       return res.status(400).json({ error: "Not enough credits for a paid spin" });
@@ -120,7 +119,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       WHERE id = ${auth.userId}
     `;
   } else {
-    // Free spin — check cooldown
     const lastSpin = user.last_free_spin ? new Date(user.last_free_spin).getTime() : 0;
     if (Date.now() - lastSpin < FREE_SPIN_COOLDOWN_MS) {
       return res.status(400).json({
@@ -129,14 +127,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // Mark free spin used
     await sql`
       UPDATE users SET last_free_spin = now(), updated_at = now()
       WHERE id = ${auth.userId}
     `;
   }
 
-  // Pick prize & award credits
   const prize = pickPrize();
 
   await sql`

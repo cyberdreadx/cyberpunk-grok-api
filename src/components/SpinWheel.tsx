@@ -1,22 +1,22 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
-import { Loader2, Star, Coins } from "lucide-react";
+import { Loader2, Star, Coins, Gift, Sparkles, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
 
 /* ── Prize segments (must match backend order) ──────────── */
 const SEGMENTS = [
-  { id: "c5",   label: "5",   color: "hsl(210 60% 18%)" },
-  { id: "c10",  label: "10",  color: "hsl(215 65% 12%)" },
-  { id: "c5b",  label: "5",   color: "hsl(212 55% 20%)" },
-  { id: "c20",  label: "20",  color: "hsl(210 60% 18%)" },
-  { id: "c5c",  label: "5",   color: "hsl(215 65% 12%)" },
-  { id: "c30",  label: "30",  color: "hsl(212 55% 20%)" },
-  { id: "c10b", label: "10",  color: "hsl(210 60% 18%)" },
-  { id: "c50",  label: "50",  color: "hsl(215 65% 12%)" },
-  { id: "c5d",  label: "5",   color: "hsl(212 55% 20%)" },
-  { id: "c100", label: "100", color: "hsl(210 60% 18%)" },
-  { id: "c10c", label: "10",  color: "hsl(215 65% 12%)" },
-  { id: "c300", label: "300", color: "hsl(220 60% 10%)" },
+  { id: "c1a",  label: "1",   color: "hsl(210 60% 18%)",  accent: "hsl(200 80% 60%)" },
+  { id: "c2a",  label: "2",   color: "hsl(215 65% 12%)",  accent: "hsl(45 90% 60%)" },
+  { id: "c1b",  label: "1",   color: "hsl(212 55% 20%)",  accent: "hsl(200 80% 60%)" },
+  { id: "c3",   label: "3",   color: "hsl(210 60% 18%)",  accent: "hsl(150 70% 55%)" },
+  { id: "c1c",  label: "1",   color: "hsl(215 65% 12%)",  accent: "hsl(200 80% 60%)" },
+  { id: "c5",   label: "5",   color: "hsl(212 55% 20%)",  accent: "hsl(280 70% 65%)" },
+  { id: "c2b",  label: "2",   color: "hsl(210 60% 18%)",  accent: "hsl(45 90% 60%)" },
+  { id: "c10",  label: "10",  color: "hsl(215 65% 12%)",  accent: "hsl(30 95% 55%)" },
+  { id: "c1d",  label: "1",   color: "hsl(212 55% 20%)",  accent: "hsl(200 80% 60%)" },
+  { id: "c3b",  label: "3",   color: "hsl(210 60% 18%)",  accent: "hsl(150 70% 55%)" },
+  { id: "c2c",  label: "2",   color: "hsl(215 65% 12%)",  accent: "hsl(45 90% 60%)" },
+  { id: "c25",  label: "25",  color: "hsl(220 60% 10%)",  accent: "hsl(0 85% 60%)" },
 ];
 
 const NUM = SEGMENTS.length;
@@ -33,9 +33,9 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ onCreditsRefresh }) => {
   const [nextFreeAt, setNextFreeAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [rotation, setRotation] = useState(0);
+  const [showConfetti, setShowConfetti] = useState(false);
   const wheelRef = useRef<HTMLDivElement>(null);
 
-  // Fetch spin state
   const fetchState = useCallback(async () => {
     try {
       const data = await apiFetch("/spin");
@@ -71,6 +71,7 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ onCreditsRefresh }) => {
     if (spinning) return;
     setSpinning(true);
     setResult(null);
+    setShowConfetti(false);
 
     try {
       const data = await apiFetch("/spin", { method: "POST", body: { paid } });
@@ -78,17 +79,18 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ onCreditsRefresh }) => {
 
       // Find segment index
       const idx = SEGMENTS.findIndex(s => s.id === prize.id);
-      // Calculate target rotation: multiple full spins + land on segment
-      // Segment 0 is at top, pointer is at top. We need to rotate so segment `idx` ends at top.
-      const segmentAngle = idx * ARC;
+      // FIX: Rotate so the winning segment's center aligns with the pointer (top)
+      // Segment i center is at i*ARC + ARC/2 degrees from initial position
+      const segmentCenter = idx * ARC + ARC / 2;
       const extraSpins = 5 + Math.floor(Math.random() * 3); // 5-7 full spins
-      const targetRotation = rotation + (extraSpins * 360) + (360 - segmentAngle) + (ARC / 2);
+      const targetRotation = rotation + (extraSpins * 360) + segmentCenter;
 
       setRotation(targetRotation);
 
       // Show result after animation
       setTimeout(() => {
         setResult({ label: prize.label, credits: prize.credits });
+        setShowConfetti(prize.credits >= 5);
         setSpinning(false);
         onCreditsRefresh?.();
         fetchState();
@@ -96,7 +98,6 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ onCreditsRefresh }) => {
     } catch (err: any) {
       setSpinning(false);
       setResult(null);
-      // Could show error toast here
     }
   }, [spinning, rotation, onCreditsRefresh, fetchState]);
 
@@ -108,39 +109,88 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ onCreditsRefresh }) => {
     );
   }
 
+  const isJackpot = result && result.credits >= 10;
+
   return (
     <div className="flex flex-col items-center gap-4 py-4 relative">
-      {/* Result overlay */}
-      {result && (
-        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm rounded-lg animate-fade-in">
-          <Star className="w-16 h-16 text-primary fill-primary mb-3 drop-shadow-[0_0_20px_hsl(var(--primary)/0.6)]" />
-          <p className="font-orbitron text-xs tracking-widest text-muted-foreground uppercase">You Won</p>
-          <p className="font-orbitron text-3xl font-bold neon-text-cyan mt-1">
-            {result.credits} CREDITS
-          </p>
-          <div className="flex flex-col items-center gap-2 mt-4">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setResult(null)}
-              className="font-mono-share text-xs"
-            >
-              Close
-            </Button>
-          </div>
+      {/* Confetti / sparkle effect for big wins */}
+      {showConfetti && (
+        <div className="absolute inset-0 z-10 pointer-events-none overflow-hidden">
+          {Array.from({ length: 20 }).map((_, i) => (
+            <div
+              key={i}
+              className="absolute w-2 h-2 rounded-full animate-ping"
+              style={{
+                left: `${10 + Math.random() * 80}%`,
+                top: `${10 + Math.random() * 80}%`,
+                backgroundColor: ['#ff6b6b', '#ffd93d', '#6bcb77', '#4d96ff', '#ff6bcb', '#c084fc'][i % 6],
+                animationDelay: `${Math.random() * 0.5}s`,
+                animationDuration: `${0.8 + Math.random() * 0.5}s`,
+              }}
+            />
+          ))}
         </div>
       )}
 
-      {/* Pointer triangle */}
-      <div className="relative w-[280px] h-[280px] sm:w-[320px] sm:h-[320px]">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1 z-10">
-          <div className="w-0 h-0 border-l-[12px] border-r-[12px] border-t-[20px] border-l-transparent border-r-transparent border-t-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.6)]" />
+      {/* Result overlay */}
+      {result && (
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-background/90 backdrop-blur-md rounded-lg animate-fade-in">
+          {isJackpot ? (
+            <>
+              <div className="relative">
+                <Sparkles className="w-20 h-20 text-yellow-400 fill-yellow-400 mb-2 drop-shadow-[0_0_30px_rgba(250,204,21,0.8)] animate-pulse" />
+                <Zap className="absolute top-2 right-2 w-6 h-6 text-orange-400 fill-orange-400 animate-bounce" />
+              </div>
+              <p className="font-orbitron text-xs tracking-[0.3em] text-yellow-400 uppercase animate-pulse">
+                🎉 JACKPOT! 🎉
+              </p>
+            </>
+          ) : (
+            <>
+              <Gift className="w-14 h-14 text-primary fill-primary/20 mb-2 drop-shadow-[0_0_20px_hsl(var(--primary)/0.6)]" />
+              <p className="font-orbitron text-xs tracking-widest text-muted-foreground uppercase">
+                You Won
+              </p>
+            </>
+          )}
+          <p className={`font-orbitron text-3xl font-bold mt-1 ${isJackpot ? "text-yellow-400 drop-shadow-[0_0_20px_rgba(250,204,21,0.5)]" : "neon-text-cyan"}`}>
+            +{result.credits} CREDITS
+          </p>
+          <p className="font-mono-share text-[10px] text-muted-foreground/60 mt-1">
+            Added to your balance
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => { setResult(null); setShowConfetti(false); }}
+            className="font-mono-share text-xs mt-4"
+          >
+            {freeAvailable ? "Spin Again!" : "Close"}
+          </Button>
         </div>
+      )}
+
+      {/* Header */}
+      <div className="text-center">
+        <p className="font-orbitron text-[10px] tracking-[0.2em] text-primary/80 uppercase">Daily Reward</p>
+        <p className="font-mono-share text-[9px] text-muted-foreground/50 mt-0.5">Spin to win free credits!</p>
+      </div>
+
+      {/* Pointer triangle */}
+      <div className="relative w-[260px] h-[260px] sm:w-[300px] sm:h-[300px]">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1 z-10">
+          <div className="w-0 h-0 border-l-[10px] border-r-[10px] border-t-[18px] border-l-transparent border-r-transparent border-t-yellow-400 drop-shadow-[0_0_12px_rgba(250,204,21,0.7)]" />
+        </div>
+
+        {/* Outer glow ring */}
+        <div className={`absolute inset-[-4px] rounded-full ${spinning ? "animate-pulse" : ""}`}
+          style={{ background: "conic-gradient(from 0deg, hsl(200 80% 50% / 0.3), hsl(280 70% 50% / 0.3), hsl(45 90% 50% / 0.3), hsl(200 80% 50% / 0.3))", filter: "blur(6px)" }}
+        />
 
         {/* Wheel */}
         <div
           ref={wheelRef}
-          className="w-full h-full rounded-full border-4 border-primary/30 shadow-[0_0_40px_hsl(var(--primary)/0.15)] overflow-hidden"
+          className="w-full h-full rounded-full border-2 border-primary/40 shadow-[0_0_40px_hsl(var(--primary)/0.15)] overflow-hidden relative"
           style={{
             transform: `rotate(${rotation}deg)`,
             transition: spinning ? "transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99)" : "none",
@@ -148,7 +198,7 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ onCreditsRefresh }) => {
         >
           <svg viewBox="0 0 200 200" className="w-full h-full">
             {SEGMENTS.map((seg, i) => {
-              const startAngle = i * ARC - 90; // -90 so segment 0 starts at top
+              const startAngle = i * ARC - 90;
               const endAngle = startAngle + ARC;
               const startRad = (startAngle * Math.PI) / 180;
               const endRad = (endAngle * Math.PI) / 180;
@@ -158,90 +208,77 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ onCreditsRefresh }) => {
               const y2 = 100 + 100 * Math.sin(endRad);
               const largeArc = ARC > 180 ? 1 : 0;
 
-              // Text position at midpoint, slightly inward
               const midRad = ((startAngle + endAngle) / 2 * Math.PI) / 180;
-              const textR = 65;
+              const textR = 60;
               const tx = 100 + textR * Math.cos(midRad);
               const ty = 100 + textR * Math.sin(midRad);
               const textAngle = (startAngle + endAngle) / 2 + 90;
 
-              // Star position
-              const starR = 45;
-              const sx = 100 + starR * Math.cos(midRad);
-              const sy = 100 + starR * Math.sin(midRad);
+              const iconR = 82;
+              const ix = 100 + iconR * Math.cos(midRad);
+              const iy = 100 + iconR * Math.sin(midRad);
+
+              const isHighValue = parseInt(seg.label) >= 10;
 
               return (
                 <g key={seg.id}>
                   <path
                     d={`M100,100 L${x1},${y1} A100,100 0 ${largeArc},1 ${x2},${y2} Z`}
                     fill={seg.color}
-                    stroke="hsl(210 50% 25%)"
-                    strokeWidth="0.5"
+                    stroke="hsl(210 50% 30%)"
+                    strokeWidth="0.3"
                   />
-                  {/* Credit label */}
+                  {/* Credit amount */}
                   <text
                     x={tx}
                     y={ty}
                     textAnchor="middle"
                     dominantBaseline="central"
                     transform={`rotate(${textAngle}, ${tx}, ${ty})`}
-                    fill="white"
-                    fontSize="7"
+                    fill={isHighValue ? seg.accent : "white"}
+                    fontSize={isHighValue ? "9" : "7"}
                     fontFamily="monospace"
                     fontWeight="bold"
                   >
                     {seg.label}
                   </text>
-                  {/* Small star icon */}
+                  {/* Coin icon at edge */}
                   <text
-                    x={sx}
-                    y={sy}
+                    x={ix}
+                    y={iy}
                     textAnchor="middle"
                     dominantBaseline="central"
-                    transform={`rotate(${textAngle}, ${sx}, ${sy})`}
-                    fontSize="8"
+                    transform={`rotate(${textAngle}, ${ix}, ${iy})`}
+                    fontSize="5"
+                    opacity={isHighValue ? 1 : 0.5}
                   >
-                    ⭐
-                  </text>
-                  {/* "CREDITS" label at edge */}
-                  <text
-                    x={100 + 85 * Math.cos(midRad)}
-                    y={100 + 85 * Math.sin(midRad)}
-                    textAnchor="middle"
-                    dominantBaseline="central"
-                    transform={`rotate(${textAngle}, ${100 + 85 * Math.cos(midRad)}, ${100 + 85 * Math.sin(midRad)})`}
-                    fill="hsl(200 80% 70%)"
-                    fontSize="3.5"
-                    fontFamily="monospace"
-                    letterSpacing="0.5"
-                  >
-                    CREDITS
+                    {isHighValue ? "💎" : "🪙"}
                   </text>
                 </g>
               );
             })}
-            {/* Center circle */}
-            <circle cx="100" cy="100" r="8" fill="hsl(210 30% 15%)" stroke="hsl(200 60% 40%)" strokeWidth="1" />
-            <circle cx="100" cy="100" r="3" fill="hsl(200 60% 50%)" />
+            {/* Center */}
+            <circle cx="100" cy="100" r="12" fill="hsl(210 30% 12%)" stroke="hsl(200 60% 40%)" strokeWidth="1" />
+            <text x="100" y="100" textAnchor="middle" dominantBaseline="central" fontSize="6" fill="hsl(200 60% 60%)">🎰</text>
           </svg>
         </div>
       </div>
 
       {/* Spin buttons */}
-      <div className="flex flex-col items-center gap-2 w-full max-w-[280px]">
+      <div className="flex flex-col items-center gap-2 w-full max-w-[260px]">
         {freeAvailable ? (
           <Button
             onClick={() => doSpin(false)}
             disabled={spinning}
-            className="w-full font-orbitron text-xs tracking-wider gap-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white border-0 shadow-[0_0_20px_rgba(34,197,94,0.3)]"
+            className="w-full font-orbitron text-xs tracking-wider gap-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white border-0 shadow-[0_0_20px_rgba(34,197,94,0.3)] h-11"
           >
-            {spinning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Star className="w-4 h-4" />}
-            {spinning ? "Spinning..." : "FREE SPIN"}
+            {spinning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Gift className="w-4 h-4" />}
+            {spinning ? "Spinning..." : "🎁 FREE SPIN"}
           </Button>
         ) : (
-          <div className="text-center">
+          <div className="text-center py-1">
             <p className="font-mono-share text-[10px] text-muted-foreground/60">
-              Next free spin in: <span className="text-primary">{countdown || "..."}</span>
+              Next free spin: <span className="text-primary font-bold">{countdown || "..."}</span>
             </p>
           </div>
         )}
@@ -250,11 +287,15 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ onCreditsRefresh }) => {
           variant="outline"
           onClick={() => doSpin(true)}
           disabled={spinning}
-          className="w-full font-mono-share text-xs gap-2 border-primary/30 hover:bg-primary/10"
+          className="w-full font-mono-share text-xs gap-2 border-primary/30 hover:bg-primary/10 h-9"
         >
           {spinning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Coins className="w-3.5 h-3.5" />}
-          Spin Again — 25 Credits
+          Extra Spin — 10 Credits
         </Button>
+
+        <p className="font-mono-share text-[8px] text-muted-foreground/30 text-center mt-1">
+          Win 1–25 credits per spin • Jackpot: 25 credits
+        </p>
       </div>
     </div>
   );
