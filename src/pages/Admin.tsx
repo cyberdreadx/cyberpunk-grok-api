@@ -842,6 +842,12 @@ function PayoutsPanel() {
 
 // ── Main Admin Page ──
 
+  // User bans
+  const [bans, setBans] = useState<any[]>([]);
+  const [bansLoading, setBansLoading] = useState(false);
+  const [banEmail, setBanEmail] = useState("");
+  const [banReason, setBanReason] = useState("");
+  const [banning, setBanning] = useState(false);
 
 export default function Admin() {
   const navigate = useNavigate();
@@ -891,6 +897,37 @@ export default function Admin() {
       console.error("[admin] list-mods failed:", err.message);
     } finally { setModsLoading(false); }
   }, []);
+
+  const fetchBans = useCallback(async () => {
+    setBansLoading(true);
+    try {
+      const res = await apiFetch("/admin", { method: "POST", body: { action: "list-bans" } });
+      setBans(res.bans || []);
+    } catch (err: any) {
+      console.error("[admin] list-bans failed:", err.message);
+    } finally { setBansLoading(false); }
+  }, []);
+
+  const handleBan = async () => {
+    if (!banEmail.trim()) return;
+    setBanning(true);
+    try {
+      await apiFetch("/admin", { method: "POST", body: { action: "ban-user", email: banEmail.trim(), reason: banReason.trim() || undefined } });
+      setBanEmail(""); setBanReason("");
+      fetchBans();
+    } catch (err: any) {
+      alert(err.message);
+    } finally { setBanning(false); }
+  };
+
+  const handleUnban = async (userId: string) => {
+    try {
+      await apiFetch("/admin", { method: "POST", body: { action: "unban-user", userId } });
+      fetchBans();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
 
   const fetchEmailLogs = useCallback(async (filters?: { type?: string; status?: string }) => {
     setEmailLoading(true);
