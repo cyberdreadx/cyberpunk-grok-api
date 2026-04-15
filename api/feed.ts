@@ -120,6 +120,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         `;
       }
 
+      // Record views before responding (Vercel kills after res.json)
+      const postIds = rows.map((r: any) => r.id);
+      if (postIds.length > 0) {
+        await Promise.all(
+          postIds.map((pid: string) =>
+            sql`INSERT INTO feed_views (post_id, user_id) VALUES (${pid}::uuid, ${auth.userId}::uuid) ON CONFLICT (post_id, user_id) DO NOTHING`.catch(() => {})
+          )
+        ).catch(() => {});
+      }
+
       return res.json({
         posts: rows.map((r: any) => {
           const isOwner = r.user_id === auth.userId;
@@ -151,16 +161,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }),
         nextCursor: rows.length === limit ? rows[rows.length - 1].created_at : null,
       });
-
-      // Record views asynchronously (don't block response)
-      const postIds = rows.map((r: any) => r.id);
-      if (postIds.length > 0) {
-        Promise.all(
-          postIds.map((pid: string) =>
-            sql`INSERT INTO feed_views (post_id, user_id) VALUES (${pid}::uuid, ${auth.userId}::uuid) ON CONFLICT (post_id, user_id) DO NOTHING`.catch(() => {})
-          )
-        ).catch(() => {});
-      }
     } catch (err: any) {
       console.error("[feed GET]", err.message);
       return res.status(500).json({ error: "Failed to fetch feed" });
