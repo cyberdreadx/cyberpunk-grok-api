@@ -52,6 +52,11 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate }) => {
   const [flagging, setFlagging] = useState(false);
   const [unlocking, setUnlocking] = useState(false);
   const [isUnlocked, setIsUnlocked] = useState(post.unlocked ?? true);
+
+  // Sync unlock state when props change (e.g. after fetchFeed refresh)
+  React.useEffect(() => {
+    if (post.unlocked !== undefined) setIsUnlocked(post.unlocked);
+  }, [post.unlocked]);
   const [xrgeUnlockOpen, setXrgeUnlockOpen] = useState(false);
 
   const isLocked = !isUnlocked && !post.isOwner && ((post.lockCost || 0) > 0 || (post.lockPriceCents || 0) > 0 || !!(post.lockXrgeAmount && parseFloat(post.lockXrgeAmount) > 0));
