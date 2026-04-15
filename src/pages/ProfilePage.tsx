@@ -325,15 +325,23 @@ const ProfilePage: React.FC = () => {
                     disabled={banLoading}
                     className="font-mono-share text-[10px]"
                     onClick={async () => {
+                      const duration = prompt("Ban duration (1h, 24h, 7d, 30d, or leave empty for permanent):", "24h");
+                      if (duration === null) return;
                       const reason = prompt("Ban reason:", "Violation of community guidelines");
                       if (reason === null) return;
+                      const validDurations = ["1h", "24h", "7d", "30d", ""];
+                      const d = duration.trim().toLowerCase();
+                      if (!validDurations.includes(d)) {
+                        toast({ title: "Invalid duration. Use 1h, 24h, 7d, 30d, or empty for permanent.", variant: "destructive" });
+                        return;
+                      }
                       setBanLoading(true);
                       try {
                         await apiFetch("/admin", {
                           method: "POST",
-                          body: { action: "ban-user", email: "", userId: profile.userId, reason },
+                          body: { action: "ban-user", userId: profile.userId, reason, duration: d || undefined },
                         });
-                        toast({ title: `@${profile.username} has been banned` });
+                        toast({ title: `@${profile.username} has been banned${d ? ` for ${d}` : " permanently"}` });
                       } catch (err: any) {
                         toast({ title: err.message, variant: "destructive" });
                       } finally {

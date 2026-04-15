@@ -1731,28 +1731,36 @@ export default function Admin() {
                   <div className="overflow-x-auto overscroll-x-contain">
                     <table className="w-full min-w-[400px]">
                       <thead><tr className="border-b border-red-500/20">
-                        {["EMAIL", "REASON", "DATE", ""].map((h) => (
+                        {["EMAIL", "REASON", "EXPIRES", "DATE", ""].map((h) => (
                           <th key={h} className="px-2.5 py-2 text-left font-mono-share text-[9px] text-red-400/50 tracking-wider">{h}</th>
                         ))}
                       </tr></thead>
                       <tbody>
-                        {bans.map((b: any) => (
-                          <tr key={b.user_id} className="border-b border-red-500/10 hover:bg-red-500/5 transition-colors">
-                            <td className="px-2.5 py-2 font-mono-share text-xs text-foreground/80">{b.email}</td>
-                            <td className="px-2.5 py-2 font-mono-share text-xs text-red-400">{b.reason}</td>
-                            <td className="px-2.5 py-2 font-mono-share text-[10px] text-muted-foreground/50">
-                              {new Date(b.created_at).toLocaleString("en-US", { month: "short", day: "numeric" })}
-                            </td>
-                            <td className="px-2.5 py-2">
-                              <button
-                                className="px-2 py-0.5 bg-green-600/80 text-white font-mono-share text-[10px] rounded hover:bg-green-500"
-                                onClick={() => handleUnban(b.user_id)}
-                              >
-                                UNBAN
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
+                        {bans.map((b: any) => {
+                          const expired = b.expires_at && new Date(b.expires_at) <= new Date();
+                          return (
+                            <tr key={b.user_id} className={`border-b border-red-500/10 hover:bg-red-500/5 transition-colors ${expired ? "opacity-40" : ""}`}>
+                              <td className="px-2.5 py-2 font-mono-share text-xs text-foreground/80">{b.email}</td>
+                              <td className="px-2.5 py-2 font-mono-share text-xs text-red-400">{b.reason}</td>
+                              <td className="px-2.5 py-2 font-mono-share text-[10px] text-muted-foreground/50">
+                                {b.expires_at
+                                  ? (expired ? "EXPIRED" : new Date(b.expires_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }))
+                                  : "PERMANENT"}
+                              </td>
+                              <td className="px-2.5 py-2 font-mono-share text-[10px] text-muted-foreground/50">
+                                {new Date(b.created_at).toLocaleString("en-US", { month: "short", day: "numeric" })}
+                              </td>
+                              <td className="px-2.5 py-2">
+                                <button
+                                  className="px-2 py-0.5 bg-green-600/80 text-white font-mono-share text-[10px] rounded hover:bg-green-500"
+                                  onClick={() => handleUnban(b.user_id)}
+                                >
+                                  UNBAN
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
