@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
-import { Loader2, Star, Coins, Gift, Sparkles, Zap } from "lucide-react";
+import { Loader2, Star, Coins, Gift, Sparkles, Zap, Flame } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
 
@@ -26,14 +26,40 @@ interface SpinWheelProps {
   onCreditsRefresh?: () => void;
 }
 
+/* ── Streak Badge ──────────────────────────────── */
+const StreakBadge: React.FC<{ streak: number; minPrize: number }> = ({ streak, minPrize }) => {
+  if (streak <= 0) return null;
+
+  const tier = streak >= 7 ? "🔥" : streak >= 5 ? "⚡" : streak >= 3 ? "✨" : "🌟";
+
+  return (
+    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-primary/20 bg-primary/5">
+      <span className="text-sm">{tier}</span>
+      <div className="text-left">
+        <p className="font-orbitron text-[9px] tracking-wider text-primary">
+          {streak}-DAY STREAK
+        </p>
+        <p className="font-mono-share text-[8px] text-muted-foreground/60">
+          Min prize: <span className="text-primary font-bold">{minPrize} credit{minPrize !== 1 ? "s" : ""}</span>
+        </p>
+      </div>
+      {streak >= 5 && (
+        <Flame className="w-3.5 h-3.5 text-orange-400 fill-orange-400/50 animate-pulse" />
+      )}
+    </div>
+  );
+};
+
 const SpinWheel: React.FC<SpinWheelProps> = ({ onCreditsRefresh }) => {
   const [spinning, setSpinning] = useState(false);
-  const [result, setResult] = useState<{ label: string; credits: number } | null>(null);
+  const [result, setResult] = useState<{ label: string; credits: number; streak?: number; minPrize?: number } | null>(null);
   const [freeAvailable, setFreeAvailable] = useState(false);
   const [nextFreeAt, setNextFreeAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [rotation, setRotation] = useState(0);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [streak, setStreak] = useState(0);
+  const [nextMinPrize, setNextMinPrize] = useState(1);
   const wheelRef = useRef<HTMLDivElement>(null);
 
   const fetchState = useCallback(async () => {
@@ -41,6 +67,8 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ onCreditsRefresh }) => {
       const data = await apiFetch("/spin");
       setFreeAvailable(data.freeAvailable);
       setNextFreeAt(data.nextFreeAt);
+      setStreak(data.streak ?? 0);
+      setNextMinPrize(data.nextMinPrize ?? 1);
     } catch {
       // silently ignore
     } finally {
@@ -77,19 +105,25 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ onCreditsRefresh }) => {
       const data = await apiFetch("/spin", { method: "POST", body: { paid } });
       const prize = data.prize;
 
+      // Update streak from response
+      if (data.streak !== undefined) setStreak(data.streak);
+
       // Find segment index
       const idx = SEGMENTS.findIndex(s => s.id === prize.id);
-      // FIX: Rotate so the winning segment's center aligns with the pointer (top)
-      // Segment i center is at i*ARC + ARC/2 degrees from initial position
       const segmentCenter = idx * ARC + ARC / 2;
-      const extraSpins = 5 + Math.floor(Math.random() * 3); // 5-7 full spins
+      const extraSpins = 5 + Math.floor(Math.random() * 3);
       const targetRotation = rotation + (extraSpins * 360) + segmentCenter;
 
       setRotation(targetRotation);
 
       // Show result after animation
       setTimeout(() => {
-        setResult({ label: prize.label, credits: prize.credits });
+        setResult({
+          label: prize.label,
+          credits: prize.credits,
+          streak: data.streak,
+          minPrize: data.minPrize,
+        });
         setShowConfetti(prize.credits >= 5);
         setSpinning(false);
         onCreditsRefresh?.();
@@ -123,7 +157,7 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ onCreditsRefresh }) => {
               style={{
                 left: `${10 + Math.random() * 80}%`,
                 top: `${10 + Math.random() * 80}%`,
-                backgroundColor: ['#ff6b6b', '#ffd93d', '#6bcb77', '#4d96ff', '#ff6bcb', '#c084fc'][i % 6],
+                backgroundColor: ['hsl(0 80% 60%)', 'hsl(45 90% 60%)', 'hsl(140 60% 50%)', 'hsl(210 80% 60%)', 'hsl(330 70% 60%)', 'hsl(270 60% 65%)'][i % 6],
                 animationDelay: `${Math.random() * 0.5}s`,
                 animationDuration: `${0.8 + Math.random() * 0.5}s`,
               }}
@@ -156,7 +190,13 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ onCreditsRefresh }) => {
           <p className={`font-orbitron text-3xl font-bold mt-1 ${isJackpot ? "text-yellow-400 drop-shadow-[0_0_20px_rgba(250,204,21,0.5)]" : "neon-text-cyan"}`}>
             +{result.credits} CREDITS
           </p>
-          <p className="font-mono-share text-[10px] text-muted-foreground/60 mt-1">
+          {/* Streak info in result */}
+          {result.streak && result.streak > 0 && (
+            <p className="font-mono-share text-[10px] text-primary/80 mt-1.5">
+              🔥 {result.streak}-day streak • min {result.minPrize} credit{(result.minPrize ?? 1) !== 1 ? "s" : ""}
+            </p>
+          )}
+          <p className="font-mono-share text-[10px] text-muted-foreground/60 mt-0.5">
             Added to your balance
           </p>
           <Button
@@ -170,10 +210,13 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ onCreditsRefresh }) => {
         </div>
       )}
 
-      {/* Header */}
-      <div className="text-center">
-        <p className="font-orbitron text-[10px] tracking-[0.2em] text-primary/80 uppercase">Daily Reward</p>
-        <p className="font-mono-share text-[9px] text-muted-foreground/50 mt-0.5">Spin to win free credits!</p>
+      {/* Header + Streak */}
+      <div className="text-center flex flex-col items-center gap-2">
+        <div>
+          <p className="font-orbitron text-[10px] tracking-[0.2em] text-primary/80 uppercase">Daily Reward</p>
+          <p className="font-mono-share text-[9px] text-muted-foreground/50 mt-0.5">Spin to win free credits!</p>
+        </div>
+        <StreakBadge streak={streak} minPrize={nextMinPrize} />
       </div>
 
       {/* Pointer triangle */}
@@ -228,26 +271,19 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ onCreditsRefresh }) => {
                     stroke="hsl(210 50% 30%)"
                     strokeWidth="0.3"
                   />
-                  {/* Credit amount */}
                   <text
-                    x={tx}
-                    y={ty}
-                    textAnchor="middle"
-                    dominantBaseline="central"
+                    x={tx} y={ty}
+                    textAnchor="middle" dominantBaseline="central"
                     transform={`rotate(${textAngle}, ${tx}, ${ty})`}
                     fill={isHighValue ? seg.accent : "white"}
                     fontSize={isHighValue ? "9" : "7"}
-                    fontFamily="monospace"
-                    fontWeight="bold"
+                    fontFamily="monospace" fontWeight="bold"
                   >
                     {seg.label}
                   </text>
-                  {/* Coin icon at edge */}
                   <text
-                    x={ix}
-                    y={iy}
-                    textAnchor="middle"
-                    dominantBaseline="central"
+                    x={ix} y={iy}
+                    textAnchor="middle" dominantBaseline="central"
                     transform={`rotate(${textAngle}, ${ix}, ${iy})`}
                     fontSize="5"
                     opacity={isHighValue ? 1 : 0.5}
@@ -257,7 +293,6 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ onCreditsRefresh }) => {
                 </g>
               );
             })}
-            {/* Center */}
             <circle cx="100" cy="100" r="12" fill="hsl(210 30% 12%)" stroke="hsl(200 60% 40%)" strokeWidth="1" />
             <text x="100" y="100" textAnchor="middle" dominantBaseline="central" fontSize="6" fill="hsl(200 60% 60%)">🎰</text>
           </svg>
@@ -273,13 +308,18 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ onCreditsRefresh }) => {
             className="w-full font-orbitron text-xs tracking-wider gap-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white border-0 shadow-[0_0_20px_rgba(34,197,94,0.3)] h-11"
           >
             {spinning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Gift className="w-4 h-4" />}
-            {spinning ? "Spinning..." : "🎁 FREE SPIN"}
+            {spinning ? "Spinning..." : `🎁 FREE SPIN${streak > 0 ? ` (${streak}🔥)` : ""}`}
           </Button>
         ) : (
           <div className="text-center py-1">
             <p className="font-mono-share text-[10px] text-muted-foreground/60">
               Next free spin: <span className="text-primary font-bold">{countdown || "..."}</span>
             </p>
+            {streak > 0 && (
+              <p className="font-mono-share text-[8px] text-muted-foreground/40 mt-0.5">
+                ⚠️ Spin within 48h to keep your streak!
+              </p>
+            )}
           </div>
         )}
 
@@ -294,7 +334,7 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ onCreditsRefresh }) => {
         </Button>
 
         <p className="font-mono-share text-[8px] text-muted-foreground/30 text-center mt-1">
-          Win 1–25 credits per spin • Jackpot: 25 credits
+          Win 1–25 credits per spin • Streak boosts minimum prize
         </p>
       </div>
     </div>

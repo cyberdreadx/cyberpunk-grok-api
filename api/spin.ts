@@ -1,13 +1,20 @@
 /**
  * /api/spin – Spin-the-wheel endpoint (Temu-style gamified).
  *
- * GET  → returns spin state (free spin available, last spin time)
+ * GET  → returns spin state (free spin available, last spin time, streak)
  * POST → spins the wheel. { paid?: boolean }
  *
  * Free spin: 1 per 24h.
  * Paid spin: costs 10 pack_credits.
  *
- * Prize weights are heavily skewed toward low values.
+ * Streak: consecutive daily free spins boost the minimum prize.
+ *   Day 1: no bonus (min 1)
+ *   Day 2: min 2
+ *   Day 3-4: min 3
+ *   Day 5-6: min 5
+ *   Day 7+: min 5 + higher jackpot odds
+ *
+ * Streak resets if the user misses a 48h window from last free spin.
  */
 
 import type { VercelRequest, VercelResponse } from "@vercel/node";
@@ -42,19 +49,45 @@ const PRIZES: Prize[] = [
   { id: "c25",  label: "25 Credits",  credits: 25,  weight: 3,   color: "#0f1d33" },
 ];
 
-const TOTAL_WEIGHT = PRIZES.reduce((s, p) => s + p.weight, 0);
+/** Get minimum credits based on streak */
+function getStreakMinimum(streak: number): number {
+  if (streak >= 5) return 5;
+  if (streak >= 3) return 3;
+  if (streak >= 2) return 2;
+  return 1;
+}
 
-function pickPrize(): Prize {
-  let r = Math.random() * TOTAL_WEIGHT;
-  for (const p of PRIZES) {
+/** Get bonus weight boost for jackpot at high streaks */
+function getStreakWeightBoost(streak: number): number {
+  // At day 7+ give slight boost to higher prizes
+  if (streak >= 7) return 3;
+  if (streak >= 5) return 2;
+  return 1;
+}
+
+function pickPrize(minCredits: number, boostFactor: number): Prize {
+  // Filter to only prizes >= minimum
+  const eligible = PRIZES.filter(p => p.credits >= minCredits);
+  if (eligible.length === 0) return PRIZES[PRIZES.length - 1]; // fallback to highest
+
+  // Apply boost to higher-value prizes
+  const boosted = eligible.map(p => ({
+    ...p,
+    weight: p.credits >= 10 ? p.weight * boostFactor : p.weight,
+  }));
+
+  const totalWeight = boosted.reduce((s, p) => s + p.weight, 0);
+  let r = Math.random() * totalWeight;
+  for (const p of boosted) {
     r -= p.weight;
-    if (r <= 0) return p;
+    if (r <= 0) return PRIZES.find(op => op.id === p.id)!;
   }
-  return PRIZES[0]; // fallback
+  return eligible[0];
 }
 
 const PAID_SPIN_COST = 10;
 const FREE_SPIN_COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24 hours
+const STREAK_BREAK_MS = 48 * 60 * 60 * 1000; // 48 hours — miss this window and streak resets
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === "OPTIONS") return res.status(200).end();
@@ -70,7 +103,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   /* ── GET: spin state ──────────────────────────────────────── */
   if (req.method === "GET") {
     const [user] = await sql`
-      SELECT last_free_spin FROM users WHERE id = ${auth.userId}
+      SELECT last_free_spin, COALESCE(spin_streak, 0) as spin_streak FROM users WHERE id = ${auth.userId}
     `;
     if (!user) return res.status(404).json({ error: "User not found" });
 
@@ -78,10 +111,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const freeAvailable = Date.now() - lastSpin >= FREE_SPIN_COOLDOWN_MS;
     const nextFreeAt = freeAvailable ? null : new Date(lastSpin + FREE_SPIN_COOLDOWN_MS).toISOString();
 
+    // Check if streak would be broken
+    const currentStreak = (lastSpin > 0 && Date.now() - lastSpin > STREAK_BREAK_MS) ? 0 : (user.spin_streak || 0);
+    const minPrize = getStreakMinimum(currentStreak + (freeAvailable ? 1 : 0));
+
     return res.status(200).json({
       freeAvailable,
       nextFreeAt,
       paidSpinCost: PAID_SPIN_COST,
+      streak: currentStreak,
+      nextMinPrize: minPrize,
       prizes: PRIZES.map(p => ({ id: p.id, label: p.label, color: p.color })),
     });
   }
@@ -92,10 +131,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const { paid } = req.body || {};
 
   const [user] = await sql`
-    SELECT daily_credits, sub_credits, pack_credits, last_free_spin
+    SELECT daily_credits, sub_credits, pack_credits, last_free_spin, COALESCE(spin_streak, 0) as spin_streak
     FROM users WHERE id = ${auth.userId}
   `;
   if (!user) return res.status(404).json({ error: "User not found" });
+
+  const lastSpin = user.last_free_spin ? new Date(user.last_free_spin).getTime() : 0;
+  let streak = user.spin_streak || 0;
 
   if (paid) {
     const total = (user.daily_credits || 0) + (user.sub_credits || 0) + (user.pack_credits || 0);
@@ -118,8 +160,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         updated_at     = now()
       WHERE id = ${auth.userId}
     `;
+    // Paid spins use current streak bonus but don't advance streak
   } else {
-    const lastSpin = user.last_free_spin ? new Date(user.last_free_spin).getTime() : 0;
     if (Date.now() - lastSpin < FREE_SPIN_COOLDOWN_MS) {
       return res.status(400).json({
         error: "Free spin not available yet",
@@ -127,13 +169,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
+    // Update streak: if within 48h window, increment; otherwise reset to 1
+    if (lastSpin > 0 && Date.now() - lastSpin <= STREAK_BREAK_MS) {
+      streak += 1;
+    } else {
+      streak = 1;
+    }
+
     await sql`
-      UPDATE users SET last_free_spin = now(), updated_at = now()
+      UPDATE users SET 
+        last_free_spin = now(), 
+        spin_streak = ${streak},
+        updated_at = now()
       WHERE id = ${auth.userId}
     `;
   }
 
-  const prize = pickPrize();
+  const minCredits = getStreakMinimum(streak);
+  const boostFactor = getStreakWeightBoost(streak);
+  const prize = pickPrize(minCredits, boostFactor);
 
   await sql`
     UPDATE users SET
@@ -144,5 +198,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   return res.status(200).json({
     prize: { id: prize.id, label: prize.label, credits: prize.credits },
+    streak,
+    minPrize: minCredits,
   });
 }
