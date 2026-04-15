@@ -132,6 +132,34 @@ const FeedPage: React.FC = () => {
     fetchFeed(nextCursor);
   };
 
+  const ackRules = () => {
+    localStorage.setItem("feed-rules-acked", "1");
+    setRulesAcked(true);
+  };
+
+  const rulesBanner = !rulesAcked ? (
+    <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4 space-y-3">
+      <div className="flex items-center gap-2">
+        <ShieldAlert className="w-5 h-5 text-destructive shrink-0" />
+        <h2 className="font-orbitron text-xs tracking-wider text-destructive">COMMUNITY GUIDELINES</h2>
+      </div>
+      <p className="font-mono-share text-[10px] text-muted-foreground leading-relaxed">
+        By posting, you agree to follow these rules. Violations will result in content removal and account bans.
+      </p>
+      <ul className="space-y-1.5">
+        {FEED_RULES.map((rule, i) => (
+          <li key={i} className="font-mono-share text-[10px] text-foreground/80 flex items-start gap-2">
+            <span className="text-destructive mt-0.5 shrink-0">▸</span>
+            {rule}
+          </li>
+        ))}
+      </ul>
+      <Button size="sm" variant="destructive" onClick={ackRules} className="font-mono-share text-[10px] w-full">
+        I UNDERSTAND — CONTINUE
+      </Button>
+    </div>
+  ) : null;
+
   const handleReelScroll = useCallback(() => {
     const el = scrollRef.current;
     if (!el || !nextCursor || loadingMore) return;
