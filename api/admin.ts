@@ -179,6 +179,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           runpodCost: {
             estimated30dCents: runpodCost30dCents,
           },
+          actualCost: {
+            actual30dCents: Number(actualCosts.actual_cost_30d_cents),
+            actualTotalCents: Number(actualCosts.actual_cost_total_cents),
+            tracked30d: actualCosts.tracked_30d,
+            total30d: actualCosts.total_30d,
+          },
           moderation: {
             ...moderationStats,
             offenders: moderationOffenders,
