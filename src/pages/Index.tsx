@@ -1126,6 +1126,9 @@ const Index = () => {
               )}
             </div>
 
+            {/* Notification bell */}
+            <NotificationBell isAuthenticated={auth.isAuthenticated} />
+
             {/* Auth: login/logout */}
             {auth.enabled && (
               <AuthDialog
