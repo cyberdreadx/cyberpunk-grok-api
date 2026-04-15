@@ -61,7 +61,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         (SELECT count(*)::int FROM feed_comments WHERE post_id = p.id) AS comment_count,
         (SELECT count(*)::int FROM feed_reports WHERE post_id = p.id) AS flag_count,
         EXISTS(SELECT 1 FROM feed_reports WHERE post_id = p.id AND user_id = ${authId}) AS user_flagged,
-        CASE WHEN EXISTS(SELECT 1 FROM feed_unlocks WHERE post_id = p.id AND user_id = ${authId}) THEN true ELSE false END AS unlocked
+        CASE WHEN EXISTS(SELECT 1 FROM feed_unlocks WHERE post_id = p.id AND user_id = ${authId}) THEN true ELSE false END AS unlocked,
+        COALESCE((SELECT count(*)::int FROM feed_views WHERE post_id = p.id), 0) AS view_count
       `;
 
       // Build ORDER BY based on sort mode
@@ -138,10 +139,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             lockXrgeAmount: xrgePrice > 0 ? r.lock_xrge_amount : undefined,
             unlocked: r.unlocked || isOwner,
             isOwner,
+            viewCount: r.view_count || 0,
           };
         }),
         nextCursor: rows.length === limit ? rows[rows.length - 1].created_at : null,
       });
+
+      // Record views asynchronously (don't block response)
+      const postIds = rows.map((r: any) => r.id);
+      if (postIds.length > 0) {
+        Promise.all(
+          postIds.map((pid: string) =>
+            sql`INSERT INTO feed_views (post_id, user_id) VALUES (${pid}::uuid, ${auth.userId}::uuid) ON CONFLICT (post_id, user_id) DO NOTHING`.catch(() => {})
+          )
+        ).catch(() => {});
+      }
     } catch (err: any) {
       console.error("[feed GET]", err.message);
       return res.status(500).json({ error: "Failed to fetch feed" });
