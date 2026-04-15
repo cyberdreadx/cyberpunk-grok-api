@@ -228,6 +228,11 @@ const FeedPage: React.FC = () => {
   if (isMobile) {
     return (
       <>
+        {!rulesAcked && (
+          <div className="fixed inset-0 z-[60] bg-black/90 backdrop-blur-sm flex items-center justify-center p-6">
+            <div className="max-w-sm w-full">{rulesBanner}</div>
+          </div>
+        )}
         <div
           ref={scrollRef}
           onScroll={handleReelScroll}
@@ -349,6 +354,8 @@ const FeedPage: React.FC = () => {
             MY PROFILE →
           </button>
         </div>
+
+        {rulesBanner}
 
         <div className="bg-card/60 border border-border/40 rounded-lg p-4 space-y-3">
           <Textarea
