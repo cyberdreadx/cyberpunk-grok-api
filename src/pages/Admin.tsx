@@ -1555,6 +1555,165 @@ export default function Admin() {
                 </table>
               </div>
             </section>
+
+            {/* ── USER INSPECTOR ── */}
+            <section className="border border-primary/30 rounded-lg bg-card/40 backdrop-blur-sm overflow-hidden">
+              <div className="px-3 sm:px-4 py-3 border-b border-primary/20">
+                <h2 className="font-orbitron text-xs tracking-wider text-primary/80 flex items-center gap-2">
+                  <Eye className="w-3.5 h-3.5" />
+                  USER_INSPECTOR
+                </h2>
+              </div>
+              <div className="p-3 sm:p-4 space-y-3">
+                <div className="flex gap-2">
+                  <input
+                    className="bg-background/60 border border-border rounded px-2.5 py-1.5 font-mono-share text-xs text-foreground flex-1 min-w-[180px]"
+                    placeholder="user@email.com"
+                    value={inspectEmail}
+                    onChange={(e) => setInspectEmail(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && inspectEmail.trim() && handleInspect()}
+                  />
+                  <button
+                    className="px-3 py-1.5 bg-primary text-primary-foreground font-mono-share text-xs rounded hover:bg-primary/80 disabled:opacity-50"
+                    disabled={inspecting || !inspectEmail.trim()}
+                    onClick={handleInspect}
+                  >
+                    {inspecting ? "..." : "INSPECT"}
+                  </button>
+                </div>
+
+                {inspectData && (
+                  <div className="space-y-3">
+                    {/* User header */}
+                    <div className="flex items-center justify-between gap-2 p-3 bg-background/30 rounded border border-border/20">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-orbitron text-sm text-foreground">@{inspectData.user.username || "—"}</span>
+                          <span className="font-mono-share text-[10px] text-muted-foreground">{inspectData.user.email}</span>
+                          {inspectData.ban && (
+                            <span className="px-1.5 py-0.5 bg-destructive/20 text-destructive font-mono-share text-[9px] rounded">BANNED</span>
+                          )}
+                        </div>
+                        <div className="font-mono-share text-[10px] text-muted-foreground/60 flex gap-3 mt-1">
+                          <span>Tier: {inspectData.user.subscription_tier || "free"}</span>
+                          <span>Credits: {(inspectData.user.daily_credits || 0) + (inspectData.user.sub_credits || 0) + (inspectData.user.pack_credits || 0)}</span>
+                          <span>Flags: <span className={inspectData.moderationFlags > 0 ? "text-destructive" : ""}>{inspectData.moderationFlags}</span></span>
+                        </div>
+                      </div>
+                      {!inspectData.ban ? (
+                        <button
+                          className="px-3 py-1 bg-destructive text-destructive-foreground font-mono-share text-[10px] rounded hover:bg-destructive/80 disabled:opacity-50 shrink-0"
+                          disabled={banning}
+                          onClick={async () => {
+                            const duration = prompt("Ban duration (1h, 24h, 7d, 30d, or empty for permanent):", "24h");
+                            if (duration === null) return;
+                            const reason = prompt("Ban reason:", "Violation of community guidelines");
+                            if (reason === null) return;
+                            setBanning(true);
+                            try {
+                              const d = duration.trim().toLowerCase();
+                              await apiFetch("/admin", { method: "POST", body: { action: "ban-user", userId: inspectData.user.id, reason, duration: d || undefined } });
+                              handleInspect();
+                              fetchBans();
+                            } catch (err: any) { alert(err.message); }
+                            finally { setBanning(false); }
+                          }}
+                        >
+                          <Ban className="w-3 h-3 inline mr-1" />BAN
+                        </button>
+                      ) : (
+                        <button
+                          className="px-3 py-1 bg-green-600/80 text-white font-mono-share text-[10px] rounded hover:bg-green-500 shrink-0"
+                          onClick={async () => {
+                            await apiFetch("/admin", { method: "POST", body: { action: "unban-user", userId: inspectData.user.id } });
+                            handleInspect();
+                            fetchBans();
+                          }}
+                        >
+                          UNBAN
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Sub-tabs */}
+                    <div className="flex gap-1 border-b border-border/20">
+                      {(["prompts", "posts", "stories"] as const).map((t) => (
+                        <button key={t} onClick={() => setInspectTab(t)}
+                          className={`px-3 py-1.5 font-mono-share text-[10px] tracking-wider border-b-2 transition-colors ${inspectTab === t ? "border-primary text-primary" : "border-transparent text-muted-foreground/50 hover:text-muted-foreground"}`}
+                        >
+                          {t.toUpperCase()} ({t === "prompts" ? inspectData.prompts.length : t === "posts" ? inspectData.posts.length : inspectData.stories.length})
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Prompts */}
+                    {inspectTab === "prompts" && (
+                      <div className="max-h-[400px] overflow-y-auto space-y-1">
+                        {inspectData.prompts.length === 0 ? (
+                          <p className="font-mono-share text-xs text-muted-foreground/40 py-4 text-center">No prompts</p>
+                        ) : inspectData.prompts.map((p: any, i: number) => (
+                          <div key={i} className="flex gap-2 items-start py-1.5 px-2 rounded hover:bg-primary/5 border-b border-border/10">
+                            <span className={`font-mono-share text-[9px] px-1.5 py-0.5 rounded shrink-0 ${p.mode?.includes("moderation") ? "bg-destructive/20 text-destructive" : "bg-primary/10 text-primary/70"}`}>
+                              {p.mode?.toUpperCase()}
+                            </span>
+                            <span className="font-mono-share text-xs text-foreground/80 flex-1 break-all">{p.prompt || "—"}</span>
+                            <span className="font-mono-share text-[9px] text-muted-foreground/40 shrink-0">
+                              {p.credits_used}cr {p.api_cost_cents ? `/ ${p.api_cost_cents}¢` : ""}
+                            </span>
+                            <span className="font-mono-share text-[9px] text-muted-foreground/30 shrink-0">
+                              {new Date(p.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Posts */}
+                    {inspectTab === "posts" && (
+                      <div className="max-h-[400px] overflow-y-auto space-y-2">
+                        {inspectData.posts.length === 0 ? (
+                          <p className="font-mono-share text-xs text-muted-foreground/40 py-4 text-center">No posts</p>
+                        ) : inspectData.posts.map((p: any) => (
+                          <div key={p.id} className="p-2 rounded border border-border/20 hover:bg-primary/5 space-y-1">
+                            <p className="font-mono-share text-xs text-foreground/80">{p.text || "—"}</p>
+                            {p.image_url && (
+                              <img src={p.image_url} alt="" className="w-24 h-24 object-cover rounded border border-border/20" />
+                            )}
+                            <span className="font-mono-share text-[9px] text-muted-foreground/40 block">
+                              {new Date(p.created_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Stories */}
+                    {inspectTab === "stories" && (
+                      <div className="max-h-[400px] overflow-y-auto space-y-2">
+                        {inspectData.stories.length === 0 ? (
+                          <p className="font-mono-share text-xs text-muted-foreground/40 py-4 text-center">No stories</p>
+                        ) : inspectData.stories.map((s: any) => (
+                          <div key={s.id} className="p-2 rounded border border-border/20 hover:bg-primary/5 flex gap-3">
+                            {s.media_type === "video" ? (
+                              <video src={s.media_url} className="w-24 h-24 object-cover rounded border border-border/20" muted playsInline />
+                            ) : (
+                              <img src={s.media_url} alt="" className="w-24 h-24 object-cover rounded border border-border/20" />
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <p className="font-mono-share text-xs text-foreground/80">{s.caption || s.prompt || "—"}</p>
+                              <span className="font-mono-share text-[9px] text-muted-foreground/40">
+                                {new Date(s.created_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                                {s.expires_at && new Date(s.expires_at) > new Date() && " · active"}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </section>
           </>
         )}
 
