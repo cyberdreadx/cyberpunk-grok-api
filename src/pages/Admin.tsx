@@ -842,6 +842,12 @@ function PayoutsPanel() {
 
 // ── Main Admin Page ──
 
+  // User bans
+  const [bans, setBans] = useState<any[]>([]);
+  const [bansLoading, setBansLoading] = useState(false);
+  const [banEmail, setBanEmail] = useState("");
+  const [banReason, setBanReason] = useState("");
+  const [banning, setBanning] = useState(false);
 
 export default function Admin() {
   const navigate = useNavigate();
@@ -891,6 +897,37 @@ export default function Admin() {
       console.error("[admin] list-mods failed:", err.message);
     } finally { setModsLoading(false); }
   }, []);
+
+  const fetchBans = useCallback(async () => {
+    setBansLoading(true);
+    try {
+      const res = await apiFetch("/admin", { method: "POST", body: { action: "list-bans" } });
+      setBans(res.bans || []);
+    } catch (err: any) {
+      console.error("[admin] list-bans failed:", err.message);
+    } finally { setBansLoading(false); }
+  }, []);
+
+  const handleBan = async () => {
+    if (!banEmail.trim()) return;
+    setBanning(true);
+    try {
+      await apiFetch("/admin", { method: "POST", body: { action: "ban-user", email: banEmail.trim(), reason: banReason.trim() || undefined } });
+      setBanEmail(""); setBanReason("");
+      fetchBans();
+    } catch (err: any) {
+      alert(err.message);
+    } finally { setBanning(false); }
+  };
+
+  const handleUnban = async (userId: string) => {
+    try {
+      await apiFetch("/admin", { method: "POST", body: { action: "unban-user", userId } });
+      fetchBans();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
 
   const fetchEmailLogs = useCallback(async (filters?: { type?: string; status?: string }) => {
     setEmailLoading(true);
@@ -982,7 +1019,8 @@ export default function Admin() {
     }
     fetchAll();
     fetchMods();
-  }, [fetchAll, fetchMods]);
+    fetchBans();
+  }, [fetchAll, fetchMods, fetchBans]);
 
   useEffect(() => {
     if (activeTab === "emails" && !emailStats && !emailLoading && authorized) {
@@ -1621,6 +1659,67 @@ export default function Admin() {
                   </table>
                 </div>
               )}
+
+              {/* ── BAN MANAGEMENT ── */}
+              <div className="border-t border-red-500/20 pt-3 space-y-3">
+                <h3 className="font-orbitron text-[10px] tracking-wider text-red-400/80">BAN_MANAGEMENT</h3>
+                <div className="flex gap-2 flex-wrap">
+                  <input
+                    className="bg-background/50 border border-red-500/30 rounded px-2 py-1 font-mono-share text-xs text-foreground flex-1 min-w-[150px]"
+                    placeholder="user@email.com"
+                    value={banEmail}
+                    onChange={(e) => setBanEmail(e.target.value)}
+                  />
+                  <input
+                    className="bg-background/50 border border-red-500/30 rounded px-2 py-1 font-mono-share text-xs text-foreground flex-1 min-w-[120px]"
+                    placeholder="Reason (optional)"
+                    value={banReason}
+                    onChange={(e) => setBanReason(e.target.value)}
+                  />
+                  <button
+                    className="px-3 py-1 bg-red-600 text-white font-mono-share text-xs rounded hover:bg-red-500 disabled:opacity-50"
+                    disabled={banning || !banEmail.trim()}
+                    onClick={handleBan}
+                  >
+                    {banning ? "..." : "BAN"}
+                  </button>
+                </div>
+
+                {bansLoading ? (
+                  <p className="font-mono-share text-xs text-muted-foreground">Loading bans...</p>
+                ) : bans.length === 0 ? (
+                  <p className="font-mono-share text-xs text-muted-foreground/50">No banned users</p>
+                ) : (
+                  <div className="overflow-x-auto overscroll-x-contain">
+                    <table className="w-full min-w-[400px]">
+                      <thead><tr className="border-b border-red-500/20">
+                        {["EMAIL", "REASON", "DATE", ""].map((h) => (
+                          <th key={h} className="px-2.5 py-2 text-left font-mono-share text-[9px] text-red-400/50 tracking-wider">{h}</th>
+                        ))}
+                      </tr></thead>
+                      <tbody>
+                        {bans.map((b: any) => (
+                          <tr key={b.user_id} className="border-b border-red-500/10 hover:bg-red-500/5 transition-colors">
+                            <td className="px-2.5 py-2 font-mono-share text-xs text-foreground/80">{b.email}</td>
+                            <td className="px-2.5 py-2 font-mono-share text-xs text-red-400">{b.reason}</td>
+                            <td className="px-2.5 py-2 font-mono-share text-[10px] text-muted-foreground/50">
+                              {new Date(b.created_at).toLocaleString("en-US", { month: "short", day: "numeric" })}
+                            </td>
+                            <td className="px-2.5 py-2">
+                              <button
+                                className="px-2 py-0.5 bg-green-600/80 text-white font-mono-share text-[10px] rounded hover:bg-green-500"
+                                onClick={() => handleUnban(b.user_id)}
+                              >
+                                UNBAN
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
             </div>
           </section>
         )}

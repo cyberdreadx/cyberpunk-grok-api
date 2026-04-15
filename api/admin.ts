@@ -765,6 +765,53 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.json({ success: true });
       }
 
+      // ── User Bans ──
+
+      case "list-bans": {
+        await sql`CREATE TABLE IF NOT EXISTS user_bans (
+          user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+          reason TEXT NOT NULL DEFAULT 'Violation of community guidelines',
+          banned_by UUID REFERENCES users(id) ON DELETE SET NULL,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        )`.catch(() => {});
+        const bans = await sql`
+          SELECT ub.user_id, ub.reason, ub.created_at, u.email
+          FROM user_bans ub
+          JOIN users u ON u.id = ub.user_id
+          ORDER BY ub.created_at DESC
+        `;
+        return res.json({ bans });
+      }
+
+      case "ban-user": {
+        const { email: banEmail, reason: banReason } = req.body;
+        if (!banEmail) return res.status(400).json({ error: "email required" });
+        await sql`CREATE TABLE IF NOT EXISTS user_bans (
+          user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+          reason TEXT NOT NULL DEFAULT 'Violation of community guidelines',
+          banned_by UUID REFERENCES users(id) ON DELETE SET NULL,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        )`.catch(() => {});
+        const [target] = await sql`SELECT id FROM users WHERE email = ${banEmail.trim().toLowerCase()}`;
+        if (!target) return res.status(404).json({ error: "User not found" });
+        const adminAuth = getUserFromRequest(req);
+        await sql`
+          INSERT INTO user_bans (user_id, reason, banned_by)
+          VALUES (${target.id}, ${banReason || 'Violation of community guidelines'}, ${adminAuth?.userId || null}::uuid)
+          ON CONFLICT (user_id) DO UPDATE SET reason = EXCLUDED.reason, created_at = now()
+        `;
+        console.log(`[admin] Banned user ${banEmail} — reason: ${banReason || 'none'}`);
+        return res.json({ success: true });
+      }
+
+      case "unban-user": {
+        const { userId: unbanId } = req.body;
+        if (!unbanId) return res.status(400).json({ error: "userId required" });
+        await sql`DELETE FROM user_bans WHERE user_id = ${unbanId}::uuid`;
+        console.log(`[admin] Unbanned user ${unbanId}`);
+        return res.json({ success: true });
+      }
+
       default:
         return res.status(400).json({ error: "Unknown action" });
     }

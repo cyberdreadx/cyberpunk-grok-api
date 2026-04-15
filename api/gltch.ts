@@ -10,7 +10,7 @@
 
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { put, del } from "@vercel/blob";
-import { getUserFromRequest, ADMIN_EMAIL } from "./_lib/auth";
+import { getUserFromRequest, ADMIN_EMAIL, checkBan } from "./_lib/auth";
 import { getDb } from "./_lib/db";
 import { checkRateLimit } from "./_lib/ratelimit";
 import { checkPrompt, logSafetyViolation } from "./_lib/safety";
@@ -67,6 +67,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const auth = getUserFromRequest(req);
   if (!auth) return res.status(401).json({ error: "Sign in to use GLTCH edit." });
+
+  // Check if user is banned
+  const sqlBan = getDb();
+  const ban = await checkBan(sqlBan, auth.userId);
+  if (ban.banned) {
+    return res.status(403).json({ error: "Your account has been suspended.", reason: ban.reason });
+  }
 
   const endpointId = getEndpointId();
   const apiKey = getApiKey();

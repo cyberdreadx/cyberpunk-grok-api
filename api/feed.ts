@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { getUserFromRequest } from "./_lib/auth";
+import { getUserFromRequest, checkBan } from "./_lib/auth";
 import { getDb } from "./_lib/db";
 
 const MAX_LOCK_COST = 100;
@@ -153,6 +153,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // POST — create a post
   if (req.method === "POST") {
     try {
+      // Check if user is banned
+      const ban = await checkBan(sql, auth.userId);
+      if (ban.banned) {
+        return res.status(403).json({ error: "Your account has been suspended.", reason: ban.reason });
+      }
+
       const { text, imageUrl, lockCost, lockPriceCents, lockXrgeAmount } = req.body || {};
       if (!text && !imageUrl) return res.status(400).json({ error: "Post must have text or image" });
       if (text && text.length > 2000) return res.status(400).json({ error: "Text too long (max 2000)" });
