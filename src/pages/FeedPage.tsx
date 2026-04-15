@@ -460,7 +460,7 @@ const FeedPage: React.FC = () => {
               </button>
             );
           })}
-          </button>
+        </div>
         </div>
 
         {loading ? (
