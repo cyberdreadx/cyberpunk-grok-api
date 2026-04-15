@@ -461,7 +461,6 @@ const FeedPage: React.FC = () => {
             );
           })}
         </div>
-        </div>
 
         {loading ? (
           <div className="space-y-4">
