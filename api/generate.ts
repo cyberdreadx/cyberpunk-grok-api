@@ -206,7 +206,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(429).json({ error: "Rate limit reached. Please wait a moment before generating again." });
     }
 
-    const sql = getDb();
 
     // Tiered moderation cooldown — escalating penalties for repeat offenders.
     // Tier 1: 10 flags in 10 minutes → 10 min cooldown (burst protection)
