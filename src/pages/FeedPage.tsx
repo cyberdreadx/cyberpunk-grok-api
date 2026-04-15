@@ -54,6 +54,7 @@ const FeedPage: React.FC = () => {
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const [rulesAcked, setRulesAcked] = useState(() => localStorage.getItem("feed-rules-acked") === "1");
+  const [showRules, setShowRules] = useState(false);
 
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [loading, setLoading] = useState(true);
@@ -137,7 +138,7 @@ const FeedPage: React.FC = () => {
     setRulesAcked(true);
   };
 
-  const rulesBanner = !rulesAcked ? (
+  const rulesBanner = !rulesAcked || showRules ? (
     <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4 space-y-3">
       <div className="flex items-center gap-2">
         <ShieldAlert className="w-5 h-5 text-destructive shrink-0" />
@@ -154,7 +155,12 @@ const FeedPage: React.FC = () => {
           </li>
         ))}
       </ul>
-      <Button size="sm" variant="destructive" onClick={ackRules} className="font-mono-share text-[10px] w-full">
+      <Button 
+        size="sm" 
+        variant="destructive" 
+        onClick={() => { ackRules(); setShowRules(false); }} 
+        className="font-mono-share text-[10px] w-full"
+      >
         I UNDERSTAND — CONTINUE
       </Button>
     </div>
@@ -228,7 +234,7 @@ const FeedPage: React.FC = () => {
   if (isMobile) {
     return (
       <>
-        {!rulesAcked && (
+        {(!rulesAcked || showRules) && (
           <div className="fixed inset-0 z-[60] bg-black/90 backdrop-blur-sm flex items-center justify-center p-6">
             <div className="max-w-sm w-full">{rulesBanner}</div>
           </div>
@@ -268,7 +274,16 @@ const FeedPage: React.FC = () => {
           className="fixed left-0 right-0 z-40 flex items-center justify-between px-4"
           style={{ top: "calc(env(safe-area-inset-top, 0px) + 8px)" }}
         >
-          <h1 className="font-orbitron text-sm tracking-widest text-white drop-shadow-lg">FEED</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="font-orbitron text-sm tracking-widest text-white drop-shadow-lg">FEED</h1>
+            <button
+              onClick={() => setShowRules(true)}
+              className="text-white/60 hover:text-white transition-colors"
+              aria-label="View community guidelines"
+            >
+              <ShieldAlert className="w-4 h-4" />
+            </button>
+          </div>
           <div className="flex gap-1.5">
             <button
               onClick={() => { setFilter("all"); setLoading(true); }}
@@ -346,7 +361,16 @@ const FeedPage: React.FC = () => {
     <CyberLayout>
       <div className="max-w-2xl mx-auto px-4 py-6 space-y-4 pb-24">
         <div className="flex items-center justify-between">
-          <h1 className="font-orbitron text-lg tracking-widest text-foreground">LIVE FEED</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="font-orbitron text-lg tracking-widest text-foreground">LIVE FEED</h1>
+            <button
+              onClick={() => setShowRules(true)}
+              className="text-muted-foreground hover:text-foreground transition-colors"
+              title="View community guidelines"
+            >
+              <ShieldAlert className="w-4 h-4" />
+            </button>
+          </div>
           <button
             onClick={() => navigate("/profile")}
             className="font-mono-share text-[10px] text-primary hover:text-primary/80 transition-colors"
