@@ -287,6 +287,24 @@ const FeedPage: React.FC = () => {
             </button>
           </div>
           <div className="flex gap-1.5">
+            {(["hot", "top", "new"] as const).map((s) => {
+              const icon = s === "hot" ? <Flame className="w-3 h-3" /> : s === "top" ? <TrendingUp className="w-3 h-3" /> : <Clock className="w-3 h-3" />;
+              return (
+                <button
+                  key={s}
+                  onClick={() => { setSort(s); setLoading(true); }}
+                  className={`px-2 py-1 rounded-full font-mono-share text-[9px] backdrop-blur-sm transition-colors flex items-center gap-1 ${
+                    sort === s
+                      ? "bg-primary/30 text-primary border border-primary/40"
+                      : "bg-black/30 text-white/70 border border-white/10"
+                  }`}
+                >
+                  {icon} {s.toUpperCase()}
+                </button>
+              );
+            })}
+          </div>
+          <div className="flex gap-1.5">
             <button
               onClick={() => { setFilter("all"); setLoading(true); }}
               className={`px-2.5 py-1 rounded-full font-mono-share text-[9px] backdrop-blur-sm transition-colors ${
