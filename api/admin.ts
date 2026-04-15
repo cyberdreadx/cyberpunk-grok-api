@@ -784,23 +784,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       case "ban-user": {
-        const { email: banEmail, reason: banReason } = req.body;
-        if (!banEmail) return res.status(400).json({ error: "email required" });
+        const { email: banEmail, userId: banUserId, reason: banReason } = req.body;
+        if (!banEmail && !banUserId) return res.status(400).json({ error: "email or userId required" });
         await sql`CREATE TABLE IF NOT EXISTS user_bans (
           user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
           reason TEXT NOT NULL DEFAULT 'Violation of community guidelines',
           banned_by UUID REFERENCES users(id) ON DELETE SET NULL,
           created_at TIMESTAMPTZ NOT NULL DEFAULT now()
         )`.catch(() => {});
-        const [target] = await sql`SELECT id FROM users WHERE email = ${banEmail.trim().toLowerCase()}`;
-        if (!target) return res.status(404).json({ error: "User not found" });
+        let targetId = banUserId;
+        if (!targetId) {
+          const [target] = await sql`SELECT id FROM users WHERE email = ${banEmail.trim().toLowerCase()}`;
+          if (!target) return res.status(404).json({ error: "User not found" });
+          targetId = target.id;
+        }
         const adminAuth = getUserFromRequest(req);
         await sql`
           INSERT INTO user_bans (user_id, reason, banned_by)
-          VALUES (${target.id}, ${banReason || 'Violation of community guidelines'}, ${adminAuth?.userId || null}::uuid)
+          VALUES (${targetId}::uuid, ${banReason || 'Violation of community guidelines'}, ${adminAuth?.userId || null}::uuid)
           ON CONFLICT (user_id) DO UPDATE SET reason = EXCLUDED.reason, created_at = now()
         `;
-        console.log(`[admin] Banned user ${banEmail} — reason: ${banReason || 'none'}`);
+        console.log(`[admin] Banned user ${banEmail || banUserId} — reason: ${banReason || 'none'}`);
         return res.json({ success: true });
       }
 
