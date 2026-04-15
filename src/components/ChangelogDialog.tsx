@@ -24,6 +24,18 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
     {
+        version: "2026.04.15",
+        date: "April 15, 2026",
+        title: "v4.6 — Moderation & Safety",
+        items: [
+            { icon: <ShieldAlert className="w-3.5 h-3.5" />, text: "Community Guidelines — mandatory acknowledgment before posting to feed", tag: "new" },
+            { icon: <Shield className="w-3.5 h-3.5" />, text: "Admin moderation — clickable offender emails navigate to user inspector", tag: "improve" },
+            { icon: <ShieldAlert className="w-3.5 h-3.5" />, text: "Profile ban button — one-click bans with permanent badge display", tag: "new" },
+            { icon: <Search className="w-3.5 h-3.5" />, text: "User inspector — view prompts, posts, and stories for any account", tag: "improve" },
+            { icon: <ShieldAlert className="w-3.5 h-3.5" />, text: "Feed rules — re-read guidelines anytime via shield icon in header", tag: "new" },
+        ],
+    },
+    {
         version: "2026.04.14",
         date: "April 14, 2026",
         title: "Creator Monetization — XRGE Locks, Wallets & Instant Payouts",
