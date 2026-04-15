@@ -124,6 +124,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         `;
         const runpodCost30dCents = Math.round((Number(runpodCost.total_ms_30d) / 1000) * 0.155);
 
+        // Actual tracked API costs (from api_cost_cents column)
+        const [actualCosts] = await sql`
+          SELECT
+            COALESCE(SUM(api_cost_cents) FILTER (WHERE created_at > now() - interval '30 days'), 0)::numeric AS actual_cost_30d_cents,
+            COALESCE(SUM(api_cost_cents), 0)::numeric AS actual_cost_total_cents,
+            COUNT(api_cost_cents) FILTER (WHERE created_at > now() - interval '30 days')::int AS tracked_30d,
+            COUNT(*) FILTER (WHERE created_at > now() - interval '30 days')::int AS total_30d
+          FROM usage_log
+        `;
+
         // Moderation stats
         const [moderationStats] = await sql`
           SELECT
@@ -168,6 +178,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           },
           runpodCost: {
             estimated30dCents: runpodCost30dCents,
+          },
+          actualCost: {
+            actual30dCents: Number(actualCosts.actual_cost_30d_cents),
+            actualTotalCents: Number(actualCosts.actual_cost_total_cents),
+            tracked30d: actualCosts.tracked_30d,
+            total30d: actualCosts.total_30d,
           },
           moderation: {
             ...moderationStats,
@@ -375,7 +391,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             COUNT(*)::int AS generations,
             COALESCE(SUM(credits_used), 0)::int AS credits_used,
             COALESCE(SUM(execution_time_ms), 0)::bigint AS total_exec_ms,
-            COUNT(execution_time_ms)::int AS tracked_count
+            COUNT(execution_time_ms)::int AS tracked_count,
+            COALESCE(SUM(api_cost_cents), 0)::numeric AS actual_cost_cents,
+            COUNT(api_cost_cents)::int AS cost_tracked_count
           FROM usage_log
           WHERE created_at > now() - interval '30 days'
             AND mode NOT LIKE 'moderation-%'

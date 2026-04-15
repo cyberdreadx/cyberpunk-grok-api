@@ -207,9 +207,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.log("[gltch] RunPod response — status:", result.status,
         "output:", result.output ? JSON.stringify(result.output).slice(0, 200) : "null");
 
+      // Log usage with RunPod cost estimate (execution time from response if available)
+      const execTimeMs = result.executionTime ? Math.round(result.executionTime) : null;
+      const runpodCostCents = execTimeMs ? Number(((execTimeMs / 1000) * 0.155).toFixed(2)) : 1.55; // default ~10s
       await sql`
-        INSERT INTO usage_log (user_id, mode, credits_used, prompt)
-        VALUES (${auth.userId}::uuid, ${hd ? "gltch-edit-hd" : "gltch-edit"}, ${cost}, ${prompt.trim().slice(0, 500)})
+        INSERT INTO usage_log (user_id, mode, credits_used, prompt, api_cost_cents, execution_time_ms)
+        VALUES (${auth.userId}::uuid, ${hd ? "gltch-edit-hd" : "gltch-edit"}, ${cost}, ${prompt.trim().slice(0, 500)}, ${runpodCostCents}, ${execTimeMs})
       `.catch(() => {});
 
       // runsync returns completed result directly

@@ -46,6 +46,26 @@ function calculateCost(action: AllowedAction, imageCount: number, videoDuration:
   }
 }
 
+/** Calculate actual xAI API cost in cents for a generation */
+function calculateApiCostCents(action: AllowedAction, imageCount: number, videoDuration: number, isPro: boolean, is2k: boolean, moderated: boolean): number {
+  if (moderated) {
+    // xAI charges $0.05/image for moderated content
+    if (action === "generate-image" || action === "edit-image") return 5 * imageCount * (is2k ? 2 : 1);
+    return 5 * videoDuration; // video moderation
+  }
+  switch (action) {
+    case "generate-image":
+    case "edit-image": {
+      // Standard: $0.02/image (2c), Pro: $0.07/image (7c), 2K doubles
+      const perImage = isPro ? 7 : 2;
+      return perImage * imageCount * (is2k ? 2 : 1);
+    }
+    case "generate-video":
+    case "edit-video":
+      return 5 * videoDuration; // $0.05/sec
+  }
+}
+
 // ── Moderation Detection ──
 // xAI returns errors containing these terms when content is blocked
 const MODERATION_KEYWORDS = [
@@ -326,11 +346,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       try {
         const modMode = moderationMode(action);
         const promptSnippet = (params.prompt || "").slice(0, 500);
+        const modApiCost = calculateApiCostCents(action as AllowedAction, imageCount, videoDuration, isPro, is2k, true);
         await sql`
-          INSERT INTO usage_log (user_id, mode, credits_used, prompt)
-          VALUES (${auth.userId}::uuid, ${modMode}, ${cost}, ${promptSnippet})
+          INSERT INTO usage_log (user_id, mode, credits_used, prompt, api_cost_cents)
+          VALUES (${auth.userId}::uuid, ${modMode}, ${cost}, ${promptSnippet}, ${modApiCost})
         `;
-        console.warn(`[moderation-block] user=${auth.userId} mode=${modMode} cost=${cost} err=${errText.slice(0, 200)}`);
+        console.warn(`[moderation-block] user=${auth.userId} mode=${modMode} cost=${cost} apiCost=${modApiCost}c err=${errText.slice(0, 200)}`);
       } catch (logErr: any) {
         console.error("Failed to log moderation block:", logErr.message);
       }
@@ -454,10 +475,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
-    // Log successful usage
+    // Log successful usage with actual API cost
+    const apiCostCents = calculateApiCostCents(action as AllowedAction, imageCount, videoDuration, isPro, is2k, false);
     await sql`
-      INSERT INTO usage_log (user_id, mode, credits_used, prompt)
-      VALUES (${auth.userId}::uuid, ${action}, ${cost}, ${(params.prompt || "").slice(0, 500)})
+      INSERT INTO usage_log (user_id, mode, credits_used, prompt, api_cost_cents)
+      VALUES (${auth.userId}::uuid, ${action}, ${cost}, ${(params.prompt || "").slice(0, 500)}, ${apiCostCents})
     `;
 
     return res.status(200).json(xaiData);

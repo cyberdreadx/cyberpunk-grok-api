@@ -2858,13 +2858,14 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           const out = data.output || {};
           console.log("[comfyui-poll] COMPLETED output keys:", Object.keys(out));
 
-          // Store execution time for RunPod cost tracking
+          // Store execution time and actual API cost for RunPod cost tracking
           if (data.executionTime && auth?.userId) {
             const execMs = Math.round(data.executionTime);
+            const runpodCostCents = Number(((execMs / 1000) * 0.155).toFixed(2));
             try {
               const sql = getDb();
               await sql`
-                UPDATE usage_log SET execution_time_ms = ${execMs}
+                UPDATE usage_log SET execution_time_ms = ${execMs}, api_cost_cents = ${runpodCostCents}
                 WHERE user_id = ${auth.userId}::uuid
                   AND mode LIKE 'comfy-%'
                   AND execution_time_ms IS NULL

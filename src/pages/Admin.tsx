@@ -75,6 +75,7 @@ interface Overview {
   creditPool: { total_sub_credits_outstanding: number; total_pack_credits_outstanding: number };
   apiCost: { estimated30dCents: number; estimatedTotalCents: number };
   runpodCost?: { estimated30dCents: number };
+  actualCost?: { actual30dCents: number; actualTotalCents: number; tracked30d: number; total30d: number };
   moderation: ModerationStats;
 }
 
@@ -1108,8 +1109,11 @@ export default function Admin() {
   const xaiCost30d = o.apiCost.estimated30dCents;
   const runpodCost30d = o.runpodCost?.estimated30dCents || 0;
   const modCost30d = o.moderation.wasted_cost_30d_cents;
-  const totalCost30d = xaiCost30d + runpodCost30d + modCost30d;
+  const actualCost30d = o.actualCost?.actual30dCents || 0;
+  const hasActualCosts = (o.actualCost?.tracked30d || 0) > 0;
+  const totalCost30d = hasActualCosts ? actualCost30d + modCost30d : xaiCost30d + runpodCost30d + modCost30d;
   const trueMargin30d = o.revenue.revenue_30d_cents - totalCost30d;
+  const costCoverage = o.actualCost ? `${o.actualCost.tracked30d}/${o.actualCost.total30d} tracked` : "estimated";
 
   return (
     <div className="min-h-screen bg-background w-full overflow-x-hidden">
@@ -1176,9 +1180,9 @@ export default function Admin() {
             </section>
 
             <section className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
-              <KpiCard icon={<CreditCard className="w-4 h-4" />} label="xAI_COST_30D" value={fmt$(xaiCost30d)} sub="estimated xAI API spend" accent="destructive" />
-              <KpiCard icon={<Server className="w-4 h-4" />} label="RUNPOD_COST_30D" value={runpodCost30d ? fmt$(runpodCost30d) : "N/A"} sub={runpodCost30d ? "tracked from execution time" : "enable tracking to see"} accent="destructive" />
-              <KpiCard icon={<Ban className="w-4 h-4" />} label="MOD_WASTE_30D" value={fmt$(modCost30d)} sub={`${o.moderation.blocks_30d} flagged requests`} accent="destructive" />
+              <KpiCard icon={<CreditCard className="w-4 h-4" />} label="xAI_COST_30D" value={fmt$(xaiCost30d)} sub="estimated from credit usage" accent="destructive" />
+              <KpiCard icon={<Server className="w-4 h-4" />} label="RUNPOD_COST_30D" value={runpodCost30d ? fmt$(runpodCost30d) : "N/A"} sub={runpodCost30d ? "from execution time" : "enable tracking"} accent="destructive" />
+              <KpiCard icon={<Activity className="w-4 h-4" />} label="ACTUAL_COST_30D" value={hasActualCosts ? fmt$(actualCost30d) : "N/A"} sub={costCoverage} accent="destructive" />
               <KpiCard icon={<TrendingUp className="w-4 h-4" />} label="TRUE_MARGIN_30D" value={fmt$(trueMargin30d)} sub={`${Math.round((trueMargin30d / Math.max(1, o.revenue.revenue_30d_cents)) * 100)}% of revenue`} accent={trueMargin30d >= 0 ? "secondary" : "destructive"} />
             </section>
 
@@ -1586,9 +1590,9 @@ export default function Admin() {
                   </h2>
                 </div>
                 <div className="overflow-x-auto overscroll-x-contain">
-                  <table className="w-full min-w-[500px]">
+                  <table className="w-full min-w-[600px]">
                     <thead><tr className="border-b border-border/20">
-                      {["MODE", "GENS", "CREDITS", "AVG CR/GEN", "TRACKED", "AVG TIME", "EST. RUNPOD"].map((h) => (
+                      {["MODE", "GENS", "CREDITS", "AVG CR", "ACTUAL COST", "EST. COST", "AVG TIME", "MARGIN"].map((h) => (
                         <th key={h} className="px-2.5 py-2 text-left font-mono-share text-[9px] text-muted-foreground/50 tracking-wider">{h}</th>
                       ))}
                     </tr></thead>
@@ -1598,15 +1602,28 @@ export default function Admin() {
                         const totalMs = Number(row.total_exec_ms);
                         const avgTimeS = row.tracked_count > 0 ? (totalMs / row.tracked_count / 1000).toFixed(1) + "s" : "—";
                         const estRunpodCents = Math.round((totalMs / 1000) * 0.155);
+                        const actualCostCents = Number(row.actual_cost_cents || 0);
+                        const costTracked = row.cost_tracked_count || 0;
+                        const displayCost = actualCostCents > 0 ? fmt$(Math.round(actualCostCents)) : "—";
+                        // Estimate revenue per credit at ~$0.01 (100 credits ≈ $1 avg across tiers)
+                        const estRevenueCents = row.credits_used * 1;
+                        const bestCost = actualCostCents > 0 ? actualCostCents : (estRunpodCents > 0 ? estRunpodCents : 0);
+                        const marginPct = bestCost > 0 ? Math.round(((estRevenueCents - bestCost) / estRevenueCents) * 100) : null;
                         return (
                           <tr key={i} className="border-b border-border/10 hover:bg-primary/5 transition-colors">
                             <td className="px-2.5 py-2 font-orbitron text-[10px] tracking-wider text-foreground/80">{row.mode?.toUpperCase()}</td>
                             <td className="px-2.5 py-2 font-mono-share text-xs">{row.generations}</td>
                             <td className="px-2.5 py-2 font-mono-share text-xs text-primary font-bold">{row.credits_used.toLocaleString()}</td>
                             <td className="px-2.5 py-2 font-mono-share text-xs">{avgCr}</td>
-                            <td className="px-2.5 py-2 font-mono-share text-xs text-muted-foreground/50">{row.tracked_count}/{row.generations}</td>
+                            <td className="px-2.5 py-2 font-mono-share text-xs text-destructive">
+                              {displayCost}
+                              {costTracked > 0 && <span className="text-muted-foreground/40 ml-1 text-[8px]">({costTracked})</span>}
+                            </td>
+                            <td className="px-2.5 py-2 font-mono-share text-xs text-muted-foreground/50">{estRunpodCents > 0 ? fmt$(estRunpodCents) : "—"}</td>
                             <td className="px-2.5 py-2 font-mono-share text-xs">{avgTimeS}</td>
-                            <td className="px-2.5 py-2 font-mono-share text-xs text-destructive">{estRunpodCents > 0 ? fmt$(estRunpodCents) : "—"}</td>
+                            <td className={`px-2.5 py-2 font-mono-share text-xs font-bold ${marginPct !== null && marginPct >= 0 ? "text-green-400" : "text-destructive"}`}>
+                              {marginPct !== null ? `${marginPct}%` : "—"}
+                            </td>
                           </tr>
                         );
                       })}
