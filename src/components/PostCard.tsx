@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowBigUp, ArrowBigDown, MessageCircle, Trash2, Flag, Lock, CreditCard, Coins, Zap } from "lucide-react";
+import { ArrowBigUp, ArrowBigDown, MessageCircle, Trash2, Flag, Lock, CreditCard, Coins, Zap, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import CommentThread from "@/components/CommentThread";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,7 @@ interface FeedPost {
   lockXrgeAmount?: string;
   unlocked?: boolean;
   isOwner?: boolean;
+  viewCount?: number;
   reactionCount?: number;
   userReacted?: boolean;
 }
@@ -286,6 +287,10 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
             <MessageCircle className="w-4 h-4" />
             {commentCount > 0 && commentCount}
           </button>
+          <span className="flex items-center gap-1 font-mono-share text-[10px] text-muted-foreground/50 ml-2">
+            <Eye className="w-3.5 h-3.5" />
+            {post.viewCount || 0}
+          </span>
 
           {user?.id !== post.userId && (
             <button

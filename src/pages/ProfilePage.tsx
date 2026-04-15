@@ -49,6 +49,7 @@ interface FeedPost {
   lockXrgeAmount?: string;
   unlocked?: boolean;
   isOwner?: boolean;
+  viewCount?: number;
 }
 
 const ProfilePage: React.FC = () => {
