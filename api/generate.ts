@@ -346,11 +346,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       try {
         const modMode = moderationMode(action);
         const promptSnippet = (params.prompt || "").slice(0, 500);
+        const modApiCost = calculateApiCostCents(action as AllowedAction, imageCount, videoDuration, isPro, is2k, true);
         await sql`
-          INSERT INTO usage_log (user_id, mode, credits_used, prompt)
-          VALUES (${auth.userId}::uuid, ${modMode}, ${cost}, ${promptSnippet})
+          INSERT INTO usage_log (user_id, mode, credits_used, prompt, api_cost_cents)
+          VALUES (${auth.userId}::uuid, ${modMode}, ${cost}, ${promptSnippet}, ${modApiCost})
         `;
-        console.warn(`[moderation-block] user=${auth.userId} mode=${modMode} cost=${cost} err=${errText.slice(0, 200)}`);
+        console.warn(`[moderation-block] user=${auth.userId} mode=${modMode} cost=${cost} apiCost=${modApiCost}c err=${errText.slice(0, 200)}`);
       } catch (logErr: any) {
         console.error("Failed to log moderation block:", logErr.message);
       }
@@ -474,10 +475,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
-    // Log successful usage
+    // Log successful usage with actual API cost
+    const apiCostCents = calculateApiCostCents(action as AllowedAction, imageCount, videoDuration, isPro, is2k, false);
     await sql`
-      INSERT INTO usage_log (user_id, mode, credits_used, prompt)
-      VALUES (${auth.userId}::uuid, ${action}, ${cost}, ${(params.prompt || "").slice(0, 500)})
+      INSERT INTO usage_log (user_id, mode, credits_used, prompt, api_cost_cents)
+      VALUES (${auth.userId}::uuid, ${action}, ${cost}, ${(params.prompt || "").slice(0, 500)}, ${apiCostCents})
     `;
 
     return res.status(200).json(xaiData);
