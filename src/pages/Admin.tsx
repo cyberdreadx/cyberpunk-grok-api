@@ -1590,9 +1590,9 @@ export default function Admin() {
                   </h2>
                 </div>
                 <div className="overflow-x-auto overscroll-x-contain">
-                  <table className="w-full min-w-[500px]">
+                  <table className="w-full min-w-[600px]">
                     <thead><tr className="border-b border-border/20">
-                      {["MODE", "GENS", "CREDITS", "AVG CR/GEN", "TRACKED", "AVG TIME", "EST. RUNPOD"].map((h) => (
+                      {["MODE", "GENS", "CREDITS", "AVG CR", "ACTUAL COST", "EST. COST", "AVG TIME", "MARGIN"].map((h) => (
                         <th key={h} className="px-2.5 py-2 text-left font-mono-share text-[9px] text-muted-foreground/50 tracking-wider">{h}</th>
                       ))}
                     </tr></thead>
@@ -1602,15 +1602,28 @@ export default function Admin() {
                         const totalMs = Number(row.total_exec_ms);
                         const avgTimeS = row.tracked_count > 0 ? (totalMs / row.tracked_count / 1000).toFixed(1) + "s" : "—";
                         const estRunpodCents = Math.round((totalMs / 1000) * 0.155);
+                        const actualCostCents = Number(row.actual_cost_cents || 0);
+                        const costTracked = row.cost_tracked_count || 0;
+                        const displayCost = actualCostCents > 0 ? fmt$(Math.round(actualCostCents)) : "—";
+                        // Estimate revenue per credit at ~$0.01 (100 credits ≈ $1 avg across tiers)
+                        const estRevenueCents = row.credits_used * 1;
+                        const bestCost = actualCostCents > 0 ? actualCostCents : (estRunpodCents > 0 ? estRunpodCents : 0);
+                        const marginPct = bestCost > 0 ? Math.round(((estRevenueCents - bestCost) / estRevenueCents) * 100) : null;
                         return (
                           <tr key={i} className="border-b border-border/10 hover:bg-primary/5 transition-colors">
                             <td className="px-2.5 py-2 font-orbitron text-[10px] tracking-wider text-foreground/80">{row.mode?.toUpperCase()}</td>
                             <td className="px-2.5 py-2 font-mono-share text-xs">{row.generations}</td>
                             <td className="px-2.5 py-2 font-mono-share text-xs text-primary font-bold">{row.credits_used.toLocaleString()}</td>
                             <td className="px-2.5 py-2 font-mono-share text-xs">{avgCr}</td>
-                            <td className="px-2.5 py-2 font-mono-share text-xs text-muted-foreground/50">{row.tracked_count}/{row.generations}</td>
+                            <td className="px-2.5 py-2 font-mono-share text-xs text-destructive">
+                              {displayCost}
+                              {costTracked > 0 && <span className="text-muted-foreground/40 ml-1 text-[8px]">({costTracked})</span>}
+                            </td>
+                            <td className="px-2.5 py-2 font-mono-share text-xs text-muted-foreground/50">{estRunpodCents > 0 ? fmt$(estRunpodCents) : "—"}</td>
                             <td className="px-2.5 py-2 font-mono-share text-xs">{avgTimeS}</td>
-                            <td className="px-2.5 py-2 font-mono-share text-xs text-destructive">{estRunpodCents > 0 ? fmt$(estRunpodCents) : "—"}</td>
+                            <td className={`px-2.5 py-2 font-mono-share text-xs font-bold ${marginPct !== null && marginPct >= 0 ? "text-green-400" : "text-destructive"}`}>
+                              {marginPct !== null ? `${marginPct}%` : "—"}
+                            </td>
                           </tr>
                         );
                       })}
