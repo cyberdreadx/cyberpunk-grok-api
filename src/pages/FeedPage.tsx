@@ -72,6 +72,7 @@ const FeedPage: React.FC = () => {
   const [lockXrge, setLockXrge] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [activeReelIndex, setActiveReelIndex] = useState(0);
 
   const fetchFeed = useCallback(async (cursor?: string) => {
     try {
@@ -171,7 +172,15 @@ const FeedPage: React.FC = () => {
 
   const handleReelScroll = useCallback(() => {
     const el = scrollRef.current;
-    if (!el || !nextCursor || loadingMore) return;
+    if (!el) return;
+
+    // Track which reel is currently visible
+    const viewportH = el.clientHeight;
+    const idx = Math.round(el.scrollTop / viewportH);
+    setActiveReelIndex(idx);
+
+    // Load more when near bottom
+    if (!nextCursor || loadingMore) return;
     const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 400;
     if (nearBottom) {
       setLoadingMore(true);
@@ -260,9 +269,24 @@ const FeedPage: React.FC = () => {
             </div>
           ) : (
             <>
-              {posts.map((post) => (
-                <ReelCard key={post.id} post={post} onUpdate={() => fetchFeed()} />
-              ))}
+              {posts.map((post, i) => {
+                // Only fully render reels within ±3 of current view
+                const RENDER_WINDOW = 3;
+                const inWindow = Math.abs(i - activeReelIndex) <= RENDER_WINDOW;
+                
+                if (!inWindow) {
+                  return (
+                    <div
+                      key={post.id}
+                      className="h-[100dvh] snap-start snap-always bg-black"
+                    />
+                  );
+                }
+                
+                return (
+                  <ReelCard key={post.id} post={post} onUpdate={() => fetchFeed()} />
+                );
+              })}
               {loadingMore && (
                 <div className="h-[100dvh] snap-start flex items-center justify-center bg-black">
                   <Loader2 className="w-6 h-6 animate-spin text-primary" />
