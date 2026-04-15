@@ -38,3 +38,15 @@ export function getUserFromRequest(req: VercelRequest): JwtPayload | null {
   if (!header?.startsWith("Bearer ")) return null;
   return verifyToken(header.slice(7));
 }
+
+/** Check if a user is banned. Returns { banned, reason }. */
+export async function checkBan(sql: ReturnType<typeof import("@neondatabase/serverless").neon>, userId: string): Promise<{ banned: boolean; reason?: string }> {
+  try {
+    const rows = await sql`SELECT reason FROM user_bans WHERE user_id = ${userId}::uuid LIMIT 1`;
+    if (rows.length > 0) return { banned: true, reason: rows[0].reason };
+    return { banned: false };
+  } catch {
+    // Table may not exist yet — treat as not banned
+    return { banned: false };
+  }
+}
