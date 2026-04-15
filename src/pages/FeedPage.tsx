@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Send, Users, Globe, Loader2, Plus, X, Lock, Zap } from "lucide-react";
+import { Send, Users, Globe, Loader2, Plus, X, Lock, Zap, ShieldAlert } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import MobileBottomNav from "@/components/MobileBottomNav";
 
@@ -37,11 +37,23 @@ interface FeedPost {
   isOwner?: boolean;
 }
 
+const FEED_RULES = [
+  "No illegal content of any kind",
+  "No underage or child exploitation content — zero tolerance",
+  "No non-consensual intimate imagery (real or AI-generated)",
+  "No doxxing, harassment, threats, or incitement of violence",
+  "No spam, scams, phishing, or malicious links",
+  "No impersonation of other users or public figures",
+  "No promotion of self-harm, terrorism, or hate speech",
+  "No posting of copyrighted content you don't own",
+];
+
 const FeedPage: React.FC = () => {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const isMobile = useIsMobile();
+  const [rulesAcked, setRulesAcked] = useState(() => localStorage.getItem("feed-rules-acked") === "1");
 
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [loading, setLoading] = useState(true);
@@ -120,6 +132,34 @@ const FeedPage: React.FC = () => {
     fetchFeed(nextCursor);
   };
 
+  const ackRules = () => {
+    localStorage.setItem("feed-rules-acked", "1");
+    setRulesAcked(true);
+  };
+
+  const rulesBanner = !rulesAcked ? (
+    <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4 space-y-3">
+      <div className="flex items-center gap-2">
+        <ShieldAlert className="w-5 h-5 text-destructive shrink-0" />
+        <h2 className="font-orbitron text-xs tracking-wider text-destructive">COMMUNITY GUIDELINES</h2>
+      </div>
+      <p className="font-mono-share text-[10px] text-muted-foreground leading-relaxed">
+        By posting, you agree to follow these rules. Violations will result in content removal and account bans.
+      </p>
+      <ul className="space-y-1.5">
+        {FEED_RULES.map((rule, i) => (
+          <li key={i} className="font-mono-share text-[10px] text-foreground/80 flex items-start gap-2">
+            <span className="text-destructive mt-0.5 shrink-0">▸</span>
+            {rule}
+          </li>
+        ))}
+      </ul>
+      <Button size="sm" variant="destructive" onClick={ackRules} className="font-mono-share text-[10px] w-full">
+        I UNDERSTAND — CONTINUE
+      </Button>
+    </div>
+  ) : null;
+
   const handleReelScroll = useCallback(() => {
     const el = scrollRef.current;
     if (!el || !nextCursor || loadingMore) return;
@@ -188,6 +228,11 @@ const FeedPage: React.FC = () => {
   if (isMobile) {
     return (
       <>
+        {!rulesAcked && (
+          <div className="fixed inset-0 z-[60] bg-black/90 backdrop-blur-sm flex items-center justify-center p-6">
+            <div className="max-w-sm w-full">{rulesBanner}</div>
+          </div>
+        )}
         <div
           ref={scrollRef}
           onScroll={handleReelScroll}
@@ -309,6 +354,8 @@ const FeedPage: React.FC = () => {
             MY PROFILE →
           </button>
         </div>
+
+        {rulesBanner}
 
         <div className="bg-card/60 border border-border/40 rounded-lg p-4 space-y-3">
           <Textarea
