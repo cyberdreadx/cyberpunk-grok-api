@@ -915,6 +915,18 @@ export default function Admin() {
     } finally { setBansLoading(false); }
   }, []);
 
+  const handleInspect = useCallback(async () => {
+    if (!inspectEmail.trim()) return;
+    setInspecting(true);
+    try {
+      const res = await apiFetch("/admin", { method: "POST", body: { action: "user-inspect", email: inspectEmail.trim() } });
+      setInspectData(res);
+    } catch (err: any) {
+      alert(err.message);
+      setInspectData(null);
+    } finally { setInspecting(false); }
+  }, [inspectEmail]);
+
   const handleBan = async () => {
     if (!banEmail.trim()) return;
     setBanning(true);
