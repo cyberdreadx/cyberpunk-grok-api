@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Send, Users, Globe, Loader2, Plus, X, Lock, Zap, ShieldAlert } from "lucide-react";
+import { Send, Users, Globe, Loader2, Plus, X, Lock, Zap, ShieldAlert, Flame, TrendingUp, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import MobileBottomNav from "@/components/MobileBottomNav";
 
@@ -59,6 +59,7 @@ const FeedPage: React.FC = () => {
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "following">("all");
+  const [sort, setSort] = useState<"hot" | "top" | "new">("hot");
   const [newText, setNewText] = useState("");
   const [posting, setPosting] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -75,6 +76,7 @@ const FeedPage: React.FC = () => {
     try {
       const params = new URLSearchParams();
       if (filter === "following") params.set("filter", "following");
+      if (sort !== "hot") params.set("sort", sort);
       if (cursor) params.set("cursor", cursor);
       const q = params.toString();
       const data = await apiFetch<{ posts: FeedPost[]; nextCursor: string | null }>(`/feed${q ? `?${q}` : ""}`);
@@ -90,7 +92,7 @@ const FeedPage: React.FC = () => {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [filter, toast]);
+  }, [filter, sort, toast]);
 
   useEffect(() => {
     if (authLoading) return;
