@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { UserPlus, UserMinus, Edit2, Check, X, ArrowLeft, Camera, Loader2, Wallet } from "lucide-react";
+import { UserPlus, UserMinus, Edit2, Check, X, ArrowLeft, Camera, Loader2, Wallet, Ban } from "lucide-react";
 import EarningsPanel from "@/components/EarningsPanel";
 import { useToast } from "@/hooks/use-toast";
 import { upload } from "@vercel/blob/client";
@@ -65,6 +65,7 @@ const ProfilePage: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [banLoading, setBanLoading] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const fetchProfile = useCallback(async () => {
     try {
@@ -301,21 +302,49 @@ const ProfilePage: React.FC = () => {
               )}
             </div>
 
-            {/* Follow button */}
+            {/* Follow / Ban buttons */}
             {!profile.isOwn && (
-              <Button
-                size="sm"
-                variant={profile.isFollowing ? "outline" : "default"}
-                onClick={handleFollow}
-                disabled={followLoading}
-                className="font-mono-share text-[10px] shrink-0"
-              >
-                {profile.isFollowing ? (
-                  <><UserMinus className="w-3 h-3 mr-1" /> UNFOLLOW</>
-                ) : (
-                  <><UserPlus className="w-3 h-3 mr-1" /> FOLLOW</>
+              <div className="flex flex-col gap-1.5 shrink-0">
+                <Button
+                  size="sm"
+                  variant={profile.isFollowing ? "outline" : "default"}
+                  onClick={handleFollow}
+                  disabled={followLoading}
+                  className="font-mono-share text-[10px]"
+                >
+                  {profile.isFollowing ? (
+                    <><UserMinus className="w-3 h-3 mr-1" /> UNFOLLOW</>
+                  ) : (
+                    <><UserPlus className="w-3 h-3 mr-1" /> FOLLOW</>
+                  )}
+                </Button>
+                {user?.is_admin && (
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    disabled={banLoading}
+                    className="font-mono-share text-[10px]"
+                    onClick={async () => {
+                      const reason = prompt("Ban reason:", "Violation of community guidelines");
+                      if (reason === null) return;
+                      setBanLoading(true);
+                      try {
+                        await apiFetch("/admin", {
+                          method: "POST",
+                          body: { action: "ban-user", email: "", userId: profile.userId, reason },
+                        });
+                        toast({ title: `@${profile.username} has been banned` });
+                      } catch (err: any) {
+                        toast({ title: err.message, variant: "destructive" });
+                      } finally {
+                        setBanLoading(false);
+                      }
+                    }}
+                  >
+                    <Ban className="w-3 h-3 mr-1" /> BAN
+                  </Button>
                 )}
-              </Button>
+              </div>
             )}
           </div>
 
