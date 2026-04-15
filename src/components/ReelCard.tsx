@@ -319,7 +319,7 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate }) => {
 
       {showComments && !isLocked && (
         <div
-          className="absolute inset-x-0 bottom-0 z-30 bg-card/95 backdrop-blur-md rounded-t-2xl max-h-[60dvh] overflow-y-auto"
+          className="absolute inset-x-0 bottom-0 z-30 bg-card/95 backdrop-blur-md rounded-t-2xl max-h-[60dvh] flex flex-col"
           style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 72px)" }}
           onClick={(e) => e.stopPropagation()}
         >
