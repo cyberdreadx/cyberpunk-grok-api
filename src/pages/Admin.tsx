@@ -842,14 +842,13 @@ function PayoutsPanel() {
 
 // ── Main Admin Page ──
 
+export default function Admin() {
   // User bans
   const [bans, setBans] = useState<any[]>([]);
   const [bansLoading, setBansLoading] = useState(false);
   const [banEmail, setBanEmail] = useState("");
   const [banReason, setBanReason] = useState("");
   const [banning, setBanning] = useState(false);
-
-export default function Admin() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [authorized, setAuthorized] = useState(false);
