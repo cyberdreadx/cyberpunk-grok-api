@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Send, Users, Globe, Loader2, Plus, X, Lock, Zap, ShieldAlert } from "lucide-react";
+import { Send, Users, Globe, Loader2, Plus, X, Lock, Zap, ShieldAlert, Flame, TrendingUp, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import MobileBottomNav from "@/components/MobileBottomNav";
 
@@ -59,6 +59,7 @@ const FeedPage: React.FC = () => {
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "following">("all");
+  const [sort, setSort] = useState<"hot" | "top" | "new">("hot");
   const [newText, setNewText] = useState("");
   const [posting, setPosting] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -75,6 +76,7 @@ const FeedPage: React.FC = () => {
     try {
       const params = new URLSearchParams();
       if (filter === "following") params.set("filter", "following");
+      if (sort !== "hot") params.set("sort", sort);
       if (cursor) params.set("cursor", cursor);
       const q = params.toString();
       const data = await apiFetch<{ posts: FeedPost[]; nextCursor: string | null }>(`/feed${q ? `?${q}` : ""}`);
@@ -90,7 +92,7 @@ const FeedPage: React.FC = () => {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [filter, toast]);
+  }, [filter, sort, toast]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -271,40 +273,60 @@ const FeedPage: React.FC = () => {
 
         {/* Top bar overlay */}
         <div
-          className="fixed left-0 right-0 z-40 flex items-center justify-between px-4"
+          className="fixed left-0 right-0 z-40 px-4 space-y-1.5"
           style={{ top: "calc(env(safe-area-inset-top, 0px) + 8px)" }}
         >
-          <div className="flex items-center gap-2">
-            <h1 className="font-orbitron text-sm tracking-widest text-white drop-shadow-lg">FEED</h1>
-            <button
-              onClick={() => setShowRules(true)}
-              className="text-white/60 hover:text-white transition-colors"
-              aria-label="View community guidelines"
-            >
-              <ShieldAlert className="w-4 h-4" />
-            </button>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <h1 className="font-orbitron text-sm tracking-widest text-white drop-shadow-lg">FEED</h1>
+              <button
+                onClick={() => setShowRules(true)}
+                className="text-white/60 hover:text-white transition-colors"
+                aria-label="View community guidelines"
+              >
+                <ShieldAlert className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="flex gap-1.5">
+              <button
+                onClick={() => { setFilter("all"); setLoading(true); }}
+                className={`px-2.5 py-1 rounded-full font-mono-share text-[9px] backdrop-blur-sm transition-colors ${
+                  filter === "all"
+                    ? "bg-primary/30 text-primary border border-primary/40"
+                    : "bg-black/30 text-white/70 border border-white/10"
+                }`}
+              >
+                ALL
+              </button>
+              <button
+                onClick={() => { setFilter("following"); setLoading(true); }}
+                className={`px-2.5 py-1 rounded-full font-mono-share text-[9px] backdrop-blur-sm transition-colors ${
+                  filter === "following"
+                    ? "bg-primary/30 text-primary border border-primary/40"
+                    : "bg-black/30 text-white/70 border border-white/10"
+                }`}
+              >
+                FOLLOWING
+              </button>
+            </div>
           </div>
-          <div className="flex gap-1.5">
-            <button
-              onClick={() => { setFilter("all"); setLoading(true); }}
-              className={`px-2.5 py-1 rounded-full font-mono-share text-[9px] backdrop-blur-sm transition-colors ${
-                filter === "all"
-                  ? "bg-primary/30 text-primary border border-primary/40"
-                  : "bg-black/30 text-white/70 border border-white/10"
-              }`}
-            >
-              ALL
-            </button>
-            <button
-              onClick={() => { setFilter("following"); setLoading(true); }}
-              className={`px-2.5 py-1 rounded-full font-mono-share text-[9px] backdrop-blur-sm transition-colors ${
-                filter === "following"
-                  ? "bg-primary/30 text-primary border border-primary/40"
-                  : "bg-black/30 text-white/70 border border-white/10"
-              }`}
-            >
-              FOLLOWING
-            </button>
+          <div className="flex justify-end gap-1.5">
+            {(["hot", "top", "new"] as const).map((s) => {
+              const icon = s === "hot" ? <Flame className="w-3 h-3" /> : s === "top" ? <TrendingUp className="w-3 h-3" /> : <Clock className="w-3 h-3" />;
+              return (
+                <button
+                  key={s}
+                  onClick={() => { setSort(s); setLoading(true); }}
+                  className={`px-2 py-1 rounded-full font-mono-share text-[9px] backdrop-blur-sm transition-colors flex items-center gap-1 ${
+                    sort === s
+                      ? "bg-secondary/30 text-secondary border border-secondary/40"
+                      : "bg-black/30 text-white/70 border border-white/10"
+                  }`}
+                >
+                  {icon} {s.toUpperCase()}
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -400,7 +422,7 @@ const FeedPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <button
             onClick={() => setFilter("all")}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded font-mono-share text-[10px] transition-colors border ${
@@ -421,6 +443,25 @@ const FeedPage: React.FC = () => {
           >
             <Users className="w-3 h-3" /> FOLLOWING
           </button>
+
+          <div className="w-px bg-border/30 mx-1" />
+
+          {(["hot", "top", "new"] as const).map((s) => {
+            const icon = s === "hot" ? <Flame className="w-3 h-3" /> : s === "top" ? <TrendingUp className="w-3 h-3" /> : <Clock className="w-3 h-3" />;
+            return (
+              <button
+                key={s}
+                onClick={() => setSort(s)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded font-mono-share text-[10px] transition-colors border ${
+                  sort === s
+                    ? "border-secondary/50 bg-secondary/10 text-secondary"
+                    : "border-border/30 text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {icon} {s.toUpperCase()}
+              </button>
+            );
+          })}
         </div>
 
         {loading ? (

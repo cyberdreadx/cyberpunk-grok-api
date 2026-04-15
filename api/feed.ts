@@ -18,8 +18,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // GET — list feed posts
   if (req.method === "GET") {
     try {
-      const { filter, cursor, userId } = req.query;
+      const { filter, cursor, userId, sort } = req.query;
       const limit = 20;
+      const sortMode = (sort as string) || "hot"; // hot | top | new
 
       // Ensure tables exist (safe for first deploy)
       await sql`CREATE TABLE IF NOT EXISTS feed_reports (
@@ -63,55 +64,52 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         CASE WHEN EXISTS(SELECT 1 FROM feed_unlocks WHERE post_id = p.id AND user_id = ${authId}) THEN true ELSE false END AS unlocked
       `;
 
+      // Build ORDER BY based on sort mode
+      // Hot: score / (age_hours + 2)^1.5  — recent high-engagement posts rise
+      // Top: pure score DESC
+      // New: created_at DESC (default)
+      const orderHot = sql`(
+        (COALESCE((SELECT count(*)::int FROM feed_reactions WHERE post_id = p.id AND emoji = '👍'), 0)
+         - COALESCE((SELECT count(*)::int FROM feed_reactions WHERE post_id = p.id AND emoji = '👎'), 0)
+         + COALESCE((SELECT count(*)::int FROM feed_comments WHERE post_id = p.id), 0) * 0.5
+        ) / POWER(EXTRACT(EPOCH FROM (now() - p.created_at)) / 3600.0 + 2, 1.5)
+      ) DESC, p.created_at DESC`;
+      const orderTop = sql`(
+        COALESCE((SELECT count(*)::int FROM feed_reactions WHERE post_id = p.id AND emoji = '👍'), 0)
+        - COALESCE((SELECT count(*)::int FROM feed_reactions WHERE post_id = p.id AND emoji = '👎'), 0)
+      ) DESC, p.created_at DESC`;
+      const orderNew = sql`p.created_at DESC`;
+
+      const orderBy = sortMode === "top" ? orderTop : sortMode === "new" ? orderNew : orderHot;
+
       let rows;
+      const cursorCond = cursor ? sql`AND p.created_at < ${cursor}` : sql``;
+
       if (userId) {
-        rows = cursor
-          ? await sql`
-              SELECT ${selectCols(auth.userId)}
-              FROM feed_posts p
-              JOIN profiles pr ON pr.user_id = p.user_id
-              WHERE p.user_id = ${userId} AND p.created_at < ${cursor}
-              ORDER BY p.created_at DESC LIMIT ${limit}
-            `
-          : await sql`
-              SELECT ${selectCols(auth.userId)}
-              FROM feed_posts p
-              JOIN profiles pr ON pr.user_id = p.user_id
-              WHERE p.user_id = ${userId}
-              ORDER BY p.created_at DESC LIMIT ${limit}
-            `;
+        rows = await sql`
+          SELECT ${selectCols(auth.userId)}
+          FROM feed_posts p
+          JOIN profiles pr ON pr.user_id = p.user_id
+          WHERE p.user_id = ${userId} ${cursorCond}
+          ORDER BY ${orderBy} LIMIT ${limit}
+        `;
       } else if (filter === "following") {
-        rows = cursor
-          ? await sql`
-              SELECT ${selectCols(auth.userId)}
-              FROM feed_posts p
-              JOIN profiles pr ON pr.user_id = p.user_id
-              WHERE p.user_id IN (SELECT following_id FROM follows WHERE follower_id = ${auth.userId})
-                AND p.created_at < ${cursor}
-              ORDER BY p.created_at DESC LIMIT ${limit}
-            `
-          : await sql`
-              SELECT ${selectCols(auth.userId)}
-              FROM feed_posts p
-              JOIN profiles pr ON pr.user_id = p.user_id
-              WHERE p.user_id IN (SELECT following_id FROM follows WHERE follower_id = ${auth.userId})
-              ORDER BY p.created_at DESC LIMIT ${limit}
-            `;
+        rows = await sql`
+          SELECT ${selectCols(auth.userId)}
+          FROM feed_posts p
+          JOIN profiles pr ON pr.user_id = p.user_id
+          WHERE p.user_id IN (SELECT following_id FROM follows WHERE follower_id = ${auth.userId})
+            ${cursorCond}
+          ORDER BY ${orderBy} LIMIT ${limit}
+        `;
       } else {
-        rows = cursor
-          ? await sql`
-              SELECT ${selectCols(auth.userId)}
-              FROM feed_posts p
-              JOIN profiles pr ON pr.user_id = p.user_id
-              WHERE p.created_at < ${cursor}
-              ORDER BY p.created_at DESC LIMIT ${limit}
-            `
-          : await sql`
-              SELECT ${selectCols(auth.userId)}
-              FROM feed_posts p
-              JOIN profiles pr ON pr.user_id = p.user_id
-              ORDER BY p.created_at DESC LIMIT ${limit}
-            `;
+        rows = await sql`
+          SELECT ${selectCols(auth.userId)}
+          FROM feed_posts p
+          JOIN profiles pr ON pr.user_id = p.user_id
+          WHERE 1=1 ${cursorCond}
+          ORDER BY ${orderBy} LIMIT ${limit}
+        `;
       }
 
       return res.json({
