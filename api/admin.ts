@@ -375,7 +375,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             COUNT(*)::int AS generations,
             COALESCE(SUM(credits_used), 0)::int AS credits_used,
             COALESCE(SUM(execution_time_ms), 0)::bigint AS total_exec_ms,
-            COUNT(execution_time_ms)::int AS tracked_count
+            COUNT(execution_time_ms)::int AS tracked_count,
+            COALESCE(SUM(api_cost_cents), 0)::numeric AS actual_cost_cents,
+            COUNT(api_cost_cents)::int AS cost_tracked_count
           FROM usage_log
           WHERE created_at > now() - interval '30 days'
             AND mode NOT LIKE 'moderation-%'
