@@ -112,14 +112,17 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ onCreditsRefresh }) => {
 
       // Find segment index
       const idx = SEGMENTS.findIndex(s => s.id === prize.id);
-      // Segment center in wheel coordinates (0° = top because SVG starts at -90°)
+      // Segment i center is at (i * ARC + ARC/2) degrees clockwise from top in the SVG.
+      // CSS rotate() is clockwise. When wheel rotates R deg, the pointer (fixed at top)
+      // points at the segment that was (360 - R%360) degrees from top.
+      // So we need: (360 - R%360) = segmentCenter → R%360 = 360 - segmentCenter
       const segmentCenter = idx * ARC + ARC / 2;
-      // To land on this segment, rotate so its center is at top (0°)
-      // We need to go PAST it: 360 - segmentCenter brings segment to top
-      const extraSpins = 5 + Math.floor(Math.random() * 3);
+      const landAngle = ((360 - segmentCenter) % 360 + 360) % 360;
       const currentRot = rotationRef.current;
-      // Normalize: always increase rotation so CSS transition animates forward
-      const targetRotation = currentRot + (extraSpins * 360) + (360 - segmentCenter) - (currentRot % 360);
+      const currentAngle = ((currentRot % 360) + 360) % 360;
+      const diff = ((landAngle - currentAngle) % 360 + 360) % 360;
+      const extraSpins = 5 + Math.floor(Math.random() * 3);
+      const targetRotation = currentRot + extraSpins * 360 + diff;
 
       rotationRef.current = targetRotation;
       setRotation(targetRotation);
