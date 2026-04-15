@@ -1109,8 +1109,11 @@ export default function Admin() {
   const xaiCost30d = o.apiCost.estimated30dCents;
   const runpodCost30d = o.runpodCost?.estimated30dCents || 0;
   const modCost30d = o.moderation.wasted_cost_30d_cents;
-  const totalCost30d = xaiCost30d + runpodCost30d + modCost30d;
+  const actualCost30d = o.actualCost?.actual30dCents || 0;
+  const hasActualCosts = (o.actualCost?.tracked30d || 0) > 0;
+  const totalCost30d = hasActualCosts ? actualCost30d + modCost30d : xaiCost30d + runpodCost30d + modCost30d;
   const trueMargin30d = o.revenue.revenue_30d_cents - totalCost30d;
+  const costCoverage = o.actualCost ? `${o.actualCost.tracked30d}/${o.actualCost.total30d} tracked` : "estimated";
 
   return (
     <div className="min-h-screen bg-background w-full overflow-x-hidden">
@@ -1177,9 +1180,9 @@ export default function Admin() {
             </section>
 
             <section className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
-              <KpiCard icon={<CreditCard className="w-4 h-4" />} label="xAI_COST_30D" value={fmt$(xaiCost30d)} sub="estimated xAI API spend" accent="destructive" />
-              <KpiCard icon={<Server className="w-4 h-4" />} label="RUNPOD_COST_30D" value={runpodCost30d ? fmt$(runpodCost30d) : "N/A"} sub={runpodCost30d ? "tracked from execution time" : "enable tracking to see"} accent="destructive" />
-              <KpiCard icon={<Ban className="w-4 h-4" />} label="MOD_WASTE_30D" value={fmt$(modCost30d)} sub={`${o.moderation.blocks_30d} flagged requests`} accent="destructive" />
+              <KpiCard icon={<CreditCard className="w-4 h-4" />} label="xAI_COST_30D" value={fmt$(xaiCost30d)} sub="estimated from credit usage" accent="destructive" />
+              <KpiCard icon={<Server className="w-4 h-4" />} label="RUNPOD_COST_30D" value={runpodCost30d ? fmt$(runpodCost30d) : "N/A"} sub={runpodCost30d ? "from execution time" : "enable tracking"} accent="destructive" />
+              <KpiCard icon={<Activity className="w-4 h-4" />} label="ACTUAL_COST_30D" value={hasActualCosts ? fmt$(actualCost30d) : "N/A"} sub={costCoverage} accent="destructive" />
               <KpiCard icon={<TrendingUp className="w-4 h-4" />} label="TRUE_MARGIN_30D" value={fmt$(trueMargin30d)} sub={`${Math.round((trueMargin30d / Math.max(1, o.revenue.revenue_30d_cents)) * 100)}% of revenue`} accent={trueMargin30d >= 0 ? "secondary" : "destructive"} />
             </section>
 
