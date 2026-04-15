@@ -1019,7 +1019,8 @@ export default function Admin() {
     }
     fetchAll();
     fetchMods();
-  }, [fetchAll, fetchMods]);
+    fetchBans();
+  }, [fetchAll, fetchMods, fetchBans]);
 
   useEffect(() => {
     if (activeTab === "emails" && !emailStats && !emailLoading && authorized) {
