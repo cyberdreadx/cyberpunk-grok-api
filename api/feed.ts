@@ -188,6 +188,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           SELECT ${selectCols(auth.userId)}
           FROM feed_posts p
           JOIN profiles pr ON pr.user_id = p.user_id
+          JOIN users uu ON uu.id = p.user_id
           WHERE p.user_id = ${userId} ${cursorCond}
           ORDER BY ${orderBy} LIMIT ${limit}
         `;
@@ -196,6 +197,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           SELECT ${selectCols(auth.userId)}
           FROM feed_posts p
           JOIN profiles pr ON pr.user_id = p.user_id
+          JOIN users uu ON uu.id = p.user_id
           WHERE p.user_id IN (SELECT following_id FROM follows WHERE follower_id = ${auth.userId})
             ${cursorCond}
           ORDER BY ${orderBy} LIMIT ${limit}
@@ -205,6 +207,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           SELECT ${selectCols(auth.userId)}
           FROM feed_posts p
           JOIN profiles pr ON pr.user_id = p.user_id
+          JOIN users uu ON uu.id = p.user_id
           WHERE 1=1 ${cursorCond}
           ORDER BY ${orderBy} LIMIT ${limit}
         `;
@@ -231,6 +234,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             userId: r.user_id,
             username: r.username,
             avatarUrl: r.avatar_url,
+            authorVerified: !!r.author_verified,
             text: isLocked ? "" : r.text,
             imageUrl: isLocked ? null : r.image_url,
             previewImageUrl: isLocked && r.image_url ? r.image_url : undefined,
