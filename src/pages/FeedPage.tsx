@@ -270,19 +270,29 @@ const FeedPage: React.FC = () => {
           ) : (
             <>
               {posts.map((post, i) => {
-                // Only fully render reels within ±3 of current view
+                // Fully render reels within ±3, lightly preload media within ±6
                 const RENDER_WINDOW = 3;
-                const inWindow = Math.abs(i - activeReelIndex) <= RENDER_WINDOW;
-                
+                const PRELOAD_WINDOW = 6;
+                const distance = Math.abs(i - activeReelIndex);
+                const inWindow = distance <= RENDER_WINDOW;
+                const shouldPreload = !inWindow && distance <= PRELOAD_WINDOW;
+
                 if (!inWindow) {
                   return (
                     <div
                       key={post.id}
                       className="h-[100dvh] snap-start snap-always bg-black"
-                    />
+                    >
+                      {shouldPreload && post.imageUrl && (
+                        <img src={post.imageUrl} alt="" aria-hidden className="hidden" decoding="async" />
+                      )}
+                      {shouldPreload && post.previewImageUrl && (
+                        <img src={post.previewImageUrl} alt="" aria-hidden className="hidden" decoding="async" />
+                      )}
+                    </div>
                   );
                 }
-                
+
                 return (
                   <ReelCard key={post.id} post={post} onUpdate={() => fetchFeed()} />
                 );
