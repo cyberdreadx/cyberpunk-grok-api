@@ -71,14 +71,7 @@ const ReelViewer: React.FC<Props> = ({ open, onClose, initialPostId, userId, fil
       try {
         const data = await apiFetch<{ posts: FeedPost[]; nextCursor: string | null }>(buildUrl());
         if (!alive) return;
-        let list = data.posts || [];
-        if (initialPostId && !list.find((p) => p.id === initialPostId)) {
-          // Fetch the single post and prepend
-          try {
-            const single = await apiFetch<{ post: FeedPost }>(`/feed?postId=${initialPostId}`);
-            if (single?.post) list = [single.post, ...list];
-          } catch { /* ignore */ }
-        }
+        const list = data.posts || [];
         setPosts(list);
         setNextCursor(data.nextCursor);
       } catch {
