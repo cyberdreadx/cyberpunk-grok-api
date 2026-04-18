@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { apiFetch } from "@/lib/api";
 import { hasAuthToken } from "@/lib/api";
 import StoryViewer from "@/components/StoryViewer";
+import FeatureExplainer, { hasSeenExplainer, markExplainerSeen } from "@/components/FeatureExplainer";
 
 interface Story {
   id: string;
@@ -37,6 +38,8 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUserId, isAdmin }) => {
   const [users, setUsers] = useState<StoryUser[]>([]);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [activeUserIdx, setActiveUserIdx] = useState(0);
+  const [explainerOpen, setExplainerOpen] = useState(false);
+  const [pendingOpenIdx, setPendingOpenIdx] = useState<number | null>(null);
 
   // Only fetch if logged in
   const loggedIn = hasAuthToken();
@@ -104,8 +107,23 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUserId, isAdmin }) => {
   });
 
   const openStory = (idx: number) => {
+    if (!hasSeenExplainer("stories")) {
+      setPendingOpenIdx(idx);
+      setExplainerOpen(true);
+      return;
+    }
     setActiveUserIdx(idx);
     setViewerOpen(true);
+  };
+
+  const handleExplainerClose = () => {
+    markExplainerSeen("stories");
+    setExplainerOpen(false);
+    if (pendingOpenIdx !== null) {
+      setActiveUserIdx(pendingOpenIdx);
+      setViewerOpen(true);
+      setPendingOpenIdx(null);
+    }
   };
 
   return (
@@ -193,6 +211,12 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUserId, isAdmin }) => {
           onUnlocked={fetchStories}
         />
       )}
+
+      <FeatureExplainer
+        feature="stories"
+        open={explainerOpen}
+        onClose={handleExplainerClose}
+      />
     </>
   );
 };
