@@ -36,9 +36,13 @@ interface FeedPost {
 interface ReelCardProps {
   post: FeedPost;
   onUpdate?: () => void;
+  /** Whether this card is currently in view — controls video play/pause + bg layers. */
+  active?: boolean;
+  /** Whether to mount media at all (for virtualization). Defaults to true. */
+  mountMedia?: boolean;
 }
 
-const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate }) => {
+const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate, active = true, mountMedia = true }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -144,30 +148,41 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate }) => {
   const timeAgo = formatDistanceToNow(new Date(post.createdAt), { addSuffix: true });
   const isVideo = post.imageUrl ? /\.(mp4|webm|mov)(\?|$)/i.test(post.imageUrl) || post.imageUrl.includes("video") : false;
 
+  // Auto play/pause video based on active state.
+  const videoRef = React.useRef<HTMLVideoElement | null>(null);
+  React.useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    if (active) v.play().catch(() => {});
+    else { v.pause(); }
+  }, [active]);
+
   return (
     <div className="relative w-full h-[100dvh] snap-start snap-always bg-black flex items-center justify-center overflow-hidden">
-      {/* Background / media */}
-      {!isLocked && post.imageUrl && (
-        isVideo ? (
-          <video src={post.imageUrl} className="absolute inset-0 w-full h-full object-cover blur-2xl scale-110 opacity-40" muted playsInline autoPlay loop />
-        ) : (
-          <img src={post.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover blur-2xl scale-110 opacity-40" />
-        )
+      {/* Lightweight blurred backdrop — image only, never a second <video>. */}
+      {mountMedia && !isLocked && post.imageUrl && !isVideo && (
+        <img src={post.imageUrl} alt="" aria-hidden className="absolute inset-0 w-full h-full object-cover blur-2xl scale-110 opacity-40" loading="lazy" decoding="async" />
       )}
 
       {/* Blurred preview for locked posts with images */}
-      {isLocked && post.previewImageUrl && (
-        <>
-          <img src={post.previewImageUrl} alt="" className="absolute inset-0 w-full h-full object-cover blur-2xl scale-110 opacity-30" />
-          <img src={post.previewImageUrl} alt="" className="absolute inset-0 w-full h-full object-cover blur-xl brightness-50" />
-        </>
+      {mountMedia && isLocked && post.previewImageUrl && (
+        <img src={post.previewImageUrl} alt="" aria-hidden className="absolute inset-0 w-full h-full object-cover blur-xl brightness-50" loading="lazy" decoding="async" />
       )}
 
-      {!isLocked && post.imageUrl ? (
+      {mountMedia && !isLocked && post.imageUrl ? (
         isVideo ? (
-          <video src={post.imageUrl} className="relative z-[1] w-full h-full object-contain" muted playsInline autoPlay loop />
+          <video
+            ref={videoRef}
+            src={active ? post.imageUrl : undefined}
+            poster={post.previewImageUrl}
+            className="relative z-[1] w-full h-full object-contain"
+            muted
+            playsInline
+            preload={active ? "auto" : "none"}
+            loop
+          />
         ) : (
-          <img src={post.imageUrl} alt="" className="relative z-[1] w-full h-full object-contain" loading="lazy" />
+          <img src={post.imageUrl} alt="" className="relative z-[1] w-full h-full object-contain" loading="lazy" decoding="async" />
         )
       ) : !isLocked ? (
         <div className="absolute inset-0 bg-gradient-to-b from-background via-card to-background" />
