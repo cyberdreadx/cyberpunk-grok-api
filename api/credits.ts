@@ -16,7 +16,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const sql = getDb();
     const rows = await sql`
-      SELECT daily_credits, sub_credits, pack_credits, subscription_tier, subscription_renews_at, subscription_cancel_at, lora_unlocked
+      SELECT daily_credits, sub_credits, pack_credits, subscription_tier, subscription_renews_at, subscription_cancel_at, lora_unlocked,
+             stripe_customer_id, COALESCE(xrge_lifetime_spend, 0)::numeric AS xrge_lifetime_spend
       FROM users
       WHERE id = ${auth.userId}
     `;
@@ -25,7 +26,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(404).json({ error: "User not found" });
     }
 
-    return res.status(200).json(rows[0]);
+    const u = rows[0];
+    const has_purchased = !!u.stripe_customer_id || !!u.subscription_tier || parseFloat(u.xrge_lifetime_spend || "0") > 0;
+    return res.status(200).json({
+      daily_credits: u.daily_credits,
+      sub_credits: u.sub_credits,
+      pack_credits: u.pack_credits,
+      subscription_tier: u.subscription_tier,
+      subscription_renews_at: u.subscription_renews_at,
+      subscription_cancel_at: u.subscription_cancel_at,
+      lora_unlocked: u.lora_unlocked,
+      has_purchased,
+    });
   } catch (err: any) {
     console.error("[credits]", err.message);
     return res.status(500).json({ error: "Failed to fetch credits" });
