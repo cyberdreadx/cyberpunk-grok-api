@@ -126,8 +126,40 @@ const EarningsPanel: React.FC = () => {
     );
   }
 
-  if (!data || (data.summary.postUnlocks === 0 && data.summary.storyUnlocks === 0 && data.summary.xrgeUnlocks === 0)) {
+  // Show verification CTA even with no earnings yet — but only if user is unverified.
+  // Hide entirely only when both no earnings AND already verified (nothing useful to show).
+  const noEarnings = !data || (data.summary.postUnlocks === 0 && data.summary.storyUnlocks === 0 && data.summary.xrgeUnlocks === 0);
+  if (noEarnings && isVerified) {
     return null;
+  }
+  if (noEarnings) {
+    // Render JUST the verification banner
+    return (
+      <div className="bg-card/60 border border-border/40 rounded-lg p-4 space-y-3">
+        <div className="bg-primary/5 border border-primary/30 rounded-md p-3 space-y-2">
+          <div className="flex items-start gap-2">
+            <ShieldAlert className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="font-orbitron text-[11px] text-primary">
+                {verificationStatus === "pending" ? "VERIFICATION IN PROGRESS" :
+                 verificationStatus === "lapsed" ? "VERIFICATION LAPSED" :
+                 "GET VERIFIED TO MONETIZE"}
+              </p>
+              <p className="font-mono-share text-[10px] text-muted-foreground mt-0.5">
+                Identity verification is required to set prices on posts/stories or request payouts.
+              </p>
+            </div>
+          </div>
+          <Button onClick={() => setVerifyOpen(true)} size="sm" className="w-full font-mono-share text-[10px]">
+            <BadgeCheck className="w-3.5 h-3.5 mr-2" />
+            {verificationStatus === "pending" ? "CONTINUE VERIFICATION" :
+             verificationStatus === "lapsed" ? "RE-ACTIVATE" :
+             "GET VERIFIED"}
+          </Button>
+        </div>
+        <VerificationDialog open={verifyOpen} onOpenChange={setVerifyOpen} />
+      </div>
+    );
   }
 
   const s = data.summary;
