@@ -84,6 +84,22 @@ const FeedPage: React.FC = () => {
     fetchCreators();
   }, [authLoading, isAuthenticated, fetchCreators, navigate]);
 
+  // Open ReelViewer when arriving from a notification click
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const stashed = sessionStorage.getItem("openReelPostId");
+    if (stashed) {
+      sessionStorage.removeItem("openReelPostId");
+      setReelTarget({ postId: stashed });
+    }
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.postId) setReelTarget({ postId: detail.postId });
+    };
+    window.addEventListener("open-reel", handler);
+    return () => window.removeEventListener("open-reel", handler);
+  }, [isAuthenticated]);
+
   // IntersectionObserver for infinite scroll
   useEffect(() => {
     const el = sentinelRef.current;
