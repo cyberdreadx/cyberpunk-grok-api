@@ -202,40 +202,82 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
     finally { setLoadingViewers(false); }
   }, [currentStory, isOwner]);
 
+  // Navigation guard — debounce rapid taps that fire twice (touchend + click)
+  const safeNav = useCallback((dir: "next" | "prev") => {
+    const now = Date.now();
+    if (now - lastNavRef.current < 250) return;
+    lastNavRef.current = now;
+    if (dir === "next") goNext(); else goPrev();
+  }, [goNext, goPrev]);
+
   // Touch handlers
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     if (showViewers) return;
-    swipeRef.current = { startY: e.touches[0].clientY, currentY: e.touches[0].clientY, swiping: false };
+    const t = e.touches[0];
+    swipeRef.current = { startX: t.clientX, startY: t.clientY, currentX: t.clientX, currentY: t.clientY, swiping: false, horizSwipe: false, startTime: Date.now() };
     setPaused(true);
   }, [showViewers]);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
     if (showViewers) return;
-    const deltaY = e.touches[0].clientY - swipeRef.current.startY;
-    swipeRef.current.currentY = e.touches[0].clientY;
-    if (deltaY > 10) { swipeRef.current.swiping = true; setSwipeOffset(Math.min(deltaY, 300)); }
+    const t = e.touches[0];
+    const deltaX = t.clientX - swipeRef.current.startX;
+    const deltaY = t.clientY - swipeRef.current.startY;
+    swipeRef.current.currentX = t.clientX;
+    swipeRef.current.currentY = t.clientY;
+    // Mark as horizontal swipe if X movement dominates
+    if (!swipeRef.current.swiping && Math.abs(deltaX) > 12 && Math.abs(deltaX) > Math.abs(deltaY)) {
+      swipeRef.current.horizSwipe = true;
+      swipeRef.current.swiping = true;
+    }
+    // Vertical swipe-down to close — only if clearly vertical
+    if (!swipeRef.current.horizSwipe && deltaY > 10 && Math.abs(deltaY) > Math.abs(deltaX) * 1.5) {
+      swipeRef.current.swiping = true;
+      setSwipeOffset(Math.min(deltaY, 300));
+    }
   }, [showViewers]);
 
   const handleTouchEnd = useCallback((e: React.TouchEvent) => {
-    if (showViewers) return;
+    if (showViewers) { setPaused(false); return; }
+    lastTouchEndRef.current = Date.now();
+    const deltaX = swipeRef.current.currentX - swipeRef.current.startX;
     const deltaY = swipeRef.current.currentY - swipeRef.current.startY;
-    if (swipeRef.current.swiping && deltaY > 100) { onClose(); return; }
+    const elapsed = Date.now() - swipeRef.current.startTime;
+
+    // Horizontal swipe → navigate
+    if (swipeRef.current.horizSwipe && Math.abs(deltaX) > 50) {
+      setPaused(false);
+      swipeRef.current.swiping = false;
+      safeNav(deltaX > 0 ? "prev" : "next");
+      return;
+    }
+    // Vertical swipe down → close
+    if (swipeRef.current.swiping && !swipeRef.current.horizSwipe && deltaY > 100) {
+      onClose();
+      return;
+    }
     setSwipeOffset(0);
-    if (!swipeRef.current.swiping) {
+    setPaused(false);
+
+    // Tap (no swipe, short, minimal movement) → navigate
+    if (!swipeRef.current.swiping && elapsed < 400 && Math.abs(deltaX) < 10 && Math.abs(deltaY) < 10) {
       const touch = e.changedTouches[0];
       const rect = e.currentTarget.getBoundingClientRect();
       const x = touch.clientX - rect.left;
-      if (x < rect.width / 3) goPrev(); else goNext();
+      // Smaller prev zone (left 25%) to avoid accidental back-tap
+      safeNav(x < rect.width * 0.25 ? "prev" : "next");
     }
-    setPaused(false);
     swipeRef.current.swiping = false;
-  }, [onClose, goPrev, goNext, showViewers]);
+    swipeRef.current.horizSwipe = false;
+  }, [onClose, safeNav, showViewers]);
 
   const handleClick = (e: React.MouseEvent) => {
     if (showViewers) return;
+    // Suppress synthetic click after touch on mobile (within 500ms)
+    if (Date.now() - lastTouchEndRef.current < 500) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
-    if (x < rect.width / 3) goPrev(); else goNext();
+    safeNav(x < rect.width * 0.25 ? "prev" : "next");
   };
 
   if (!currentUser || !currentStory) return null;
