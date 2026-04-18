@@ -174,8 +174,15 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
           </span>
         )}
         {(user?.id === post.userId || user?.is_admin || user?.is_feed_mod) && (
-          <button onClick={handleDelete} disabled={deleting} className="text-muted-foreground/40 hover:text-destructive transition-colors">
+          <button
+            onClick={handleDelete}
+            disabled={deleting}
+            title={user?.id === post.userId ? "Delete your post" : "Delete post (mod)"}
+            aria-label="Delete post"
+            className="flex items-center gap-1 px-2 py-1 rounded-md border border-destructive/30 text-destructive/80 hover:text-destructive hover:bg-destructive/10 transition-colors font-mono-share text-[10px]"
+          >
             <Trash2 className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">{deleting ? "..." : "Delete"}</span>
           </button>
         )}
       </div>
