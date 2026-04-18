@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UserPlus, UserMinus, Edit2, Check, X, ArrowLeft, Camera, Loader2, Wallet, Ban } from "lucide-react";
 import EarningsPanel from "@/components/EarningsPanel";
+import VerifiedBadge from "@/components/VerifiedBadge";
 import { useToast } from "@/hooks/use-toast";
 import { upload } from "@vercel/blob/client";
 
