@@ -14,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Send, Users, Globe, Loader2, Plus, X, Lock, Zap, ShieldAlert, Flame, TrendingUp, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import MobileBottomNav from "@/components/MobileBottomNav";
+import FeatureExplainer from "@/components/FeatureExplainer";
 
 interface FeedPost {
   id: string;
