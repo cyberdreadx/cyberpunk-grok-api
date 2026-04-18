@@ -342,10 +342,10 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
 
       {/* Media */}
       <div className="w-full h-full cursor-pointer select-none"
-        style={{ transform: `translateY(${swipeOffset}px)` }}
+        style={{ transform: `translateY(${swipeOffset}px)`, touchAction: "pan-y" }}
         onClick={handleClick}
-        onMouseDown={() => !isLocked && !showViewers && setPaused(true)}
-        onMouseUp={() => !isLocked && !showViewers && setPaused(false)}
+        onMouseDown={(e) => { if (Date.now() - lastTouchEndRef.current < 500) return; if (!isLocked && !showViewers) setPaused(true); }}
+        onMouseUp={(e) => { if (Date.now() - lastTouchEndRef.current < 500) return; if (!isLocked && !showViewers) setPaused(false); }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
