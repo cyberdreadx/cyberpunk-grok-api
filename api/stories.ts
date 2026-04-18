@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getUserFromRequest, ADMIN_EMAIL, checkBan } from "./_lib/auth";
 import { getDb } from "./_lib/db";
+import { hasPurchased, POSTING_GATE_MESSAGE } from "./_lib/purchaseGate";
 
 export const config = { maxDuration: 30 };
 
