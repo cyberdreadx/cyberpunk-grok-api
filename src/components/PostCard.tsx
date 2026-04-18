@@ -9,12 +9,14 @@ import CommentThread from "@/components/CommentThread";
 import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
 import XrgeUnlockDialog from "@/components/XrgeUnlockDialog";
+import VerifiedBadge from "@/components/VerifiedBadge";
 
 interface FeedPost {
   id: string;
   userId: string;
   username: string;
   avatarUrl: string | null;
+  authorVerified?: boolean;
   text: string;
   imageUrl: string | null;
   previewImageUrl?: string;
@@ -164,7 +166,10 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
             onClick={() => navigate(`/profile/${post.username}`)}
             className="font-orbitron text-xs text-foreground hover:text-primary transition-colors truncate block"
           >
-            @{post.username}
+            <span className="inline-flex items-center gap-1">
+              @{post.username}
+              {post.authorVerified && <VerifiedBadge size="xs" />}
+            </span>
           </button>
           <span className="font-mono-share text-[9px] text-muted-foreground">{timeAgo}</span>
         </div>

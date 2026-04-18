@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getUserFromRequest, checkBan } from "./_lib/auth";
 import { getDb } from "./_lib/db";
 import { hasPurchased, POSTING_GATE_MESSAGE } from "./_lib/purchaseGate";
+import { isVerified, VERIFICATION_REQUIRED_MESSAGE } from "./_lib/verifiedGate";
 
 const MAX_LOCK_COST = 100;
 const MAX_LOCK_PRICE_CENTS = 10000; // $100 max
@@ -102,6 +103,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             l.created_at AS latest_at,
             l.lock_cost, l.lock_price_cents, l.lock_xrge_amount,
             pr.username, pr.avatar_url,
+            (u.verification_status = 'verified' AND (u.verification_renews_at IS NULL OR u.verification_renews_at > now())) AS verified,
             s.post_count,
             s.recent_score,
             (
@@ -110,6 +112,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             ) AS rank_score
           FROM latest l
           JOIN profiles pr ON pr.user_id = l.user_id
+          JOIN users u ON u.id = l.user_id
           JOIN stats s ON s.user_id = l.user_id
           ${cursor ? sql`WHERE (
             1.0 / POWER(EXTRACT(EPOCH FROM (now() - l.created_at)) / 3600.0 + 2, 1.2)
@@ -128,6 +131,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               userId: r.user_id,
               username: r.username,
               avatarUrl: r.avatar_url,
+              verified: !!r.verified,
               postCount: r.post_count,
               recentScore: r.recent_score,
               latestPostId: r.latest_post_id,
@@ -147,6 +151,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       const selectCols = (authId: string) => sql`
         p.*, pr.username, pr.avatar_url,
+        (uu.verification_status = 'verified' AND (uu.verification_renews_at IS NULL OR uu.verification_renews_at > now())) AS author_verified,
         COALESCE((SELECT count(*)::int FROM feed_reactions WHERE post_id = p.id AND emoji = '👍'), 0)
         - COALESCE((SELECT count(*)::int FROM feed_reactions WHERE post_id = p.id AND emoji = '👎'), 0) AS score,
         (SELECT emoji FROM feed_reactions WHERE post_id = p.id AND user_id = ${authId} LIMIT 1) AS user_vote,
@@ -183,6 +188,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           SELECT ${selectCols(auth.userId)}
           FROM feed_posts p
           JOIN profiles pr ON pr.user_id = p.user_id
+          JOIN users uu ON uu.id = p.user_id
           WHERE p.user_id = ${userId} ${cursorCond}
           ORDER BY ${orderBy} LIMIT ${limit}
         `;
@@ -191,6 +197,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           SELECT ${selectCols(auth.userId)}
           FROM feed_posts p
           JOIN profiles pr ON pr.user_id = p.user_id
+          JOIN users uu ON uu.id = p.user_id
           WHERE p.user_id IN (SELECT following_id FROM follows WHERE follower_id = ${auth.userId})
             ${cursorCond}
           ORDER BY ${orderBy} LIMIT ${limit}
@@ -200,6 +207,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           SELECT ${selectCols(auth.userId)}
           FROM feed_posts p
           JOIN profiles pr ON pr.user_id = p.user_id
+          JOIN users uu ON uu.id = p.user_id
           WHERE 1=1 ${cursorCond}
           ORDER BY ${orderBy} LIMIT ${limit}
         `;
@@ -226,6 +234,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             userId: r.user_id,
             username: r.username,
             avatarUrl: r.avatar_url,
+            authorVerified: !!r.author_verified,
             text: isLocked ? "" : r.text,
             imageUrl: isLocked ? null : r.image_url,
             previewImageUrl: isLocked && r.image_url ? r.image_url : undefined,
@@ -278,6 +287,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const cost = Math.max(0, Math.min(parseInt(lockCost) || 0, MAX_LOCK_COST));
       const priceCents = Math.max(0, Math.min(parseInt(lockPriceCents) || 0, MAX_LOCK_PRICE_CENTS));
       const xrgeAmount = lockXrgeAmount ? String(Math.max(0, parseFloat(lockXrgeAmount) || 0)) : null;
+
+      // Verification gate: monetized posts (any non-zero lock) require an
+      // ACTIVE creator verification subscription.
+      const wantsMoney = cost > 0 || priceCents > 0 || (xrgeAmount && parseFloat(xrgeAmount) > 0);
+      if (wantsMoney && !(await isVerified(sql, auth.userId))) {
+        return res.status(403).json({ error: VERIFICATION_REQUIRED_MESSAGE, code: "VERIFICATION_REQUIRED" });
+      }
 
       const rows = await sql`
         INSERT INTO feed_posts (user_id, text, image_url, lock_cost, lock_price_cents, lock_xrge_amount)

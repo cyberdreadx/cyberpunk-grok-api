@@ -14,8 +14,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     await checkRateLimit(auth.userId, "me", { max: 60, windowSeconds: 60 });
 
     const sql = getDb();
+    // Defensive: ensure verification columns exist (idempotent)
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_status TEXT NOT NULL DEFAULT 'unverified'`.catch(() => {});
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_renews_at TIMESTAMPTZ`.catch(() => {});
+
     const rows = await sql`
-      SELECT id, email, email_verified, sub_credits, pack_credits, subscription_tier, subscription_renews_at
+      SELECT id, email, email_verified, sub_credits, pack_credits, subscription_tier, subscription_renews_at,
+             verification_status, verification_renews_at
       FROM users
       WHERE id = ${auth.userId}
     `;
@@ -26,12 +31,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const user = rows[0];
     const modRows = await sql`SELECT 1 FROM feed_moderators WHERE user_id = ${auth.userId} LIMIT 1`.catch(() => []);
+    const verifiedActive =
+      user.verification_status === "verified" &&
+      (!user.verification_renews_at || new Date(user.verification_renews_at) > new Date());
+
     return res.status(200).json({
       id: user.id,
       email: user.email,
       email_verified: !!user.email_verified,
       is_admin: user.email === ADMIN_EMAIL,
       is_feed_mod: modRows.length > 0,
+      is_verified: verifiedActive,
+      verification_status: user.verification_status || "unverified",
       sub_credits: user.sub_credits,
       pack_credits: user.pack_credits,
       subscription_tier: user.subscription_tier,
