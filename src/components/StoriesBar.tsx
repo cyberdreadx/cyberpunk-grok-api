@@ -107,8 +107,23 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUserId, isAdmin }) => {
   });
 
   const openStory = (idx: number) => {
+    if (!hasSeenExplainer("stories")) {
+      setPendingOpenIdx(idx);
+      setExplainerOpen(true);
+      return;
+    }
     setActiveUserIdx(idx);
     setViewerOpen(true);
+  };
+
+  const handleExplainerClose = () => {
+    markExplainerSeen("stories");
+    setExplainerOpen(false);
+    if (pendingOpenIdx !== null) {
+      setActiveUserIdx(pendingOpenIdx);
+      setViewerOpen(true);
+      setPendingOpenIdx(null);
+    }
   };
 
   return (
