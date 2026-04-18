@@ -352,6 +352,15 @@ const FeedPage: React.FC = () => {
 
         <MobileBottomNav isAuthenticated={isAuthenticated} />
         <FeatureExplainer feature="feed" />
+        {reelTarget && (
+          <ReelViewer
+            open
+            onClose={() => setReelTarget(null)}
+            initialPostId={reelTarget.postId}
+            userId={reelTarget.userId}
+            filter={filter}
+          />
+        )}
       </>
     );
   }
@@ -432,6 +441,15 @@ const FeedPage: React.FC = () => {
       <CreatorPanel creator={activeCreator} onClose={() => setActiveCreator(null)} />
       <MobileBottomNav isAuthenticated={isAuthenticated} />
       <FeatureExplainer feature="feed" />
+      {reelTarget && (
+        <ReelViewer
+          open
+          onClose={() => setReelTarget(null)}
+          initialPostId={reelTarget.postId}
+          userId={reelTarget.userId}
+          filter={filter}
+        />
+      )}
     </CyberLayout>
   );
 };
