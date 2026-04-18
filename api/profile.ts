@@ -21,6 +21,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         rows = await sql`
           SELECT p.user_id, p.username, p.avatar_url, p.bio, p.created_at,
                  u.email, p.wallet_address,
+                 u.verification_status, u.verification_renews_at,
                  (SELECT count(*)::int FROM follows WHERE following_id = p.user_id) AS followers,
                  (SELECT count(*)::int FROM follows WHERE follower_id = p.user_id) AS following,
                  (SELECT count(*)::int FROM feed_posts WHERE user_id = p.user_id) AS post_count
@@ -31,6 +32,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         rows = await sql`
           SELECT p.user_id, p.username, p.avatar_url, p.bio, p.created_at,
                  u.email, p.wallet_address,
+                 u.verification_status, u.verification_renews_at,
                  (SELECT count(*)::int FROM follows WHERE following_id = p.user_id) AS followers,
                  (SELECT count(*)::int FROM follows WHERE follower_id = p.user_id) AS following,
                  (SELECT count(*)::int FROM feed_posts WHERE user_id = p.user_id) AS post_count
@@ -49,6 +51,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         rows = await sql`
           SELECT p.user_id, p.username, p.avatar_url, p.bio, p.created_at,
                  u.email, p.wallet_address,
+                 u.verification_status, u.verification_renews_at,
                  (SELECT count(*)::int FROM follows WHERE following_id = p.user_id) AS followers,
                  (SELECT count(*)::int FROM follows WHERE follower_id = p.user_id) AS following,
                  (SELECT count(*)::int FROM feed_posts WHERE user_id = p.user_id) AS post_count
@@ -77,6 +80,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       }
 
+      const isVerifiedActive =
+        p.verification_status === "verified" &&
+        (!p.verification_renews_at || new Date(p.verification_renews_at) > new Date());
+
       return res.json({
         userId: p.user_id,
         username: p.username,
@@ -92,6 +99,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         isFollowing,
         isBanned,
         banReason,
+        verified: isVerifiedActive,
       });
     } catch (err: any) {
       console.error("[profile GET]", err.message);
