@@ -91,7 +91,29 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ isAuthenticated }) 
     } catch {}
   };
 
-  if (!isAuthenticated) return null;
+  const handleClick = async (n: Notification) => {
+    setOpen(false);
+    // Mark as read (optimistic)
+    if (!n.read) {
+      setNotifications(prev => prev.map(x => x.id === n.id ? { ...x, read: true } : x));
+      setUnreadCount(c => Math.max(0, c - 1));
+      apiFetch("/notifications", { method: "PATCH", body: { ids: [n.id] } }).catch(() => {});
+    }
+    // Route based on type
+    if (n.type === "follow" && n.actor_username) {
+      navigate(`/profile/${n.actor_username}`);
+      return;
+    }
+    if (n.ref_id && (n.type === "comment" || n.type === "upvote" || n.type === "unlock")) {
+      // Stash target so FeedPage opens ReelViewer focused on this post
+      try {
+        sessionStorage.setItem("openReelPostId", n.ref_id);
+      } catch {}
+      navigate("/feed");
+      // Notify FeedPage if already mounted
+      window.dispatchEvent(new CustomEvent("open-reel", { detail: { postId: n.ref_id } }));
+    }
+  };
 
   return (
     <div className="relative" ref={panelRef}>
