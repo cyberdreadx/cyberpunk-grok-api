@@ -548,6 +548,7 @@ const FeedPage: React.FC = () => {
         <div ref={bottomRef} />
       </div>
       <MobileBottomNav isAuthenticated={isAuthenticated} />
+      <FeatureExplainer feature="feed" />
     </CyberLayout>
   );
 };
