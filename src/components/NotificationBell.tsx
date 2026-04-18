@@ -115,6 +115,8 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ isAuthenticated }) 
     }
   };
 
+  if (!isAuthenticated) return null;
+
   return (
     <div className="relative" ref={panelRef}>
       <button
@@ -160,9 +162,10 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ isAuthenticated }) 
               </div>
             ) : (
               notifications.map((n) => (
-                <div
+                <button
                   key={n.id}
-                  className={`flex items-start gap-2.5 px-3 py-2.5 border-b border-border/10 hover:bg-primary/5 transition-colors ${
+                  onClick={() => handleClick(n)}
+                  className={`w-full text-left flex items-start gap-2.5 px-3 py-2.5 border-b border-border/10 hover:bg-primary/10 transition-colors ${
                     !n.read ? "bg-primary/5" : ""
                   }`}
                 >
@@ -195,7 +198,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ isAuthenticated }) 
                   {!n.read && (
                     <div className="w-2 h-2 rounded-full bg-primary shrink-0 mt-2" />
                   )}
-                </div>
+                </button>
               ))
             )}
           </div>
