@@ -1,6 +1,7 @@
 import React from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Lock, ImageIcon, MessageSquare } from "lucide-react";
+import VerifiedBadge from "@/components/VerifiedBadge";
 
 export interface FeedCreator {
   userId: string;
@@ -14,6 +15,7 @@ export interface FeedCreator {
   previewImage?: string;
   latestAt: string;
   latestLocked: boolean;
+  verified?: boolean;
 }
 
 interface Props {
@@ -91,8 +93,9 @@ const CreatorCard: React.FC<Props> = ({ creator, onOpen, active }) => {
           <AvatarFallback className="text-[9px] font-mono-share bg-muted">{initials}</AvatarFallback>
         </Avatar>
         <div className="min-w-0 flex-1">
-          <div className="font-mono-share text-[11px] text-foreground truncate">
-            @{creator.username}
+          <div className="font-mono-share text-[11px] text-foreground truncate flex items-center gap-1">
+            <span className="truncate">@{creator.username}</span>
+            {creator.verified && <VerifiedBadge size="xs" />}
           </div>
           <div className="font-mono-share text-[9px] text-muted-foreground flex items-center gap-1">
             <MessageSquare className="w-2.5 h-2.5" />
