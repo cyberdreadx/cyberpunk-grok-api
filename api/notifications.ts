@@ -21,25 +21,51 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const sql = getDb();
 
+  // Self-heal: make sure the table exists even if migration 023 wasn't run.
+  try {
+    await sql`
+      CREATE TABLE IF NOT EXISTS notifications (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        type text NOT NULL,
+        title text NOT NULL,
+        body text,
+        actor_id uuid REFERENCES users(id) ON DELETE SET NULL,
+        actor_username text,
+        actor_avatar_url text,
+        ref_id text,
+        read boolean NOT NULL DEFAULT false,
+        created_at timestamptz NOT NULL DEFAULT now()
+      )
+    `;
+  } catch (e) {
+    console.error("[notifications] ensure table failed", e);
+  }
+
   /* ── GET: list notifications ──────────────────────────── */
   if (req.method === "GET") {
     const limit = Math.min(parseInt(String(req.query.limit)) || 30, 100);
     const offset = parseInt(String(req.query.offset)) || 0;
 
-    const rows = await sql`
-      SELECT id, type, title, body, actor_username, actor_avatar_url, ref_id, read, created_at
-      FROM notifications
-      WHERE user_id = ${auth.userId}
-      ORDER BY created_at DESC
-      LIMIT ${limit} OFFSET ${offset}
-    `;
+    try {
+      const rows = await sql`
+        SELECT id, type, title, body, actor_username, actor_avatar_url, ref_id, read, created_at
+        FROM notifications
+        WHERE user_id = ${auth.userId}
+        ORDER BY created_at DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
 
-    const [{ count }] = await sql`
-      SELECT count(*)::int AS count FROM notifications
-      WHERE user_id = ${auth.userId} AND read = false
-    `;
+      const [{ count }] = await sql`
+        SELECT count(*)::int AS count FROM notifications
+        WHERE user_id = ${auth.userId} AND read = false
+      `;
 
-    return res.status(200).json({ notifications: rows, unreadCount: count });
+      return res.status(200).json({ notifications: rows, unreadCount: count });
+    } catch (e: any) {
+      console.error("[notifications GET]", e);
+      return res.status(200).json({ notifications: [], unreadCount: 0 });
+    }
   }
 
   /* ── PATCH: mark read ─────────────────────────────────── */
