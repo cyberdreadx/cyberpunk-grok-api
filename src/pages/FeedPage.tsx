@@ -181,7 +181,7 @@ const FeedPage: React.FC = () => {
 
     // Load more when near bottom
     if (!nextCursor || loadingMore) return;
-    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 400;
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 1500;
     if (nearBottom) {
       setLoadingMore(true);
       fetchFeed(nextCursor);
