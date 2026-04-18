@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getUserFromRequest, checkBan } from "./_lib/auth";
 import { getDb } from "./_lib/db";
 import { hasPurchased, POSTING_GATE_MESSAGE } from "./_lib/purchaseGate";
+import { isVerified, VERIFICATION_REQUIRED_MESSAGE } from "./_lib/verifiedGate";
 
 const MAX_LOCK_COST = 100;
 const MAX_LOCK_PRICE_CENTS = 10000; // $100 max
@@ -278,6 +279,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const cost = Math.max(0, Math.min(parseInt(lockCost) || 0, MAX_LOCK_COST));
       const priceCents = Math.max(0, Math.min(parseInt(lockPriceCents) || 0, MAX_LOCK_PRICE_CENTS));
       const xrgeAmount = lockXrgeAmount ? String(Math.max(0, parseFloat(lockXrgeAmount) || 0)) : null;
+
+      // Verification gate: monetized posts (any non-zero lock) require an
+      // ACTIVE creator verification subscription.
+      const wantsMoney = cost > 0 || priceCents > 0 || (xrgeAmount && parseFloat(xrgeAmount) > 0);
+      if (wantsMoney && !(await isVerified(sql, auth.userId))) {
+        return res.status(403).json({ error: VERIFICATION_REQUIRED_MESSAGE, code: "VERIFICATION_REQUIRED" });
+      }
 
       const rows = await sql`
         INSERT INTO feed_posts (user_id, text, image_url, lock_cost, lock_price_cents, lock_xrge_amount)

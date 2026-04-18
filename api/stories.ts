@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getUserFromRequest, ADMIN_EMAIL, checkBan } from "./_lib/auth";
 import { getDb } from "./_lib/db";
 import { hasPurchased, POSTING_GATE_MESSAGE } from "./_lib/purchaseGate";
+import { isVerified, VERIFICATION_REQUIRED_MESSAGE } from "./_lib/verifiedGate";
 
 export const config = { maxDuration: 30 };
 
@@ -38,6 +39,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const type = (mediaType || "image").startsWith("video") ? "video" : "image";
       const cost = Math.max(0, Math.min(parseInt(lockCost) || 0, MAX_LOCK_COST));
       const xrgeAmount = lockXrgeAmount ? String(parseFloat(lockXrgeAmount) || 0) : null;
+
+      // Verification gate: monetized stories (any non-zero lock) require an
+      // ACTIVE creator verification subscription.
+      const wantsMoney = cost > 0 || (xrgeAmount && parseFloat(xrgeAmount) > 0);
+      if (wantsMoney && !(await isVerified(sql, auth.userId))) {
+        return res.status(403).json({ error: VERIFICATION_REQUIRED_MESSAGE, code: "VERIFICATION_REQUIRED" });
+      }
 
       // Ensure lock_xrge_amount column exists
       await sql`ALTER TABLE stories ADD COLUMN IF NOT EXISTS lock_xrge_amount TEXT DEFAULT NULL`.catch(() => {});

@@ -3,6 +3,7 @@ import { getDb } from "./_lib/db";
 import { getUserFromRequest, ADMIN_EMAIL } from "./_lib/auth";
 import { checkRateLimit } from "./_lib/ratelimit";
 import { fetchXrgePrice } from "./_lib/xrge";
+import { isVerified, VERIFICATION_REQUIRED_MESSAGE } from "./_lib/verifiedGate";
 
 const MIN_PAYOUT_CENTS = 2500; // $25
 const MIN_XRGE_PAYOUT_CENTS = 100; // $1 min for instant XRGE
@@ -75,6 +76,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // POST — request a payout
     if (req.method === "POST") {
+      // Verification gate: NEW payouts require an active verified status.
+      // Existing cash_balance accrued before verification is grandfathered:
+      // they CAN still see it, they just can't withdraw without verification.
+      if (!(await isVerified(sql, auth.userId))) {
+        return res.status(403).json({ error: VERIFICATION_REQUIRED_MESSAGE, code: "VERIFICATION_REQUIRED" });
+      }
+
       const { amountCents, method, payoutDetails } = req.body || {};
       const amount = parseInt(amountCents) || 0;
       const isXrge = method === "xrge";
