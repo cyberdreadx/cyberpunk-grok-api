@@ -30,26 +30,27 @@ interface FeedPost {
 interface Props {
   open: boolean;
   onClose: () => void;
-  /** Initial post id to focus. */
   initialPostId: string;
-  /** Optional creator filter — only show this user's posts. */
   userId?: string;
-  /** Optional follow/all filter passthrough. */
   filter?: "all" | "following";
 }
 
+/** How many slides to keep mounted on each side of the active one. */
+const WINDOW_RADIUS = 1;
+
 /**
- * Full-screen TikTok-style reel viewer. Vertical snap-scroll between posts,
- * fetches the same /feed listing the page uses, ensures the initial post is
- * present, and lazy-loads more on scroll-to-end.
+ * Full-screen TikTok-style reel viewer. Virtualized: only the active slide
+ * (and ±1 neighbours as placeholders) renders heavy media, so memory + decode
+ * cost stays flat as the feed grows.
  */
 const ReelViewer: React.FC<Props> = ({ open, onClose, initialPostId, userId, filter }) => {
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [activeIdx, setActiveIdx] = useState(0);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   const buildUrl = useCallback((cursor?: string) => {
     const params = new URLSearchParams({ sort: "new" });
@@ -59,13 +60,14 @@ const ReelViewer: React.FC<Props> = ({ open, onClose, initialPostId, userId, fil
     return `/feed?${params.toString()}`;
   }, [userId, filter]);
 
-  // Initial fetch — ensure initial post is in the list (prepend if missing).
+  // Initial fetch
   useEffect(() => {
     if (!open) return;
     let alive = true;
     setLoading(true);
     setPosts([]);
     setNextCursor(null);
+    setActiveIdx(0);
 
     (async () => {
       try {
@@ -74,6 +76,8 @@ const ReelViewer: React.FC<Props> = ({ open, onClose, initialPostId, userId, fil
         const list = data.posts || [];
         setPosts(list);
         setNextCursor(data.nextCursor);
+        const idx = initialPostId ? list.findIndex((p) => p.id === initialPostId) : 0;
+        setActiveIdx(idx >= 0 ? idx : 0);
       } catch {
         setPosts([]);
       } finally {
@@ -86,10 +90,35 @@ const ReelViewer: React.FC<Props> = ({ open, onClose, initialPostId, userId, fil
 
   // Scroll to the initial post once posts are rendered.
   useEffect(() => {
-    if (!open || loading || !initialPostId) return;
-    const el = itemRefs.current[initialPostId];
+    if (!open || loading || posts.length === 0) return;
+    const el = itemRefs.current[activeIdx];
     if (el) el.scrollIntoView({ behavior: "auto", block: "start" });
-  }, [open, loading, initialPostId]);
+    // Only run when posts list first populates.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, loading, posts.length]);
+
+  // Track which slide is active via IntersectionObserver (no scroll math).
+  useEffect(() => {
+    if (!open || loading || posts.length === 0) return;
+    const root = containerRef.current;
+    if (!root) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        // Pick the most-visible entry.
+        let best: IntersectionObserverEntry | null = null;
+        for (const e of entries) {
+          if (!best || e.intersectionRatio > best.intersectionRatio) best = e;
+        }
+        if (best && best.isIntersecting) {
+          const idx = itemRefs.current.findIndex((el) => el === best!.target);
+          if (idx >= 0) setActiveIdx(idx);
+        }
+      },
+      { root, threshold: [0.5, 0.75] }
+    );
+    itemRefs.current.forEach((el) => el && io.observe(el));
+    return () => io.disconnect();
+  }, [open, loading, posts.length]);
 
   // Lock body scroll while open.
   useEffect(() => {
@@ -102,33 +131,28 @@ const ReelViewer: React.FC<Props> = ({ open, onClose, initialPostId, userId, fil
   // Esc to close.
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  // Infinite scroll — load more when near the bottom.
-  const onScroll = useCallback(() => {
-    const c = containerRef.current;
-    if (!c || !nextCursor || loadingMore) return;
-    if (c.scrollTop + c.clientHeight >= c.scrollHeight - 800) {
-      setLoadingMore(true);
-      apiFetch<{ posts: FeedPost[]; nextCursor: string | null }>(buildUrl(nextCursor))
-        .then((d) => {
-          setPosts((prev) => {
-            const seen = new Set(prev.map((p) => p.id));
-            return [...prev, ...(d.posts || []).filter((p) => !seen.has(p.id))];
-          });
-          setNextCursor(d.nextCursor);
-        })
-        .catch(() => {})
-        .finally(() => setLoadingMore(false));
-    }
-  }, [buildUrl, loadingMore, nextCursor]);
+  // Infinite scroll — load more when active is near the end.
+  useEffect(() => {
+    if (!nextCursor || loadingMore) return;
+    if (activeIdx < posts.length - 3) return;
+    setLoadingMore(true);
+    apiFetch<{ posts: FeedPost[]; nextCursor: string | null }>(buildUrl(nextCursor))
+      .then((d) => {
+        setPosts((prev) => {
+          const seen = new Set(prev.map((p) => p.id));
+          return [...prev, ...(d.posts || []).filter((p) => !seen.has(p.id))];
+        });
+        setNextCursor(d.nextCursor);
+      })
+      .catch(() => {})
+      .finally(() => setLoadingMore(false));
+  }, [activeIdx, posts.length, nextCursor, loadingMore, buildUrl]);
 
-  // Desktop arrow nav helpers
   const scrollByOne = (dir: 1 | -1) => {
     const c = containerRef.current;
     if (!c) return;
@@ -139,7 +163,6 @@ const ReelViewer: React.FC<Props> = ({ open, onClose, initialPostId, userId, fil
 
   const node = (
     <div className="fixed inset-0 z-[100] bg-black">
-      {/* Close button */}
       <button
         onClick={onClose}
         aria-label="Close"
@@ -149,7 +172,6 @@ const ReelViewer: React.FC<Props> = ({ open, onClose, initialPostId, userId, fil
         <X className="w-5 h-5" />
       </button>
 
-      {/* Desktop nav arrows */}
       <button
         onClick={() => scrollByOne(-1)}
         aria-label="Previous"
@@ -176,18 +198,29 @@ const ReelViewer: React.FC<Props> = ({ open, onClose, initialPostId, userId, fil
       ) : (
         <div
           ref={containerRef}
-          onScroll={onScroll}
           className="h-[100dvh] w-full overflow-y-auto snap-y snap-mandatory overscroll-contain"
           style={{ scrollbarWidth: "none" }}
         >
-          {posts.map((p) => (
-            <div
-              key={p.id}
-              ref={(el) => { itemRefs.current[p.id] = el; }}
-            >
-              <ReelCard post={p} />
-            </div>
-          ))}
+          {posts.map((p, i) => {
+            const distance = Math.abs(i - activeIdx);
+            const shouldMount = distance <= WINDOW_RADIUS;
+            const isActive = i === activeIdx;
+            return (
+              <div
+                key={p.id}
+                ref={(el) => { itemRefs.current[i] = el; }}
+                className="h-[100dvh] snap-start snap-always"
+              >
+                {shouldMount ? (
+                  <ReelCard post={p} active={isActive} mountMedia />
+                ) : (
+                  // Lightweight placeholder — keeps scroll height correct without
+                  // mounting media / spawning DOM trees for off-screen slides.
+                  <div className="w-full h-full bg-black" />
+                )}
+              </div>
+            );
+          })}
           {loadingMore && (
             <div className="h-16 flex items-center justify-center">
               <Loader2 className="w-5 h-5 animate-spin text-primary" />
