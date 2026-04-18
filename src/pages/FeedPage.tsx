@@ -410,6 +410,7 @@ const FeedPage: React.FC = () => {
         )}
 
         <MobileBottomNav isAuthenticated={isAuthenticated} />
+        <FeatureExplainer feature="feed" />
       </>
     );
   }
