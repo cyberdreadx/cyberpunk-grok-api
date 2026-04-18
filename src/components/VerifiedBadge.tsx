@@ -20,12 +20,13 @@ const SIZE: Record<string, string> = {
  */
 const VerifiedBadge: React.FC<VerifiedBadgeProps> = ({ className, size = "sm", title }) => {
   return (
-    <BadgeCheck
-      className={cn("text-primary fill-primary/20 shrink-0", SIZE[size], className)}
-      strokeWidth={2.5}
-      aria-label="Verified creator"
-      title={title || "Verified creator — identity confirmed"}
-    />
+    <span title={title || "Verified creator — identity confirmed"} className="inline-flex shrink-0">
+      <BadgeCheck
+        className={cn("text-primary fill-primary/20", SIZE[size], className)}
+        strokeWidth={2.5}
+        aria-label="Verified creator"
+      />
+    </span>
   );
 };
 
