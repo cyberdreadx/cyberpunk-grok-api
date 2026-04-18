@@ -211,6 +211,12 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUserId, isAdmin }) => {
           onUnlocked={fetchStories}
         />
       )}
+
+      <FeatureExplainer
+        feature="stories"
+        open={explainerOpen}
+        onClose={handleExplainerClose}
+      />
     </>
   );
 };
