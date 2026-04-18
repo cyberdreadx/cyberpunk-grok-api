@@ -26,6 +26,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(403).json({ error: "Your account has been suspended.", reason: ban.reason });
       }
 
+      // Posting gate: must have purchased credits at least once
+      if (!(await hasPurchased(sql, auth.userId))) {
+        return res.status(403).json({ error: POSTING_GATE_MESSAGE, code: "PURCHASE_REQUIRED" });
+      }
+
       const { mediaUrl, mediaType, caption, prompt, lockCost, lockXrgeAmount } = req.body || {};
       if (!mediaUrl) return res.status(400).json({ error: "mediaUrl required" });
 
