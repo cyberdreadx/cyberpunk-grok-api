@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getUserFromRequest, ADMIN_EMAIL, checkBan } from "./_lib/auth";
 import { getDb } from "./_lib/db";
+import { hasPurchased, POSTING_GATE_MESSAGE } from "./_lib/purchaseGate";
 
 export const config = { maxDuration: 30 };
 
@@ -24,6 +25,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const ban = await checkBan(sql, auth.userId);
       if (ban.banned) {
         return res.status(403).json({ error: "Your account has been suspended.", reason: ban.reason });
+      }
+
+      // Posting gate: must have purchased credits at least once
+      if (!(await hasPurchased(sql, auth.userId))) {
+        return res.status(403).json({ error: POSTING_GATE_MESSAGE, code: "PURCHASE_REQUIRED" });
       }
 
       const { mediaUrl, mediaType, caption, prompt, lockCost, lockXrgeAmount } = req.body || {};
