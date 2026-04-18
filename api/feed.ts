@@ -61,6 +61,89 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       await sql`ALTER TABLE feed_posts ADD COLUMN IF NOT EXISTS lock_price_cents INT NOT NULL DEFAULT 0`.catch(() => {});
       await sql`ALTER TABLE feed_posts ADD COLUMN IF NOT EXISTS lock_xrge_amount TEXT DEFAULT NULL`.catch(() => {});
 
+      // ───── CREATORS VIEW: one row per author, ranked by recency + engagement ─────
+      if (viewMode === "creators" && !userId) {
+        const followingFilter = filter === "following"
+          ? sql`AND p.user_id IN (SELECT following_id FROM follows WHERE follower_id = ${auth.userId})`
+          : sql``;
+        // Latest post per author + 7-day score signal. Ranking:
+        //   recency (decays over hours) + score boost (log-scaled, capped influence).
+        const creatorRows = await sql`
+          WITH latest AS (
+            SELECT DISTINCT ON (p.user_id)
+              p.id, p.user_id, p.text, p.image_url, p.created_at,
+              p.lock_cost, p.lock_price_cents, p.lock_xrge_amount
+            FROM feed_posts p
+            WHERE 1=1 ${followingFilter}
+            ORDER BY p.user_id, p.created_at DESC
+          ),
+          stats AS (
+            SELECT
+              l.user_id,
+              COALESCE((
+                SELECT count(*)::int FROM feed_posts WHERE user_id = l.user_id
+              ), 0) AS post_count,
+              COALESCE((
+                SELECT SUM(
+                  CASE WHEN r.emoji = '👍' THEN 1 WHEN r.emoji = '👎' THEN -1 ELSE 0 END
+                )::int
+                FROM feed_reactions r
+                JOIN feed_posts fp ON fp.id = r.post_id
+                WHERE fp.user_id = l.user_id AND fp.created_at > now() - interval '7 days'
+              ), 0) AS recent_score
+            FROM latest l
+          )
+          SELECT
+            l.id AS latest_post_id,
+            l.user_id,
+            l.text AS latest_text,
+            l.image_url AS latest_image,
+            l.created_at AS latest_at,
+            l.lock_cost, l.lock_price_cents, l.lock_xrge_amount,
+            pr.username, pr.avatar_url,
+            s.post_count,
+            s.recent_score,
+            (
+              1.0 / POWER(EXTRACT(EPOCH FROM (now() - l.created_at)) / 3600.0 + 2, 1.2)
+              + LN(GREATEST(s.recent_score, 0) + 1) * 0.15
+            ) AS rank_score
+          FROM latest l
+          JOIN profiles pr ON pr.user_id = l.user_id
+          JOIN stats s ON s.user_id = l.user_id
+          ${cursor ? sql`WHERE (
+            1.0 / POWER(EXTRACT(EPOCH FROM (now() - l.created_at)) / 3600.0 + 2, 1.2)
+            + LN(GREATEST(s.recent_score, 0) + 1) * 0.15
+          ) < ${parseFloat(cursor as string)}` : sql``}
+          ORDER BY rank_score DESC, l.created_at DESC
+          LIMIT ${limit}
+        `;
+
+        return res.json({
+          creators: creatorRows.map((r: any) => {
+            const xrgePrice = parseFloat(r.lock_xrge_amount || "0") || 0;
+            const isOwner = r.user_id === auth.userId;
+            const isLocked = (r.lock_cost > 0 || r.lock_price_cents > 0 || xrgePrice > 0) && !isOwner;
+            return {
+              userId: r.user_id,
+              username: r.username,
+              avatarUrl: r.avatar_url,
+              postCount: r.post_count,
+              recentScore: r.recent_score,
+              latestPostId: r.latest_post_id,
+              latestText: isLocked ? "" : r.latest_text,
+              latestImage: isLocked ? null : r.latest_image,
+              previewImage: isLocked && r.latest_image ? r.latest_image : undefined,
+              latestAt: r.latest_at,
+              latestLocked: isLocked,
+              rankScore: parseFloat(r.rank_score),
+            };
+          }),
+          nextCursor: creatorRows.length === limit
+            ? String(creatorRows[creatorRows.length - 1].rank_score)
+            : null,
+        });
+      }
+
       const selectCols = (authId: string) => sql`
         p.*, pr.username, pr.avatar_url,
         COALESCE((SELECT count(*)::int FROM feed_reactions WHERE post_id = p.id AND emoji = '👍'), 0)
