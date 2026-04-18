@@ -38,6 +38,8 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUserId, isAdmin }) => {
   const [users, setUsers] = useState<StoryUser[]>([]);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [activeUserIdx, setActiveUserIdx] = useState(0);
+  const [explainerOpen, setExplainerOpen] = useState(false);
+  const [pendingOpenIdx, setPendingOpenIdx] = useState<number | null>(null);
 
   // Only fetch if logged in
   const loggedIn = hasAuthToken();
