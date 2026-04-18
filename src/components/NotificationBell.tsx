@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { Bell, Check, MessageCircle, UserPlus, ThumbsUp, Unlock, Coins, Info } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -30,6 +31,7 @@ interface NotificationBellProps {
 }
 
 const NotificationBell: React.FC<NotificationBellProps> = ({ isAuthenticated }) => {
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -89,6 +91,30 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ isAuthenticated }) 
     } catch {}
   };
 
+  const handleClick = async (n: Notification) => {
+    setOpen(false);
+    // Mark as read (optimistic)
+    if (!n.read) {
+      setNotifications(prev => prev.map(x => x.id === n.id ? { ...x, read: true } : x));
+      setUnreadCount(c => Math.max(0, c - 1));
+      apiFetch("/notifications", { method: "PATCH", body: { ids: [n.id] } }).catch(() => {});
+    }
+    // Route based on type
+    if (n.type === "follow" && n.actor_username) {
+      navigate(`/profile/${n.actor_username}`);
+      return;
+    }
+    if (n.ref_id && (n.type === "comment" || n.type === "upvote" || n.type === "unlock")) {
+      // Stash target so FeedPage opens ReelViewer focused on this post
+      try {
+        sessionStorage.setItem("openReelPostId", n.ref_id);
+      } catch {}
+      navigate("/feed");
+      // Notify FeedPage if already mounted
+      window.dispatchEvent(new CustomEvent("open-reel", { detail: { postId: n.ref_id } }));
+    }
+  };
+
   if (!isAuthenticated) return null;
 
   return (
@@ -136,9 +162,10 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ isAuthenticated }) 
               </div>
             ) : (
               notifications.map((n) => (
-                <div
+                <button
                   key={n.id}
-                  className={`flex items-start gap-2.5 px-3 py-2.5 border-b border-border/10 hover:bg-primary/5 transition-colors ${
+                  onClick={() => handleClick(n)}
+                  className={`w-full text-left flex items-start gap-2.5 px-3 py-2.5 border-b border-border/10 hover:bg-primary/10 transition-colors ${
                     !n.read ? "bg-primary/5" : ""
                   }`}
                 >
@@ -171,7 +198,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ isAuthenticated }) 
                   {!n.read && (
                     <div className="w-2 h-2 rounded-full bg-primary shrink-0 mt-2" />
                   )}
-                </div>
+                </button>
               ))
             )}
           </div>
