@@ -413,6 +413,116 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
+    // ════════════════════════════════════════════════════════════════════
+    // CREATOR VERIFICATION (Stripe Identity + monthly verification sub)
+    // ════════════════════════════════════════════════════════════════════
+
+    // Verification checkout completed → mark one-time fee paid + store sub id.
+    if (
+      event.type === "checkout.session.completed" ||
+      event.type === "checkout.session.async_payment_succeeded"
+    ) {
+      const s = event.data.object as Stripe.Checkout.Session;
+      if (s.metadata?.type === "creator_verification_start" && s.payment_status !== "unpaid") {
+        const userId = s.client_reference_id || s.metadata?.user_id;
+        const subId = typeof s.subscription === "string" ? s.subscription : s.subscription?.id;
+        if (userId) {
+          await sql`
+            UPDATE users
+            SET verification_onetime_paid = true,
+                verification_subscription_id = COALESCE(${subId || null}, verification_subscription_id),
+                verification_status = CASE WHEN verification_status = 'verified' THEN verification_status ELSE 'pending' END,
+                updated_at = now()
+            WHERE id = ${userId}::uuid
+          `;
+          console.log(`[verify] Onetime fee paid for ${userId}, sub=${subId}`);
+        }
+      }
+    }
+
+    // Identity session verified → grant verified status
+    if (event.type === "identity.verification_session.verified") {
+      const session = event.data.object as any;
+      const userId = session.metadata?.user_id;
+      if (userId) {
+        await sql`
+          UPDATE users
+          SET verification_status = 'verified',
+              verified_at = COALESCE(verified_at, now()),
+              verification_lapsed_at = NULL,
+              updated_at = now()
+          WHERE id = ${userId}::uuid
+        `;
+        console.log(`[verify] Identity verified for ${userId}`);
+      }
+    }
+
+    // Identity failed / requires input — keep pending, log it
+    if (
+      event.type === "identity.verification_session.requires_input" ||
+      event.type === "identity.verification_session.canceled"
+    ) {
+      const session = event.data.object as any;
+      const userId = session.metadata?.user_id;
+      if (userId) {
+        console.log(`[verify] Identity ${event.type} for ${userId}`);
+      }
+    }
+
+    // Verification subscription invoice paid → bump renews_at
+    if (event.type === "invoice.paid") {
+      const inv = event.data.object as any;
+      const subId = inv.subscription as string | null;
+      const lineMeta = inv.lines?.data?.[0]?.metadata || {};
+      const isVerifySub = lineMeta.type === "creator_verification";
+      if (subId && isVerifySub && lineMeta.user_id) {
+        const periodEnd = inv.lines?.data?.[0]?.period?.end;
+        const renewsAt = periodEnd
+          ? new Date(periodEnd * 1000).toISOString()
+          : new Date(Date.now() + 31 * 24 * 60 * 60 * 1000).toISOString();
+        await sql`
+          UPDATE users
+          SET verification_renews_at = ${renewsAt}::timestamptz,
+              verification_subscription_id = ${subId},
+              verification_lapsed_at = NULL,
+              updated_at = now()
+          WHERE id = ${lineMeta.user_id}::uuid
+        `;
+        console.log(`[verify] Sub renewed for ${lineMeta.user_id} until ${renewsAt}`);
+      }
+    }
+
+    // Verification sub deleted or payment failed → IMMEDIATE revoke
+    if (event.type === "customer.subscription.deleted") {
+      const sub = event.data.object as Stripe.Subscription;
+      if (sub.metadata?.type === "creator_verification" && sub.metadata?.user_id) {
+        await sql`
+          UPDATE users
+          SET verification_status = 'lapsed',
+              verification_lapsed_at = now(),
+              verification_renews_at = NULL,
+              updated_at = now()
+          WHERE id = ${sub.metadata.user_id}::uuid
+        `;
+        console.log(`[verify] Subscription deleted, revoked for ${sub.metadata.user_id}`);
+      }
+    }
+
+    if (event.type === "invoice.payment_failed") {
+      const inv = event.data.object as any;
+      const lineMeta = inv.lines?.data?.[0]?.metadata || {};
+      if (lineMeta.type === "creator_verification" && lineMeta.user_id) {
+        await sql`
+          UPDATE users
+          SET verification_status = 'lapsed',
+              verification_lapsed_at = now(),
+              updated_at = now()
+          WHERE id = ${lineMeta.user_id}::uuid
+        `;
+        console.log(`[verify] Payment failed, revoked for ${lineMeta.user_id}`);
+      }
+    }
+
     return res.status(200).json({ received: true });
   } catch (err: any) {
     console.error("[webhook]", err.message);
