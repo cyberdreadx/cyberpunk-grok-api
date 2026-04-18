@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { Bell, Check, MessageCircle, UserPlus, ThumbsUp, Unlock, Coins, Info } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
