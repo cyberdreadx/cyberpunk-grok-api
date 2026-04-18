@@ -15,6 +15,7 @@ import { Send, Users, Globe, Loader2, Plus, X, Lock, Zap, ShieldAlert } from "lu
 import { useToast } from "@/hooks/use-toast";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import FeatureExplainer from "@/components/FeatureExplainer";
+import ReelViewer from "@/components/ReelViewer";
 
 const FEED_RULES = [
   "No illegal content of any kind",
@@ -48,6 +49,7 @@ const FeedPage: React.FC = () => {
   const [lockPrice, setLockPrice] = useState("");
   const [lockXrge, setLockXrge] = useState("");
   const [activeCreator, setActiveCreator] = useState<FeedCreator | null>(null);
+  const [reelTarget, setReelTarget] = useState<{ postId: string; userId?: string } | null>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   const fetchCreators = useCallback(async (cursor?: string) => {
@@ -128,11 +130,13 @@ const FeedPage: React.FC = () => {
   };
 
   const openCreator = (c: FeedCreator) => {
-    if (isMobile) {
-      navigate(`/profile/${c.username}`);
-    } else {
-      setActiveCreator(c);
-    }
+    // Open the immersive reel viewer focused on this creator's latest post.
+    setReelTarget({ postId: c.latestPostId, userId: c.userId });
+  };
+
+  const openProfile = (c: FeedCreator) => {
+    if (isMobile) navigate(`/profile/${c.username}`);
+    else setActiveCreator(c);
   };
 
   const rulesBanner = !rulesAcked || showRules ? (
