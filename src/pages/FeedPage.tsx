@@ -4,40 +4,17 @@ import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
 import CyberLayout from "@/components/CyberLayout";
-import PostCard from "@/components/PostCard";
-import ReelCard from "@/components/ReelCard";
+import CreatorCard, { type FeedCreator } from "@/components/CreatorCard";
+import CreatorPanel from "@/components/CreatorPanel";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Send, Users, Globe, Loader2, Plus, X, Lock, Zap, ShieldAlert, Flame, TrendingUp, Clock } from "lucide-react";
+import { Send, Users, Globe, Loader2, Plus, X, Lock, Zap, ShieldAlert } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import FeatureExplainer from "@/components/FeatureExplainer";
-
-interface FeedPost {
-  id: string;
-  userId: string;
-  username: string;
-  avatarUrl: string | null;
-  text: string;
-  imageUrl: string | null;
-  previewImageUrl?: string;
-  previewText?: string;
-  createdAt: string;
-  score: number;
-  userVote: string | null;
-  commentCount: number;
-  flagCount?: number;
-  userFlagged?: boolean;
-  lockCost?: number;
-  lockPriceCents?: number;
-  lockXrgeAmount?: string;
-  unlocked?: boolean;
-  isOwner?: boolean;
-  viewCount?: number;
-}
 
 const FEED_RULES = [
   "No illegal content of any kind",
@@ -51,17 +28,16 @@ const FEED_RULES = [
 ];
 
 const FeedPage: React.FC = () => {
-  const { user, isAuthenticated, loading: authLoading } = useAuth();
+  const { isAuthenticated, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const [rulesAcked, setRulesAcked] = useState(() => localStorage.getItem("feed-rules-acked") === "1");
   const [showRules, setShowRules] = useState(false);
 
-  const [posts, setPosts] = useState<FeedPost[]>([]);
+  const [creators, setCreators] = useState<FeedCreator[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "following">("all");
-  const [sort, setSort] = useState<"hot" | "top" | "new">("hot");
   const [newText, setNewText] = useState("");
   const [posting, setPosting] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -71,22 +47,21 @@ const FeedPage: React.FC = () => {
   const [lockCredits, setLockCredits] = useState("");
   const [lockPrice, setLockPrice] = useState("");
   const [lockXrge, setLockXrge] = useState("");
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [activeReelIndex, setActiveReelIndex] = useState(0);
+  const [activeCreator, setActiveCreator] = useState<FeedCreator | null>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
-  const fetchFeed = useCallback(async (cursor?: string) => {
+  const fetchCreators = useCallback(async (cursor?: string) => {
     try {
-      const params = new URLSearchParams();
+      const params = new URLSearchParams({ view: "creators" });
       if (filter === "following") params.set("filter", "following");
-      if (sort !== "hot") params.set("sort", sort);
       if (cursor) params.set("cursor", cursor);
-      const q = params.toString();
-      const data = await apiFetch<{ posts: FeedPost[]; nextCursor: string | null }>(`/feed${q ? `?${q}` : ""}`);
+      const data = await apiFetch<{ creators: FeedCreator[]; nextCursor: string | null }>(
+        `/feed?${params.toString()}`
+      );
       if (cursor) {
-        setPosts((prev) => [...prev, ...data.posts]);
+        setCreators((prev) => [...prev, ...data.creators]);
       } else {
-        setPosts(data.posts);
+        setCreators(data.creators);
       }
       setNextCursor(data.nextCursor);
     } catch {
@@ -95,7 +70,7 @@ const FeedPage: React.FC = () => {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [filter, sort, toast]);
+  }, [filter, toast]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -104,8 +79,22 @@ const FeedPage: React.FC = () => {
       return;
     }
     setLoading(true);
-    fetchFeed();
-  }, [authLoading, isAuthenticated, fetchFeed, navigate]);
+    fetchCreators();
+  }, [authLoading, isAuthenticated, fetchCreators, navigate]);
+
+  // IntersectionObserver for infinite scroll
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el || !nextCursor || loadingMore) return;
+    const io = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        setLoadingMore(true);
+        fetchCreators(nextCursor);
+      }
+    }, { rootMargin: "400px" });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [nextCursor, loadingMore, fetchCreators]);
 
   const handlePost = async () => {
     if (!newText.trim()) return;
@@ -124,7 +113,8 @@ const FeedPage: React.FC = () => {
       setLockCredits("");
       setLockPrice("");
       setLockXrge("");
-      fetchFeed();
+      setLoading(true);
+      fetchCreators();
     } catch (err: any) {
       toast({ title: err.message, variant: "destructive" });
     } finally {
@@ -132,15 +122,17 @@ const FeedPage: React.FC = () => {
     }
   };
 
-  const loadMore = () => {
-    if (!nextCursor || loadingMore) return;
-    setLoadingMore(true);
-    fetchFeed(nextCursor);
-  };
-
   const ackRules = () => {
     localStorage.setItem("feed-rules-acked", "1");
     setRulesAcked(true);
+  };
+
+  const openCreator = (c: FeedCreator) => {
+    if (isMobile) {
+      navigate(`/profile/${c.username}`);
+    } else {
+      setActiveCreator(c);
+    }
   };
 
   const rulesBanner = !rulesAcked || showRules ? (
@@ -160,34 +152,16 @@ const FeedPage: React.FC = () => {
           </li>
         ))}
       </ul>
-      <Button 
-        size="sm" 
-        variant="destructive" 
-        onClick={() => { ackRules(); setShowRules(false); }} 
+      <Button
+        size="sm"
+        variant="destructive"
+        onClick={() => { ackRules(); setShowRules(false); }}
         className="font-mono-share text-[10px] w-full"
       >
         I UNDERSTAND — CONTINUE
       </Button>
     </div>
   ) : null;
-
-  const handleReelScroll = useCallback(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-
-    // Track which reel is currently visible
-    const viewportH = el.clientHeight;
-    const idx = Math.round(el.scrollTop / viewportH);
-    setActiveReelIndex(idx);
-
-    // Load more when near bottom
-    if (!nextCursor || loadingMore) return;
-    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 1500;
-    if (nearBottom) {
-      setLoadingMore(true);
-      fetchFeed(nextCursor);
-    }
-  }, [nextCursor, loadingMore, fetchFeed]);
 
   const lockControls = (
     <div className="space-y-2">
@@ -201,49 +175,77 @@ const FeedPage: React.FC = () => {
         <div className="flex gap-2 flex-wrap">
           <div className="flex-1 min-w-[80px]">
             <label className="font-mono-share text-[9px] text-muted-foreground block mb-1">Credits</label>
-            <Input
-              type="number"
-              min="0"
-              max="100"
-              placeholder="e.g. 5"
-              value={lockCredits}
-              onChange={(e) => setLockCredits(e.target.value)}
-              className="font-mono-share text-xs h-8"
-            />
+            <Input type="number" min="0" max="100" placeholder="e.g. 5" value={lockCredits}
+              onChange={(e) => setLockCredits(e.target.value)} className="font-mono-share text-xs h-8" />
           </div>
           <div className="flex-1 min-w-[80px]">
             <label className="font-mono-share text-[9px] text-muted-foreground block mb-1">USD ($)</label>
-            <Input
-              type="number"
-              min="0"
-              max="100"
-              step="0.01"
-              placeholder="e.g. 2.99"
-              value={lockPrice}
-              onChange={(e) => setLockPrice(e.target.value)}
-              className="font-mono-share text-xs h-8"
-            />
+            <Input type="number" min="0" max="100" step="0.01" placeholder="e.g. 2.99" value={lockPrice}
+              onChange={(e) => setLockPrice(e.target.value)} className="font-mono-share text-xs h-8" />
           </div>
           <div className="flex-1 min-w-[80px]">
             <label className="font-mono-share text-[9px] text-muted-foreground flex items-center gap-1 block mb-1">
               <Zap className="w-3 h-3 text-secondary" /> XRGE
             </label>
-            <Input
-              type="number"
-              min="0"
-              step="0.01"
-              placeholder="e.g. 100"
-              value={lockXrge}
-              onChange={(e) => setLockXrge(e.target.value)}
-              className="font-mono-share text-xs h-8"
-            />
+            <Input type="number" min="0" step="0.01" placeholder="e.g. 100" value={lockXrge}
+              onChange={(e) => setLockXrge(e.target.value)} className="font-mono-share text-xs h-8" />
           </div>
         </div>
       )}
     </div>
   );
 
-  /* ───── MOBILE REELS VIEW ───── */
+  const filterTabs = (variant: "mobile" | "desktop") => (
+    <div className="flex gap-1.5 flex-wrap">
+      <button
+        onClick={() => { setFilter("all"); setLoading(true); }}
+        className={`flex items-center gap-1 px-2.5 py-1 rounded-full font-mono-share text-[10px] transition-colors border ${
+          filter === "all"
+            ? "border-primary/50 bg-primary/10 text-primary"
+            : variant === "mobile"
+            ? "border-white/10 bg-black/30 text-white/70 backdrop-blur-sm"
+            : "border-border/30 text-muted-foreground hover:text-foreground"
+        }`}
+      >
+        <Globe className="w-3 h-3" /> ALL
+      </button>
+      <button
+        onClick={() => { setFilter("following"); setLoading(true); }}
+        className={`flex items-center gap-1 px-2.5 py-1 rounded-full font-mono-share text-[10px] transition-colors border ${
+          filter === "following"
+            ? "border-primary/50 bg-primary/10 text-primary"
+            : variant === "mobile"
+            ? "border-white/10 bg-black/30 text-white/70 backdrop-blur-sm"
+            : "border-border/30 text-muted-foreground hover:text-foreground"
+        }`}
+      >
+        <Users className="w-3 h-3" /> FOLLOWING
+      </button>
+    </div>
+  );
+
+  const skeletonGrid = (cols: string) => (
+    <div className={`grid ${cols} gap-3`}>
+      {[...Array(8)].map((_, i) => (
+        <div
+          key={i}
+          className="aspect-[3/4] rounded-lg overflow-hidden bg-card/40 border border-border/30 animate-in fade-in duration-300"
+          style={{ animationDelay: `${i * 60}ms` }}
+        >
+          <Skeleton className="w-full h-3/4" />
+          <div className="p-2 flex items-center gap-2">
+            <Skeleton className="w-7 h-7 rounded-full" />
+            <div className="flex-1 space-y-1">
+              <Skeleton className="h-2 w-20 rounded" />
+              <Skeleton className="h-2 w-12 rounded" />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
+  /* ───── MOBILE GRID VIEW ───── */
   if (isMobile) {
     return (
       <>
@@ -252,117 +254,49 @@ const FeedPage: React.FC = () => {
             <div className="max-w-sm w-full">{rulesBanner}</div>
           </div>
         )}
-        <div
-          ref={scrollRef}
-          onScroll={handleReelScroll}
-          className="fixed inset-0 z-0 overflow-y-auto snap-y snap-mandatory bg-black"
-          style={{ WebkitOverflowScrolling: "touch" }}
-        >
-          {loading ? (
-            <div className="h-[100dvh] flex items-center justify-center">
-              <Loader2 className="w-8 h-8 animate-spin text-primary" />
-            </div>
-          ) : posts.length === 0 ? (
-            <div className="h-[100dvh] flex items-center justify-center">
-              <p className="font-mono-share text-xs text-muted-foreground">
-                {filter === "following" ? "Follow users to see their posts here" : "No posts yet. Be the first!"}
-              </p>
-            </div>
-          ) : (
-            <>
-              {posts.map((post, i) => {
-                // Fully render reels within ±3, lightly preload media within ±6
-                const RENDER_WINDOW = 3;
-                const PRELOAD_WINDOW = 6;
-                const distance = Math.abs(i - activeReelIndex);
-                const inWindow = distance <= RENDER_WINDOW;
-                const shouldPreload = !inWindow && distance <= PRELOAD_WINDOW;
-
-                if (!inWindow) {
-                  return (
-                    <div
-                      key={post.id}
-                      className="h-[100dvh] snap-start snap-always bg-black"
-                    >
-                      {shouldPreload && post.imageUrl && (
-                        <img src={post.imageUrl} alt="" aria-hidden className="hidden" decoding="async" />
-                      )}
-                      {shouldPreload && post.previewImageUrl && (
-                        <img src={post.previewImageUrl} alt="" aria-hidden className="hidden" decoding="async" />
-                      )}
-                    </div>
-                  );
-                }
-
-                return (
-                  <ReelCard key={post.id} post={post} onUpdate={() => fetchFeed()} />
-                );
-              })}
-              {loadingMore && (
-                <div className="h-[100dvh] snap-start flex items-center justify-center bg-black">
-                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                </div>
-              )}
-            </>
-          )}
-        </div>
-
-        {/* Top bar overlay */}
-        <div
-          className="fixed left-0 right-0 z-40 px-4 space-y-1.5"
-          style={{ top: "calc(env(safe-area-inset-top, 0px) + 8px)" }}
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <h1 className="font-orbitron text-sm tracking-widest text-white drop-shadow-lg">FEED</h1>
-              <button
-                onClick={() => setShowRules(true)}
-                className="text-white/60 hover:text-white transition-colors"
-                aria-label="View community guidelines"
-              >
-                <ShieldAlert className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="flex gap-1.5">
-              <button
-                onClick={() => { setFilter("all"); setLoading(true); }}
-                className={`px-2.5 py-1 rounded-full font-mono-share text-[9px] backdrop-blur-sm transition-colors ${
-                  filter === "all"
-                    ? "bg-primary/30 text-primary border border-primary/40"
-                    : "bg-black/30 text-white/70 border border-white/10"
-                }`}
-              >
-                ALL
-              </button>
-              <button
-                onClick={() => { setFilter("following"); setLoading(true); }}
-                className={`px-2.5 py-1 rounded-full font-mono-share text-[9px] backdrop-blur-sm transition-colors ${
-                  filter === "following"
-                    ? "bg-primary/30 text-primary border border-primary/40"
-                    : "bg-black/30 text-white/70 border border-white/10"
-                }`}
-              >
-                FOLLOWING
-              </button>
+        <div className="min-h-[100dvh] bg-background pb-24">
+          {/* Sticky header */}
+          <div
+            className="sticky z-30 bg-background/85 backdrop-blur-md border-b border-border/30 px-3 py-2 space-y-2"
+            style={{ top: 0, paddingTop: "calc(env(safe-area-inset-top, 0px) + 8px)" }}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <h1 className="font-orbitron text-sm tracking-widest text-foreground">FEED</h1>
+                <button
+                  onClick={() => setShowRules(true)}
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                  aria-label="View community guidelines"
+                >
+                  <ShieldAlert className="w-4 h-4" />
+                </button>
+              </div>
+              {filterTabs("mobile")}
             </div>
           </div>
-          <div className="flex justify-end gap-1.5">
-            {(["hot", "top", "new"] as const).map((s) => {
-              const icon = s === "hot" ? <Flame className="w-3 h-3" /> : s === "top" ? <TrendingUp className="w-3 h-3" /> : <Clock className="w-3 h-3" />;
-              return (
-                <button
-                  key={s}
-                  onClick={() => { setSort(s); setLoading(true); }}
-                  className={`px-2 py-1 rounded-full font-mono-share text-[9px] backdrop-blur-sm transition-colors flex items-center gap-1 ${
-                    sort === s
-                      ? "bg-secondary/30 text-secondary border border-secondary/40"
-                      : "bg-black/30 text-white/70 border border-white/10"
-                  }`}
-                >
-                  {icon} {s.toUpperCase()}
-                </button>
-              );
-            })}
+
+          {/* Grid */}
+          <div className="px-3 pt-3">
+            {loading ? (
+              skeletonGrid("grid-cols-2")
+            ) : creators.length === 0 ? (
+              <div className="py-16 text-center">
+                <p className="font-mono-share text-xs text-muted-foreground">
+                  {filter === "following" ? "Follow users to see their posts here" : "No creators yet. Be the first to post!"}
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  {creators.map((c) => (
+                    <CreatorCard key={c.userId} creator={c} onOpen={openCreator} />
+                  ))}
+                </div>
+                <div ref={sentinelRef} className="h-12 flex items-center justify-center">
+                  {loadingMore && <Loader2 className="w-5 h-5 animate-spin text-primary" />}
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -377,7 +311,10 @@ const FeedPage: React.FC = () => {
 
         {/* Compose sheet */}
         {showCompose && (
-          <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 backdrop-blur-sm pt-[env(safe-area-inset-top,0px)]" onClick={() => setShowCompose(false)}>
+          <div
+            className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 backdrop-blur-sm pt-[env(safe-area-inset-top,0px)]"
+            onClick={() => setShowCompose(false)}
+          >
             <div
               className="w-[calc(100%-32px)] mt-16 bg-card rounded-2xl p-4 space-y-3 animate-in fade-in zoom-in-95 duration-200 shadow-xl"
               onClick={(e) => e.stopPropagation()}
@@ -415,13 +352,13 @@ const FeedPage: React.FC = () => {
     );
   }
 
-  /* ───── DESKTOP VIEW ───── */
+  /* ───── DESKTOP GRID VIEW ───── */
   return (
     <CyberLayout>
-      <div className="max-w-2xl mx-auto px-4 py-6 space-y-4 pb-24">
+      <div className="max-w-6xl mx-auto px-4 py-6 space-y-4 pb-24">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <h1 className="font-orbitron text-lg tracking-widest text-foreground">LIVE FEED</h1>
+            <h1 className="font-orbitron text-lg tracking-widest text-foreground">CREATORS</h1>
             <button
               onClick={() => setShowRules(true)}
               className="text-muted-foreground hover:text-foreground transition-colors"
@@ -459,94 +396,36 @@ const FeedPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex gap-2 flex-wrap">
-          <button
-            onClick={() => setFilter("all")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded font-mono-share text-[10px] transition-colors border ${
-              filter === "all"
-                ? "border-primary/50 bg-primary/10 text-primary"
-                : "border-border/30 text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <Globe className="w-3 h-3" /> GLOBAL
-          </button>
-          <button
-            onClick={() => setFilter("following")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded font-mono-share text-[10px] transition-colors border ${
-              filter === "following"
-                ? "border-primary/50 bg-primary/10 text-primary"
-                : "border-border/30 text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <Users className="w-3 h-3" /> FOLLOWING
-          </button>
-
-          <div className="w-px bg-border/30 mx-1" />
-
-          {(["hot", "top", "new"] as const).map((s) => {
-            const icon = s === "hot" ? <Flame className="w-3 h-3" /> : s === "top" ? <TrendingUp className="w-3 h-3" /> : <Clock className="w-3 h-3" />;
-            return (
-              <button
-                key={s}
-                onClick={() => setSort(s)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded font-mono-share text-[10px] transition-colors border ${
-                  sort === s
-                    ? "border-secondary/50 bg-secondary/10 text-secondary"
-                    : "border-border/30 text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {icon} {s.toUpperCase()}
-              </button>
-            );
-          })}
-        </div>
+        {filterTabs("desktop")}
 
         {loading ? (
-          <div className="space-y-4">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="bg-card/60 border border-border/40 rounded-lg p-4 space-y-3 animate-in fade-in duration-300" style={{ animationDelay: `${i * 80}ms` }}>
-                <div className="flex items-center gap-3">
-                  <Skeleton className="w-8 h-8 rounded-full" />
-                  <div className="space-y-1.5">
-                    <Skeleton className="h-3 w-24 rounded" />
-                    <Skeleton className="h-2 w-16 rounded" />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Skeleton className="h-3 w-full rounded" />
-                  <Skeleton className="h-3 w-3/4 rounded" />
-                </div>
-                {i % 2 === 0 && <Skeleton className="h-40 w-full rounded" />}
-                <div className="flex items-center gap-4 pt-1">
-                  <Skeleton className="h-4 w-16 rounded" />
-                  <Skeleton className="h-4 w-20 rounded" />
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : posts.length === 0 ? (
+          skeletonGrid("grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5")
+        ) : creators.length === 0 ? (
           <div className="text-center py-12">
             <p className="font-mono-share text-xs text-muted-foreground">
-              {filter === "following" ? "Follow users to see their posts here" : "No posts yet. Be the first!"}
+              {filter === "following" ? "Follow users to see their posts here" : "No creators yet. Be the first to post!"}
             </p>
           </div>
         ) : (
-          <div className="space-y-4">
-            {posts.map((post) => (
-              <PostCard key={post.id} post={post} onUpdate={() => fetchFeed()} />
-            ))}
-            {nextCursor && (
-              <div className="flex justify-center pt-2">
-                <Button variant="ghost" size="sm" onClick={loadMore} disabled={loadingMore} className="font-mono-share text-[10px]">
-                  {loadingMore ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : null}
-                  LOAD MORE
-                </Button>
-              </div>
-            )}
-          </div>
+          <>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+              {creators.map((c) => (
+                <CreatorCard
+                  key={c.userId}
+                  creator={c}
+                  onOpen={openCreator}
+                  active={activeCreator?.userId === c.userId}
+                />
+              ))}
+            </div>
+            <div ref={sentinelRef} className="h-12 flex items-center justify-center">
+              {loadingMore && <Loader2 className="w-5 h-5 animate-spin text-primary" />}
+            </div>
+          </>
         )}
-        <div ref={bottomRef} />
       </div>
+
+      <CreatorPanel creator={activeCreator} onClose={() => setActiveCreator(null)} />
       <MobileBottomNav isAuthenticated={isAuthenticated} />
       <FeatureExplainer feature="feed" />
     </CyberLayout>
