@@ -153,7 +153,43 @@ const EarningsPanel: React.FC = () => {
     <div className="bg-card/60 border border-border/40 rounded-lg p-4 space-y-4">
       <h2 className="font-orbitron text-xs text-muted-foreground tracking-widest flex items-center gap-2">
         <TrendingUp className="w-3.5 h-3.5" /> CREATOR EARNINGS
+        {isVerified && <BadgeCheck className="w-3.5 h-3.5 text-primary" />}
       </h2>
+
+      {/* Verification banner — required for monetization & payouts */}
+      {!isVerified && (
+        <div className="bg-primary/5 border border-primary/30 rounded-md p-3 space-y-2">
+          <div className="flex items-start gap-2">
+            <ShieldAlert className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="font-orbitron text-[11px] text-primary">
+                {verificationStatus === "pending" ? "VERIFICATION IN PROGRESS" :
+                 verificationStatus === "lapsed" ? "VERIFICATION LAPSED" :
+                 "GET VERIFIED TO MONETIZE"}
+              </p>
+              <p className="font-mono-share text-[10px] text-muted-foreground mt-0.5">
+                {verificationStatus === "pending"
+                  ? "Finish payment + ID check to enable payouts and priced posts."
+                  : verificationStatus === "lapsed"
+                  ? "Your verification subscription lapsed. Restart to re-enable monetization."
+                  : "Identity verification is required to set prices on posts/stories or request payouts."}
+              </p>
+            </div>
+          </div>
+          <Button
+            onClick={() => setVerifyOpen(true)}
+            size="sm"
+            className="w-full font-mono-share text-[10px]"
+          >
+            <BadgeCheck className="w-3.5 h-3.5 mr-2" />
+            {verificationStatus === "pending" ? "CONTINUE VERIFICATION" :
+             verificationStatus === "lapsed" ? "RE-ACTIVATE" :
+             "GET VERIFIED"}
+          </Button>
+        </div>
+      )}
+
+      <VerificationDialog open={verifyOpen} onOpenChange={setVerifyOpen} />
 
       {/* KPI cards */}
       <div className="grid grid-cols-2 gap-3">
@@ -220,7 +256,7 @@ const EarningsPanel: React.FC = () => {
       )}
 
       {/* Withdraw button */}
-      {s.cashBalanceCents >= 100 && !hasPending && (
+      {s.cashBalanceCents >= 100 && !hasPending && isVerified && (
         <Button
           onClick={() => setShowWithdraw(!showWithdraw)}
           className="w-full font-mono-share text-xs"
@@ -229,6 +265,11 @@ const EarningsPanel: React.FC = () => {
           <ArrowDownToLine className="w-3.5 h-3.5 mr-2" />
           REQUEST WITHDRAWAL
         </Button>
+      )}
+      {s.cashBalanceCents >= 100 && !hasPending && !isVerified && (
+        <p className="font-mono-share text-[10px] text-muted-foreground text-center italic">
+          Get verified to withdraw your ${(s.cashBalanceCents / 100).toFixed(2)}.
+        </p>
       )}
 
       {s.cashBalanceCents > 0 && s.cashBalanceCents < 100 && (
