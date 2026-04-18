@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { apiFetch } from "@/lib/api";
-import { DollarSign, Coins, Heart, TrendingUp, Loader2, Wallet, ArrowDownToLine, Zap } from "lucide-react";
+import { DollarSign, Coins, Heart, TrendingUp, Loader2, Wallet, ArrowDownToLine, Zap, BadgeCheck, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import VerificationDialog from "@/components/VerificationDialog";
 
 interface EarningsSummary {
   totalCreditsEarned: number;
@@ -52,6 +54,7 @@ interface PayoutData {
 
 const EarningsPanel: React.FC = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [data, setData] = useState<EarningsData | null>(null);
   const [payoutData, setPayoutData] = useState<PayoutData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -60,6 +63,9 @@ const EarningsPanel: React.FC = () => {
   const [withdrawMethod, setWithdrawMethod] = useState<"xrge" | "paypal" | "bank" | "crypto">("xrge");
   const [withdrawDetails, setWithdrawDetails] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [verifyOpen, setVerifyOpen] = useState(false);
+  const isVerified = !!user?.is_verified;
+  const verificationStatus = user?.verification_status || "unverified";
 
   const fetchData = useCallback(async () => {
     try {
