@@ -28,6 +28,7 @@ interface Profile {
   isFollowing: boolean;
   isBanned?: boolean;
   banReason?: string | null;
+  verified?: boolean;
 }
 
 interface FeedPost {
@@ -288,6 +289,7 @@ const ProfilePage: React.FC = () => {
                 <>
                   <div className="flex items-center gap-2">
                     <h1 className="font-orbitron text-lg text-foreground truncate">@{profile.username}</h1>
+                    {profile.verified && <VerifiedBadge size="md" />}
                     {profile.isBanned && (
                       <span className="px-1.5 py-0.5 bg-destructive/20 text-destructive font-mono-share text-[9px] rounded tracking-wider" title={profile.banReason || undefined}>
                         BANNED
