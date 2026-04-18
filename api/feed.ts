@@ -103,6 +103,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             l.created_at AS latest_at,
             l.lock_cost, l.lock_price_cents, l.lock_xrge_amount,
             pr.username, pr.avatar_url,
+            (u.verification_status = 'verified' AND (u.verification_renews_at IS NULL OR u.verification_renews_at > now())) AS verified,
             s.post_count,
             s.recent_score,
             (
@@ -111,6 +112,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             ) AS rank_score
           FROM latest l
           JOIN profiles pr ON pr.user_id = l.user_id
+          JOIN users u ON u.id = l.user_id
           JOIN stats s ON s.user_id = l.user_id
           ${cursor ? sql`WHERE (
             1.0 / POWER(EXTRACT(EPOCH FROM (now() - l.created_at)) / 3600.0 + 2, 1.2)
@@ -129,6 +131,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               userId: r.user_id,
               username: r.username,
               avatarUrl: r.avatar_url,
+              verified: !!r.verified,
               postCount: r.post_count,
               recentScore: r.recent_score,
               latestPostId: r.latest_post_id,
@@ -148,6 +151,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       const selectCols = (authId: string) => sql`
         p.*, pr.username, pr.avatar_url,
+        (uu.verification_status = 'verified' AND (uu.verification_renews_at IS NULL OR uu.verification_renews_at > now())) AS author_verified,
         COALESCE((SELECT count(*)::int FROM feed_reactions WHERE post_id = p.id AND emoji = '👍'), 0)
         - COALESCE((SELECT count(*)::int FROM feed_reactions WHERE post_id = p.id AND emoji = '👎'), 0) AS score,
         (SELECT emoji FROM feed_reactions WHERE post_id = p.id AND user_id = ${authId} LIMIT 1) AS user_vote,
