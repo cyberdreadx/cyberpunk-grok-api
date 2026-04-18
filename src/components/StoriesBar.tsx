@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { apiFetch } from "@/lib/api";
 import { hasAuthToken } from "@/lib/api";
 import StoryViewer from "@/components/StoryViewer";
+import FeatureExplainer, { hasSeenExplainer, markExplainerSeen } from "@/components/FeatureExplainer";
 
 interface Story {
   id: string;
