@@ -68,8 +68,10 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
   const timerRef = useRef<ReturnType<typeof setInterval>>();
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  const swipeRef = useRef({ startY: 0, currentY: 0, swiping: false });
+  const swipeRef = useRef({ startX: 0, startY: 0, currentX: 0, currentY: 0, swiping: false, horizSwipe: false, startTime: 0 });
   const [swipeOffset, setSwipeOffset] = useState(0);
+  const lastTouchEndRef = useRef(0);
+  const lastNavRef = useRef(0);
 
   const currentUser = users[userIdx];
   const currentStory = currentUser?.stories[storyIdx];
