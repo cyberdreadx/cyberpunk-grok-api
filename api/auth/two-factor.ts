@@ -6,9 +6,11 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getDb } from "../_lib/db";
 import { getUserFromRequest } from "../_lib/auth";
+import { applyCors } from "../_lib/cors";
 import { ensureTrustedDevicesTable, revokeTrustedDevices } from "../_lib/trustedDevice";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  applyCors(req, res, "GET, POST, OPTIONS");
   if (req.method === "OPTIONS") return res.status(200).end();
   const auth = getUserFromRequest(req);
   if (!auth) return res.status(401).json({ error: "Unauthorized" });
