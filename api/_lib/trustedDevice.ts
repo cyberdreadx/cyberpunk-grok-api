@@ -12,21 +12,35 @@ function hash(token: string) {
   return crypto.createHash("sha256").update(token).digest("hex");
 }
 
+// Cache the schema-ensure promise so we don't run DDL on every request
+// (running ALTER/CREATE on every login was causing intermittent failures
+// and slow responses that surfaced as "Load failed" on the client).
+let _ensurePromise: Promise<void> | null = null;
 export async function ensureTrustedDevicesTable() {
+  if (_ensurePromise) return _ensurePromise;
   const sql = getDb();
-  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS two_factor_enabled BOOLEAN NOT NULL DEFAULT false`.catch(() => {});
-  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS two_factor_code TEXT`.catch(() => {});
-  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS two_factor_code_expires_at TIMESTAMPTZ`.catch(() => {});
-  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS two_factor_attempts INT NOT NULL DEFAULT 0`.catch(() => {});
-  await sql`CREATE TABLE IF NOT EXISTS trusted_devices (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    token_hash TEXT NOT NULL UNIQUE,
-    user_agent TEXT,
-    ip TEXT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    expires_at TIMESTAMPTZ NOT NULL
-  )`.catch(() => {});
+  _ensurePromise = (async () => {
+    try {
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS two_factor_enabled BOOLEAN NOT NULL DEFAULT false`;
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS two_factor_code TEXT`;
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS two_factor_code_expires_at TIMESTAMPTZ`;
+      await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS two_factor_attempts INT NOT NULL DEFAULT 0`;
+      await sql`CREATE TABLE IF NOT EXISTS trusted_devices (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        token_hash TEXT NOT NULL UNIQUE,
+        user_agent TEXT,
+        ip TEXT,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        expires_at TIMESTAMPTZ NOT NULL
+      )`;
+    } catch (e) {
+      // Reset cache so a future call can retry, but don't block login.
+      _ensurePromise = null;
+      console.error("[trustedDevice] ensure schema failed", (e as any)?.message);
+    }
+  })();
+  return _ensurePromise;
 }
 
 function parseCookies(req: VercelRequest): Record<string, string> {
