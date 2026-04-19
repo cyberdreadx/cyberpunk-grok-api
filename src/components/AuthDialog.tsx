@@ -12,6 +12,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import TwoFactorSettingsDialog from "@/components/TwoFactorSettingsDialog";
 
 interface AuthDialogProps {
   isAuthenticated: boolean;
@@ -23,6 +24,9 @@ interface AuthDialogProps {
   onVerify?: (email: string, code: string) => Promise<any>;
   onResendCode?: (email: string) => Promise<any>;
   onCancelVerification?: () => void;
+  pendingTwoFactorEmail?: string | null;
+  onVerifyTwoFactor?: (email: string, code: string, rememberDevice: boolean) => Promise<any>;
+  onCancelTwoFactor?: () => void;
   onForgotPassword?: (email: string) => Promise<any>;
   onResetPassword?: (email: string, code: string, newPassword: string) => Promise<any>;
   onDeleteAccount?: (password: string) => Promise<void>;
@@ -38,6 +42,9 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
   onVerify,
   onResendCode,
   onCancelVerification,
+  pendingTwoFactorEmail,
+  onVerifyTwoFactor,
+  onCancelTwoFactor,
   onForgotPassword,
   onResetPassword,
   onDeleteAccount,
@@ -59,12 +66,12 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
     } catch { return undefined; }
   }, []);
 
-  // Open dialog when verification is needed (signup, login, or "verify now" banner)
+  // Open dialog when verification or 2FA is needed
   useEffect(() => {
-    if (pendingVerificationEmail) {
+    if (pendingVerificationEmail || pendingTwoFactorEmail) {
       setOpen(true);
     }
-  }, [pendingVerificationEmail]);
+  }, [pendingVerificationEmail, pendingTwoFactorEmail]);
 
   // Auto-open on referral link (only once, only if not authenticated)
   useEffect(() => {
@@ -124,6 +131,7 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
         <span className="font-mono-share text-[10px] text-primary/70 hidden sm:inline truncate max-w-[120px]">
           {userEmail}
         </span>
+        <TwoFactorSettingsDialog />
         {onDeleteAccount && (
           <Dialog>
             <DialogTrigger asChild>
@@ -170,8 +178,15 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
         </Button>
       </DialogTrigger>
       <DialogContent className="bg-card border-border sm:max-w-md">
-        {/* Show verification UI when we have a pending email */}
-        {pendingVerificationEmail && onVerify ? (
+        {/* 2FA login challenge */}
+        {pendingTwoFactorEmail && onVerifyTwoFactor ? (
+          <TwoFactorForm
+            email={pendingTwoFactorEmail}
+            onVerify={onVerifyTwoFactor}
+            onCancel={() => { onCancelTwoFactor?.(); setOpen(false); }}
+            onSuccess={() => setOpen(false)}
+          />
+        ) : pendingVerificationEmail && onVerify ? (
           <VerificationForm
             email={pendingVerificationEmail}
             onVerify={onVerify}
@@ -881,6 +896,100 @@ function DeleteAccountForm({ onDelete }: { onDelete: (password: string) => Promi
           <p className="font-mono-share text-xs text-destructive">{error}</p>
         </div>
       )}
+    </div>
+  );
+}
+
+/** 2FA login code prompt with "remember this device" option. */
+function TwoFactorForm({
+  email,
+  onVerify,
+  onCancel,
+  onSuccess,
+}: {
+  email: string;
+  onVerify: (email: string, code: string, rememberDevice: boolean) => Promise<any>;
+  onCancel?: () => void;
+  onSuccess: () => void;
+}) {
+  const [code, setCode] = useState("");
+  const [remember, setRemember] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const submit = async (value?: string) => {
+    const c = (value ?? code).trim();
+    if (!/^\d{6}$/.test(c)) { setError("Enter the 6-digit code"); return; }
+    setLoading(true); setError(null);
+    try {
+      await onVerify(email, c, remember);
+      onSuccess();
+    } catch (e: any) {
+      setError(e?.message || "Invalid code");
+    } finally { setLoading(false); }
+  };
+
+  return (
+    <div className="space-y-4">
+      <DialogHeader>
+        <DialogTitle className="font-orbitron text-sm tracking-wider neon-text-cyan flex items-center gap-2">
+          <ShieldCheck className="w-4 h-4" /> TWO_FACTOR_AUTH
+        </DialogTitle>
+        <DialogDescription className="font-mono-share text-xs text-muted-foreground/80">
+          We sent a 6-digit code to <span className="text-secondary">{email}</span>. It expires in 10 minutes.
+        </DialogDescription>
+      </DialogHeader>
+
+      <Input
+        type="text"
+        inputMode="numeric"
+        pattern="\d{6}"
+        maxLength={6}
+        autoFocus
+        value={code}
+        onChange={(e) => {
+          const v = e.target.value.replace(/\D/g, "").slice(0, 6);
+          setCode(v);
+          if (v.length === 6) submit(v);
+        }}
+        onKeyDown={(e) => e.key === "Enter" && submit()}
+        placeholder="000000"
+        className="bg-input border-border font-mono-share text-center text-2xl tracking-[0.5em]"
+      />
+
+      <label className="flex items-center gap-2 cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={remember}
+          onChange={(e) => setRemember(e.target.checked)}
+          className="accent-primary"
+        />
+        <span className="font-mono-share text-[11px] text-muted-foreground">
+          Remember this device for 30 days
+        </span>
+      </label>
+
+      {error && (
+        <div className="bg-destructive/10 border border-destructive/30 rounded px-3 py-2">
+          <p className="font-mono-share text-xs text-destructive">{error}</p>
+        </div>
+      )}
+
+      <div className="flex gap-2">
+        {onCancel && (
+          <Button variant="ghost" onClick={onCancel} className="font-orbitron text-xs gap-1.5">
+            <ArrowLeft className="w-3 h-3" /> CANCEL
+          </Button>
+        )}
+        <Button
+          onClick={() => submit()}
+          disabled={loading || code.length !== 6}
+          className="flex-1 bg-primary text-primary-foreground hover:bg-primary/80 font-orbitron text-xs tracking-wider gap-2"
+        >
+          {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <ShieldCheck className="w-3 h-3" />}
+          VERIFY
+        </Button>
+      </div>
     </div>
   );
 }

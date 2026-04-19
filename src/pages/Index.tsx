@@ -1160,6 +1160,9 @@ const Index = () => {
                 onVerify={auth.verifyEmail}
                 onResendCode={auth.resendCode}
                 onCancelVerification={auth.cancelVerification}
+                pendingTwoFactorEmail={auth.pendingTwoFactorEmail}
+                onVerifyTwoFactor={auth.verifyTwoFactor}
+                onCancelTwoFactor={auth.cancelTwoFactor}
                 onForgotPassword={auth.forgotPassword}
                 onResetPassword={auth.resetPassword}
                 onDeleteAccount={auth.deleteAccount}

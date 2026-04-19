@@ -53,7 +53,7 @@ export async function apiFetch<T = any>(path: string, options: ApiOptions = {}):
     }
   }
 
-  const fetchOptions: RequestInit = { method, headers };
+  const fetchOptions: RequestInit = { method, headers, credentials: "include" };
   if (body !== undefined) {
     fetchOptions.body = JSON.stringify(body);
   }
