@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { getUserFromRequest, checkBan } from "./_lib/auth";
+import { getUserFromRequest, checkBan, ADMIN_EMAIL } from "./_lib/auth";
 import { getDb } from "./_lib/db";
 import { hasPurchased, POSTING_GATE_MESSAGE } from "./_lib/purchaseGate";
 import { isVerified, VERIFICATION_REQUIRED_MESSAGE } from "./_lib/verifiedGate";
@@ -138,7 +138,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             l.created_at AS latest_at,
             l.lock_cost, l.lock_price_cents, l.lock_xrge_amount,
             pr.username, pr.avatar_url,
-            (u.verification_status = 'verified' AND (u.verification_renews_at IS NULL OR u.verification_renews_at > now())) AS verified,
+            (u.email = ${ADMIN_EMAIL} OR (u.verification_status = 'verified' AND (u.verification_renews_at IS NULL OR u.verification_renews_at > now()))) AS verified,
             s.post_count,
             s.recent_score,
             s.trending_score,
@@ -200,7 +200,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // For logged-out users, per-user fields (vote, flag, unlock) are always null/false.
       const selectCols = (authId: string | null) => sql`
         p.*, pr.username, pr.avatar_url,
-        (uu.verification_status = 'verified' AND (uu.verification_renews_at IS NULL OR uu.verification_renews_at > now())) AS author_verified,
+        (uu.email = ${ADMIN_EMAIL} OR (uu.verification_status = 'verified' AND (uu.verification_renews_at IS NULL OR uu.verification_renews_at > now()))) AS author_verified,
         COALESCE((SELECT count(*)::int FROM feed_reactions WHERE post_id = p.id AND emoji = '👍'), 0)
         - COALESCE((SELECT count(*)::int FROM feed_reactions WHERE post_id = p.id AND emoji = '👎'), 0) AS score,
         ${authId ? sql`(SELECT emoji FROM feed_reactions WHERE post_id = p.id AND user_id = ${authId} LIMIT 1)` : sql`NULL`} AS user_vote,

@@ -874,12 +874,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         let targetId = inspectUserId;
         let userRow: any;
         if (inspectEmail) {
-          const rows = await sql`SELECT id, email, created_at, subscription_tier, sub_credits, pack_credits, daily_credits FROM users WHERE email = ${inspectEmail.trim().toLowerCase()} LIMIT 1`;
+          const rows = await sql`SELECT id, email, created_at, subscription_tier, sub_credits, pack_credits, daily_credits, verification_status, verification_renews_at FROM users WHERE email = ${inspectEmail.trim().toLowerCase()} LIMIT 1`;
           if (rows.length === 0) return res.status(404).json({ error: "User not found" });
           userRow = rows[0];
           targetId = userRow.id;
         } else {
-          const rows = await sql`SELECT id, email, created_at, subscription_tier, sub_credits, pack_credits, daily_credits FROM users WHERE id = ${inspectUserId}::uuid LIMIT 1`;
+          const rows = await sql`SELECT id, email, created_at, subscription_tier, sub_credits, pack_credits, daily_credits, verification_status, verification_renews_at FROM users WHERE id = ${inspectUserId}::uuid LIMIT 1`;
           if (rows.length === 0) return res.status(404).json({ error: "User not found" });
           userRow = rows[0];
         }
@@ -934,6 +934,49 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           ban,
           moderationFlags: modStats.total_flags,
         });
+      }
+
+      // ── Grant Verification (admin override) ──
+      case "grant-verification": {
+        const { email: gvEmail, userId: gvUserId, durationDays } = req.body;
+        if (!gvEmail && !gvUserId) return res.status(400).json({ error: "email or userId required" });
+        const userRows = gvEmail
+          ? await sql`SELECT id, email FROM users WHERE email = ${String(gvEmail).trim().toLowerCase()} LIMIT 1`
+          : await sql`SELECT id, email FROM users WHERE id = ${gvUserId}::uuid LIMIT 1`;
+        if (userRows.length === 0) return res.status(404).json({ error: "User not found" });
+        const targetId = userRows[0].id;
+        const days = Number.isFinite(Number(durationDays)) && Number(durationDays) > 0 ? Number(durationDays) : 365;
+        await sql`
+          UPDATE users
+          SET verification_status = 'verified',
+              verified_at = COALESCE(verified_at, now()),
+              verification_renews_at = now() + (${days} || ' days')::interval,
+              verification_lapsed_at = NULL,
+              updated_at = now()
+          WHERE id = ${targetId}::uuid
+        `;
+        console.log(`[admin] Granted verification to ${userRows[0].email} for ${days}d`);
+        return res.json({ success: true, userId: targetId, durationDays: days });
+      }
+
+      case "revoke-verification": {
+        const { email: rvEmail, userId: rvUserId } = req.body;
+        if (!rvEmail && !rvUserId) return res.status(400).json({ error: "email or userId required" });
+        const userRows = rvEmail
+          ? await sql`SELECT id, email FROM users WHERE email = ${String(rvEmail).trim().toLowerCase()} LIMIT 1`
+          : await sql`SELECT id, email FROM users WHERE id = ${rvUserId}::uuid LIMIT 1`;
+        if (userRows.length === 0) return res.status(404).json({ error: "User not found" });
+        const targetId = userRows[0].id;
+        await sql`
+          UPDATE users
+          SET verification_status = 'unverified',
+              verification_renews_at = NULL,
+              verification_lapsed_at = now(),
+              updated_at = now()
+          WHERE id = ${targetId}::uuid
+        `;
+        console.log(`[admin] Revoked verification for ${userRows[0].email}`);
+        return res.json({ success: true, userId: targetId });
       }
 
       default:
