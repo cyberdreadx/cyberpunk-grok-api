@@ -15,7 +15,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const sql = getDb();
   const auth = getUserFromRequest(req);
-  if (!auth) return res.status(401).json({ error: "Unauthorized" });
+  // GET is public (logged-out users can browse the feed). Mutations require auth.
+  if (req.method !== "GET" && !auth) return res.status(401).json({ error: "Unauthorized" });
+  const authUserId: string | null = auth?.userId ?? null;
 
   // GET — list feed posts
   if (req.method === "GET") {
@@ -65,8 +67,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // ───── CREATORS VIEW: one row per author, ranked by recency + engagement ─────
       if (viewMode === "creators" && !userId) {
-        const followingFilter = filter === "following"
-          ? sql`AND p.user_id IN (SELECT following_id FROM follows WHERE follower_id = ${auth.userId})`
+        const followingFilter = filter === "following" && authUserId
+          ? sql`AND p.user_id IN (SELECT following_id FROM follows WHERE follower_id = ${authUserId})`
           : sql``;
         const isTrending = sortMode === "trending";
         // Latest post per author + engagement signal.
@@ -168,7 +170,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.json({
           creators: creatorRows.map((r: any) => {
             const xrgePrice = parseFloat(r.lock_xrge_amount || "0") || 0;
-            const isOwner = r.user_id === auth.userId;
+            const isOwner = authUserId ? r.user_id === authUserId : false;
             const isLocked = (r.lock_cost > 0 || r.lock_price_cents > 0 || xrgePrice > 0) && !isOwner;
             return {
               userId: r.user_id,
@@ -192,16 +194,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
 
-      const selectCols = (authId: string) => sql`
+      // For logged-out users, per-user fields (vote, flag, unlock) are always null/false.
+      const selectCols = (authId: string | null) => sql`
         p.*, pr.username, pr.avatar_url,
         (uu.verification_status = 'verified' AND (uu.verification_renews_at IS NULL OR uu.verification_renews_at > now())) AS author_verified,
         COALESCE((SELECT count(*)::int FROM feed_reactions WHERE post_id = p.id AND emoji = '👍'), 0)
         - COALESCE((SELECT count(*)::int FROM feed_reactions WHERE post_id = p.id AND emoji = '👎'), 0) AS score,
-        (SELECT emoji FROM feed_reactions WHERE post_id = p.id AND user_id = ${authId} LIMIT 1) AS user_vote,
+        ${authId ? sql`(SELECT emoji FROM feed_reactions WHERE post_id = p.id AND user_id = ${authId} LIMIT 1)` : sql`NULL`} AS user_vote,
         (SELECT count(*)::int FROM feed_comments WHERE post_id = p.id) AS comment_count,
         (SELECT count(*)::int FROM feed_reports WHERE post_id = p.id) AS flag_count,
-        EXISTS(SELECT 1 FROM feed_reports WHERE post_id = p.id AND user_id = ${authId}) AS user_flagged,
-        CASE WHEN EXISTS(SELECT 1 FROM feed_unlocks WHERE post_id = p.id AND user_id = ${authId}) THEN true ELSE false END AS unlocked,
+        ${authId ? sql`EXISTS(SELECT 1 FROM feed_reports WHERE post_id = p.id AND user_id = ${authId})` : sql`false`} AS user_flagged,
+        ${authId ? sql`CASE WHEN EXISTS(SELECT 1 FROM feed_unlocks WHERE post_id = p.id AND user_id = ${authId}) THEN true ELSE false END` : sql`false`} AS unlocked,
         COALESCE((SELECT count(*)::int FROM feed_views WHERE post_id = p.id), 0) AS view_count
       `;
 
@@ -228,26 +231,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       if (userId) {
         rows = await sql`
-          SELECT ${selectCols(auth.userId)}
+          SELECT ${selectCols(authUserId)}
           FROM feed_posts p
           JOIN profiles pr ON pr.user_id = p.user_id
           JOIN users uu ON uu.id = p.user_id
           WHERE p.user_id = ${userId} ${cursorCond}
           ORDER BY ${orderBy} LIMIT ${limit}
         `;
-      } else if (filter === "following") {
+      } else if (filter === "following" && authUserId) {
         rows = await sql`
-          SELECT ${selectCols(auth.userId)}
+          SELECT ${selectCols(authUserId)}
           FROM feed_posts p
           JOIN profiles pr ON pr.user_id = p.user_id
           JOIN users uu ON uu.id = p.user_id
-          WHERE p.user_id IN (SELECT following_id FROM follows WHERE follower_id = ${auth.userId})
+          WHERE p.user_id IN (SELECT following_id FROM follows WHERE follower_id = ${authUserId})
             ${cursorCond}
           ORDER BY ${orderBy} LIMIT ${limit}
         `;
       } else {
         rows = await sql`
-          SELECT ${selectCols(auth.userId)}
+          SELECT ${selectCols(authUserId)}
           FROM feed_posts p
           JOIN profiles pr ON pr.user_id = p.user_id
           JOIN users uu ON uu.id = p.user_id
@@ -256,19 +259,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         `;
       }
 
-      // Record views before responding (Vercel kills after res.json)
+      // Record views before responding (Vercel kills after res.json). Only for logged-in users.
       const postIds = rows.map((r: any) => r.id);
-      if (postIds.length > 0) {
+      if (postIds.length > 0 && authUserId) {
         await Promise.all(
           postIds.map((pid: string) =>
-            sql`INSERT INTO feed_views (post_id, user_id) VALUES (${pid}::uuid, ${auth.userId}::uuid) ON CONFLICT (post_id, user_id) DO NOTHING`.catch(() => {})
+            sql`INSERT INTO feed_views (post_id, user_id) VALUES (${pid}::uuid, ${authUserId}::uuid) ON CONFLICT (post_id, user_id) DO NOTHING`.catch(() => {})
           )
         ).catch(() => {});
       }
 
       return res.json({
         posts: rows.map((r: any) => {
-          const isOwner = r.user_id === auth.userId;
+          const isOwner = authUserId ? r.user_id === authUserId : false;
           const xrgePrice = parseFloat(r.lock_xrge_amount || "0") || 0;
           const isLocked = (r.lock_cost > 0 || r.lock_price_cents > 0 || xrgePrice > 0) && !r.unlocked && !isOwner;
 
