@@ -5,6 +5,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getDb } from "./_lib/db";
 import { getUserFromRequest, ADMIN_EMAIL } from "./_lib/auth";
+import { applyCors } from "./_lib/cors";
 
 export const config = { maxDuration: 10 };
 
@@ -43,6 +44,7 @@ function parseImmersion(raw: unknown): typeof DEFAULT {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  applyCors(req, res, "GET, POST, OPTIONS");
   if (req.method === "OPTIONS") return res.status(200).end();
 
   if (req.method === "GET") {

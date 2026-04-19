@@ -2,11 +2,13 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import bcrypt from "bcryptjs";
 import { getDb } from "../_lib/db";
 import { signToken } from "../_lib/auth";
+import { applyCors } from "../_lib/cors";
 import { checkRateLimit, getClientIp } from "../_lib/ratelimit";
 import { ensureTrustedDevicesTable, isDeviceTrusted } from "../_lib/trustedDevice";
 import { sendTwoFactorEmail, generateVerificationCode } from "../_lib/email";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  applyCors(req, res, "POST, OPTIONS");
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
