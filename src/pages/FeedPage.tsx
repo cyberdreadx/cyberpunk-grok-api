@@ -295,7 +295,7 @@ const FeedPage: React.FC = () => {
   if (isMobile) {
     return (
       <>
-        {(!rulesAcked || showRules) && (
+        {isAuthenticated && (!rulesAcked || showRules) && (
           <div className="fixed inset-0 z-[60] bg-black/90 backdrop-blur-sm flex items-center justify-center p-6">
             <div className="max-w-sm w-full">{rulesBanner}</div>
           </div>
