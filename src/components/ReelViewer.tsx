@@ -32,7 +32,7 @@ interface Props {
   onClose: () => void;
   initialPostId: string;
   userId?: string;
-  filter?: "all" | "following";
+  filter?: "all" | "following" | "trending";
 }
 
 /** How many slides to keep mounted on each side of the active one. */
@@ -53,7 +53,7 @@ const ReelViewer: React.FC<Props> = ({ open, onClose, initialPostId, userId, fil
   const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   const buildUrl = useCallback((cursor?: string) => {
-    const params = new URLSearchParams({ sort: "new" });
+    const params = new URLSearchParams({ sort: filter === "trending" ? "trending" : "new" });
     if (userId) params.set("userId", userId);
     else if (filter === "following") params.set("filter", "following");
     if (cursor) params.set("cursor", cursor);
