@@ -17,7 +17,6 @@ import MobileBottomNav from "@/components/MobileBottomNav";
 import FeatureExplainer from "@/components/FeatureExplainer";
 import ReelViewer from "@/components/ReelViewer";
 import StoriesBar from "@/components/StoriesBar";
-import AuthDialog from "@/components/AuthDialog";
 
 const FEED_RULES = [
   "No illegal content of any kind",
