@@ -251,6 +251,26 @@ const FeedPage: React.FC = () => {
     </div>
   );
 
+  /** Top tab strip: Feed (current page) / Create (navigates to /create). */
+  const topTabs = (
+    <div className="flex items-center gap-1 p-1 rounded-lg border border-border/40 bg-card/40 w-fit">
+      <button
+        type="button"
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md font-orbitron text-[10px] tracking-widest bg-primary/15 text-primary border border-primary/40 shadow-[0_0_8px_hsl(var(--primary)/0.25)]"
+        aria-current="page"
+      >
+        <Rss className="w-3.5 h-3.5" /> FEED
+      </button>
+      <button
+        type="button"
+        onClick={() => navigate("/create")}
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md font-orbitron text-[10px] tracking-widest text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
+      >
+        <Sparkles className="w-3.5 h-3.5" /> CREATE
+      </button>
+    </div>
+  );
+
   const skeletonGrid = (cols: string) => (
     <div className={`grid ${cols} gap-3`}>
       {[...Array(8)].map((_, i) => (
