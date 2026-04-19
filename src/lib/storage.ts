@@ -884,6 +884,8 @@ export async function exportLibraryAsZip(
 
 /** Build a proxy URL for exporting external media (same pattern as ResultsGrid). */
 function getExportProxyUrl(url: string, filename: string): string {
-  const base = "/api/download";
-  return `${base}?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(filename)}`;
+  // Lazy import to avoid circular deps; resolves the correct API base for preview vs prod.
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { apiUrl } = require("@/lib/api") as typeof import("@/lib/api");
+  return `${apiUrl("/download")}?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(filename)}`;
 }
