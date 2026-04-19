@@ -442,7 +442,7 @@ const FeedPage: React.FC = () => {
           </div>
         </div>
 
-        {rulesBanner}
+        {isAuthenticated && rulesBanner}
 
         {/* Stories at the very top */}
         <StoriesBar currentUserId={user?.id} isAdmin={!!user?.is_admin} />
