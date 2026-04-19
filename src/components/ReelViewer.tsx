@@ -33,6 +33,8 @@ interface Props {
   initialPostId: string;
   userId?: string;
   filter?: "all" | "following" | "trending";
+  /** When "video", only video posts are loaded (TikTok-style reels mode). */
+  mediaType?: "video";
 }
 
 /** How many slides to keep mounted on each side of the active one. */
@@ -43,7 +45,7 @@ const WINDOW_RADIUS = 1;
  * (and ±1 neighbours as placeholders) renders heavy media, so memory + decode
  * cost stays flat as the feed grows.
  */
-const ReelViewer: React.FC<Props> = ({ open, onClose, initialPostId, userId, filter }) => {
+const ReelViewer: React.FC<Props> = ({ open, onClose, initialPostId, userId, filter, mediaType }) => {
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -56,9 +58,10 @@ const ReelViewer: React.FC<Props> = ({ open, onClose, initialPostId, userId, fil
     const params = new URLSearchParams({ sort: filter === "trending" ? "trending" : "new" });
     if (userId) params.set("userId", userId);
     else if (filter === "following") params.set("filter", "following");
+    if (mediaType) params.set("mediaType", mediaType);
     if (cursor) params.set("cursor", cursor);
     return `/feed?${params.toString()}`;
-  }, [userId, filter]);
+  }, [userId, filter, mediaType]);
 
   // Initial fetch
   useEffect(() => {
