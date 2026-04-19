@@ -874,12 +874,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         let targetId = inspectUserId;
         let userRow: any;
         if (inspectEmail) {
-          const rows = await sql`SELECT id, email, created_at, subscription_tier, sub_credits, pack_credits, daily_credits FROM users WHERE email = ${inspectEmail.trim().toLowerCase()} LIMIT 1`;
+          const rows = await sql`SELECT id, email, created_at, subscription_tier, sub_credits, pack_credits, daily_credits, verification_status, verification_renews_at FROM users WHERE email = ${inspectEmail.trim().toLowerCase()} LIMIT 1`;
           if (rows.length === 0) return res.status(404).json({ error: "User not found" });
           userRow = rows[0];
           targetId = userRow.id;
         } else {
-          const rows = await sql`SELECT id, email, created_at, subscription_tier, sub_credits, pack_credits, daily_credits FROM users WHERE id = ${inspectUserId}::uuid LIMIT 1`;
+          const rows = await sql`SELECT id, email, created_at, subscription_tier, sub_credits, pack_credits, daily_credits, verification_status, verification_renews_at FROM users WHERE id = ${inspectUserId}::uuid LIMIT 1`;
           if (rows.length === 0) return res.status(404).json({ error: "User not found" });
           userRow = rows[0];
         }
