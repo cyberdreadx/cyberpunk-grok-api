@@ -236,7 +236,7 @@ const FeedPage: React.FC = () => {
         <Globe className="w-3 h-3" /> ALL
       </button>
       <button
-        onClick={() => { setFilter("following"); setLoading(true); }}
+        onClick={() => { if (requireAuth()) { setFilter("following"); setLoading(true); } }}
         className={`flex items-center gap-1 px-2.5 py-1 rounded-full font-mono-share text-[10px] transition-colors border ${
           filter === "following"
             ? "border-primary/50 bg-primary/10 text-primary"
