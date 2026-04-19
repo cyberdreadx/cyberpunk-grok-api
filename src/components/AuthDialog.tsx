@@ -23,6 +23,9 @@ interface AuthDialogProps {
   onVerify?: (email: string, code: string) => Promise<any>;
   onResendCode?: (email: string) => Promise<any>;
   onCancelVerification?: () => void;
+  pendingTwoFactorEmail?: string | null;
+  onVerifyTwoFactor?: (email: string, code: string, rememberDevice: boolean) => Promise<any>;
+  onCancelTwoFactor?: () => void;
   onForgotPassword?: (email: string) => Promise<any>;
   onResetPassword?: (email: string, code: string, newPassword: string) => Promise<any>;
   onDeleteAccount?: (password: string) => Promise<void>;
@@ -38,6 +41,9 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
   onVerify,
   onResendCode,
   onCancelVerification,
+  pendingTwoFactorEmail,
+  onVerifyTwoFactor,
+  onCancelTwoFactor,
   onForgotPassword,
   onResetPassword,
   onDeleteAccount,
