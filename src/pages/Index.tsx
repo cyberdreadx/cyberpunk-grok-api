@@ -1302,6 +1302,14 @@ const Index = () => {
               glitchIntensity="low"
             />
             <div className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
+            <Link
+              to="/"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-secondary/30 hover:border-secondary/60 bg-secondary/5 hover:bg-secondary/10 transition-all font-mono-share text-[10px] text-secondary/80 hover:text-secondary tracking-wider"
+              title="Browse community feed"
+            >
+              <Rss className="w-3 h-3" />
+              FEED
+            </Link>
           </div>
           <ModeSelector activeMode={mode} onModeChange={(m) => { setMode(m); setActiveImageUrl(""); }} isAuthenticated={auth.isAuthenticated} />
         </section>
