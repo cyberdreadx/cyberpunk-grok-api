@@ -11,11 +11,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Send, Users, Globe, Loader2, Plus, X, Lock, Zap, ShieldAlert } from "lucide-react";
+import { Send, Users, Globe, Loader2, Plus, X, Lock, Zap, ShieldAlert, Sparkles, Rss } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import FeatureExplainer from "@/components/FeatureExplainer";
 import ReelViewer from "@/components/ReelViewer";
+import StoriesBar from "@/components/StoriesBar";
 
 const FEED_RULES = [
   "No illegal content of any kind",
@@ -29,7 +30,7 @@ const FEED_RULES = [
 ];
 
 const FeedPage: React.FC = () => {
-  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const isMobile = useIsMobile();
@@ -51,6 +52,15 @@ const FeedPage: React.FC = () => {
   const [activeCreator, setActiveCreator] = useState<FeedCreator | null>(null);
   const [reelTarget, setReelTarget] = useState<{ postId: string; userId?: string } | null>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
+
+  const requireAuth = useCallback(() => {
+    if (!isAuthenticated) {
+      toast({ title: "Sign in to post", description: "Create an account to share with the community." });
+      navigate("/create");
+      return false;
+    }
+    return true;
+  }, [isAuthenticated, toast, navigate]);
 
   const fetchCreators = useCallback(async (cursor?: string) => {
     try {
@@ -76,13 +86,9 @@ const FeedPage: React.FC = () => {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!isAuthenticated) {
-      navigate("/");
-      return;
-    }
     setLoading(true);
     fetchCreators();
-  }, [authLoading, isAuthenticated, fetchCreators, navigate]);
+  }, [authLoading, isAuthenticated, fetchCreators]);
 
   // Open ReelViewer when arriving from a notification click
   useEffect(() => {
@@ -230,7 +236,7 @@ const FeedPage: React.FC = () => {
         <Globe className="w-3 h-3" /> ALL
       </button>
       <button
-        onClick={() => { setFilter("following"); setLoading(true); }}
+        onClick={() => { if (requireAuth()) { setFilter("following"); setLoading(true); } }}
         className={`flex items-center gap-1 px-2.5 py-1 rounded-full font-mono-share text-[10px] transition-colors border ${
           filter === "following"
             ? "border-primary/50 bg-primary/10 text-primary"
@@ -240,6 +246,26 @@ const FeedPage: React.FC = () => {
         }`}
       >
         <Users className="w-3 h-3" /> FOLLOWING
+      </button>
+    </div>
+  );
+
+  /** Top tab strip: Feed (current page) / Create (navigates to /create). */
+  const topTabs = (
+    <div className="flex items-center gap-1 p-1 rounded-lg border border-border/40 bg-card/40 w-fit">
+      <button
+        type="button"
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md font-orbitron text-[10px] tracking-widest bg-primary/15 text-primary border border-primary/40 shadow-[0_0_8px_hsl(var(--primary)/0.25)]"
+        aria-current="page"
+      >
+        <Rss className="w-3.5 h-3.5" /> FEED
+      </button>
+      <button
+        type="button"
+        onClick={() => navigate("/create")}
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md font-orbitron text-[10px] tracking-widest text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
+      >
+        <Sparkles className="w-3.5 h-3.5" /> CREATE
       </button>
     </div>
   );
@@ -269,7 +295,7 @@ const FeedPage: React.FC = () => {
   if (isMobile) {
     return (
       <>
-        {(!rulesAcked || showRules) && (
+        {isAuthenticated && (!rulesAcked || showRules) && (
           <div className="fixed inset-0 z-[60] bg-black/90 backdrop-blur-sm flex items-center justify-center p-6">
             <div className="max-w-sm w-full">{rulesBanner}</div>
           </div>
@@ -280,19 +306,24 @@ const FeedPage: React.FC = () => {
             className="sticky z-30 bg-background/85 backdrop-blur-md border-b border-border/30 px-3 py-2 space-y-2"
             style={{ top: 0, paddingTop: "calc(env(safe-area-inset-top, 0px) + 8px)" }}
           >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <h1 className="font-orbitron text-sm tracking-widest text-foreground">FEED</h1>
-                <button
-                  onClick={() => setShowRules(true)}
-                  className="text-muted-foreground hover:text-foreground transition-colors"
-                  aria-label="View community guidelines"
-                >
-                  <ShieldAlert className="w-4 h-4" />
-                </button>
-              </div>
+            <div className="flex items-center justify-between gap-2">
+              {topTabs}
+              <button
+                onClick={() => setShowRules(true)}
+                className="text-muted-foreground hover:text-foreground transition-colors p-1"
+                aria-label="View community guidelines"
+              >
+                <ShieldAlert className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="flex items-center justify-end">
               {filterTabs("mobile")}
             </div>
+          </div>
+
+          {/* Stories */}
+          <div className="px-3 pt-3">
+            <StoriesBar currentUserId={user?.id} isAdmin={!!user?.is_admin} />
           </div>
 
           {/* Grid */}
@@ -322,9 +353,10 @@ const FeedPage: React.FC = () => {
 
         {/* Floating compose button */}
         <button
-          onClick={() => setShowCompose(true)}
+          onClick={() => { if (requireAuth()) setShowCompose(true); }}
           className="fixed z-40 right-4 bg-primary text-primary-foreground w-12 h-12 rounded-full flex items-center justify-center shadow-lg shadow-primary/30 active:scale-90 transition-transform"
           style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 72px)" }}
+          aria-label="Create post"
         >
           <Plus className="w-6 h-6" />
         </button>
@@ -377,6 +409,7 @@ const FeedPage: React.FC = () => {
             filter={filter}
           />
         )}
+        
       </>
     );
   }
@@ -385,9 +418,10 @@ const FeedPage: React.FC = () => {
   return (
     <CyberLayout>
       <div className="max-w-6xl mx-auto px-4 py-6 space-y-4 pb-24">
-        <div className="flex items-center justify-between">
+        {/* Top tabs + actions */}
+        <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-3">
-            <h1 className="font-orbitron text-lg tracking-widest text-foreground">CREATORS</h1>
+            {topTabs}
             <button
               onClick={() => setShowRules(true)}
               className="text-muted-foreground hover:text-foreground transition-colors"
@@ -396,34 +430,55 @@ const FeedPage: React.FC = () => {
               <ShieldAlert className="w-4 h-4" />
             </button>
           </div>
-          <button
-            onClick={() => navigate("/profile")}
-            className="font-mono-share text-[10px] text-primary hover:text-primary/80 transition-colors"
-          >
-            MY PROFILE →
-          </button>
-        </div>
-
-        {rulesBanner}
-
-        <div className="bg-card/60 border border-border/40 rounded-lg p-4 space-y-3">
-          <Textarea
-            value={newText}
-            onChange={(e) => setNewText(e.target.value)}
-            placeholder="Share something with the community..."
-            maxLength={2000}
-            rows={3}
-            className="font-mono-share text-sm bg-input/50 resize-none border-border/30 focus:border-primary/50"
-          />
-          {lockControls}
-          <div className="flex items-center justify-between">
-            <span className="font-mono-share text-[9px] text-muted-foreground">{newText.length}/2000</span>
-            <Button size="sm" onClick={handlePost} disabled={posting || !newText.trim()} className="font-mono-share text-[10px]">
-              {posting ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Send className="w-3 h-3 mr-1" />}
-              POST
-            </Button>
+          <div className="flex items-center gap-3">
+            {isAuthenticated && (
+              <button
+                onClick={() => navigate("/profile")}
+                className="font-mono-share text-[10px] text-primary hover:text-primary/80 transition-colors"
+              >
+                MY PROFILE →
+              </button>
+            )}
           </div>
         </div>
+
+        {isAuthenticated && rulesBanner}
+
+        {/* Stories at the very top */}
+        <StoriesBar currentUserId={user?.id} isAdmin={!!user?.is_admin} />
+
+        {isAuthenticated ? (
+          <div className="bg-card/60 border border-border/40 rounded-lg p-4 space-y-3">
+            <Textarea
+              value={newText}
+              onChange={(e) => setNewText(e.target.value)}
+              placeholder="Share something with the community..."
+              maxLength={2000}
+              rows={3}
+              className="font-mono-share text-sm bg-input/50 resize-none border-border/30 focus:border-primary/50"
+            />
+            {lockControls}
+            <div className="flex items-center justify-between">
+              <span className="font-mono-share text-[9px] text-muted-foreground">{newText.length}/2000</span>
+              <Button size="sm" onClick={handlePost} disabled={posting || !newText.trim()} className="font-mono-share text-[10px]">
+                {posting ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Send className="w-3 h-3 mr-1" />}
+                POST
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-card/60 border border-border/40 rounded-lg p-4 flex items-center justify-between gap-3">
+            <div>
+              <h2 className="font-orbitron text-xs tracking-wider text-foreground">SIGN IN TO POST &amp; CREATE</h2>
+              <p className="font-mono-share text-[10px] text-muted-foreground mt-1">
+                Browse freely. Sign up to generate, post, and unlock locked content.
+              </p>
+            </div>
+            <Button size="sm" onClick={() => navigate("/create")} className="font-mono-share text-[10px] shrink-0">
+              <Sparkles className="w-3 h-3 mr-1" /> GET STARTED
+            </Button>
+          </div>
+        )}
 
         {filterTabs("desktop")}
 

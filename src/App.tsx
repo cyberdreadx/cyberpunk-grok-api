@@ -44,14 +44,15 @@ const App = () => (
       >
         <AgeGateDialog />
         <Routes>
-          <Route path="/" element={<PageShell><Index /></PageShell>} />
-          <Route path="/index" element={<Navigate to="/" replace />} />
+          <Route path="/" element={<PageShell><FeedPage /></PageShell>} />
+          <Route path="/create" element={<PageShell><Index /></PageShell>} />
+          <Route path="/index" element={<Navigate to="/create" replace />} />
           <Route path="/admin" element={<PageShell><Admin /></PageShell>} />
           <Route path="/characters" element={<PageShell><Characters /></PageShell>} />
           <Route path="/library" element={<PageShell><Library /></PageShell>} />
           <Route path="/s/:shareId" element={<PageShell><ShareView /></PageShell>} />
           <Route path="/docs" element={<PageShell><ApiDocs /></PageShell>} />
-          <Route path="/feed" element={<PageShell><FeedPage /></PageShell>} />
+          <Route path="/feed" element={<Navigate to="/" replace />} />
           <Route path="/profile" element={<PageShell><ProfilePage /></PageShell>} />
           <Route path="/profile/:username" element={<PageShell><ProfilePage /></PageShell>} />
           <Route path="/referral" element={<PageShell><ReferralPage /></PageShell>} />
