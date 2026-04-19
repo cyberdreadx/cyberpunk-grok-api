@@ -36,7 +36,6 @@ const FeedPage: React.FC = () => {
   const isMobile = useIsMobile();
   const [rulesAcked, setRulesAcked] = useState(() => localStorage.getItem("feed-rules-acked") === "1");
   const [showRules, setShowRules] = useState(false);
-  const [authOpen, setAuthOpen] = useState(false);
 
   const [creators, setCreators] = useState<FeedCreator[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,11 +55,12 @@ const FeedPage: React.FC = () => {
 
   const requireAuth = useCallback(() => {
     if (!isAuthenticated) {
-      setAuthOpen(true);
+      toast({ title: "Sign in to post", description: "Create an account to share with the community." });
+      navigate("/create");
       return false;
     }
     return true;
-  }, [isAuthenticated]);
+  }, [isAuthenticated, toast, navigate]);
 
   const fetchCreators = useCallback(async (cursor?: string) => {
     try {
@@ -409,7 +409,7 @@ const FeedPage: React.FC = () => {
             filter={filter}
           />
         )}
-        <AuthDialog open={authOpen} onOpenChange={setAuthOpen} />
+        
       </>
     );
   }
