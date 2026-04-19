@@ -29,6 +29,8 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
   /** When set, the UI should show the verification code input. */
   const [pendingVerificationEmail, setPendingVerificationEmail] = useState<string | null>(null);
+  /** When set, the UI should show the 2FA login code prompt. */
+  const [pendingTwoFactorEmail, setPendingTwoFactorEmail] = useState<string | null>(null);
 
   // Hydrate user from stored token on mount
   useEffect(() => {
@@ -76,18 +78,45 @@ export function useAuth() {
   }, []);
 
   const signIn = useCallback(async (email: string, password: string) => {
-    const data = await apiFetch<{ token: string; user: AuthUser; email_verified: boolean }>("/auth/login", {
+    const data = await apiFetch<{ token?: string; user?: AuthUser; email_verified?: boolean; twoFactorRequired?: boolean; email?: string }>("/auth/login", {
       method: "POST",
       body: { email, password },
       auth: false,
     });
-    setAuthToken(data.token);
-    setUser({ ...data.user, email_verified: data.email_verified });
-    // If unverified, prompt for verification
-    if (!data.email_verified) {
-      setPendingVerificationEmail(data.user.email);
+    if (data.twoFactorRequired) {
+      setPendingTwoFactorEmail(data.email || email);
+      return data;
+    }
+    if (data.token && data.user) {
+      setAuthToken(data.token);
+      setUser({ ...data.user, email_verified: data.email_verified });
+      if (!data.email_verified) setPendingVerificationEmail(data.user.email);
     }
     return data;
+  }, []);
+
+  /** Submit the 2FA code received by email. */
+  const verifyTwoFactor = useCallback(async (email: string, code: string, rememberDevice: boolean) => {
+    const data = await apiFetch<{ token: string; user: AuthUser; email_verified: boolean }>("/auth/verify-2fa", {
+      method: "POST",
+      body: { email, code, rememberDevice },
+      auth: false,
+    });
+    setAuthToken(data.token);
+    setUser({ ...data.user, email_verified: data.email_verified });
+    setPendingTwoFactorEmail(null);
+    if (!data.email_verified) setPendingVerificationEmail(data.user.email);
+    return data;
+  }, []);
+
+  const cancelTwoFactor = useCallback(() => setPendingTwoFactorEmail(null), []);
+
+  /** Read/update 2FA setting. */
+  const getTwoFactor = useCallback(async () => {
+    return apiFetch<{ enabled: boolean; email_verified: boolean }>("/auth/two-factor");
+  }, []);
+  const setTwoFactor = useCallback(async (enabled: boolean) => {
+    return apiFetch<{ enabled: boolean }>("/auth/two-factor", { method: "POST", body: { enabled } });
   }, []);
 
   /** Verify email with the 6-digit code. Refreshes token. */
@@ -168,10 +197,15 @@ export function useAuth() {
     enabled: backendEnabled,
     isAuthenticated: !!user,
     pendingVerificationEmail,
+    pendingTwoFactorEmail,
     signUp,
     signIn,
     signOut,
     verifyEmail,
+    verifyTwoFactor,
+    cancelTwoFactor,
+    getTwoFactor,
+    setTwoFactor,
     resendCode,
     cancelVerification,
     requestVerification,
