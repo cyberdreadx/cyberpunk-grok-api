@@ -56,11 +56,15 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate, active = true, moun
   const [flagging, setFlagging] = useState(false);
   const [unlocking, setUnlocking] = useState(false);
   const [isUnlocked, setIsUnlocked] = useState(post.unlocked ?? true);
+  const [mediaFailed, setMediaFailed] = useState(false);
 
   // Sync unlock state when props change (e.g. after fetchFeed refresh)
   React.useEffect(() => {
     if (post.unlocked !== undefined) setIsUnlocked(post.unlocked);
   }, [post.unlocked]);
+  React.useEffect(() => {
+    setMediaFailed(false);
+  }, [post.id, post.imageUrl, post.previewImageUrl]);
   const [xrgeUnlockOpen, setXrgeUnlockOpen] = useState(false);
 
   const isLocked = !isUnlocked && !post.isOwner && ((post.lockCost || 0) > 0 || (post.lockPriceCents || 0) > 0 || !!(post.lockXrgeAmount && parseFloat(post.lockXrgeAmount) > 0));
@@ -169,7 +173,7 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate, active = true, moun
         <img src={post.previewImageUrl} alt="" aria-hidden className="absolute inset-0 w-full h-full object-cover blur-xl brightness-50" loading="lazy" decoding="async" />
       )}
 
-      {mountMedia && !isLocked && post.imageUrl ? (
+      {mountMedia && !isLocked && post.imageUrl && !mediaFailed ? (
         isVideo ? (
           <video
             ref={videoRef}
@@ -180,10 +184,18 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate, active = true, moun
             playsInline
             preload={active ? "auto" : "none"}
             loop
+            onError={() => setMediaFailed(true)}
           />
         ) : (
-          <img src={post.imageUrl} alt="" className="relative z-[1] w-full h-full object-contain" loading="lazy" decoding="async" />
+          <img src={post.imageUrl} alt="" className="relative z-[1] w-full h-full object-contain" loading="lazy" decoding="async" onError={() => setMediaFailed(true)} />
         )
+      ) : mountMedia && !isLocked && mediaFailed && post.previewImageUrl ? (
+        <img src={post.previewImageUrl} alt="" className="relative z-[1] w-full h-full object-contain opacity-80" loading="lazy" decoding="async" />
+      ) : mountMedia && !isLocked && mediaFailed ? (
+        <div className="relative z-10 px-8 max-w-full text-center">
+          <p className="font-mono-share text-sm text-white/70">Media failed to load</p>
+          {!!post.text && <p className="mt-3 font-mono-share text-xs text-white/55 whitespace-pre-wrap break-words line-clamp-5">{post.text}</p>}
+        </div>
       ) : !isLocked ? (
         <div className="absolute inset-0 bg-gradient-to-b from-background via-card to-background" />
       ) : null}

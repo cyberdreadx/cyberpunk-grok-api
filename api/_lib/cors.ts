@@ -6,6 +6,10 @@ export function applyCors(
   methods: string = "GET, POST, PUT, PATCH, DELETE, OPTIONS",
 ) {
   const origin = typeof req.headers.origin === "string" ? req.headers.origin : "";
+  const requestedHeaders = typeof req.headers["access-control-request-headers"] === "string"
+    ? req.headers["access-control-request-headers"]
+    : "";
+  const allowHeaders = requestedHeaders || "Content-Type, Authorization";
 
   if (origin) {
     res.setHeader("Access-Control-Allow-Origin", origin);
@@ -16,6 +20,6 @@ export function applyCors(
   }
 
   res.setHeader("Access-Control-Allow-Methods", methods);
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Access-Control-Allow-Headers", allowHeaders);
   res.setHeader("Access-Control-Max-Age", "86400");
 }
