@@ -1,8 +1,9 @@
 import React, { useState } from "react";
-import { Loader2, Zap, Crown, RefreshCw, Sparkles, ArrowUp } from "lucide-react";
+import { Loader2, Zap, Crown, RefreshCw, Sparkles, ArrowUp, Flame } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { SUBSCRIPTION_TIERS_MONTHLY, SUBSCRIPTION_TIERS_YEARLY, TIER_RANK } from "@/lib/api";
+import { useFlashSale } from "@/hooks/useFlashSale";
 import type { CreditPackage, SubscriptionTier } from "@/lib/api";
 
 interface PricingCardsProps {
