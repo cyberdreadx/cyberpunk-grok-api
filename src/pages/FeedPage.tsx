@@ -74,11 +74,22 @@ const FeedPage: React.FC = () => {
         `/feed?${params.toString()}`
       );
       if (cursor) {
-        setCreators((prev) => [...prev, ...data.creators]);
+        setCreators((prev) => {
+          const seen = new Set(prev.map((c) => c.userId));
+          const merged = [...prev];
+          for (const c of data.creators) {
+            if (!seen.has(c.userId)) {
+              seen.add(c.userId);
+              merged.push(c);
+            }
+          }
+          return merged;
+        });
       } else {
         setCreators(data.creators);
       }
-      setNextCursor(data.nextCursor);
+      // Guard against the server returning the same cursor (would loop forever).
+      setNextCursor((prevCursor) => (data.nextCursor && data.nextCursor !== cursor ? data.nextCursor : null));
     } catch {
       toast({ title: "Failed to load feed", variant: "destructive" });
     } finally {
