@@ -28,6 +28,8 @@ interface GrokResult {
   folderId?: string | null;
 }
 
+import { apiUrl } from "@/lib/api";
+
 const DB_NAME = "grok-media-db";
 const DB_VERSION = 3;
 const STORE_NAME = "results";
@@ -884,6 +886,5 @@ export async function exportLibraryAsZip(
 
 /** Build a proxy URL for exporting external media (same pattern as ResultsGrid). */
 function getExportProxyUrl(url: string, filename: string): string {
-  const base = "/api/download";
-  return `${base}?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(filename)}`;
+  return `${apiUrl("/download")}?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(filename)}`;
 }

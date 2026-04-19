@@ -7,7 +7,7 @@ import {
   moveResultToFolder,
   migrateFromLocalStorage,
 } from "@/lib/storage";
-import { apiFetch, calculateCreditCost, backendEnabled } from "@/lib/api";
+import { apiFetch, calculateCreditCost, backendEnabled, apiUrl } from "@/lib/api";
 
 interface ActiveJob {
   promptId: string;
@@ -390,7 +390,7 @@ export function useGrokApi() {
             let video = poll.video;
             if (video && video.startsWith("https://") && !video.startsWith("data:")) {
               try {
-                const proxyResp = await fetch("/api/comfyui", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "proxy-s3", url: video }) });
+                const proxyResp = await fetch(apiUrl("/comfyui"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "proxy-s3", url: video }) });
                 if (proxyResp.ok) { const blob = await proxyResp.blob(); video = URL.createObjectURL(blob); }
               } catch { }
             }
@@ -1113,7 +1113,7 @@ export function useGrokApi() {
         if (video && video.startsWith("https://") && !video.startsWith("data:")) {
           try {
             console.log("[comfy-poll] Proxying S3 video through backend...");
-            const proxyResp = await fetch("/api/comfyui", {
+            const proxyResp = await fetch(apiUrl("/comfyui"), {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ action: "proxy-s3", url: video }),
