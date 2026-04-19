@@ -14,6 +14,15 @@ const isLovablePreviewHost = currentHost.endsWith(".lovable.app") || currentHost
 const API_BASE = import.meta.env.VITE_API_URL || (isLovablePreviewHost ? PREVIEW_API_BASE : "/api");
 const isSameOriginApi = API_BASE.startsWith("/") || API_BASE.startsWith(currentOrigin);
 
+/** Resolved API base (e.g. "/api" or "https://your-app.vercel.app/api"). Use for direct fetch() calls. */
+export const API_BASE_URL = API_BASE;
+/** Whether the API is same-origin — controls fetch credentials. */
+export const apiIsSameOrigin = isSameOriginApi;
+/** Build a full API URL for a sub-path (e.g. apiUrl("/download") → "/api/download"). */
+export function apiUrl(path: string): string {
+  return `${API_BASE}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
 /** Whether the backend is configured (always true if deployed on Vercel). */
 export const backendEnabled = true;
 
