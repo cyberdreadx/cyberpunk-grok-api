@@ -31,12 +31,13 @@ const FEED_RULES = [
 ];
 
 const FeedPage: React.FC = () => {
-  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const [rulesAcked, setRulesAcked] = useState(() => localStorage.getItem("feed-rules-acked") === "1");
   const [showRules, setShowRules] = useState(false);
+  const [authOpen, setAuthOpen] = useState(false);
 
   const [creators, setCreators] = useState<FeedCreator[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,6 +54,14 @@ const FeedPage: React.FC = () => {
   const [activeCreator, setActiveCreator] = useState<FeedCreator | null>(null);
   const [reelTarget, setReelTarget] = useState<{ postId: string; userId?: string } | null>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
+
+  const requireAuth = useCallback(() => {
+    if (!isAuthenticated) {
+      setAuthOpen(true);
+      return false;
+    }
+    return true;
+  }, [isAuthenticated]);
 
   const fetchCreators = useCallback(async (cursor?: string) => {
     try {
