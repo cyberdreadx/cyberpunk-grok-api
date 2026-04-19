@@ -52,7 +52,7 @@ const App = () => (
           <Route path="/library" element={<PageShell><Library /></PageShell>} />
           <Route path="/s/:shareId" element={<PageShell><ShareView /></PageShell>} />
           <Route path="/docs" element={<PageShell><ApiDocs /></PageShell>} />
-          <Route path="/feed" element={<PageShell><FeedPage /></PageShell>} />
+          <Route path="/feed" element={<Navigate to="/" replace />} />
           <Route path="/profile" element={<PageShell><ProfilePage /></PageShell>} />
           <Route path="/profile/:username" element={<PageShell><ProfilePage /></PageShell>} />
           <Route path="/referral" element={<PageShell><ReferralPage /></PageShell>} />
