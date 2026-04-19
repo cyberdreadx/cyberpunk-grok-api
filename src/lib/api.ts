@@ -5,8 +5,14 @@
 
 // ── API base URL ─────────────────────────────────────────────────────────
 // Production (Vercel): same origin — `/api` hits serverless routes.
+// Lovable preview hosts do not serve the backend, so they must call the deployed API directly.
 // Local dev: set `VITE_API_URL` to full API base, OR leave unset — Vite proxies `/api` → backend (see vite.config).
-const API_BASE = import.meta.env.VITE_API_URL || "/api";
+const PREVIEW_API_BASE = "https://cyberpunk-grok-api.vercel.app/api";
+const currentOrigin = typeof window !== "undefined" ? window.location.origin : "";
+const currentHost = typeof window !== "undefined" ? window.location.hostname : "";
+const isLovablePreviewHost = currentHost.endsWith(".lovable.app") || currentHost.endsWith(".lovableproject.com");
+const API_BASE = import.meta.env.VITE_API_URL || (isLovablePreviewHost ? PREVIEW_API_BASE : "/api");
+const isSameOriginApi = API_BASE.startsWith("/") || API_BASE.startsWith(currentOrigin);
 
 /** Whether the backend is configured (always true if deployed on Vercel). */
 export const backendEnabled = true;
@@ -53,7 +59,7 @@ export async function apiFetch<T = any>(path: string, options: ApiOptions = {}):
     }
   }
 
-  const fetchOptions: RequestInit = { method, headers, credentials: "include" };
+  const fetchOptions: RequestInit = { method, headers, credentials: isSameOriginApi ? "include" : "omit" };
   if (body !== undefined) {
     fetchOptions.body = JSON.stringify(body);
   }
