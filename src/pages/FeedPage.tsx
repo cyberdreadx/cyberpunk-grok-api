@@ -363,10 +363,10 @@ const FeedPage: React.FC = () => {
             <StoriesBar currentUserId={user?.id} isAdmin={!!user?.is_admin} />
           </div>
 
-          {/* Grid */}
-          <div className="px-3 pt-3">
+          {/* Grid — edge-to-edge so cards' borders touch */}
+          <div className="pt-3">
             {loading ? (
-              skeletonGrid("grid-cols-2")
+              <div className="px-3">{skeletonGrid("grid-cols-2")}</div>
             ) : creators.length === 0 ? (
               <div className="py-16 text-center">
                 <p className="font-mono-share text-xs text-muted-foreground">
@@ -375,9 +375,11 @@ const FeedPage: React.FC = () => {
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-0 -mx-px">
                   {creators.map((c) => (
-                    <CreatorCard key={c.userId} creator={c} onOpen={openCreator} forceBlur={!isAuthenticated} />
+                    <div key={c.userId} className="-ml-px -mt-px">
+                      <CreatorCard creator={c} onOpen={openCreator} forceBlur={!isAuthenticated} />
+                    </div>
                   ))}
                 </div>
                 <div ref={sentinelRef} className="h-12 flex items-center justify-center">
