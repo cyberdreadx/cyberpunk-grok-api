@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import { useTranslation } from "react-i18next";
-import { Coins, ShoppingCart, Loader2, Crown, Settings, XCircle, AlertTriangle, Share2, Copy, Check, Gift, Users, Wallet } from "lucide-react";
+import { Coins, ShoppingCart, Loader2, Crown, Settings, XCircle, AlertTriangle, Share2, Copy, Check, Gift, Users, Wallet, Flame } from "lucide-react";
+import { useFlashSale } from "@/hooks/useFlashSale";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
 import {
@@ -63,6 +64,7 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
   onExternalOpenChange,
 }) => {
   const { t } = useTranslation();
+  const { sale: flashSale, timeLeft: flashTimeLeft, appliesTo: flashApplies } = useFlashSale();
   const [internalOpen, setInternalOpen] = useState(false);
   const open = externalOpen !== undefined ? externalOpen : internalOpen;
   const setOpen = (v: boolean) => {
@@ -116,10 +118,16 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
           <Button
             variant="ghost"
             size="sm"
-            className="font-mono-share text-xs gap-1.5 text-secondary hover:text-secondary/80"
+            className="font-mono-share text-xs gap-1.5 text-secondary hover:text-secondary/80 relative"
           >
             <ShoppingCart className="w-3 h-3" />
             <span className="hidden sm:inline">{t("nav.store")}</span>
+            {flashSale && (
+              <span className="ml-1 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-orange-500/25 border border-orange-400/60 font-orbitron text-[8px] tracking-wider text-orange-200 animate-pulse">
+                <Flame className="w-2.5 h-2.5" />
+                SALE
+              </span>
+            )}
           </Button>
         </DialogTrigger>
         <DialogContent className="bg-card border-border border-primary/20 shadow-[0_0_48px_hsl(var(--primary)/0.08)] w-[min(96vw,72rem)] max-w-6xl max-h-[85vh] overflow-hidden p-0 gap-0 flex flex-col">
@@ -156,6 +164,42 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
               </Button>
             </div>
           </DialogHeader>
+
+          {/* Flash sale banner — prominent, in-store */}
+          {flashSale && (
+            <div className="mt-3 rounded-lg border-2 border-orange-500/60 bg-gradient-to-r from-orange-600/20 via-pink-500/15 to-orange-600/20 p-3 space-y-1.5 shadow-[0_0_24px_hsl(20_90%_50%/0.25)]">
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-orange-500/30 ring-2 ring-orange-400/60">
+                  <Flame className="h-3.5 w-3.5 text-orange-200 animate-pulse" />
+                </div>
+                <span className="font-orbitron text-[11px] tracking-widest text-orange-100 font-bold">⚡ FLASH SALE</span>
+                <span className="font-mono-share text-[11px] text-orange-100/90">{flashSale.title}</span>
+                <span className="ml-auto font-mono-share text-[10px] text-orange-100/80">
+                  ends in <span className="font-bold text-yellow-200 tabular-nums">{flashTimeLeft}</span>
+                </span>
+              </div>
+              <div className="flex items-center gap-3 flex-wrap pl-9">
+                {flashSale.discount_percent > 0 && (
+                  <span className="font-orbitron text-xs font-bold text-yellow-300">
+                    {flashSale.discount_percent}% OFF
+                  </span>
+                )}
+                {flashSale.bonus_credits_percent > 0 && (
+                  <span className="font-orbitron text-xs font-bold text-green-300">
+                    +{flashSale.bonus_credits_percent}% BONUS CREDITS
+                  </span>
+                )}
+                <span className="font-mono-share text-[9px] text-orange-200/70">
+                  {flashSale.packages && flashSale.packages.length > 0
+                    ? `Eligible packs: ${flashSale.packages.map(p => p.toUpperCase()).join(", ")}`
+                    : "All packs eligible"}
+                </span>
+              </div>
+              <p className="font-mono-share text-[10px] text-orange-100/80 leading-snug pl-9">
+                Pay with <span className="text-pink-200 font-bold">XRGE</span> on any eligible pack to apply this sale automatically.
+              </p>
+            </div>
+          )}
 
           {/* Current balance summary */}
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 bg-input/50 border border-border/30 rounded-md px-3 py-2 mt-2">

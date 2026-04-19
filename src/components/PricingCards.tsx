@@ -1,8 +1,9 @@
 import React, { useState } from "react";
-import { Loader2, Zap, Crown, RefreshCw, Sparkles, ArrowUp } from "lucide-react";
+import { Loader2, Zap, Crown, RefreshCw, Sparkles, ArrowUp, Flame } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { SUBSCRIPTION_TIERS_MONTHLY, SUBSCRIPTION_TIERS_YEARLY, TIER_RANK } from "@/lib/api";
+import { useFlashSale } from "@/hooks/useFlashSale";
 import type { CreditPackage, SubscriptionTier } from "@/lib/api";
 
 interface PricingCardsProps {
@@ -270,22 +271,35 @@ function PackCard({
   isBulk?: boolean;
 }) {
   const { t } = useTranslation();
+  const { sale: flashSale, appliesTo: flashApplies } = useFlashSale();
+  const onFlash = !!flashSale && flashApplies(pkg.id);
+
   return (
     <div
       className={`relative flex min-w-0 max-w-full flex-col overflow-hidden rounded-lg border-2 transition-all ${
-        pkg.popular
+        onFlash
+          ? "border-orange-500/70 bg-gradient-to-b from-orange-500/[0.08] to-card/50 shadow-[0_0_20px_hsl(20_90%_50%/0.18)]"
+          : pkg.popular
           ? "border-secondary/70 bg-secondary/[0.06] shadow-[0_0_20px_hsl(var(--secondary)/0.1)]"
           : isBulk
           ? "border-primary/45 bg-primary/[0.06] shadow-[0_0_16px_hsl(var(--primary)/0.08)]"
           : "border-border/90 bg-card/50"
       }`}
     >
-      {pkg.popular && (
+      {onFlash && (
+        <div className="border-b border-orange-500/60 bg-gradient-to-r from-orange-600/40 via-pink-500/40 to-orange-600/40 py-1.5 px-2 flex items-center justify-center gap-1.5 font-orbitron text-[8px] tracking-[0.18em] text-orange-100">
+          <Flame className="w-3 h-3 animate-pulse" />
+          FLASH SALE
+          {flashSale!.discount_percent > 0 && <span className="text-yellow-200">{flashSale!.discount_percent}% OFF</span>}
+          {flashSale!.bonus_credits_percent > 0 && <span className="text-green-200">+{flashSale!.bonus_credits_percent}% BONUS</span>}
+        </div>
+      )}
+      {pkg.popular && !onFlash && (
         <div className="border-b border-secondary/50 bg-secondary/85 py-1.5 text-center font-orbitron text-[8px] tracking-[0.18em] text-secondary-foreground">
           {t("pricing.popular")}
         </div>
       )}
-      {isBulk && !pkg.popular && (
+      {isBulk && !pkg.popular && !onFlash && (
         <div className="border-b border-primary/40 bg-primary/20 py-1.5 text-center font-orbitron text-[8px] tracking-[0.18em] text-primary">
           {t("pricing.bulk")}
         </div>

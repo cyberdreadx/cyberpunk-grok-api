@@ -34,6 +34,7 @@ import ApiKeyDialog from "@/components/ApiKeyDialog";
 import ApiKeysPanel from "@/components/ApiKeysPanel";
 import AuthDialog from "@/components/AuthDialog";
 import CreditDisplay from "@/components/CreditDisplay";
+import FlashSaleBanner from "@/components/FlashSaleBanner";
 import NotificationBell from "@/components/NotificationBell";
 import DailyMissionsDialog from "@/components/DailyMissionsDialog";
 import { useDailyMissions } from "@/hooks/useDailyMissions";
@@ -936,6 +937,9 @@ const Index = () => {
   return (
     <CyberLayout>
       <div className="max-w-5xl mx-auto px-3 sm:px-4 py-4 sm:py-8 pb-24 sm:pb-8 space-y-4 sm:space-y-6">
+        {/* Flash sale banner — sitewide */}
+        <FlashSaleBanner onClick={() => setStoreOpen(true)} />
+
         {/* Verify email banner for unverified users */}
         {auth.isAuthenticated && auth.user && !auth.user.email_verified && (
           <div className="flex items-center gap-3 bg-secondary/10 border border-secondary/30 rounded-lg px-4 py-3 animate-slide-up">
