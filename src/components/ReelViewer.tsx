@@ -40,6 +40,23 @@ interface Props {
 /** How many slides to keep mounted on each side of the active one. */
 const WINDOW_RADIUS = 1;
 
+const getNearestSlideIndex = (container: HTMLDivElement, items: (HTMLDivElement | null)[]) => {
+  const containerTop = container.getBoundingClientRect().top;
+  let bestIdx = 0;
+  let bestDistance = Number.POSITIVE_INFINITY;
+
+  items.forEach((el, idx) => {
+    if (!el) return;
+    const distance = Math.abs(el.getBoundingClientRect().top - containerTop);
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      bestIdx = idx;
+    }
+  });
+
+  return bestIdx;
+};
+
 /**
  * Full-screen TikTok-style reel viewer. Virtualized: only the active slide
  * (and ±1 neighbours as placeholders) renders heavy media, so memory + decode
@@ -53,6 +70,7 @@ const ReelViewer: React.FC<Props> = ({ open, onClose, initialPostId, userId, fil
   const [activeIdx, setActiveIdx] = useState(0);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const scrollSettleTimerRef = useRef<number | null>(null);
 
   const buildUrl = useCallback((cursor?: string) => {
     const params = new URLSearchParams({ sort: filter === "trending" ? "trending" : "new" });
@@ -100,11 +118,18 @@ const ReelViewer: React.FC<Props> = ({ open, onClose, initialPostId, userId, fil
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, loading, posts.length]);
 
-  // Track which slide is active via IntersectionObserver (no scroll math).
+  // Track which slide is active; snap scrolling can produce observer gaps, so
+  // settle to the nearest slide after scroll stops.
   useEffect(() => {
     if (!open || loading || posts.length === 0) return;
     const root = containerRef.current;
     if (!root) return;
+    const syncActiveFromScroll = () => {
+      if (scrollSettleTimerRef.current) window.clearTimeout(scrollSettleTimerRef.current);
+      scrollSettleTimerRef.current = window.setTimeout(() => {
+        setActiveIdx(getNearestSlideIndex(root, itemRefs.current));
+      }, 90);
+    };
     const io = new IntersectionObserver(
       (entries) => {
         // Pick the most-visible entry.
@@ -117,10 +142,15 @@ const ReelViewer: React.FC<Props> = ({ open, onClose, initialPostId, userId, fil
           if (idx >= 0) setActiveIdx(idx);
         }
       },
-      { root, threshold: [0.5, 0.75] }
+      { root, threshold: [0.25, 0.5, 0.75] }
     );
     itemRefs.current.forEach((el) => el && io.observe(el));
-    return () => io.disconnect();
+    root.addEventListener("scroll", syncActiveFromScroll, { passive: true });
+    return () => {
+      io.disconnect();
+      root.removeEventListener("scroll", syncActiveFromScroll);
+      if (scrollSettleTimerRef.current) window.clearTimeout(scrollSettleTimerRef.current);
+    };
   }, [open, loading, posts.length]);
 
   // Lock body scroll while open.

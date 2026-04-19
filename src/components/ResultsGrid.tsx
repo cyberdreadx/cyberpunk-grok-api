@@ -1307,7 +1307,6 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
     setStoryPostingId(result.id);
     try {
       // Reuse the share upload flow to get a public URL
-      const shareBase = (import.meta.env.VITE_API_URL as string) || "/api";
       let mediaUrl = result.url;
 
       // Only skip upload if the URL is already in permanent blob storage
@@ -1325,7 +1324,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
           } else if (src.startsWith("http") || src.startsWith("blob:")) {
             if (src.startsWith("https://") || src.startsWith("http://")) {
               const token = localStorage.getItem("auth-token");
-              const dlRes = await fetch(`${shareBase}/share`, {
+              const dlRes = await fetch(apiUrl("/share"), {
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",
@@ -1353,7 +1352,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
           const authToken = localStorage.getItem("auth-token") || "";
           const { url: blobUrl } = await upload(`stories/story.${ext}`, mediaBlob, {
             access: "public",
-            handleUploadUrl: `${shareBase}/blob-upload`,
+            handleUploadUrl: apiUrl("/blob-upload"),
             clientPayload: authToken,
           });
           mediaUrl = blobUrl;
@@ -1378,12 +1377,11 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
   const handleStoryLockConfirm = useCallback(async () => {
     if (!storyLockDialog) return;
     try {
-      const shareBase = (import.meta.env.VITE_API_URL as string) || "/api";
       const token = localStorage.getItem("auth-token");
       const lockCost = Math.max(0, Math.min(storyLockCredits, 50));
       const xrgeAmount = parseFloat(storyLockXrge) > 0 ? storyLockXrge : undefined;
 
-      const storyRes = await fetch(`${shareBase}/stories`, {
+      const storyRes = await fetch(apiUrl("/stories"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
