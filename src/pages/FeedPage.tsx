@@ -87,13 +87,9 @@ const FeedPage: React.FC = () => {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!isAuthenticated) {
-      navigate("/");
-      return;
-    }
     setLoading(true);
     fetchCreators();
-  }, [authLoading, isAuthenticated, fetchCreators, navigate]);
+  }, [authLoading, isAuthenticated, fetchCreators]);
 
   // Open ReelViewer when arriving from a notification click
   useEffect(() => {
