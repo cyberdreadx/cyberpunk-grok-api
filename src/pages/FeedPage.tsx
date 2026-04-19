@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Send, Users, Globe, Loader2, Plus, X, Lock, Zap, ShieldAlert, Sparkles, Rss, Flame } from "lucide-react";
+import { Send, Users, Globe, Loader2, Plus, X, Lock, Zap, ShieldAlert, Sparkles, Rss, Flame, Film } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import FeatureExplainer from "@/components/FeatureExplainer";
@@ -52,6 +52,7 @@ const FeedPage: React.FC = () => {
   const [lockXrge, setLockXrge] = useState("");
   const [activeCreator, setActiveCreator] = useState<FeedCreator | null>(null);
   const [reelTarget, setReelTarget] = useState<{ postId: string; userId?: string } | null>(null);
+  const [reelsOpen, setReelsOpen] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   const requireAuth = useCallback(() => {
@@ -261,6 +262,20 @@ const FeedPage: React.FC = () => {
         >
           <Users className="w-3 h-3" /> FOLLOWING
         </button>
+        <button
+          onClick={() => {
+            if (!isAuthenticated) {
+              toast({ title: "Sign up to watch reels", description: "Create a free account to watch the video feed." });
+              navigate("/create?signup=1");
+              return;
+            }
+            setReelsOpen(true);
+          }}
+          className={`flex items-center gap-1 px-2.5 py-1 rounded-full font-mono-share text-[10px] transition-colors border border-accent/50 bg-accent/10 text-accent shadow-[0_0_8px_hsl(var(--accent)/0.25)] hover:bg-accent/20`}
+          title="Vertical video reels"
+        >
+          <Film className="w-3 h-3" /> REELS
+        </button>
       </div>
     );
   };
@@ -431,7 +446,14 @@ const FeedPage: React.FC = () => {
             filter={filter}
           />
         )}
-        
+        {reelsOpen && (
+          <ReelViewer
+            open
+            onClose={() => setReelsOpen(false)}
+            initialPostId=""
+            mediaType="video"
+          />
+        )}
       </>
     );
   }
@@ -532,6 +554,14 @@ const FeedPage: React.FC = () => {
           initialPostId={reelTarget.postId}
           userId={reelTarget.userId}
           filter={filter}
+        />
+      )}
+      {reelsOpen && (
+        <ReelViewer
+          open
+          onClose={() => setReelsOpen(false)}
+          initialPostId=""
+          mediaType="video"
         />
       )}
     </CyberLayout>

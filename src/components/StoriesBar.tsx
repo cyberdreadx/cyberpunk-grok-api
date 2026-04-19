@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { apiFetch } from "@/lib/api";
 import { hasAuthToken } from "@/lib/api";
 import StoryViewer from "@/components/StoryViewer";
 import FeatureExplainer, { hasSeenExplainer, markExplainerSeen } from "@/components/FeatureExplainer";
+import { Lock } from "lucide-react";
 
 interface Story {
   id: string;
@@ -35,13 +37,13 @@ interface StoriesBarProps {
 }
 
 const StoriesBar: React.FC<StoriesBarProps> = ({ currentUserId, isAdmin }) => {
+  const navigate = useNavigate();
   const [users, setUsers] = useState<StoryUser[]>([]);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [activeUserIdx, setActiveUserIdx] = useState(0);
   const [explainerOpen, setExplainerOpen] = useState(false);
   const [pendingOpenIdx, setPendingOpenIdx] = useState<number | null>(null);
 
-  // Only fetch if logged in
   const loggedIn = hasAuthToken();
 
   const fetchStories = useCallback(async () => {
@@ -92,7 +94,50 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUserId, isAdmin }) => {
     };
   }, [fetchStories]);
 
-  if (!loggedIn || users.length === 0) return null;
+  // ─── Logged-out teaser: show fake blurred bubbles that nudge to signup ───
+  if (!loggedIn) {
+    const teaserNames = ["neon", "muse", "cyber", "ghost", "vexa", "halo"];
+    return (
+      <div className="flex gap-4 overflow-x-auto pb-3 px-1 scrollbar-hide">
+        {teaserNames.map((name, i) => (
+          <button
+            key={name}
+            onClick={() => navigate("/create?signup=1")}
+            className="flex flex-col items-center gap-1.5 shrink-0 group"
+            aria-label="Sign up to view stories"
+          >
+            <div className="relative w-[62px] h-[62px] sm:w-[70px] sm:h-[70px] rounded-full p-[2.5px] story-ring-active transition-transform duration-200 group-hover:scale-110 group-active:scale-95">
+              <div className="w-full h-full rounded-full bg-background overflow-hidden relative">
+                <div
+                  className="absolute inset-0 bg-gradient-to-br from-primary/40 via-secondary/30 to-accent/40 blur-md scale-125"
+                  style={{ animationDelay: `${i * 80}ms` }}
+                  aria-hidden
+                />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="bg-black/50 backdrop-blur-sm rounded-full p-1.5 border border-primary/40">
+                    <Lock className="w-3 h-3 text-primary" />
+                  </div>
+                </div>
+              </div>
+            </div>
+            <span className="font-mono-share text-[10px] text-muted-foreground/60 truncate max-w-[64px]">
+              @{name}
+            </span>
+          </button>
+        ))}
+        <style>{`
+          @keyframes story-ring-spin { to { --story-angle: 360deg; } }
+          @property --story-angle { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+          .story-ring-active {
+            background: conic-gradient(from var(--story-angle), hsl(var(--primary)), hsl(var(--secondary)), hsl(var(--primary)));
+            animation: story-ring-spin 3s linear infinite;
+          }
+        `}</style>
+      </div>
+    );
+  }
+
+  if (users.length === 0) return null;
 
   // Sort: users with free (unlocked) stories first, then locked-only users
   const sortedUsers = [...users].sort((a, b) => {
