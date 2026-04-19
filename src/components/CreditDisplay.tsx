@@ -118,10 +118,16 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
           <Button
             variant="ghost"
             size="sm"
-            className="font-mono-share text-xs gap-1.5 text-secondary hover:text-secondary/80"
+            className="font-mono-share text-xs gap-1.5 text-secondary hover:text-secondary/80 relative"
           >
             <ShoppingCart className="w-3 h-3" />
             <span className="hidden sm:inline">{t("nav.store")}</span>
+            {flashSale && (
+              <span className="ml-1 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-orange-500/25 border border-orange-400/60 font-orbitron text-[8px] tracking-wider text-orange-200 animate-pulse">
+                <Flame className="w-2.5 h-2.5" />
+                SALE
+              </span>
+            )}
           </Button>
         </DialogTrigger>
         <DialogContent className="bg-card border-border border-primary/20 shadow-[0_0_48px_hsl(var(--primary)/0.08)] w-[min(96vw,72rem)] max-w-6xl max-h-[85vh] overflow-hidden p-0 gap-0 flex flex-col">
