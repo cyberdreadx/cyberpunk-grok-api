@@ -15,7 +15,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const sql = getDb();
   const auth = getUserFromRequest(req);
-  if (!auth) return res.status(401).json({ error: "Unauthorized" });
+  // GET is public (logged-out users can browse the feed). Mutations require auth.
+  if (req.method !== "GET" && !auth) return res.status(401).json({ error: "Unauthorized" });
+  const authUserId: string | null = auth?.userId ?? null;
 
   // GET — list feed posts
   if (req.method === "GET") {
