@@ -485,7 +485,7 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
             <div className="divide-y divide-border/10">
               {viewers.map((v) => (
                 <Link
-                  to={`/u/${v.username}`}
+                  to={`/profile/${v.username}`}
                   key={v.userId}
                   onClick={() => onClose()}
                   className="flex items-center gap-3 px-4 py-3 hover:bg-primary/5 transition-colors"
