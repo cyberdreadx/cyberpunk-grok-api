@@ -446,7 +446,14 @@ const FeedPage: React.FC = () => {
             filter={filter}
           />
         )}
-        
+        {reelsOpen && (
+          <ReelViewer
+            open
+            onClose={() => setReelsOpen(false)}
+            initialPostId=""
+            mediaType="video"
+          />
+        )}
       </>
     );
   }
