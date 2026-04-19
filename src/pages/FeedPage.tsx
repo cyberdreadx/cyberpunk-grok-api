@@ -262,6 +262,20 @@ const FeedPage: React.FC = () => {
         >
           <Users className="w-3 h-3" /> FOLLOWING
         </button>
+        <button
+          onClick={() => {
+            if (!isAuthenticated) {
+              toast({ title: "Sign up to watch reels", description: "Create a free account to watch the video feed." });
+              navigate("/create?signup=1");
+              return;
+            }
+            setReelsOpen(true);
+          }}
+          className={`flex items-center gap-1 px-2.5 py-1 rounded-full font-mono-share text-[10px] transition-colors border border-accent/50 bg-accent/10 text-accent shadow-[0_0_8px_hsl(var(--accent)/0.25)] hover:bg-accent/20`}
+          title="Vertical video reels"
+        >
+          <Film className="w-3 h-3" /> REELS
+        </button>
       </div>
     );
   };
