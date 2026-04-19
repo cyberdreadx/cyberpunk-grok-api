@@ -65,12 +65,12 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
     } catch { return undefined; }
   }, []);
 
-  // Open dialog when verification is needed (signup, login, or "verify now" banner)
+  // Open dialog when verification or 2FA is needed
   useEffect(() => {
-    if (pendingVerificationEmail) {
+    if (pendingVerificationEmail || pendingTwoFactorEmail) {
       setOpen(true);
     }
-  }, [pendingVerificationEmail]);
+  }, [pendingVerificationEmail, pendingTwoFactorEmail]);
 
   // Auto-open on referral link (only once, only if not authenticated)
   useEffect(() => {
