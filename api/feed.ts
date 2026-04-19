@@ -238,7 +238,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           FROM feed_posts p
           JOIN profiles pr ON pr.user_id = p.user_id
           JOIN users uu ON uu.id = p.user_id
-          WHERE p.user_id = ${userId} ${cursorCond}
+          WHERE p.user_id = ${userId} ${cursorCond} ${videoCond}
           ORDER BY ${orderBy} LIMIT ${limit}
         `;
       } else if (filter === "following" && authUserId) {
@@ -248,7 +248,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           JOIN profiles pr ON pr.user_id = p.user_id
           JOIN users uu ON uu.id = p.user_id
           WHERE p.user_id IN (SELECT following_id FROM follows WHERE follower_id = ${authUserId})
-            ${cursorCond}
+            ${cursorCond} ${videoCond}
           ORDER BY ${orderBy} LIMIT ${limit}
         `;
       } else {
@@ -257,7 +257,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           FROM feed_posts p
           JOIN profiles pr ON pr.user_id = p.user_id
           JOIN users uu ON uu.id = p.user_id
-          WHERE 1=1 ${cursorCond}
+          WHERE 1=1 ${cursorCond} ${videoCond}
           ORDER BY ${orderBy} LIMIT ${limit}
         `;
       }
