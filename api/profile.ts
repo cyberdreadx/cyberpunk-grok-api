@@ -81,8 +81,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       const isVerifiedActive =
-        p.verification_status === "verified" &&
-        (!p.verification_renews_at || new Date(p.verification_renews_at) > new Date());
+        p.email === ADMIN_EMAIL ||
+        (p.verification_status === "verified" &&
+          (!p.verification_renews_at || new Date(p.verification_renews_at) > new Date()));
 
       return res.json({
         userId: p.user_id,
