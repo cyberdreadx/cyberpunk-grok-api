@@ -17,6 +17,7 @@ import MobileBottomNav from "@/components/MobileBottomNav";
 import FeatureExplainer from "@/components/FeatureExplainer";
 import ReelViewer from "@/components/ReelViewer";
 import StoriesBar from "@/components/StoriesBar";
+import SignupTeaser from "@/components/SignupTeaser";
 
 const FEED_RULES = [
   "No illegal content of any kind",
@@ -320,6 +321,13 @@ const FeedPage: React.FC = () => {
               {filterTabs("mobile")}
             </div>
           </div>
+
+          {/* Signup teaser for logged-out users */}
+          {!authLoading && !isAuthenticated && (
+            <div className="px-3 pt-3">
+              <SignupTeaser variant="mobile" />
+            </div>
+          )}
 
           {/* Stories */}
           <div className="px-3 pt-3">
