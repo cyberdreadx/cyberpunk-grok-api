@@ -22,10 +22,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // GET — list feed posts
   if (req.method === "GET") {
     try {
-      const { filter, cursor, userId, sort, view } = req.query;
+      const { filter, cursor, userId, sort, view, mediaType } = req.query;
       const limit = 20;
-      const sortMode = (sort as string) || "hot"; // hot | top | new
+      const sortMode = (sort as string) || "hot"; // hot | top | new | trending
       const viewMode = (view as string) || "posts"; // posts | creators
+      // Optional media filter: "video" returns only posts whose image_url ends in a video extension.
+      const videoOnly = (mediaType as string) === "video";
+      const videoCond = videoOnly ? sql`AND p.image_url ~* '\\.(mp4|webm|mov|m4v)(\\?|$)'` : sql``;
 
       // Ensure tables exist (safe for first deploy)
       await sql`CREATE TABLE IF NOT EXISTS feed_reports (
