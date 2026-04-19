@@ -410,6 +410,7 @@ const FeedPage: React.FC = () => {
             filter={filter}
           />
         )}
+        <AuthDialog open={authOpen} onOpenChange={setAuthOpen} />
       </>
     );
   }
