@@ -17,6 +17,7 @@ import MobileBottomNav from "@/components/MobileBottomNav";
 import FeatureExplainer from "@/components/FeatureExplainer";
 import ReelViewer from "@/components/ReelViewer";
 import StoriesBar from "@/components/StoriesBar";
+import SignupTeaser from "@/components/SignupTeaser";
 
 const FEED_RULES = [
   "No illegal content of any kind",
@@ -321,6 +322,13 @@ const FeedPage: React.FC = () => {
             </div>
           </div>
 
+          {/* Signup teaser for logged-out users */}
+          {!authLoading && !isAuthenticated && (
+            <div className="px-3 pt-3">
+              <SignupTeaser variant="mobile" />
+            </div>
+          )}
+
           {/* Stories */}
           <div className="px-3 pt-3">
             <StoriesBar currentUserId={user?.id} isAdmin={!!user?.is_admin} />
@@ -467,17 +475,7 @@ const FeedPage: React.FC = () => {
             </div>
           </div>
         ) : (
-          <div className="bg-card/60 border border-border/40 rounded-lg p-4 flex items-center justify-between gap-3">
-            <div>
-              <h2 className="font-orbitron text-xs tracking-wider text-foreground">SIGN IN TO POST &amp; CREATE</h2>
-              <p className="font-mono-share text-[10px] text-muted-foreground mt-1">
-                Browse freely. Sign up to generate, post, and unlock locked content.
-              </p>
-            </div>
-            <Button size="sm" onClick={() => navigate("/create")} className="font-mono-share text-[10px] shrink-0">
-              <Sparkles className="w-3 h-3 mr-1" /> GET STARTED
-            </Button>
-          </div>
+          <SignupTeaser variant="desktop" />
         )}
 
         {filterTabs("desktop")}
