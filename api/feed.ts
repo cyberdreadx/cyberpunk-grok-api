@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { getUserFromRequest, checkBan } from "./_lib/auth";
+import { getUserFromRequest, checkBan, ADMIN_EMAIL } from "./_lib/auth";
 import { getDb } from "./_lib/db";
 import { hasPurchased, POSTING_GATE_MESSAGE } from "./_lib/purchaseGate";
 import { isVerified, VERIFICATION_REQUIRED_MESSAGE } from "./_lib/verifiedGate";
