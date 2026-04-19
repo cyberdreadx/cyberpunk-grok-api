@@ -64,6 +64,7 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
   onExternalOpenChange,
 }) => {
   const { t } = useTranslation();
+  const { sale: flashSale, timeLeft: flashTimeLeft, appliesTo: flashApplies } = useFlashSale();
   const [internalOpen, setInternalOpen] = useState(false);
   const open = externalOpen !== undefined ? externalOpen : internalOpen;
   const setOpen = (v: boolean) => {
