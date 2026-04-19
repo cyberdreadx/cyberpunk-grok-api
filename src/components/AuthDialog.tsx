@@ -12,6 +12,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import TwoFactorSettingsDialog from "@/components/TwoFactorSettingsDialog";
 
 interface AuthDialogProps {
   isAuthenticated: boolean;
@@ -130,6 +131,7 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
         <span className="font-mono-share text-[10px] text-primary/70 hidden sm:inline truncate max-w-[120px]">
           {userEmail}
         </span>
+        <TwoFactorSettingsDialog />
         {onDeleteAccount && (
           <Dialog>
             <DialogTrigger asChild>
