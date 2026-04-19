@@ -28,6 +28,7 @@ import type { FolderFilter } from "@/hooks/useFolders";
 import { useSwipe } from "@/hooks/useSwipe";
 import ShareCTA from "@/components/ShareCTA";
 import { upload } from "@vercel/blob/client";
+import { apiUrl } from "@/lib/api";
 
 // ── PIN Utilities ────────────────────────────────────────────────────────
 
@@ -255,9 +256,7 @@ async function fetchBlob(url: string): Promise<Blob | null> {
  * Uses the Vercel `/api/download` route (or `VITE_API_URL` when split-hosted).
  */
 function getProxyDownloadUrl(url: string, filename: string): string {
-  const apiBase = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") || "/api";
-  const base = `${apiBase}/download`;
-  return `${base}?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(filename)}`;
+  return `${apiUrl("/download")}?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(filename)}`;
 }
 
 /**
