@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { Link } from "react-router-dom";
 import { X, ChevronLeft, ChevronRight, Volume2, VolumeX, Trash2, Loader2, Eye, Lock, Unlock, Heart, Zap } from "lucide-react";
 import XrgeUnlockDialog from "@/components/XrgeUnlockDialog";
 import { toast } from "sonner";
@@ -180,13 +181,27 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
     if (!currentStory || isLocked) return;
     const prevLiked = liked;
     const prevCount = likeCount;
-    setLiked(!liked);
-    setLikeCount(c => liked ? c - 1 : c + 1);
+    const newLiked = !prevLiked;
+    const newCount = prevLiked ? prevCount - 1 : prevCount + 1;
+    setLiked(newLiked);
+    setLikeCount(newCount);
+    // Persist on the underlying story object so navigating away/back keeps state
+    currentStory.userLiked = newLiked;
+    currentStory.likeCount = newCount;
     try {
-      await apiFetch("/story-likes", { method: "POST", body: { storyId: currentStory.id } });
+      const res = await apiFetch<{ liked: boolean }>("/story-likes", { method: "POST", body: { storyId: currentStory.id } });
+      // Reconcile with server truth
+      if (typeof res?.liked === "boolean" && res.liked !== newLiked) {
+        const corrected = res.liked;
+        setLiked(corrected);
+        currentStory.userLiked = corrected;
+      }
     } catch {
       setLiked(prevLiked);
       setLikeCount(prevCount);
+      currentStory.userLiked = prevLiked;
+      currentStory.likeCount = prevCount;
+      toast.error("Failed to like");
     }
   }, [currentStory, isLocked, liked, likeCount]);
 
@@ -469,7 +484,12 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
           ) : (
             <div className="divide-y divide-border/10">
               {viewers.map((v) => (
-                <div key={v.userId} className="flex items-center gap-3 px-4 py-3">
+                <Link
+                  to={`/u/${v.username}`}
+                  key={v.userId}
+                  onClick={() => onClose()}
+                  className="flex items-center gap-3 px-4 py-3 hover:bg-primary/5 transition-colors"
+                >
                   <Avatar className="w-8 h-8 border border-primary/10">
                     {v.avatarUrl && <AvatarImage src={v.avatarUrl} alt={v.username} />}
                     <AvatarFallback className="bg-primary/10 text-primary font-orbitron text-[9px]">
@@ -482,7 +502,7 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
                       {new Date(v.viewedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                     </span>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           )}
