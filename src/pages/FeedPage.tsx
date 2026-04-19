@@ -528,15 +528,16 @@ const FeedPage: React.FC = () => {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-0">
               {creators.map((c) => (
-                <CreatorCard
-                  key={c.userId}
-                  creator={c}
-                  onOpen={openCreator}
-                  active={activeCreator?.userId === c.userId}
-                  forceBlur={!isAuthenticated}
-                />
+                <div key={c.userId} className="-ml-px -mt-px">
+                  <CreatorCard
+                    creator={c}
+                    onOpen={openCreator}
+                    active={activeCreator?.userId === c.userId}
+                    forceBlur={!isAuthenticated}
+                  />
+                </div>
               ))}
             </div>
             <div ref={sentinelRef} className="h-12 flex items-center justify-center">
