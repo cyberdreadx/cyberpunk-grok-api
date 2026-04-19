@@ -307,19 +307,24 @@ const FeedPage: React.FC = () => {
             className="sticky z-30 bg-background/85 backdrop-blur-md border-b border-border/30 px-3 py-2 space-y-2"
             style={{ top: 0, paddingTop: "calc(env(safe-area-inset-top, 0px) + 8px)" }}
           >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <h1 className="font-orbitron text-sm tracking-widest text-foreground">FEED</h1>
-                <button
-                  onClick={() => setShowRules(true)}
-                  className="text-muted-foreground hover:text-foreground transition-colors"
-                  aria-label="View community guidelines"
-                >
-                  <ShieldAlert className="w-4 h-4" />
-                </button>
-              </div>
+            <div className="flex items-center justify-between gap-2">
+              {topTabs}
+              <button
+                onClick={() => setShowRules(true)}
+                className="text-muted-foreground hover:text-foreground transition-colors p-1"
+                aria-label="View community guidelines"
+              >
+                <ShieldAlert className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="flex items-center justify-end">
               {filterTabs("mobile")}
             </div>
+          </div>
+
+          {/* Stories */}
+          <div className="px-3 pt-3">
+            <StoriesBar currentUserId={user?.id} isAdmin={!!user?.is_admin} />
           </div>
 
           {/* Grid */}
@@ -349,9 +354,10 @@ const FeedPage: React.FC = () => {
 
         {/* Floating compose button */}
         <button
-          onClick={() => setShowCompose(true)}
+          onClick={() => { if (requireAuth()) setShowCompose(true); }}
           className="fixed z-40 right-4 bg-primary text-primary-foreground w-12 h-12 rounded-full flex items-center justify-center shadow-lg shadow-primary/30 active:scale-90 transition-transform"
           style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 72px)" }}
+          aria-label="Create post"
         >
           <Plus className="w-6 h-6" />
         </button>
