@@ -26,18 +26,25 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   const { t } = useTranslation();
   const [moreOpen, setMoreOpen] = useState(false);
 
-  const isHome = location.pathname === "/" || location.pathname === "";
+  const isFeed = location.pathname === "/" || location.pathname === "";
+  const isCreate = location.pathname === "/create";
   const isCharacters = location.pathname === "/characters";
   const isLibrary = location.pathname === "/library";
-  const isFeed = location.pathname === "/feed";
 
   const tabs = [
+    {
+      id: "feed",
+      label: "FEED",
+      icon: Rss,
+      active: isFeed,
+      onClick: () => { if (!isFeed) navigate("/"); setMoreOpen(false); },
+    },
     {
       id: "create",
       label: t("modes.generate").toUpperCase(),
       icon: Sparkles,
-      active: isHome,
-      onClick: () => { if (!isHome) navigate("/"); setMoreOpen(false); },
+      active: isCreate,
+      onClick: () => { if (!isCreate) navigate("/create"); setMoreOpen(false); },
     },
     {
       id: "library",
@@ -47,13 +54,6 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
       onClick: () => { if (!isLibrary) navigate("/library"); setMoreOpen(false); },
     },
     ...(isAuthenticated ? [
-      {
-        id: "feed",
-        label: "FEED",
-        icon: Rss,
-        active: isFeed,
-        onClick: () => { navigate("/feed"); setMoreOpen(false); },
-      },
       {
         id: "characters",
         label: t("nav.characters").toUpperCase().slice(0, 5),
