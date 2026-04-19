@@ -1603,11 +1603,14 @@ export default function Admin() {
                     {/* User header */}
                     <div className="flex items-center justify-between gap-2 p-3 bg-background/30 rounded border border-border/20">
                       <div className="min-w-0">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-orbitron text-sm text-foreground">@{inspectData.user.username || "—"}</span>
                           <span className="font-mono-share text-[10px] text-muted-foreground">{inspectData.user.email}</span>
                           {inspectData.ban && (
                             <span className="px-1.5 py-0.5 bg-destructive/20 text-destructive font-mono-share text-[9px] rounded">BANNED</span>
+                          )}
+                          {inspectData.user.verification_status === "verified" && (
+                            <span className="px-1.5 py-0.5 bg-primary/20 text-primary font-mono-share text-[9px] rounded">✓ VERIFIED</span>
                           )}
                         </div>
                         <div className="font-mono-share text-[10px] text-muted-foreground/60 flex gap-3 mt-1">
@@ -1616,39 +1619,69 @@ export default function Admin() {
                           <span>Flags: <span className={inspectData.moderationFlags > 0 ? "text-destructive" : ""}>{inspectData.moderationFlags}</span></span>
                         </div>
                       </div>
-                      {!inspectData.ban ? (
-                        <button
-                          className="px-3 py-1 bg-destructive text-destructive-foreground font-mono-share text-[10px] rounded hover:bg-destructive/80 disabled:opacity-50 shrink-0"
-                          disabled={banning}
-                          onClick={async () => {
-                            const duration = prompt("Ban duration (1h, 24h, 7d, 30d, or empty for permanent):", "24h");
-                            if (duration === null) return;
-                            const reason = prompt("Ban reason:", "Violation of community guidelines");
-                            if (reason === null) return;
-                            setBanning(true);
-                            try {
-                              const d = duration.trim().toLowerCase();
-                              await apiFetch("/admin", { method: "POST", body: { action: "ban-user", userId: inspectData.user.id, reason, duration: d || undefined } });
+                      <div className="flex items-center gap-2 shrink-0">
+                        {inspectData.user.verification_status === "verified" ? (
+                          <button
+                            className="px-3 py-1 bg-muted text-muted-foreground font-mono-share text-[10px] rounded hover:bg-muted/80"
+                            onClick={async () => {
+                              if (!confirm(`Revoke verification for ${inspectData.user.email}?`)) return;
+                              try {
+                                await apiFetch("/admin", { method: "POST", body: { action: "revoke-verification", userId: inspectData.user.id } });
+                                handleInspect();
+                              } catch (err: any) { alert(err.message); }
+                            }}
+                          >
+                            UNVERIFY
+                          </button>
+                        ) : (
+                          <button
+                            className="px-3 py-1 bg-primary text-primary-foreground font-mono-share text-[10px] rounded hover:bg-primary/80"
+                            onClick={async () => {
+                              const days = prompt("Verification duration (days):", "365");
+                              if (days === null) return;
+                              try {
+                                await apiFetch("/admin", { method: "POST", body: { action: "grant-verification", userId: inspectData.user.id, durationDays: Number(days) || 365 } });
+                                handleInspect();
+                              } catch (err: any) { alert(err.message); }
+                            }}
+                          >
+                            ✓ VERIFY
+                          </button>
+                        )}
+                        {!inspectData.ban ? (
+                          <button
+                            className="px-3 py-1 bg-destructive text-destructive-foreground font-mono-share text-[10px] rounded hover:bg-destructive/80 disabled:opacity-50"
+                            disabled={banning}
+                            onClick={async () => {
+                              const duration = prompt("Ban duration (1h, 24h, 7d, 30d, or empty for permanent):", "24h");
+                              if (duration === null) return;
+                              const reason = prompt("Ban reason:", "Violation of community guidelines");
+                              if (reason === null) return;
+                              setBanning(true);
+                              try {
+                                const d = duration.trim().toLowerCase();
+                                await apiFetch("/admin", { method: "POST", body: { action: "ban-user", userId: inspectData.user.id, reason, duration: d || undefined } });
+                                handleInspect();
+                                fetchBans();
+                              } catch (err: any) { alert(err.message); }
+                              finally { setBanning(false); }
+                            }}
+                          >
+                            <Ban className="w-3 h-3 inline mr-1" />BAN
+                          </button>
+                        ) : (
+                          <button
+                            className="px-3 py-1 bg-green-600/80 text-white font-mono-share text-[10px] rounded hover:bg-green-500"
+                            onClick={async () => {
+                              await apiFetch("/admin", { method: "POST", body: { action: "unban-user", userId: inspectData.user.id } });
                               handleInspect();
                               fetchBans();
-                            } catch (err: any) { alert(err.message); }
-                            finally { setBanning(false); }
-                          }}
-                        >
-                          <Ban className="w-3 h-3 inline mr-1" />BAN
-                        </button>
-                      ) : (
-                        <button
-                          className="px-3 py-1 bg-green-600/80 text-white font-mono-share text-[10px] rounded hover:bg-green-500 shrink-0"
-                          onClick={async () => {
-                            await apiFetch("/admin", { method: "POST", body: { action: "unban-user", userId: inspectData.user.id } });
-                            handleInspect();
-                            fetchBans();
-                          }}
-                        >
-                          UNBAN
-                        </button>
-                      )}
+                            }}
+                          >
+                            UNBAN
+                          </button>
+                        )}
+                      </div>
                     </div>
 
                     {/* Sub-tabs */}
