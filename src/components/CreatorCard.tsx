@@ -22,6 +22,8 @@ interface Props {
   creator: FeedCreator;
   onOpen: (c: FeedCreator) => void;
   active?: boolean;
+  /** When true, blur all previews regardless of lock state (used for logged-out teaser). */
+  forceBlur?: boolean;
 }
 
 const timeAgo = (iso: string) => {
@@ -35,9 +37,10 @@ const timeAgo = (iso: string) => {
   return `${d}d`;
 };
 
-const CreatorCard: React.FC<Props> = ({ creator, onOpen, active }) => {
+const CreatorCard: React.FC<Props> = ({ creator, onOpen, active, forceBlur }) => {
   const previewImg = creator.latestImage || creator.previewImage;
   const initials = (creator.username || "?").slice(0, 2).toUpperCase();
+  const showLocked = creator.latestLocked || forceBlur;
 
   return (
     <button
@@ -57,12 +60,12 @@ const CreatorCard: React.FC<Props> = ({ creator, onOpen, active }) => {
             loading="lazy"
             decoding="async"
             className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${
-              creator.latestLocked ? "blur-2xl scale-110" : ""
+              showLocked ? "blur-2xl scale-110" : ""
             }`}
           />
         ) : creator.latestText ? (
           <div className="absolute inset-0 p-3 flex items-center justify-center">
-            <p className="font-mono-share text-[11px] text-foreground/80 line-clamp-6 text-center leading-snug">
+            <p className={`font-mono-share text-[11px] text-foreground/80 line-clamp-6 text-center leading-snug ${forceBlur ? "blur-sm select-none" : ""}`}>
               {creator.latestText}
             </p>
           </div>
@@ -72,7 +75,7 @@ const CreatorCard: React.FC<Props> = ({ creator, onOpen, active }) => {
           </div>
         )}
 
-        {creator.latestLocked && (
+        {showLocked && (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="bg-black/60 backdrop-blur-sm rounded-full p-2 border border-primary/40">
               <Lock className="w-4 h-4 text-primary" />

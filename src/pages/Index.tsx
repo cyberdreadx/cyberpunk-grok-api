@@ -952,6 +952,25 @@ const Index = () => {
           </div>
         )}
 
+        {/* Top tabs: Feed / Create — keeps navigation symmetrical with the feed page */}
+        <div className="flex items-center justify-center sm:justify-start">
+          <div className="flex items-center gap-1 p-1 rounded-lg border border-border/40 bg-card/40 w-fit">
+            <Link
+              to="/"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md font-orbitron text-[10px] tracking-widest text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
+            >
+              <Rss className="w-3.5 h-3.5" /> FEED
+            </Link>
+            <button
+              type="button"
+              aria-current="page"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md font-orbitron text-[10px] tracking-widest bg-primary/15 text-primary border border-primary/40 shadow-[0_0_8px_hsl(var(--primary)/0.25)]"
+            >
+              <Zap className="w-3.5 h-3.5" /> CREATE
+            </button>
+          </div>
+        </div>
+
         {/* Stories */}
         <StoriesBar currentUserId={auth.user?.id} isAdmin={auth.user?.is_admin} />
 

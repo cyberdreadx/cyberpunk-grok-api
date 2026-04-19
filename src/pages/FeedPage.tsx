@@ -154,6 +154,12 @@ const FeedPage: React.FC = () => {
   };
 
   const openCreator = (c: FeedCreator) => {
+    // Logged-out users get nudged to sign up instead of viewing locked previews.
+    if (!isAuthenticated) {
+      toast({ title: "Sign up to view posts", description: "Create a free account to unlock the feed." });
+      navigate("/create?signup=1");
+      return;
+    }
     // Open the immersive reel viewer focused on this creator's latest post.
     setReelTarget({ postId: c.latestPostId, userId: c.userId });
   };
@@ -356,7 +362,7 @@ const FeedPage: React.FC = () => {
               <>
                 <div className="grid grid-cols-2 gap-3">
                   {creators.map((c) => (
-                    <CreatorCard key={c.userId} creator={c} onOpen={openCreator} />
+                    <CreatorCard key={c.userId} creator={c} onOpen={openCreator} forceBlur={!isAuthenticated} />
                   ))}
                 </div>
                 <div ref={sentinelRef} className="h-12 flex items-center justify-center">
@@ -505,6 +511,7 @@ const FeedPage: React.FC = () => {
                   creator={c}
                   onOpen={openCreator}
                   active={activeCreator?.userId === c.userId}
+                  forceBlur={!isAuthenticated}
                 />
               ))}
             </div>
