@@ -99,6 +99,33 @@ export async function sendVerificationEmail(
   await logEmail(to, "verification", "sent", data?.id);
 }
 
+/** Send a 2FA login code email. */
+export async function sendTwoFactorEmail(to: string, code: string): Promise<void> {
+  const fromAddress = getFromAddress();
+  const { data, error } = await getResend().emails.send({
+    from: `Grok Runner <${fromAddress}>`,
+    to: [to],
+    subject: `Your login code: ${code}`,
+    html: `
+      <div style="font-family: 'Courier New', monospace; background: #0a0a0f; color: #e0e0e0; padding: 32px; max-width: 480px; margin: 0 auto;">
+        <div style="border: 1px solid #00f0ff33; padding: 24px; border-radius: 4px;">
+          <h1 style="color: #00f0ff; font-size: 18px; letter-spacing: 3px; margin: 0 0 16px;">GROK RUNNER</h1>
+          <p style="font-size: 14px; color: #a0a0a0; margin: 0 0 12px;">Two-factor login code:</p>
+          <div style="background: #111; border: 1px solid #00f0ff55; padding: 16px; text-align: center; border-radius: 4px; margin: 0 0 24px;">
+            <span style="font-size: 32px; letter-spacing: 8px; color: #00f0ff; font-weight: bold;">${code}</span>
+          </div>
+          <p style="font-size: 12px; color: #666; margin: 0;">Expires in 10 minutes. If you didn't try to log in, change your password immediately.</p>
+        </div>
+      </div>
+    `,
+  });
+  if (error) {
+    await logEmail(to, "two_factor", "failed", null, error.message);
+    throw new Error("Failed to send 2FA code");
+  }
+  await logEmail(to, "two_factor", "sent", data?.id);
+}
+
 /** Send a password reset code email. */
 export async function sendPasswordResetEmail(
   to: string,
