@@ -7,7 +7,7 @@ import {
   moveResultToFolder,
   migrateFromLocalStorage,
 } from "@/lib/storage";
-import { apiFetch, calculateCreditCost, backendEnabled } from "@/lib/api";
+import { apiFetch, calculateCreditCost, backendEnabled, apiUrl } from "@/lib/api";
 
 interface ActiveJob {
   promptId: string;
