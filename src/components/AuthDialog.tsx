@@ -176,8 +176,15 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
         </Button>
       </DialogTrigger>
       <DialogContent className="bg-card border-border sm:max-w-md">
-        {/* Show verification UI when we have a pending email */}
-        {pendingVerificationEmail && onVerify ? (
+        {/* 2FA login challenge */}
+        {pendingTwoFactorEmail && onVerifyTwoFactor ? (
+          <TwoFactorForm
+            email={pendingTwoFactorEmail}
+            onVerify={onVerifyTwoFactor}
+            onCancel={() => { onCancelTwoFactor?.(); setOpen(false); }}
+            onSuccess={() => setOpen(false)}
+          />
+        ) : pendingVerificationEmail && onVerify ? (
           <VerificationForm
             email={pendingVerificationEmail}
             onVerify={onVerify}
