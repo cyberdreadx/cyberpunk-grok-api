@@ -68,8 +68,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const followingFilter = filter === "following"
           ? sql`AND p.user_id IN (SELECT following_id FROM follows WHERE follower_id = ${auth.userId})`
           : sql``;
-        // Latest post per author + 7-day score signal. Ranking:
-        //   recency (decays over hours) + score boost (log-scaled, capped influence).
+        const isTrending = sortMode === "trending";
+        // Latest post per author + engagement signal.
+        // Default ranking: recency + 7-day score.
+        // Trending: 24h engagement (votes + comments + unlocks + views) with mild recency boost.
         const creatorRows = await sql`
           WITH latest AS (
             SELECT DISTINCT ON (p.user_id)
@@ -92,7 +94,35 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 FROM feed_reactions r
                 JOIN feed_posts fp ON fp.id = r.post_id
                 WHERE fp.user_id = l.user_id AND fp.created_at > now() - interval '7 days'
-              ), 0) AS recent_score
+              ), 0) AS recent_score,
+              COALESCE((
+                SELECT (
+                  COALESCE((
+                    SELECT count(*)::int FROM feed_reactions r2
+                    JOIN feed_posts fp2 ON fp2.id = r2.post_id
+                    WHERE fp2.user_id = l.user_id
+                      AND r2.created_at > now() - interval '24 hours'
+                  ), 0) * 2
+                  + COALESCE((
+                    SELECT count(*)::int FROM feed_comments c
+                    JOIN feed_posts fp3 ON fp3.id = c.post_id
+                    WHERE fp3.user_id = l.user_id
+                      AND c.created_at > now() - interval '24 hours'
+                  ), 0) * 3
+                  + COALESCE((
+                    SELECT count(*)::int FROM feed_unlocks u2
+                    JOIN feed_posts fp4 ON fp4.id = u2.post_id
+                    WHERE fp4.user_id = l.user_id
+                      AND u2.unlocked_at > now() - interval '24 hours'
+                  ), 0) * 5
+                  + COALESCE((
+                    SELECT count(*)::int FROM feed_views v
+                    JOIN feed_posts fp5 ON fp5.id = v.post_id
+                    WHERE fp5.user_id = l.user_id
+                      AND v.viewed_at > now() - interval '24 hours'
+                  ), 0)
+                )
+              ), 0) AS trending_score
             FROM latest l
           )
           SELECT
@@ -106,17 +136,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             (u.verification_status = 'verified' AND (u.verification_renews_at IS NULL OR u.verification_renews_at > now())) AS verified,
             s.post_count,
             s.recent_score,
-            (
-              1.0 / POWER(EXTRACT(EPOCH FROM (now() - l.created_at)) / 3600.0 + 2, 1.2)
-              + LN(GREATEST(s.recent_score, 0) + 1) * 0.15
-            ) AS rank_score
+            s.trending_score,
+            ${isTrending
+              ? sql`(
+                  s.trending_score::float
+                  + 1.0 / POWER(EXTRACT(EPOCH FROM (now() - l.created_at)) / 3600.0 + 2, 0.8)
+                )`
+              : sql`(
+                  1.0 / POWER(EXTRACT(EPOCH FROM (now() - l.created_at)) / 3600.0 + 2, 1.2)
+                  + LN(GREATEST(s.recent_score, 0) + 1) * 0.15
+                )`} AS rank_score
           FROM latest l
           JOIN profiles pr ON pr.user_id = l.user_id
           JOIN users u ON u.id = l.user_id
           JOIN stats s ON s.user_id = l.user_id
           ${cursor ? sql`WHERE (
-            1.0 / POWER(EXTRACT(EPOCH FROM (now() - l.created_at)) / 3600.0 + 2, 1.2)
-            + LN(GREATEST(s.recent_score, 0) + 1) * 0.15
+            ${isTrending
+              ? sql`(
+                  s.trending_score::float
+                  + 1.0 / POWER(EXTRACT(EPOCH FROM (now() - l.created_at)) / 3600.0 + 2, 0.8)
+                )`
+              : sql`(
+                  1.0 / POWER(EXTRACT(EPOCH FROM (now() - l.created_at)) / 3600.0 + 2, 1.2)
+                  + LN(GREATEST(s.recent_score, 0) + 1) * 0.15
+                )`}
           ) < ${parseFloat(cursor as string)}` : sql``}
           ORDER BY rank_score DESC, l.created_at DESC
           LIMIT ${limit}
