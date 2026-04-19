@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Send, Users, Globe, Loader2, Plus, X, Lock, Zap, ShieldAlert, Sparkles, Rss } from "lucide-react";
+import { Send, Users, Globe, Loader2, Plus, X, Lock, Zap, ShieldAlert, Sparkles, Rss, Flame } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import FeatureExplainer from "@/components/FeatureExplainer";
@@ -40,7 +40,7 @@ const FeedPage: React.FC = () => {
 
   const [creators, setCreators] = useState<FeedCreator[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<"all" | "following">("all");
+  const [filter, setFilter] = useState<"all" | "following" | "trending">("all");
   const [newText, setNewText] = useState("");
   const [posting, setPosting] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -67,6 +67,7 @@ const FeedPage: React.FC = () => {
     try {
       const params = new URLSearchParams({ view: "creators" });
       if (filter === "following") params.set("filter", "following");
+      if (filter === "trending") params.set("sort", "trending");
       if (cursor) params.set("cursor", cursor);
       const data = await apiFetch<{ creators: FeedCreator[]; nextCursor: string | null }>(
         `/feed?${params.toString()}`
@@ -222,34 +223,41 @@ const FeedPage: React.FC = () => {
     </div>
   );
 
-  const filterTabs = (variant: "mobile" | "desktop") => (
-    <div className="flex gap-1.5 flex-wrap">
-      <button
-        onClick={() => { setFilter("all"); setLoading(true); }}
-        className={`flex items-center gap-1 px-2.5 py-1 rounded-full font-mono-share text-[10px] transition-colors border ${
-          filter === "all"
-            ? "border-primary/50 bg-primary/10 text-primary"
-            : variant === "mobile"
-            ? "border-white/10 bg-black/30 text-white/70 backdrop-blur-sm"
-            : "border-border/30 text-muted-foreground hover:text-foreground"
-        }`}
-      >
-        <Globe className="w-3 h-3" /> ALL
-      </button>
-      <button
-        onClick={() => { if (requireAuth()) { setFilter("following"); setLoading(true); } }}
-        className={`flex items-center gap-1 px-2.5 py-1 rounded-full font-mono-share text-[10px] transition-colors border ${
-          filter === "following"
-            ? "border-primary/50 bg-primary/10 text-primary"
-            : variant === "mobile"
-            ? "border-white/10 bg-black/30 text-white/70 backdrop-blur-sm"
-            : "border-border/30 text-muted-foreground hover:text-foreground"
-        }`}
-      >
-        <Users className="w-3 h-3" /> FOLLOWING
-      </button>
-    </div>
-  );
+  const filterTabs = (variant: "mobile" | "desktop") => {
+    const baseInactive = variant === "mobile"
+      ? "border-white/10 bg-black/30 text-white/70 backdrop-blur-sm"
+      : "border-border/30 text-muted-foreground hover:text-foreground";
+    return (
+      <div className="flex gap-1.5 flex-wrap">
+        <button
+          onClick={() => { setFilter("all"); setLoading(true); }}
+          className={`flex items-center gap-1 px-2.5 py-1 rounded-full font-mono-share text-[10px] transition-colors border ${
+            filter === "all" ? "border-primary/50 bg-primary/10 text-primary" : baseInactive
+          }`}
+        >
+          <Globe className="w-3 h-3" /> ALL
+        </button>
+        <button
+          onClick={() => { setFilter("trending"); setLoading(true); }}
+          className={`flex items-center gap-1 px-2.5 py-1 rounded-full font-mono-share text-[10px] transition-colors border ${
+            filter === "trending"
+              ? "border-secondary/50 bg-secondary/10 text-secondary shadow-[0_0_8px_hsl(var(--secondary)/0.3)]"
+              : baseInactive
+          }`}
+        >
+          <Flame className="w-3 h-3" /> TRENDING
+        </button>
+        <button
+          onClick={() => { if (requireAuth()) { setFilter("following"); setLoading(true); } }}
+          className={`flex items-center gap-1 px-2.5 py-1 rounded-full font-mono-share text-[10px] transition-colors border ${
+            filter === "following" ? "border-primary/50 bg-primary/10 text-primary" : baseInactive
+          }`}
+        >
+          <Users className="w-3 h-3" /> FOLLOWING
+        </button>
+      </div>
+    );
+  };
 
   /** Top tab strip: Feed (current page) / Create (navigates to /create). */
   const topTabs = (
