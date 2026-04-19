@@ -33,15 +33,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const user = rows[0];
     const modRows = await sql`SELECT 1 FROM feed_moderators WHERE user_id = ${auth.userId} LIMIT 1`.catch(() => []);
+    const isAdmin = user.email === ADMIN_EMAIL;
     const verifiedActive =
-      user.verification_status === "verified" &&
-      (!user.verification_renews_at || new Date(user.verification_renews_at) > new Date());
+      isAdmin ||
+      (user.verification_status === "verified" &&
+        (!user.verification_renews_at || new Date(user.verification_renews_at) > new Date()));
 
     return res.status(200).json({
       id: user.id,
       email: user.email,
       email_verified: !!user.email_verified,
-      is_admin: user.email === ADMIN_EMAIL,
+      is_admin: isAdmin,
       is_feed_mod: modRows.length > 0,
       is_verified: verifiedActive,
       verification_status: user.verification_status || "unverified",
