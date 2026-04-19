@@ -418,9 +418,10 @@ const FeedPage: React.FC = () => {
   return (
     <CyberLayout>
       <div className="max-w-6xl mx-auto px-4 py-6 space-y-4 pb-24">
-        <div className="flex items-center justify-between">
+        {/* Top tabs + actions */}
+        <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-3">
-            <h1 className="font-orbitron text-lg tracking-widest text-foreground">CREATORS</h1>
+            {topTabs}
             <button
               onClick={() => setShowRules(true)}
               className="text-muted-foreground hover:text-foreground transition-colors"
@@ -429,34 +430,55 @@ const FeedPage: React.FC = () => {
               <ShieldAlert className="w-4 h-4" />
             </button>
           </div>
-          <button
-            onClick={() => navigate("/profile")}
-            className="font-mono-share text-[10px] text-primary hover:text-primary/80 transition-colors"
-          >
-            MY PROFILE →
-          </button>
+          <div className="flex items-center gap-3">
+            {isAuthenticated && (
+              <button
+                onClick={() => navigate("/profile")}
+                className="font-mono-share text-[10px] text-primary hover:text-primary/80 transition-colors"
+              >
+                MY PROFILE →
+              </button>
+            )}
+          </div>
         </div>
 
         {rulesBanner}
 
-        <div className="bg-card/60 border border-border/40 rounded-lg p-4 space-y-3">
-          <Textarea
-            value={newText}
-            onChange={(e) => setNewText(e.target.value)}
-            placeholder="Share something with the community..."
-            maxLength={2000}
-            rows={3}
-            className="font-mono-share text-sm bg-input/50 resize-none border-border/30 focus:border-primary/50"
-          />
-          {lockControls}
-          <div className="flex items-center justify-between">
-            <span className="font-mono-share text-[9px] text-muted-foreground">{newText.length}/2000</span>
-            <Button size="sm" onClick={handlePost} disabled={posting || !newText.trim()} className="font-mono-share text-[10px]">
-              {posting ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Send className="w-3 h-3 mr-1" />}
-              POST
+        {/* Stories at the very top */}
+        <StoriesBar currentUserId={user?.id} isAdmin={!!user?.is_admin} />
+
+        {isAuthenticated ? (
+          <div className="bg-card/60 border border-border/40 rounded-lg p-4 space-y-3">
+            <Textarea
+              value={newText}
+              onChange={(e) => setNewText(e.target.value)}
+              placeholder="Share something with the community..."
+              maxLength={2000}
+              rows={3}
+              className="font-mono-share text-sm bg-input/50 resize-none border-border/30 focus:border-primary/50"
+            />
+            {lockControls}
+            <div className="flex items-center justify-between">
+              <span className="font-mono-share text-[9px] text-muted-foreground">{newText.length}/2000</span>
+              <Button size="sm" onClick={handlePost} disabled={posting || !newText.trim()} className="font-mono-share text-[10px]">
+                {posting ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Send className="w-3 h-3 mr-1" />}
+                POST
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-card/60 border border-border/40 rounded-lg p-4 flex items-center justify-between gap-3">
+            <div>
+              <h2 className="font-orbitron text-xs tracking-wider text-foreground">SIGN IN TO POST &amp; CREATE</h2>
+              <p className="font-mono-share text-[10px] text-muted-foreground mt-1">
+                Browse freely. Sign up to generate, post, and unlock locked content.
+              </p>
+            </div>
+            <Button size="sm" onClick={() => navigate("/create")} className="font-mono-share text-[10px] shrink-0">
+              <Sparkles className="w-3 h-3 mr-1" /> GET STARTED
             </Button>
           </div>
-        </div>
+        )}
 
         {filterTabs("desktop")}
 
