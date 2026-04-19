@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Send, Users, Globe, Loader2, Plus, X, Lock, Zap, ShieldAlert, Sparkles, Rss, Flame } from "lucide-react";
+import { Send, Users, Globe, Loader2, Plus, X, Lock, Zap, ShieldAlert, Sparkles, Rss, Flame, Film } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import FeatureExplainer from "@/components/FeatureExplainer";
@@ -52,6 +52,7 @@ const FeedPage: React.FC = () => {
   const [lockXrge, setLockXrge] = useState("");
   const [activeCreator, setActiveCreator] = useState<FeedCreator | null>(null);
   const [reelTarget, setReelTarget] = useState<{ postId: string; userId?: string } | null>(null);
+  const [reelsOpen, setReelsOpen] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   const requireAuth = useCallback(() => {
