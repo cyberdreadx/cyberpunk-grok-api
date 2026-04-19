@@ -82,8 +82,8 @@ export async function issueTrustedDevice(res: VercelResponse, req: VercelRequest
   const sql = getDb();
   await sql`
     INSERT INTO trusted_devices (user_id, token_hash, user_agent, ip, expires_at)
-    VALUES (${userId}::uuid, ${hash(token)}, ${ua}, ${ip}, now() + interval '${TTL_DAYS} days')
-  `.catch(() => {});
+    VALUES (${userId}::uuid, ${hash(token)}, ${ua}, ${ip}, now() + (${TTL_DAYS} || ' days')::interval)
+  `.catch((e) => { console.error("[trustedDevice] insert failed", (e as any)?.message); });
   const maxAge = TTL_DAYS * 24 * 60 * 60;
   res.setHeader(
     "Set-Cookie",
