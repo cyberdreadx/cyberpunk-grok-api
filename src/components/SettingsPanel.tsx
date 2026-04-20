@@ -84,6 +84,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
   mode 
 }) => {
   const { t, i18n } = useTranslation();
+  const { matureFilter, setMatureFilter } = useMatureFilter();
   const isVideoMode = mode === "text-to-video" || mode === "image-to-video";
 
   const summaryText = isVideoMode
