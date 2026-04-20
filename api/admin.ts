@@ -26,6 +26,21 @@ function isAdmin(req: VercelRequest): boolean {
   return !!auth && auth.email === ADMIN_EMAIL;
 }
 
+async function isFeedMod(req: VercelRequest): Promise<boolean> {
+  const auth = getUserFromRequest(req);
+  if (!auth) return false;
+  try {
+    const sql = getDb();
+    const rows = await sql`SELECT 1 FROM feed_moderators WHERE user_id = ${auth.userId} LIMIT 1`;
+    return rows.length > 0;
+  } catch {
+    return false;
+  }
+}
+
+// Actions feed moderators are allowed to perform (in addition to admins)
+const MOD_ALLOWED_ACTIONS = new Set(["ban-user", "unban-user", "list-bans", "user-inspect"]);
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Health check (GET, no auth)
   if (req.method === "GET") {
@@ -41,13 +56,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  // All POST actions require admin
-  if (!isAdmin(req)) {
-    return res.status(403).json({ error: "Access denied" });
-  }
-
   const sql = getDb();
   const { action } = req.body || {};
+
+  // Admins can perform all actions; feed mods only a small subset
+  const admin = isAdmin(req);
+  const modAllowed = !admin && MOD_ALLOWED_ACTIONS.has(action) && (await isFeedMod(req));
+  if (!admin && !modAllowed) {
+    return res.status(403).json({ error: "Access denied" });
+  }
 
   try {
     switch (action) {
