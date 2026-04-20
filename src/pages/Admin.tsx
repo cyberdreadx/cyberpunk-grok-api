@@ -410,8 +410,30 @@ function AnnouncementPanel() {
         ) : null}
       </div>
 
-      {/* Subject + Email Editor */}
+      {/* Campaign + Subject + Email Editor */}
       <div className="space-y-2">
+        <div className="space-y-1">
+          <label className="font-mono-share text-[10px] text-muted-foreground/70">CAMPAIGN</label>
+          <select
+            value={campaign}
+            onChange={(e) => {
+              const next = e.target.value as "announcement" | "announcement_v47";
+              setCampaign(next);
+              setSubject(
+                next === "announcement_v47"
+                  ? "⚡ Grok Runner v4.7 // the coolest drop yet"
+                  : "🚀 Grok Runner just got a massive upgrade"
+              );
+            }}
+            className="w-full bg-background/50 border border-primary/20 rounded px-2 py-1.5 font-mono-share text-xs text-foreground focus:outline-none focus:border-primary/50"
+          >
+            <option value="announcement_v47">v4.7 — Coolest Updates Drop (NEW)</option>
+            <option value="announcement">Original "Massive Upgrade" announcement</option>
+          </select>
+          <p className="font-mono-share text-[9px] text-muted-foreground/50">
+            Each campaign tracks its own send list — picking a new campaign lets you re-email everyone with fresh content.
+          </p>
+        </div>
         <div className="space-y-1">
           <label className="font-mono-share text-[10px] text-muted-foreground/70">SUBJECT LINE</label>
           <input
@@ -435,7 +457,7 @@ function AnnouncementPanel() {
               <textarea
                 value={htmlContent}
                 onChange={(e) => setHtmlContent(e.target.value)}
-                placeholder="Paste custom HTML here, or leave blank to use the default announcement template..."
+                placeholder="Paste custom HTML here, or leave blank to use the campaign's default template..."
                 className="w-full h-48 bg-background/50 border border-primary/20 rounded px-2 py-1.5 font-mono text-[11px] text-foreground focus:outline-none focus:border-primary/50 resize-y"
               />
               <div className="flex gap-2">
@@ -446,7 +468,7 @@ function AnnouncementPanel() {
                 </Button>
                 {!htmlContent && (
                   <Button variant="outline" size="sm" onClick={() => {
-                    apiFetch("/admin", { method: "POST", body: { action: "get-announcement-html" } })
+                    apiFetch("/admin", { method: "POST", body: { action: "get-announcement-html", campaign } })
                       .then((r) => setHtmlContent(r.html))
                       .catch(() => setHtmlContent("<!-- Failed to load default template -->"));
                   }}
