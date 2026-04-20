@@ -67,6 +67,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       await sql`ALTER TABLE feed_posts ADD COLUMN IF NOT EXISTS lock_cost INT NOT NULL DEFAULT 0`.catch(() => {});
       await sql`ALTER TABLE feed_posts ADD COLUMN IF NOT EXISTS lock_price_cents INT NOT NULL DEFAULT 0`.catch(() => {});
       await sql`ALTER TABLE feed_posts ADD COLUMN IF NOT EXISTS lock_xrge_amount TEXT DEFAULT NULL`.catch(() => {});
+      await sql`ALTER TABLE feed_posts ADD COLUMN IF NOT EXISTS is_mature BOOLEAN NOT NULL DEFAULT false`.catch(() => {});
 
       // ───── CREATORS VIEW: one row per author, ranked by recency + engagement ─────
       if (viewMode === "creators" && !userId) {
@@ -137,6 +138,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             l.image_url AS latest_image,
             l.created_at AS latest_at,
             l.lock_cost, l.lock_price_cents, l.lock_xrge_amount,
+            COALESCE((SELECT is_mature FROM feed_posts WHERE id = l.id), false) AS is_mature,
             pr.username, pr.avatar_url,
             (u.email = ${ADMIN_EMAIL} OR (u.verification_status = 'verified' AND (u.verification_renews_at IS NULL OR u.verification_renews_at > now()))) AS verified,
             s.post_count,
@@ -200,6 +202,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               previewImage: isLocked && r.latest_image ? r.latest_image : undefined,
               latestAt: r.latest_at,
               latestLocked: isLocked,
+              isMature: !!r.is_mature,
               rankScore: parseFloat(r.rank_score),
             };
           }),
@@ -312,6 +315,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             unlocked: r.unlocked || isOwner,
             isOwner,
             viewCount: r.view_count || 0,
+            isMature: !!r.is_mature,
           };
         }),
         nextCursor: rows.length === limit ? rows[rows.length - 1].created_at : null,
@@ -329,6 +333,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       await sql`ALTER TABLE feed_posts ADD COLUMN IF NOT EXISTS lock_cost INT NOT NULL DEFAULT 0`.catch(() => {});
       await sql`ALTER TABLE feed_posts ADD COLUMN IF NOT EXISTS lock_price_cents INT NOT NULL DEFAULT 0`.catch(() => {});
       await sql`ALTER TABLE feed_posts ADD COLUMN IF NOT EXISTS lock_xrge_amount TEXT DEFAULT NULL`.catch(() => {});
+      await sql`ALTER TABLE feed_posts ADD COLUMN IF NOT EXISTS is_mature BOOLEAN NOT NULL DEFAULT false`.catch(() => {});
 
       // Check if user is banned
       const ban = await checkBan(sql, auth.userId);
@@ -341,13 +346,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(403).json({ error: POSTING_GATE_MESSAGE, code: "PURCHASE_REQUIRED" });
       }
 
-      const { text, imageUrl, lockCost, lockPriceCents, lockXrgeAmount } = req.body || {};
+      const { text, imageUrl, lockCost, lockPriceCents, lockXrgeAmount, isMature } = req.body || {};
       if (!text && !imageUrl) return res.status(400).json({ error: "Post must have text or image" });
       if (text && text.length > 2000) return res.status(400).json({ error: "Text too long (max 2000)" });
 
       const cost = Math.max(0, Math.min(parseInt(lockCost) || 0, MAX_LOCK_COST));
       const priceCents = Math.max(0, Math.min(parseInt(lockPriceCents) || 0, MAX_LOCK_PRICE_CENTS));
       const xrgeAmount = lockXrgeAmount ? String(Math.max(0, parseFloat(lockXrgeAmount) || 0)) : null;
+      const mature = !!isMature;
 
       // Verification gate: monetized posts (any non-zero lock) require an
       // ACTIVE creator verification subscription.
@@ -357,8 +363,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       const rows = await sql`
-        INSERT INTO feed_posts (user_id, text, image_url, lock_cost, lock_price_cents, lock_xrge_amount)
-        VALUES (${auth.userId}, ${text || ""}, ${imageUrl || null}, ${cost}, ${priceCents}, ${xrgeAmount})
+        INSERT INTO feed_posts (user_id, text, image_url, lock_cost, lock_price_cents, lock_xrge_amount, is_mature)
+        VALUES (${auth.userId}, ${text || ""}, ${imageUrl || null}, ${cost}, ${priceCents}, ${xrgeAmount}, ${mature})
         RETURNING id, created_at
       `;
       return res.status(201).json({ id: rows[0].id, createdAt: rows[0].created_at });

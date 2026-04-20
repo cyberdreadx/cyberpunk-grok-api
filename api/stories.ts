@@ -33,12 +33,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(403).json({ error: POSTING_GATE_MESSAGE, code: "PURCHASE_REQUIRED" });
       }
 
-      const { mediaUrl, mediaType, caption, prompt, lockCost, lockXrgeAmount } = req.body || {};
+      const { mediaUrl, mediaType, caption, prompt, lockCost, lockXrgeAmount, isMature } = req.body || {};
       if (!mediaUrl) return res.status(400).json({ error: "mediaUrl required" });
 
       const type = (mediaType || "image").startsWith("video") ? "video" : "image";
       const cost = Math.max(0, Math.min(parseInt(lockCost) || 0, MAX_LOCK_COST));
       const xrgeAmount = lockXrgeAmount ? String(parseFloat(lockXrgeAmount) || 0) : null;
+      const mature = !!isMature;
 
       // Verification gate: monetized stories (any non-zero lock) require an
       // ACTIVE creator verification subscription.
@@ -47,12 +48,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(403).json({ error: VERIFICATION_REQUIRED_MESSAGE, code: "VERIFICATION_REQUIRED" });
       }
 
-      // Ensure lock_xrge_amount column exists
+      // Ensure lock_xrge_amount + is_mature columns exist
       await sql`ALTER TABLE stories ADD COLUMN IF NOT EXISTS lock_xrge_amount TEXT DEFAULT NULL`.catch(() => {});
+      await sql`ALTER TABLE stories ADD COLUMN IF NOT EXISTS is_mature BOOLEAN NOT NULL DEFAULT false`.catch(() => {});
 
       const rows = await sql`
-        INSERT INTO stories (user_id, media_url, media_type, caption, prompt, lock_cost, lock_xrge_amount)
-        VALUES (${auth.userId}::uuid, ${mediaUrl}, ${type}, ${caption || ""}, ${prompt || ""}, ${cost}, ${xrgeAmount})
+        INSERT INTO stories (user_id, media_url, media_type, caption, prompt, lock_cost, lock_xrge_amount, is_mature)
+        VALUES (${auth.userId}::uuid, ${mediaUrl}, ${type}, ${caption || ""}, ${prompt || ""}, ${cost}, ${xrgeAmount}, ${mature})
         RETURNING id, created_at, expires_at
       `;
 
@@ -80,13 +82,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         UNIQUE(story_id, user_id)
       )`.catch(() => {});
 
-      // Ensure lock_xrge_amount column exists
+      // Ensure lock_xrge_amount + is_mature columns exist
       await sql`ALTER TABLE stories ADD COLUMN IF NOT EXISTS lock_xrge_amount TEXT DEFAULT NULL`.catch(() => {});
+      await sql`ALTER TABLE stories ADD COLUMN IF NOT EXISTS is_mature BOOLEAN NOT NULL DEFAULT false`.catch(() => {});
 
       const rows = await sql`
         SELECT
           s.id, s.user_id, s.media_url, s.media_type, s.caption, s.prompt,
           s.created_at, s.expires_at, s.lock_cost,
+          COALESCE(s.is_mature, false) AS is_mature,
           COALESCE(s.lock_xrge_amount, '') AS lock_xrge_amount,
           u.email,
           CASE WHEN sv.viewer_id IS NOT NULL THEN true ELSE false END AS viewed,
@@ -136,6 +140,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           lockXrgeAmount: xrgePrice > 0 ? r.lock_xrge_amount : undefined,
           unlocked: r.unlocked || isOwner,
           isOwner,
+          isMature: !!r.is_mature,
         });
         if (!r.viewed) grouped[r.user_id].hasUnviewed = true;
       }
