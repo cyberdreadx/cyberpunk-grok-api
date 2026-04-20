@@ -24,6 +24,20 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
     {
+        version: "2026.04.20",
+        date: "April 20, 2026",
+        title: "v4.7 — Storage Hygiene & Auto-Purge",
+        items: [
+            { icon: <Trash2 className="w-3.5 h-3.5" />, text: "Auto-delete media — removing a post, story, or avatar now also purges the file from Vercel Blob storage", tag: "new" },
+            { icon: <Trash2 className="w-3.5 h-3.5" />, text: "Share-link cleanup — deleting a generation from your Library tears down the underlying /s/:id share + metadata", tag: "new" },
+            { icon: <Shield className="w-3.5 h-3.5" />, text: "Owner-only share purge — new share_owners table tracks creators so only you (or an admin) can take down your shares", tag: "new" },
+            { icon: <Wrench className="w-3.5 h-3.5" />, text: "Legacy share backfill — admin endpoint scans old share JSONs and reattributes ownership where possible", tag: "improve" },
+            { icon: <Clock className="w-3.5 h-3.5" />, text: "Weekly orphan-cleanup cron — sweeps Vercel Blob and removes files no longer referenced by any post, story, profile, or share (24h safety window)", tag: "new" },
+            { icon: <Bug className="w-3.5 h-3.5" />, text: "Stable creator-feed pagination — secondary sort by user_id prevents stalled cursors when rank scores tie", tag: "fix" },
+            { icon: <Eye className="w-3.5 h-3.5" />, text: "End-of-feed indicator — clear 'You're all caught up' marker when the feed has no more pages", tag: "improve" },
+        ],
+    },
+    {
         version: "2026.04.15",
         date: "April 15, 2026",
         title: "v4.6 — Moderation & Safety",
