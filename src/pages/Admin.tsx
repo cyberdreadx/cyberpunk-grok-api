@@ -281,7 +281,8 @@ function AnnouncementPanel() {
   const abortRef = useRef(false);
   const [stats, setStats] = useState<{ totalVerified: number; alreadySent: number; remaining: number } | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
-  const [subject, setSubject] = useState("🚀 Grok Runner just got a massive upgrade");
+  const [campaign, setCampaign] = useState<"announcement" | "announcement_v47">("announcement_v47");
+  const [subject, setSubject] = useState("⚡ Grok Runner v4.7 // the coolest drop yet");
   const [showEditor, setShowEditor] = useState(false);
   const [htmlContent, setHtmlContent] = useState("");
   const [showPreview, setShowPreview] = useState(false);
@@ -289,13 +290,16 @@ function AnnouncementPanel() {
   const fetchStats = useCallback(async () => {
     setStatsLoading(true);
     try {
-      const res = await apiFetch("/admin", { method: "POST", body: { action: "announcement-stats" } });
+      const res = await apiFetch("/admin", { method: "POST", body: { action: "announcement-stats", campaign } });
       setStats(res);
     } catch { /* ignore */ }
     finally { setStatsLoading(false); }
-  }, []);
+  }, [campaign]);
 
   useEffect(() => { fetchStats(); }, [fetchStats]);
+
+  // Reset custom HTML when switching campaigns so the right default loads
+  useEffect(() => { setHtmlContent(""); }, [campaign]);
 
   const handleDryRun = async () => {
     setDryRunning(true);
@@ -303,7 +307,7 @@ function AnnouncementPanel() {
     try {
       const res = await apiFetch("/admin", {
         method: "POST",
-        body: { action: "send-announcement", dryRun: true, batchSize: 999999, offset: 0 },
+        body: { action: "send-announcement", dryRun: true, batchSize: 999999, offset: 0, campaign },
       });
       setResult({ dryRun: true, totalUsers: res.totalUsers, emails: res.batchEmails });
     } catch (err: any) {
@@ -333,7 +337,7 @@ function AnnouncementPanel() {
       while (true) {
         if (abortRef.current) break;
         try {
-          const body: any = { action: "send-announcement", batchSize, offset };
+          const body: any = { action: "send-announcement", batchSize, offset, campaign };
           if (subject) body.subject = subject;
           if (htmlContent) body.html = htmlContent;
           const res = await apiFetch("/admin", { method: "POST", body });
@@ -406,8 +410,30 @@ function AnnouncementPanel() {
         ) : null}
       </div>
 
-      {/* Subject + Email Editor */}
+      {/* Campaign + Subject + Email Editor */}
       <div className="space-y-2">
+        <div className="space-y-1">
+          <label className="font-mono-share text-[10px] text-muted-foreground/70">CAMPAIGN</label>
+          <select
+            value={campaign}
+            onChange={(e) => {
+              const next = e.target.value as "announcement" | "announcement_v47";
+              setCampaign(next);
+              setSubject(
+                next === "announcement_v47"
+                  ? "⚡ Grok Runner v4.7 // the coolest drop yet"
+                  : "🚀 Grok Runner just got a massive upgrade"
+              );
+            }}
+            className="w-full bg-background/50 border border-primary/20 rounded px-2 py-1.5 font-mono-share text-xs text-foreground focus:outline-none focus:border-primary/50"
+          >
+            <option value="announcement_v47">v4.7 — Coolest Updates Drop (NEW)</option>
+            <option value="announcement">Original "Massive Upgrade" announcement</option>
+          </select>
+          <p className="font-mono-share text-[9px] text-muted-foreground/50">
+            Each campaign tracks its own send list — picking a new campaign lets you re-email everyone with fresh content.
+          </p>
+        </div>
         <div className="space-y-1">
           <label className="font-mono-share text-[10px] text-muted-foreground/70">SUBJECT LINE</label>
           <input
@@ -431,7 +457,7 @@ function AnnouncementPanel() {
               <textarea
                 value={htmlContent}
                 onChange={(e) => setHtmlContent(e.target.value)}
-                placeholder="Paste custom HTML here, or leave blank to use the default announcement template..."
+                placeholder="Paste custom HTML here, or leave blank to use the campaign's default template..."
                 className="w-full h-48 bg-background/50 border border-primary/20 rounded px-2 py-1.5 font-mono text-[11px] text-foreground focus:outline-none focus:border-primary/50 resize-y"
               />
               <div className="flex gap-2">
@@ -442,7 +468,7 @@ function AnnouncementPanel() {
                 </Button>
                 {!htmlContent && (
                   <Button variant="outline" size="sm" onClick={() => {
-                    apiFetch("/admin", { method: "POST", body: { action: "get-announcement-html" } })
+                    apiFetch("/admin", { method: "POST", body: { action: "get-announcement-html", campaign } })
                       .then((r) => setHtmlContent(r.html))
                       .catch(() => setHtmlContent("<!-- Failed to load default template -->"));
                   }}

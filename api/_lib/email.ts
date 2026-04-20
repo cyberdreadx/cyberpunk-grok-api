@@ -192,8 +192,13 @@ export async function sendDailyCreditsEmail(
   await logEmail(to, "daily_credits", "sent", data?.id, null, { amount });
 }
 
-/** Send the Grok Runner announcement email. Accepts optional custom subject/html. */
-export async function sendAnnouncementEmail(to: string, customSubject?: string, customHtml?: string): Promise<boolean> {
+/** Send the Grok Runner announcement email. Accepts optional custom subject/html and campaign id. */
+export async function sendAnnouncementEmail(
+  to: string,
+  customSubject?: string,
+  customHtml?: string,
+  campaign: string = "announcement",
+): Promise<boolean> {
   const fromAddress = getFromAddress();
 
   const { data, error } = await getResend().emails.send({
@@ -204,12 +209,12 @@ export async function sendAnnouncementEmail(to: string, customSubject?: string, 
   });
 
   if (error) {
-    await logEmail(to, "announcement", "failed", null, error.message);
+    await logEmail(to, campaign, "failed", null, error.message);
     console.error("[email] Failed to send announcement to", to, error.message);
     return false;
   }
 
-  await logEmail(to, "announcement", "sent", data?.id);
+  await logEmail(to, campaign, "sent", data?.id);
   return true;
 }
 
@@ -310,6 +315,97 @@ export function buildDailyCreditsHtml(amount: number): string {
         </a>
         <p style="font-size: 11px; color: #444; margin: 16px 0 0;">
           You're receiving this because you have a verified Grok Runner account.
+        </p>
+      </div>
+    </div>
+  `;
+}
+
+/** Build the v4.7 "coolest updates" announcement HTML. */
+export function buildV47AnnouncementHtml(): string {
+  return `
+    <div style="font-family: 'Courier New', monospace; background: #0a0a0f; color: #e0e0e0; padding: 32px; max-width: 540px; margin: 0 auto;">
+      <div style="border: 1px solid #00f0ff33; padding: 28px; border-radius: 4px;">
+
+        <h1 style="color: #00f0ff; font-size: 22px; letter-spacing: 4px; margin: 0 0 6px; text-align: center;">
+          GROK RUNNER
+        </h1>
+        <p style="color: #ff00e599; font-size: 11px; letter-spacing: 5px; text-align: center; margin: 0 0 28px;">
+          v4.7 // SYSTEM_DROP
+        </p>
+
+        <p style="font-size: 14px; color: #c0c0c0; line-height: 1.7; margin: 0 0 24px; text-align: center;">
+          We've been shipping. Here's what's new since you last logged in.
+        </p>
+
+        <div style="background: #111; border: 1px solid #00f0ff44; padding: 20px; border-radius: 4px; margin: 0 0 16px;">
+          <h2 style="color: #00f0ff; font-size: 15px; margin: 0 0 10px; letter-spacing: 1px;">
+            🌍 LIVE COMMUNITY FEED
+          </h2>
+          <p style="font-size: 13px; color: #b0b0b0; margin: 0; line-height: 1.6;">
+            The social network for AI creators is here. Post your best gens, vote on others,
+            comment, and follow your favorite Runners. Snap-scroll on mobile, Reddit-style ranking on desktop.
+          </p>
+        </div>
+
+        <div style="background: #111; border: 1px solid #ff00e544; padding: 20px; border-radius: 4px; margin: 0 0 16px;">
+          <h2 style="color: #ff00e5; font-size: 15px; margin: 0 0 10px; letter-spacing: 1px;">
+            💸 CREATOR MONETIZATION
+          </h2>
+          <p style="font-size: 13px; color: #b0b0b0; margin: 0; line-height: 1.6;">
+            Lock posts, reels & stories behind credits, USD, or $XRGE. You keep <span style="color: #ff00e5; font-weight: bold;">75–80%</span>.
+            Cash out in USD ($25 min) or convert to $XRGE instantly ($1 min). Verified creators get a checkmark.
+          </p>
+        </div>
+
+        <div style="background: #111; border: 1px solid #39ff1444; padding: 20px; border-radius: 4px; margin: 0 0 16px;">
+          <h2 style="color: #39ff14; font-size: 15px; margin: 0 0 10px; letter-spacing: 1px;">
+            🤖 AI CHARACTER CHAT
+          </h2>
+          <p style="font-size: 13px; color: #b0b0b0; margin: 0; line-height: 1.6;">
+            Unfiltered conversations with AI personalities that have memory and vision.
+            Ask them to generate images or videos mid-chat — they'll do it.
+          </p>
+        </div>
+
+        <div style="background: #111; border: 1px solid #ffaa0044; padding: 20px; border-radius: 4px; margin: 0 0 16px;">
+          <h2 style="color: #ffaa00; font-size: 15px; margin: 0 0 10px; letter-spacing: 1px;">
+            🎰 SPIN THE WHEEL + DAILY MISSIONS
+          </h2>
+          <p style="font-size: 13px; color: #b0b0b0; margin: 0; line-height: 1.6;">
+            Free daily spin for credits. Complete 7-day mission cycles for a <span style="color: #ffaa00; font-weight: bold;">50-credit streak bonus</span>.
+            Plus flash sales on $XRGE with stacking bonus multipliers.
+          </p>
+        </div>
+
+        <div style="background: #111; border: 1px solid #00f0ff44; padding: 20px; border-radius: 4px; margin: 0 0 16px;">
+          <h2 style="color: #00f0ff; font-size: 15px; margin: 0 0 10px; letter-spacing: 1px;">
+            🔌 PUBLIC API + 🔐 2FA + 📱 TELEGRAM BOT
+          </h2>
+          <p style="font-size: 13px; color: #b0b0b0; margin: 0; line-height: 1.6;">
+            Generate programmatically with the new <span style="color: #00f0ff;">/api/v1</span> endpoints.
+            Lock your account with 2FA + trusted devices. Or skip the browser and run prompts straight from Telegram.
+          </p>
+        </div>
+
+        <div style="background: #0d0d15; border: 1px solid #ff00e544; padding: 20px; border-radius: 4px; margin: 0 0 24px;">
+          <h2 style="color: #ff00e5; font-size: 15px; margin: 0 0 10px; letter-spacing: 1px;">
+            🛡️ PRIVACY UPGRADE
+          </h2>
+          <p style="font-size: 13px; color: #b0b0b0; margin: 0; line-height: 1.6;">
+            Delete a Library item and the file is purged from storage too.
+            Take down your shared links with one click. Weekly orphan cleanup keeps your footprint minimal.
+          </p>
+        </div>
+
+        <div style="text-align: center; margin: 0 0 20px;">
+          <a href="https://grokrunner.gltch.app" style="display: inline-block; background: linear-gradient(135deg, #00f0ff22, #ff00e522); border: 1px solid #00f0ff55; color: #00f0ff; text-decoration: none; padding: 14px 36px; border-radius: 4px; font-size: 14px; letter-spacing: 3px; font-weight: bold;">
+            JACK IN →
+          </a>
+        </div>
+
+        <p style="font-size: 11px; color: #444; margin: 0; text-align: center;">
+          Sent to verified Grok Runner accounts. Your 10 daily credits are waiting.
         </p>
       </div>
     </div>
