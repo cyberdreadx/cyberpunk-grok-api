@@ -3,13 +3,36 @@ import { useNavigate } from "react-router-dom";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowBigUp, ArrowBigDown, MessageCircle, Trash2, Flag, Lock, CreditCard, Coins, Zap, Eye } from "lucide-react";
+import {
+  ArrowBigUp,
+  ArrowBigDown,
+  MessageCircle,
+  Trash2,
+  Flag,
+  Lock,
+  CreditCard,
+  Coins,
+  Zap,
+  Eye,
+  EyeOff,
+  MoreHorizontal,
+  Link2,
+  ShieldOff,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import CommentThread from "@/components/CommentThread";
 import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
 import XrgeUnlockDialog from "@/components/XrgeUnlockDialog";
 import VerifiedBadge from "@/components/VerifiedBadge";
+import { useMatureFilter } from "@/hooks/useMatureFilter";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface FeedPost {
   id: string;
@@ -35,6 +58,7 @@ interface FeedPost {
   viewCount?: number;
   reactionCount?: number;
   userReacted?: boolean;
+  isMature?: boolean;
 }
 
 interface PostCardProps {
@@ -46,6 +70,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { matureFilter } = useMatureFilter();
   const [score, setScore] = useState(post.score ?? post.reactionCount ?? 0);
   const [userVote, setUserVote] = useState<string | null>(post.userVote ?? (post.userReacted ? "👍" : null));
   const [showComments, setShowComments] = useState(false);
@@ -56,6 +81,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
   const [flagging, setFlagging] = useState(false);
   const [unlocking, setUnlocking] = useState(false);
   const [isUnlocked, setIsUnlocked] = useState(post.unlocked ?? true);
+  const [matureRevealed, setMatureRevealed] = useState(false);
 
   // Sync unlock state when props change (e.g. after fetchFeed refresh)
   React.useEffect(() => {
@@ -66,6 +92,10 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
   const [xrgeUnlockOpen, setXrgeUnlockOpen] = useState(false);
 
   const isLocked = !isUnlocked && !post.isOwner && ((post.lockCost || 0) > 0 || (post.lockPriceCents || 0) > 0 || !!(post.lockXrgeAmount && parseFloat(post.lockXrgeAmount) > 0));
+  const isMatureBlurred = !isLocked && matureFilter && !!post.isMature && !matureRevealed && !post.isOwner;
+
+  const isAdminOrMod = !!user?.is_admin || !!user?.is_feed_mod;
+  const canDelete = user?.id === post.userId || isAdminOrMod;
 
   const handleVote = async (emoji: "👍" | "👎") => {
     if (isLocked) return;
@@ -119,6 +149,27 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
       toast({ title: err.message, variant: "destructive" });
     } finally {
       setFlagging(false);
+    }
+  };
+
+  const handleCopyLink = async () => {
+    try {
+      const url = `${window.location.origin}/feed?post=${post.id}`;
+      await navigator.clipboard.writeText(url);
+      toast({ title: "Link copied" });
+    } catch {
+      toast({ title: "Failed to copy link", variant: "destructive" });
+    }
+  };
+
+  const handleAdminBan = async () => {
+    if (!confirm(`Ban @${post.username}? This blocks the user from posting.`)) return;
+    try {
+      await apiFetch("/admin", { method: "POST", body: { action: "ban-user", userId: post.userId, reason: "Banned via feed moderation" } });
+      toast({ title: "User banned" });
+      onUpdate?.();
+    } catch (err: any) {
+      toast({ title: err.message || "Failed to ban", variant: "destructive" });
     }
   };
 
@@ -178,18 +229,61 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
             <Lock className="w-3 h-3" /> LOCKED
           </span>
         )}
-        {(user?.id === post.userId || user?.is_admin || user?.is_feed_mod) && (
-          <button
-            onClick={handleDelete}
-            disabled={deleting}
-            title={user?.id === post.userId ? "Delete your post" : "Delete post (mod)"}
-            aria-label="Delete post"
-            className="flex items-center gap-1 px-2 py-1 rounded-md border border-destructive/30 text-destructive/80 hover:text-destructive hover:bg-destructive/10 transition-colors font-mono-share text-[10px]"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">{deleting ? "..." : "Delete"}</span>
-          </button>
+        {post.isMature && (
+          <span className="flex items-center gap-1 text-amber-300/80 font-mono-share text-[9px] px-1.5 py-0.5 rounded border border-amber-300/30">
+            18+
+          </span>
         )}
+
+        {/* 3-dot action menu */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              aria-label="Post actions"
+              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
+            >
+              <MoreHorizontal className="w-4 h-4" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48 font-mono-share text-xs">
+            <DropdownMenuItem onClick={handleCopyLink} className="cursor-pointer">
+              <Link2 className="w-3.5 h-3.5 mr-2" />
+              Copy link
+            </DropdownMenuItem>
+            {user?.id !== post.userId && (
+              <DropdownMenuItem
+                onClick={handleFlag}
+                disabled={flagging || userFlagged}
+                className="cursor-pointer"
+              >
+                <Flag className={`w-3.5 h-3.5 mr-2 ${userFlagged ? "fill-current text-destructive" : ""}`} />
+                {userFlagged ? "Reported" : "Report post"}
+              </DropdownMenuItem>
+            )}
+            {canDelete && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="cursor-pointer text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="w-3.5 h-3.5 mr-2" />
+                  {deleting ? "Deleting…" : user?.id === post.userId ? "Delete" : "Delete (mod)"}
+                </DropdownMenuItem>
+              </>
+            )}
+            {isAdminOrMod && user?.id !== post.userId && (
+              <DropdownMenuItem
+                onClick={handleAdminBan}
+                className="cursor-pointer text-destructive focus:text-destructive"
+              >
+                <ShieldOff className="w-3.5 h-3.5 mr-2" />
+                Ban user
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Content */}
@@ -264,7 +358,30 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
             <p className="px-4 pb-2 font-mono-share text-sm text-foreground/90 whitespace-pre-wrap break-words">{revealedText || post.text}</p>
           )}
           {(revealedImage || post.imageUrl) && (
-            <img src={revealedImage || post.imageUrl!} alt="" className="w-full max-h-[500px] object-cover" loading="lazy" />
+            <div className="relative">
+              <img
+                src={revealedImage || post.imageUrl!}
+                alt=""
+                className={`w-full max-h-[500px] object-cover transition-[filter] duration-300 ${
+                  isMatureBlurred ? "blur-2xl scale-105" : ""
+                }`}
+                loading="lazy"
+              />
+              {isMatureBlurred && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-background/40 backdrop-blur-sm">
+                  <div className="bg-black/70 rounded-full p-2 border border-amber-400/40">
+                    <EyeOff className="w-5 h-5 text-amber-300" />
+                  </div>
+                  <span className="font-mono-share text-[10px] tracking-widest text-amber-300/90">MATURE CONTENT</span>
+                  <button
+                    onClick={() => setMatureRevealed(true)}
+                    className="font-mono-share text-[10px] px-3 py-1 rounded border border-amber-400/40 text-amber-300 hover:bg-amber-400/10 transition-colors"
+                  >
+                    REVEAL
+                  </button>
+                </div>
+              )}
+            </div>
           )}
         </>
       )}
@@ -309,18 +426,11 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
             {post.viewCount || 0}
           </span>
 
-          {user?.id !== post.userId && (
-            <button
-              onClick={handleFlag}
-              disabled={flagging || userFlagged}
-              className={`flex items-center gap-1 font-mono-share text-[10px] ml-auto transition-colors ${
-                userFlagged ? "text-destructive" : "text-muted-foreground/40 hover:text-destructive"
-              }`}
-              title={userFlagged ? "You reported this post" : "Report post"}
-            >
-              <Flag className={`w-3.5 h-3.5 ${userFlagged ? "fill-current" : ""}`} />
-              {flagCount > 0 && <span>{flagCount}</span>}
-            </button>
+          {flagCount > 0 && (
+            <span className="flex items-center gap-1 font-mono-share text-[10px] text-muted-foreground/40 ml-auto" title="Reports">
+              <Flag className="w-3.5 h-3.5" />
+              {flagCount}
+            </span>
           )}
         </div>
       )}

@@ -1,6 +1,7 @@
 import React from "react";
-import { Settings, Maximize, Hash, Clock, Monitor, Zap, Globe } from "lucide-react";
+import { Settings, Maximize, Hash, Clock, Monitor, Zap, Globe, EyeOff } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useMatureFilter } from "@/hooks/useMatureFilter";
 import {
   Collapsible,
   CollapsibleContent,
@@ -83,6 +84,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
   mode 
 }) => {
   const { t, i18n } = useTranslation();
+  const { matureFilter, setMatureFilter } = useMatureFilter();
   const isVideoMode = mode === "text-to-video" || mode === "image-to-video";
 
   const summaryText = isVideoMode
@@ -466,6 +468,31 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
             </div>
           </div>
         )}
+
+        {/* Mature content filter */}
+        <div className="space-y-2 pt-2 border-t border-border/30">
+          <label className="font-orbitron text-[10px] tracking-wider text-muted-foreground flex items-center gap-1.5">
+            <EyeOff className="w-3 h-3" />
+            MATURE_CONTENT_FILTER
+          </label>
+          <button
+            type="button"
+            onClick={() => setMatureFilter(!matureFilter)}
+            className={`w-full flex items-center justify-between px-3 py-2 rounded-md border transition-colors font-mono-share text-[11px] ${
+              matureFilter
+                ? "border-amber-400/40 bg-amber-400/5 text-amber-300"
+                : "border-border/40 bg-card/40 text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <span>{matureFilter ? "Blur mature posts & stories" : "Mature content filter OFF"}</span>
+            <span className={`text-[9px] px-1.5 py-0.5 rounded ${matureFilter ? "bg-amber-400/20" : "bg-muted/40"}`}>
+              {matureFilter ? "ON" : "OFF"}
+            </span>
+          </button>
+          <p className="font-mono-share text-[9px] text-muted-foreground/60 leading-relaxed">
+            When ON, posts and stories the creator marked as mature are blurred until you tap REVEAL.
+          </p>
+        </div>
       </CollapsibleContent>
     </Collapsible>
   );
