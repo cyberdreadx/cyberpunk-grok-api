@@ -213,7 +213,7 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate, active = true, moun
             ref={videoRef}
             src={active ? post.imageUrl : undefined}
             poster={post.previewImageUrl}
-            className="relative z-[1] w-full h-full object-contain"
+            className={`relative z-[1] w-full h-full object-contain transition-[filter] duration-300 ${isMatureBlurred ? "blur-2xl scale-110" : ""}`}
             muted
             playsInline
             preload={active ? "auto" : "none"}
@@ -221,7 +221,7 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate, active = true, moun
             onError={() => setMediaFailed(true)}
           />
         ) : (
-          <img src={post.imageUrl} alt="" className="relative z-[1] w-full h-full object-contain" loading="lazy" decoding="async" onError={() => setMediaFailed(true)} />
+          <img src={post.imageUrl} alt="" className={`relative z-[1] w-full h-full object-contain transition-[filter] duration-300 ${isMatureBlurred ? "blur-2xl scale-110" : ""}`} loading="lazy" decoding="async" onError={() => setMediaFailed(true)} />
         )
       ) : mountMedia && !isLocked && mediaFailed && post.previewImageUrl ? (
         <img src={post.previewImageUrl} alt="" className="relative z-[1] w-full h-full object-contain opacity-80" loading="lazy" decoding="async" />
@@ -233,6 +233,22 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate, active = true, moun
       ) : !isLocked ? (
         <div className="absolute inset-0 bg-gradient-to-b from-background via-card to-background" />
       ) : null}
+
+      {/* Mature reveal overlay */}
+      {isMatureBlurred && !isLocked && (
+        <div className="absolute inset-0 z-[5] flex flex-col items-center justify-center gap-3 bg-black/40 backdrop-blur-sm">
+          <div className="bg-black/70 rounded-full p-3 border border-amber-400/50">
+            <EyeOff className="w-6 h-6 text-amber-300" />
+          </div>
+          <span className="font-orbitron text-xs tracking-widest text-amber-300">MATURE CONTENT</span>
+          <button
+            onClick={() => setMatureRevealed(true)}
+            className="font-mono-share text-xs px-4 py-1.5 rounded-md border border-amber-400/50 text-amber-300 bg-black/40 hover:bg-amber-400/10 transition-colors"
+          >
+            REVEAL
+          </button>
+        </div>
+      )}
 
       <div className="absolute inset-0 z-[2] bg-gradient-to-b from-black/40 via-transparent to-black/70 pointer-events-none" />
 
@@ -337,26 +353,58 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate, active = true, moun
           <span className="font-mono-share text-[10px] text-white/50">{post.viewCount || 0}</span>
         </div>
 
-        {user?.id !== post.userId && (
-          <button onClick={handleFlag} disabled={flagging || userFlagged} className="flex flex-col items-center gap-0.5">
-            <div className={`p-2 rounded-full backdrop-blur-sm transition-colors ${
-              userFlagged ? "bg-destructive/30 text-destructive" : "bg-black/30 text-white/60 hover:text-destructive"
-            }`}>
-              <Flag className={`w-5 h-5 ${userFlagged ? "fill-current" : ""}`} />
-            </div>
-            {flagCount > 0 && (
-              <span className="font-mono-share text-[10px] text-destructive/80">{flagCount}</span>
-            )}
-          </button>
+        {user?.id !== post.userId && flagCount > 0 && (
+          <div className="flex flex-col items-center gap-0.5 opacity-60">
+            <Flag className="w-4 h-4 text-destructive/70" />
+            <span className="font-mono-share text-[10px] text-destructive/80">{flagCount}</span>
+          </div>
         )}
 
-        {(user?.id === post.userId || user?.is_admin || user?.is_feed_mod) && (
-          <button onClick={handleDelete} disabled={deleting} className="flex flex-col items-center gap-0.5">
-            <div className="p-2 rounded-full bg-black/30 text-white/60 hover:text-destructive backdrop-blur-sm transition-colors">
-              <Trash2 className="w-5 h-5" />
-            </div>
-          </button>
-        )}
+        {/* 3-dot menu — replaces inline delete/report */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button aria-label="More" className="p-2 rounded-full bg-black/30 text-white/70 hover:text-white backdrop-blur-sm transition-colors">
+              <MoreHorizontal className="w-5 h-5" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-44 font-mono-share text-xs">
+            <DropdownMenuItem onClick={handleCopyLink} className="cursor-pointer">
+              <Link2 className="w-3.5 h-3.5 mr-2" /> Copy link
+            </DropdownMenuItem>
+            {user?.id !== post.userId && (
+              <DropdownMenuItem
+                onClick={handleFlag}
+                disabled={flagging || userFlagged}
+                className="cursor-pointer"
+              >
+                <Flag className={`w-3.5 h-3.5 mr-2 ${userFlagged ? "fill-current text-destructive" : ""}`} />
+                {userFlagged ? "Reported" : "Report"}
+              </DropdownMenuItem>
+            )}
+            {canDelete && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="cursor-pointer text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="w-3.5 h-3.5 mr-2" />
+                  {deleting ? "Deleting…" : user?.id === post.userId ? "Delete" : "Delete (mod)"}
+                </DropdownMenuItem>
+              </>
+            )}
+            {isAdminOrMod && user?.id !== post.userId && (
+              <DropdownMenuItem
+                onClick={handleAdminBan}
+                className="cursor-pointer text-destructive focus:text-destructive"
+              >
+                <ShieldOff className="w-3.5 h-3.5 mr-2" />
+                Ban user
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Bottom info overlay */}
