@@ -263,7 +263,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const isAdmin = auth.email === ADMIN_EMAIL;
 
       const rows = await sql`
-        SELECT user_id FROM stories WHERE id = ${storyId}::uuid
+        SELECT user_id, media_url FROM stories WHERE id = ${storyId}::uuid
       `;
       if (rows.length === 0) return res.status(404).json({ error: "Story not found" });
 
@@ -273,6 +273,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       await sql`DELETE FROM stories WHERE id = ${storyId}::uuid`;
+
+      // Best-effort: purge the underlying media file from Vercel Blob.
+      if (rows[0].media_url) {
+        const { deleteBlobs } = await import("./_lib/blob");
+        await deleteBlobs([rows[0].media_url]);
+      }
 
       return res.status(200).json({ ok: true });
     } catch (err: any) {

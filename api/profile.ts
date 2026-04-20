@@ -143,6 +143,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Upsert profile
       const cleanUsername = username ? username.trim().toLowerCase() : undefined;
       const cleanWallet = walletAddress !== undefined ? (walletAddress ? walletAddress.trim().toLowerCase() : null) : undefined;
+
+      // If avatar is being replaced, capture the previous URL so we can purge the old blob.
+      let previousAvatar: string | null = null;
+      if (avatarUrl !== undefined && avatarUrl !== null) {
+        const prev = await sql`SELECT avatar_url FROM profiles WHERE user_id = ${auth.userId}`;
+        previousAvatar = prev[0]?.avatar_url || null;
+      }
+
       await sql`
         INSERT INTO profiles (user_id, username, bio, avatar_url, wallet_address, updated_at)
         VALUES (
@@ -160,6 +168,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           wallet_address = COALESCE(${cleanWallet ?? null}, profiles.wallet_address),
           updated_at = NOW()
       `;
+
+      // Best-effort: delete the old avatar blob if it was replaced.
+      if (previousAvatar && previousAvatar !== avatarUrl) {
+        const { deleteBlobs } = await import("./_lib/blob");
+        await deleteBlobs([previousAvatar]);
+      }
 
       return res.json({ success: true });
     } catch (err: any) {
