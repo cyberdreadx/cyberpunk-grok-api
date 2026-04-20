@@ -63,8 +63,7 @@ const CreatorCard: React.FC<Props> = ({ creator, onOpen, active, forceBlur }) =>
               muted
               loop
               playsInline
-              // @ts-expect-error vendor attr for iOS Safari
-              webkit-playsinline="true"
+              {...({ "webkit-playsinline": "true" } as any)}
               preload="metadata"
               autoPlay
               className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${
