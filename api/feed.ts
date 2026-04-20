@@ -445,10 +445,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const isAdmin = auth.email === (process.env.ADMIN_EMAIL || "cyberdreadx@proton.me");
       const modRows = await sql`SELECT 1 FROM feed_moderators WHERE user_id = ${auth.userId} LIMIT 1`;
       const isMod = modRows.length > 0;
+
+      // Look up the media URL BEFORE deleting so we can purge the blob too.
+      const mediaRows = isAdmin || isMod
+        ? await sql`SELECT image_url FROM feed_posts WHERE id = ${postId}`
+        : await sql`SELECT image_url FROM feed_posts WHERE id = ${postId} AND user_id = ${auth.userId}`;
+
       if (isAdmin || isMod) {
         await sql`DELETE FROM feed_posts WHERE id = ${postId}`;
       } else {
         await sql`DELETE FROM feed_posts WHERE id = ${postId} AND user_id = ${auth.userId}`;
+      }
+
+      // Best-effort: remove the underlying media file from Vercel Blob.
+      if (mediaRows.length > 0 && mediaRows[0].image_url) {
+        const { deleteBlobs } = await import("./_lib/blob");
+        await deleteBlobs([mediaRows[0].image_url]);
       }
       return res.json({ success: true });
     } catch (err: any) {
