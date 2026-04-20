@@ -330,7 +330,7 @@ const ProfilePage: React.FC = () => {
                     <><UserPlus className="w-3 h-3 mr-1" /> FOLLOW</>
                   )}
                 </Button>
-                {user?.is_admin && (
+                {(user?.is_admin || user?.is_feed_mod) && (
                   <Button
                     size="sm"
                     variant="destructive"
