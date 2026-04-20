@@ -281,7 +281,8 @@ function AnnouncementPanel() {
   const abortRef = useRef(false);
   const [stats, setStats] = useState<{ totalVerified: number; alreadySent: number; remaining: number } | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
-  const [subject, setSubject] = useState("🚀 Grok Runner just got a massive upgrade");
+  const [campaign, setCampaign] = useState<"announcement" | "announcement_v47">("announcement_v47");
+  const [subject, setSubject] = useState("⚡ Grok Runner v4.7 // the coolest drop yet");
   const [showEditor, setShowEditor] = useState(false);
   const [htmlContent, setHtmlContent] = useState("");
   const [showPreview, setShowPreview] = useState(false);
@@ -289,13 +290,16 @@ function AnnouncementPanel() {
   const fetchStats = useCallback(async () => {
     setStatsLoading(true);
     try {
-      const res = await apiFetch("/admin", { method: "POST", body: { action: "announcement-stats" } });
+      const res = await apiFetch("/admin", { method: "POST", body: { action: "announcement-stats", campaign } });
       setStats(res);
     } catch { /* ignore */ }
     finally { setStatsLoading(false); }
-  }, []);
+  }, [campaign]);
 
   useEffect(() => { fetchStats(); }, [fetchStats]);
+
+  // Reset custom HTML when switching campaigns so the right default loads
+  useEffect(() => { setHtmlContent(""); }, [campaign]);
 
   const handleDryRun = async () => {
     setDryRunning(true);
