@@ -678,13 +678,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       case "announcement-stats": {
+        const campaign = (req.body.campaign as string) || "announcement";
         const [{ total_verified }] = await sql`SELECT COUNT(*)::int AS total_verified FROM users WHERE email_verified = true`;
-        const [{ already_sent }] = await sql`SELECT COUNT(DISTINCT recipient)::int AS already_sent FROM email_log WHERE email_type = 'announcement' AND status = 'sent'`;
-        return res.status(200).json({ totalVerified: total_verified, alreadySent: already_sent, remaining: total_verified - already_sent });
+        const [{ already_sent }] = await sql`SELECT COUNT(DISTINCT recipient)::int AS already_sent FROM email_log WHERE email_type = ${campaign} AND status = 'sent'`;
+        return res.status(200).json({ campaign, totalVerified: total_verified, alreadySent: already_sent, remaining: total_verified - already_sent });
       }
 
       case "get-announcement-html": {
-        return res.status(200).json({ html: buildAnnouncementHtml() });
+        const campaign = (req.body.campaign as string) || "announcement";
+        const html = campaign === "announcement_v47" ? buildV47AnnouncementHtml() : buildAnnouncementHtml();
+        return res.status(200).json({ html, campaign });
       }
 
       case "send-announcement": {
@@ -693,14 +696,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const dryRun = req.body.dryRun || false;
         const customSubject = req.body.subject || null;
         const customHtml = req.body.html || null;
+        const campaign = (req.body.campaign as string) || "announcement";
 
-        // Get verified users who haven't already received this announcement
+        // Get verified users who haven't already received THIS campaign
         const users = await sql`
           SELECT u.email FROM users u
           WHERE u.email_verified = true
             AND u.email NOT IN (
               SELECT recipient FROM email_log
-              WHERE email_type = 'announcement' AND status = 'sent'
+              WHERE email_type = ${campaign} AND status = 'sent'
             )
           ORDER BY u.created_at ASC
           LIMIT ${batchSize} OFFSET ${offset}
@@ -712,13 +716,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           WHERE u.email_verified = true
             AND u.email NOT IN (
               SELECT recipient FROM email_log
-              WHERE email_type = 'announcement' AND status = 'sent'
+              WHERE email_type = ${campaign} AND status = 'sent'
             )
         `;
 
         if (dryRun) {
           return res.status(200).json({
             dryRun: true,
+            campaign,
             totalUsers: count,
             batchSize,
             offset,
@@ -734,7 +739,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         for (const user of users) {
           try {
-            const ok = await sendAnnouncementEmail(user.email, customSubject, customHtml);
+            const ok = await sendAnnouncementEmail(user.email, customSubject, customHtml, campaign);
             if (ok) sent++;
             else { failed++; errors.push(user.email); }
             // Small delay to avoid rate limits
@@ -748,6 +753,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json({
           sent,
           failed,
+          campaign,
           errors: errors.slice(0, 20),
           totalUsers: count,
           offset,
