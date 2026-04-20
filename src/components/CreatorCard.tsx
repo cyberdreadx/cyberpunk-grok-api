@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Lock, ImageIcon, MessageSquare, EyeOff } from "lucide-react";
 import VerifiedBadge from "@/components/VerifiedBadge";
@@ -49,6 +49,28 @@ const CreatorCard: React.FC<Props> = ({ creator, onOpen, active, forceBlur }) =>
   const showLocked = creator.latestLocked || forceBlur;
   const showBlur = showLocked || matureBlur;
   const previewIsVideo = isVideoUrl(previewImg);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  // Play/pause based on viewport visibility — reliable mobile autoplay pattern.
+  useEffect(() => {
+    if (!previewIsVideo) return;
+    const v = videoRef.current;
+    if (!v) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) {
+            v.play().catch(() => {});
+          } else {
+            v.pause();
+          }
+        }
+      },
+      { threshold: 0.25 }
+    );
+    obs.observe(v);
+    return () => obs.disconnect();
+  }, [previewIsVideo, previewImg]);
 
   return (
     <button
@@ -64,13 +86,16 @@ const CreatorCard: React.FC<Props> = ({ creator, onOpen, active, forceBlur }) =>
         {previewImg ? (
           previewIsVideo ? (
             <video
+              ref={videoRef}
               src={previewImg}
               muted
               loop
               playsInline
-              {...({ "webkit-playsinline": "true" } as any)}
+              {...({ "webkit-playsinline": "true", "x5-playsinline": "true" } as any)}
               preload="metadata"
               autoPlay
+              disablePictureInPicture
+              disableRemotePlayback
               className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${
                 showBlur ? "blur-2xl scale-110" : ""
               }`}
