@@ -155,8 +155,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           JOIN profiles pr ON pr.user_id = l.user_id
           JOIN users u ON u.id = l.user_id
           JOIN stats s ON s.user_id = l.user_id
-          ${cursor ? sql`WHERE (
-            ${isTrending
+          ${(() => {
+            if (!cursor) return sql``;
+            // Cursor format: "<rankScore>|<userId>". Falls back to legacy numeric-only cursors.
+            const raw = String(cursor);
+            const pipe = raw.indexOf("|");
+            const scoreStr = pipe >= 0 ? raw.slice(0, pipe) : raw;
+            const lastUserId = pipe >= 0 ? raw.slice(pipe + 1) : "";
+            const scoreNum = parseFloat(scoreStr);
+            const rankExpr = isTrending
               ? sql`(
                   s.trending_score::float
                   + 1.0 / POWER(EXTRACT(EPOCH FROM (now() - l.created_at)) / 3600.0 + 2, 0.8)
@@ -164,9 +171,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               : sql`(
                   1.0 / POWER(EXTRACT(EPOCH FROM (now() - l.created_at)) / 3600.0 + 2, 1.2)
                   + LN(GREATEST(s.recent_score, 0) + 1) * 0.15
-                )`}
-          ) < ${parseFloat(cursor as string)}` : sql``}
-          ORDER BY rank_score DESC, l.created_at DESC
+                )`;
+            // Stable keyset pagination: rank_score DESC, then user_id ASC as tiebreaker
+            return lastUserId
+              ? sql`WHERE (${rankExpr} < ${scoreNum})
+                       OR (${rankExpr} = ${scoreNum} AND l.user_id > ${lastUserId})`
+              : sql`WHERE ${rankExpr} < ${scoreNum}`;
+          })()}
+          ORDER BY rank_score DESC, l.user_id ASC
           LIMIT ${limit}
         `;
 
@@ -192,7 +204,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             };
           }),
           nextCursor: creatorRows.length === limit
-            ? String(creatorRows[creatorRows.length - 1].rank_score)
+            ? `${creatorRows[creatorRows.length - 1].rank_score}|${creatorRows[creatorRows.length - 1].user_id}`
             : null,
         });
       }
