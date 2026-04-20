@@ -307,7 +307,7 @@ function AnnouncementPanel() {
     try {
       const res = await apiFetch("/admin", {
         method: "POST",
-        body: { action: "send-announcement", dryRun: true, batchSize: 999999, offset: 0 },
+        body: { action: "send-announcement", dryRun: true, batchSize: 999999, offset: 0, campaign },
       });
       setResult({ dryRun: true, totalUsers: res.totalUsers, emails: res.batchEmails });
     } catch (err: any) {
