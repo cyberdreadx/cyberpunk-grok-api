@@ -396,6 +396,13 @@ const FeedPage: React.FC = () => {
                 <div ref={sentinelRef} className="h-12 flex items-center justify-center">
                   {loadingMore && <Loader2 className="w-5 h-5 animate-spin text-primary" />}
                 </div>
+                {!loadingMore && !nextCursor && creators.length > 0 && (
+                  <div className="py-6 text-center">
+                    <p className="font-mono-share text-[10px] tracking-widest text-muted-foreground/70">
+                      ── YOU'RE ALL CAUGHT UP ──
+                    </p>
+                  </div>
+                )}
               </>
             )}
           </div>
@@ -554,6 +561,13 @@ const FeedPage: React.FC = () => {
             <div ref={sentinelRef} className="h-12 flex items-center justify-center">
               {loadingMore && <Loader2 className="w-5 h-5 animate-spin text-primary" />}
             </div>
+            {!loadingMore && !nextCursor && creators.length > 0 && (
+              <div className="py-8 text-center">
+                <p className="font-mono-share text-[10px] tracking-widest text-muted-foreground/70">
+                  ── YOU'RE ALL CAUGHT UP ──
+                </p>
+              </div>
+            )}
           </>
         )}
       </div>
