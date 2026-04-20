@@ -192,8 +192,13 @@ export async function sendDailyCreditsEmail(
   await logEmail(to, "daily_credits", "sent", data?.id, null, { amount });
 }
 
-/** Send the Grok Runner announcement email. Accepts optional custom subject/html. */
-export async function sendAnnouncementEmail(to: string, customSubject?: string, customHtml?: string): Promise<boolean> {
+/** Send the Grok Runner announcement email. Accepts optional custom subject/html and campaign id. */
+export async function sendAnnouncementEmail(
+  to: string,
+  customSubject?: string,
+  customHtml?: string,
+  campaign: string = "announcement",
+): Promise<boolean> {
   const fromAddress = getFromAddress();
 
   const { data, error } = await getResend().emails.send({
@@ -204,12 +209,12 @@ export async function sendAnnouncementEmail(to: string, customSubject?: string, 
   });
 
   if (error) {
-    await logEmail(to, "announcement", "failed", null, error.message);
+    await logEmail(to, campaign, "failed", null, error.message);
     console.error("[email] Failed to send announcement to", to, error.message);
     return false;
   }
 
-  await logEmail(to, "announcement", "sent", data?.id);
+  await logEmail(to, campaign, "sent", data?.id);
   return true;
 }
 
