@@ -1163,10 +1163,6 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
         }
         const data = await res.json();
         shareCacheRef.current.set(result.id, data.shareUrl);
-        if (data.shareId) {
-          const { rememberShare } = await import("@/lib/shareTracker");
-          rememberShare(result.id, data.shareId);
-        }
         await copyOrShareLink(data, result);
         return;
       }
@@ -1209,10 +1205,6 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
       }
       const data = await res.json();
       shareCacheRef.current.set(result.id, data.shareUrl);
-      if (data.shareId) {
-        const { rememberShare } = await import("@/lib/shareTracker");
-        rememberShare(result.id, data.shareId);
-      }
       await copyOrShareLink(data, result);
     } catch (err: any) {
       console.error("[share] error:", err);

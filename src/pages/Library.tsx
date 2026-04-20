@@ -61,11 +61,6 @@ const Library: React.FC = () => {
   const deleteResult = useCallback(async (id: string) => {
     setResults(prev => prev.filter(r => r.id !== id));
     try { await deleteStoredResult(id); } catch (e) { console.error("[library] delete failed:", e); }
-    // Best-effort: purge any associated /s/:id share blob + meta
-    try {
-      const { purgeSharesForResults } = await import("@/lib/shareTracker");
-      void purgeSharesForResults([id]);
-    } catch { /* non-critical */ }
   }, []);
 
   const clearResults = useCallback(async () => {
@@ -73,10 +68,6 @@ const Library: React.FC = () => {
     revokeAllRef.current?.();
     revokeAllRef.current = null;
     try { await clearStoredResults(); } catch (e) { console.error("[library] clear failed:", e); }
-    try {
-      const { purgeAllTrackedShares } = await import("@/lib/shareTracker");
-      void purgeAllTrackedShares();
-    } catch { /* non-critical */ }
   }, []);
 
   const updateResultFolder = useCallback((resultId: string, folderId: string | null) => {
@@ -105,10 +96,6 @@ const Library: React.FC = () => {
     try {
       await foldersHook.bulkDelete(ids);
       for (const id of ids) deleteResult(id);
-      try {
-        const { purgeSharesForResults } = await import("@/lib/shareTracker");
-        void purgeSharesForResults(ids);
-      } catch { /* non-critical */ }
     } catch {
       toast({ title: t("common.error"), description: t("library.deleteError"), variant: "destructive" });
     }
@@ -118,10 +105,6 @@ const Library: React.FC = () => {
     try {
       const deletedIds = await foldersHook.emptyTrashFolder();
       for (const id of deletedIds) deleteResult(id);
-      try {
-        const { purgeSharesForResults } = await import("@/lib/shareTracker");
-        void purgeSharesForResults(deletedIds);
-      } catch { /* non-critical */ }
     } catch {
       toast({ title: t("common.error"), description: t("library.trashError"), variant: "destructive" });
     }
