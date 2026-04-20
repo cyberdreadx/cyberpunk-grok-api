@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
-import { X, ChevronLeft, ChevronRight, Volume2, VolumeX, Trash2, Loader2, Eye, Lock, Unlock, Heart, Zap } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Volume2, VolumeX, Trash2, Loader2, Eye, Lock, Unlock, Heart, Zap, EyeOff } from "lucide-react";
 import XrgeUnlockDialog from "@/components/XrgeUnlockDialog";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useMatureFilter } from "@/hooks/useMatureFilter";
 
 interface Story {
   id: string;
@@ -23,6 +24,7 @@ interface Story {
   lockXrgeAmount?: string;
   unlocked?: boolean;
   isOwner?: boolean;
+  isMature?: boolean;
 }
 
 interface StoryUser {
@@ -53,6 +55,8 @@ interface Viewer {
 const STORY_DURATION = 5000;
 
 const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, currentUserId, isAdmin, onClose, onViewed, onDelete, onUnlocked }) => {
+  const { matureFilter } = useMatureFilter();
+  const [matureRevealed, setMatureRevealed] = useState<Record<string, boolean>>({});
   const [userIdx, setUserIdx] = useState(initialUserIdx);
   const [storyIdx, setStoryIdx] = useState(0);
   const [progress, setProgress] = useState(0);
@@ -78,6 +82,7 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
   const currentStory = currentUser?.stories[storyIdx];
   const isOwner = currentUser?.userId === currentUserId;
   const isLocked = currentStory && ((currentStory.lockCost || 0) > 0 || (currentStory.lockXrgeAmount && parseFloat(currentStory.lockXrgeAmount) > 0)) && !currentStory.unlocked && !currentStory.isOwner;
+  const isMatureBlurred = !!currentStory && !isLocked && matureFilter && !!currentStory.isMature && !matureRevealed[currentStory.id] && !currentStory.isOwner;
 
   // Sync like state when story changes
   useEffect(() => {
@@ -412,13 +417,41 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
             </div>
           </div>
         ) : currentStory.mediaType === "video" ? (
-          <video ref={videoRef} src={currentStory.mediaUrl}
-            className="w-full h-full object-contain"
-            autoPlay muted={muted} playsInline
-            onEnded={handleVideoEnd} onTimeUpdate={handleVideoTime} />
+          <div className="relative w-full h-full">
+            <video ref={videoRef} src={currentStory.mediaUrl}
+              className={`w-full h-full object-contain transition-[filter] duration-300 ${isMatureBlurred ? "blur-2xl scale-110" : ""}`}
+              autoPlay muted={muted} playsInline
+              onEnded={handleVideoEnd} onTimeUpdate={handleVideoTime} />
+            {isMatureBlurred && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/40 backdrop-blur-sm z-10">
+                <div className="bg-black/70 rounded-full p-3 border border-amber-400/50">
+                  <EyeOff className="w-7 h-7 text-amber-300" />
+                </div>
+                <span className="font-orbitron text-xs tracking-widest text-amber-300">MATURE CONTENT</span>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setMatureRevealed(p => ({ ...p, [currentStory.id]: true })); }}
+                  className="font-mono-share text-xs px-4 py-1.5 rounded-md border border-amber-400/50 text-amber-300 bg-black/40 hover:bg-amber-400/10"
+                >REVEAL</button>
+              </div>
+            )}
+          </div>
         ) : (
-          <img src={currentStory.mediaUrl} alt={currentStory.caption || "Story"}
-            className="w-full h-full object-contain" />
+          <div className="relative w-full h-full">
+            <img src={currentStory.mediaUrl} alt={currentStory.caption || "Story"}
+              className={`w-full h-full object-contain transition-[filter] duration-300 ${isMatureBlurred ? "blur-2xl scale-110" : ""}`} />
+            {isMatureBlurred && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/40 backdrop-blur-sm z-10">
+                <div className="bg-black/70 rounded-full p-3 border border-amber-400/50">
+                  <EyeOff className="w-7 h-7 text-amber-300" />
+                </div>
+                <span className="font-orbitron text-xs tracking-widest text-amber-300">MATURE CONTENT</span>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setMatureRevealed(p => ({ ...p, [currentStory.id]: true })); }}
+                  className="font-mono-share text-xs px-4 py-1.5 rounded-md border border-amber-400/50 text-amber-300 bg-black/40 hover:bg-amber-400/10"
+                >REVEAL</button>
+              </div>
+            )}
+          </div>
         )}
       </div>
 
