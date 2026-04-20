@@ -1,13 +1,24 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import crypto from "crypto";
-import { getUserFromRequest } from "./_lib/auth";
+import { getUserFromRequest, ADMIN_EMAIL } from "./_lib/auth";
 import { applyCors } from "./_lib/cors";
 
 export const config = { maxDuration: 30 };
 
+/** Lazily ensure the share_owners table exists (used to authorize DELETE). */
+async function ensureShareOwnersTable(sql: any) {
+  await sql`CREATE TABLE IF NOT EXISTS share_owners (
+    share_id TEXT PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    ext TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  )`.catch(() => {});
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  applyCors(req, res, "GET, POST, OPTIONS");
+  applyCors(req, res, "GET, POST, DELETE, OPTIONS");
   if (req.method === "OPTIONS") return res.status(200).end();
+
 
   if (req.method === "POST") {
     try {
