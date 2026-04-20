@@ -402,7 +402,7 @@ function PrivacyContent() {
         <span className="text-secondary">$</span> cat /sys/legal/privacy_protocol.dat
         <br />
         <span className="text-muted-foreground/40">
-          {"// Last updated: 2026.02.10 // Encryption: AES-256"}
+          {`// Last updated: 2026.04.20 // Protocol v${APP_VERSION} // Encryption: AES-256`}
         </span>
       </p>
 
@@ -411,28 +411,48 @@ function PrivacyContent() {
           1. DATA_COLLECTION
         </h3>
         <p>
-          We believe in minimal data harvesting. Here is exactly what we collect:
+          We believe in minimal data harvesting. Here is exactly what we collect on our servers:
         </p>
         <ul className="list-none space-y-1 pl-4 mt-2 text-foreground/70">
           <li>
             <span className="text-secondary/40 mr-2">{arrow}</span>
-            <strong className="text-foreground/90">Email address</strong> - for
-            account creation and verification
+            <strong className="text-foreground/90">Email address</strong> — for
+            account creation, verification, and password resets
           </li>
           <li>
             <span className="text-secondary/40 mr-2">{arrow}</span>
-            <strong className="text-foreground/90">Password hash</strong> -
-            bcrypt-hashed, we never see your raw password
+            <strong className="text-foreground/90">Password hash</strong> —
+            bcrypt-hashed; we never see your raw password
           </li>
           <li>
             <span className="text-secondary/40 mr-2">{arrow}</span>
-            <strong className="text-foreground/90">Usage logs</strong> -
-            generation type, credit costs, timestamps (no prompt content)
+            <strong className="text-foreground/90">Profile data</strong> —
+            optional username, bio, avatar URL, and (if you opt in) a public
+            Base wallet address used for $XRGE creator payouts
           </li>
           <li>
             <span className="text-secondary/40 mr-2">{arrow}</span>
-            <strong className="text-foreground/90">Payment data</strong> -
-            processed entirely by Stripe; we only store transaction IDs
+            <strong className="text-foreground/90">Device fingerprint &amp; trusted-device records</strong>{" "}
+            — used for abuse prevention and 2FA "remember this device" only
+          </li>
+          <li>
+            <span className="text-secondary/40 mr-2">{arrow}</span>
+            <strong className="text-foreground/90">Usage logs</strong> —
+            generation type, credit costs, and timestamps for billing and abuse
+            detection. Prompt text is logged only when required to verify
+            daily-mission actions or moderate flagged feed posts
+          </li>
+          <li>
+            <span className="text-secondary/40 mr-2">{arrow}</span>
+            <strong className="text-foreground/90">Email delivery log</strong> —
+            transactional email status (sent / bounced / delayed) is stored so we
+            can surface delivery problems to you
+          </li>
+          <li>
+            <span className="text-secondary/40 mr-2">{arrow}</span>
+            <strong className="text-foreground/90">Payment data</strong> —
+            processed entirely by Stripe; we only store transaction IDs.
+            On-chain $XRGE order references are stored when you pay with crypto
           </li>
         </ul>
       </section>
@@ -449,104 +469,177 @@ function PrivacyContent() {
           <li>
             <span className="text-secondary/40 mr-2">{arrow}</span>
             <strong className="text-foreground/90">Generated images and videos</strong>
-            {" "}- stored in IndexedDB
+            {" "}— stored in IndexedDB as binary blobs
           </li>
           <li>
             <span className="text-secondary/40 mr-2">{arrow}</span>
             <strong className="text-foreground/90">Folder structure and PIN hashes</strong>
-            {" "}- stored in IndexedDB and localStorage
+            {" "}— stored in IndexedDB and localStorage
           </li>
           <li>
             <span className="text-secondary/40 mr-2">{arrow}</span>
-            <strong className="text-foreground/90">Generation settings and prompt history</strong>
-            {" "}- stored in localStorage
+            <strong className="text-foreground/90">Prompt history, engine choice, language &amp; theme</strong>
+            {" "}— stored in localStorage
           </li>
           <li>
             <span className="text-secondary/40 mr-2">{arrow}</span>
-            <strong className="text-foreground/90">xAI API key (BYOK mode)</strong>
-            {" "}- stored in localStorage, never transmitted to us
+            <strong className="text-foreground/90">xAI / RunPod API keys (BYOK mode)</strong>
+            {" "}— stored in localStorage, never transmitted to us
+          </li>
+          <li>
+            <span className="text-secondary/40 mr-2">{arrow}</span>
+            <strong className="text-foreground/90">Share-link map</strong>
+            {" "}— links your local results to /s/:id IDs so deleting a result can
+            also tear down the public share
           </li>
         </ul>
       </section>
 
       <section>
         <h3 className="font-orbitron text-xs tracking-wider text-secondary mb-2">
-          3. DATA_WE_DO_NOT_COLLECT
+          3. SERVER_SIDE_MEDIA_STORAGE
+        </h3>
+        <p>
+          You only upload media to our servers when you <strong>choose to</strong> —
+          generations stay on your device by default. The following actions
+          publish files to Vercel Blob storage:
+        </p>
+        <ul className="list-none space-y-1 pl-4 mt-2 text-foreground/70">
+          <li>
+            <span className="text-secondary/40 mr-2">{arrow}</span>
+            <strong className="text-foreground/90">Posting to the community feed</strong>
+            {" "}— image is hosted publicly until you delete the post
+          </li>
+          <li>
+            <span className="text-secondary/40 mr-2">{arrow}</span>
+            <strong className="text-foreground/90">Stories</strong>
+            {" "}— media is hosted for up to 24 hours, then auto-deleted by a cron
+          </li>
+          <li>
+            <span className="text-secondary/40 mr-2">{arrow}</span>
+            <strong className="text-foreground/90">Avatars</strong>
+            {" "}— previous avatar is purged when you upload a new one
+          </li>
+          <li>
+            <span className="text-secondary/40 mr-2">{arrow}</span>
+            <strong className="text-foreground/90">Share links (/s/:id)</strong>
+            {" "}— you create a public copy of a single result so it can be opened
+            without an account; ownership is tracked so only you can take it down
+          </li>
+        </ul>
+        <p className="mt-3 text-foreground/90">
+          When you delete any of the above, the underlying file is removed from
+          Vercel Blob storage automatically. A weekly cron also sweeps for
+          orphaned files (anything no longer referenced by a post, story, profile,
+          or share) and deletes them after a 24-hour safety window.
+        </p>
+      </section>
+
+      <section>
+        <h3 className="font-orbitron text-xs tracking-wider text-secondary mb-2">
+          4. DATA_WE_DO_NOT_COLLECT
         </h3>
         <p>To be crystal clear, we do NOT collect or store:</p>
         <ul className="list-none space-y-1 pl-4 mt-2 text-foreground/70">
           <li>
-            <span className="text-primary/40 mr-2">!!</span>Your prompts or
-            generated content
+            <span className="text-primary/40 mr-2">!!</span>Your generations, by
+            default — they live on your device unless you publish or share them
           </li>
           <li>
             <span className="text-primary/40 mr-2">!!</span>Your IP address
-            (beyond rate-limiting windows)
+            beyond short rate-limiting and abuse-prevention windows
           </li>
           <li>
-            <span className="text-primary/40 mr-2">!!</span>Tracking cookies or
-            analytics fingerprints
+            <span className="text-primary/40 mr-2">!!</span>Tracking cookies,
+            third-party analytics, or advertising identifiers
+          </li>
+          <li>
+            <span className="text-primary/40 mr-2">!!</span>BYOK API keys — they
+            never leave your browser
           </li>
           <li>
             <span className="text-primary/40 mr-2">!!</span>Any data sold to
-            third parties - ever
+            third parties — ever
           </li>
         </ul>
       </section>
 
       <section>
         <h3 className="font-orbitron text-xs tracking-wider text-secondary mb-2">
-          4. THIRD_PARTY_SERVICES
+          5. THIRD_PARTY_SERVICES
         </h3>
         <p>
-          Grok Runner integrates with the following external services, each with
-          their own privacy policies:
+          The Platform integrates with the following external services, each
+          governed by its own privacy policy:
         </p>
         <ul className="list-none space-y-1 pl-4 mt-2 text-foreground/70">
           <li>
             <span className="text-secondary/40 mr-2">{arrow}</span>
-            <strong className="text-foreground/90">xAI</strong> - AI generation
-            engine (your prompts are sent to xAI for processing)
+            <strong className="text-foreground/90">xAI</strong> — Grok image,
+            video, and chat generation (your prompts are sent to xAI for processing)
           </li>
           <li>
             <span className="text-secondary/40 mr-2">{arrow}</span>
-            <strong className="text-foreground/90">Stripe</strong> - payment
-            processing (handles all credit card data)
+            <strong className="text-foreground/90">RunPod / ComfyUI workers</strong>
+            {" "}— GLTCH and GLTCH PRO generation pipelines
           </li>
           <li>
             <span className="text-secondary/40 mr-2">{arrow}</span>
-            <strong className="text-foreground/90">Resend</strong> - email
-            delivery for verification codes
+            <strong className="text-foreground/90">DeepSeek</strong> — optional
+            backend for character chat
           </li>
           <li>
             <span className="text-secondary/40 mr-2">{arrow}</span>
-            <strong className="text-foreground/90">Neon (PostgreSQL)</strong> -
-            server-side database for accounts and transactions
+            <strong className="text-foreground/90">Stripe</strong> — payment
+            processing for subscriptions and credit packs
           </li>
           <li>
             <span className="text-secondary/40 mr-2">{arrow}</span>
-            <strong className="text-foreground/90">Vercel</strong> - hosting and
-            serverless functions
+            <strong className="text-foreground/90">Base network ($XRGE)</strong>
+            {" "}— optional on-chain payments and creator payouts
+          </li>
+          <li>
+            <span className="text-secondary/40 mr-2">{arrow}</span>
+            <strong className="text-foreground/90">Resend</strong> — verification
+            and transactional email delivery
+          </li>
+          <li>
+            <span className="text-secondary/40 mr-2">{arrow}</span>
+            <strong className="text-foreground/90">Telegram</strong> — only if
+            you link your Telegram account to the bot
+          </li>
+          <li>
+            <span className="text-secondary/40 mr-2">{arrow}</span>
+            <strong className="text-foreground/90">Neon (PostgreSQL)</strong> —
+            server-side database for accounts, credits, and transactions
+          </li>
+          <li>
+            <span className="text-secondary/40 mr-2">{arrow}</span>
+            <strong className="text-foreground/90">Vercel</strong> — hosting,
+            serverless functions, and Blob storage for media you publish
           </li>
         </ul>
       </section>
 
       <section>
         <h3 className="font-orbitron text-xs tracking-wider text-secondary mb-2">
-          5. DATA_RETENTION
+          6. DATA_RETENTION
         </h3>
         <p>
           Server-side account data is retained for the lifetime of your account.
-          Rate-limiting records are automatically purged after their window
-          expires. Client-side data persists until you clear your browser storage
-          or uninstall the PWA. You may request account deletion at any time by
-          contacting us.
+          Stories self-destruct after 24 hours. Posts, avatars, and shares are
+          retained until you delete them — at which point the underlying media
+          file is purged from Blob storage as well. Rate-limiting records are
+          automatically purged after their window expires. Client-side data
+          persists until you clear your browser storage or uninstall the PWA.
+          You may delete your account at any time from Settings; this also
+          removes your profile data, posts, stories, and any associated media.
         </p>
       </section>
 
       <section>
         <h3 className="font-orbitron text-xs tracking-wider text-secondary mb-2">
-          6. YOUR_RIGHTS
+          7. YOUR_RIGHTS
         </h3>
         <p>You have the right to:</p>
         <ul className="list-none space-y-1 pl-4 mt-2 text-foreground/70">
@@ -555,8 +648,13 @@ function PrivacyContent() {
             of all data we hold about you
           </li>
           <li>
-            <span className="text-secondary/40 mr-2">{arrow}</span>Request
-            deletion of your account and associated data
+            <span className="text-secondary/40 mr-2">{arrow}</span>Delete your
+            account and associated data directly from Settings
+          </li>
+          <li>
+            <span className="text-secondary/40 mr-2">{arrow}</span>Take down any
+            share link you created — deleting the source result also tears down
+            the public /s/:id page and its underlying file
           </li>
           <li>
             <span className="text-secondary/40 mr-2">{arrow}</span>Clear all
@@ -567,19 +665,22 @@ function PrivacyContent() {
 
       <section>
         <h3 className="font-orbitron text-xs tracking-wider text-secondary mb-2">
-          7. SECURITY_MEASURES
+          8. SECURITY_MEASURES
         </h3>
         <p>
-          All communications use HTTPS/TLS encryption. Passwords are hashed with
-          bcrypt. API keys are stored client-side only. Rate limiting protects
-          against brute-force attacks. Stripe webhook signatures are verified for
-          payment integrity.
+          All communications use HTTPS/TLS encryption with HSTS enforced.
+          Passwords are bcrypt-hashed. Optional two-factor authentication (2FA)
+          via email is available in Settings, with trusted-device support.
+          Rate limiting, disposable-email blocking, IP throttling, and device
+          fingerprinting protect against abuse. Stripe webhook signatures and
+          on-chain $XRGE transactions are verified server-side. Public API keys
+          are SHA-256 hashed at rest.
         </p>
       </section>
 
       <section>
         <h3 className="font-orbitron text-xs tracking-wider text-secondary mb-2">
-          8. CONTACT
+          9. CONTACT
         </h3>
         <p>
           For privacy inquiries, data requests, or concerns, reach out to us via
