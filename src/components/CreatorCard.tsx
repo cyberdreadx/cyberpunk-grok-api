@@ -37,10 +37,13 @@ const timeAgo = (iso: string) => {
   return `${d}d`;
 };
 
+const isVideoUrl = (u?: string | null) => !!u && /\.(mp4|webm|mov|m4v)(\?|$)/i.test(u);
+
 const CreatorCard: React.FC<Props> = ({ creator, onOpen, active, forceBlur }) => {
   const previewImg = creator.latestImage || creator.previewImage;
   const initials = (creator.username || "?").slice(0, 2).toUpperCase();
   const showLocked = creator.latestLocked || forceBlur;
+  const previewIsVideo = isVideoUrl(previewImg);
 
   return (
     <button
@@ -54,15 +57,30 @@ const CreatorCard: React.FC<Props> = ({ creator, onOpen, active, forceBlur }) =>
       {/* Preview */}
       <div className="relative flex-1 bg-muted/30 overflow-hidden">
         {previewImg ? (
-          <img
-            src={previewImg}
-            alt={`${creator.username}'s latest`}
-            loading="lazy"
-            decoding="async"
-            className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${
-              showLocked ? "blur-2xl scale-110" : ""
-            }`}
-          />
+          previewIsVideo ? (
+            <video
+              src={previewImg}
+              muted
+              loop
+              playsInline
+              {...({ "webkit-playsinline": "true" } as any)}
+              preload="metadata"
+              autoPlay
+              className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${
+                showLocked ? "blur-2xl scale-110" : ""
+              }`}
+            />
+          ) : (
+            <img
+              src={previewImg}
+              alt={`${creator.username}'s latest`}
+              loading="lazy"
+              decoding="async"
+              className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${
+                showLocked ? "blur-2xl scale-110" : ""
+              }`}
+            />
+          )
         ) : creator.latestText ? (
           <div className="absolute inset-0 p-3 flex items-center justify-center">
             <p className={`font-mono-share text-[11px] text-foreground/80 line-clamp-6 text-center leading-snug ${forceBlur ? "blur-sm select-none" : ""}`}>

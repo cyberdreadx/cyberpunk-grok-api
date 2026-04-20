@@ -24,9 +24,6 @@ import { getDb } from "./_lib/db";
 
 const SAFETY_WINDOW_MS = 24 * 60 * 60 * 1000; // 24h grace period
 const MAX_DELETIONS_PER_RUN = 5000;           // hard ceiling
-
-const SAFETY_WINDOW_MS = 24 * 60 * 60 * 1000; // 24h grace period
-const MAX_DELETIONS_PER_RUN = 5000;           // hard ceiling
 const ABORT_RATIO = 0.5;                      // refuse to delete >50% of bucket in one run
 
 function getBlobToken(): string {
