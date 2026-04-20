@@ -337,7 +337,7 @@ function AnnouncementPanel() {
       while (true) {
         if (abortRef.current) break;
         try {
-          const body: any = { action: "send-announcement", batchSize, offset };
+          const body: any = { action: "send-announcement", batchSize, offset, campaign };
           if (subject) body.subject = subject;
           if (htmlContent) body.html = htmlContent;
           const res = await apiFetch("/admin", { method: "POST", body });
