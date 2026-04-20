@@ -1,164 +1,173 @@
-# ⚡ GROK_IMAGINE
+# ⚡ GROK_RUNNER
 
-> Cyberpunk neural rendering interface for xAI's Grok Imagine API.
+> Cyberpunk neural interface for AI image, video, and character generation — multi-engine, multi-payment, creator-friendly.
 
-![GROK_IMAGINE Banner](public/og-image.png)
+![Banner](public/og-image.png)
 
 **Live:** [grokrunner.gltch.app](https://grokrunner.gltch.app)
+**Current version:** v4.7 (2026.04.20)
 
-## ✅ Recent Updates
+## ✨ What it does
 
-- **Folder Vault system** — hide folders from main tabs, restore from discreet vault menu
-- **Safer folder deletion** — confirmation modal with clear consequences; contents move to `UNFILED`
-- **Mobile folder UX upgrades** — larger tap targets and easier menu interactions
-- **Improved error extraction** — clearer Stripe/xAI error messages and BYOK billing hints
-- **Bundle splitting in Vite** — app chunk reduced significantly for faster repeat loads
+A cyberpunk-themed app for generating, editing, and sharing AI media. It bundles four generation engines, a creator-monetized social feed, 24-hour stories, character chat, $XRGE crypto payments, and a public developer API behind one terminal-flavored interface.
 
-## What is this?
+### Generation modes
 
-A cyberpunk-themed web app for the [xAI Grok Imagine API](https://docs.x.ai/docs/guides/image-generation) — generate images, edit them, create videos, and animate stills. Works in two modes:
+| Mode | What it does |
+|------|--------------|
+| 🖼️ **GENERATE** | Text → Image |
+| ✏️ **MODIFY** | Edit existing images with prompts (Flux 2 Klein) |
+| 🎬 **RENDER** | Text → Video (up to 15s, WAN 2.2 + RIFE) |
+| 🎞️ **ANIMATE** | Image → Video (start/end frame interpolation) |
+| 🧬 **CHARACTERS** | Persistent AI personalities with vision + media generation |
 
-- **BYOK (Bring Your Own Key)** — 100% client-side, your API key never leaves the browser
-- **Credits** — Sign up, buy credits or subscribe, and use xAI features without managing an API key
+### Engines
 
-### Modes
+- **GLTCH PRO** (ComfyUI) — best quality, full LoRA stack, NSFW unlocks
+- **GLTCH** (default) — fast and balanced
+- **GROK** (xAI) — official xAI Imagine pipeline
 
-| Mode | Description |
-|------|-------------|
-| 🖼️ **GENERATE** | Text → Image generation |
-| ✏️ **MODIFY** | Edit existing images with prompts |
-| 🎬 **RENDER** | Text → Video generation (up to 15s) |
-| 🎞️ **ANIMATE** | Image → Video animation |
+## 🆕 Recent highlights (v4.7)
 
-### Features
+- **Auto-purge media** — deleting a post, story, avatar, or shared result also removes the file from Vercel Blob storage
+- **Owner-only share takedowns** — `share_owners` table tracks creators, with admin backfill for legacy shares
+- **Weekly orphan-cleanup cron** — sweeps Blob storage for files no longer referenced by any post, story, profile, or share
+- **Stable creator-feed pagination** — secondary cursor key prevents stalls on tied rank scores
+- **End-of-feed indicator** — clear "You're all caught up" marker
 
-- **Dual API Mode** — BYOK (free, client-side) or Credits (paid, server-proxied)
-- **Settings Panel** — Resolution (512² to 1792×1024), batch count (×1–×4), video duration (5–15s)
-- **Prompt History** — Auto-saved, searchable, reusable prompts
-- **Results Gallery** — Expand, download, delete individual items, carousel view
-- **Folder Management** — Create/rename/delete folders, move outputs, PIN lock support
-- **Vault Mode** — Hide folders from main tabs and restore them from vault controls
-- **IndexedDB Storage** — Persistent local storage for generated media (survives cache clears)
-- **Download Proxy** — Server-side proxy for video downloads (bypasses xAI CDN CORS restrictions)
-- **PWA Support** — Install on any device as a native-feeling app
-- **Mobile Optimized** — Share sheet integration, swipe gestures, responsive layout
+See the in-app **Changelog** dialog for the full history.
 
-### SaaS Features
+## 🔑 Account & payment options
 
-- **User Authentication** — Custom JWT-based signup/login
-- **Credit System** — Pay-per-use credits with sub-credits (subscription) and pack-credits (one-time)
-- **Stripe Integration** — One-time credit packs, monthly subscriptions, customer portal
-- **$XRGE on Base** — Optional crypto checkout for packs (+ bonus credits; unlocks NSFW LoRAs for holders)
-- **Monthly Plans** — Basic and Premium tiers with auto-renewing credits (no rollover)
-- **API Proxy** — Server-side xAI API calls for credit users (key stays on server)
+- **BYOK** — bring your own xAI / RunPod key, 100% client-side, never sent to us
+- **Credits** — Stripe checkout for one-time packs and monthly subscriptions
+- **$XRGE on Base** — pay or get paid in crypto; 80% of XRGE post/story unlocks go straight to the creator's wallet
+- **10 free daily credits** for verified accounts
+- **Daily Missions, Spin the Wheel, Referrals, Flash Sales** — gamified credit boosts
 
-## 🔒 Privacy
+## 🎨 Creator platform
 
-| Concern | BYOK Mode | Credits Mode |
-|---------|-----------|--------------|
-| API key | Browser localStorage only | Stored on server (encrypted) |
-| API calls | Direct to `api.x.ai` | Proxied through backend |
-| Data persistence | All local (IndexedDB) | All local (IndexedDB) |
-| Telemetry | None | Usage logging for credit billing |
+- Post images and 24-hour stories with optional credit / USD / $XRGE locks
+- Revenue split: **75/20/5** for credits & USD, **80/20** for $XRGE (instant on-chain)
+- Manual USD payouts ($25 min) or instant $XRGE conversion ($1 min)
+- Verified creator badges, follow/follower system, comment threads
 
-## 🚀 Quick Start
+See [CREATOR-PLATFORM.md](CREATOR-PLATFORM.md) for the full spec.
+
+## 🔒 Privacy at a glance
+
+| Data | Where it lives | When it's deleted |
+|------|----------------|-------------------|
+| Generated media (default) | Your browser (IndexedDB) | When you clear it |
+| BYOK API keys | Your browser (localStorage) | Never sent to us |
+| Feed posts / avatars | Vercel Blob (server) | Auto-purged on delete |
+| Stories | Vercel Blob (server) | Auto-deleted after 24h |
+| Share links (`/s/:id`) | Vercel Blob (server) | Auto-purged when you delete the source result |
+| Account email + bcrypt hash | Neon Postgres | On account deletion |
+| Prompt text | **Not stored**, except for daily-mission verification & flagged-post moderation |
+
+A weekly cron also sweeps Blob storage for orphaned files (with a 24-hour safety window). Full details in the in-app **Privacy Protocol** dialog.
+
+## 🚀 Quick start
 
 ```bash
-# Install dependencies
 npm install
-
-# Start dev server
-npm run dev
-
-# Build for production
-npm run build
+npm run dev        # local dev
+npm run build      # production build
 ```
 
 ## 🏗️ Architecture
 
 ```
-┌──────────────────────────────────────────────────┐
-│  Frontend (Vercel static + SPA, or any static host) │
-│  React + Vite + Tailwind + shadcn/ui             │
-│                                                  │
-│  BYOK mode: calls xAI API directly              │
-│  Credits mode: calls /api/* backend              │
-└────────────────────┬─────────────────────────────┘
-                     │
-          ┌──────────▼──────────┐
-          │  Backend (Vercel)   │
-          │  Serverless Funcs   │
-          │                     │
-          │  /api/auth/*        │  ← JWT auth
-          │  /api/credits       │  ← credit balance
-          │  /api/checkout      │  ← Stripe sessions
-          │  /api/xrge-*        │  ← XRGE pack orders (Base)
-          │  /api/webhook       │  ← Stripe webhooks
-          │  /api/generate      │  ← xAI proxy
-          │  /api/download      │  ← media proxy
-          └──────┬──────┬───────┘
-                 │      │
-        ┌────────▼┐  ┌──▼────────┐
-        │  Neon   │  │  Stripe   │
-        │ Postgres│  │ Payments  │
-        └─────────┘  └───────────┘
+┌──────────────────────────────────────────────────────────┐
+│  Frontend (React + Vite + Tailwind + shadcn/ui)          │
+│  BYOK mode → calls xAI / RunPod directly                 │
+│  Credits mode → calls /api/* serverless functions        │
+└────────────────────────┬─────────────────────────────────┘
+                         │
+         ┌───────────────▼───────────────┐
+         │  Vercel Serverless Functions  │
+         │  /api/auth/*    /api/generate │
+         │  /api/credits   /api/comfyui  │
+         │  /api/checkout  /api/feed     │
+         │  /api/xrge-*    /api/stories  │
+         │  /api/share     /api/v1/*     │
+         │  /api/cron-blob-orphans (wk)  │
+         └────┬──────────┬──────────┬────┘
+              │          │          │
+       ┌──────▼──┐  ┌────▼────┐  ┌──▼──────────┐
+       │  Neon   │  │ Stripe  │  │ Vercel Blob │
+       │ Postgres│  │ + XRGE  │  │  (media)    │
+       └─────────┘  └─────────┘  └─────────────┘
 ```
 
-## 🔧 Environment Variables
+## 🔧 Environment variables
 
-Copy `.env.example` and fill in your values:
+Copy `.env.example` and fill in the values you need. Core requirements:
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `DATABASE_URL` | Backend | Neon Postgres connection string |
-| `JWT_SECRET` | Backend | Random 64-char string for signing tokens |
-| `XAI_API_KEY` | Backend | xAI API key for credit-mode proxy |
-| `STRIPE_SECRET_KEY` | Backend | Stripe secret key |
-| `STRIPE_WEBHOOK_SECRET` | Backend | Stripe webhook signing secret |
-| `STRIPE_PRICE_*` | Backend | Stripe Price IDs for packs and subscriptions |
-| `SITE_URL` | Backend | Frontend URL for Stripe redirects |
-| `VITE_API_URL` | Frontend | Backend API URL (only if on a different domain) |
-| `XRGE_DEPOSIT_ADDRESS` | Backend | Wallet to receive XRGE (Base); see `api/_lib/xrge.ts` |
+| `DATABASE_URL` | ✅ | Neon Postgres connection string |
+| `JWT_SECRET` | ✅ | Random 64-char string for signing tokens |
+| `XAI_API_KEY` | ✅ | xAI key for credit-mode Grok proxy |
+| `STRIPE_SECRET_KEY` | ✅ | Stripe secret key |
+| `STRIPE_WEBHOOK_SECRET` | ✅ | Stripe webhook signing secret |
+| `STRIPE_PRICE_*` | ✅ | Stripe Price IDs for packs and subscriptions |
+| `RESEND_API_KEY` | ✅ | Email delivery (verification, 2FA, alerts) |
+| `BLOB_READ_WRITE_TOKEN` | ✅ | Vercel Blob token for posts/stories/shares |
+| `SITE_URL` | ✅ | Frontend URL for redirects |
+| `RUNPOD_*` / `COMFYUI_URL` | optional | Enable GLTCH / GLTCH PRO engines |
+| `XRGE_*` | optional | Enable $XRGE crypto payments on Base |
+| `DEEPSEEK_API_KEY` | optional | Alternate backend for character chat |
 
-## 🏠 Self-Hosting
+See `.env.example` for the full list.
 
-See [SELF-HOSTING.md](SELF-HOSTING.md) for complete instructions on running privately via:
+## ❓ FAQ
 
-- 📱 **iPhone (iSH terminal)**
-- 🐳 **Docker** (Synology, QNAP, Unraid, TrueNAS)
-- 💻 **Any static server** (npx serve, Python, PHP)
-- 🔐 **Tailscale / ZeroTier** for secure remote access
+**Where do my generations go?**
+By default, nowhere — they live in your browser's IndexedDB. Files only hit our server when you explicitly post to the feed, publish a story, set an avatar, or create a `/s/:id` share link.
 
-> **Note:** Self-hosting the frontend gives you BYOK mode. For the credit/SaaS features, you'll also need to deploy the Vercel backend and set up Neon + Stripe.
+**What happens when I delete something?**
+The database row goes first, then the underlying Vercel Blob is auto-purged. A weekly cron also sweeps for any orphaned files with a 24-hour safety window. Stories self-destruct after 24 hours regardless.
 
-## 💳 SaaS Setup
+**Do you store my prompts?**
+Not by default. We log generation type, credit cost, and timestamp for billing. Prompt text is only kept when needed to verify a daily-mission action (e.g. `shared:<id>`) or to moderate a flagged feed post.
 
-To enable the credit-based SaaS features:
+**What's BYOK and is it safer?**
+"Bring Your Own Key" lets you paste your own xAI / RunPod API key. It's stored only in your browser's localStorage and never reaches our servers. In BYOK mode, your prompts go straight from your browser to the AI provider.
 
-1. **Database** — Create a [Neon](https://neon.tech) Postgres project and run `supabase/migrations/20260209_saas_credits.sql`
-2. **Stripe** — Create products using `scripts/setup-stripe-products.ps1` (Windows) or `scripts/setup-stripe-products.sh` (Mac/Linux)
-3. **Backend** — Deploy the `api/` folder to [Vercel](https://vercel.com) and configure environment variables
-4. **Frontend** — Set `VITE_API_URL` to your Vercel deployment URL if hosted separately
+**Do credits expire?**
+- **Subscription credits** reset every billing cycle (no rollover).
+- **Pack credits** never expire.
+- **Daily free credits** (10/day) reset every 24 hours for verified accounts.
 
-## 🛠️ Tech Stack
+**How do creator earnings work?**
+- Posts/stories locked in **credits or USD** — split 75% creator / 20% platform / 5% reserve. USD payouts manual review at $25 min.
+- Posts/stories locked in **$XRGE** — split 80% creator / 20% platform, paid **instantly** on-chain to the creator's Base wallet. Convert in-app earnings to $XRGE at $1 min.
 
-**Frontend:**
-- React 18 + TypeScript + Vite
-- Tailwind CSS with custom cyberpunk design system
-- shadcn/ui components
-- IndexedDB for persistent media storage
-- PWA via vite-plugin-pwa
-- Fonts: Orbitron, Share Tech Mono, Rajdhani
+**Is this 18+?**
+Yes. The Platform requires age confirmation and account verification. NSFW LoRAs unlock for users with a $30 Stripe purchase, an $XRGE pack, or an $XRGE deposit. CSAM and non-consensual imagery are zero-tolerance — see the in-app Terms of Service.
 
-**Backend:**
-- Vercel Serverless Functions (Node.js)
-- Neon Postgres (serverless driver)
-- Custom JWT authentication (bcryptjs + jsonwebtoken)
-- Stripe (cards/subscriptions) + optional XRGE (packs on Base)
+**Can I self-host?**
+Yes — the frontend works in BYOK mode on any static host. For the SaaS features you'll need to deploy the `api/` folder to Vercel and provide Neon + Stripe + Blob credentials. See [SELF-HOSTING.md](SELF-HOSTING.md).
 
-**Hosting:**
-- App (frontend + API): [Vercel](https://vercel.com) — static `dist` and `/api/*` serverless routes on one project
-- Database: Neon Postgres
+**How do I delete my account?**
+Settings → Delete Account. Your profile, posts, stories, and any associated media files are removed.
+
+**Where can I report abuse or DMCA?**
+Email `dmca@grokrunner.gltch.app` for copyright. Use the in-app report flow on any post, story, or profile for community-guideline issues — flagged content is auto-removed at 6 unique reports.
+
+## 🏠 Self-hosting
+
+See [SELF-HOSTING.md](SELF-HOSTING.md) for Docker, iSH, and static-server instructions.
+
+## 🛠️ Tech stack
+
+**Frontend:** React 18 · TypeScript · Vite · Tailwind · shadcn/ui · IndexedDB · vite-plugin-pwa · react-i18next (10 languages, RTL)
+**Backend:** Vercel Serverless Functions · Neon Postgres · bcryptjs + JWT · Vercel Blob
+**Generation:** xAI Grok · RunPod (ComfyUI: Flux 2 Klein, WAN 2.2, Z-Image Turbo) · DeepSeek
+**Payments:** Stripe · $XRGE on Base
+**Integrations:** Resend (email) · Telegram bot
 
 ## 📝 License
 
