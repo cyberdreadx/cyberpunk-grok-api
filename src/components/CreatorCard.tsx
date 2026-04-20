@@ -37,10 +37,13 @@ const timeAgo = (iso: string) => {
   return `${d}d`;
 };
 
+const isVideoUrl = (u?: string | null) => !!u && /\.(mp4|webm|mov|m4v)(\?|$)/i.test(u);
+
 const CreatorCard: React.FC<Props> = ({ creator, onOpen, active, forceBlur }) => {
   const previewImg = creator.latestImage || creator.previewImage;
   const initials = (creator.username || "?").slice(0, 2).toUpperCase();
   const showLocked = creator.latestLocked || forceBlur;
+  const previewIsVideo = isVideoUrl(previewImg);
 
   return (
     <button
