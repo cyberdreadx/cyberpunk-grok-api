@@ -3,12 +3,20 @@ import { useNavigate } from "react-router-dom";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowBigUp, ArrowBigDown, MessageCircle, Trash2, Flag, Lock, Coins, CreditCard, Zap, Eye } from "lucide-react";
+import { ArrowBigUp, ArrowBigDown, MessageCircle, Trash2, Flag, Lock, Coins, CreditCard, Zap, Eye, EyeOff, MoreHorizontal, Link2, ShieldOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import CommentThread from "@/components/CommentThread";
 import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
 import XrgeUnlockDialog from "@/components/XrgeUnlockDialog";
+import { useMatureFilter } from "@/hooks/useMatureFilter";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface FeedPost {
   id: string;
@@ -31,6 +39,7 @@ interface FeedPost {
   unlocked?: boolean;
   isOwner?: boolean;
   viewCount?: number;
+  isMature?: boolean;
 }
 
 interface ReelCardProps {
@@ -46,6 +55,7 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate, active = true, moun
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { matureFilter } = useMatureFilter();
   const [score, setScore] = useState(post.score ?? 0);
   const [userVote, setUserVote] = useState<string | null>(post.userVote);
   const [showComments, setShowComments] = useState(false);
@@ -57,6 +67,7 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate, active = true, moun
   const [unlocking, setUnlocking] = useState(false);
   const [isUnlocked, setIsUnlocked] = useState(post.unlocked ?? true);
   const [mediaFailed, setMediaFailed] = useState(false);
+  const [matureRevealed, setMatureRevealed] = useState(false);
 
   // Sync unlock state when props change (e.g. after fetchFeed refresh)
   React.useEffect(() => {
@@ -68,6 +79,29 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate, active = true, moun
   const [xrgeUnlockOpen, setXrgeUnlockOpen] = useState(false);
 
   const isLocked = !isUnlocked && !post.isOwner && ((post.lockCost || 0) > 0 || (post.lockPriceCents || 0) > 0 || !!(post.lockXrgeAmount && parseFloat(post.lockXrgeAmount) > 0));
+  const isMatureBlurred = !isLocked && matureFilter && !!post.isMature && !matureRevealed && !post.isOwner;
+  const isAdminOrMod = !!user?.is_admin || !!user?.is_feed_mod;
+  const canDelete = user?.id === post.userId || isAdminOrMod;
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/feed?post=${post.id}`);
+      toast({ title: "Link copied" });
+    } catch {
+      toast({ title: "Failed to copy", variant: "destructive" });
+    }
+  };
+
+  const handleAdminBan = async () => {
+    if (!confirm(`Ban @${post.username}?`)) return;
+    try {
+      await apiFetch("/admin", { method: "POST", body: { action: "ban-user", userId: post.userId, reason: "Banned via reels moderation" } });
+      toast({ title: "User banned" });
+      onUpdate?.();
+    } catch (err: any) {
+      toast({ title: err.message || "Failed", variant: "destructive" });
+    }
+  };
 
   const handleVote = async (emoji: "👍" | "👎") => {
     if (isLocked) return;
