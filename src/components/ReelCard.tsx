@@ -362,10 +362,11 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate, active = true, moun
 
         {/* 3-dot menu — replaces inline delete/report */}
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button aria-label="More" className="p-2 rounded-full bg-black/30 text-white/70 hover:text-white backdrop-blur-sm transition-colors">
-              <MoreHorizontal className="w-5 h-5" />
-            </button>
+          <DropdownMenuTrigger
+            aria-label="More"
+            className="p-2 rounded-full bg-black/30 text-white/70 hover:text-white backdrop-blur-sm transition-colors outline-none"
+          >
+            <MoreHorizontal className="w-5 h-5" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-44 font-mono-share text-xs">
             <DropdownMenuItem onClick={handleCopyLink} className="cursor-pointer">
