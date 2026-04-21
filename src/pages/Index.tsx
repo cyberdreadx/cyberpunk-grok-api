@@ -1056,8 +1056,8 @@ const Index = () => {
             )}
 
 
-            {/* Credits: balance display — always visible in simple mode for authenticated users */}
-            {(effectiveApiMode === "credits" || simpleMode) && canUseCredits && (
+            {/* Credits: balance display — always visible for authenticated users (store + balance) */}
+            {canUseCredits && (
               <CreditDisplay
                 totalCredits={creditsHook.totalCredits}
                 dailyCredits={creditsHook.dailyCredits}
