@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import CyberLayout from "@/components/CyberLayout";
 import StoriesBar from "@/components/StoriesBar";
 import MobileBottomNav from "@/components/MobileBottomNav";
+import MobileCreditsPill from "@/components/MobileCreditsPill";
 import PreferencesDialog from "@/components/PreferencesDialog";
 import SocialProofToast from "@/components/SocialProofToast";
 import {
@@ -2465,6 +2466,9 @@ const Index = () => {
 
       {/* Temu-style social proof */}
       <SocialProofToast />
+
+      {/* Persistent credits pill (mobile) */}
+      <MobileCreditsPill onOpenStore={() => setStoreOpen(true)} />
 
       {/* Mobile bottom navigation */}
       <MobileBottomNav

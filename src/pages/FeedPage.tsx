@@ -14,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Send, Users, Globe, Loader2, Plus, X, Lock, Zap, ShieldAlert, Sparkles, Rss, Flame, Film } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import MobileBottomNav from "@/components/MobileBottomNav";
+import MobileCreditsPill from "@/components/MobileCreditsPill";
 import FeatureExplainer from "@/components/FeatureExplainer";
 import ReelViewer from "@/components/ReelViewer";
 import StoriesBar from "@/components/StoriesBar";
@@ -468,6 +469,7 @@ const FeedPage: React.FC = () => {
           </div>
         )}
 
+        <MobileCreditsPill onOpenStore={() => setStoreOpen(true)} />
         <MobileBottomNav isAuthenticated={isAuthenticated} onOpenStore={() => setStoreOpen(true)} onOpenSettings={() => setPrefsOpen(true)} />
         <StoreOverlay open={storeOpen} onOpenChange={setStoreOpen} />
         <PreferencesDialog open={prefsOpen} onOpenChange={setPrefsOpen} />
@@ -588,6 +590,7 @@ const FeedPage: React.FC = () => {
       </div>
 
       <CreatorPanel creator={activeCreator} onClose={() => setActiveCreator(null)} />
+      <MobileCreditsPill onOpenStore={() => setStoreOpen(true)} />
       <MobileBottomNav isAuthenticated={isAuthenticated} onOpenStore={() => setStoreOpen(true)} onOpenSettings={() => setPrefsOpen(true)} />
       <StoreOverlay open={storeOpen} onOpenChange={setStoreOpen} />
       <PreferencesDialog open={prefsOpen} onOpenChange={setPrefsOpen} />
