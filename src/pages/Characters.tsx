@@ -79,6 +79,7 @@ export default function Characters() {
   const { comfyModels, fetchComfyModels } = useGrokApi();
 
   const [view, setView] = useState<View>("gallery");
+  const [storeOpen, setStoreOpen] = useState(false);
   const [editLora, setEditLora] = useState("none");
   const [editLoraStrength, setEditLoraStrength] = useState(0.30);
   const [negPrompt, setNegPrompt] = useState("");

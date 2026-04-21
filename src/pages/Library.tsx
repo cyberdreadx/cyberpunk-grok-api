@@ -37,6 +37,7 @@ const Library: React.FC = () => {
 
   // Dialog states
   const [guideOpen, setGuideOpen] = useState(false);
+  const [storeOpen, setStoreOpen] = useState(false);
   const [changelogOpen, setChangelogOpen] = useState(false);
   const [tosOpen, setTosOpen] = useState(false);
   const [privacyOpen, setPrivacyOpen] = useState(false);
