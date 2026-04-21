@@ -64,6 +64,7 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
   onCreditsRefresh,
   externalOpen,
   onExternalOpenChange,
+  hideTrigger = false,
 }) => {
   const { t } = useTranslation();
   const { sale: flashSale, timeLeft: flashTimeLeft, appliesTo: flashApplies } = useFlashSale();
