@@ -8,6 +8,7 @@ import {
   migrateFromLocalStorage,
 } from "@/lib/storage";
 import { apiFetch, calculateCreditCost, backendEnabled, apiUrl } from "@/lib/api";
+import { publishApiMode, subscribeApiMode } from "@/lib/apiModeChannel";
 
 interface ActiveJob {
   promptId: string;
