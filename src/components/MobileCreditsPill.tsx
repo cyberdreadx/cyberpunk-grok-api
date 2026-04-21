@@ -10,10 +10,9 @@
  */
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Coins, Info, X, Key } from "lucide-react";
+import { Coins, Info, X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCredits } from "@/hooks/useCredits";
-import { useCreditsView } from "@/hooks/useCreditsView";
 
 interface MobileCreditsPillProps {
   onOpenStore?: () => void;
@@ -22,7 +21,6 @@ interface MobileCreditsPillProps {
 const MobileCreditsPill: React.FC<MobileCreditsPillProps> = ({ onOpenStore }) => {
   const { user, isAuthenticated } = useAuth();
   const { totalCredits, loading } = useCredits(user);
-  const { view } = useCreditsView();
   const [byok, setByok] = useState(false);
   const [noticeOpen, setNoticeOpen] = useState(false);
 
@@ -42,53 +40,30 @@ const MobileCreditsPill: React.FC<MobileCreditsPillProps> = ({ onOpenStore }) =>
   const node = (
     <>
       <div
-        className="sm:hidden fixed z-[55] right-2 flex items-center gap-1"
-        style={{ top: "calc(env(safe-area-inset-top, 0px) + 8px)" }}
+        className="sm:hidden fixed z-[55] right-1.5 flex items-center gap-1"
+        style={{ top: "calc(env(safe-area-inset-top, 0px) + 6px)" }}
       >
         <button
           onClick={onOpenStore}
-          aria-label={
-            view === "byok"
-              ? `BYOK mode${byok ? " active" : " inactive"}. ${label} credits available. Tap to open store.`
-              : `Credits balance: ${label}. Tap to open store.`
-          }
-          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border bg-card/90 backdrop-blur-md active:scale-95 transition-transform ${
-            view === "byok"
-              ? "border-secondary/50 shadow-[0_0_10px_hsl(var(--secondary)/0.25)]"
-              : "border-primary/40 shadow-[0_0_10px_hsl(var(--primary)/0.25)]"
-          }`}
+          aria-label={`Credits balance: ${label}. Tap to open store.`}
+          className="flex items-center gap-1 px-2 py-0.5 rounded-full border border-primary/40 bg-card/90 backdrop-blur-md shadow-[0_0_8px_hsl(var(--primary)/0.2)] active:scale-95 transition-transform"
         >
-          {view === "byok" ? (
-            <>
-              <Key className={`w-3.5 h-3.5 ${byok ? "text-secondary drop-shadow-[0_0_4px_hsl(var(--secondary))]" : "text-muted-foreground/60"}`} />
-              <span className={`font-orbitron text-[10px] tracking-wider leading-none ${byok ? "text-secondary" : "text-muted-foreground/60"}`}>
-                {byok ? "BYOK" : "NO KEY"}
-              </span>
-              <span className="font-orbitron text-[8px] tracking-wider text-primary/80 border-l border-secondary/30 pl-1.5 leading-none flex items-center gap-0.5">
-                <Coins className="w-2.5 h-2.5" />
-                {label}
-              </span>
-            </>
-          ) : (
-            <>
-              <Coins className="w-3.5 h-3.5 text-primary drop-shadow-[0_0_4px_hsl(var(--primary))]" />
-              <span className="font-orbitron text-[10px] tracking-wider text-primary leading-none">
-                {label}
-              </span>
-              {byok && (
-                <span className="font-orbitron text-[8px] tracking-wider text-secondary/90 border-l border-primary/30 pl-1.5 leading-none">
-                  BYOK
-                </span>
-              )}
-            </>
+          <Coins className="w-3 h-3 text-primary drop-shadow-[0_0_3px_hsl(var(--primary))]" />
+          <span className="font-orbitron text-[9px] tracking-wider text-primary leading-none">
+            {label}
+          </span>
+          {byok && (
+            <span className="font-orbitron text-[7px] tracking-wider text-secondary/90 border-l border-primary/30 pl-1 leading-none">
+              BYOK
+            </span>
           )}
         </button>
         <button
           onClick={() => setNoticeOpen((v) => !v)}
           aria-label="What are credits?"
-          className="w-5 h-5 rounded-full border border-primary/30 bg-card/80 backdrop-blur-md flex items-center justify-center active:scale-95 transition-transform"
+          className="w-4 h-4 rounded-full border border-primary/30 bg-card/80 backdrop-blur-md flex items-center justify-center active:scale-95 transition-transform"
         >
-          <Info className="w-3 h-3 text-primary/70" />
+          <Info className="w-2.5 h-2.5 text-primary/70" />
         </button>
       </div>
 
