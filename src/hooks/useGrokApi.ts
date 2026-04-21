@@ -526,10 +526,12 @@ export function useGrokApi() {
 
   const setApiKey = useCallback((key: string) => {
     localStorage.setItem("xai-api-key", key);
+    try { window.dispatchEvent(new Event("xai-api-key-changed")); } catch {}
   }, []);
 
   const clearApiKey = useCallback(() => {
     localStorage.removeItem("xai-api-key");
+    try { window.dispatchEvent(new Event("xai-api-key-changed")); } catch {}
   }, []);
 
   const hasApiKey = useCallback((): boolean => {
