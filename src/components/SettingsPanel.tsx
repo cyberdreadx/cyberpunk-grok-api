@@ -81,8 +81,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
   isAdmin = false,
   mode 
 }) => {
-  const { t, i18n } = useTranslation();
-  const { matureFilter, setMatureFilter } = useMatureFilter();
+  const { t } = useTranslation();
   const isVideoMode = mode === "text-to-video" || mode === "image-to-video";
 
   const summaryText = isVideoMode
