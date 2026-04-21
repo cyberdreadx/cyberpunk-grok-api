@@ -457,7 +457,8 @@ const FeedPage: React.FC = () => {
           </div>
         )}
 
-        <MobileBottomNav isAuthenticated={isAuthenticated} />
+        <MobileBottomNav isAuthenticated={isAuthenticated} onOpenStore={() => setStoreOpen(true)} />
+        <StoreOverlay open={storeOpen} onOpenChange={setStoreOpen} />
         <FeatureExplainer feature="feed" />
         {reelTarget && (
           <ReelViewer
@@ -575,7 +576,8 @@ const FeedPage: React.FC = () => {
       </div>
 
       <CreatorPanel creator={activeCreator} onClose={() => setActiveCreator(null)} />
-      <MobileBottomNav isAuthenticated={isAuthenticated} />
+      <MobileBottomNav isAuthenticated={isAuthenticated} onOpenStore={() => setStoreOpen(true)} />
+      <StoreOverlay open={storeOpen} onOpenChange={setStoreOpen} />
       <FeatureExplainer feature="feed" />
       {reelTarget && (
         <ReelViewer
