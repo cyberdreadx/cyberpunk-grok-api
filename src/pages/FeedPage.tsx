@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Send, Users, Globe, Loader2, Plus, X, Lock, Zap, ShieldAlert, Sparkles, Rss, Flame, Film } from "lucide-react";
+import { Send, Users, Globe, Loader2, Plus, X, Lock, Zap, ShieldAlert, Sparkles, Rss, Flame, Film, FolderOpen, ImageIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import MobileCreditsPill from "@/components/MobileCreditsPill";
@@ -21,6 +21,9 @@ import StoriesBar from "@/components/StoriesBar";
 import SignupTeaser from "@/components/SignupTeaser";
 import StoreOverlay from "@/components/StoreOverlay";
 import PreferencesDialog from "@/components/PreferencesDialog";
+import LibraryPicker from "@/components/LibraryPicker";
+import { uploadLibraryItemForPost } from "@/lib/postMedia";
+import type { GrokResult } from "@/hooks/useGrokApi";
 
 const FEED_RULES = [
   "No illegal content of any kind",
@@ -59,6 +62,9 @@ const FeedPage: React.FC = () => {
   const [activeCreator, setActiveCreator] = useState<FeedCreator | null>(null);
   const [reelTarget, setReelTarget] = useState<{ postId: string; userId?: string } | null>(null);
   const [reelsOpen, setReelsOpen] = useState(false);
+  const [libraryPickerOpen, setLibraryPickerOpen] = useState(false);
+  const [pickedMedia, setPickedMedia] = useState<{ url: string; type: "image" | "video"; prompt?: string } | null>(null);
+  const [uploadingPick, setUploadingPick] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   const requireAuth = useCallback(() => {
@@ -141,10 +147,11 @@ const FeedPage: React.FC = () => {
   }, [nextCursor, loadingMore, fetchCreators]);
 
   const handlePost = async () => {
-    if (!newText.trim()) return;
+    if (!newText.trim() && !pickedMedia) return;
     setPosting(true);
     try {
       const body: any = { text: newText.trim() };
+      if (pickedMedia) body.imageUrl = pickedMedia.url;
       if (matureFlag) body.isMature = true;
       if (lockEnabled) {
         if (lockCredits) body.lockCost = parseInt(lockCredits) || 0;
@@ -159,6 +166,7 @@ const FeedPage: React.FC = () => {
       setLockCredits("");
       setLockPrice("");
       setLockXrge("");
+      setPickedMedia(null);
       setLoading(true);
       fetchCreators();
     } catch (err: any) {
@@ -167,6 +175,21 @@ const FeedPage: React.FC = () => {
       setPosting(false);
     }
   };
+
+  const handlePickFromLibrary = useCallback(async (result: GrokResult) => {
+    setUploadingPick(true);
+    try {
+      const url = await uploadLibraryItemForPost(result);
+      setPickedMedia({ url, type: result.type, prompt: result.revised_prompt });
+      // If user hasn't typed anything, prefill with the prompt for context.
+      setNewText((cur) => (cur.trim() ? cur : (result.revised_prompt || "")));
+      setLibraryPickerOpen(false);
+    } catch (err: any) {
+      toast({ title: err?.message || "Failed to attach media", variant: "destructive" });
+    } finally {
+      setUploadingPick(false);
+    }
+  }, [toast]);
 
   const ackRules = () => {
     localStorage.setItem("feed-rules-acked", "1");
@@ -251,6 +274,42 @@ const FeedPage: React.FC = () => {
               onChange={(e) => setLockXrge(e.target.value)} className="font-mono-share text-xs h-8" />
           </div>
         </div>
+      )}
+    </div>
+  );
+
+  const attachControls = (
+    <div className="space-y-2">
+      {pickedMedia ? (
+        <div className="relative inline-block rounded-md overflow-hidden border border-primary/40 bg-card/40">
+          {pickedMedia.type === "video" ? (
+            <video src={pickedMedia.url} muted playsInline className="h-24 w-24 object-cover" />
+          ) : (
+            <img src={pickedMedia.url} alt="Selected media" className="h-24 w-24 object-cover" />
+          )}
+          <button
+            type="button"
+            onClick={() => setPickedMedia(null)}
+            className="absolute top-1 right-1 bg-black/70 rounded-full p-0.5 text-white hover:bg-black"
+            aria-label="Remove attached media"
+          >
+            <X className="w-3 h-3" />
+          </button>
+          <div className="absolute bottom-1 left-1 bg-black/60 backdrop-blur-sm rounded px-1 py-0.5 flex items-center gap-1">
+            {pickedMedia.type === "video"
+              ? <Film className="w-2.5 h-2.5 text-white" />
+              : <ImageIcon className="w-2.5 h-2.5 text-white" />}
+            <span className="font-mono-share text-[8px] text-white tracking-wider">ATTACHED</span>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setLibraryPickerOpen(true)}
+          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-border/40 bg-card/40 text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors font-mono-share text-[10px] tracking-wider"
+        >
+          <FolderOpen className="w-3.5 h-3.5" /> ADD FROM LIBRARY
+        </button>
       )}
     </div>
   );
@@ -457,10 +516,11 @@ const FeedPage: React.FC = () => {
                 autoFocus
                 className="font-mono-share text-sm bg-input/50 resize-none border-border/30 focus:border-primary/50"
               />
+              {attachControls}
               {lockControls}
               <div className="flex items-center justify-between">
                 <span className="font-mono-share text-[9px] text-muted-foreground">{newText.length}/2000</span>
-                <Button size="sm" onClick={handlePost} disabled={posting || !newText.trim()} className="font-mono-share text-[10px]">
+                <Button size="sm" onClick={handlePost} disabled={posting || (!newText.trim() && !pickedMedia)} className="font-mono-share text-[10px]">
                   {posting ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Send className="w-3 h-3 mr-1" />}
                   POST
                 </Button>
@@ -474,6 +534,12 @@ const FeedPage: React.FC = () => {
         <StoreOverlay open={storeOpen} onOpenChange={setStoreOpen} />
         <PreferencesDialog open={prefsOpen} onOpenChange={setPrefsOpen} />
         <FeatureExplainer feature="feed" />
+        <LibraryPicker
+          open={libraryPickerOpen}
+          onClose={() => setLibraryPickerOpen(false)}
+          onSelect={handlePickFromLibrary}
+          busy={uploadingPick}
+        />
         {reelTarget && (
           <ReelViewer
             open
@@ -538,10 +604,11 @@ const FeedPage: React.FC = () => {
               rows={3}
               className="font-mono-share text-sm bg-input/50 resize-none border-border/30 focus:border-primary/50"
             />
+            {attachControls}
             {lockControls}
             <div className="flex items-center justify-between">
               <span className="font-mono-share text-[9px] text-muted-foreground">{newText.length}/2000</span>
-              <Button size="sm" onClick={handlePost} disabled={posting || !newText.trim()} className="font-mono-share text-[10px]">
+              <Button size="sm" onClick={handlePost} disabled={posting || (!newText.trim() && !pickedMedia)} className="font-mono-share text-[10px]">
                 {posting ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Send className="w-3 h-3 mr-1" />}
                 POST
               </Button>
@@ -595,6 +662,12 @@ const FeedPage: React.FC = () => {
       <StoreOverlay open={storeOpen} onOpenChange={setStoreOpen} />
       <PreferencesDialog open={prefsOpen} onOpenChange={setPrefsOpen} />
       <FeatureExplainer feature="feed" />
+      <LibraryPicker
+        open={libraryPickerOpen}
+        onClose={() => setLibraryPickerOpen(false)}
+        onSelect={handlePickFromLibrary}
+        busy={uploadingPick}
+      />
       {reelTarget && (
         <ReelViewer
           open
