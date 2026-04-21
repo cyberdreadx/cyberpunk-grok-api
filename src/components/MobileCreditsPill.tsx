@@ -23,6 +23,7 @@ const MobileCreditsPill: React.FC<MobileCreditsPillProps> = ({ onOpenStore }) =>
   const { totalCredits, loading } = useCredits(user);
   const [byok, setByok] = useState(false);
   const [noticeOpen, setNoticeOpen] = useState(false);
+  const [hasTerminal, setHasTerminal] = useState(false);
 
   // Detect BYOK whenever the pill mounts or storage changes
   useEffect(() => {
@@ -30,6 +31,17 @@ const MobileCreditsPill: React.FC<MobileCreditsPillProps> = ({ onOpenStore }) =>
     update();
     window.addEventListener("storage", update);
     return () => window.removeEventListener("storage", update);
+  }, []);
+
+  // Detect whether the current page renders the CyberLayout terminal bar
+  // (Index/Library/Characters). When present, the pill must sit below it
+  // to avoid overlapping the macOS-style title row.
+  useEffect(() => {
+    const check = () => setHasTerminal(document.documentElement.dataset.cyberTerminal === "1");
+    check();
+    const obs = new MutationObserver(check);
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["data-cyber-terminal"] });
+    return () => obs.disconnect();
   }, []);
 
   if (typeof document === "undefined") return null;
