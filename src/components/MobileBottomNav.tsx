@@ -67,7 +67,11 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
       label: t("nav.store").toUpperCase(),
       icon: ShoppingCart,
       active: false,
-      onClick: () => { onOpenStore?.(); setMoreOpen(false); },
+      onClick: () => {
+        if (onOpenStore) onOpenStore();
+        else navigate("/create?store=1");
+        setMoreOpen(false);
+      },
     },
     {
       id: "more",

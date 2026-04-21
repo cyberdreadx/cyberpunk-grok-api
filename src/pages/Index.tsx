@@ -212,6 +212,13 @@ const Index = () => {
     const action = params.get("action");
     const sharedPrompt = params.get("prompt");
 
+    if (params.get("store") === "1") {
+      setStoreOpen(true);
+      params.delete("store");
+      const qs = params.toString();
+      window.history.replaceState({}, "", "/create" + (qs ? `?${qs}` : ""));
+    }
+
     if (action === "edit") {
       const url = sessionStorage.getItem("library-edit-image");
       if (url) {
