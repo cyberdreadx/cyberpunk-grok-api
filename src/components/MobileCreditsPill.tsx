@@ -54,7 +54,11 @@ const MobileCreditsPill: React.FC<MobileCreditsPillProps> = ({ onOpenStore }) =>
       <div
         className="sm:hidden fixed z-[55]"
         style={{
-          top: "max(14px, calc(env(safe-area-inset-top, 0px) + 10px))",
+          // When the CyberLayout terminal bar is present (28px tall + safe-area),
+          // sit just below it; otherwise sit near the viewport top.
+          top: hasTerminal
+            ? "calc(env(safe-area-inset-top, 0px) + 36px)"
+            : "max(14px, calc(env(safe-area-inset-top, 0px) + 10px))",
           right: "max(12px, env(safe-area-inset-right, 0px))",
         }}
       >
