@@ -18,6 +18,7 @@ import FeatureExplainer from "@/components/FeatureExplainer";
 import ReelViewer from "@/components/ReelViewer";
 import StoriesBar from "@/components/StoriesBar";
 import SignupTeaser from "@/components/SignupTeaser";
+import StoreOverlay from "@/components/StoreOverlay";
 
 const FEED_RULES = [
   "No illegal content of any kind",
@@ -48,6 +49,7 @@ const FeedPage: React.FC = () => {
   const [showCompose, setShowCompose] = useState(false);
   const [lockEnabled, setLockEnabled] = useState(false);
   const [lockCredits, setLockCredits] = useState("");
+  const [storeOpen, setStoreOpen] = useState(false);
   const [lockPrice, setLockPrice] = useState("");
   const [lockXrge, setLockXrge] = useState("");
   const [activeCreator, setActiveCreator] = useState<FeedCreator | null>(null);
@@ -455,7 +457,8 @@ const FeedPage: React.FC = () => {
           </div>
         )}
 
-        <MobileBottomNav isAuthenticated={isAuthenticated} />
+        <MobileBottomNav isAuthenticated={isAuthenticated} onOpenStore={() => setStoreOpen(true)} />
+        <StoreOverlay open={storeOpen} onOpenChange={setStoreOpen} />
         <FeatureExplainer feature="feed" />
         {reelTarget && (
           <ReelViewer
@@ -573,7 +576,8 @@ const FeedPage: React.FC = () => {
       </div>
 
       <CreatorPanel creator={activeCreator} onClose={() => setActiveCreator(null)} />
-      <MobileBottomNav isAuthenticated={isAuthenticated} />
+      <MobileBottomNav isAuthenticated={isAuthenticated} onOpenStore={() => setStoreOpen(true)} />
+      <StoreOverlay open={storeOpen} onOpenChange={setStoreOpen} />
       <FeatureExplainer feature="feed" />
       {reelTarget && (
         <ReelViewer

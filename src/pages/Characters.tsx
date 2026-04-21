@@ -7,6 +7,7 @@ import { useGrokApi } from "@/hooks/useGrokApi";
 import { useAuth } from "@/hooks/useAuth";
 import CyberLayout from "@/components/CyberLayout";
 import MobileBottomNav from "@/components/MobileBottomNav";
+import StoreOverlay from "@/components/StoreOverlay";
 import { ArrowLeft, Plus, Trash2, Send, Edit, X, MessageSquare, Sparkles, Image, Download, Paperclip } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -78,6 +79,7 @@ export default function Characters() {
   const { comfyModels, fetchComfyModels } = useGrokApi();
 
   const [view, setView] = useState<View>("gallery");
+  const [storeOpen, setStoreOpen] = useState(false);
   const [editLora, setEditLora] = useState("none");
   const [editLoraStrength, setEditLoraStrength] = useState(0.30);
   const [negPrompt, setNegPrompt] = useState("");
@@ -1004,7 +1006,8 @@ export default function Characters() {
         )}
       </div>
     </CyberLayout>
-    <MobileBottomNav isAuthenticated={true} />
+    <MobileBottomNav isAuthenticated={true} onOpenStore={() => setStoreOpen(true)} />
+    <StoreOverlay open={storeOpen} onOpenChange={setStoreOpen} />
     </>
   );
 }
