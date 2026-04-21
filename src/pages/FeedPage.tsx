@@ -361,7 +361,7 @@ const FeedPage: React.FC = () => {
             className="sticky z-30 bg-background/85 backdrop-blur-md border-b border-border/30 px-3 py-2 space-y-2"
             style={{ top: 0, paddingTop: "calc(env(safe-area-inset-top, 0px) + 8px)" }}
           >
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center justify-between gap-2 mobile-pill-clear">
               {topTabs}
               <button
                 onClick={() => setShowRules(true)}
