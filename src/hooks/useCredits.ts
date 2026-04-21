@@ -62,6 +62,55 @@ export function useCredits(user: AuthUser | null) {
     fetchCredits();
   }, [fetchCredits]);
 
+  // Auto-refresh: poll while tab is visible, refetch on focus/visibility,
+  // and listen for cross-component "credits-changed" broadcasts so balances
+  // stay in sync without manual page refreshes.
+  useEffect(() => {
+    if (!user) return;
+
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+    const startPolling = () => {
+      if (intervalId) return;
+      intervalId = setInterval(() => {
+        if (document.visibilityState === "visible") fetchCredits();
+      }, 30000);
+    };
+    const stopPolling = () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+        intervalId = null;
+      }
+    };
+
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") {
+        fetchCredits();
+        startPolling();
+      } else {
+        stopPolling();
+      }
+    };
+    const onFocus = () => fetchCredits();
+    const onCreditsChanged = () => fetchCredits();
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "credits-changed") fetchCredits();
+    };
+
+    if (document.visibilityState === "visible") startPolling();
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("focus", onFocus);
+    window.addEventListener("credits-changed", onCreditsChanged);
+    window.addEventListener("storage", onStorage);
+
+    return () => {
+      stopPolling();
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("credits-changed", onCreditsChanged);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, [user, fetchCredits]);
+
   // Purchase one-time credit pack
   const purchaseCredits = useCallback(async (packageId: CreditPackage["id"]) => {
     if (!user) throw new Error("Not authenticated");
