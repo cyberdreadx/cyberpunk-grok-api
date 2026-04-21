@@ -259,13 +259,11 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
 
         {/* 3-dot action menu */}
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              aria-label="Post actions"
-              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
-            >
-              <MoreHorizontal className="w-4 h-4" />
-            </button>
+          <DropdownMenuTrigger
+            aria-label="Post actions"
+            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors outline-none"
+          >
+            <MoreHorizontal className="w-4 h-4" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48 font-mono-share text-xs">
             <DropdownMenuItem onClick={handleCopyLink} className="cursor-pointer">
