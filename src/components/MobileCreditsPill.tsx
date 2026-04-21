@@ -95,7 +95,11 @@ const MobileCreditsPill: React.FC<MobileCreditsPillProps> = ({ onOpenStore }) =>
         >
           <div
             className="absolute right-2 w-64 bg-card/95 backdrop-blur-md border border-primary/40 rounded-lg shadow-[0_0_20px_hsl(var(--primary)/0.25)] p-3 animate-fade-in"
-            style={{ top: "max(44px, calc(env(safe-area-inset-top, 0px) + 40px))" }}
+            style={{
+              top: hasTerminal
+                ? "calc(env(safe-area-inset-top, 0px) + 72px)"
+                : "max(44px, calc(env(safe-area-inset-top, 0px) + 40px))",
+            }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-2 mb-2">
