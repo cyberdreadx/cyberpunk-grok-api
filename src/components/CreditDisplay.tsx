@@ -100,42 +100,47 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
   const isControlled = externalOpen !== undefined;
 
   return (
-    <div className="flex items-center gap-2">
+    <div className={hideTrigger ? "contents" : "flex items-center gap-2"}>
       {/* Credit balance badge */}
-      <div
-        className="flex items-center gap-1.5 bg-card/60 border border-border/50 rounded px-2 py-1 cursor-default"
-        title={`Daily: ${dailyCredits} | Subscription: ${subCredits} | Pack: ${packCredits}`}
-      >
-        <Coins className="w-3 h-3 text-secondary" />
-        <span className="font-mono-share text-xs text-secondary font-bold">
-          {loading ? "..." : totalCredits.toLocaleString()}
-        </span>
-        {subscriptionTier && (
-          <span className={`font-orbitron text-[7px] uppercase tracking-wider ml-0.5 ${isCancelling ? "text-destructive/70" : "text-primary/70"}`}>
-            {isCancelling ? `${subscriptionTier} (${t("store.ending")})` : subscriptionTier}
+      {!hideTrigger && (
+        <div
+          className="flex items-center gap-1.5 bg-card/60 border border-border/50 rounded px-2 py-1 cursor-default"
+          title={`Daily: ${dailyCredits} | Subscription: ${subCredits} | Pack: ${packCredits}`}
+        >
+          <Coins className="w-3 h-3 text-secondary" />
+          <span className="font-mono-share text-xs text-secondary font-bold">
+            {loading ? "..." : totalCredits.toLocaleString()}
           </span>
-        )}
-      </div>
+          {subscriptionTier && (
+            <span className={`font-orbitron text-[7px] uppercase tracking-wider ml-0.5 ${isCancelling ? "text-destructive/70" : "text-primary/70"}`}>
+              {isCancelling ? `${subscriptionTier} (${t("store.ending")})` : subscriptionTier}
+            </span>
+          )}
+        </div>
+      )}
 
-      {/* Buy / Store button — always rendered, even when externally controlled,
-          so the desktop header always exposes a visible cart entry point. */}
+      {/* Buy / Store button — always rendered (even when externally controlled),
+          so the desktop header always exposes a visible cart entry point.
+          Hidden only when hideTrigger is explicitly set (e.g. StoreOverlay). */}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="font-mono-share text-xs gap-1.5 text-secondary hover:text-secondary/80 relative"
-          >
-            <ShoppingCart className="w-3 h-3" />
-            <span className="hidden sm:inline">{t("nav.store")}</span>
-            {flashSale && (
-              <span className="ml-1 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-orange-500/25 border border-orange-400/60 font-orbitron text-[8px] tracking-wider text-orange-200 animate-pulse">
-                <Flame className="w-2.5 h-2.5" />
-                SALE
-              </span>
-            )}
-          </Button>
-        </DialogTrigger>
+        {!hideTrigger && (
+          <DialogTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="font-mono-share text-xs gap-1.5 text-secondary hover:text-secondary/80 relative"
+            >
+              <ShoppingCart className="w-3 h-3" />
+              <span className="hidden sm:inline">{t("nav.store")}</span>
+              {flashSale && (
+                <span className="ml-1 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-orange-500/25 border border-orange-400/60 font-orbitron text-[8px] tracking-wider text-orange-200 animate-pulse">
+                  <Flame className="w-2.5 h-2.5" />
+                  SALE
+                </span>
+              )}
+            </Button>
+          </DialogTrigger>
+        )}
         <DialogContent className="bg-card border-border border-primary/20 shadow-[0_0_48px_hsl(var(--primary)/0.08)] w-[min(96vw,72rem)] max-w-6xl max-h-[85vh] overflow-hidden p-0 gap-0 flex flex-col">
           {/* Inner scroll — must NOT be on DialogContent (grid + overflow quirks; OS scrollbars ignore webkit rules on some builds). */}
           <div className="credit-store-scroll scrollbar-cyber min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-6 py-6 [color-scheme:dark]">
