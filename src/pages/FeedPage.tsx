@@ -147,10 +147,11 @@ const FeedPage: React.FC = () => {
   }, [nextCursor, loadingMore, fetchCreators]);
 
   const handlePost = async () => {
-    if (!newText.trim()) return;
+    if (!newText.trim() && !pickedMedia) return;
     setPosting(true);
     try {
       const body: any = { text: newText.trim() };
+      if (pickedMedia) body.imageUrl = pickedMedia.url;
       if (matureFlag) body.isMature = true;
       if (lockEnabled) {
         if (lockCredits) body.lockCost = parseInt(lockCredits) || 0;
@@ -165,6 +166,7 @@ const FeedPage: React.FC = () => {
       setLockCredits("");
       setLockPrice("");
       setLockXrge("");
+      setPickedMedia(null);
       setLoading(true);
       fetchCreators();
     } catch (err: any) {
@@ -173,6 +175,21 @@ const FeedPage: React.FC = () => {
       setPosting(false);
     }
   };
+
+  const handlePickFromLibrary = useCallback(async (result: GrokResult) => {
+    setUploadingPick(true);
+    try {
+      const url = await uploadLibraryItemForPost(result);
+      setPickedMedia({ url, type: result.type, prompt: result.revised_prompt });
+      // If user hasn't typed anything, prefill with the prompt for context.
+      setNewText((cur) => (cur.trim() ? cur : (result.revised_prompt || "")));
+      setLibraryPickerOpen(false);
+    } catch (err: any) {
+      toast({ title: err?.message || "Failed to attach media", variant: "destructive" });
+    } finally {
+      setUploadingPick(false);
+    }
+  }, [toast]);
 
   const ackRules = () => {
     localStorage.setItem("feed-rules-acked", "1");
