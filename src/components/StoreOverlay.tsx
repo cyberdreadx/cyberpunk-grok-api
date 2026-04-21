@@ -21,30 +21,27 @@ const StoreOverlay: React.FC<StoreOverlayProps> = ({ open, onOpenChange }) => {
   if (!user) return null;
 
   return (
-    <div className="hidden-store-host" aria-hidden={!open}>
-      <style>{`.hidden-store-host > div > .flex.items-center.gap-2 > *:not([role="dialog"]):not([data-state]) { display: none !important; }`}</style>
-      <CreditDisplay
-        totalCredits={credits.totalCredits}
-        dailyCredits={credits.dailyCredits}
-        subCredits={credits.subCredits}
-        packCredits={credits.packCredits}
-        subscriptionTier={credits.subscriptionTier}
-        subscriptionRenewsAt={credits.subscriptionRenewsAt}
-        subscriptionCancelAt={credits.subscriptionCancelAt}
-        loading={credits.loading}
-        purchasing={credits.purchasing}
-        purchaseError={credits.purchaseError}
-        clearPurchaseError={credits.clearPurchaseError}
-        packages={credits.packages}
-        subscriptionTiers={credits.subscriptionTiers}
-        onPurchase={credits.purchaseCredits}
-        onSubscribe={credits.subscribeToPlan}
-        onManageSubscription={credits.manageSubscription}
-        onCreditsRefresh={credits.refreshCredits}
-        externalOpen={open}
-        onExternalOpenChange={onOpenChange}
-      />
-    </div>
+    <CreditDisplay
+      totalCredits={credits.totalCredits}
+      dailyCredits={credits.dailyCredits}
+      subCredits={credits.subCredits}
+      packCredits={credits.packCredits}
+      subscriptionTier={credits.subscriptionTier}
+      subscriptionRenewsAt={credits.subscriptionRenewsAt}
+      subscriptionCancelAt={credits.subscriptionCancelAt}
+      loading={credits.loading}
+      purchasing={credits.purchasing}
+      purchaseError={credits.purchaseError}
+      clearPurchaseError={credits.clearPurchaseError}
+      packages={credits.packages}
+      subscriptionTiers={credits.subscriptionTiers}
+      onPurchase={credits.purchaseCredits}
+      onSubscribe={credits.subscribeToPlan}
+      onManageSubscription={credits.manageSubscription}
+      onCreditsRefresh={credits.refreshCredits}
+      externalOpen={open}
+      onExternalOpenChange={onOpenChange}
+    />
   );
 };
 
