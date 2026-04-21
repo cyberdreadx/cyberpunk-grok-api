@@ -509,24 +509,50 @@
 [dir="rtl"] .text-right { text-align: left; }
 
 /* ─────────────────────────────────────────────────────────────
- * Mobile credits pill clearance
+ * Mobile credits pill clearance — responsive
  *
- * The MobileCreditsPill is fixed at the top-right of the viewport
- * on mobile (sm: hidden on desktop). It measures roughly
- * 110px wide × 28px tall including the info dot.
+ * The MobileCreditsPill is fixed top-right on mobile (sm: hidden
+ * on desktop). Its width varies with content (BYOK badge present
+ * or not) and with the safe-area-inset-right value on devices
+ * with rounded screens / landscape notches.
  *
- * Page-level mobile sticky headers should reserve space so their
- * controls (tabs, buttons) never sit underneath the pill. Apply
- * the .mobile-pill-clear utility to any header row on mobile.
+ * --mobile-pill-clearance: right-side gutter for sticky headers
+ * --mobile-pill-pad-top: vertical breathing room below the pill
+ *   (used when a header sits flush at viewport top).
+ *
+ * Tier breakdown (width-based, all overrideable per-page):
+ *   <360px (XS)  → 116px  (compact pill, tight phones)
+ *   360–413px    → 128px  (iPhone mini / small Android)
+ *   414–639px    → 140px  (iPhone Pro / large Android)
+ *   ≥640px (sm)  → 0      (desktop CreditDisplay takes over)
+ *
+ * Includes safe-area-inset-right so devices in landscape with a
+ * notch on the right side push the gutter further inward.
  * ───────────────────────────────────────────────────────────── */
 :root {
-  --mobile-pill-clearance: 132px;
+  --mobile-pill-base: 116px;
+  --mobile-pill-clearance: calc(var(--mobile-pill-base) + env(safe-area-inset-right, 0px));
+  --mobile-pill-pad-top: 4px;
   --mobile-pill-height: 36px;
+}
+
+@media (min-width: 360px) {
+  :root {
+    --mobile-pill-base: 128px;
+  }
+}
+
+@media (min-width: 414px) {
+  :root {
+    --mobile-pill-base: 140px;
+  }
 }
 
 @media (min-width: 640px) {
   :root {
+    --mobile-pill-base: 0px;
     --mobile-pill-clearance: 0px;
+    --mobile-pill-pad-top: 0px;
     --mobile-pill-height: 0px;
   }
 }
@@ -535,7 +561,26 @@
   padding-right: var(--mobile-pill-clearance);
 }
 
-[dir="rtl"] .mobile-pill-clear {
+/* Vertical variant — for headers that render flush at viewport top
+   without their own safe-area padding; ensures the pill never
+   visually collides with header controls on short screens. */
+.mobile-pill-clear-y {
+  padding-right: var(--mobile-pill-clearance);
+  padding-top: calc(var(--mobile-pill-pad-top) + env(safe-area-inset-top, 0px));
+}
+
+[dir="rtl"] .mobile-pill-clear,
+[dir="rtl"] .mobile-pill-clear-y {
   padding-right: 0;
   padding-left: var(--mobile-pill-clearance);
+}
+
+/* Landscape phones — header rows are very short; force the
+   FEED/CREATE-style toggle to wrap below if it would collide. */
+@media (max-width: 639px) and (orientation: landscape) and (max-height: 480px) {
+  .mobile-pill-clear {
+    padding-right: var(--mobile-pill-clearance);
+    flex-wrap: wrap;
+    row-gap: 0.5rem;
+  }
 }
