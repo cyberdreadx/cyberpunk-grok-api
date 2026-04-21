@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Send, Users, Globe, Loader2, Plus, X, Lock, Zap, ShieldAlert, Sparkles, Rss, Flame, Film } from "lucide-react";
+import { Send, Users, Globe, Loader2, Plus, X, Lock, Zap, ShieldAlert, Sparkles, Rss, Flame, Film, FolderOpen, ImageIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import MobileCreditsPill from "@/components/MobileCreditsPill";
@@ -21,6 +21,9 @@ import StoriesBar from "@/components/StoriesBar";
 import SignupTeaser from "@/components/SignupTeaser";
 import StoreOverlay from "@/components/StoreOverlay";
 import PreferencesDialog from "@/components/PreferencesDialog";
+import LibraryPicker from "@/components/LibraryPicker";
+import { uploadLibraryItemForPost } from "@/lib/postMedia";
+import type { GrokResult } from "@/hooks/useGrokApi";
 
 const FEED_RULES = [
   "No illegal content of any kind",
