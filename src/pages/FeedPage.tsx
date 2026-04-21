@@ -516,10 +516,11 @@ const FeedPage: React.FC = () => {
                 autoFocus
                 className="font-mono-share text-sm bg-input/50 resize-none border-border/30 focus:border-primary/50"
               />
+              {attachControls}
               {lockControls}
               <div className="flex items-center justify-between">
                 <span className="font-mono-share text-[9px] text-muted-foreground">{newText.length}/2000</span>
-                <Button size="sm" onClick={handlePost} disabled={posting || !newText.trim()} className="font-mono-share text-[10px]">
+                <Button size="sm" onClick={handlePost} disabled={posting || (!newText.trim() && !pickedMedia)} className="font-mono-share text-[10px]">
                   {posting ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Send className="w-3 h-3 mr-1" />}
                   POST
                 </Button>
