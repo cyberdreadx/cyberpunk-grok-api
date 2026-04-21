@@ -23,6 +23,7 @@ const MobileCreditsPill: React.FC<MobileCreditsPillProps> = ({ onOpenStore }) =>
   const { totalCredits, loading } = useCredits(user);
   const [byok, setByok] = useState(false);
   const [noticeOpen, setNoticeOpen] = useState(false);
+  const [hasTerminal, setHasTerminal] = useState(false);
 
   // Detect BYOK whenever the pill mounts or storage changes
   useEffect(() => {
@@ -30,6 +31,17 @@ const MobileCreditsPill: React.FC<MobileCreditsPillProps> = ({ onOpenStore }) =>
     update();
     window.addEventListener("storage", update);
     return () => window.removeEventListener("storage", update);
+  }, []);
+
+  // Detect whether the current page renders the CyberLayout terminal bar
+  // (Index/Library/Characters). When present, the pill must sit below it
+  // to avoid overlapping the macOS-style title row.
+  useEffect(() => {
+    const check = () => setHasTerminal(document.documentElement.dataset.cyberTerminal === "1");
+    check();
+    const obs = new MutationObserver(check);
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["data-cyber-terminal"] });
+    return () => obs.disconnect();
   }, []);
 
   if (typeof document === "undefined") return null;
@@ -42,7 +54,11 @@ const MobileCreditsPill: React.FC<MobileCreditsPillProps> = ({ onOpenStore }) =>
       <div
         className="sm:hidden fixed z-[55]"
         style={{
-          top: "max(14px, calc(env(safe-area-inset-top, 0px) + 10px))",
+          // When the CyberLayout terminal bar is present (28px tall + safe-area),
+          // sit just below it; otherwise sit near the viewport top.
+          top: hasTerminal
+            ? "calc(env(safe-area-inset-top, 0px) + 36px)"
+            : "max(14px, calc(env(safe-area-inset-top, 0px) + 10px))",
           right: "max(12px, env(safe-area-inset-right, 0px))",
         }}
       >
@@ -79,7 +95,11 @@ const MobileCreditsPill: React.FC<MobileCreditsPillProps> = ({ onOpenStore }) =>
         >
           <div
             className="absolute right-2 w-64 bg-card/95 backdrop-blur-md border border-primary/40 rounded-lg shadow-[0_0_20px_hsl(var(--primary)/0.25)] p-3 animate-fade-in"
-            style={{ top: "max(44px, calc(env(safe-area-inset-top, 0px) + 40px))" }}
+            style={{
+              top: hasTerminal
+                ? "calc(env(safe-area-inset-top, 0px) + 72px)"
+                : "max(44px, calc(env(safe-area-inset-top, 0px) + 40px))",
+            }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-2 mb-2">

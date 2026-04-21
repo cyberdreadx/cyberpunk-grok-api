@@ -11,11 +11,19 @@ const CyberLayout: React.FC<CyberLayoutProps> = ({ children }) => {
   useEffect(() => {
     if (document.documentElement.dataset.cyberTheme === BARE_THEME_ID) {
       applyImmersionToRoot(BARE_IMMERSION);
-      return;
+    } else {
+      fetchMasterImmersion()
+        .then(applyImmersionToRoot)
+        .catch(() => applyImmersionToRoot(DEFAULT_IMMERSION));
     }
-    fetchMasterImmersion()
-      .then(applyImmersionToRoot)
-      .catch(() => applyImmersionToRoot(DEFAULT_IMMERSION));
+
+    // Signal to globally-positioned UI (e.g. MobileCreditsPill) that a
+    // terminal bar is present so they can offset their top position and
+    // avoid overlapping the macOS-style title row.
+    document.documentElement.dataset.cyberTerminal = "1";
+    return () => {
+      delete document.documentElement.dataset.cyberTerminal;
+    };
   }, []);
 
   return (
@@ -72,7 +80,7 @@ const CyberLayout: React.FC<CyberLayoutProps> = ({ children }) => {
         <div className="font-mono-share text-[10px] text-muted-foreground/50 flex-1 text-center pb-1">
           grok@xai:~/neural-render — bash
         </div>
-        <div className="font-mono-share text-[10px] text-muted-foreground/30 pb-1">
+        <div className="font-mono-share text-[10px] text-muted-foreground/30 pb-1 hidden sm:block">
           PID:4F7A
         </div>
       </div>
