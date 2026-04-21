@@ -358,6 +358,73 @@ const FeedPage: React.FC = () => {
     </div>
   );
 
+  const confirmDialog = (
+    <AlertDialog
+      open={confirmOpen}
+      onOpenChange={(open) => {
+        // Block dismiss while a request is in flight to keep the idempotency
+        // key + UI state stable until we know the outcome.
+        if (!posting) setConfirmOpen(open);
+      }}
+    >
+      <AlertDialogContent className="bg-card border-border/50">
+        <AlertDialogHeader>
+          <AlertDialogTitle className="font-orbitron text-sm tracking-widest text-primary">
+            POST TO FEED?
+          </AlertDialogTitle>
+          <AlertDialogDescription className="font-mono-share text-[11px] text-muted-foreground space-y-2">
+            <span className="block">Your post will be visible to the community.</span>
+            {newText.trim() && (
+              <span className="block bg-input/30 border border-border/30 rounded p-2 text-foreground/80 max-h-24 overflow-y-auto">
+                "{newText.trim().slice(0, 200)}{newText.trim().length > 200 ? "…" : ""}"
+              </span>
+            )}
+            {pickedMedia && (
+              <span className="flex items-center gap-2 text-foreground/70">
+                {pickedMedia.type === "video"
+                  ? <Film className="w-3 h-3 text-secondary" />
+                  : <ImageIcon className="w-3 h-3 text-primary" />}
+                Media attached from your library
+              </span>
+            )}
+            {matureFlag && (
+              <span className="flex items-center gap-1 text-amber-300">
+                <ShieldAlert className="w-3 h-3" /> Marked 18+ / mature
+              </span>
+            )}
+            {lockEnabled && (lockCredits || lockPrice || lockXrge) && (
+              <span className="flex items-center gap-1 text-secondary">
+                <Lock className="w-3 h-3" /> Locked
+                {lockCredits && ` · ${lockCredits} credits`}
+                {lockPrice && ` · $${lockPrice}`}
+                {lockXrge && ` · ${lockXrge} XRGE`}
+              </span>
+            )}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={posting} className="font-mono-share text-[11px]">
+            CANCEL
+          </AlertDialogCancel>
+          <AlertDialogAction
+            disabled={posting}
+            onClick={(e) => {
+              e.preventDefault(); // keep dialog open until submit resolves
+              if (!posting) submitPost();
+            }}
+            className="font-mono-share text-[11px] bg-primary text-primary-foreground hover:bg-primary/90"
+          >
+            {posting ? (
+              <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> POSTING…</>
+            ) : (
+              <><Send className="w-3 h-3 mr-1" /> CONFIRM POST</>
+            )}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+
   const filterTabs = (variant: "mobile" | "desktop") => {
     const baseInactive = variant === "mobile"
       ? "border-white/10 bg-black/30 text-white/70 backdrop-blur-sm"
