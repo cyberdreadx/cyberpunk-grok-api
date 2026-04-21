@@ -325,7 +325,32 @@ export function useGrokApi() {
 
   const [storageReady, setStorageReady] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const [apiMode, setApiMode] = useState<ApiMode>("byok");
+  // Persist apiMode across pages/reloads. Default to "credits" when the
+  // user has no BYOK key stored (most users), otherwise honour the saved
+  // choice. Stored under "api-mode" so all hook instances stay in sync.
+  const [apiMode, setApiModeState] = useState<ApiMode>(() => {
+    try {
+      const saved = localStorage.getItem("api-mode");
+      if (saved === "byok" || saved === "credits") return saved;
+      return localStorage.getItem("xai-api-key") ? "byok" : "credits";
+    } catch {
+      return "credits";
+    }
+  });
+  const setApiMode = useCallback((mode: ApiMode) => {
+    setApiModeState(mode);
+    try { localStorage.setItem("api-mode", mode); } catch {}
+    try { window.dispatchEvent(new StorageEvent("storage", { key: "api-mode", newValue: mode })); } catch {}
+  }, []);
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "api-mode" && (e.newValue === "byok" || e.newValue === "credits")) {
+        setApiModeState(e.newValue);
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
   const revokeAllRef = useRef<(() => void) | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [comfyJobs, setComfyJobs] = useState<ComfyJob[]>([]);
