@@ -10,9 +10,10 @@
  */
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Coins, Info, X } from "lucide-react";
+import { Coins, Info, X, Key } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCredits } from "@/hooks/useCredits";
+import { useCreditsView } from "@/hooks/useCreditsView";
 
 interface MobileCreditsPillProps {
   onOpenStore?: () => void;
@@ -21,6 +22,7 @@ interface MobileCreditsPillProps {
 const MobileCreditsPill: React.FC<MobileCreditsPillProps> = ({ onOpenStore }) => {
   const { user, isAuthenticated } = useAuth();
   const { totalCredits, loading } = useCredits(user);
+  const { view } = useCreditsView();
   const [byok, setByok] = useState(false);
   const [noticeOpen, setNoticeOpen] = useState(false);
 
@@ -45,17 +47,40 @@ const MobileCreditsPill: React.FC<MobileCreditsPillProps> = ({ onOpenStore }) =>
       >
         <button
           onClick={onOpenStore}
-          aria-label={`Credits balance: ${label}. Tap to open store.`}
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-primary/40 bg-card/90 backdrop-blur-md shadow-[0_0_10px_hsl(var(--primary)/0.25)] active:scale-95 transition-transform"
+          aria-label={
+            view === "byok"
+              ? `BYOK mode${byok ? " active" : " inactive"}. ${label} credits available. Tap to open store.`
+              : `Credits balance: ${label}. Tap to open store.`
+          }
+          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border bg-card/90 backdrop-blur-md active:scale-95 transition-transform ${
+            view === "byok"
+              ? "border-secondary/50 shadow-[0_0_10px_hsl(var(--secondary)/0.25)]"
+              : "border-primary/40 shadow-[0_0_10px_hsl(var(--primary)/0.25)]"
+          }`}
         >
-          <Coins className="w-3.5 h-3.5 text-primary drop-shadow-[0_0_4px_hsl(var(--primary))]" />
-          <span className="font-orbitron text-[10px] tracking-wider text-primary leading-none">
-            {label}
-          </span>
-          {byok && (
-            <span className="font-orbitron text-[8px] tracking-wider text-secondary/90 border-l border-primary/30 pl-1.5 leading-none">
-              BYOK
-            </span>
+          {view === "byok" ? (
+            <>
+              <Key className={`w-3.5 h-3.5 ${byok ? "text-secondary drop-shadow-[0_0_4px_hsl(var(--secondary))]" : "text-muted-foreground/60"}`} />
+              <span className={`font-orbitron text-[10px] tracking-wider leading-none ${byok ? "text-secondary" : "text-muted-foreground/60"}`}>
+                {byok ? "BYOK" : "NO KEY"}
+              </span>
+              <span className="font-orbitron text-[8px] tracking-wider text-primary/80 border-l border-secondary/30 pl-1.5 leading-none flex items-center gap-0.5">
+                <Coins className="w-2.5 h-2.5" />
+                {label}
+              </span>
+            </>
+          ) : (
+            <>
+              <Coins className="w-3.5 h-3.5 text-primary drop-shadow-[0_0_4px_hsl(var(--primary))]" />
+              <span className="font-orbitron text-[10px] tracking-wider text-primary leading-none">
+                {label}
+              </span>
+              {byok && (
+                <span className="font-orbitron text-[8px] tracking-wider text-secondary/90 border-l border-primary/30 pl-1.5 leading-none">
+                  BYOK
+                </span>
+              )}
+            </>
           )}
         </button>
         <button
