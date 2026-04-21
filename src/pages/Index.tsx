@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import CyberLayout from "@/components/CyberLayout";
 import StoriesBar from "@/components/StoriesBar";
 import MobileBottomNav from "@/components/MobileBottomNav";
+import PreferencesDialog from "@/components/PreferencesDialog";
 import SocialProofToast from "@/components/SocialProofToast";
 import {
   Collapsible,
@@ -351,6 +352,7 @@ const Index = () => {
     return hasUnseenChangelog();
   });
   const [storeOpen, setStoreOpen] = useState(false);
+  const [prefsOpen, setPrefsOpen] = useState(false);
   const [apiKeySet, setApiKeySet] = useState(() => hasApiKey());
 
   React.useEffect(() => {
@@ -2472,7 +2474,9 @@ const Index = () => {
         onOpenChangelog={() => setChangelogOpen(true)}
         onOpenTos={() => setTosOpen(true)}
         onOpenPrivacy={() => setPrivacyOpen(true)}
+        onOpenSettings={() => setPrefsOpen(true)}
       />
+      <PreferencesDialog open={prefsOpen} onOpenChange={setPrefsOpen} />
     </CyberLayout>
   );
 };
