@@ -662,6 +662,12 @@ const FeedPage: React.FC = () => {
       <StoreOverlay open={storeOpen} onOpenChange={setStoreOpen} />
       <PreferencesDialog open={prefsOpen} onOpenChange={setPrefsOpen} />
       <FeatureExplainer feature="feed" />
+      <LibraryPicker
+        open={libraryPickerOpen}
+        onClose={() => setLibraryPickerOpen(false)}
+        onSelect={handlePickFromLibrary}
+        busy={uploadingPick}
+      />
       {reelTarget && (
         <ReelViewer
           open
