@@ -18,7 +18,6 @@ import {
   MoreHorizontal,
   Link2,
   ShieldOff,
-  EyeOff as EyeOffIcon,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import CommentThread from "@/components/CommentThread";
