@@ -40,20 +40,20 @@ const MobileCreditsPill: React.FC<MobileCreditsPillProps> = ({ onOpenStore }) =>
   const node = (
     <>
       <div
-        className="sm:hidden fixed z-[55] right-2 flex items-center gap-1"
-        style={{ top: "calc(env(safe-area-inset-top, 0px) + 8px)" }}
+        className="sm:hidden fixed z-[55] right-1.5 flex items-center gap-1"
+        style={{ top: "calc(env(safe-area-inset-top, 0px) + 6px)" }}
       >
         <button
           onClick={onOpenStore}
           aria-label={`Credits balance: ${label}. Tap to open store.`}
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-primary/40 bg-card/90 backdrop-blur-md shadow-[0_0_10px_hsl(var(--primary)/0.25)] active:scale-95 transition-transform"
+          className="flex items-center gap-1 px-2 py-0.5 rounded-full border border-primary/40 bg-card/90 backdrop-blur-md shadow-[0_0_8px_hsl(var(--primary)/0.2)] active:scale-95 transition-transform"
         >
-          <Coins className="w-3.5 h-3.5 text-primary drop-shadow-[0_0_4px_hsl(var(--primary))]" />
-          <span className="font-orbitron text-[10px] tracking-wider text-primary leading-none">
+          <Coins className="w-3 h-3 text-primary drop-shadow-[0_0_3px_hsl(var(--primary))]" />
+          <span className="font-orbitron text-[9px] tracking-wider text-primary leading-none">
             {label}
           </span>
           {byok && (
-            <span className="font-orbitron text-[8px] tracking-wider text-secondary/90 border-l border-primary/30 pl-1.5 leading-none">
+            <span className="font-orbitron text-[7px] tracking-wider text-secondary/90 border-l border-primary/30 pl-1 leading-none">
               BYOK
             </span>
           )}
@@ -61,9 +61,9 @@ const MobileCreditsPill: React.FC<MobileCreditsPillProps> = ({ onOpenStore }) =>
         <button
           onClick={() => setNoticeOpen((v) => !v)}
           aria-label="What are credits?"
-          className="w-5 h-5 rounded-full border border-primary/30 bg-card/80 backdrop-blur-md flex items-center justify-center active:scale-95 transition-transform"
+          className="w-4 h-4 rounded-full border border-primary/30 bg-card/80 backdrop-blur-md flex items-center justify-center active:scale-95 transition-transform"
         >
-          <Info className="w-3 h-3 text-primary/70" />
+          <Info className="w-2.5 h-2.5 text-primary/70" />
         </button>
       </div>
 
