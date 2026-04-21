@@ -325,31 +325,76 @@ export function useGrokApi() {
 
   const [storageReady, setStorageReady] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  // Persist apiMode across pages/reloads. Default to "credits" when the
-  // user has no BYOK key stored (most users), otherwise honour the saved
-  // choice. Stored under "api-mode" so all hook instances stay in sync.
+  // Persist apiMode across pages/reloads. We track whether the user made
+  // an *explicit* choice so we don't keep overriding them. If they never
+  // chose, we follow the BYOK key presence automatically. If they did
+  // choose BYOK but later remove their key, we fall back to credits
+  // (and clear the explicit flag so adding the key back auto-restores BYOK).
   const [apiMode, setApiModeState] = useState<ApiMode>(() => {
     try {
       const saved = localStorage.getItem("api-mode");
-      if (saved === "byok" || saved === "credits") return saved;
-      return localStorage.getItem("xai-api-key") ? "byok" : "credits";
+      const explicit = localStorage.getItem("api-mode-explicit") === "1";
+      const hasKey = !!localStorage.getItem("xai-api-key");
+      if (explicit && (saved === "byok" || saved === "credits")) {
+        // Honor explicit choice, but downgrade BYOK→credits if key is gone.
+        if (saved === "byok" && !hasKey) return "credits";
+        return saved;
+      }
+      return hasKey ? "byok" : "credits";
     } catch {
       return "credits";
     }
   });
   const setApiMode = useCallback((mode: ApiMode) => {
     setApiModeState(mode);
-    try { localStorage.setItem("api-mode", mode); } catch {}
+    try {
+      localStorage.setItem("api-mode", mode);
+      localStorage.setItem("api-mode-explicit", "1");
+    } catch {}
     try { window.dispatchEvent(new StorageEvent("storage", { key: "api-mode", newValue: mode })); } catch {}
   }, []);
   useEffect(() => {
+    const revalidate = () => {
+      try {
+        const saved = localStorage.getItem("api-mode");
+        const explicit = localStorage.getItem("api-mode-explicit") === "1";
+        const hasKey = !!localStorage.getItem("xai-api-key");
+        let next: ApiMode;
+        if (explicit && (saved === "byok" || saved === "credits")) {
+          if (saved === "byok" && !hasKey) {
+            // User had explicitly chosen BYOK, but their key is gone.
+            // Fall back to credits and clear the explicit flag so that
+            // re-adding a key will auto-restore BYOK without requiring
+            // them to toggle it again.
+            next = "credits";
+            localStorage.removeItem("api-mode-explicit");
+            localStorage.setItem("api-mode", "credits");
+          } else {
+            next = saved;
+          }
+        } else {
+          next = hasKey ? "byok" : "credits";
+        }
+        setApiModeState((cur) => (cur === next ? cur : next));
+      } catch {}
+    };
     const onStorage = (e: StorageEvent) => {
       if (e.key === "api-mode" && (e.newValue === "byok" || e.newValue === "credits")) {
         setApiModeState(e.newValue);
+      } else if (e.key === "xai-api-key" || e.key === "api-mode-explicit" || e.key === null) {
+        revalidate();
       }
     };
+    const onKeyChanged = () => revalidate();
     window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
+    window.addEventListener("xai-api-key-changed", onKeyChanged);
+    // Run once on mount in case the key changed between initial state
+    // computation and effect setup (e.g. another hook instance updated it).
+    revalidate();
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("xai-api-key-changed", onKeyChanged);
+    };
   }, []);
   const revokeAllRef = useRef<(() => void) | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -481,10 +526,12 @@ export function useGrokApi() {
 
   const setApiKey = useCallback((key: string) => {
     localStorage.setItem("xai-api-key", key);
+    try { window.dispatchEvent(new Event("xai-api-key-changed")); } catch {}
   }, []);
 
   const clearApiKey = useCallback(() => {
     localStorage.removeItem("xai-api-key");
+    try { window.dispatchEvent(new Event("xai-api-key-changed")); } catch {}
   }, []);
 
   const hasApiKey = useCallback((): boolean => {
