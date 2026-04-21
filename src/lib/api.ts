@@ -52,13 +52,16 @@ interface ApiOptions {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
   auth?: boolean; // include JWT token (default true)
+  /** Extra headers to merge in (e.g. Idempotency-Key). */
+  headers?: Record<string, string>;
 }
 
 export async function apiFetch<T = any>(path: string, options: ApiOptions = {}): Promise<T> {
-  const { method = "GET", body, auth = true } = options;
+  const { method = "GET", body, auth = true, headers: extraHeaders } = options;
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
+    ...(extraHeaders || {}),
   };
 
   if (auth) {

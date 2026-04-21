@@ -11,6 +11,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Send, Users, Globe, Loader2, Plus, X, Lock, Zap, ShieldAlert, Sparkles, Rss, Flame, Film, FolderOpen, ImageIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import MobileBottomNav from "@/components/MobileBottomNav";
@@ -65,7 +75,22 @@ const FeedPage: React.FC = () => {
   const [libraryPickerOpen, setLibraryPickerOpen] = useState(false);
   const [pickedMedia, setPickedMedia] = useState<{ url: string; type: "image" | "video"; prompt?: string } | null>(null);
   const [uploadingPick, setUploadingPick] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  // Idempotency key — regenerated for each fresh compose session and after
+  // a successful post. Reused across retries so the server can dedupe a
+  // double-click into a single post.
+  const idempotencyKeyRef = useRef<string>("");
   const sentinelRef = useRef<HTMLDivElement>(null);
+
+  const ensureIdempotencyKey = useCallback(() => {
+    if (!idempotencyKeyRef.current) {
+      idempotencyKeyRef.current =
+        typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? (crypto as any).randomUUID()
+          : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+    }
+    return idempotencyKeyRef.current;
+  }, []);
 
   const requireAuth = useCallback(() => {
     if (!isAuthenticated) {
@@ -146,7 +171,7 @@ const FeedPage: React.FC = () => {
     return () => io.disconnect();
   }, [nextCursor, loadingMore, fetchCreators]);
 
-  const handlePost = async () => {
+  const submitPost = async () => {
     if (!newText.trim() && !pickedMedia) return;
     setPosting(true);
     try {
@@ -158,9 +183,20 @@ const FeedPage: React.FC = () => {
         if (lockPrice) body.lockPriceCents = Math.round(parseFloat(lockPrice) * 100) || 0;
         if (lockXrge) body.lockXrgeAmount = lockXrge;
       }
-      await apiFetch("/feed", { method: "POST", body });
+      const key = ensureIdempotencyKey();
+      const result = await apiFetch<{ id: string; idempotent?: boolean }>("/feed", {
+        method: "POST",
+        body,
+        headers: { "Idempotency-Key": key },
+      });
+      if (result?.idempotent) {
+        toast({ title: "Already posted", description: "Your previous attempt already went through." });
+      }
+      // Reset compose for the next post — including a fresh idempotency key.
+      idempotencyKeyRef.current = "";
       setNewText("");
       setShowCompose(false);
+      setConfirmOpen(false);
       setLockEnabled(false);
       setMatureFlag(false);
       setLockCredits("");
@@ -174,6 +210,14 @@ const FeedPage: React.FC = () => {
     } finally {
       setPosting(false);
     }
+  };
+
+  /** Click-handler for the POST button: opens confirmation instead of submitting directly. */
+  const handlePost = () => {
+    if (posting) return; // double-click guard
+    if (!newText.trim() && !pickedMedia) return;
+    ensureIdempotencyKey();
+    setConfirmOpen(true);
   };
 
   const handlePickFromLibrary = useCallback(async (result: GrokResult) => {
@@ -312,6 +356,73 @@ const FeedPage: React.FC = () => {
         </button>
       )}
     </div>
+  );
+
+  const confirmDialog = (
+    <AlertDialog
+      open={confirmOpen}
+      onOpenChange={(open) => {
+        // Block dismiss while a request is in flight to keep the idempotency
+        // key + UI state stable until we know the outcome.
+        if (!posting) setConfirmOpen(open);
+      }}
+    >
+      <AlertDialogContent className="bg-card border-border/50">
+        <AlertDialogHeader>
+          <AlertDialogTitle className="font-orbitron text-sm tracking-widest text-primary">
+            POST TO FEED?
+          </AlertDialogTitle>
+          <AlertDialogDescription className="font-mono-share text-[11px] text-muted-foreground space-y-2">
+            <span className="block">Your post will be visible to the community.</span>
+            {newText.trim() && (
+              <span className="block bg-input/30 border border-border/30 rounded p-2 text-foreground/80 max-h-24 overflow-y-auto">
+                "{newText.trim().slice(0, 200)}{newText.trim().length > 200 ? "…" : ""}"
+              </span>
+            )}
+            {pickedMedia && (
+              <span className="flex items-center gap-2 text-foreground/70">
+                {pickedMedia.type === "video"
+                  ? <Film className="w-3 h-3 text-secondary" />
+                  : <ImageIcon className="w-3 h-3 text-primary" />}
+                Media attached from your library
+              </span>
+            )}
+            {matureFlag && (
+              <span className="flex items-center gap-1 text-amber-300">
+                <ShieldAlert className="w-3 h-3" /> Marked 18+ / mature
+              </span>
+            )}
+            {lockEnabled && (lockCredits || lockPrice || lockXrge) && (
+              <span className="flex items-center gap-1 text-secondary">
+                <Lock className="w-3 h-3" /> Locked
+                {lockCredits && ` · ${lockCredits} credits`}
+                {lockPrice && ` · $${lockPrice}`}
+                {lockXrge && ` · ${lockXrge} XRGE`}
+              </span>
+            )}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={posting} className="font-mono-share text-[11px]">
+            CANCEL
+          </AlertDialogCancel>
+          <AlertDialogAction
+            disabled={posting}
+            onClick={(e) => {
+              e.preventDefault(); // keep dialog open until submit resolves
+              if (!posting) submitPost();
+            }}
+            className="font-mono-share text-[11px] bg-primary text-primary-foreground hover:bg-primary/90"
+          >
+            {posting ? (
+              <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> POSTING…</>
+            ) : (
+              <><Send className="w-3 h-3 mr-1" /> CONFIRM POST</>
+            )}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 
   const filterTabs = (variant: "mobile" | "desktop") => {
@@ -495,7 +606,11 @@ const FeedPage: React.FC = () => {
         {showCompose && (
           <div
             className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 backdrop-blur-sm pt-[env(safe-area-inset-top,0px)]"
-            onClick={() => setShowCompose(false)}
+            onClick={() => {
+              if (posting) return;
+              setShowCompose(false);
+              idempotencyKeyRef.current = "";
+            }}
           >
             <div
               className="w-[calc(100%-32px)] mt-16 bg-card rounded-2xl p-4 space-y-3 animate-in fade-in zoom-in-95 duration-200 shadow-xl"
@@ -503,7 +618,14 @@ const FeedPage: React.FC = () => {
             >
               <div className="flex items-center justify-between">
                 <span className="font-orbitron text-xs text-foreground tracking-wider">NEW POST</span>
-                <button onClick={() => setShowCompose(false)} className="text-muted-foreground p-1">
+                <button
+                  onClick={() => {
+                    if (posting) return;
+                    setShowCompose(false);
+                    idempotencyKeyRef.current = "";
+                  }}
+                  className="text-muted-foreground p-1"
+                >
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -540,6 +662,7 @@ const FeedPage: React.FC = () => {
           onSelect={handlePickFromLibrary}
           busy={uploadingPick}
         />
+        {confirmDialog}
         {reelTarget && (
           <ReelViewer
             open
@@ -668,6 +791,7 @@ const FeedPage: React.FC = () => {
         onSelect={handlePickFromLibrary}
         busy={uploadingPick}
       />
+      {confirmDialog}
       {reelTarget && (
         <ReelViewer
           open
