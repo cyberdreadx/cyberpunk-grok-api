@@ -966,8 +966,10 @@ const Index = () => {
           </div>
         )}
 
-        {/* Top tabs: Feed / Create — keeps navigation symmetrical with the feed page */}
-        <div className="flex items-center justify-center sm:justify-start">
+        {/* Top tabs: Feed / Create — keeps navigation symmetrical with the
+            feed page. On mobile, the credits pill sits inline at the end of
+            the row so it never overlaps the toggle. */}
+        <div className="flex items-center justify-between sm:justify-start gap-2">
           <div className="flex items-center gap-1 p-1 rounded-lg border border-border/40 bg-card/40 w-fit">
             <Link
               to="/"
@@ -983,6 +985,8 @@ const Index = () => {
               <Zap className="w-3.5 h-3.5" /> CREATE
             </button>
           </div>
+          {/* Inline credits pill — mobile only; desktop uses the header CreditDisplay */}
+          <MobileCreditsPill inline onOpenStore={() => setStoreOpen(true)} />
         </div>
 
         {/* Stories */}
@@ -2467,8 +2471,8 @@ const Index = () => {
       {/* Temu-style social proof */}
       <SocialProofToast />
 
-      {/* Persistent credits pill (mobile) */}
-      <MobileCreditsPill onOpenStore={() => setStoreOpen(true)} />
+      {/* Credits pill is rendered inline in the FEED/CREATE row above on
+          this page to avoid overlapping the toggle. */}
 
       {/* Mobile bottom navigation */}
       <MobileBottomNav
