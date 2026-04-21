@@ -65,40 +65,35 @@ const MobileCreditsPill: React.FC<MobileCreditsPillProps> = ({ onOpenStore, inli
   const label = loading ? "…" : totalCredits > 9999 ? "9999+" : totalCredits.toString();
 
   // Shared pill markup — used by both the floating and inline variants.
+  // Single clean tap target: the whole pill opens the store. A tiny info
+  // affordance sits as a secondary action without visual segment boxes.
   const pill = (
-    <div className="relative inline-flex">
-      {/* `flex-row` is forced so the segment order (balance → cart → info)
-          stays identical in RTL — only padding/dividers flip. */}
-      <div className="flex flex-row items-center rounded-full border border-primary/40 bg-card/90 backdrop-blur-md shadow-[0_0_8px_hsl(var(--primary)/0.2)] overflow-hidden">
-        <div
-          className="flex items-center gap-1 ps-2.5 pe-2 py-1"
-          aria-label={`Credits balance: ${label}`}
-        >
-          <Coins className="w-3 h-3 text-primary drop-shadow-[0_0_3px_hsl(var(--primary))] shrink-0" />
-          <span className="font-orbitron text-[10px] tracking-wider text-primary leading-none">
-            {label}
+    <div className="relative inline-flex items-center gap-1.5">
+      <button
+        type="button"
+        onClick={onOpenStore}
+        aria-label={`Open store — ${label} credits${byok ? ", BYOK active" : ""}`}
+        className="group inline-flex items-center gap-1.5 h-7 ps-2.5 pe-2 rounded-full border border-primary/40 bg-card/70 backdrop-blur-md hover:bg-card/90 hover:border-primary/60 active:scale-[0.97] transition-all"
+      >
+        <Coins className="w-3 h-3 text-primary drop-shadow-[0_0_3px_hsl(var(--primary))] shrink-0" />
+        <span className="font-orbitron text-[10px] tracking-wider text-primary leading-none">
+          {label}
+        </span>
+        {byok && (
+          <span className="font-orbitron text-[8px] tracking-wider text-secondary/90 leading-none px-1 py-0.5 rounded bg-secondary/10 border border-secondary/30">
+            BYOK
           </span>
-          {byok && (
-            <span className="font-orbitron text-[8px] tracking-wider text-secondary/90 border-s border-primary/30 ps-1.5 ms-0.5 leading-none">
-              BYOK
-            </span>
-          )}
-        </div>
-        <button
-          onClick={onOpenStore}
-          aria-label="Open store"
-          className="flex items-center justify-center px-2 py-1 border-s border-primary/30 text-secondary hover:text-secondary/80 active:scale-95 transition-transform"
-        >
-          <ShoppingCart className="w-3 h-3" />
-        </button>
-        <button
-          onClick={() => setNoticeOpen((v) => !v)}
-          aria-label="What are credits?"
-          className="flex items-center justify-center ps-1.5 pe-2 py-1 border-s border-primary/30 active:scale-95 transition-transform"
-        >
-          <Info className="w-3 h-3 text-primary/70" />
-        </button>
-      </div>
+        )}
+        <ShoppingCart className="w-3 h-3 text-secondary/80 group-hover:text-secondary transition-colors" />
+      </button>
+      <button
+        type="button"
+        onClick={() => setNoticeOpen((v) => !v)}
+        aria-label="What are credits?"
+        className="flex items-center justify-center w-5 h-5 rounded-full text-muted-foreground/60 hover:text-primary active:scale-95 transition-all"
+      >
+        <Info className="w-3 h-3" />
+      </button>
     </div>
   );
 
