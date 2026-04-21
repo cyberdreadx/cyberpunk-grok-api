@@ -606,7 +606,11 @@ const FeedPage: React.FC = () => {
         {showCompose && (
           <div
             className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 backdrop-blur-sm pt-[env(safe-area-inset-top,0px)]"
-            onClick={() => setShowCompose(false)}
+            onClick={() => {
+              if (posting) return;
+              setShowCompose(false);
+              idempotencyKeyRef.current = "";
+            }}
           >
             <div
               className="w-[calc(100%-32px)] mt-16 bg-card rounded-2xl p-4 space-y-3 animate-in fade-in zoom-in-95 duration-200 shadow-xl"
@@ -614,7 +618,14 @@ const FeedPage: React.FC = () => {
             >
               <div className="flex items-center justify-between">
                 <span className="font-orbitron text-xs text-foreground tracking-wider">NEW POST</span>
-                <button onClick={() => setShowCompose(false)} className="text-muted-foreground p-1">
+                <button
+                  onClick={() => {
+                    if (posting) return;
+                    setShowCompose(false);
+                    idempotencyKeyRef.current = "";
+                  }}
+                  className="text-muted-foreground p-1"
+                >
                   <X className="w-5 h-5" />
                 </button>
               </div>
