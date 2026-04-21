@@ -49,6 +49,7 @@ const FeedPage: React.FC = () => {
   const [showCompose, setShowCompose] = useState(false);
   const [lockEnabled, setLockEnabled] = useState(false);
   const [lockCredits, setLockCredits] = useState("");
+  const [storeOpen, setStoreOpen] = useState(false);
   const [lockPrice, setLockPrice] = useState("");
   const [lockXrge, setLockXrge] = useState("");
   const [activeCreator, setActiveCreator] = useState<FeedCreator | null>(null);
