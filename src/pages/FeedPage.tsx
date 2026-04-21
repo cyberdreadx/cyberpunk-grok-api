@@ -62,6 +62,9 @@ const FeedPage: React.FC = () => {
   const [activeCreator, setActiveCreator] = useState<FeedCreator | null>(null);
   const [reelTarget, setReelTarget] = useState<{ postId: string; userId?: string } | null>(null);
   const [reelsOpen, setReelsOpen] = useState(false);
+  const [libraryPickerOpen, setLibraryPickerOpen] = useState(false);
+  const [pickedMedia, setPickedMedia] = useState<{ url: string; type: "image" | "video"; prompt?: string } | null>(null);
+  const [uploadingPick, setUploadingPick] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   const requireAuth = useCallback(() => {
