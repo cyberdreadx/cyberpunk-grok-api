@@ -68,30 +68,41 @@ const MobileCreditsPill: React.FC<MobileCreditsPillProps> = ({ onOpenStore }) =>
           top: hasTerminal
             ? "calc(env(safe-area-inset-top, 0px) + 36px)"
             : "max(14px, calc(env(safe-area-inset-top, 0px) + 10px))",
-          right: "max(12px, env(safe-area-inset-right, 0px))",
+          // Anchor to the inline-end edge of the viewport: right in LTR,
+          // left in RTL. Honors safe-area-inset on the matching side
+          // (landscape notches / rounded screens).
+          ...(isRtl
+            ? { left: "max(12px, env(safe-area-inset-left, 0px))" }
+            : { right: "max(12px, env(safe-area-inset-right, 0px))" }),
         }}
       >
-        <div className="flex items-center rounded-full border border-primary/40 bg-card/90 backdrop-blur-md shadow-[0_0_8px_hsl(var(--primary)/0.2)] overflow-hidden">
-          {/* Balance segment — read-only display */}
+        {/* `flex-row` is forced so the segment order (balance → cart → info)
+            stays identical in RTL — only padding/dividers flip. This avoids
+            the cart icon ending up between the coin count and BYOK badge. */}
+        <div className="flex flex-row items-center rounded-full border border-primary/40 bg-card/90 backdrop-blur-md shadow-[0_0_8px_hsl(var(--primary)/0.2)] overflow-hidden">
+          {/* Balance segment — read-only display. Uses logical ps-/pe- so
+              the BYOK divider (border-s) sits on the trailing edge in both
+              LTR and RTL. */}
           <div
-            className="flex items-center gap-1 pl-2.5 pr-2 py-1"
+            className="flex items-center gap-1 ps-2.5 pe-2 py-1"
             aria-label={`Credits balance: ${label}`}
           >
-            <Coins className="w-3 h-3 text-primary drop-shadow-[0_0_3px_hsl(var(--primary))]" />
+            <Coins className="w-3 h-3 text-primary drop-shadow-[0_0_3px_hsl(var(--primary))] shrink-0" />
             <span className="font-orbitron text-[10px] tracking-wider text-primary leading-none">
               {label}
             </span>
             {byok && (
-              <span className="font-orbitron text-[8px] tracking-wider text-secondary/90 border-l border-primary/30 pl-1.5 ml-0.5 leading-none">
+              <span className="font-orbitron text-[8px] tracking-wider text-secondary/90 border-s border-primary/30 ps-1.5 ms-0.5 leading-none">
                 BYOK
               </span>
             )}
           </div>
-          {/* Cart segment — opens store */}
+          {/* Cart segment — opens store. border-s draws the divider on the
+              correct (leading) side in both directions. */}
           <button
             onClick={onOpenStore}
             aria-label="Open store"
-            className="flex items-center justify-center px-2 py-1 border-l border-primary/30 text-secondary hover:text-secondary/80 active:scale-95 transition-transform"
+            className="flex items-center justify-center px-2 py-1 border-s border-primary/30 text-secondary hover:text-secondary/80 active:scale-95 transition-transform"
           >
             <ShoppingCart className="w-3 h-3" />
           </button>
@@ -99,7 +110,7 @@ const MobileCreditsPill: React.FC<MobileCreditsPillProps> = ({ onOpenStore }) =>
           <button
             onClick={() => setNoticeOpen((v) => !v)}
             aria-label="What are credits?"
-            className="flex items-center justify-center pl-1.5 pr-2 py-1 border-l border-primary/30 active:scale-95 transition-transform"
+            className="flex items-center justify-center ps-1.5 pe-2 py-1 border-s border-primary/30 active:scale-95 transition-transform"
           >
             <Info className="w-3 h-3 text-primary/70" />
           </button>
@@ -112,11 +123,12 @@ const MobileCreditsPill: React.FC<MobileCreditsPillProps> = ({ onOpenStore }) =>
           onClick={() => setNoticeOpen(false)}
         >
           <div
-            className="absolute right-2 w-64 bg-card/95 backdrop-blur-md border border-primary/40 rounded-lg shadow-[0_0_20px_hsl(var(--primary)/0.25)] p-3 animate-fade-in"
+            className="absolute w-64 bg-card/95 backdrop-blur-md border border-primary/40 rounded-lg shadow-[0_0_20px_hsl(var(--primary)/0.25)] p-3 animate-fade-in"
             style={{
               top: hasTerminal
                 ? "calc(env(safe-area-inset-top, 0px) + 72px)"
                 : "max(44px, calc(env(safe-area-inset-top, 0px) + 40px))",
+              ...(isRtl ? { left: "0.5rem" } : { right: "0.5rem" }),
             }}
             onClick={(e) => e.stopPropagation()}
           >
