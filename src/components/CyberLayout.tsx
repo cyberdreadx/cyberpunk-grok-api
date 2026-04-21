@@ -11,11 +11,19 @@ const CyberLayout: React.FC<CyberLayoutProps> = ({ children }) => {
   useEffect(() => {
     if (document.documentElement.dataset.cyberTheme === BARE_THEME_ID) {
       applyImmersionToRoot(BARE_IMMERSION);
-      return;
+    } else {
+      fetchMasterImmersion()
+        .then(applyImmersionToRoot)
+        .catch(() => applyImmersionToRoot(DEFAULT_IMMERSION));
     }
-    fetchMasterImmersion()
-      .then(applyImmersionToRoot)
-      .catch(() => applyImmersionToRoot(DEFAULT_IMMERSION));
+
+    // Signal to globally-positioned UI (e.g. MobileCreditsPill) that a
+    // terminal bar is present so they can offset their top position and
+    // avoid overlapping the macOS-style title row.
+    document.documentElement.dataset.cyberTerminal = "1";
+    return () => {
+      delete document.documentElement.dataset.cyberTerminal;
+    };
   }, []);
 
   return (
