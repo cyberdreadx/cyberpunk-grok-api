@@ -82,9 +82,10 @@ const LibraryPicker: React.FC<LibraryPickerProps> = ({
   const filteredResults = useMemo(() => {
     let list = results;
     if (mediaType !== "all") list = list.filter((r) => r.type === mediaType);
+    // Always hide trashed items from the picker.
+    list = list.filter((r) => r.folderId !== TRASH_FOLDER_ID);
     if (filter === "unfiled") {
-      list = list.filter((r) => !r.folderId || r.folderId === TRASH_FOLDER_ID === false && !r.folderId);
-      list = results.filter((r) => (mediaType === "all" || r.type === mediaType) && !r.folderId);
+      list = list.filter((r) => !r.folderId);
     } else if (filter !== "all") {
       list = list.filter((r) => r.folderId === filter);
     }
