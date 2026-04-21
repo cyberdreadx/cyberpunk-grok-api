@@ -33,6 +33,7 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   const { t } = useTranslation();
   const { user } = useAuth();
   const { totalCredits, loading: creditsLoading } = useCredits(user);
+  const { view: creditsView, toggle: toggleCreditsView } = useCreditsView();
   const [moreOpen, setMoreOpen] = useState(false);
 
   const isFeed = location.pathname === "/" || location.pathname === "";
@@ -111,6 +112,38 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
                 <span className="font-mono-share text-[11px] text-foreground/80">CREDITS</span>
                 <span className="ml-auto font-orbitron text-[10px] tracking-wider text-primary">
                   {creditsBadge}
+                </span>
+              </button>
+            )}
+            {isAuthenticated && (
+              <button
+                onClick={() => { toggleCreditsView(); }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded hover:bg-primary/10 transition-colors"
+                aria-label={`Switch credits view to ${creditsView === "credits" ? "BYOK" : "credits"}`}
+              >
+                <Eye className="w-4 h-4 text-primary/60" />
+                <span className="font-mono-share text-[11px] text-foreground/80">CREDITS VIEW</span>
+                <span className="ml-auto flex items-center gap-1 rounded-full border border-primary/30 bg-card/80 px-1.5 py-0.5">
+                  <span
+                    className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full font-orbitron text-[8px] tracking-wider transition-colors ${
+                      creditsView === "credits"
+                        ? "bg-primary/20 text-primary"
+                        : "text-muted-foreground/60"
+                    }`}
+                  >
+                    <Coins className="w-2.5 h-2.5" />
+                    CREDITS
+                  </span>
+                  <span
+                    className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full font-orbitron text-[8px] tracking-wider transition-colors ${
+                      creditsView === "byok"
+                        ? "bg-secondary/20 text-secondary"
+                        : "text-muted-foreground/60"
+                    }`}
+                  >
+                    <Key className="w-2.5 h-2.5" />
+                    BYOK
+                  </span>
                 </span>
               </button>
             )}
