@@ -373,7 +373,7 @@ const FeedPage: React.FC = () => {
             POST TO FEED?
           </AlertDialogTitle>
           <AlertDialogDescription className="font-mono-share text-[11px] text-muted-foreground space-y-2">
-            <span className="block">Your post will be visible to the community.</span>
+            <span className="block">Your post will be visible to the community. Please review the details below before publishing.</span>
             {newText.trim() && (
               <span className="block bg-input/30 border border-border/30 rounded p-2 text-foreground/80 max-h-24 overflow-y-auto">
                 "{newText.trim().slice(0, 200)}{newText.trim().length > 200 ? "…" : ""}"
