@@ -65,7 +65,22 @@ const FeedPage: React.FC = () => {
   const [libraryPickerOpen, setLibraryPickerOpen] = useState(false);
   const [pickedMedia, setPickedMedia] = useState<{ url: string; type: "image" | "video"; prompt?: string } | null>(null);
   const [uploadingPick, setUploadingPick] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  // Idempotency key — regenerated for each fresh compose session and after
+  // a successful post. Reused across retries so the server can dedupe a
+  // double-click into a single post.
+  const idempotencyKeyRef = useRef<string>("");
   const sentinelRef = useRef<HTMLDivElement>(null);
+
+  const ensureIdempotencyKey = useCallback(() => {
+    if (!idempotencyKeyRef.current) {
+      idempotencyKeyRef.current =
+        typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? (crypto as any).randomUUID()
+          : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+    }
+    return idempotencyKeyRef.current;
+  }, []);
 
   const requireAuth = useCallback(() => {
     if (!isAuthenticated) {
