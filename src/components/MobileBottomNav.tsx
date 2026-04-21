@@ -102,6 +102,27 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
             onClick={(e) => e.stopPropagation()}
           >
             <button
+              onClick={() => {
+                if (isAuthenticated) navigate("/profile");
+                else onOpenAuth?.();
+                setMoreOpen(false);
+              }}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded hover:bg-primary/10 transition-colors"
+            >
+              <User className="w-4 h-4 text-primary/60" />
+              <span className="font-mono-share text-[11px] text-foreground/80">
+                {isAuthenticated ? "PROFILE" : "SIGN IN"}
+              </span>
+            </button>
+            <button
+              onClick={() => { onOpenSettings?.(); setMoreOpen(false); }}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded hover:bg-primary/10 transition-colors"
+            >
+              <SettingsIcon className="w-4 h-4 text-primary/60" />
+              <span className="font-mono-share text-[11px] text-foreground/80">SETTINGS</span>
+            </button>
+            <div className="h-px bg-border/30 my-1" />
+            <button
               onClick={() => { onOpenGuide?.(); setMoreOpen(false); }}
               className="w-full flex items-center gap-3 px-3 py-2.5 rounded hover:bg-primary/10 transition-colors"
             >
