@@ -791,6 +791,7 @@ const FeedPage: React.FC = () => {
         onSelect={handlePickFromLibrary}
         busy={uploadingPick}
       />
+      {confirmDialog}
       {reelTarget && (
         <ReelViewer
           open
