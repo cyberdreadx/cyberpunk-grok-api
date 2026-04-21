@@ -16,9 +16,15 @@ import { useCredits } from "@/hooks/useCredits";
 
 interface MobileCreditsPillProps {
   onOpenStore?: () => void;
+  /**
+   * When true, render the pill inline (no portal, no fixed positioning) so
+   * it can sit naturally inside a parent header row. Useful on pages like
+   * Index where the floating variant collides with the FEED/CREATE toggle.
+   */
+  inline?: boolean;
 }
 
-const MobileCreditsPill: React.FC<MobileCreditsPillProps> = ({ onOpenStore }) => {
+const MobileCreditsPill: React.FC<MobileCreditsPillProps> = ({ onOpenStore, inline = false }) => {
   const { user, isAuthenticated } = useAuth();
   const { totalCredits, loading } = useCredits(user);
   const [byok, setByok] = useState(false);
