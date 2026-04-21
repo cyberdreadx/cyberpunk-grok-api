@@ -41,7 +41,7 @@ const MobileCreditsPill: React.FC<MobileCreditsPillProps> = ({ onOpenStore }) =>
     <>
       <div
         className="sm:hidden fixed z-[55] right-1.5 flex items-center gap-1"
-        style={{ top: "calc(env(safe-area-inset-top, 0px) + 6px)" }}
+        style={{ top: "max(12px, calc(env(safe-area-inset-top, 0px) + 6px))" }}
       >
         <button
           onClick={onOpenStore}
