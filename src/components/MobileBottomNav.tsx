@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { createPortal } from "react-dom";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Sparkles, Image, Users, ShoppingCart, MoreHorizontal, HelpCircle, FileText, Shield, ScrollText, Rss } from "lucide-react";
+import { Sparkles, Image, Users, ShoppingCart, MoreHorizontal, HelpCircle, FileText, Shield, ScrollText, Rss, User, Settings as SettingsIcon } from "lucide-react";
 
 interface MobileBottomNavProps {
   isAuthenticated?: boolean;
@@ -11,6 +11,8 @@ interface MobileBottomNavProps {
   onOpenChangelog?: () => void;
   onOpenTos?: () => void;
   onOpenPrivacy?: () => void;
+  onOpenSettings?: () => void;
+  onOpenAuth?: () => void;
 }
 
 const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
@@ -20,6 +22,8 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   onOpenChangelog,
   onOpenTos,
   onOpenPrivacy,
+  onOpenSettings,
+  onOpenAuth,
 }) => {
   const location = useLocation();
   const navigate = useNavigate();
