@@ -18,6 +18,7 @@ import FeatureExplainer from "@/components/FeatureExplainer";
 import ReelViewer from "@/components/ReelViewer";
 import StoriesBar from "@/components/StoriesBar";
 import SignupTeaser from "@/components/SignupTeaser";
+import StoreOverlay from "@/components/StoreOverlay";
 
 const FEED_RULES = [
   "No illegal content of any kind",

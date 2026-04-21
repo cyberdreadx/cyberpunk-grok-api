@@ -4,6 +4,7 @@ import { Image, Film, ArrowLeft } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import CyberLayout from "@/components/CyberLayout";
 import MobileBottomNav from "@/components/MobileBottomNav";
+import StoreOverlay from "@/components/StoreOverlay";
 import GlitchText from "@/components/GlitchText";
 import ResultsGrid from "@/components/ResultsGrid";
 import HowToUseDialog from "@/components/HowToUseDialog";
@@ -241,11 +242,13 @@ const Library: React.FC = () => {
       {/* Mobile bottom navigation */}
       <MobileBottomNav
         isAuthenticated={auth.isAuthenticated}
+        onOpenStore={() => setStoreOpen(true)}
         onOpenGuide={() => setGuideOpen(true)}
         onOpenChangelog={() => setChangelogOpen(true)}
         onOpenTos={() => setTosOpen(true)}
         onOpenPrivacy={() => setPrivacyOpen(true)}
       />
+      <StoreOverlay open={storeOpen} onOpenChange={setStoreOpen} />
 
       {/* Dialogs */}
       <HowToUseDialog open={guideOpen} onOpenChange={setGuideOpen} />
