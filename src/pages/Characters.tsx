@@ -7,6 +7,7 @@ import { useGrokApi } from "@/hooks/useGrokApi";
 import { useAuth } from "@/hooks/useAuth";
 import CyberLayout from "@/components/CyberLayout";
 import MobileBottomNav from "@/components/MobileBottomNav";
+import MobileCreditsPill from "@/components/MobileCreditsPill";
 import StoreOverlay from "@/components/StoreOverlay";
 import PreferencesDialog from "@/components/PreferencesDialog";
 import { ArrowLeft, Plus, Trash2, Send, Edit, X, MessageSquare, Sparkles, Image, Download, Paperclip } from "lucide-react";
@@ -1008,6 +1009,7 @@ export default function Characters() {
         )}
       </div>
     </CyberLayout>
+    <MobileCreditsPill onOpenStore={() => setStoreOpen(true)} />
     <MobileBottomNav isAuthenticated={true} onOpenStore={() => setStoreOpen(true)} onOpenSettings={() => setPrefsOpen(true)} />
     <StoreOverlay open={storeOpen} onOpenChange={setStoreOpen} />
     <PreferencesDialog open={prefsOpen} onOpenChange={setPrefsOpen} />

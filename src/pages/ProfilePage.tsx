@@ -14,6 +14,7 @@ import VerifiedBadge from "@/components/VerifiedBadge";
 import { useToast } from "@/hooks/use-toast";
 import { upload } from "@vercel/blob/client";
 import MobileBottomNav from "@/components/MobileBottomNav";
+import MobileCreditsPill from "@/components/MobileCreditsPill";
 import StoreOverlay from "@/components/StoreOverlay";
 import PreferencesDialog from "@/components/PreferencesDialog";
 
@@ -414,6 +415,7 @@ const ProfileMobileChrome: React.FC = () => {
   const [prefsOpen, setPrefsOpen] = useState(false);
   return (
     <>
+      <MobileCreditsPill onOpenStore={() => setStoreOpen(true)} />
       <MobileBottomNav
         isAuthenticated={isAuthenticated}
         onOpenStore={() => setStoreOpen(true)}

@@ -4,6 +4,7 @@ import { Image, Film, ArrowLeft } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import CyberLayout from "@/components/CyberLayout";
 import MobileBottomNav from "@/components/MobileBottomNav";
+import MobileCreditsPill from "@/components/MobileCreditsPill";
 import StoreOverlay from "@/components/StoreOverlay";
 import PreferencesDialog from "@/components/PreferencesDialog";
 import GlitchText from "@/components/GlitchText";
@@ -241,6 +242,8 @@ const Library: React.FC = () => {
           />
         )}
       </div>
+
+      <MobileCreditsPill onOpenStore={() => setStoreOpen(true)} />
 
       {/* Mobile bottom navigation */}
       <MobileBottomNav
