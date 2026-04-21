@@ -3,6 +3,8 @@ import { createPortal } from "react-dom";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Sparkles, Image, Users, ShoppingCart, MoreHorizontal, HelpCircle, FileText, Shield, ScrollText, Rss, User, Settings as SettingsIcon } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { useCredits } from "@/hooks/useCredits";
 
 interface MobileBottomNavProps {
   isAuthenticated?: boolean;
@@ -28,12 +30,15 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   const location = useLocation();
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { user } = useAuth();
+  const { totalCredits, loading: creditsLoading } = useCredits(user);
   const [moreOpen, setMoreOpen] = useState(false);
 
   const isFeed = location.pathname === "/" || location.pathname === "";
   const isCreate = location.pathname === "/create";
   const isCharacters = location.pathname === "/characters";
   const isLibrary = location.pathname === "/library";
+  const creditsBadge = !isAuthenticated ? null : creditsLoading ? "…" : totalCredits > 999 ? "999+" : totalCredits.toString();
 
   const tabs = [
     {
@@ -71,6 +76,7 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
       label: t("nav.store").toUpperCase(),
       icon: ShoppingCart,
       active: false,
+      badge: creditsBadge,
       onClick: () => {
         if (onOpenStore) onOpenStore();
         else navigate("/create?store=1");
@@ -86,14 +92,8 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
     },
   ];
 
-  /**
-   * Portaled to document.body so `position: fixed` is relative to the viewport.
-   * CyberLayout uses `.immersion-screen-host` (CSS `filter` on an ancestor), which
-   * creates a new containing block and breaks fixed positioning for descendants.
-   */
   const node = (
     <>
-      {/* More menu overlay */}
       {moreOpen && (
         <div className="fixed inset-0 z-40 sm:hidden" onClick={() => setMoreOpen(false)}>
           <div
@@ -101,6 +101,18 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
             style={{ bottom: 'calc(62px + env(safe-area-inset-bottom, 0px))' }}
             onClick={(e) => e.stopPropagation()}
           >
+            {isAuthenticated && (
+              <button
+                onClick={() => { onOpenStore?.(); setMoreOpen(false); }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded hover:bg-primary/10 transition-colors"
+              >
+                <ShoppingCart className="w-4 h-4 text-primary/60" />
+                <span className="font-mono-share text-[11px] text-foreground/80">CREDITS</span>
+                <span className="ml-auto font-orbitron text-[10px] tracking-wider text-primary">
+                  {creditsBadge}
+                </span>
+              </button>
+            )}
             <button
               onClick={() => {
                 if (isAuthenticated) navigate("/profile");
@@ -155,7 +167,6 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
         </div>
       )}
 
-      {/* Bottom nav bar */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 sm:hidden">
         <div className="bg-card/95 backdrop-blur-md border-t border-border/50 shadow-[0_-2px_20px_rgba(0,0,0,0.3)]">
           <div className="flex items-center justify-around px-1 py-1">
@@ -173,6 +184,11 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
                 >
                   <div className="relative">
                     <Icon className={`w-5 h-5 ${tab.active ? "drop-shadow-[0_0_6px_hsl(var(--primary))]" : ""}`} />
+                    {tab.badge && (
+                      <span className="absolute -top-2 -right-4 min-w-[1.75rem] rounded-full border border-primary/40 bg-card px-1 py-0.5 text-center font-orbitron text-[8px] leading-none text-primary shadow-[0_0_8px_hsl(var(--primary)/0.2)]">
+                        {tab.badge}
+                      </span>
+                    )}
                     {tab.active && (
                       <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary shadow-[0_0_4px_hsl(var(--primary))]" />
                     )}
@@ -186,7 +202,6 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
               );
             })}
           </div>
-          {/* Safe area for notched phones */}
           <div className="h-[env(safe-area-inset-bottom,0px)] bg-card/95" />
         </div>
       </nav>
