@@ -278,6 +278,42 @@ const FeedPage: React.FC = () => {
     </div>
   );
 
+  const attachControls = (
+    <div className="space-y-2">
+      {pickedMedia ? (
+        <div className="relative inline-block rounded-md overflow-hidden border border-primary/40 bg-card/40">
+          {pickedMedia.type === "video" ? (
+            <video src={pickedMedia.url} muted playsInline className="h-24 w-24 object-cover" />
+          ) : (
+            <img src={pickedMedia.url} alt="Selected media" className="h-24 w-24 object-cover" />
+          )}
+          <button
+            type="button"
+            onClick={() => setPickedMedia(null)}
+            className="absolute top-1 right-1 bg-black/70 rounded-full p-0.5 text-white hover:bg-black"
+            aria-label="Remove attached media"
+          >
+            <X className="w-3 h-3" />
+          </button>
+          <div className="absolute bottom-1 left-1 bg-black/60 backdrop-blur-sm rounded px-1 py-0.5 flex items-center gap-1">
+            {pickedMedia.type === "video"
+              ? <Film className="w-2.5 h-2.5 text-white" />
+              : <ImageIcon className="w-2.5 h-2.5 text-white" />}
+            <span className="font-mono-share text-[8px] text-white tracking-wider">ATTACHED</span>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setLibraryPickerOpen(true)}
+          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-border/40 bg-card/40 text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors font-mono-share text-[10px] tracking-wider"
+        >
+          <FolderOpen className="w-3.5 h-3.5" /> ADD FROM LIBRARY
+        </button>
+      )}
+    </div>
+  );
+
   const filterTabs = (variant: "mobile" | "desktop") => {
     const baseInactive = variant === "mobile"
       ? "border-white/10 bg-black/30 text-white/70 backdrop-blur-sm"
