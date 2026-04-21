@@ -374,11 +374,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  // PATCH — unlock a locked post (pay credits)
+  // PATCH — unlock a locked post (pay credits) OR toggle is_mature flag
   if (req.method === "PATCH") {
     try {
-      const { postId } = req.body || {};
+      const { postId, action, isMature } = req.body || {};
       if (!postId) return res.status(400).json({ error: "postId required" });
+
+      // ── Sub-action: toggle 18+ flag (owner / admin / mod) ──
+      if (action === "set-mature") {
+        const [target] = await sql`SELECT user_id FROM feed_posts WHERE id = ${postId}::uuid`;
+        if (!target) return res.status(404).json({ error: "Post not found" });
+        const isAdminUser = auth.email === (process.env.ADMIN_EMAIL || "cyberdreadx@proton.me");
+        const modRows = await sql`SELECT 1 FROM feed_moderators WHERE user_id = ${auth.userId} LIMIT 1`;
+        const allowed = target.user_id === auth.userId || isAdminUser || modRows.length > 0;
+        if (!allowed) return res.status(403).json({ error: "Not allowed" });
+        const next = !!isMature;
+        await sql`UPDATE feed_posts SET is_mature = ${next} WHERE id = ${postId}::uuid`;
+        return res.status(200).json({ ok: true, isMature: next });
+      }
 
       const [post] = await sql`SELECT id, user_id, lock_cost, lock_price_cents FROM feed_posts WHERE id = ${postId}::uuid`;
       if (!post) return res.status(404).json({ error: "Post not found" });

@@ -53,6 +53,7 @@ const FeedPage: React.FC = () => {
   const [storeOpen, setStoreOpen] = useState(false);
   const [prefsOpen, setPrefsOpen] = useState(false);
   const [lockPrice, setLockPrice] = useState("");
+  const [matureFlag, setMatureFlag] = useState(false);
   const [lockXrge, setLockXrge] = useState("");
   const [activeCreator, setActiveCreator] = useState<FeedCreator | null>(null);
   const [reelTarget, setReelTarget] = useState<{ postId: string; userId?: string } | null>(null);
@@ -143,6 +144,7 @@ const FeedPage: React.FC = () => {
     setPosting(true);
     try {
       const body: any = { text: newText.trim() };
+      if (matureFlag) body.isMature = true;
       if (lockEnabled) {
         if (lockCredits) body.lockCost = parseInt(lockCredits) || 0;
         if (lockPrice) body.lockPriceCents = Math.round(parseFloat(lockPrice) * 100) || 0;
@@ -152,6 +154,7 @@ const FeedPage: React.FC = () => {
       setNewText("");
       setShowCompose(false);
       setLockEnabled(false);
+      setMatureFlag(false);
       setLockCredits("");
       setLockPrice("");
       setLockXrge("");
