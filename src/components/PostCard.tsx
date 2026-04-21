@@ -82,20 +82,26 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
   const [unlocking, setUnlocking] = useState(false);
   const [isUnlocked, setIsUnlocked] = useState(post.unlocked ?? true);
   const [matureRevealed, setMatureRevealed] = useState(false);
+  const [matureFlagged, setMatureFlagged] = useState(!!post.isMature);
+  const [togglingMature, setTogglingMature] = useState(false);
 
   // Sync unlock state when props change (e.g. after fetchFeed refresh)
   React.useEffect(() => {
     if (post.unlocked !== undefined) setIsUnlocked(post.unlocked);
   }, [post.unlocked]);
+  React.useEffect(() => {
+    setMatureFlagged(!!post.isMature);
+  }, [post.isMature]);
   const [revealedText, setRevealedText] = useState<string | null>(null);
   const [revealedImage, setRevealedImage] = useState<string | null>(null);
   const [xrgeUnlockOpen, setXrgeUnlockOpen] = useState(false);
 
   const isLocked = !isUnlocked && !post.isOwner && ((post.lockCost || 0) > 0 || (post.lockPriceCents || 0) > 0 || !!(post.lockXrgeAmount && parseFloat(post.lockXrgeAmount) > 0));
-  const isMatureBlurred = !isLocked && matureFilter && !!post.isMature && !matureRevealed && !post.isOwner;
+  const isMatureBlurred = !isLocked && matureFilter && matureFlagged && !matureRevealed && !post.isOwner;
 
   const isAdminOrMod = !!user?.is_admin || !!user?.is_feed_mod;
   const canDelete = user?.id === post.userId || isAdminOrMod;
+  const canToggleMature = user?.id === post.userId || isAdminOrMod;
 
   const handleVote = async (emoji: "👍" | "👎") => {
     if (isLocked) return;
@@ -170,6 +176,22 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
       onUpdate?.();
     } catch (err: any) {
       toast({ title: err.message || "Failed to ban", variant: "destructive" });
+    }
+  };
+
+  const handleToggleMature = async () => {
+    if (togglingMature) return;
+    const next = !matureFlagged;
+    setTogglingMature(true);
+    setMatureFlagged(next);
+    try {
+      await apiFetch("/feed", { method: "PATCH", body: { postId: post.id, action: "set-mature", isMature: next } });
+      toast({ title: next ? "Marked as 18+" : "Removed 18+ tag" });
+    } catch (err: any) {
+      setMatureFlagged(!next);
+      toast({ title: err.message || "Failed to update", variant: "destructive" });
+    } finally {
+      setTogglingMature(false);
     }
   };
 
@@ -258,6 +280,16 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
               >
                 <Flag className={`w-3.5 h-3.5 mr-2 ${userFlagged ? "fill-current text-destructive" : ""}`} />
                 {userFlagged ? "Reported" : "Report post"}
+              </DropdownMenuItem>
+            )}
+            {canToggleMature && (
+              <DropdownMenuItem
+                onClick={handleToggleMature}
+                disabled={togglingMature}
+                className="cursor-pointer"
+              >
+                <EyeOff className="w-3.5 h-3.5 mr-2" />
+                {matureFlagged ? "Unmark as 18+" : "Mark as 18+"}
               </DropdownMenuItem>
             )}
             {canDelete && (

@@ -53,6 +53,7 @@ const FeedPage: React.FC = () => {
   const [storeOpen, setStoreOpen] = useState(false);
   const [prefsOpen, setPrefsOpen] = useState(false);
   const [lockPrice, setLockPrice] = useState("");
+  const [matureFlag, setMatureFlag] = useState(false);
   const [lockXrge, setLockXrge] = useState("");
   const [activeCreator, setActiveCreator] = useState<FeedCreator | null>(null);
   const [reelTarget, setReelTarget] = useState<{ postId: string; userId?: string } | null>(null);
@@ -143,6 +144,7 @@ const FeedPage: React.FC = () => {
     setPosting(true);
     try {
       const body: any = { text: newText.trim() };
+      if (matureFlag) body.isMature = true;
       if (lockEnabled) {
         if (lockCredits) body.lockCost = parseInt(lockCredits) || 0;
         if (lockPrice) body.lockPriceCents = Math.round(parseFloat(lockPrice) * 100) || 0;
@@ -152,6 +154,7 @@ const FeedPage: React.FC = () => {
       setNewText("");
       setShowCompose(false);
       setLockEnabled(false);
+      setMatureFlag(false);
       setLockCredits("");
       setLockPrice("");
       setLockXrge("");
@@ -219,6 +222,12 @@ const FeedPage: React.FC = () => {
         <Switch checked={lockEnabled} onCheckedChange={setLockEnabled} />
         <span className="font-mono-share text-[10px] text-muted-foreground flex items-center gap-1">
           <Lock className="w-3 h-3" /> Lock this post
+        </span>
+      </div>
+      <div className="flex items-center gap-2">
+        <Switch checked={matureFlag} onCheckedChange={setMatureFlag} />
+        <span className={`font-mono-share text-[10px] flex items-center gap-1 ${matureFlag ? "text-amber-300" : "text-muted-foreground"}`}>
+          <ShieldAlert className="w-3 h-3" /> Mark as 18+ / mature
         </span>
       </div>
       {lockEnabled && (
