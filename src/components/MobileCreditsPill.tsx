@@ -63,10 +63,10 @@ const MobileCreditsPill: React.FC<MobileCreditsPillProps> = ({ onOpenStore }) =>
         }}
       >
         <div className="flex items-center rounded-full border border-primary/40 bg-card/90 backdrop-blur-md shadow-[0_0_8px_hsl(var(--primary)/0.2)] overflow-hidden">
-          <button
-            onClick={onOpenStore}
-            aria-label={`Credits balance: ${label}. Tap to open store.`}
-            className="flex items-center gap-1 pl-2.5 pr-2 py-1 active:scale-95 transition-transform"
+          {/* Balance segment — read-only display */}
+          <div
+            className="flex items-center gap-1 pl-2.5 pr-2 py-1"
+            aria-label={`Credits balance: ${label}`}
           >
             <Coins className="w-3 h-3 text-primary drop-shadow-[0_0_3px_hsl(var(--primary))]" />
             <span className="font-orbitron text-[10px] tracking-wider text-primary leading-none">
@@ -77,7 +77,16 @@ const MobileCreditsPill: React.FC<MobileCreditsPillProps> = ({ onOpenStore }) =>
                 BYOK
               </span>
             )}
+          </div>
+          {/* Cart segment — opens store */}
+          <button
+            onClick={onOpenStore}
+            aria-label="Open store"
+            className="flex items-center justify-center px-2 py-1 border-l border-primary/30 text-secondary hover:text-secondary/80 active:scale-95 transition-transform"
+          >
+            <ShoppingCart className="w-3 h-3" />
           </button>
+          {/* Info segment — opens credits/BYOK explanation */}
           <button
             onClick={() => setNoticeOpen((v) => !v)}
             aria-label="What are credits?"
