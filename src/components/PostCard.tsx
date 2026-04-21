@@ -179,6 +179,22 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
     }
   };
 
+  const handleToggleMature = async () => {
+    if (togglingMature) return;
+    const next = !matureFlagged;
+    setTogglingMature(true);
+    setMatureFlagged(next);
+    try {
+      await apiFetch("/feed", { method: "PATCH", body: { postId: post.id, action: "set-mature", isMature: next } });
+      toast({ title: next ? "Marked as 18+" : "Removed 18+ tag" });
+    } catch (err: any) {
+      setMatureFlagged(!next);
+      toast({ title: err.message || "Failed to update", variant: "destructive" });
+    } finally {
+      setTogglingMature(false);
+    }
+  };
+
   const handleUnlockCredits = async () => {
     setUnlocking(true);
     try {
@@ -264,6 +280,16 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
               >
                 <Flag className={`w-3.5 h-3.5 mr-2 ${userFlagged ? "fill-current text-destructive" : ""}`} />
                 {userFlagged ? "Reported" : "Report post"}
+              </DropdownMenuItem>
+            )}
+            {canToggleMature && (
+              <DropdownMenuItem
+                onClick={handleToggleMature}
+                disabled={togglingMature}
+                className="cursor-pointer"
+              >
+                <EyeOff className="w-3.5 h-3.5 mr-2" />
+                {matureFlagged ? "Unmark as 18+" : "Mark as 18+"}
               </DropdownMenuItem>
             )}
             {canDelete && (
