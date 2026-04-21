@@ -224,6 +224,12 @@ const FeedPage: React.FC = () => {
           <Lock className="w-3 h-3" /> Lock this post
         </span>
       </div>
+      <div className="flex items-center gap-2">
+        <Switch checked={matureFlag} onCheckedChange={setMatureFlag} />
+        <span className={`font-mono-share text-[10px] flex items-center gap-1 ${matureFlag ? "text-amber-300" : "text-muted-foreground"}`}>
+          <ShieldAlert className="w-3 h-3" /> Mark as 18+ / mature
+        </span>
+      </div>
       {lockEnabled && (
         <div className="flex gap-2 flex-wrap">
           <div className="flex-1 min-w-[80px]">
