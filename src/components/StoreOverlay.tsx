@@ -41,6 +41,7 @@ const StoreOverlay: React.FC<StoreOverlayProps> = ({ open, onOpenChange }) => {
       onCreditsRefresh={credits.refreshCredits}
       externalOpen={open}
       onExternalOpenChange={onOpenChange}
+      hideTrigger
     />
   );
 };
