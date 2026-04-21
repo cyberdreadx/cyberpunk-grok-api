@@ -352,8 +352,12 @@ export function useGrokApi() {
       localStorage.setItem("api-mode", mode);
       localStorage.setItem("api-mode-explicit", "1");
     } catch {}
-    try { window.dispatchEvent(new StorageEvent("storage", { key: "api-mode", newValue: mode })); } catch {}
+    // Broadcast to other tabs (and sibling hook instances in this tab).
+    // Native `storage` events fire automatically in *other* tabs as a
+    // fallback when BroadcastChannel is unavailable.
+    publishApiMode({ kind: "api-mode", mode });
   }, []);
+
   useEffect(() => {
     const revalidate = () => {
       try {
@@ -379,21 +383,31 @@ export function useGrokApi() {
         setApiModeState((cur) => (cur === next ? cur : next));
       } catch {}
     };
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === "api-mode" && (e.newValue === "byok" || e.newValue === "credits")) {
-        setApiModeState(e.newValue);
-      } else if (e.key === "xai-api-key" || e.key === "api-mode-explicit" || e.key === null) {
+
+    const unsubscribe = subscribeApiMode((msg) => {
+      if (msg.kind === "api-mode") {
+        // Direct mode change from another tab/component — apply, but still
+        // run revalidate so we honour the BYOK-key invariant.
+        setApiModeState(msg.mode);
+        revalidate();
+      } else if (msg.kind === "xai-key") {
         revalidate();
       }
+    });
+
+    const onKeyChanged = () => {
+      // Same-tab key add/remove via setApiKey/clearApiKey helpers.
+      publishApiMode({ kind: "xai-key", hasKey: !!localStorage.getItem("xai-api-key") });
+      revalidate();
     };
-    const onKeyChanged = () => revalidate();
-    window.addEventListener("storage", onStorage);
     window.addEventListener("xai-api-key-changed", onKeyChanged);
+
     // Run once on mount in case the key changed between initial state
     // computation and effect setup (e.g. another hook instance updated it).
     revalidate();
+
     return () => {
-      window.removeEventListener("storage", onStorage);
+      unsubscribe();
       window.removeEventListener("xai-api-key-changed", onKeyChanged);
     };
   }, []);
