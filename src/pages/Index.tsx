@@ -997,12 +997,25 @@ const Index = () => {
             </Suspense>
           </div>
 
-          <GlitchText
-            text="GROK_RUNNER"
-            as="h1"
-            className="font-orbitron text-2xl sm:text-3xl md:text-5xl font-black tracking-wider neon-text-cyan"
-            glitchIntensity="medium"
-          />
+          <div className="relative flex items-center justify-center gap-3">
+            <GlitchText
+              text="GROK_RUNNER"
+              as="h1"
+              className="font-orbitron text-2xl sm:text-3xl md:text-5xl font-black tracking-wider neon-text-cyan"
+              glitchIntensity="medium"
+            />
+            {canUseCredits && (
+              <button
+                onClick={() => setStoreOpen(true)}
+                aria-label="Open store"
+                title="Open store"
+                className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded border border-secondary/50 bg-secondary/10 text-secondary hover:bg-secondary/20 hover:border-secondary transition-all font-orbitron text-[10px] tracking-wider"
+              >
+                <ShoppingCart className="w-3 h-3" />
+                STORE
+              </button>
+            )}
+          </div>
           <p className="font-mono-share text-xs sm:text-sm text-muted-foreground animate-flicker">
             <span className="text-primary/50">$</span> {t("header.subtitle")} // v{APP_VERSION}
             <span className="inline-block w-2 h-4 bg-primary/70 ml-1 animate-pulse align-middle" />
