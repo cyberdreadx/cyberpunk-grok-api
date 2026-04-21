@@ -13,6 +13,9 @@ import EarningsPanel from "@/components/EarningsPanel";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import { useToast } from "@/hooks/use-toast";
 import { upload } from "@vercel/blob/client";
+import MobileBottomNav from "@/components/MobileBottomNav";
+import StoreOverlay from "@/components/StoreOverlay";
+import PreferencesDialog from "@/components/PreferencesDialog";
 
 interface Profile {
   userId: string;
@@ -400,7 +403,25 @@ const ProfilePage: React.FC = () => {
           )}
         </div>
       </div>
+      <ProfileMobileChrome />
     </CyberLayout>
+  );
+};
+
+const ProfileMobileChrome: React.FC = () => {
+  const { isAuthenticated } = useAuth();
+  const [storeOpen, setStoreOpen] = useState(false);
+  const [prefsOpen, setPrefsOpen] = useState(false);
+  return (
+    <>
+      <MobileBottomNav
+        isAuthenticated={isAuthenticated}
+        onOpenStore={() => setStoreOpen(true)}
+        onOpenSettings={() => setPrefsOpen(true)}
+      />
+      <StoreOverlay open={storeOpen} onOpenChange={setStoreOpen} />
+      <PreferencesDialog open={prefsOpen} onOpenChange={setPrefsOpen} />
+    </>
   );
 };
 

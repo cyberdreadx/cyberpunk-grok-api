@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { createPortal } from "react-dom";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Sparkles, Image, Users, ShoppingCart, MoreHorizontal, HelpCircle, FileText, Shield, ScrollText, Rss } from "lucide-react";
+import { Sparkles, Image, Users, ShoppingCart, MoreHorizontal, HelpCircle, FileText, Shield, ScrollText, Rss, User, Settings as SettingsIcon } from "lucide-react";
 
 interface MobileBottomNavProps {
   isAuthenticated?: boolean;
@@ -11,6 +11,8 @@ interface MobileBottomNavProps {
   onOpenChangelog?: () => void;
   onOpenTos?: () => void;
   onOpenPrivacy?: () => void;
+  onOpenSettings?: () => void;
+  onOpenAuth?: () => void;
 }
 
 const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
@@ -20,6 +22,8 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   onOpenChangelog,
   onOpenTos,
   onOpenPrivacy,
+  onOpenSettings,
+  onOpenAuth,
 }) => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -97,6 +101,27 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
             style={{ bottom: 'calc(62px + env(safe-area-inset-bottom, 0px))' }}
             onClick={(e) => e.stopPropagation()}
           >
+            <button
+              onClick={() => {
+                if (isAuthenticated) navigate("/profile");
+                else onOpenAuth?.();
+                setMoreOpen(false);
+              }}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded hover:bg-primary/10 transition-colors"
+            >
+              <User className="w-4 h-4 text-primary/60" />
+              <span className="font-mono-share text-[11px] text-foreground/80">
+                {isAuthenticated ? "PROFILE" : "SIGN IN"}
+              </span>
+            </button>
+            <button
+              onClick={() => { onOpenSettings?.(); setMoreOpen(false); }}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded hover:bg-primary/10 transition-colors"
+            >
+              <SettingsIcon className="w-4 h-4 text-primary/60" />
+              <span className="font-mono-share text-[11px] text-foreground/80">SETTINGS</span>
+            </button>
+            <div className="h-px bg-border/30 my-1" />
             <button
               onClick={() => { onOpenGuide?.(); setMoreOpen(false); }}
               className="w-full flex items-center gap-3 px-3 py-2.5 rounded hover:bg-primary/10 transition-colors"
