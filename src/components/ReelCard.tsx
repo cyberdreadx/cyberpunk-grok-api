@@ -368,7 +368,7 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate, active = true, moun
           >
             <MoreHorizontal className="w-5 h-5" />
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-44 font-mono-share text-xs">
+          <DropdownMenuContent align="end" side="left" className="z-[120] w-44 font-mono-share text-xs">
             <DropdownMenuItem onClick={handleCopyLink} className="cursor-pointer">
               <Link2 className="w-3.5 h-3.5 mr-2" /> Copy link
             </DropdownMenuItem>
