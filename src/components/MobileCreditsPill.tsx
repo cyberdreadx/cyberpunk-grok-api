@@ -10,9 +10,10 @@
  */
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Coins, Info, X } from "lucide-react";
+import { Coins, Info, X, Key } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCredits } from "@/hooks/useCredits";
+import { useCreditsView } from "@/hooks/useCreditsView";
 
 interface MobileCreditsPillProps {
   onOpenStore?: () => void;
