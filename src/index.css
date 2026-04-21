@@ -507,3 +507,35 @@
 [dir="rtl"] .left-2 { left: auto; right: 0.5rem; }
 [dir="rtl"] .text-left { text-align: right; }
 [dir="rtl"] .text-right { text-align: left; }
+
+/* ─────────────────────────────────────────────────────────────
+ * Mobile credits pill clearance
+ *
+ * The MobileCreditsPill is fixed at the top-right of the viewport
+ * on mobile (sm: hidden on desktop). It measures roughly
+ * 110px wide × 28px tall including the info dot.
+ *
+ * Page-level mobile sticky headers should reserve space so their
+ * controls (tabs, buttons) never sit underneath the pill. Apply
+ * the .mobile-pill-clear utility to any header row on mobile.
+ * ───────────────────────────────────────────────────────────── */
+:root {
+  --mobile-pill-clearance: 132px;
+  --mobile-pill-height: 36px;
+}
+
+@media (min-width: 640px) {
+  :root {
+    --mobile-pill-clearance: 0px;
+    --mobile-pill-height: 0px;
+  }
+}
+
+.mobile-pill-clear {
+  padding-right: var(--mobile-pill-clearance);
+}
+
+[dir="rtl"] .mobile-pill-clear {
+  padding-right: 0;
+  padding-left: var(--mobile-pill-clearance);
+}
