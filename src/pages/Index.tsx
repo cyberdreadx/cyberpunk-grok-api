@@ -2471,8 +2471,8 @@ const Index = () => {
       {/* Temu-style social proof */}
       <SocialProofToast />
 
-      {/* Persistent credits pill (mobile) */}
-      <MobileCreditsPill onOpenStore={() => setStoreOpen(true)} />
+      {/* Credits pill is rendered inline in the FEED/CREATE row above on
+          this page to avoid overlapping the toggle. */}
 
       {/* Mobile bottom navigation */}
       <MobileBottomNav
