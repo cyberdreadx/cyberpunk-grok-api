@@ -40,6 +40,8 @@ interface CreditDisplayProps {
   onCreditsRefresh?: () => void;
   externalOpen?: boolean;
   onExternalOpenChange?: (open: boolean) => void;
+  /** When true, hide the inline balance + cart trigger and only render the dialog. */
+  hideTrigger?: boolean;
 }
 
 const CreditDisplay: React.FC<CreditDisplayProps> = ({
@@ -62,6 +64,7 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
   onCreditsRefresh,
   externalOpen,
   onExternalOpenChange,
+  hideTrigger = false,
 }) => {
   const { t } = useTranslation();
   const { sale: flashSale, timeLeft: flashTimeLeft, appliesTo: flashApplies } = useFlashSale();
@@ -97,9 +100,9 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
   const isControlled = externalOpen !== undefined;
 
   return (
-    <div className={isControlled ? "contents" : "flex items-center gap-2"}>
-      {/* Credit balance badge — hidden when controlled externally (overlay mode) */}
-      {!isControlled && (
+    <div className={hideTrigger ? "contents" : "flex items-center gap-2"}>
+      {/* Credit balance badge */}
+      {!hideTrigger && (
         <div
           className="flex items-center gap-1.5 bg-card/60 border border-border/50 rounded px-2 py-1 cursor-default"
           title={`Daily: ${dailyCredits} | Subscription: ${subCredits} | Pack: ${packCredits}`}
@@ -116,9 +119,11 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
         </div>
       )}
 
-      {/* Buy / Store button */}
+      {/* Buy / Store button — always rendered (even when externally controlled),
+          so the desktop header always exposes a visible cart entry point.
+          Hidden only when hideTrigger is explicitly set (e.g. StoreOverlay). */}
       <Dialog open={open} onOpenChange={setOpen}>
-        {!isControlled && (
+        {!hideTrigger && (
           <DialogTrigger asChild>
             <Button
               variant="ghost"
