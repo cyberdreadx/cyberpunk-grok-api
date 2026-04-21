@@ -82,20 +82,26 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
   const [unlocking, setUnlocking] = useState(false);
   const [isUnlocked, setIsUnlocked] = useState(post.unlocked ?? true);
   const [matureRevealed, setMatureRevealed] = useState(false);
+  const [matureFlagged, setMatureFlagged] = useState(!!post.isMature);
+  const [togglingMature, setTogglingMature] = useState(false);
 
   // Sync unlock state when props change (e.g. after fetchFeed refresh)
   React.useEffect(() => {
     if (post.unlocked !== undefined) setIsUnlocked(post.unlocked);
   }, [post.unlocked]);
+  React.useEffect(() => {
+    setMatureFlagged(!!post.isMature);
+  }, [post.isMature]);
   const [revealedText, setRevealedText] = useState<string | null>(null);
   const [revealedImage, setRevealedImage] = useState<string | null>(null);
   const [xrgeUnlockOpen, setXrgeUnlockOpen] = useState(false);
 
   const isLocked = !isUnlocked && !post.isOwner && ((post.lockCost || 0) > 0 || (post.lockPriceCents || 0) > 0 || !!(post.lockXrgeAmount && parseFloat(post.lockXrgeAmount) > 0));
-  const isMatureBlurred = !isLocked && matureFilter && !!post.isMature && !matureRevealed && !post.isOwner;
+  const isMatureBlurred = !isLocked && matureFilter && matureFlagged && !matureRevealed && !post.isOwner;
 
   const isAdminOrMod = !!user?.is_admin || !!user?.is_feed_mod;
   const canDelete = user?.id === post.userId || isAdminOrMod;
+  const canToggleMature = user?.id === post.userId || isAdminOrMod;
 
   const handleVote = async (emoji: "👍" | "👎") => {
     if (isLocked) return;
