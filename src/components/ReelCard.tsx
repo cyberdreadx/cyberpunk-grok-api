@@ -68,6 +68,8 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate, active = true, moun
   const [isUnlocked, setIsUnlocked] = useState(post.unlocked ?? true);
   const [mediaFailed, setMediaFailed] = useState(false);
   const [matureRevealed, setMatureRevealed] = useState(false);
+  const [matureFlagged, setMatureFlagged] = useState(!!post.isMature);
+  const [togglingMature, setTogglingMature] = useState(false);
 
   // Sync unlock state when props change (e.g. after fetchFeed refresh)
   React.useEffect(() => {
@@ -82,6 +84,24 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate, active = true, moun
   const isMatureBlurred = !isLocked && matureFilter && !!post.isMature && !matureRevealed && !post.isOwner;
   const isAdminOrMod = !!user?.is_admin || !!user?.is_feed_mod;
   const canDelete = user?.id === post.userId || isAdminOrMod;
+  const canToggleMature = user?.id === post.userId || isAdminOrMod;
+
+  const handleToggleMature = async () => {
+    if (togglingMature) return;
+    const next = !matureFlagged;
+    setTogglingMature(true);
+    setMatureFlagged(next);
+    try {
+      await apiFetch("/feed", { method: "PATCH", body: { postId: post.id, action: "set-mature", isMature: next } });
+      toast({ title: next ? "Marked as 18+" : "Removed 18+ tag" });
+      onUpdate?.();
+    } catch (err: any) {
+      setMatureFlagged(!next);
+      toast({ title: err.message || "Failed to update", variant: "destructive" });
+    } finally {
+      setTogglingMature(false);
+    }
+  };
 
   const handleCopyLink = async () => {
     try {
@@ -380,6 +400,16 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate, active = true, moun
               >
                 <Flag className={`w-3.5 h-3.5 mr-2 ${userFlagged ? "fill-current text-destructive" : ""}`} />
                 {userFlagged ? "Reported" : "Report"}
+              </DropdownMenuItem>
+            )}
+            {canToggleMature && (
+              <DropdownMenuItem
+                onClick={handleToggleMature}
+                disabled={togglingMature}
+                className="cursor-pointer"
+              >
+                <EyeOff className="w-3.5 h-3.5 mr-2" />
+                {matureFlagged ? "Unmark as 18+" : "Mark as 18+"}
               </DropdownMenuItem>
             )}
             {canDelete && (
