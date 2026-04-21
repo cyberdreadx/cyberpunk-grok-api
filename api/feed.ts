@@ -334,6 +334,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       await sql`ALTER TABLE feed_posts ADD COLUMN IF NOT EXISTS lock_price_cents INT NOT NULL DEFAULT 0`.catch(() => {});
       await sql`ALTER TABLE feed_posts ADD COLUMN IF NOT EXISTS lock_xrge_amount TEXT DEFAULT NULL`.catch(() => {});
       await sql`ALTER TABLE feed_posts ADD COLUMN IF NOT EXISTS is_mature BOOLEAN NOT NULL DEFAULT false`.catch(() => {});
+      await sql`CREATE TABLE IF NOT EXISTS feed_idempotency (
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        idempotency_key TEXT NOT NULL,
+        post_id UUID NOT NULL REFERENCES feed_posts(id) ON DELETE CASCADE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        PRIMARY KEY (user_id, idempotency_key)
+      )`.catch(() => {});
 
       // Check if user is banned
       const ban = await checkBan(sql, auth.userId);
@@ -344,6 +351,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Posting gate: must have purchased credits at least once
       if (!(await hasPurchased(sql, auth.userId))) {
         return res.status(403).json({ error: POSTING_GATE_MESSAGE, code: "PURCHASE_REQUIRED" });
+      }
+
+      // ── Idempotency: if the client retries the same logical request, return
+      // the existing post instead of creating a duplicate. We accept either an
+      // `Idempotency-Key` header (preferred) or an idempotencyKey field in
+      // the body. Keys are scoped per user and considered fresh for 24h.
+      const headerKeyRaw = req.headers["idempotency-key"];
+      const headerKey = Array.isArray(headerKeyRaw) ? headerKeyRaw[0] : headerKeyRaw;
+      const bodyKey = (req.body && (req.body.idempotencyKey || req.body.idempotency_key)) || null;
+      const idempotencyKey = (headerKey || bodyKey || "").toString().slice(0, 128).trim() || null;
+
+      if (idempotencyKey) {
+        const existing = await sql`
+          SELECT p.id, p.created_at
+          FROM feed_idempotency i
+          JOIN feed_posts p ON p.id = i.post_id
+          WHERE i.user_id = ${auth.userId}
+            AND i.idempotency_key = ${idempotencyKey}
+            AND i.created_at > now() - interval '24 hours'
+          LIMIT 1
+        `.catch(() => []);
+        if (existing.length > 0) {
+          return res.status(200).json({
+            id: existing[0].id,
+            createdAt: existing[0].created_at,
+            idempotent: true,
+          });
+        }
       }
 
       const { text, imageUrl, lockCost, lockPriceCents, lockXrgeAmount, isMature } = req.body || {};
@@ -367,6 +402,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         VALUES (${auth.userId}, ${text || ""}, ${imageUrl || null}, ${cost}, ${priceCents}, ${xrgeAmount}, ${mature})
         RETURNING id, created_at
       `;
+
+      // Best-effort: record the idempotency mapping. If two requests race,
+      // the unique PK prevents both from inserting; the loser sees a conflict
+      // and silently moves on (the client still got a valid post back here).
+      if (idempotencyKey) {
+        await sql`
+          INSERT INTO feed_idempotency (user_id, idempotency_key, post_id)
+          VALUES (${auth.userId}, ${idempotencyKey}, ${rows[0].id})
+          ON CONFLICT (user_id, idempotency_key) DO NOTHING
+        `.catch(() => {});
+      }
+
       return res.status(201).json({ id: rows[0].id, createdAt: rows[0].created_at });
     } catch (err: any) {
       console.error("[feed POST]", err.message);
