@@ -161,7 +161,7 @@ const FeedPage: React.FC = () => {
     return () => io.disconnect();
   }, [nextCursor, loadingMore, fetchCreators]);
 
-  const handlePost = async () => {
+  const submitPost = async () => {
     if (!newText.trim() && !pickedMedia) return;
     setPosting(true);
     try {
@@ -173,9 +173,20 @@ const FeedPage: React.FC = () => {
         if (lockPrice) body.lockPriceCents = Math.round(parseFloat(lockPrice) * 100) || 0;
         if (lockXrge) body.lockXrgeAmount = lockXrge;
       }
-      await apiFetch("/feed", { method: "POST", body });
+      const key = ensureIdempotencyKey();
+      const result = await apiFetch<{ id: string; idempotent?: boolean }>("/feed", {
+        method: "POST",
+        body,
+        headers: { "Idempotency-Key": key },
+      });
+      if (result?.idempotent) {
+        toast({ title: "Already posted", description: "Your previous attempt already went through." });
+      }
+      // Reset compose for the next post — including a fresh idempotency key.
+      idempotencyKeyRef.current = "";
       setNewText("");
       setShowCompose(false);
+      setConfirmOpen(false);
       setLockEnabled(false);
       setMatureFlag(false);
       setLockCredits("");
@@ -189,6 +200,14 @@ const FeedPage: React.FC = () => {
     } finally {
       setPosting(false);
     }
+  };
+
+  /** Click-handler for the POST button: opens confirmation instead of submitting directly. */
+  const handlePost = () => {
+    if (posting) return; // double-click guard
+    if (!newText.trim() && !pickedMedia) return;
+    ensureIdempotencyKey();
+    setConfirmOpen(true);
   };
 
   const handlePickFromLibrary = useCallback(async (result: GrokResult) => {
