@@ -128,6 +128,7 @@ export async function hasKarmaUnlock(sql: any, userId: string): Promise<{
   accountAgeHours: number;
   minAccountAgeHours: number;
 }> {
+  await ensureSchema(sql);
   try {
     const [row] = await sql`
       SELECT
