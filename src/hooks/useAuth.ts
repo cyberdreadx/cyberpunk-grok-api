@@ -51,7 +51,7 @@ export function useAuth() {
       setLoading(false);
       return;
     }
-    apiFetch<AuthUser & { email_verified?: boolean; is_admin?: boolean; is_feed_mod?: boolean; is_verified?: boolean; verification_status?: AuthUser["verification_status"] }>("/auth/me")
+    apiFetch<AuthUser>("/auth/me")
       .then((data) => {
         setUser({
           id: data.id,
@@ -61,12 +61,35 @@ export function useAuth() {
           is_feed_mod: data.is_feed_mod,
           is_verified: data.is_verified,
           verification_status: data.verification_status,
+          karma: data.karma,
+          posting: data.posting,
         });
       })
       .catch(() => {
         clearAuthToken();
       })
       .finally(() => setLoading(false));
+  }, []);
+
+  /** Re-fetch the authenticated user (karma, posting status, credits, etc.). */
+  const refreshUser = useCallback(async () => {
+    if (!hasAuthToken()) return;
+    try {
+      const data = await apiFetch<AuthUser>("/auth/me");
+      setUser({
+        id: data.id,
+        email: data.email,
+        email_verified: data.email_verified,
+        is_admin: data.is_admin,
+        is_feed_mod: data.is_feed_mod,
+        is_verified: data.is_verified,
+        verification_status: data.verification_status,
+        karma: data.karma,
+        posting: data.posting,
+      });
+    } catch {
+      /* ignore */
+    }
   }, []);
 
   const signUp = useCallback(async (email: string, password: string, referralCode?: string) => {
