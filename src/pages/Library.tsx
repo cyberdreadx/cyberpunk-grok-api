@@ -117,12 +117,12 @@ const Library: React.FC = () => {
 
   const handleEditImage = useCallback((imageUrl: string) => {
     sessionStorage.setItem("library-edit-image", imageUrl);
-    navigate("/?action=edit");
+    navigate("/create?action=edit");
   }, [navigate]);
 
   const handleAnimateImage = useCallback((imageUrl: string) => {
     sessionStorage.setItem("library-animate-image", imageUrl);
-    navigate("/?action=animate");
+    navigate("/create?action=animate");
   }, [navigate]);
 
   // Filter results by search query and type
