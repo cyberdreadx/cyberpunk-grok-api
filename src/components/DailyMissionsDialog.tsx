@@ -29,6 +29,8 @@ const SHARE_INTENTS: Record<"reddit" | "twitter", { url: string; label: string }
 
 export default function DailyMissionsDialog({ status, loading, claiming, onClaim, onClaimStreak, onCreditsRefresh }: Props) {
   const [open, setOpen] = useState(false);
+  const [activeProof, setActiveProof] = useState<string | null>(null);
+  const [proofUrl, setProofUrl] = useState("");
 
   if (!status && !loading) return null;
 
@@ -44,9 +46,13 @@ export default function DailyMissionsDialog({ status, loading, claiming, onClaim
   const todayComplete = missions.length > 0 && claimedToday.length >= missions.length;
   const canClaimStreakBonus = streakDay >= cycleDays && !streakBonusClaimed;
 
-  const handleClaim = async (mission: string) => {
-    const ok = await onClaim(mission);
-    if (ok) onCreditsRefresh?.();
+  const handleClaim = async (mission: string, url?: string) => {
+    const ok = await onClaim(mission, url);
+    if (ok) {
+      onCreditsRefresh?.();
+      setActiveProof(null);
+      setProofUrl("");
+    }
   };
 
   const handleStreakClaim = async () => {
