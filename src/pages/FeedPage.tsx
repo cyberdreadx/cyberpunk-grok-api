@@ -534,7 +534,7 @@ const FeedPage: React.FC = () => {
             </div>
           </div>
         )}
-        <div className="min-h-[100dvh] bg-background pb-24">
+        <div className="min-h-[100dvh] w-full max-w-full overflow-x-hidden bg-background pb-24">
           {/* Sticky header */}
           <div
             className="sticky z-30 bg-background/85 backdrop-blur-md border-b border-border/30 px-3 py-2 space-y-2"
