@@ -1,23 +1,30 @@
 import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { CalendarCheck, Gift, Star, CheckCircle2, Circle, Trophy, Flame, Share2, Image, MessageCircle, Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { CalendarCheck, Gift, Star, CheckCircle2, Circle, Trophy, Flame, Share2, MessageCircle, Loader2, ExternalLink, X } from "lucide-react";
 import type { MissionStatus } from "@/hooks/useDailyMissions";
 
 interface Props {
   status: MissionStatus | null;
   loading: boolean;
   claiming: boolean;
-  onClaim: (mission: string) => Promise<boolean>;
+  onClaim: (mission: string, url?: string) => Promise<boolean>;
   onClaimStreak: () => Promise<boolean>;
   onCreditsRefresh?: () => void;
 }
 
-const MISSION_META: Record<string, { label: string; desc: string; icon: React.ReactNode }> = {
+const MISSION_META: Record<string, { label: string; desc: string; icon: React.ReactNode; needsUrl?: "reddit" | "twitter" }> = {
   login:    { label: "Daily Check-in",  desc: "Open the app and claim",         icon: <CalendarCheck className="w-4 h-4" /> },
-  story:    { label: "Post a Story",    desc: "Share a creation to Stories",     icon: <MessageCircle className="w-4 h-4" /> },
-  reddit:   { label: "Share on Reddit", desc: "Post to r/GrokRunner",           icon: <Share2 className="w-4 h-4" /> },
+  story:    { label: "Post a Story",    desc: "Share a creation to Stories",    icon: <MessageCircle className="w-4 h-4" /> },
+  reddit:   { label: "Share on Reddit", desc: "Post to r/GrokRunner & paste link", icon: <Share2 className="w-4 h-4" />, needsUrl: "reddit" },
+  twitter:  { label: "Share on X",      desc: "Post on X & paste your link",    icon: <Share2 className="w-4 h-4" />, needsUrl: "twitter" },
   share:    { label: "Share Creation",  desc: "Share any result with a link",   icon: <Share2 className="w-4 h-4" /> },
+};
+
+const SHARE_INTENTS: Record<"reddit" | "twitter", { url: string; label: string }> = {
+  reddit:  { url: "https://www.reddit.com/r/GrokRunner/submit?title=Check%20out%20what%20I%20made%20with%20Grok%20Runner&url=https://grokrunner.gltch.app", label: "Open Reddit" },
+  twitter: { url: "https://x.com/intent/tweet?text=Check%20out%20what%20I%20made%20with%20%40GrokRunner%20%E2%80%94%20free%20AI%20image%20%26%20video%20generation%20https%3A%2F%2Fgrokrunner.gltch.app", label: "Open X" },
 };
 
 export default function DailyMissionsDialog({ status, loading, claiming, onClaim, onClaimStreak, onCreditsRefresh }: Props) {
