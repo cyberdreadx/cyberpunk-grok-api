@@ -4,13 +4,18 @@ import { getUserFromRequest } from "./_lib/auth";
 import { checkRateLimit } from "./_lib/ratelimit";
 import { awardKarma } from "./_lib/karma";
 
-const MISSIONS = ["login", "story", "reddit", "share"] as const;
+const MISSIONS = ["login", "story", "reddit", "twitter", "share"] as const;
 const MISSION_CREDITS: Record<string, number> = {
   login: 3,
   story: 7,
   reddit: 10,
+  twitter: 10,
   share: 10,
 };
+
+// URL validators for social proof missions
+const REDDIT_URL_RE = /^https?:\/\/(www\.|old\.|new\.)?reddit\.com\/(r\/[A-Za-z0-9_]+\/)?(comments|s)\/[A-Za-z0-9]+/i;
+const TWITTER_URL_RE = /^https?:\/\/(www\.|mobile\.)?(twitter\.com|x\.com)\/[A-Za-z0-9_]{1,15}\/status\/\d+/i;
 const STREAK_BONUS = 50;
 const CYCLE_DAYS = 7;
 
@@ -30,14 +35,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return await getStatus(sql, auth.userId, res);
     }
     if (req.method === "POST") {
-      const { mission } = req.body || {};
+      const { mission, url } = req.body || {};
       if (mission === "streak_bonus") {
         return await claimStreakBonus(sql, auth.userId, res);
       }
       if (!MISSIONS.includes(mission)) {
         return res.status(400).json({ error: `Invalid mission. Must be one of: ${MISSIONS.join(", ")}` });
       }
-      return await claimMission(sql, auth.userId, mission, res);
+      return await claimMission(sql, auth.userId, mission, res, url);
     }
     return res.status(405).json({ error: "Method not allowed" });
   } catch (err: any) {
@@ -117,7 +122,7 @@ async function getStatus(sql: any, userId: string, res: VercelResponse) {
   });
 }
 
-async function claimMission(sql: any, userId: string, mission: string, res: VercelResponse) {
+async function claimMission(sql: any, userId: string, mission: string, res: VercelResponse, url?: string) {
   const today = new Date().toISOString().split("T")[0];
   await ensureProgress(sql, userId);
 
@@ -130,10 +135,42 @@ async function claimMission(sql: any, userId: string, mission: string, res: Verc
     return res.status(409).json({ error: "Already claimed today" });
   }
 
-  // ── Server-side verification ──
-  const verified = await verifyMission(sql, userId, mission, today);
-  if (!verified) {
-    return res.status(403).json({ error: `Mission "${mission}" not completed. Do the action first, then claim.` });
+  // ── URL-proof missions: validate, dedupe, and store proof ──
+  if (mission === "reddit" || mission === "twitter") {
+    const trimmed = (url || "").trim();
+    if (!trimmed) {
+      return res.status(400).json({ error: `Please paste your ${mission === "reddit" ? "Reddit" : "X"} post URL to claim.` });
+    }
+    if (trimmed.length > 500) {
+      return res.status(400).json({ error: "URL too long" });
+    }
+    const re = mission === "reddit" ? REDDIT_URL_RE : TWITTER_URL_RE;
+    if (!re.test(trimmed)) {
+      return res.status(400).json({
+        error: mission === "reddit"
+          ? "Invalid Reddit URL. Must look like https://reddit.com/r/.../comments/..."
+          : "Invalid X URL. Must look like https://x.com/username/status/123...",
+      });
+    }
+    // Dedupe: same URL can't be reused
+    const [dup] = await sql`SELECT id FROM daily_share_proofs WHERE url = ${trimmed} LIMIT 1`;
+    if (dup) {
+      return res.status(409).json({ error: "This URL has already been submitted. Share a new post." });
+    }
+    try {
+      await sql`
+        INSERT INTO daily_share_proofs (user_id, platform, url, claim_date)
+        VALUES (${userId}::uuid, ${mission}, ${trimmed}, ${today}::date)
+      `;
+    } catch (e: any) {
+      return res.status(409).json({ error: "Already submitted today" });
+    }
+  } else {
+    // ── Server-side verification for non-URL missions ──
+    const verified = await verifyMission(sql, userId, mission, today);
+    if (!verified) {
+      return res.status(403).json({ error: `Mission "${mission}" not completed. Do the action first, then claim.` });
+    }
   }
 
   const creditAmount = MISSION_CREDITS[mission] || 5;
@@ -178,14 +215,6 @@ async function verifyMission(sql: any, userId: string, mission: string, today: s
         LIMIT 1
       `;
       return !!story;
-    }
-
-    case "reddit": {
-      // Check if user has claimed the reddit reward (one-time, verified via secret code)
-      const [user] = await sql`
-        SELECT reddit_reward_claimed FROM users WHERE id = ${userId}::uuid
-      `;
-      return !!user?.reddit_reward_claimed;
     }
 
     case "share": {
