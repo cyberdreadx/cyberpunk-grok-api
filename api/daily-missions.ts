@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getDb } from "./_lib/db";
 import { getUserFromRequest } from "./_lib/auth";
 import { checkRateLimit } from "./_lib/ratelimit";
+import { awardKarma } from "./_lib/karma";
 
 const MISSIONS = ["login", "story", "reddit", "share"] as const;
 const MISSION_CREDITS: Record<string, number> = {
