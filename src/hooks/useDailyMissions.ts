@@ -36,17 +36,17 @@ export function useDailyMissions(user: AuthUser | null) {
 
   useEffect(() => { fetchStatus(); }, [fetchStatus]);
 
-  const claimMission = useCallback(async (mission: string) => {
+  const claimMission = useCallback(async (mission: string, url?: string) => {
     setClaiming(true);
     try {
-      await apiFetch("/daily-missions", { method: "POST", body: { mission } });
+      await apiFetch("/daily-missions", { method: "POST", body: { mission, url } });
       await fetchStatus();
       return true;
     } catch (err: any) {
       const msg = err.message || "Failed to claim";
       if (msg.includes("not completed")) {
         toast.error("Complete the mission first, then claim your reward!");
-      } else if (msg.includes("Already claimed")) {
+      } else if (msg.includes("Already claimed") || msg.includes("Already submitted")) {
         toast.info("Already claimed today");
       } else {
         toast.error(msg);
