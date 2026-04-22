@@ -56,6 +56,7 @@ const CommentThread: React.FC<CommentThreadProps> = ({ postId, onCountChange }) 
       setNewText("");
       setReplyTo(null);
       fetchComments();
+      window.dispatchEvent(new Event("karma-changed"));
       toast.success("Comment posted");
     } catch (err: any) {
       toast.error(err.message || "Failed to post comment");
