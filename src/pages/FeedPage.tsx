@@ -285,6 +285,11 @@ const FeedPage: React.FC = () => {
     </div>
   ) : null;
 
+  // Karma / posting eligibility strip — always shown to authenticated users.
+  const karmaStrip = isAuthenticated && user?.posting ? (
+    <KarmaBadge posting={user.posting} onOpenStore={() => setStoreOpen(true)} />
+  ) : null;
+
   const lockControls = (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
