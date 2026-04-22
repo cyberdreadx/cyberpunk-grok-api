@@ -2580,6 +2580,14 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <PostToFeedDialog
+        open={!!feedDialogResult}
+        onOpenChange={(o) => { if (!o) setFeedDialogResult(null); }}
+        defaultCaption={feedDialogResult?.revised_prompt || ""}
+        posting={!!feedDialogResult && feedPostingId === feedDialogResult.id}
+        onSubmit={submitPostToFeed}
+      />
     </div>
   );
 };
