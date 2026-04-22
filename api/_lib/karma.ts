@@ -62,6 +62,7 @@ export async function awardKarma(
   if (!userId) return false;
   const delta = KARMA_AWARDS[reason];
   if (!delta) return false;
+  await ensureSchema(sql);
 
   // Daily cap check
   const cap = DAILY_CAPS[reason];
@@ -101,6 +102,7 @@ export async function awardKarma(
  * Used when a vote is undone, a comment deleted, or a post removed.
  */
 export async function revertKarma(sql: any, sourceKey: string): Promise<void> {
+  await ensureSchema(sql);
   try {
     const rows = await sql`
       DELETE FROM karma_events WHERE source_key = ${sourceKey}
