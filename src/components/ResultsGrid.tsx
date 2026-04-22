@@ -1396,7 +1396,30 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
           lockXrgeAmount: xrgeAmount,
         }),
       });
-      if (!storyRes.ok) throw new Error("Failed to post story");
+      if (!storyRes.ok) {
+        const errBody = await storyRes.json().catch(() => null);
+        const code = errBody?.code;
+        const serverMsg = errBody?.error;
+        if (storyRes.status === 401) {
+          throw new Error("Please sign in to post a story.");
+        }
+        if (code === "PURCHASE_REQUIRED" || storyRes.status === 402) {
+          throw new Error(
+            serverMsg ||
+              "Posting to stories requires a credit purchase. Buy any credit pack, subscription, or XRGE to unlock posting."
+          );
+        }
+        if (code === "VERIFICATION_REQUIRED") {
+          throw new Error(
+            serverMsg ||
+              "Identity verification is required to set prices on stories. Verify your account to continue."
+          );
+        }
+        if (storyRes.status === 403) {
+          throw new Error(serverMsg || "You can't post a story right now.");
+        }
+        throw new Error(serverMsg || `Failed to post story (${storyRes.status})`);
+      }
 
       const parts: string[] = [];
       if (lockCost > 0) parts.push(`${lockCost} credits`);
