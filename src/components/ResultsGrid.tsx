@@ -27,6 +27,7 @@ import { exportLibraryAsZip, getResultDataUrl } from "@/lib/storage";
 import type { FolderFilter } from "@/hooks/useFolders";
 import { useSwipe } from "@/hooks/useSwipe";
 import ShareCTA from "@/components/ShareCTA";
+import PostToFeedDialog, { type PostToFeedValues } from "@/components/PostToFeedDialog";
 import { upload } from "@vercel/blob/client";
 import { apiUrl } from "@/lib/api";
 
