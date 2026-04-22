@@ -32,6 +32,7 @@ import SignupTeaser from "@/components/SignupTeaser";
 import StoreOverlay from "@/components/StoreOverlay";
 import PreferencesDialog from "@/components/PreferencesDialog";
 import LibraryPicker from "@/components/LibraryPicker";
+import KarmaBadge from "@/components/KarmaBadge";
 import { uploadLibraryItemForPost } from "@/lib/postMedia";
 import type { GrokResult } from "@/hooks/useGrokApi";
 
@@ -47,7 +48,7 @@ const FEED_RULES = [
 ];
 
 const FeedPage: React.FC = () => {
-  const { user, isAuthenticated, loading: authLoading } = useAuth();
+  const { user, isAuthenticated, loading: authLoading, refreshUser } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const isMobile = useIsMobile();
