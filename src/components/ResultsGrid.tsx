@@ -1219,8 +1219,15 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
 
   /** Upload media then post to feed */
   const [feedPostingId, setFeedPostingId] = useState<string | null>(null);
+  const [feedDialogResult, setFeedDialogResult] = useState<GrokResult | null>(null);
 
-  const handlePostToFeed = useCallback(async (result: GrokResult) => {
+  const handlePostToFeed = useCallback((result: GrokResult) => {
+    setFeedDialogResult(result);
+  }, []);
+
+  const submitPostToFeed = useCallback(async (values: PostToFeedValues) => {
+    const result = feedDialogResult;
+    if (!result) return;
     setFeedPostingId(result.id);
     try {
       const shareBase = (import.meta.env.VITE_API_URL as string) || "/api";
@@ -1280,18 +1287,26 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
-          text: result.revised_prompt || "",
+          text: values.caption || result.revised_prompt || "",
           imageUrl: mediaUrl,
+          isMature: values.isMature,
+          lockCost: values.lockCost,
+          lockPriceCents: values.lockPriceCents,
+          lockXrgeAmount: values.lockXrgeAmount || undefined,
         }),
       });
-      if (!feedRes.ok) throw new Error("Failed to post to feed");
+      if (!feedRes.ok) {
+        const errData = await feedRes.json().catch(() => ({}));
+        throw new Error(errData.error || "Failed to post to feed");
+      }
       toast.success("Posted to feed!");
+      setFeedDialogResult(null);
     } catch (err: any) {
       toast.error(err.message || "Failed to post to feed");
     } finally {
       setFeedPostingId(null);
     }
-  }, []);
+  }, [feedDialogResult]);
 
   // ── Post as Story ──────────────────────────────────────────────────────
   const [storyPostingId, setStoryPostingId] = useState<string | null>(null);
