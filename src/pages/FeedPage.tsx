@@ -528,7 +528,10 @@ const FeedPage: React.FC = () => {
       <>
         {isAuthenticated && (!rulesAcked || showRules) && (
           <div className="fixed inset-0 z-[60] bg-black/90 backdrop-blur-sm flex items-center justify-center p-6">
-            <div className="max-w-sm w-full">{rulesBanner}</div>
+            <div className="max-w-sm w-full space-y-3">
+              {rulesBanner}
+              {karmaStrip}
+            </div>
           </div>
         )}
         <div className="min-h-[100dvh] bg-background pb-24">
@@ -719,6 +722,7 @@ const FeedPage: React.FC = () => {
         </div>
 
         {isAuthenticated && rulesBanner}
+        {karmaStrip}
 
         {/* Stories at the very top */}
         <StoriesBar currentUserId={user?.id} isAdmin={!!user?.is_admin} />
