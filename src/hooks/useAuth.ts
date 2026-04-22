@@ -14,6 +14,17 @@ import {
 } from "@/lib/api";
 import { getBrowserFingerprint } from "@/lib/fingerprint";
 
+export interface PostingStatus {
+  can_post: boolean;
+  purchased: boolean;
+  karma: number;
+  karma_threshold: number;
+  karma_unlock_ok: boolean;
+  email_verified: boolean;
+  account_age_hours: number;
+  min_account_age_hours: number;
+}
+
 export interface AuthUser {
   id: string;
   email: string;
@@ -22,6 +33,8 @@ export interface AuthUser {
   is_feed_mod?: boolean;
   is_verified?: boolean;
   verification_status?: "unverified" | "pending" | "verified" | "lapsed";
+  karma?: number;
+  posting?: PostingStatus;
 }
 
 export function useAuth() {
