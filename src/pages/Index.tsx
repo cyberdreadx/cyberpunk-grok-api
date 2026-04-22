@@ -229,7 +229,7 @@ const Index = () => {
         setActivePrompt("");
         sessionStorage.removeItem("library-edit-image");
       }
-      window.history.replaceState({}, "", "/");
+      window.history.replaceState({}, "", "/create");
     } else if (action === "animate") {
       const url = sessionStorage.getItem("library-animate-image");
       if (url) {
@@ -238,11 +238,11 @@ const Index = () => {
         setActivePrompt("");
         sessionStorage.removeItem("library-animate-image");
       }
-      window.history.replaceState({}, "", "/");
+      window.history.replaceState({}, "", "/create");
     } else if (sharedPrompt) {
       setActivePrompt(sharedPrompt);
       setMode("text-to-image");
-      window.history.replaceState({}, "", "/");
+      window.history.replaceState({}, "", "/create");
     }
   }, []);
 
