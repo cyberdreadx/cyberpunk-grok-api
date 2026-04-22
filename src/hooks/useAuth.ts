@@ -92,6 +92,20 @@ export function useAuth() {
     }
   }, []);
 
+  // Auto-refresh karma/posting status when the tab regains focus or when a
+  // component dispatches `karma-changed` after an engagement action.
+  useEffect(() => {
+    if (!user) return;
+    const onFocus = () => refreshUser();
+    const onKarma = () => refreshUser();
+    window.addEventListener("focus", onFocus);
+    window.addEventListener("karma-changed", onKarma);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("karma-changed", onKarma);
+    };
+  }, [user, refreshUser]);
+
   const signUp = useCallback(async (email: string, password: string, referralCode?: string) => {
     const body: Record<string, string> = { email, password };
     if (referralCode) body.referral_code = referralCode;
