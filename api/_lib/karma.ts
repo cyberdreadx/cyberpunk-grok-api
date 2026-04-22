@@ -26,6 +26,29 @@ const DAILY_CAPS: Partial<Record<KarmaReason, number>> = {
   like_given: 5,       // max +5 karma/day from giving likes
 };
 
+let schemaEnsured = false;
+async function ensureSchema(sql: any): Promise<void> {
+  if (schemaEnsured) return;
+  try {
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS karma INTEGER NOT NULL DEFAULT 0`;
+    await sql`
+      CREATE TABLE IF NOT EXISTS karma_events (
+        id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        delta       INTEGER NOT NULL,
+        reason      TEXT NOT NULL,
+        source_key  TEXT NOT NULL,
+        created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+        UNIQUE (source_key)
+      )
+    `;
+    await sql`CREATE INDEX IF NOT EXISTS idx_karma_events_user_created ON karma_events(user_id, created_at DESC)`;
+    schemaEnsured = true;
+  } catch (err: any) {
+    console.error("[karma] ensureSchema:", err.message);
+  }
+}
+
 /**
  * Award karma idempotently. Returns true if awarded, false if already awarded
  * (duplicate source_key) or daily cap reached.
