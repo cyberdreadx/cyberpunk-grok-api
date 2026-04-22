@@ -234,6 +234,7 @@ export function useAuth() {
     isAuthenticated: !!user,
     pendingVerificationEmail,
     pendingTwoFactorEmail,
+    refreshUser,
     signUp,
     signIn,
     signOut,
