@@ -3,6 +3,8 @@ import { getDb } from "../_lib/db";
 import { getUserFromRequest, ADMIN_EMAIL } from "../_lib/auth";
 import { applyCors } from "../_lib/cors";
 import { checkRateLimit } from "../_lib/ratelimit";
+import { hasKarmaUnlock, KARMA_THRESHOLD } from "../_lib/karma";
+import { hasPurchased } from "../_lib/purchaseGate";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   applyCors(req, res, "GET, OPTIONS");
@@ -16,13 +18,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     await checkRateLimit(auth.userId, "me", { max: 60, windowSeconds: 60 });
 
     const sql = getDb();
-    // Defensive: ensure verification columns exist (idempotent)
+    // Defensive: ensure verification + karma columns exist (idempotent)
     await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_status TEXT NOT NULL DEFAULT 'unverified'`.catch(() => {});
     await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_renews_at TIMESTAMPTZ`.catch(() => {});
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS karma INTEGER NOT NULL DEFAULT 0`.catch(() => {});
 
     const rows = await sql`
       SELECT id, email, email_verified, sub_credits, pack_credits, subscription_tier, subscription_renews_at,
-             verification_status, verification_renews_at
+             verification_status, verification_renews_at, COALESCE(karma, 0)::int AS karma
       FROM users
       WHERE id = ${auth.userId}
     `;
@@ -39,6 +42,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       (user.verification_status === "verified" &&
         (!user.verification_renews_at || new Date(user.verification_renews_at) > new Date()));
 
+    // Posting eligibility — surface both paths so the UI can render the right CTA.
+    const purchased = await hasPurchased(sql, auth.userId);
+    const karmaUnlock = await hasKarmaUnlock(sql, auth.userId);
+    const canPostNow = isAdmin || purchased || karmaUnlock.ok;
+
     return res.status(200).json({
       id: user.id,
       email: user.email,
@@ -51,9 +59,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       pack_credits: user.pack_credits,
       subscription_tier: user.subscription_tier,
       subscription_renews_at: user.subscription_renews_at,
+      karma: user.karma,
+      posting: {
+        can_post: canPostNow,
+        purchased,
+        karma: user.karma,
+        karma_threshold: KARMA_THRESHOLD,
+        karma_unlock_ok: karmaUnlock.ok,
+        email_verified: karmaUnlock.emailVerified,
+        account_age_hours: Math.floor(karmaUnlock.accountAgeHours),
+        min_account_age_hours: karmaUnlock.minAccountAgeHours,
+      },
     });
   } catch (err: any) {
     console.error("[me]", err.message);
     return res.status(500).json({ error: "Failed to fetch profile" });
   }
 }
+
