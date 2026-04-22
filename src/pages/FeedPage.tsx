@@ -32,6 +32,7 @@ import SignupTeaser from "@/components/SignupTeaser";
 import StoreOverlay from "@/components/StoreOverlay";
 import PreferencesDialog from "@/components/PreferencesDialog";
 import LibraryPicker from "@/components/LibraryPicker";
+import KarmaBadge from "@/components/KarmaBadge";
 import { uploadLibraryItemForPost } from "@/lib/postMedia";
 import type { GrokResult } from "@/hooks/useGrokApi";
 
@@ -47,7 +48,7 @@ const FEED_RULES = [
 ];
 
 const FeedPage: React.FC = () => {
-  const { user, isAuthenticated, loading: authLoading } = useAuth();
+  const { user, isAuthenticated, loading: authLoading, refreshUser } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const isMobile = useIsMobile();
@@ -282,6 +283,11 @@ const FeedPage: React.FC = () => {
         I UNDERSTAND — CONTINUE
       </Button>
     </div>
+  ) : null;
+
+  // Karma / posting eligibility strip — always shown to authenticated users.
+  const karmaStrip = isAuthenticated && user?.posting ? (
+    <KarmaBadge posting={user.posting} onOpenStore={() => setStoreOpen(true)} />
   ) : null;
 
   const lockControls = (
@@ -522,7 +528,10 @@ const FeedPage: React.FC = () => {
       <>
         {isAuthenticated && (!rulesAcked || showRules) && (
           <div className="fixed inset-0 z-[60] bg-black/90 backdrop-blur-sm flex items-center justify-center p-6">
-            <div className="max-w-sm w-full">{rulesBanner}</div>
+            <div className="max-w-sm w-full space-y-3">
+              {rulesBanner}
+              {karmaStrip}
+            </div>
           </div>
         )}
         <div className="min-h-[100dvh] bg-background pb-24">
@@ -713,6 +722,7 @@ const FeedPage: React.FC = () => {
         </div>
 
         {isAuthenticated && rulesBanner}
+        {karmaStrip}
 
         {/* Stories at the very top */}
         <StoriesBar currentUserId={user?.id} isAdmin={!!user?.is_admin} />

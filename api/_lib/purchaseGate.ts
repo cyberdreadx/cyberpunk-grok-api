@@ -1,7 +1,11 @@
+import { hasKarmaUnlock, KARMA_THRESHOLD } from "./karma";
+
 /**
- * Posting gate: only users who have made at least one real purchase
- * (Stripe subscription, Stripe pack, or XRGE purchase) may post to feed/stories.
- * Daily/spin/mission credits do NOT count.
+ * Posting gate: users may post if they either
+ *   (a) have made a real purchase (Stripe / XRGE), OR
+ *   (b) have earned enough karma through engagement.
+ *
+ * Daily/spin/mission credits do NOT count as a purchase.
  */
 export async function hasPurchased(sql: any, userId: string): Promise<boolean> {
   try {
@@ -23,5 +27,14 @@ export async function hasPurchased(sql: any, userId: string): Promise<boolean> {
   }
 }
 
+/**
+ * Combined posting eligibility: purchase OR karma path.
+ */
+export async function canPost(sql: any, userId: string): Promise<boolean> {
+  if (await hasPurchased(sql, userId)) return true;
+  const k = await hasKarmaUnlock(sql, userId);
+  return k.ok;
+}
+
 export const POSTING_GATE_MESSAGE =
-  "Posting to the community feed and stories requires a credit purchase. Buy any credit pack, subscription, or XRGE to unlock posting.";
+  `Posting requires either a credit purchase or ${KARMA_THRESHOLD} karma from community engagement (verified email + 48h account age). Earn karma by commenting, reacting, and receiving upvotes — or unlock instantly with any credit pack, subscription, or XRGE.`;

@@ -14,6 +14,17 @@ import {
 } from "@/lib/api";
 import { getBrowserFingerprint } from "@/lib/fingerprint";
 
+export interface PostingStatus {
+  can_post: boolean;
+  purchased: boolean;
+  karma: number;
+  karma_threshold: number;
+  karma_unlock_ok: boolean;
+  email_verified: boolean;
+  account_age_hours: number;
+  min_account_age_hours: number;
+}
+
 export interface AuthUser {
   id: string;
   email: string;
@@ -22,6 +33,8 @@ export interface AuthUser {
   is_feed_mod?: boolean;
   is_verified?: boolean;
   verification_status?: "unverified" | "pending" | "verified" | "lapsed";
+  karma?: number;
+  posting?: PostingStatus;
 }
 
 export function useAuth() {
@@ -38,7 +51,7 @@ export function useAuth() {
       setLoading(false);
       return;
     }
-    apiFetch<AuthUser & { email_verified?: boolean; is_admin?: boolean; is_feed_mod?: boolean; is_verified?: boolean; verification_status?: AuthUser["verification_status"] }>("/auth/me")
+    apiFetch<AuthUser>("/auth/me")
       .then((data) => {
         setUser({
           id: data.id,
@@ -48,6 +61,8 @@ export function useAuth() {
           is_feed_mod: data.is_feed_mod,
           is_verified: data.is_verified,
           verification_status: data.verification_status,
+          karma: data.karma,
+          posting: data.posting,
         });
       })
       .catch(() => {
@@ -55,6 +70,41 @@ export function useAuth() {
       })
       .finally(() => setLoading(false));
   }, []);
+
+  /** Re-fetch the authenticated user (karma, posting status, credits, etc.). */
+  const refreshUser = useCallback(async () => {
+    if (!hasAuthToken()) return;
+    try {
+      const data = await apiFetch<AuthUser>("/auth/me");
+      setUser({
+        id: data.id,
+        email: data.email,
+        email_verified: data.email_verified,
+        is_admin: data.is_admin,
+        is_feed_mod: data.is_feed_mod,
+        is_verified: data.is_verified,
+        verification_status: data.verification_status,
+        karma: data.karma,
+        posting: data.posting,
+      });
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  // Auto-refresh karma/posting status when the tab regains focus or when a
+  // component dispatches `karma-changed` after an engagement action.
+  useEffect(() => {
+    if (!user) return;
+    const onFocus = () => refreshUser();
+    const onKarma = () => refreshUser();
+    window.addEventListener("focus", onFocus);
+    window.addEventListener("karma-changed", onKarma);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("karma-changed", onKarma);
+    };
+  }, [user, refreshUser]);
 
   const signUp = useCallback(async (email: string, password: string, referralCode?: string) => {
     const body: Record<string, string> = { email, password };
@@ -198,6 +248,7 @@ export function useAuth() {
     isAuthenticated: !!user,
     pendingVerificationEmail,
     pendingTwoFactorEmail,
+    refreshUser,
     signUp,
     signIn,
     signOut,

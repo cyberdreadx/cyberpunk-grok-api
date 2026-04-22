@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getDb } from "./_lib/db";
 import { getUserFromRequest } from "./_lib/auth";
 import { checkRateLimit } from "./_lib/ratelimit";
+import { awardKarma } from "./_lib/karma";
 
 const MISSIONS = ["login", "story", "reddit", "share"] as const;
 const MISSION_CREDITS: Record<string, number> = {
@@ -156,6 +157,9 @@ async function claimMission(sql: any, userId: string, mission: string, res: Verc
     WHERE user_id = ${userId}
   `;
 
+  // Karma — engagement reward for completing a mission
+  await awardKarma(sql, userId, "daily_mission", `mission:${today}:${mission}`);
+
   return res.status(200).json({ credited: creditAmount, mission });
 }
 
@@ -221,6 +225,9 @@ async function claimStreakBonus(sql: any, userId: string, res: VercelResponse) {
         total_earned = total_earned + ${STREAK_BONUS}, updated_at = now()
     WHERE user_id = ${userId}
   `;
+
+  // Karma — completing a 7-day streak is a strong engagement signal
+  await awardKarma(sql, userId, "streak_bonus", `streak_bonus:${today}:${userId}`);
 
   return res.status(200).json({ credited: STREAK_BONUS, mission: "streak_bonus" });
 }

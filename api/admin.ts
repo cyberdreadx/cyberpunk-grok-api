@@ -877,6 +877,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           VALUES (${targetId}::uuid, ${banReason || 'Violation of community guidelines'}, ${adminAuth?.userId || null}::uuid, ${expiresAt}::timestamptz)
           ON CONFLICT (user_id) DO UPDATE SET reason = EXCLUDED.reason, created_at = now(), expires_at = EXCLUDED.expires_at
         `;
+        // Zero karma on ban so the karma-based posting unlock cannot survive a sanction.
+        await sql`UPDATE users SET karma = 0 WHERE id = ${targetId}::uuid`.catch(() => {});
+        await sql`DELETE FROM karma_events WHERE user_id = ${targetId}::uuid`.catch(() => {});
         console.log(`[admin] Banned user ${banEmail || banUserId} — reason: ${banReason || 'none'} — duration: ${duration || 'permanent'}`);
         return res.json({ success: true });
       }

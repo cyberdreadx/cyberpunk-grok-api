@@ -201,6 +201,7 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
         setLiked(corrected);
         currentStory.userLiked = corrected;
       }
+      window.dispatchEvent(new Event("karma-changed"));
     } catch {
       setLiked(prevLiked);
       setLikeCount(prevCount);

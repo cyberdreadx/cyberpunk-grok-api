@@ -119,6 +119,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
     }
     try {
       await apiFetch("/reactions", { method: "POST", body: { postId: post.id, emoji } });
+      window.dispatchEvent(new Event("karma-changed"));
     } catch (err: any) {
       setScore(prevScore);
       setUserVote(prevVote);
