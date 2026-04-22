@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getUserFromRequest } from "./_lib/auth";
 import { getDb } from "./_lib/db";
 import { notify } from "./_lib/notify";
+import { awardKarma, revertKarma } from "./_lib/karma";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -14,7 +15,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const sql = getDb();
 
-  // GET — list comments for a post
   if (req.method === "GET") {
     const { postId } = req.query;
     if (!postId) return res.status(400).json({ error: "postId required" });
@@ -43,7 +43,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  // POST — add comment
   if (req.method === "POST") {
     const { postId, text, parentId } = req.body || {};
     if (!postId || !text) return res.status(400).json({ error: "postId and text required" });
@@ -54,11 +53,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         VALUES (${postId}, ${auth.userId}, ${parentId || null}, ${text})
         RETURNING id, created_at
       `;
+      const commentId = rows[0].id;
 
-      // Get commenter profile + post owner for notification
+      // Karma — actor: +1 (capped/day), post owner: +2 per comment
+      await awardKarma(sql, auth.userId, "comment_post", `comment_post:${commentId}`);
+
       const [profile] = await sql`SELECT username, avatar_url FROM profiles WHERE user_id = ${auth.userId}`;
       const [postOwner] = await sql`SELECT user_id FROM feed_posts WHERE id = ${postId}`;
       if (postOwner && postOwner.user_id !== auth.userId) {
+        await awardKarma(sql, postOwner.user_id, "comment_received", `comment_received:${commentId}`);
         notify({
           userId: postOwner.user_id,
           type: "comment",
@@ -71,19 +74,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
 
-      return res.status(201).json({ id: rows[0].id, createdAt: rows[0].created_at });
+      return res.status(201).json({ id: commentId, createdAt: rows[0].created_at });
     } catch (err: any) {
       console.error("[comments POST]", err.message);
       return res.status(500).json({ error: "Failed to add comment" });
     }
   }
 
-  // DELETE — delete own comment
   if (req.method === "DELETE") {
     const { commentId } = req.body || {};
     if (!commentId) return res.status(400).json({ error: "commentId required" });
     try {
       await sql`DELETE FROM feed_comments WHERE id = ${commentId} AND user_id = ${auth.userId}`;
+      await revertKarma(sql, `comment_post:${commentId}`);
+      await revertKarma(sql, `comment_received:${commentId}`);
       return res.json({ success: true });
     } catch (err: any) {
       console.error("[comments DELETE]", err.message);
