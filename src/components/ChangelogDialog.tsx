@@ -24,6 +24,18 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
     {
+        version: "2026.04.23",
+        date: "April 23, 2026",
+        title: "v4.8 — Social Proof Missions & Pack Buyer Fix",
+        items: [
+            { icon: <Share2 className="w-3.5 h-3.5" />, text: "Reddit daily mission now requires a real post URL — paste your r/GrokRunner share link to claim", tag: "improve" },
+            { icon: <Share2 className="w-3.5 h-3.5" />, text: "New X (Twitter) daily mission — share a post on X and submit the link for +10 credits/day", tag: "new" },
+            { icon: <Shield className="w-3.5 h-3.5" />, text: "URL deduplication — every submitted share link is unique platform-wide, no recycling old posts", tag: "new" },
+            { icon: <Bug className="w-3.5 h-3.5" />, text: "Credit-pack buyers unblocked — 'Failed to post story' fix for users whose Stripe customer ID never persisted on one-time purchases", tag: "fix" },
+            { icon: <Wrench className="w-3.5 h-3.5" />, text: "Backfill migration retroactively unlocks posting for affected pack customers", tag: "fix" },
+        ],
+    },
+    {
         version: "2026.04.20",
         date: "April 20, 2026",
         title: "v4.7 — Storage Hygiene & Auto-Purge",
