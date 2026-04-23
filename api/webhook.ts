@@ -236,6 +236,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       } else {
         console.log(`[webhook] Duplicate pack transaction skipped for session ${session.id}`);
       }
+
+      // Always persist stripe_customer_id on pack purchases so the posting gate
+      // (canPost / hasPurchased) recognizes the user as a paying customer.
+      // Without this, users who buy credit packs get "Failed to post story".
+      if (session.customer) {
+        await sql`
+          UPDATE users
+          SET stripe_customer_id = ${session.customer as string}
+          WHERE id = ${userId}::uuid AND stripe_customer_id IS NULL
+        `;
+      }
     }
 
     // ── invoice.paid: subscription renewal → reset sub_credits ──
