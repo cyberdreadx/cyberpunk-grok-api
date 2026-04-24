@@ -1,20 +1,24 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getDb } from "./_lib/db";
-import { getUserFromRequest } from "./_lib/auth";
+import { getUserFromRequest, ADMIN_EMAIL } from "./_lib/auth";
 import { checkRateLimit } from "./_lib/ratelimit";
 import { awardKarma } from "./_lib/karma";
+import { notify } from "./_lib/notify";
 
-const MISSIONS = ["login", "story", "reddit", "twitter", "share"] as const;
+const MISSIONS = ["login", "story", "reddit", "grok_subreddit", "twitter", "share"] as const;
 const MISSION_CREDITS: Record<string, number> = {
   login: 3,
   story: 7,
   reddit: 10,
+  grok_subreddit: 15, // r/grok — highest-converting channel, premium reward
   twitter: 10,
   share: 10,
 };
 
 // URL validators for social proof missions
 const REDDIT_URL_RE = /^https?:\/\/(www\.|old\.|new\.)?reddit\.com\/(r\/[A-Za-z0-9_]+\/)?(comments|s)\/[A-Za-z0-9]+/i;
+// r/grok specifically — must be in that exact subreddit (case-insensitive)
+const GROK_SUBREDDIT_URL_RE = /^https?:\/\/(www\.|old\.|new\.)?reddit\.com\/r\/grok\/(comments|s)\/[A-Za-z0-9]+/i;
 const TWITTER_URL_RE = /^https?:\/\/(www\.|mobile\.)?(twitter\.com|x\.com)\/[A-Za-z0-9_]{1,15}\/status\/\d+/i;
 const STREAK_BONUS = 50;
 const CYCLE_DAYS = 7;
