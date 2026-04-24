@@ -19,7 +19,9 @@ const ApiDocs = lazyWithRetry(() => import("./pages/ApiDocs"), "api-docs");
 const FeedPage = lazyWithRetry(() => import("./pages/FeedPage"), "feed");
 const ProfilePage = lazyWithRetry(() => import("./pages/ProfilePage"), "profile");
 const ReferralPage = lazyWithRetry(() => import("./pages/ReferralPage"), "referral");
+const TerminalMode = lazyWithRetry(() => import("./pages/TerminalMode"), "terminal");
 import AgeGateDialog from "@/components/AgeGateDialog";
+import KonamiTerminalUnlock from "@/components/KonamiTerminalUnlock";
 
 const queryClient = new QueryClient();
 
