@@ -78,10 +78,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (reconciledSubscriptionId && !reconciledRenewsAt) {
           try {
             const sub = await stripe.subscriptions.retrieve(reconciledSubscriptionId);
+            const currentPeriodEnd = (sub as any)?.current_period_end as number | undefined;
             if (["active", "trialing", "past_due"].includes(sub.status)) {
               reconciledSubscriptionId = sub.id;
-              reconciledRenewsAt = sub.current_period_end
-                ? new Date(sub.current_period_end * 1000).toISOString()
+              reconciledRenewsAt = currentPeriodEnd
+                ? new Date(currentPeriodEnd * 1000).toISOString()
                 : null;
             }
           } catch (err: any) {
