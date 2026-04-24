@@ -76,6 +76,7 @@ const ProfilePage: React.FC = () => {
   const [followLoading, setFollowLoading] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [banLoading, setBanLoading] = useState(false);
+  const [verifyOpen, setVerifyOpen] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const fetchProfile = useCallback(async () => {
     try {
