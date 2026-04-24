@@ -139,24 +139,34 @@ async function claimMission(sql: any, userId: string, mission: string, res: Verc
     return res.status(409).json({ error: "Already claimed today" });
   }
 
-  // ── URL-proof missions: validate, dedupe, and store proof ──
-  if (mission === "reddit" || mission === "twitter") {
+  // ── URL-proof missions: validate, dedupe, age-check, and notify admin ──
+  const urlMissions = ["reddit", "grok_subreddit", "twitter"] as const;
+  if ((urlMissions as readonly string[]).includes(mission)) {
     const trimmed = (url || "").trim();
+    const platformLabel =
+      mission === "twitter" ? "X" : mission === "grok_subreddit" ? "r/grok Reddit" : "Reddit";
     if (!trimmed) {
-      return res.status(400).json({ error: `Please paste your ${mission === "reddit" ? "Reddit" : "X"} post URL to claim.` });
+      return res.status(400).json({ error: `Please paste your ${platformLabel} post URL to claim.` });
     }
     if (trimmed.length > 500) {
       return res.status(400).json({ error: "URL too long" });
     }
-    const re = mission === "reddit" ? REDDIT_URL_RE : TWITTER_URL_RE;
+    const re =
+      mission === "twitter"
+        ? TWITTER_URL_RE
+        : mission === "grok_subreddit"
+          ? GROK_SUBREDDIT_URL_RE
+          : REDDIT_URL_RE;
     if (!re.test(trimmed)) {
-      return res.status(400).json({
-        error: mission === "reddit"
-          ? "Invalid Reddit URL. Must look like https://reddit.com/r/.../comments/..."
-          : "Invalid X URL. Must look like https://x.com/username/status/123...",
-      });
+      const hint =
+        mission === "twitter"
+          ? "Invalid X URL. Must look like https://x.com/username/status/123..."
+          : mission === "grok_subreddit"
+            ? "Must be a post in r/grok. Example: https://reddit.com/r/grok/comments/..."
+            : "Invalid Reddit URL. Must look like https://reddit.com/r/.../comments/...";
+      return res.status(400).json({ error: hint });
     }
-    // Dedupe: same URL can't be reused
+    // Platform-wide dedup: same URL can never be reused (by anyone)
     const [dup] = await sql`SELECT id FROM daily_share_proofs WHERE url = ${trimmed} LIMIT 1`;
     if (dup) {
       return res.status(409).json({ error: "This URL has already been submitted. Share a new post." });
@@ -168,6 +178,24 @@ async function claimMission(sql: any, userId: string, mission: string, res: Verc
       `;
     } catch (e: any) {
       return res.status(409).json({ error: "Already submitted today" });
+    }
+
+    // ── Admin notification (fire-and-forget) so spam can be spot-checked ──
+    try {
+      const [admin] = await sql`SELECT id FROM users WHERE email = ${ADMIN_EMAIL} LIMIT 1`;
+      if (admin?.id && admin.id !== userId) {
+        const [actor] = await sql`SELECT email, COALESCE((SELECT username FROM profiles WHERE user_id = users.id), email) AS handle FROM users WHERE id = ${userId}`;
+        notify({
+          userId: admin.id,
+          type: "system",
+          title: `Social proof: ${platformLabel}`,
+          body: `@${actor?.handle || "user"} claimed ${mission} — ${trimmed}`,
+          actorId: userId,
+          refId: trimmed,
+        });
+      }
+    } catch (e) {
+      console.error("[daily-missions] admin notify failed", e);
     }
   } else {
     // ── Server-side verification for non-URL missions ──
