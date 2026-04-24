@@ -185,7 +185,7 @@ async function claimMission(sql: any, userId: string, mission: string, res: Verc
     if (mission === "grok_subreddit") {
       const check = await verifyRedditPost(trimmed);
       if (!check.ok) {
-        return res.status(400).json({ error: check.error });
+        return res.status(400).json({ error: (check as { ok: false; error: string }).error });
       }
     }
 
