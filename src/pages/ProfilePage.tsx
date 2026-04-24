@@ -8,9 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { UserPlus, UserMinus, Edit2, Check, X, ArrowLeft, Camera, Loader2, Wallet, Ban } from "lucide-react";
+import { UserPlus, UserMinus, Edit2, Check, X, ArrowLeft, Camera, Loader2, Wallet, Ban, BadgeCheck } from "lucide-react";
 import EarningsPanel from "@/components/EarningsPanel";
 import VerifiedBadge from "@/components/VerifiedBadge";
+import VerificationDialog from "@/components/VerificationDialog";
 import { useToast } from "@/hooks/use-toast";
 import { upload } from "@vercel/blob/client";
 import MobileBottomNav from "@/components/MobileBottomNav";
@@ -75,6 +76,7 @@ const ProfilePage: React.FC = () => {
   const [followLoading, setFollowLoading] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [banLoading, setBanLoading] = useState(false);
+  const [verifyOpen, setVerifyOpen] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const fetchProfile = useCallback(async () => {
     try {
@@ -314,6 +316,14 @@ const ProfilePage: React.FC = () => {
                       <span className="font-mono-share text-[8px] text-muted-foreground/40">BASE</span>
                     </div>
                   )}
+                  {profile.isOwn && !profile.verified && (
+                    <button
+                      onClick={() => setVerifyOpen(true)}
+                      className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-primary/40 bg-primary/10 hover:bg-primary/20 hover:border-primary/70 transition-colors font-mono-share text-[10px] text-primary tracking-widest shadow-[0_0_12px_hsl(var(--primary)/0.25)]"
+                    >
+                      <BadgeCheck className="w-3 h-3" /> GET VERIFIED
+                    </button>
+                  )}
                 </>
               )}
             </div>
@@ -404,6 +414,7 @@ const ProfilePage: React.FC = () => {
           )}
         </div>
       </div>
+      <VerificationDialog open={verifyOpen} onOpenChange={setVerifyOpen} />
       <ProfileMobileChrome />
     </CyberLayout>
   );
