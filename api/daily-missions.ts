@@ -301,3 +301,48 @@ async function claimStreakBonus(sql: any, userId: string, res: VercelResponse) {
 
   return res.status(200).json({ credited: STREAK_BONUS, mission: "streak_bonus" });
 }
+
+/**
+ * Public Reddit JSON API check used to enforce r/grok mission quality:
+ *  1. Post must be at least 10 minutes old (anti hit-and-delete spam)
+ *  2. Post must contain media (link, image, gallery) — no text-only/title-only posts
+ *
+ * Reddit's `<permalink>.json` is unauthenticated and returns post metadata.
+ * Returns { ok: true } on success or { ok: false, error } with a user-friendly message.
+ */
+async function verifyRedditPost(url: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    // Normalize → strip trailing slash, strip query, append .json
+    const cleanUrl = url.split("?")[0].replace(/\/$/, "") + ".json";
+    const resp = await fetch(cleanUrl, {
+      headers: { "User-Agent": "GltchDailyMissionBot/1.0" },
+      // Reddit can be slow — short timeout via AbortController
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!resp.ok) {
+      return { ok: false, error: `Couldn't read your post (Reddit returned ${resp.status}). Make sure it's public.` };
+    }
+    const data = await resp.json();
+    const post = data?.[0]?.data?.children?.[0]?.data;
+    if (!post) {
+      return { ok: false, error: "Couldn't parse your Reddit post. Try again in a moment." };
+    }
+    // 1. Age check
+    const ageSec = Math.floor(Date.now() / 1000) - (post.created_utc || 0);
+    if (ageSec < 600) {
+      const wait = Math.ceil((600 - ageSec) / 60);
+      return { ok: false, error: `Post is too new — wait ~${wait} more min before claiming (anti-spam).` };
+    }
+    // 2. Content type — must be a link/image/gallery, not a self-post with no media
+    const isSelfText = post.is_self === true;
+    const hasMedia = !!(post.url_overridden_by_dest || post.preview || post.is_gallery || post.media || post.thumbnail && post.thumbnail !== "self");
+    if (isSelfText && !hasMedia) {
+      return { ok: false, error: "Post must include an image, video, or link — text-only posts don't count." };
+    }
+    return { ok: true };
+  } catch (err: any) {
+    console.warn("[daily-missions] verifyRedditPost failed:", err.message);
+    // Soft-fail: if Reddit is down, accept the URL — better UX than blocking. Admin notify still fires.
+    return { ok: true };
+  }
+}
