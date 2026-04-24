@@ -11,6 +11,10 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import Stripe from "stripe";
 import { getDb } from "./_lib/db";
+import {
+  sendVerificationPaymentReceiptEmail,
+  sendVerificationApprovedEmail,
+} from "./_lib/email";
 
 // Vercel needs raw body for signature verification
 export const config = { api: { bodyParser: false } };
