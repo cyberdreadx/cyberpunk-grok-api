@@ -216,7 +216,8 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ isAuthenticated }) 
               ))
             )}
           </div>
-        </div>
+          </div>
+        </>
       )}
     </div>
   );
