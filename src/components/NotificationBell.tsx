@@ -37,6 +37,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ isAuthenticated }) 
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
 
   const fetchNotifications = useCallback(async () => {
     if (!isAuthenticated) return;
