@@ -112,6 +112,19 @@ async function getStatus(sql: any, userId: string, res: VercelResponse) {
   `;
   const claimedToday = claims.map((c: any) => c.mission);
 
+  // Most recent public feed post with media — used to prefill Reddit/X share URLs
+  // so users post their actual generations rather than a generic landing-page link.
+  let lastFeedPost: { id: string; image_url: string | null; text: string | null } | null = null;
+  try {
+    const [row] = await sql`
+      SELECT id::text, image_url, text
+      FROM feed_posts
+      WHERE user_id = ${userId}::uuid AND image_url IS NOT NULL
+      ORDER BY created_at DESC LIMIT 1
+    `;
+    if (row) lastFeedPost = row;
+  } catch {}
+
   return res.status(200).json({
     streakDay: progress.streak_day,
     cycleStart: progress.cycle_start,
@@ -123,6 +136,7 @@ async function getStatus(sql: any, userId: string, res: VercelResponse) {
     missionCredits: MISSION_CREDITS,
     streakBonus: STREAK_BONUS,
     cycleDays: CYCLE_DAYS,
+    lastFeedPost,
   });
 }
 
