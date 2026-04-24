@@ -72,13 +72,15 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ isAuthenticated }) 
     if (open) fetchNotifications();
   }, [open, fetchNotifications]);
 
-  // Close on outside click
+  // Close on outside click — must check both the trigger wrapper AND the
+  // floating popover (which is portaled out of `panelRef` via `fixed` positioning).
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
+      const target = e.target as Node;
+      const inTrigger = panelRef.current?.contains(target);
+      const inPopover = popoverRef.current?.contains(target);
+      if (!inTrigger && !inPopover) setOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
