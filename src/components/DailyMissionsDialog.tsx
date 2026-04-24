@@ -14,18 +14,54 @@ interface Props {
   onCreditsRefresh?: () => void;
 }
 
-const MISSION_META: Record<string, { label: string; desc: string; icon: React.ReactNode; needsUrl?: "reddit" | "twitter" }> = {
-  login:    { label: "Daily Check-in",  desc: "Open the app and claim",         icon: <CalendarCheck className="w-4 h-4" /> },
-  story:    { label: "Post a Story",    desc: "Share a creation to Stories",    icon: <MessageCircle className="w-4 h-4" /> },
-  reddit:   { label: "Share on Reddit", desc: "Post to r/GrokRunner & paste link", icon: <Share2 className="w-4 h-4" />, needsUrl: "reddit" },
-  twitter:  { label: "Share on X",      desc: "Post on X & paste your link",    icon: <Share2 className="w-4 h-4" />, needsUrl: "twitter" },
-  share:    { label: "Share Creation",  desc: "Share any result with a link",   icon: <Share2 className="w-4 h-4" /> },
+type ProofPlatform = "reddit" | "grok_subreddit" | "twitter";
+
+const MISSION_META: Record<string, { label: string; desc: string; icon: React.ReactNode; needsUrl?: ProofPlatform }> = {
+  login:           { label: "Daily Check-in",   desc: "Open the app and claim",                 icon: <CalendarCheck className="w-4 h-4" /> },
+  story:           { label: "Post a Story",      desc: "Share a creation to Stories",            icon: <MessageCircle className="w-4 h-4" /> },
+  reddit:          { label: "Share on Reddit",   desc: "Post to any subreddit & paste link",     icon: <Share2 className="w-4 h-4" />, needsUrl: "reddit" },
+  grok_subreddit:  { label: "Post in r/grok",    desc: "Post to r/grok (highest-converting!)",   icon: <Share2 className="w-4 h-4 text-orange-400" />, needsUrl: "grok_subreddit" },
+  twitter:         { label: "Share on X",        desc: "Post on X & paste your link",            icon: <Share2 className="w-4 h-4" /> , needsUrl: "twitter" },
+  share:           { label: "Share Creation",    desc: "Share any result with a link",           icon: <Share2 className="w-4 h-4" /> },
 };
 
-const SHARE_INTENTS: Record<"reddit" | "twitter", { url: string; label: string }> = {
-  reddit:  { url: "https://www.reddit.com/r/GrokRunner/submit?title=Check%20out%20what%20I%20made%20with%20Grok%20Runner&url=https://grokrunner.gltch.app", label: "Open Reddit" },
-  twitter: { url: "https://x.com/intent/tweet?text=Check%20out%20what%20I%20made%20with%20%40GrokRunner%20%E2%80%94%20free%20AI%20image%20%26%20video%20generation%20https%3A%2F%2Fgrokrunner.gltch.app", label: "Open X" },
-};
+/**
+ * Build a Reddit/X submit URL pre-filled with the user's most recent public
+ * feed post (image + caption) when available, otherwise fall back to a
+ * generic landing-page link. Authentic posts convert dramatically better
+ * than bare promo links.
+ */
+function buildShareIntent(
+  platform: ProofPlatform,
+  lastFeedPost: MissionStatus["lastFeedPost"]
+): { url: string; label: string; usingPrefill: boolean } {
+  const APP_URL = "https://grokrunner.gltch.app";
+  const mediaUrl = lastFeedPost?.image_url || null;
+  const caption = (lastFeedPost?.text || "").trim();
+  const usingPrefill = !!mediaUrl;
+
+  if (platform === "twitter") {
+    const text = usingPrefill
+      ? `${caption || "Made this with Grok Runner"} — ${APP_URL}`
+      : `Check out what I made with @GrokRunner — free AI image & video generation ${APP_URL}`;
+    // X intent supports `text` + `url`; if we have media we still link to gltch (X doesn't accept remote img upload via intent)
+    return { url: `https://x.com/intent/tweet?text=${encodeURIComponent(text)}`, label: "Open X", usingPrefill };
+  }
+
+  // Reddit: r/grok for the premium mission, generic GrokRunner otherwise
+  const subreddit = platform === "grok_subreddit" ? "grok" : "GrokRunner";
+  const title = usingPrefill
+    ? (caption.slice(0, 280) || "Made with Grok Runner")
+    : "Check out what I made with Grok Runner";
+  const linkUrl = mediaUrl || APP_URL;
+  // `url=` makes it a link/image post (qualifies for r/grok mission's media requirement)
+  const params = new URLSearchParams({ title, url: linkUrl });
+  return {
+    url: `https://www.reddit.com/r/${subreddit}/submit?${params.toString()}`,
+    label: platform === "grok_subreddit" ? "Open r/grok" : "Open Reddit",
+    usingPrefill,
+  };
+}
 
 export default function DailyMissionsDialog({ status, loading, claiming, onClaim, onClaimStreak, onCreditsRefresh }: Props) {
   const [open, setOpen] = useState(false);
@@ -160,11 +196,11 @@ export default function DailyMissionsDialog({ status, loading, claiming, onClaim
             <div className="space-y-2">
               <h3 className="text-xs text-muted-foreground uppercase tracking-wider">Today's Missions</h3>
               {missions.map((m) => {
-                const meta = MISSION_META[m] || { label: m, desc: "", icon: <Circle className="w-4 h-4" />, needsUrl: undefined as "reddit" | "twitter" | undefined };
+                const meta = MISSION_META[m] || { label: m, desc: "", icon: <Circle className="w-4 h-4" />, needsUrl: undefined as ProofPlatform | undefined };
                 const claimed = claimedToday.includes(m);
                 const reward = missionCredits[m] || 5;
                 const isOpenProof = activeProof === m;
-                const intent = meta.needsUrl ? SHARE_INTENTS[meta.needsUrl] : null;
+                const intent = meta.needsUrl ? buildShareIntent(meta.needsUrl, status?.lastFeedPost) : null;
                 return (
                   <div
                     key={m}
@@ -214,12 +250,20 @@ export default function DailyMissionsDialog({ status, loading, claiming, onClaim
                       </div>
                     </div>
 
-                    {/* URL proof flow for reddit/twitter */}
+                    {/* URL proof flow for reddit / r/grok / twitter */}
                     {isOpenProof && intent && !claimed && (
                       <div className="px-3 pb-3 space-y-2 border-t border-muted-foreground/10 pt-2">
                         <div className="flex items-center justify-between gap-2">
                           <p className="text-[10px] text-muted-foreground leading-snug flex-1">
-                            1. Post about Grok Runner. 2. Copy your post URL. 3. Paste it below.
+                            {meta.needsUrl === "grok_subreddit" ? (
+                              <>
+                                1. Post in r/grok (link or image — no text-only).{" "}
+                                2. Wait ~10 min so Reddit indexes it.{" "}
+                                3. Paste your post URL below.
+                              </>
+                            ) : (
+                              <>1. Post about Grok Runner. 2. Copy your post URL. 3. Paste it below.</>
+                            )}
                           </p>
                           <a
                             href={intent.url}
@@ -231,11 +275,22 @@ export default function DailyMissionsDialog({ status, loading, claiming, onClaim
                             <ExternalLink className="w-3 h-3" />
                           </a>
                         </div>
+                        {intent.usingPrefill && (
+                          <p className="text-[9px] text-primary/70 leading-snug">
+                            ✨ Pre-filled with your latest feed post — most authentic posts get the most upvotes.
+                          </p>
+                        )}
                         <div className="flex gap-2">
                           <Input
                             value={proofUrl}
                             onChange={(e) => setProofUrl(e.target.value)}
-                            placeholder={meta.needsUrl === "reddit" ? "https://reddit.com/r/.../comments/..." : "https://x.com/you/status/..."}
+                            placeholder={
+                              meta.needsUrl === "twitter"
+                                ? "https://x.com/you/status/..."
+                                : meta.needsUrl === "grok_subreddit"
+                                  ? "https://reddit.com/r/grok/comments/..."
+                                  : "https://reddit.com/r/.../comments/..."
+                            }
                             className="h-8 text-[11px] bg-background/50 border-muted-foreground/20"
                             disabled={claiming}
                           />

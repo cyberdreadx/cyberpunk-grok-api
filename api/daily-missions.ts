@@ -1,20 +1,24 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getDb } from "./_lib/db";
-import { getUserFromRequest } from "./_lib/auth";
+import { getUserFromRequest, ADMIN_EMAIL } from "./_lib/auth";
 import { checkRateLimit } from "./_lib/ratelimit";
 import { awardKarma } from "./_lib/karma";
+import { notify } from "./_lib/notify";
 
-const MISSIONS = ["login", "story", "reddit", "twitter", "share"] as const;
+const MISSIONS = ["login", "story", "reddit", "grok_subreddit", "twitter", "share"] as const;
 const MISSION_CREDITS: Record<string, number> = {
   login: 3,
   story: 7,
   reddit: 10,
+  grok_subreddit: 15, // r/grok — highest-converting channel, premium reward
   twitter: 10,
   share: 10,
 };
 
 // URL validators for social proof missions
 const REDDIT_URL_RE = /^https?:\/\/(www\.|old\.|new\.)?reddit\.com\/(r\/[A-Za-z0-9_]+\/)?(comments|s)\/[A-Za-z0-9]+/i;
+// r/grok specifically — must be in that exact subreddit (case-insensitive)
+const GROK_SUBREDDIT_URL_RE = /^https?:\/\/(www\.|old\.|new\.)?reddit\.com\/r\/grok\/(comments|s)\/[A-Za-z0-9]+/i;
 const TWITTER_URL_RE = /^https?:\/\/(www\.|mobile\.)?(twitter\.com|x\.com)\/[A-Za-z0-9_]{1,15}\/status\/\d+/i;
 const STREAK_BONUS = 50;
 const CYCLE_DAYS = 7;
@@ -108,6 +112,19 @@ async function getStatus(sql: any, userId: string, res: VercelResponse) {
   `;
   const claimedToday = claims.map((c: any) => c.mission);
 
+  // Most recent public feed post with media — used to prefill Reddit/X share URLs
+  // so users post their actual generations rather than a generic landing-page link.
+  let lastFeedPost: { id: string; image_url: string | null; text: string | null } | null = null;
+  try {
+    const [row] = await sql`
+      SELECT id::text, image_url, text
+      FROM feed_posts
+      WHERE user_id = ${userId}::uuid AND image_url IS NOT NULL
+      ORDER BY created_at DESC LIMIT 1
+    `;
+    if (row) lastFeedPost = row;
+  } catch {}
+
   return res.status(200).json({
     streakDay: progress.streak_day,
     cycleStart: progress.cycle_start,
@@ -119,6 +136,7 @@ async function getStatus(sql: any, userId: string, res: VercelResponse) {
     missionCredits: MISSION_CREDITS,
     streakBonus: STREAK_BONUS,
     cycleDays: CYCLE_DAYS,
+    lastFeedPost,
   });
 }
 
@@ -135,24 +153,43 @@ async function claimMission(sql: any, userId: string, mission: string, res: Verc
     return res.status(409).json({ error: "Already claimed today" });
   }
 
-  // ── URL-proof missions: validate, dedupe, and store proof ──
-  if (mission === "reddit" || mission === "twitter") {
+  // ── URL-proof missions: validate, dedupe, age-check, and notify admin ──
+  const urlMissions = ["reddit", "grok_subreddit", "twitter"] as const;
+  if ((urlMissions as readonly string[]).includes(mission)) {
     const trimmed = (url || "").trim();
+    const platformLabel =
+      mission === "twitter" ? "X" : mission === "grok_subreddit" ? "r/grok Reddit" : "Reddit";
     if (!trimmed) {
-      return res.status(400).json({ error: `Please paste your ${mission === "reddit" ? "Reddit" : "X"} post URL to claim.` });
+      return res.status(400).json({ error: `Please paste your ${platformLabel} post URL to claim.` });
     }
     if (trimmed.length > 500) {
       return res.status(400).json({ error: "URL too long" });
     }
-    const re = mission === "reddit" ? REDDIT_URL_RE : TWITTER_URL_RE;
+    const re =
+      mission === "twitter"
+        ? TWITTER_URL_RE
+        : mission === "grok_subreddit"
+          ? GROK_SUBREDDIT_URL_RE
+          : REDDIT_URL_RE;
     if (!re.test(trimmed)) {
-      return res.status(400).json({
-        error: mission === "reddit"
-          ? "Invalid Reddit URL. Must look like https://reddit.com/r/.../comments/..."
-          : "Invalid X URL. Must look like https://x.com/username/status/123...",
-      });
+      const hint =
+        mission === "twitter"
+          ? "Invalid X URL. Must look like https://x.com/username/status/123..."
+          : mission === "grok_subreddit"
+            ? "Must be a post in r/grok. Example: https://reddit.com/r/grok/comments/..."
+            : "Invalid Reddit URL. Must look like https://reddit.com/r/.../comments/...";
+      return res.status(400).json({ error: hint });
     }
-    // Dedupe: same URL can't be reused
+
+    // ── r/grok strict checks: post must be ≥10min old AND have a link/image (not text-only) ──
+    if (mission === "grok_subreddit") {
+      const check = await verifyRedditPost(trimmed);
+      if (!check.ok) {
+        return res.status(400).json({ error: (check as { ok: false; error: string }).error });
+      }
+    }
+
+    // Platform-wide dedup: same URL can never be reused (by anyone)
     const [dup] = await sql`SELECT id FROM daily_share_proofs WHERE url = ${trimmed} LIMIT 1`;
     if (dup) {
       return res.status(409).json({ error: "This URL has already been submitted. Share a new post." });
@@ -164,6 +201,24 @@ async function claimMission(sql: any, userId: string, mission: string, res: Verc
       `;
     } catch (e: any) {
       return res.status(409).json({ error: "Already submitted today" });
+    }
+
+    // ── Admin notification (fire-and-forget) so spam can be spot-checked ──
+    try {
+      const [admin] = await sql`SELECT id FROM users WHERE email = ${ADMIN_EMAIL} LIMIT 1`;
+      if (admin?.id && admin.id !== userId) {
+        const [actor] = await sql`SELECT email, COALESCE((SELECT username FROM profiles WHERE user_id = users.id), email) AS handle FROM users WHERE id = ${userId}`;
+        notify({
+          userId: admin.id,
+          type: "system",
+          title: `Social proof: ${platformLabel}`,
+          body: `@${actor?.handle || "user"} claimed ${mission} — ${trimmed}`,
+          actorId: userId,
+          refId: trimmed,
+        });
+      }
+    } catch (e) {
+      console.error("[daily-missions] admin notify failed", e);
     }
   } else {
     // ── Server-side verification for non-URL missions ──
@@ -259,4 +314,49 @@ async function claimStreakBonus(sql: any, userId: string, res: VercelResponse) {
   await awardKarma(sql, userId, "streak_bonus", `streak_bonus:${today}:${userId}`);
 
   return res.status(200).json({ credited: STREAK_BONUS, mission: "streak_bonus" });
+}
+
+/**
+ * Public Reddit JSON API check used to enforce r/grok mission quality:
+ *  1. Post must be at least 10 minutes old (anti hit-and-delete spam)
+ *  2. Post must contain media (link, image, gallery) — no text-only/title-only posts
+ *
+ * Reddit's `<permalink>.json` is unauthenticated and returns post metadata.
+ * Returns { ok: true } on success or { ok: false, error } with a user-friendly message.
+ */
+async function verifyRedditPost(url: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    // Normalize → strip trailing slash, strip query, append .json
+    const cleanUrl = url.split("?")[0].replace(/\/$/, "") + ".json";
+    const resp = await fetch(cleanUrl, {
+      headers: { "User-Agent": "GltchDailyMissionBot/1.0" },
+      // Reddit can be slow — short timeout via AbortController
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!resp.ok) {
+      return { ok: false, error: `Couldn't read your post (Reddit returned ${resp.status}). Make sure it's public.` };
+    }
+    const data = await resp.json();
+    const post = data?.[0]?.data?.children?.[0]?.data;
+    if (!post) {
+      return { ok: false, error: "Couldn't parse your Reddit post. Try again in a moment." };
+    }
+    // 1. Age check
+    const ageSec = Math.floor(Date.now() / 1000) - (post.created_utc || 0);
+    if (ageSec < 600) {
+      const wait = Math.ceil((600 - ageSec) / 60);
+      return { ok: false, error: `Post is too new — wait ~${wait} more min before claiming (anti-spam).` };
+    }
+    // 2. Content type — must be a link/image/gallery, not a self-post with no media
+    const isSelfText = post.is_self === true;
+    const hasMedia = !!(post.url_overridden_by_dest || post.preview || post.is_gallery || post.media || post.thumbnail && post.thumbnail !== "self");
+    if (isSelfText && !hasMedia) {
+      return { ok: false, error: "Post must include an image, video, or link — text-only posts don't count." };
+    }
+    return { ok: true };
+  } catch (err: any) {
+    console.warn("[daily-missions] verifyRedditPost failed:", err.message);
+    // Soft-fail: if Reddit is down, accept the URL — better UX than blocking. Admin notify still fires.
+    return { ok: true };
+  }
 }
