@@ -133,6 +133,7 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
         <span className="font-mono-share text-[10px] text-primary/70 hidden sm:inline truncate max-w-[120px]">
           {userEmail}
         </span>
+        <KarmaChip />
         <TwoFactorSettingsDialog />
         {onDeleteAccount && (
           <Dialog>
