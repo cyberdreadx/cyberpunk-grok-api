@@ -214,32 +214,32 @@ const COMMANDS: CommandSpec[] = [
   },
   {
     name: "gen",
-    usage: 'gen "<prompt>" [--engine grok|gltch|gltch-pro] [--n 1-4] [--ratio 1:1|16:9|9:16]',
-    desc: "Generate images from a text prompt",
+    usage: 'gen "<prompt>" [--n 1-4] [--ratio 1:1|16:9|9:16] [--pro]',
+    desc: "Generate images from a text prompt (Grok engine)",
     needsAuth: true,
     run: async (args, opts, { print, auth }) => {
       const prompt = args.join(" ").trim();
       if (!prompt) return print('usage: gen "<prompt>"', "error");
-      const engine = String(opts.engine || "gltch");
       const n = Math.min(4, Math.max(1, parseInt(String(opts.n || "1"), 10)));
       const ratio = String(opts.ratio || "1:1");
-
-      const mode: CreditMode =
-        engine === "grok" ? "grok-image" : engine === "gltch-pro" ? "comfy-image" : "zimage";
-      const cost = calculateCreditCost(mode, n);
-      print(`▸ dispatching ${n}× image · engine=${engine} · ratio=${ratio} · cost=${cost}cr`, "system");
+      const pro = !!opts.pro;
+      const cost = calculateCreditCost(pro ? "text-to-image-pro" : "text-to-image", n);
+      print(`▸ dispatching ${n}× image · ratio=${ratio}${pro ? " · PRO" : ""} · cost=${cost}cr`, "system");
 
       try {
         const data = await apiFetch<any>("/generate", {
           method: "POST",
           body: {
-            mode,
+            action: "generate-image",
             prompt,
-            count: n,
-            aspectRatio: ratio,
+            n,
+            aspect_ratio: ratio,
+            ...(pro ? { model: "grok-imagine-image-pro" } : {}),
           },
         });
-        const images: string[] = (data.images || data.urls || []).map((x: any) => x.url || x);
+        const images: string[] = (data?.data || data?.images || []).map(
+          (x: any) => x?.url || x?.b64_json && `data:image/png;base64,${x.b64_json}` || x
+        );
         if (!images.length) return print("no images returned", "error");
         images.forEach((url, i) => print(`[img ${i + 1}] ${url}`, "ascii", { url, isImage: true }));
         print(`✔ done · ${images.length} image(s) ready`, "success");
@@ -252,21 +252,21 @@ const COMMANDS: CommandSpec[] = [
   {
     name: "edit",
     usage: 'edit <image_url> "<prompt>"',
-    desc: "Edit an existing image",
+    desc: "Edit an existing image (Grok engine)",
     needsAuth: true,
     run: async (args, _o, { print, auth }) => {
       const [url, ...rest] = args;
       const prompt = rest.join(" ").trim();
       if (!url || !prompt) return print('usage: edit <image_url> "<prompt>"', "error");
-      const cost = calculateCreditCost("zimage-edit", 1);
+      const cost = calculateCreditCost("edit-image", 1);
       print(`▸ editing image · cost=${cost}cr`, "system");
       try {
         const data = await apiFetch<any>("/generate", {
           method: "POST",
-          body: { mode: "zimage-edit", prompt, sourceImage: url },
+          body: { action: "edit-image", prompt, image_url: url, n: 1 },
         });
-        const out = (data.images || data.urls || [])[0];
-        const outUrl = out?.url || out;
+        const out = (data?.data || data?.images || [])[0];
+        const outUrl = out?.url || (out?.b64_json && `data:image/png;base64,${out.b64_json}`) || out;
         if (outUrl) print(`[edit] ${outUrl}`, "ascii", { url: outUrl, isImage: true });
         print("✔ edit complete", "success");
         await auth.refreshUser?.();
@@ -278,21 +278,21 @@ const COMMANDS: CommandSpec[] = [
   {
     name: "animate",
     usage: 'animate <image_url> ["<motion prompt>"] [--seconds 5]',
-    desc: "Image → video",
+    desc: "Image → video (Grok engine)",
     needsAuth: true,
     run: async (args, opts, { print, auth }) => {
       const [url, ...rest] = args;
       const prompt = rest.join(" ").trim() || "smooth cinematic motion";
       const seconds = Math.min(15, Math.max(1, parseInt(String(opts.seconds || "5"), 10)));
       if (!url) return print("usage: animate <image_url>", "error");
-      const cost = calculateCreditCost("grok-i2v", 1, seconds);
+      const cost = calculateCreditCost("image-to-video", 1, seconds);
       print(`▸ animating · ${seconds}s · cost=${cost}cr — this may take a minute`, "system");
       try {
         const data = await apiFetch<any>("/generate", {
           method: "POST",
-          body: { mode: "grok-i2v", prompt, sourceImage: url, durationSeconds: seconds },
+          body: { action: "generate-video", prompt, image_url: url, duration_seconds: seconds },
         });
-        const v = (data.videos || data.urls || [])[0];
+        const v = (data?.data || data?.videos || [])[0];
         const vurl = v?.url || v;
         if (vurl) print(`[video] ${vurl}`, "ascii", { url: vurl, isVideo: true });
         print("✔ render complete", "success");
