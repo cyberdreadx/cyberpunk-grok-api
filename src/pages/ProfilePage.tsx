@@ -414,6 +414,7 @@ const ProfilePage: React.FC = () => {
           )}
         </div>
       </div>
+      <VerificationDialog open={verifyOpen} onOpenChange={setVerifyOpen} />
       <ProfileMobileChrome />
     </CyberLayout>
   );
