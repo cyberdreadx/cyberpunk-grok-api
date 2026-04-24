@@ -38,14 +38,87 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const stripe = new Stripe(STRIPE_SECRET_KEY);
     const sql = getDb();
 
-    // GET — current status
+    // GET — current status (with Stripe reconciliation fallback in case the
+    // webhook was delayed/missed and the user already completed Checkout)
     if (req.method === "GET") {
-      const [row] = await sql`
+      let [row] = await sql`
         SELECT verification_status, verification_session_id,
-               verification_subscription_id, verification_onetime_paid,
-               verified_at, verification_renews_at, verification_lapsed_at
+               verification_subscription_id, verification_checkout_id,
+               verification_onetime_paid, verified_at,
+               verification_renews_at, verification_lapsed_at
         FROM users WHERE id = ${auth.userId}::uuid
       `;
+
+      if (row && (!row.verification_onetime_paid || !row.verification_subscription_id || !row.verification_renews_at)) {
+        const existingRenewsAt = row.verification_renews_at
+          ? new Date(row.verification_renews_at).toISOString()
+          : null;
+        let reconciledSubscriptionId: string | null = row.verification_subscription_id || null;
+        let reconciledOnetimePaid = !!row.verification_onetime_paid;
+        let reconciledRenewsAt: string | null = existingRenewsAt;
+
+        if (row.verification_checkout_id) {
+          try {
+            const session = await stripe.checkout.sessions.retrieve(row.verification_checkout_id);
+            const sessionSubscriptionId =
+              typeof session.subscription === "string"
+                ? session.subscription
+                : session.subscription?.id || null;
+            if (session.payment_status && session.payment_status !== "unpaid") {
+              reconciledOnetimePaid = true;
+            }
+            if (sessionSubscriptionId) {
+              reconciledSubscriptionId = sessionSubscriptionId;
+            }
+          } catch (err: any) {
+            console.error("[verify] checkout reconciliation failed:", err?.message);
+          }
+        }
+
+        if (reconciledSubscriptionId && !reconciledRenewsAt) {
+          try {
+            const sub = await stripe.subscriptions.retrieve(reconciledSubscriptionId);
+            const currentPeriodEnd = (sub as any)?.current_period_end as number | undefined;
+            if (["active", "trialing", "past_due"].includes(sub.status)) {
+              reconciledSubscriptionId = sub.id;
+              reconciledRenewsAt = currentPeriodEnd
+                ? new Date(currentPeriodEnd * 1000).toISOString()
+                : null;
+            }
+          } catch (err: any) {
+            console.error("[verify] subscription reconciliation failed:", err?.message);
+          }
+        }
+
+        if (
+          reconciledOnetimePaid !== !!row.verification_onetime_paid ||
+          reconciledSubscriptionId !== (row.verification_subscription_id || null) ||
+          reconciledRenewsAt !== existingRenewsAt
+        ) {
+          await sql`
+            UPDATE users
+            SET verification_onetime_paid = ${reconciledOnetimePaid},
+                verification_subscription_id = ${reconciledSubscriptionId},
+                verification_renews_at = ${reconciledRenewsAt}::timestamptz,
+                verification_status = CASE
+                  WHEN verification_status = 'verified' THEN verification_status
+                  WHEN ${reconciledOnetimePaid} THEN 'pending'
+                  ELSE verification_status
+                END,
+                updated_at = now()
+            WHERE id = ${auth.userId}::uuid
+          `;
+
+          [row] = await sql`
+            SELECT verification_status, verification_session_id,
+                   verification_subscription_id, verification_checkout_id,
+                   verification_onetime_paid, verified_at,
+                   verification_renews_at, verification_lapsed_at
+            FROM users WHERE id = ${auth.userId}::uuid
+          `;
+        }
+      }
+
       const isActive =
         row?.verification_status === "verified" &&
         (!row?.verification_renews_at || new Date(row.verification_renews_at) > new Date());
