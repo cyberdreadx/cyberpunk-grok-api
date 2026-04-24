@@ -14,18 +14,54 @@ interface Props {
   onCreditsRefresh?: () => void;
 }
 
-const MISSION_META: Record<string, { label: string; desc: string; icon: React.ReactNode; needsUrl?: "reddit" | "twitter" }> = {
-  login:    { label: "Daily Check-in",  desc: "Open the app and claim",         icon: <CalendarCheck className="w-4 h-4" /> },
-  story:    { label: "Post a Story",    desc: "Share a creation to Stories",    icon: <MessageCircle className="w-4 h-4" /> },
-  reddit:   { label: "Share on Reddit", desc: "Post to r/GrokRunner & paste link", icon: <Share2 className="w-4 h-4" />, needsUrl: "reddit" },
-  twitter:  { label: "Share on X",      desc: "Post on X & paste your link",    icon: <Share2 className="w-4 h-4" />, needsUrl: "twitter" },
-  share:    { label: "Share Creation",  desc: "Share any result with a link",   icon: <Share2 className="w-4 h-4" /> },
+type ProofPlatform = "reddit" | "grok_subreddit" | "twitter";
+
+const MISSION_META: Record<string, { label: string; desc: string; icon: React.ReactNode; needsUrl?: ProofPlatform }> = {
+  login:           { label: "Daily Check-in",   desc: "Open the app and claim",                 icon: <CalendarCheck className="w-4 h-4" /> },
+  story:           { label: "Post a Story",      desc: "Share a creation to Stories",            icon: <MessageCircle className="w-4 h-4" /> },
+  reddit:          { label: "Share on Reddit",   desc: "Post to any subreddit & paste link",     icon: <Share2 className="w-4 h-4" />, needsUrl: "reddit" },
+  grok_subreddit:  { label: "Post in r/grok",    desc: "Post to r/grok (highest-converting!)",   icon: <Share2 className="w-4 h-4 text-orange-400" />, needsUrl: "grok_subreddit" },
+  twitter:         { label: "Share on X",        desc: "Post on X & paste your link",            icon: <Share2 className="w-4 h-4" /> , needsUrl: "twitter" },
+  share:           { label: "Share Creation",    desc: "Share any result with a link",           icon: <Share2 className="w-4 h-4" /> },
 };
 
-const SHARE_INTENTS: Record<"reddit" | "twitter", { url: string; label: string }> = {
-  reddit:  { url: "https://www.reddit.com/r/GrokRunner/submit?title=Check%20out%20what%20I%20made%20with%20Grok%20Runner&url=https://grokrunner.gltch.app", label: "Open Reddit" },
-  twitter: { url: "https://x.com/intent/tweet?text=Check%20out%20what%20I%20made%20with%20%40GrokRunner%20%E2%80%94%20free%20AI%20image%20%26%20video%20generation%20https%3A%2F%2Fgrokrunner.gltch.app", label: "Open X" },
-};
+/**
+ * Build a Reddit/X submit URL pre-filled with the user's most recent public
+ * feed post (image + caption) when available, otherwise fall back to a
+ * generic landing-page link. Authentic posts convert dramatically better
+ * than bare promo links.
+ */
+function buildShareIntent(
+  platform: ProofPlatform,
+  lastFeedPost: MissionStatus["lastFeedPost"]
+): { url: string; label: string; usingPrefill: boolean } {
+  const APP_URL = "https://grokrunner.gltch.app";
+  const mediaUrl = lastFeedPost?.image_url || null;
+  const caption = (lastFeedPost?.text || "").trim();
+  const usingPrefill = !!mediaUrl;
+
+  if (platform === "twitter") {
+    const text = usingPrefill
+      ? `${caption || "Made this with Grok Runner"} — ${APP_URL}`
+      : `Check out what I made with @GrokRunner — free AI image & video generation ${APP_URL}`;
+    // X intent supports `text` + `url`; if we have media we still link to gltch (X doesn't accept remote img upload via intent)
+    return { url: `https://x.com/intent/tweet?text=${encodeURIComponent(text)}`, label: "Open X", usingPrefill };
+  }
+
+  // Reddit: r/grok for the premium mission, generic GrokRunner otherwise
+  const subreddit = platform === "grok_subreddit" ? "grok" : "GrokRunner";
+  const title = usingPrefill
+    ? (caption.slice(0, 280) || "Made with Grok Runner")
+    : "Check out what I made with Grok Runner";
+  const linkUrl = mediaUrl || APP_URL;
+  // `url=` makes it a link/image post (qualifies for r/grok mission's media requirement)
+  const params = new URLSearchParams({ title, url: linkUrl });
+  return {
+    url: `https://www.reddit.com/r/${subreddit}/submit?${params.toString()}`,
+    label: platform === "grok_subreddit" ? "Open r/grok" : "Open Reddit",
+    usingPrefill,
+  };
+}
 
 export default function DailyMissionsDialog({ status, loading, claiming, onClaim, onClaimStreak, onCreditsRefresh }: Props) {
   const [open, setOpen] = useState(false);
