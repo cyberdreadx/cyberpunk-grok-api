@@ -55,6 +55,14 @@ const ModeSelector: React.FC<ModeSelectorProps> = ({ activeMode, onModeChange, i
             <span className="font-orbitron text-[9px] tracking-wider text-secondary/80">{t("modes.chars")}</span>
           </a>
         )}
+        <Link
+          to="/terminal"
+          className="flex items-center gap-1.5 px-3 py-2 rounded border whitespace-nowrap transition-all duration-200 shrink-0 border-primary/40 bg-black/60 active:bg-primary/10"
+          title="Hacker terminal mode"
+        >
+          <TerminalSquare className="w-3.5 h-3.5 text-primary" />
+          <span className="font-orbitron text-[9px] tracking-wider text-primary">TERMINAL</span>
+        </Link>
       </div>
 
       {/* Desktop: terminal-style grid */}
