@@ -2425,6 +2425,14 @@ const Index = () => {
                   <Users className="w-3 h-3" />
                   CHARACTERS
                 </Link>
+                <span className="text-border/50">|</span>
+                <Link
+                  to="/verification"
+                  className="flex items-center gap-1 text-muted-foreground/40 hover:text-primary transition-colors"
+                >
+                  <BadgeCheck className="w-3 h-3" />
+                  VERIFICATION
+                </Link>
               </>
             )}
             {effectiveApiMode === "credits" && canUseCredits && (
