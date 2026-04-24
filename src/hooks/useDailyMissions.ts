@@ -14,6 +14,8 @@ export interface MissionStatus {
   missionCredits: Record<string, number>;
   streakBonus: number;
   cycleDays: number;
+  /** Most recent public feed post by this user — used to prefill share intents. */
+  lastFeedPost?: { id: string; image_url: string | null; text: string | null } | null;
 }
 
 export function useDailyMissions(user: AuthUser | null) {
