@@ -88,6 +88,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         await sql`UPDATE users SET stripe_customer_id = ${customerId} WHERE id = ${auth.userId}::uuid`;
       }
 
+      // Validate price types up-front so we surface clear errors instead of
+      // a confusing "received unknown parameter" from Stripe.
+      const [onetimePrice, monthlyPrice] = await Promise.all([
+        stripe.prices.retrieve(PRICE_ONETIME),
+        stripe.prices.retrieve(PRICE_MONTHLY),
+      ]);
+      if (monthlyPrice.recurring == null) {
+        return res.status(500).json({
+          error: `STRIPE_PRICE_VERIFY_MONTHLY (${PRICE_MONTHLY}) must be a recurring price.`,
+        });
+      }
+      if (onetimePrice.recurring != null) {
+        return res.status(500).json({
+          error: `STRIPE_PRICE_VERIFY_ONETIME (${PRICE_ONETIME}) must be a one-time price (no recurring interval). add_invoice_items only accepts one-time prices.`,
+        });
+      }
+
       // Subscription mode with an extra one-time invoice item for the ID fee
       const session = await stripe.checkout.sessions.create({
         mode: "subscription",
@@ -97,12 +114,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         ],
         subscription_data: {
           // Adds the one-time fee to the FIRST invoice of the subscription
-          add_invoice_items: [{ price: PRICE_ONETIME, quantity: 1 }],
           metadata: {
             user_id: auth.userId,
             type: "creator_verification",
           },
         },
+        // add_invoice_items lives at the top level on Checkout Sessions
+        // (NOT under subscription_data) — that mismatch is the usual cause
+        // of "received unknown parameter".
+        // @ts-expect-error - add_invoice_items is valid on subscription-mode sessions
+        add_invoice_items: [{ price: PRICE_ONETIME, quantity: 1 }],
         client_reference_id: auth.userId,
         metadata: {
           user_id: auth.userId,
