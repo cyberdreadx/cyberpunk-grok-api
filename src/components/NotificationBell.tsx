@@ -133,7 +133,21 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ isAuthenticated }) 
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-[320px] max-h-[400px] bg-card border border-border/30 rounded-lg shadow-[0_0_30px_hsl(var(--primary)/0.1)] z-50 flex flex-col overflow-hidden">
+        <>
+          {/* Mobile backdrop — taps outside close the panel */}
+          <div
+            className="fixed inset-0 z-40 sm:hidden bg-background/40 backdrop-blur-sm"
+            onClick={() => setOpen(false)}
+            aria-hidden
+          />
+          <div
+            className="
+              fixed sm:absolute z-50 flex flex-col overflow-hidden
+              bg-card border border-border/30 rounded-lg shadow-[0_0_30px_hsl(var(--primary)/0.15)]
+              left-2 right-2 top-[calc(env(safe-area-inset-top,0px)+56px)] max-h-[70vh]
+              sm:left-auto sm:right-0 sm:top-full sm:mt-2 sm:w-[320px] sm:max-h-[400px]
+            "
+          >
           {/* Header */}
           <div className="flex items-center justify-between px-3 py-2 border-b border-border/20">
             <span className="font-orbitron text-[10px] tracking-wider text-foreground uppercase">
