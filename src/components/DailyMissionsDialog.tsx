@@ -250,12 +250,20 @@ export default function DailyMissionsDialog({ status, loading, claiming, onClaim
                       </div>
                     </div>
 
-                    {/* URL proof flow for reddit/twitter */}
+                    {/* URL proof flow for reddit / r/grok / twitter */}
                     {isOpenProof && intent && !claimed && (
                       <div className="px-3 pb-3 space-y-2 border-t border-muted-foreground/10 pt-2">
                         <div className="flex items-center justify-between gap-2">
                           <p className="text-[10px] text-muted-foreground leading-snug flex-1">
-                            1. Post about Grok Runner. 2. Copy your post URL. 3. Paste it below.
+                            {meta.needsUrl === "grok_subreddit" ? (
+                              <>
+                                1. Post in r/grok (link or image — no text-only).{" "}
+                                2. Wait ~10 min so Reddit indexes it.{" "}
+                                3. Paste your post URL below.
+                              </>
+                            ) : (
+                              <>1. Post about Grok Runner. 2. Copy your post URL. 3. Paste it below.</>
+                            )}
                           </p>
                           <a
                             href={intent.url}
@@ -267,11 +275,22 @@ export default function DailyMissionsDialog({ status, loading, claiming, onClaim
                             <ExternalLink className="w-3 h-3" />
                           </a>
                         </div>
+                        {intent.usingPrefill && (
+                          <p className="text-[9px] text-primary/70 leading-snug">
+                            ✨ Pre-filled with your latest feed post — most authentic posts get the most upvotes.
+                          </p>
+                        )}
                         <div className="flex gap-2">
                           <Input
                             value={proofUrl}
                             onChange={(e) => setProofUrl(e.target.value)}
-                            placeholder={meta.needsUrl === "reddit" ? "https://reddit.com/r/.../comments/..." : "https://x.com/you/status/..."}
+                            placeholder={
+                              meta.needsUrl === "twitter"
+                                ? "https://x.com/you/status/..."
+                                : meta.needsUrl === "grok_subreddit"
+                                  ? "https://reddit.com/r/grok/comments/..."
+                                  : "https://reddit.com/r/.../comments/..."
+                            }
                             className="h-8 text-[11px] bg-background/50 border-muted-foreground/20"
                             disabled={claiming}
                           />
