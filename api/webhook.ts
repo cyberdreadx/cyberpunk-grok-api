@@ -11,6 +11,10 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import Stripe from "stripe";
 import { getDb } from "./_lib/db";
+import {
+  sendVerificationPaymentReceiptEmail,
+  sendVerificationApprovedEmail,
+} from "./_lib/email";
 
 // Vercel needs raw body for signature verification
 export const config = { api: { bodyParser: false } };
@@ -447,6 +451,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             WHERE id = ${userId}::uuid
           `;
           console.log(`[verify] Onetime fee paid for ${userId}, sub=${subId}`);
+
+          // Send payment receipt email (non-blocking, idempotent at webhook layer)
+          try {
+            const [u] = await sql`SELECT email FROM users WHERE id = ${userId}::uuid`;
+            if (u?.email) {
+              const amountStr =
+                typeof s.amount_total === "number"
+                  ? `${(s.amount_total / 100).toFixed(2)} ${(s.currency || "usd").toUpperCase()}`
+                  : null;
+              await sendVerificationPaymentReceiptEmail(u.email, {
+                amount: amountStr,
+                subscriptionId: subId || null,
+              });
+            }
+          } catch (e: any) {
+            console.error("[verify] payment receipt email failed:", e?.message);
+          }
         }
       }
     }
@@ -456,6 +477,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const session = event.data.object as any;
       const userId = session.metadata?.user_id;
       if (userId) {
+        // Capture prior verified_at so we only send the email on the FIRST
+        // transition to verified (defense in depth — top-level idempotency
+        // already prevents replay, but Stripe may re-send across sessions).
+        const [prev] = await sql`
+          SELECT email, verified_at FROM users WHERE id = ${userId}::uuid
+        `;
         await sql`
           UPDATE users
           SET verification_status = 'verified',
@@ -465,6 +492,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           WHERE id = ${userId}::uuid
         `;
         console.log(`[verify] Identity verified for ${userId}`);
+
+        if (prev?.email && !prev?.verified_at) {
+          try {
+            await sendVerificationApprovedEmail(prev.email);
+          } catch (e: any) {
+            console.error("[verify] approved email failed:", e?.message);
+          }
+        }
       }
     }
 

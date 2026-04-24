@@ -411,3 +411,116 @@ export function buildV47AnnouncementHtml(): string {
     </div>
   `;
 }
+
+/**
+ * Send a receipt confirming the one-time creator verification fee was charged.
+ * Triggered from the Stripe webhook on checkout.session.completed for the
+ * creator_verification flow. Idempotency-safe: webhook itself is idempotent.
+ */
+export async function sendVerificationPaymentReceiptEmail(
+  to: string,
+  opts: { amount?: string | null; subscriptionId?: string | null } = {},
+): Promise<void> {
+  const fromAddress = getFromAddress();
+  const amount = opts.amount || "your verification fee";
+  const { data, error } = await getResend().emails.send({
+    from: `Grok Runner <${fromAddress}>`,
+    to: [to],
+    subject: `Payment received — finish your creator verification`,
+    html: `
+      <div style="font-family: 'Courier New', monospace; background: #0a0a0f; color: #e0e0e0; padding: 32px; max-width: 480px; margin: 0 auto;">
+        <div style="border: 1px solid #00f0ff33; padding: 24px; border-radius: 4px;">
+          <h1 style="color: #00f0ff; font-size: 18px; letter-spacing: 3px; margin: 0 0 16px;">GROK RUNNER</h1>
+          <p style="color: #00f0ff99; font-size: 11px; letter-spacing: 4px; margin: 0 0 20px;">PAYMENT RECEIPT // STEP 1 OF 2</p>
+
+          <div style="background: #111; border: 1px solid #00f0ff55; padding: 18px; border-radius: 4px; margin: 0 0 20px;">
+            <p style="font-size: 13px; color: #b0b0b0; margin: 0 0 6px;">Charged for ${amount}</p>
+            <p style="font-size: 13px; color: #b0b0b0; margin: 0;">Monthly verification subscription started.</p>
+          </div>
+
+          <p style="font-size: 14px; color: #e0e0e0; margin: 0 0 12px;">
+            ✅ One-time identity check fee received.
+          </p>
+          <p style="font-size: 13px; color: #a0a0a0; line-height: 1.6; margin: 0 0 20px;">
+            Last step: complete the Stripe-hosted ID + selfie check. Once Stripe confirms,
+            you'll get your blue check, can set prices on posts/stories, and unlock payouts.
+          </p>
+
+          <div style="text-align: center; margin: 0 0 20px;">
+            <a href="https://grokrunner.gltch.app/verification" style="display: inline-block; background: #00f0ff22; border: 1px solid #00f0ff55; color: #00f0ff; text-decoration: none; padding: 12px 28px; border-radius: 4px; font-size: 13px; letter-spacing: 3px; font-weight: bold;">
+              FINISH ID CHECK →
+            </a>
+          </div>
+
+          <p style="font-size: 11px; color: #555; margin: 0;">
+            Manage or cancel the monthly verification subscription anytime in the Stripe customer portal.
+            Verification is revoked immediately if the subscription lapses.
+          </p>
+        </div>
+      </div>
+    `,
+  });
+
+  if (error) {
+    await logEmail(to, "verify_payment_receipt", "failed", null, error.message, opts);
+    console.error("[email] Failed to send verification payment receipt:", error.message);
+    return; // non-critical
+  }
+  await logEmail(to, "verify_payment_receipt", "sent", data?.id, null, opts);
+}
+
+/**
+ * Send confirmation that Stripe Identity verification succeeded.
+ * Triggered from the webhook on identity.verification_session.verified.
+ */
+export async function sendVerificationApprovedEmail(to: string): Promise<void> {
+  const fromAddress = getFromAddress();
+  const { data, error } = await getResend().emails.send({
+    from: `Grok Runner <${fromAddress}>`,
+    to: [to],
+    subject: `You're a verified Grok Runner ✓`,
+    html: `
+      <div style="font-family: 'Courier New', monospace; background: #0a0a0f; color: #e0e0e0; padding: 32px; max-width: 480px; margin: 0 auto;">
+        <div style="border: 1px solid #39ff1444; padding: 24px; border-radius: 4px;">
+          <h1 style="color: #00f0ff; font-size: 18px; letter-spacing: 3px; margin: 0 0 8px;">GROK RUNNER</h1>
+          <p style="color: #39ff1499; font-size: 11px; letter-spacing: 4px; margin: 0 0 24px;">IDENTITY CONFIRMED // STEP 2 OF 2</p>
+
+          <div style="background: #111; border: 1px solid #39ff1455; padding: 22px; text-align: center; border-radius: 4px; margin: 0 0 20px;">
+            <div style="font-size: 36px; color: #39ff14; line-height: 1;">✓</div>
+            <p style="font-size: 14px; color: #39ff14; letter-spacing: 3px; font-weight: bold; margin: 10px 0 0;">VERIFIED CREATOR</p>
+          </div>
+
+          <p style="font-size: 14px; color: #e0e0e0; margin: 0 0 12px;">
+            You're in. Stripe confirmed your identity.
+          </p>
+          <p style="font-size: 13px; color: #a0a0a0; line-height: 1.7; margin: 0 0 20px;">
+            What unlocks now:
+          </p>
+          <ul style="font-size: 13px; color: #b0b0b0; line-height: 1.8; padding-left: 18px; margin: 0 0 24px;">
+            <li>Blue checkmark on your profile, posts, and stories</li>
+            <li>Set prices on posts &amp; stories (credits, USD, or $XRGE)</li>
+            <li>Request payouts ($25 USD min / $1 XRGE min)</li>
+          </ul>
+
+          <div style="text-align: center; margin: 0 0 20px;">
+            <a href="https://grokrunner.gltch.app/profile" style="display: inline-block; background: linear-gradient(135deg, #00f0ff22, #39ff1422); border: 1px solid #39ff1455; color: #39ff14; text-decoration: none; padding: 14px 32px; border-radius: 4px; font-size: 13px; letter-spacing: 3px; font-weight: bold;">
+              GO TO PROFILE →
+            </a>
+          </div>
+
+          <p style="font-size: 11px; color: #555; margin: 0;">
+            Verification stays active as long as your monthly subscription is current.
+            View status anytime at /verification.
+          </p>
+        </div>
+      </div>
+    `,
+  });
+
+  if (error) {
+    await logEmail(to, "verify_approved", "failed", null, error.message);
+    console.error("[email] Failed to send verification approved email:", error.message);
+    return;
+  }
+  await logEmail(to, "verify_approved", "sent", data?.id);
+}
