@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect, Suspense } from "react";
 import { useTranslation } from "react-i18next";
-import { Terminal, Key, Coins, Shield, Eye, MessageCircle, HelpCircle, Server, Zap, Cpu, ChevronDown, Film, X, AlertCircle, CheckCircle2, Upload, Users, Image, Code, ToggleLeft, ToggleRight, Gift, Rss } from "lucide-react";
+import { Terminal, Key, Coins, Shield, Eye, MessageCircle, HelpCircle, Server, Zap, Cpu, ChevronDown, Film, X, AlertCircle, CheckCircle2, Upload, Users, Image, Code, ToggleLeft, ToggleRight, Gift, Rss, BadgeCheck } from "lucide-react";
 import { Link } from "react-router-dom";
 import CyberLayout from "@/components/CyberLayout";
 import StoriesBar from "@/components/StoriesBar";
@@ -2424,6 +2424,14 @@ const Index = () => {
                 >
                   <Users className="w-3 h-3" />
                   CHARACTERS
+                </Link>
+                <span className="text-border/50">|</span>
+                <Link
+                  to="/verification"
+                  className="flex items-center gap-1 text-muted-foreground/40 hover:text-primary transition-colors"
+                >
+                  <BadgeCheck className="w-3 h-3" />
+                  VERIFICATION
                 </Link>
               </>
             )}
