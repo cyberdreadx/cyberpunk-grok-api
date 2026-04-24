@@ -125,8 +125,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           user_id: auth.userId,
           type: "creator_verification_start",
         },
-        success_url: `${SITE_URL}/?verify=paid&session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${SITE_URL}/?verify=cancelled`,
+        success_url: `${SITE_URL}/verification?paid=1&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${SITE_URL}/verification?cancelled=1`,
       });
 
       // Mark pending so UI can show "in progress"

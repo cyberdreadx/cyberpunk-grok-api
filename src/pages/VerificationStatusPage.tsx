@@ -149,6 +149,46 @@ const VerificationStatusPage: React.FC = () => {
     load();
   }, [authLoading, isAuthenticated, load, navigate]);
 
+  // After Stripe Checkout success redirect (?paid=1), the webhook may take a
+  // moment to flip verification_onetime_paid. Poll a few times so the user
+  // sees step 1 turn green without needing to manually refresh.
+  useEffect(() => {
+    if (authLoading || !isAuthenticated) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("paid") !== "1" && params.get("cancelled") !== "1") return;
+
+    if (params.get("cancelled") === "1") {
+      toast({ title: "Checkout cancelled", description: "You can restart anytime." });
+    } else {
+      toast({ title: "Payment received", description: "Finalizing… you can start the ID check next." });
+    }
+
+    let cancelled = false;
+    let attempts = 0;
+    const maxAttempts = 8;
+    const poll = async () => {
+      while (!cancelled && attempts < maxAttempts) {
+        attempts++;
+        try {
+          const res = await apiFetch<VerificationStatus>("/verify");
+          if (cancelled) return;
+          setStatus(res);
+          if (res.onetimePaid || res.isVerified) break;
+        } catch {/* ignore */}
+        await new Promise((r) => setTimeout(r, 1500));
+      }
+      // Clean the URL so reload doesn't re-trigger
+      const url = new URL(window.location.href);
+      url.searchParams.delete("paid");
+      url.searchParams.delete("cancelled");
+      url.searchParams.delete("session_id");
+      window.history.replaceState({}, "", url.toString());
+    };
+    poll();
+    return () => { cancelled = true; };
+  }, [authLoading, isAuthenticated, toast]);
+
+
   const startCheckout = async () => {
     setSubmitting(true);
     try {
