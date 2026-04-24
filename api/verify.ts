@@ -105,25 +105,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
 
-      // Subscription mode with an extra one-time invoice item for the ID fee
+      // Subscription mode supports mixing recurring + one-time prices in line_items.
+      // The one-time fee gets added to the first subscription invoice automatically.
       const session = await stripe.checkout.sessions.create({
         mode: "subscription",
         customer: customerId,
         line_items: [
           { price: PRICE_MONTHLY, quantity: 1 },
+          { price: PRICE_ONETIME, quantity: 1 },
         ],
         subscription_data: {
-          // Adds the one-time fee to the FIRST invoice of the subscription
           metadata: {
             user_id: auth.userId,
             type: "creator_verification",
           },
         },
-        // add_invoice_items lives at the top level on Checkout Sessions
-        // (NOT under subscription_data) — that mismatch is the usual cause
-        // of "received unknown parameter".
-        // @ts-expect-error - add_invoice_items is valid on subscription-mode sessions
-        add_invoice_items: [{ price: PRICE_ONETIME, quantity: 1 }],
         client_reference_id: auth.userId,
         metadata: {
           user_id: auth.userId,
