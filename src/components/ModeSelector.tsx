@@ -137,6 +137,25 @@ const ModeSelector: React.FC<ModeSelectorProps> = ({ activeMode, onModeChange, i
             </div>
           </Link>
         )}
+
+        <Link
+          to="/terminal"
+          className="relative group p-3 border rounded transition-all duration-300 text-left overflow-hidden border-primary/40 bg-black/60 hover:border-primary hover:bg-black/80"
+          title="Hacker terminal — type commands"
+        >
+          <div className="absolute top-0 left-0 right-0 h-[2px] bg-primary/60 group-hover:bg-primary transition-all" />
+          <span className="absolute top-2 right-2 font-mono-share text-[8px] text-primary/40">07</span>
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="font-mono-share text-[10px] text-primary/60">▸</span>
+            <TerminalSquare className="w-4 h-4 text-primary transition-colors" />
+          </div>
+          <div className="font-orbitron text-[10px] font-bold tracking-wider neon-text-cyan">
+            TERMINAL
+          </div>
+          <div className="font-mono-share text-[9px] text-primary/50 mt-0.5">
+            Hacker shell
+          </div>
+        </Link>
       </div>
     </>
   );
