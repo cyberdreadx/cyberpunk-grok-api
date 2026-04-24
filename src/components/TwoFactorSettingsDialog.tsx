@@ -23,6 +23,14 @@ export default function TwoFactorSettingsDialog() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Fetch current 2FA state on mount so the trigger button can reflect status.
+  useEffect(() => {
+    apiFetch<{ enabled: boolean; email_verified: boolean }>("/auth/two-factor")
+      .then((d) => { setEnabled(d.enabled); setEmailVerified(d.email_verified); })
+      .catch(() => { /* ignore — keep default Off state */ });
+  }, []);
+
+  // Re-fetch when dialog opens to guarantee fresh state.
   useEffect(() => {
     if (!open) return;
     setLoading(true); setError(null);
@@ -51,10 +59,15 @@ export default function TwoFactorSettingsDialog() {
         <Button
           variant="ghost"
           size="sm"
-          className="font-mono-share text-xs gap-1 text-muted-foreground/40 hover:text-primary"
+          className={`font-mono-share text-[10px] gap-1 px-2 border ${
+            enabled
+              ? "text-primary border-primary/40 hover:bg-primary/10"
+              : "text-amber-400 border-amber-500/40 hover:bg-amber-500/10"
+          }`}
           title="Two-factor authentication"
         >
           <ShieldCheck className="w-3 h-3" />
+          <span className="hidden sm:inline">{enabled ? "2FA ON" : "2FA OFF"}</span>
         </Button>
       </DialogTrigger>
       <DialogContent className="bg-card border-border sm:max-w-md">
