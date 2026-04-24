@@ -1,5 +1,5 @@
 import React from "react";
-import { Image, Pencil, Video, Film, Scissors, Users } from "lucide-react";
+import { Image, Pencil, Video, Film, Scissors, Users, TerminalSquare } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import type { GrokMode } from "@/hooks/useGrokApi";
