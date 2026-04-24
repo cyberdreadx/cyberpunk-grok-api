@@ -196,11 +196,11 @@ export default function DailyMissionsDialog({ status, loading, claiming, onClaim
             <div className="space-y-2">
               <h3 className="text-xs text-muted-foreground uppercase tracking-wider">Today's Missions</h3>
               {missions.map((m) => {
-                const meta = MISSION_META[m] || { label: m, desc: "", icon: <Circle className="w-4 h-4" />, needsUrl: undefined as "reddit" | "twitter" | undefined };
+                const meta = MISSION_META[m] || { label: m, desc: "", icon: <Circle className="w-4 h-4" />, needsUrl: undefined as ProofPlatform | undefined };
                 const claimed = claimedToday.includes(m);
                 const reward = missionCredits[m] || 5;
                 const isOpenProof = activeProof === m;
-                const intent = meta.needsUrl ? SHARE_INTENTS[meta.needsUrl] : null;
+                const intent = meta.needsUrl ? buildShareIntent(meta.needsUrl, status?.lastFeedPost) : null;
                 return (
                   <div
                     key={m}
