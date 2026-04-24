@@ -61,6 +61,7 @@ const App = () => (
           <Route path="/profile/:username" element={<PageShell><ProfilePage /></PageShell>} />
           <Route path="/referral" element={<PageShell><ReferralPage /></PageShell>} />
           <Route path="/terminal" element={<PageShell><TerminalMode /></PageShell>} />
+          <Route path="/verification" element={<PageShell><VerificationStatusPage /></PageShell>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
