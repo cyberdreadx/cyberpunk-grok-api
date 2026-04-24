@@ -62,7 +62,7 @@ export default function TwoFactorSettingsDialog() {
           className={`font-mono-share text-[10px] gap-1 px-2 border ${
             enabled
               ? "text-primary border-primary/40 hover:bg-primary/10"
-              : "text-amber-400 border-amber-500/40 hover:bg-amber-500/10"
+              : "text-destructive border-destructive/40 hover:bg-destructive/10"
           }`}
           title="Two-factor authentication"
         >
