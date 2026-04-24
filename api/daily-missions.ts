@@ -166,6 +166,15 @@ async function claimMission(sql: any, userId: string, mission: string, res: Verc
             : "Invalid Reddit URL. Must look like https://reddit.com/r/.../comments/...";
       return res.status(400).json({ error: hint });
     }
+
+    // ── r/grok strict checks: post must be ≥10min old AND have a link/image (not text-only) ──
+    if (mission === "grok_subreddit") {
+      const check = await verifyRedditPost(trimmed);
+      if (!check.ok) {
+        return res.status(400).json({ error: check.error });
+      }
+    }
+
     // Platform-wide dedup: same URL can never be reused (by anyone)
     const [dup] = await sql`SELECT id FROM daily_share_proofs WHERE url = ${trimmed} LIMIT 1`;
     if (dup) {
