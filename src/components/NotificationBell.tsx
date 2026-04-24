@@ -37,6 +37,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ isAuthenticated }) 
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
 
   const fetchNotifications = useCallback(async () => {
     if (!isAuthenticated) return;
@@ -71,13 +72,15 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ isAuthenticated }) 
     if (open) fetchNotifications();
   }, [open, fetchNotifications]);
 
-  // Close on outside click
+  // Close on outside click — must check both the trigger wrapper AND the
+  // floating popover (which is portaled out of `panelRef` via `fixed` positioning).
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
+      const target = e.target as Node;
+      const inTrigger = panelRef.current?.contains(target);
+      const inPopover = popoverRef.current?.contains(target);
+      if (!inTrigger && !inPopover) setOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -133,7 +136,22 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ isAuthenticated }) 
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-[320px] max-h-[400px] bg-card border border-border/30 rounded-lg shadow-[0_0_30px_hsl(var(--primary)/0.1)] z-50 flex flex-col overflow-hidden">
+        <>
+          {/* Mobile backdrop — taps outside close the panel */}
+          <div
+            className="fixed inset-0 z-40 sm:hidden bg-background/40 backdrop-blur-sm"
+            onClick={() => setOpen(false)}
+            aria-hidden
+          />
+          <div
+            ref={popoverRef}
+            className="
+              fixed sm:absolute z-50 flex flex-col overflow-hidden
+              bg-card border border-border/30 rounded-lg shadow-[0_0_30px_hsl(var(--primary)/0.15)]
+              left-2 right-2 top-[calc(env(safe-area-inset-top,0px)+56px)] max-h-[70vh]
+              sm:left-auto sm:right-0 sm:top-full sm:mt-2 sm:w-[320px] sm:max-h-[400px]
+            "
+          >
           {/* Header */}
           <div className="flex items-center justify-between px-3 py-2 border-b border-border/20">
             <span className="font-orbitron text-[10px] tracking-wider text-foreground uppercase">
@@ -202,7 +220,8 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ isAuthenticated }) 
               ))
             )}
           </div>
-        </div>
+          </div>
+        </>
       )}
     </div>
   );
