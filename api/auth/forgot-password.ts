@@ -7,6 +7,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getDb } from "../_lib/db";
 import { generateVerificationCode, sendPasswordResetEmail } from "../_lib/email";
 import { checkRateLimit, getClientIp } from "../_lib/ratelimit";
+import { ADMIN_EMAIL } from "../_lib/auth";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === "OPTIONS") return res.status(200).end();
@@ -18,17 +19,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const normalizedEmail = email.toLowerCase().trim();
 
-    // Rate limit by IP
+    // Rate limit by IP — tightened to 3 attempts / 15 min
     const ip = getClientIp(req);
-    const ipLimit = await checkRateLimit(ip, "forgot-password", { max: 5, windowSeconds: 900 });
+    const ipLimit = await checkRateLimit(ip, "forgot-password", { max: 3, windowSeconds: 900 });
     if (!ipLimit.allowed) {
       return res.status(429).json({ error: "Too many requests. Try again later." });
     }
 
-    // Rate limit by email
-    const emailLimit = await checkRateLimit(`email:${normalizedEmail}`, "forgot-password", { max: 3, windowSeconds: 900 });
+    // Rate limit by email — 2 attempts / 15 min
+    const emailLimit = await checkRateLimit(`email:${normalizedEmail}`, "forgot-password", { max: 2, windowSeconds: 900 });
     if (!emailLimit.allowed) {
       return res.status(429).json({ error: "Too many requests for this email. Try again later." });
+    }
+
+    // Block password reset for the admin account via the public endpoint.
+    // Admin recovery must go through a manual / out-of-band path to prevent
+    // an attacker who compromises the inbox from also taking over admin.
+    if (normalizedEmail === ADMIN_EMAIL.toLowerCase()) {
+      console.warn(`[forgot-password] BLOCKED admin reset attempt from IP ${ip}`);
+      return res.status(200).json({ message: "If that email exists, a reset code has been sent." });
     }
 
     const sql = getDb();
