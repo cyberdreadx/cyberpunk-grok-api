@@ -139,10 +139,7 @@ const COMMANDS: CommandSpec[] = [
           `email           ${u?.email}`,
           `verified        ${u?.email_verified ? "yes" : "no"}`,
           `admin           ${u?.is_admin ? "yes" : "no"}`,
-          `tier            ${u?.subscription_tier || "free"}`,
-          `sub_credits     ${u?.sub_credits ?? 0}`,
-          `pack_credits    ${u?.pack_credits ?? 0}`,
-          `karma           ${u?.karma ?? 0} / ${u?.posting?.karma_threshold ?? "?"}`,
+          `karma           ${u?.posting?.karma ?? 0} / ${u?.posting?.karma_threshold ?? "?"}`,
           `can_post        ${u?.posting?.can_post ? "yes" : "no"}`,
         ],
         "output"
