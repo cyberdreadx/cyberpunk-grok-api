@@ -50,9 +50,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       `;
 
       if (row && (!row.verification_onetime_paid || !row.verification_subscription_id || !row.verification_renews_at)) {
+        const existingRenewsAt = row.verification_renews_at
+          ? new Date(row.verification_renews_at).toISOString()
+          : null;
         let reconciledSubscriptionId: string | null = row.verification_subscription_id || null;
         let reconciledOnetimePaid = !!row.verification_onetime_paid;
-        let reconciledRenewsAt: string | null = row.verification_renews_at || null;
+        let reconciledRenewsAt: string | null = existingRenewsAt;
 
         if (row.verification_checkout_id) {
           try {
@@ -89,7 +92,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (
           reconciledOnetimePaid !== !!row.verification_onetime_paid ||
           reconciledSubscriptionId !== (row.verification_subscription_id || null) ||
-          reconciledRenewsAt !== (row.verification_renews_at || null)
+          reconciledRenewsAt !== existingRenewsAt
         ) {
           await sql`
             UPDATE users
