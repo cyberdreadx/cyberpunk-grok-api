@@ -997,4 +997,51 @@ function TwoFactorForm({
   );
 }
 
+/**
+ * KarmaChip — compact karma indicator shown next to the email in the header.
+ * Click opens a popover with the full KarmaBadge (progress + unlock status).
+ * Reads from useAuth so it auto-updates on `karma-changed` events.
+ */
+function KarmaChip() {
+  const { user } = useAuth();
+  const [open, setOpen] = useState(false);
+  const posting = user?.posting;
+  if (!posting) return null;
+  const unlocked = posting.can_post;
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          className={`font-mono-share text-[10px] gap-1 px-2 border ${
+            unlocked
+              ? "text-secondary border-secondary/40 hover:bg-secondary/10"
+              : "text-muted-foreground border-border hover:bg-muted/20"
+          }`}
+          title={unlocked ? "Posting unlocked" : `Karma ${posting.karma}/${posting.karma_threshold}`}
+        >
+          <Sparkles className="w-3 h-3" />
+          <span>{posting.karma}</span>
+          {!unlocked && (
+            <span className="hidden sm:inline text-muted-foreground/60">/{posting.karma_threshold}</span>
+          )}
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="bg-card border-border sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="font-orbitron text-sm tracking-wider neon-text-cyan flex items-center gap-2">
+            <Sparkles className="w-4 h-4" />
+            KARMA & POSTING
+          </DialogTitle>
+          <DialogDescription className="font-rajdhani text-muted-foreground">
+            Earn karma by engaging with the community to unlock posting — or buy credits to unlock instantly.
+          </DialogDescription>
+        </DialogHeader>
+        <KarmaBadge posting={posting} />
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default AuthDialog;
