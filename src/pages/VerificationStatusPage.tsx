@@ -205,14 +205,39 @@ const VerificationStatusPage: React.FC = () => {
 
   const startIdentity = async () => {
     setSubmitting(true);
+    // Detect mobile — popups after await are blocked on mobile Safari/Chrome,
+    // so we redirect the current tab instead. On desktop, open a placeholder
+    // tab synchronously inside the click handler to preserve the user gesture.
+    const isMobile =
+      typeof navigator !== "undefined" &&
+      /iphone|ipad|ipod|android/i.test(navigator.userAgent);
+    let popup: Window | null = null;
+    if (!isMobile) {
+      popup = window.open("about:blank", "_blank", "noopener,noreferrer");
+    }
     try {
       const res = await apiFetch<{ url: string }>("/verify", {
         method: "POST",
         body: { action: "identity" },
       });
-      if (res.url) window.open(res.url, "_blank", "noopener,noreferrer");
+      if (res.url) {
+        if (isMobile) {
+          window.location.href = res.url;
+          return;
+        }
+        if (popup && !popup.closed) {
+          popup.location.href = res.url;
+        } else {
+          // Popup was blocked — fall back to same-tab navigation
+          window.location.href = res.url;
+          return;
+        }
+      } else if (popup && !popup.closed) {
+        popup.close();
+      }
       setTimeout(() => load(), 1500);
     } catch (e: any) {
+      if (popup && !popup.closed) popup.close();
       toast({ title: e?.message || "Could not start ID check", variant: "destructive" });
     } finally {
       setSubmitting(false);
