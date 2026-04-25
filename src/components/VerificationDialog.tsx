@@ -49,12 +49,32 @@ const VerificationDialog: React.FC<Props> = ({ open, onOpenChange }) => {
 
   const startIdentity = async () => {
     setSubmitting(true);
+    const isMobile =
+      typeof navigator !== "undefined" &&
+      /iphone|ipad|ipod|android/i.test(navigator.userAgent);
+    let popup: Window | null = null;
+    if (!isMobile) {
+      popup = window.open("about:blank", "_blank", "noopener,noreferrer");
+    }
     try {
       const res = await apiFetch<{ url: string }>("/verify", { method: "POST", body: { action: "identity" } });
-      if (res.url) window.open(res.url, "_blank", "noopener,noreferrer");
-      // Re-fetch after a moment in case it was already verified
+      if (res.url) {
+        if (isMobile) {
+          window.location.href = res.url;
+          return;
+        }
+        if (popup && !popup.closed) {
+          popup.location.href = res.url;
+        } else {
+          window.location.href = res.url;
+          return;
+        }
+      } else if (popup && !popup.closed) {
+        popup.close();
+      }
       setTimeout(() => apiFetch<VerificationStatus>("/verify").then(setStatus).catch(() => {}), 1500);
     } catch (e: any) {
+      if (popup && !popup.closed) popup.close();
       toast({ title: e.message || "Could not start ID check", variant: "destructive" });
     } finally {
       setSubmitting(false);
