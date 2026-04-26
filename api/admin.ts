@@ -932,6 +932,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           hasMore: offset + batchSize < count,
           background,
           remainingAfter,
+          bgQueued,
+          bgQueueError,
         });
       }
 
