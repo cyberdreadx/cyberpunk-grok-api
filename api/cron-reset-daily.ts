@@ -25,6 +25,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
+    if (freeCreditsDisabled()) {
+      console.log("[cron-reset-daily] Skipped — FREE_CREDITS_DISABLED is on");
+      return res.status(200).json({
+        success: true,
+        skipped: true,
+        reason: "free_credits_disabled",
+        timestamp: new Date().toISOString(),
+      });
+    }
+
     const sql = getDb();
 
     // 1. Reset credits
