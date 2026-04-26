@@ -21,6 +21,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getDb } from "./_lib/db";
 import { getUserFromRequest } from "./_lib/auth";
 import { checkRateLimit } from "./_lib/ratelimit";
+import { freeCreditsDisabled, FREE_CREDITS_MAINTENANCE_MESSAGE } from "./_lib/freeCredits";
 
 /* ── Prize table ─────────────────────────────────────────────── */
 
