@@ -415,6 +415,7 @@ function AnnouncementPanel() {
     )) return;
     setSending(true);
     setResult(null);
+    setCancelled(false);
     // Capture the starting "remaining" so the dashboard can compute progress
     const startingRemaining = stats?.remaining ?? null;
     setBgInitialRemaining(startingRemaining);
