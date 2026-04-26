@@ -1083,6 +1083,8 @@ const Index = () => {
                 onCreditsRefresh={creditsHook.refreshCredits}
                 externalOpen={storeOpen}
                 onExternalOpenChange={setStoreOpen}
+                freeCreditsDisabled={creditsHook.freeCreditsDisabled}
+                maintenanceMessage={creditsHook.maintenanceMessage}
               />
             )}
 
