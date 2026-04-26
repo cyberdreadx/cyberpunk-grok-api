@@ -2405,6 +2405,20 @@ export default function Admin() {
                         </td>
                         <td className="px-2.5 py-2 font-mono-share text-[9px] text-muted-foreground/40 max-w-[120px] truncate">{log.resend_id || "—"}</td>
                         <td className="px-2.5 py-2 font-mono-share text-[10px] text-destructive/80 max-w-[200px] truncate">{log.error_message || "—"}</td>
+                        <td className="px-2.5 py-2 text-right">
+                          {log.status !== "sent" && log.status !== "delivered" ? (
+                            <button
+                              onClick={() => deleteFailedEmails(
+                                { ids: [log.id] },
+                                `Delete this ${log.status} log row for ${log.recipient}?\n\nNext time you re-send "${log.email_type}" they will be retried.`,
+                              )}
+                              className="font-mono-share text-[10px] text-destructive/70 hover:text-destructive hover:underline"
+                              title="Delete this failed log row"
+                            >
+                              DEL
+                            </button>
+                          ) : null}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
