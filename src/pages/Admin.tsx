@@ -367,6 +367,40 @@ function AnnouncementPanel() {
     }
   };
 
+  const handleSendBackground = async () => {
+    if (!confirm(
+      "Send in BACKGROUND mode?\n\n" +
+      "The server will keep sending after you close this page. " +
+      "Progress here will stop updating, but emails will keep going. " +
+      "Use the REFRESH stats button to track progress."
+    )) return;
+    setSending(true);
+    setResult(null);
+    try {
+      const body: any = {
+        action: "send-announcement",
+        background: true,
+        batchSize: 25,
+        campaign,
+      };
+      if (subject) body.subject = subject;
+      if (htmlContent) body.html = htmlContent;
+      const res = await apiFetch("/admin", { method: "POST", body });
+      setResult({
+        background: true,
+        sent: res.sent,
+        failed: res.failed,
+        total: res.totalUsers,
+        remaining: res.remainingAfter,
+      });
+      fetchStats();
+    } catch (err: any) {
+      setResult({ error: err.message });
+    } finally {
+      setSending(false);
+    }
+  };
+
   return (
     <section className="border border-primary/20 rounded-lg bg-card/40 backdrop-blur-sm p-3 sm:p-4 space-y-3">
       <div className="flex items-center justify-between gap-2 flex-wrap">
