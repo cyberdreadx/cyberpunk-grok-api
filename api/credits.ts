@@ -40,6 +40,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       subscription_cancel_at: u.subscription_cancel_at,
       lora_unlocked: u.lora_unlocked,
       has_purchased,
+      free_credits_disabled: freeCreditsDisabled(),
+      maintenance_message: freeCreditsDisabled() ? FREE_CREDITS_MAINTENANCE_MESSAGE : null,
     });
   } catch (err: any) {
     console.error("[credits]", err.message);
