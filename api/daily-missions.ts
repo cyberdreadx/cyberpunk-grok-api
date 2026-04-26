@@ -141,6 +141,8 @@ async function getStatus(sql: any, userId: string, res: VercelResponse) {
     streakBonus: STREAK_BONUS,
     cycleDays: CYCLE_DAYS,
     lastFeedPost,
+    freeCreditsDisabled: freeCreditsDisabled(),
+    maintenanceMessage: freeCreditsDisabled() ? FREE_CREDITS_MAINTENANCE_MESSAGE : null,
   });
 }
 
