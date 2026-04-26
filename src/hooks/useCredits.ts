@@ -264,7 +264,8 @@ export function useCredits(user: AuthUser | null) {
   }), [
     totalCredits, dailyCredits, subCredits, packCredits,
     subscriptionTier, subscriptionRenewsAt, subscriptionCancelAt,
-    loraUnlocked, loading, purchasing, purchaseError,
+    loraUnlocked, freeCreditsDisabled, maintenanceMessage,
+    loading, purchasing, purchaseError,
     clearPurchaseError, hasEnoughCredits,
     user, purchaseCredits, purchaseLoraUnlock, subscribeToPlan,
     manageSubscription, deductCreditsLocally, fetchCredits,
