@@ -448,9 +448,6 @@ function AnnouncementPanel() {
     }
   };
 
-  const [cancelling, setCancelling] = useState(false);
-  const [cancelled, setCancelled] = useState(false);
-
   const handleCancelBackground = async () => {
     if (!confirm(`Cancel the in-flight "${campaign}" background campaign?\n\nThe currently-running batch will finish, then the loop stops. Already-sent emails cannot be undone.`)) return;
     setCancelling(true);
@@ -466,9 +463,6 @@ function AnnouncementPanel() {
       setCancelling(false);
     }
   };
-
-  // Reset cancelled flag whenever a new campaign is started or selected
-  useEffect(() => { setCancelled(false); }, [campaign]);
 
   return (
     <section className="border border-primary/20 rounded-lg bg-card/40 backdrop-blur-sm p-3 sm:p-4 space-y-3">
