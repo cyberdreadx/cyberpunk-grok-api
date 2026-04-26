@@ -286,12 +286,16 @@ function AnnouncementPanel() {
   const [showEditor, setShowEditor] = useState(false);
   const [htmlContent, setHtmlContent] = useState("");
   const [showPreview, setShowPreview] = useState(false);
+  const [bgRunning, setBgRunning] = useState(false);
+  const [bgStartedAt, setBgStartedAt] = useState<number | null>(null);
+  const [bgInitialRemaining, setBgInitialRemaining] = useState<number | null>(null);
 
   const fetchStats = useCallback(async () => {
     setStatsLoading(true);
     try {
       const res = await apiFetch("/admin", { method: "POST", body: { action: "announcement-stats", campaign } });
       setStats(res);
+      return res;
     } catch { /* ignore */ }
     finally { setStatsLoading(false); }
   }, [campaign]);
@@ -300,6 +304,40 @@ function AnnouncementPanel() {
 
   // Reset custom HTML when switching campaigns so the right default loads
   useEffect(() => { setHtmlContent(""); }, [campaign]);
+
+  // Live poll while a background campaign is running. Stops when remaining
+  // reaches 0 or the user switches campaigns / leaves the panel.
+  useEffect(() => {
+    if (!bgRunning) return;
+    let cancelled = false;
+    let stallCount = 0;
+    let lastRemaining: number | null = null;
+
+    const tick = async () => {
+      const res: any = await fetchStats();
+      if (cancelled || !res) return;
+      if (typeof res.remaining === "number") {
+        if (res.remaining === 0) {
+          setBgRunning(false);
+          return;
+        }
+        // Detect stalled campaign (no progress for 6 polls = ~24s).
+        if (lastRemaining !== null && res.remaining === lastRemaining) {
+          stallCount++;
+          if (stallCount >= 6) {
+            setBgRunning(false);
+            return;
+          }
+        } else {
+          stallCount = 0;
+        }
+        lastRemaining = res.remaining;
+      }
+    };
+
+    const id = setInterval(tick, 4000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [bgRunning, fetchStats]);
 
   const handleDryRun = async () => {
     setDryRunning(true);
@@ -371,11 +409,14 @@ function AnnouncementPanel() {
     if (!confirm(
       "Send in BACKGROUND mode?\n\n" +
       "The server will keep sending after you close this page. " +
-      "Progress here will stop updating, but emails will keep going. " +
-      "Use the REFRESH stats button to track progress."
+      "The live dashboard below will update automatically every few seconds."
     )) return;
     setSending(true);
     setResult(null);
+    // Capture the starting "remaining" so the dashboard can compute progress
+    const startingRemaining = stats?.remaining ?? null;
+    setBgInitialRemaining(startingRemaining);
+    setBgStartedAt(Date.now());
     try {
       const body: any = {
         action: "send-announcement",
@@ -393,9 +434,15 @@ function AnnouncementPanel() {
         total: res.totalUsers,
         remaining: res.remainingAfter,
       });
+      // Initialise the baseline if stats hadn't loaded yet
+      if (startingRemaining === null && typeof res.totalUsers === "number") {
+        setBgInitialRemaining(res.totalUsers);
+      }
+      setBgRunning(true);
       fetchStats();
     } catch (err: any) {
       setResult({ error: err.message });
+      setBgRunning(false);
     } finally {
       setSending(false);
     }
@@ -563,12 +610,70 @@ function AnnouncementPanel() {
         </div>
       )}
 
-      {result?.background && (
-        <div className="bg-accent/5 border border-accent/20 rounded p-3 font-mono-share text-xs space-y-1">
-          <div><span className="text-accent">⚡ Running in background:</span> first batch sent {result.sent} ({result.failed} failed). {result.remaining} users remaining.</div>
-          <div className="text-muted-foreground/70 text-[10px]">The server will keep sending automatically. Safe to close this page. Use REFRESH stats to track progress.</div>
-        </div>
-      )}
+      {result?.background && (() => {
+        const baseline = bgInitialRemaining ?? result.total ?? 0;
+        const currentRemaining = stats?.remaining ?? result.remaining ?? baseline;
+        const sentSoFar = Math.max(0, baseline - currentRemaining);
+        const pct = baseline > 0 ? Math.min(100, Math.round((sentSoFar / baseline) * 100)) : 0;
+        const elapsedSec = bgStartedAt ? Math.floor((Date.now() - bgStartedAt) / 1000) : 0;
+        const rate = elapsedSec > 0 ? sentSoFar / elapsedSec : 0; // emails/sec
+        const etaSec = rate > 0 ? Math.round(currentRemaining / rate) : null;
+        const etaLabel = etaSec === null
+          ? "—"
+          : etaSec < 60
+            ? `${etaSec}s`
+            : etaSec < 3600
+              ? `${Math.round(etaSec / 60)}m`
+              : `${(etaSec / 3600).toFixed(1)}h`;
+        const isComplete = currentRemaining === 0;
+
+        return (
+          <div className={`border rounded p-3 font-mono-share text-xs space-y-2 ${isComplete ? "bg-secondary/5 border-secondary/30" : "bg-accent/5 border-accent/20"}`}>
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2">
+                {isComplete
+                  ? <span className="text-secondary">✓ Background campaign complete</span>
+                  : <><Loader2 className="w-3 h-3 animate-spin text-accent" /><span className="text-accent">Live: campaign running on server</span></>
+                }
+              </div>
+              <span className="text-muted-foreground/70 text-[10px]">
+                {bgRunning && !isComplete ? "auto-refreshing every 4s" : ""}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="bg-background/40 rounded p-2 border border-border/30">
+                <div className="text-[9px] text-muted-foreground/60 uppercase tracking-wider">Sent</div>
+                <div className="text-lg font-bold text-secondary">{sentSoFar}</div>
+              </div>
+              <div className="bg-background/40 rounded p-2 border border-border/30">
+                <div className="text-[9px] text-muted-foreground/60 uppercase tracking-wider">Remaining</div>
+                <div className="text-lg font-bold text-primary">{currentRemaining}</div>
+              </div>
+              <div className="bg-background/40 rounded p-2 border border-border/30">
+                <div className="text-[9px] text-muted-foreground/60 uppercase tracking-wider">Total</div>
+                <div className="text-lg font-bold text-foreground">{baseline}</div>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <div className="flex justify-between text-[10px] text-muted-foreground/70">
+                <span>{pct}% complete</span>
+                <span>elapsed {Math.floor(elapsedSec / 60)}m {elapsedSec % 60}s · ETA {etaLabel}</span>
+              </div>
+              <div className="w-full bg-muted/30 rounded-full h-1.5 overflow-hidden">
+                <div className={`h-1.5 rounded-full transition-all ${isComplete ? "bg-secondary" : "bg-accent"}`} style={{ width: `${pct}%` }} />
+              </div>
+            </div>
+
+            <div className="text-muted-foreground/70 text-[10px]">
+              {isComplete
+                ? `Campaign finished. ${result.failed > 0 ? `${result.failed} failures in the first batch — check email logs.` : ""}`
+                : "Server keeps sending in the background — safe to close this page. Dashboard auto-refreshes from the database."}
+            </div>
+          </div>
+        );
+      })()}
 
       {result?.error && (
         <div className="bg-destructive/5 border border-destructive/20 rounded p-3 space-y-2">
