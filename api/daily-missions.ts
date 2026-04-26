@@ -4,6 +4,7 @@ import { getUserFromRequest, ADMIN_EMAIL } from "./_lib/auth";
 import { checkRateLimit } from "./_lib/ratelimit";
 import { awardKarma } from "./_lib/karma";
 import { notify } from "./_lib/notify";
+import { freeCreditsDisabled, FREE_CREDITS_MAINTENANCE_MESSAGE } from "./_lib/freeCredits";
 
 const MISSIONS = ["login", "story", "reddit", "grok_subreddit", "twitter", "share"] as const;
 const MISSION_CREDITS: Record<string, number> = {
