@@ -243,6 +243,8 @@ export function useCredits(user: AuthUser | null) {
     subscriptionRenewsAt,
     subscriptionCancelAt,
     loraUnlocked,
+    freeCreditsDisabled,
+    maintenanceMessage,
     hasSubscription: !!subscriptionTier,
     isCancelling: !!subscriptionTier && !!subscriptionCancelAt,
     loading,
