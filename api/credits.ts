@@ -3,6 +3,7 @@ import { getDb } from "./_lib/db";
 import { getUserFromRequest } from "./_lib/auth";
 import { applyCors } from "./_lib/cors";
 import { checkRateLimit } from "./_lib/ratelimit";
+import { freeCreditsDisabled, FREE_CREDITS_MAINTENANCE_MESSAGE } from "./_lib/freeCredits";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   applyCors(req, res, "GET, OPTIONS");
