@@ -134,6 +134,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const { paid } = req.body || {};
 
+  if (!paid && freeCreditsDisabled()) {
+    return res.status(503).json({ error: FREE_CREDITS_MAINTENANCE_MESSAGE, maintenance: true });
+  }
+
+
   const [user] = await sql`
     SELECT daily_credits, sub_credits, pack_credits, last_free_spin, COALESCE(spin_streak, 0) as spin_streak
     FROM users WHERE id = ${auth.userId}
