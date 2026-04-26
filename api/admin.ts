@@ -709,6 +709,39 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const campaign = (req.body.campaign as string) || "announcement";
         const background = req.body.background === true || req.body._bg === true;
 
+        // Cancel handling for background mode.
+        // - The FIRST batch (initiated by an admin via JWT, _bg=false) clears
+        //   any stale cancel flag so a new campaign can start cleanly.
+        // - Subsequent self-continuation batches (_bg=true) check the flag
+        //   and abort if set.
+        if (background) {
+          const isContinuation = req.body._bg === true;
+          if (!isContinuation) {
+            try { await sql`DELETE FROM announcement_cancels WHERE campaign = ${campaign}`; }
+            catch (e: any) { console.warn("[admin] failed to clear stale cancel:", e?.message); }
+          } else {
+            try {
+              const cancelRows = await sql`
+                SELECT 1 FROM announcement_cancels WHERE campaign = ${campaign} LIMIT 1
+              `;
+              if (cancelRows.length > 0) {
+                console.log(`[admin] bg announcement: cancel signal found for "${campaign}", stopping loop`);
+                return res.status(200).json({
+                  sent: 0,
+                  failed: 0,
+                  campaign,
+                  cancelled: true,
+                  background: true,
+                  hasMore: false,
+                  remainingAfter: 0,
+                });
+              }
+            } catch (e: any) {
+              console.warn("[admin] cancel check failed (table missing?):", e?.message);
+            }
+          }
+        }
+
         // Get verified users who haven't already received THIS campaign.
         // In background mode the offset is ALWAYS 0 because each batch
         // already-sent users are filtered out by the dedupe subquery.
@@ -813,6 +846,49 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           background,
           remainingAfter,
         });
+      }
+
+      case "cancel-announcement": {
+        const campaign = (req.body.campaign as string) || "announcement";
+        try {
+          await sql`
+            INSERT INTO announcement_cancels (campaign, cancelled_at)
+            VALUES (${campaign}, now())
+            ON CONFLICT (campaign) DO UPDATE SET cancelled_at = now()
+          `;
+          console.log(`[admin] cancel signal set for campaign "${campaign}"`);
+          return res.status(200).json({ cancelled: true, campaign });
+        } catch (e: any) {
+          return res.status(500).json({ error: `Cancel failed: ${e?.message}` });
+        }
+      }
+
+      case "resume-announcement": {
+        // Removes the cancel flag so a new send-announcement (foreground or
+        // background) can proceed for this campaign.
+        const campaign = (req.body.campaign as string) || "announcement";
+        try {
+          await sql`DELETE FROM announcement_cancels WHERE campaign = ${campaign}`;
+          return res.status(200).json({ cleared: true, campaign });
+        } catch (e: any) {
+          return res.status(500).json({ error: `Clear failed: ${e?.message}` });
+        }
+      }
+
+      case "announcement-cancel-status": {
+        const campaign = (req.body.campaign as string) || "announcement";
+        try {
+          const rows = await sql`
+            SELECT cancelled_at FROM announcement_cancels WHERE campaign = ${campaign} LIMIT 1
+          `;
+          return res.status(200).json({
+            cancelled: rows.length > 0,
+            cancelledAt: rows[0]?.cancelled_at || null,
+            campaign,
+          });
+        } catch {
+          return res.status(200).json({ cancelled: false, campaign });
+        }
       }
 
       case "list-mods": {

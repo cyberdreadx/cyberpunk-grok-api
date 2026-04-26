@@ -289,6 +289,8 @@ function AnnouncementPanel() {
   const [bgRunning, setBgRunning] = useState(false);
   const [bgStartedAt, setBgStartedAt] = useState<number | null>(null);
   const [bgInitialRemaining, setBgInitialRemaining] = useState<number | null>(null);
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelled, setCancelled] = useState(false);
 
   const fetchStats = useCallback(async () => {
     setStatsLoading(true);
@@ -302,8 +304,8 @@ function AnnouncementPanel() {
 
   useEffect(() => { fetchStats(); }, [fetchStats]);
 
-  // Reset custom HTML when switching campaigns so the right default loads
-  useEffect(() => { setHtmlContent(""); }, [campaign]);
+  // Reset custom HTML and cancel state when switching campaigns
+  useEffect(() => { setHtmlContent(""); setCancelled(false); }, [campaign]);
 
   // Live poll while a background campaign is running. Stops when remaining
   // reaches 0 or the user switches campaigns / leaves the panel.
@@ -413,6 +415,7 @@ function AnnouncementPanel() {
     )) return;
     setSending(true);
     setResult(null);
+    setCancelled(false);
     // Capture the starting "remaining" so the dashboard can compute progress
     const startingRemaining = stats?.remaining ?? null;
     setBgInitialRemaining(startingRemaining);
@@ -448,6 +451,22 @@ function AnnouncementPanel() {
     }
   };
 
+  const handleCancelBackground = async () => {
+    if (!confirm(`Cancel the in-flight "${campaign}" background campaign?\n\nThe currently-running batch will finish, then the loop stops. Already-sent emails cannot be undone.`)) return;
+    setCancelling(true);
+    try {
+      await apiFetch("/admin", { method: "POST", body: { action: "cancel-announcement", campaign } });
+      setCancelled(true);
+      // Stop client-side polling immediately; server-side loop will exit
+      // after the in-flight batch completes (~5–15s).
+      setBgRunning(false);
+    } catch (err: any) {
+      alert(`Cancel failed: ${err.message}`);
+    } finally {
+      setCancelling(false);
+    }
+  };
+
   return (
     <section className="border border-primary/20 rounded-lg bg-card/40 backdrop-blur-sm p-3 sm:p-4 space-y-3">
       <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -466,12 +485,19 @@ function AnnouncementPanel() {
             {sending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
             {sending ? "SENDING..." : "SEND_TO_ALL"}
           </Button>
-          <Button variant="outline" size="sm" onClick={handleSendBackground} disabled={sending || dryRunning}
+          <Button variant="outline" size="sm" onClick={handleSendBackground} disabled={sending || dryRunning || bgRunning}
             className="font-mono-share text-xs gap-1.5 border-accent/30 hover:bg-accent/10 text-accent">
             <Send className="w-3 h-3" />
             SEND_IN_BG
           </Button>
-          {sending && (
+          {bgRunning && (
+            <Button variant="outline" size="sm" onClick={handleCancelBackground} disabled={cancelling}
+              className="font-mono-share text-xs gap-1.5 border-destructive/30 hover:bg-destructive/10 text-destructive">
+              {cancelling ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+              {cancelling ? "CANCELLING..." : "CANCEL_BG"}
+            </Button>
+          )}
+          {sending && !bgRunning && (
             <Button variant="outline" size="sm" onClick={() => { abortRef.current = true; }}
               className="font-mono-share text-xs gap-1.5 border-destructive/30 hover:bg-destructive/10 text-destructive">
               ABORT
@@ -628,12 +654,18 @@ function AnnouncementPanel() {
         const isComplete = currentRemaining === 0;
 
         return (
-          <div className={`border rounded p-3 font-mono-share text-xs space-y-2 ${isComplete ? "bg-secondary/5 border-secondary/30" : "bg-accent/5 border-accent/20"}`}>
+          <div className={`border rounded p-3 font-mono-share text-xs space-y-2 ${
+            cancelled ? "bg-destructive/5 border-destructive/30"
+            : isComplete ? "bg-secondary/5 border-secondary/30"
+            : "bg-accent/5 border-accent/20"
+          }`}>
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-2">
-                {isComplete
-                  ? <span className="text-secondary">✓ Background campaign complete</span>
-                  : <><Loader2 className="w-3 h-3 animate-spin text-accent" /><span className="text-accent">Live: campaign running on server</span></>
+                {cancelled
+                  ? <span className="text-destructive">⛔ Campaign cancelled — current batch finishes, then loop stops</span>
+                  : isComplete
+                    ? <span className="text-secondary">✓ Background campaign complete</span>
+                    : <><Loader2 className="w-3 h-3 animate-spin text-accent" /><span className="text-accent">Live: campaign running on server</span></>
                 }
               </div>
               <span className="text-muted-foreground/70 text-[10px]">
@@ -662,14 +694,20 @@ function AnnouncementPanel() {
                 <span>elapsed {Math.floor(elapsedSec / 60)}m {elapsedSec % 60}s · ETA {etaLabel}</span>
               </div>
               <div className="w-full bg-muted/30 rounded-full h-1.5 overflow-hidden">
-                <div className={`h-1.5 rounded-full transition-all ${isComplete ? "bg-secondary" : "bg-accent"}`} style={{ width: `${pct}%` }} />
+                <div className={`h-1.5 rounded-full transition-all ${
+                  cancelled ? "bg-destructive"
+                  : isComplete ? "bg-secondary"
+                  : "bg-accent"
+                }`} style={{ width: `${pct}%` }} />
               </div>
             </div>
 
             <div className="text-muted-foreground/70 text-[10px]">
-              {isComplete
-                ? `Campaign finished. ${result.failed > 0 ? `${result.failed} failures in the first batch — check email logs.` : ""}`
-                : "Server keeps sending in the background — safe to close this page. Dashboard auto-refreshes from the database."}
+              {cancelled
+                ? `Cancel signal sent. The remaining ${currentRemaining} users will NOT be emailed. Hit SEND_IN_BG again to resume — already-sent users will be skipped automatically.`
+                : isComplete
+                  ? `Campaign finished. ${result.failed > 0 ? `${result.failed} failures in the first batch — check email logs.` : ""}`
+                  : "Server keeps sending in the background — safe to close this page. Dashboard auto-refreshes from the database."}
             </div>
           </div>
         );
