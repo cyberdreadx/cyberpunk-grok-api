@@ -613,6 +613,62 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json({ logs: rows, stats });
       }
 
+      // Delete failed/bounced/complained email_log entries so the
+      // dedup filter in send-announcement no longer skips those recipients.
+      // Modes:
+      //   { ids: string[] }                      → delete specific log rows
+      //   { campaign: string, scope: 'failed' }  → delete all non-'sent' rows for a campaign
+      //   { recipient: string }                  → delete all failed rows for one recipient
+      // 'sent' rows are NEVER deletable here — that would let the same user
+      // receive the same campaign twice. To intentionally re-send, use a new
+      // campaign name instead.
+      case "delete-failed-emails": {
+        const ids = Array.isArray(req.body.ids) ? (req.body.ids as string[]) : null;
+        const campaign = typeof req.body.campaign === "string" ? req.body.campaign : null;
+        const recipient = typeof req.body.recipient === "string" ? req.body.recipient : null;
+        const scope = (req.body.scope as string) || "failed"; // 'failed' | 'all-non-sent'
+
+        // Whitelist of statuses we're willing to delete. 'sent' is excluded
+        // on purpose — see comment above.
+        const deletableStatuses =
+          scope === "all-non-sent"
+            ? ["failed", "bounced", "complained", "delayed", "pending"]
+            : ["failed", "bounced", "complained"];
+
+        try {
+          let deleted: any[] = [];
+          if (ids && ids.length > 0) {
+            deleted = await sql`
+              DELETE FROM email_log
+              WHERE id = ANY(${ids}::uuid[])
+                AND status = ANY(${deletableStatuses}::text[])
+              RETURNING id, recipient, email_type, status
+            `;
+          } else if (campaign) {
+            deleted = await sql`
+              DELETE FROM email_log
+              WHERE email_type = ${campaign}
+                AND status = ANY(${deletableStatuses}::text[])
+              RETURNING id, recipient, email_type, status
+            `;
+          } else if (recipient) {
+            deleted = await sql`
+              DELETE FROM email_log
+              WHERE recipient = ${recipient}
+                AND status = ANY(${deletableStatuses}::text[])
+              RETURNING id, recipient, email_type, status
+            `;
+          } else {
+            return res.status(400).json({ error: "Provide ids[], campaign, or recipient" });
+          }
+
+          console.log(`[admin] deleted ${deleted.length} failed email_log rows`);
+          return res.status(200).json({ deleted: deleted.length, rows: deleted });
+        } catch (e: any) {
+          return res.status(500).json({ error: `Delete failed: ${e?.message}` });
+        }
+      }
+
       // -- API usage analytics --
       case "api-analytics": {
         // KPI overview
