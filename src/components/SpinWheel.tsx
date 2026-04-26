@@ -60,6 +60,8 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ onCreditsRefresh }) => {
   const [showConfetti, setShowConfetti] = useState(false);
   const [streak, setStreak] = useState(0);
   const [nextMinPrize, setNextMinPrize] = useState(1);
+  const [maintenance, setMaintenance] = useState(false);
+  const [maintenanceMsg, setMaintenanceMsg] = useState<string | null>(null);
   const wheelRef = useRef<HTMLDivElement>(null);
 
   const fetchState = useCallback(async () => {
@@ -69,6 +71,8 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ onCreditsRefresh }) => {
       setNextFreeAt(data.nextFreeAt);
       setStreak(data.streak ?? 0);
       setNextMinPrize(data.nextMinPrize ?? 1);
+      setMaintenance(!!data.freeCreditsDisabled);
+      setMaintenanceMsg(data.maintenanceMessage ?? null);
     } catch {
       // silently ignore
     } finally {
