@@ -2343,6 +2343,23 @@ export default function Admin() {
                 {emailLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
                 REFRESH
               </Button>
+              {/* Bulk delete: removes failed rows for the currently-filtered
+                  campaign so a re-send retries those recipients. Only enabled
+                  when the user has filtered by a specific campaign type. */}
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!emailFilter.type || emailLoading}
+                onClick={() => deleteFailedEmails(
+                  { campaign: emailFilter.type, scope: "all-non-sent" },
+                  `Delete ALL non-'sent' email log rows for campaign "${emailFilter.type}"?\n\nThis lets you re-send to recipients whose previous attempt failed/bounced. 'Sent' rows are kept so users don't get duplicates.`,
+                )}
+                title={emailFilter.type ? `Delete failed rows for ${emailFilter.type}` : "Pick a TYPE filter first"}
+                className="font-mono-share text-xs gap-1.5 border-destructive/30 hover:bg-destructive/10 text-destructive"
+              >
+                <Ban className="w-3 h-3" />
+                DELETE_FAILED
+              </Button>
             </div>
 
             {/* Log table */}
@@ -2351,17 +2368,17 @@ export default function Admin() {
                 <table className="w-full min-w-[600px]">
                   <thead>
                     <tr className="border-b border-border/20">
-                      {["TIME", "RECIPIENT", "TYPE", "STATUS", "RESEND_ID", "ERROR"].map((h) => (
+                      {["TIME", "RECIPIENT", "TYPE", "STATUS", "RESEND_ID", "ERROR", ""].map((h) => (
                         <th key={h} className="px-2.5 py-2 text-left font-mono-share text-[9px] text-muted-foreground/50 tracking-wider">{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {emailLogs.length === 0 && !emailLoading && (
-                      <tr><td colSpan={6} className="px-4 py-8 text-center font-mono-share text-xs text-muted-foreground/50">No email logs found</td></tr>
+                      <tr><td colSpan={7} className="px-4 py-8 text-center font-mono-share text-xs text-muted-foreground/50">No email logs found</td></tr>
                     )}
                     {emailLoading && (
-                      <tr><td colSpan={6} className="px-4 py-8 text-center"><Loader2 className="w-4 h-4 animate-spin mx-auto text-primary" /></td></tr>
+                      <tr><td colSpan={7} className="px-4 py-8 text-center"><Loader2 className="w-4 h-4 animate-spin mx-auto text-primary" /></td></tr>
                     )}
                     {emailLogs.map((log: any, i: number) => (
                       <tr key={i} className="border-b border-border/10 hover:bg-primary/5 transition-colors">
