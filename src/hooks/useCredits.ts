@@ -23,6 +23,8 @@ export function useCredits(user: AuthUser | null) {
   const [subscriptionRenewsAt, setSubscriptionRenewsAt] = useState<string | null>(null);
   const [subscriptionCancelAt, setSubscriptionCancelAt] = useState<string | null>(null);
   const [loraUnlocked, setLoraUnlocked] = useState(false);
+  const [freeCreditsDisabled, setFreeCreditsDisabled] = useState(false);
+  const [maintenanceMessage, setMaintenanceMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [purchasing, setPurchasing] = useState(false);
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
