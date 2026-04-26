@@ -329,16 +329,30 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
             </div>
           )}
 
-          {/* Spin Wheel Section */}
-          <div className="mt-4 border border-primary/20 rounded-lg bg-primary/5 p-4">
-            <h3 className="font-orbitron text-xs tracking-wider neon-text-cyan text-center mb-1">
-              🎰 Free Credits
-            </h3>
-            <p className="font-mono-share text-[10px] text-muted-foreground/60 text-center mb-2">
-              Spin the wheel for a chance to win credits! One free spin every 24 hours.
-            </p>
-            <SpinWheel onCreditsRefresh={onCreditsRefresh} />
-          </div>
+          {/* Free credits maintenance banner */}
+          {freeCreditsDisabled && (
+            <div className="mt-4 border border-yellow-500/30 bg-yellow-500/5 rounded-lg px-3 py-3 text-center">
+              <p className="font-orbitron text-[11px] tracking-widest text-yellow-400 uppercase">
+                ⚠ Free credits paused
+              </p>
+              <p className="font-mono-share text-[10px] text-muted-foreground mt-1.5 leading-relaxed">
+                {maintenanceMessage || "Free credits are temporarily down for maintenance updates. Paid credit packs and subscriptions are unaffected."}
+              </p>
+            </div>
+          )}
+
+          {/* Spin Wheel Section — hidden during maintenance */}
+          {!freeCreditsDisabled && (
+            <div className="mt-4 border border-primary/20 rounded-lg bg-primary/5 p-4">
+              <h3 className="font-orbitron text-xs tracking-wider neon-text-cyan text-center mb-1">
+                🎰 Free Credits
+              </h3>
+              <p className="font-mono-share text-[10px] text-muted-foreground/60 text-center mb-2">
+                Spin the wheel for a chance to win credits! One free spin every 24 hours.
+              </p>
+              <SpinWheel onCreditsRefresh={onCreditsRefresh} />
+            </div>
+          )}
 
           <div className="mt-4">
             <PricingCards
