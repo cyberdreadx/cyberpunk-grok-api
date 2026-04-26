@@ -1183,6 +1183,27 @@ export default function Admin() {
     }
   }, []);
 
+  // Delete failed/bounced/complained email_log rows. After deletion the
+  // dedup filter in send-announcement no longer skips those recipients,
+  // so a re-run of the campaign will retry them.
+  const deleteFailedEmails = useCallback(async (
+    payload: { ids?: string[]; campaign?: string; recipient?: string; scope?: "failed" | "all-non-sent" },
+    confirmMsg: string,
+  ) => {
+    if (!confirm(confirmMsg)) return;
+    try {
+      const res = await apiFetch<{ deleted: number }>("/admin", {
+        method: "POST",
+        body: { action: "delete-failed-emails", ...payload },
+      });
+      alert(`Deleted ${res.deleted} log row${res.deleted === 1 ? "" : "s"}.`);
+      // Refresh the table so removed rows disappear and stats update.
+      await fetchEmailLogs(emailFilter);
+    } catch (err: any) {
+      alert(`Delete failed: ${err.message}`);
+    }
+  }, [fetchEmailLogs, emailFilter]);
+
   const fetchAll = useCallback(async () => {
     setRefreshing(true);
     const errors: string[] = [];
