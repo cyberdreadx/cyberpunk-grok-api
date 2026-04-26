@@ -49,6 +49,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         FROM users WHERE id = ${auth.userId}::uuid
       `;
 
+      // Reconcile Identity session: Stripe may have verified the user but the
+      // webhook was missed/delayed. If we have a session id and aren't already
+      // marked verified, check Stripe directly.
+      if (row && row.verification_status !== "verified" && row.verification_session_id) {
+        try {
+          const idSession = await stripe.identity.verificationSessions.retrieve(row.verification_session_id);
+          if (idSession.status === "verified") {
+            await sql`
+              UPDATE users
+              SET verification_status = 'verified',
+                  verified_at = COALESCE(verified_at, now()),
+                  verification_lapsed_at = NULL,
+                  updated_at = now()
+              WHERE id = ${auth.userId}::uuid
+            `;
+            [row] = await sql`
+              SELECT verification_status, verification_session_id,
+                     verification_subscription_id, verification_checkout_id,
+                     verification_onetime_paid, verified_at,
+                     verification_renews_at, verification_lapsed_at
+              FROM users WHERE id = ${auth.userId}::uuid
+            `;
+          }
+        } catch (err: any) {
+          console.error("[verify] identity session reconciliation failed:", err?.message);
+        }
+      }
+
       if (row && (!row.verification_onetime_paid || !row.verification_subscription_id || !row.verification_renews_at)) {
         const existingRenewsAt = row.verification_renews_at
           ? new Date(row.verification_renews_at).toISOString()
