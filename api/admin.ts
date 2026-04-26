@@ -854,38 +854,69 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           }
         }
 
-        // Background mode: kick off the next batch as a fire-and-forget
-        // server-to-server call. This survives the admin closing the tab.
+        // Background mode: kick off the next batch as a server-to-server
+        // call before returning. We MUST await the fetch on Vercel —
+        // unawaited promises are killed when the parent function returns,
+        // which silently breaks the self-continuation loop. We only await
+        // until the child request has been ACCEPTED (headers received) by
+        // setting a short timeout, then abort the response stream so the
+        // child keeps processing on its own function instance while we
+        // return to the admin UI quickly.
         const remainingAfter = count - users.length;
+        let bgQueued = false;
+        let bgQueueError: string | null = null;
         if (background && users.length > 0 && remainingAfter > 0) {
           if (!cronSecret) {
-            console.warn("[admin] background announcement requested but CRON_SECRET is not set — cannot self-continue");
+            bgQueueError = "CRON_SECRET not set — cannot self-continue";
+            console.warn("[admin] " + bgQueueError);
           } else {
             try {
               const proto = (req.headers["x-forwarded-proto"] as string) || "https";
               const host = req.headers["host"];
               const selfUrl = `${proto}://${host}/api/admin`;
-              // Fire-and-forget — DO NOT await. Vercel will keep this child
-              // request alive on its own function instance.
-              fetch(selfUrl, {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  "x-bg-secret": cronSecret,
-                },
-                body: JSON.stringify({
-                  action: "send-announcement",
-                  background: true,
-                  _bg: true,
-                  batchSize,
-                  campaign,
-                  subject: customSubject,
-                  html: customHtml,
-                }),
-              }).catch((e) => console.error("[admin] bg continue fetch failed:", e?.message));
-              console.log(`[admin] bg announcement: queued next batch, ${remainingAfter} users remaining`);
+
+              // Abort the child fetch after 2.5s — long enough for Vercel
+              // to spin up the child function and start executing it,
+              // short enough that the admin UI doesn't wait on a full batch.
+              const ac = new AbortController();
+              const abortTimer = setTimeout(() => ac.abort(), 2500);
+
+              try {
+                await fetch(selfUrl, {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    "x-bg-secret": cronSecret,
+                  },
+                  body: JSON.stringify({
+                    action: "send-announcement",
+                    background: true,
+                    _bg: true,
+                    batchSize,
+                    campaign,
+                    subject: customSubject,
+                    html: customHtml,
+                  }),
+                  signal: ac.signal,
+                });
+                bgQueued = true;
+              } catch (e: any) {
+                // AbortError is EXPECTED — the child kept running, we just
+                // stopped reading its response. Anything else is a real
+                // queueing failure.
+                if (e?.name === "AbortError") {
+                  bgQueued = true;
+                } else {
+                  bgQueueError = e?.message || String(e);
+                  console.error("[admin] bg continue fetch failed:", bgQueueError);
+                }
+              } finally {
+                clearTimeout(abortTimer);
+              }
+              console.log(`[admin] bg announcement: ${bgQueued ? "queued" : "FAILED to queue"} next batch, ${remainingAfter} users remaining`);
             } catch (e: any) {
-              console.error("[admin] bg continue setup failed:", e?.message);
+              bgQueueError = e?.message || String(e);
+              console.error("[admin] bg continue setup failed:", bgQueueError);
             }
           }
         }
