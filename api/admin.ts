@@ -709,29 +709,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const campaign = (req.body.campaign as string) || "announcement";
         const background = req.body.background === true || req.body._bg === true;
 
-        // Cancel check (background mode only). If a row exists in
-        // announcement_cancels for this campaign, abort immediately and
-        // do NOT send this batch or schedule another. Best-effort: if the
-        // table doesn't exist yet (migration not run) we silently skip.
+        // Cancel handling for background mode.
+        // - The FIRST batch (initiated by an admin via JWT, _bg=false) clears
+        //   any stale cancel flag so a new campaign can start cleanly.
+        // - Subsequent self-continuation batches (_bg=true) check the flag
+        //   and abort if set.
         if (background) {
-          try {
-            const cancelRows = await sql`
-              SELECT 1 FROM announcement_cancels WHERE campaign = ${campaign} LIMIT 1
-            `;
-            if (cancelRows.length > 0) {
-              console.log(`[admin] bg announcement: cancel signal found for "${campaign}", stopping loop`);
-              return res.status(200).json({
-                sent: 0,
-                failed: 0,
-                campaign,
-                cancelled: true,
-                background: true,
-                hasMore: false,
-                remainingAfter: 0,
-              });
+          const isContinuation = req.body._bg === true;
+          if (!isContinuation) {
+            try { await sql`DELETE FROM announcement_cancels WHERE campaign = ${campaign}`; }
+            catch (e: any) { console.warn("[admin] failed to clear stale cancel:", e?.message); }
+          } else {
+            try {
+              const cancelRows = await sql`
+                SELECT 1 FROM announcement_cancels WHERE campaign = ${campaign} LIMIT 1
+              `;
+              if (cancelRows.length > 0) {
+                console.log(`[admin] bg announcement: cancel signal found for "${campaign}", stopping loop`);
+                return res.status(200).json({
+                  sent: 0,
+                  failed: 0,
+                  campaign,
+                  cancelled: true,
+                  background: true,
+                  hasMore: false,
+                  remainingAfter: 0,
+                });
+              }
+            } catch (e: any) {
+              console.warn("[admin] cancel check failed (table missing?):", e?.message);
             }
-          } catch (e: any) {
-            console.warn("[admin] cancel check failed (table missing?):", e?.message);
           }
         }
 
