@@ -23,6 +23,8 @@ export function useCredits(user: AuthUser | null) {
   const [subscriptionRenewsAt, setSubscriptionRenewsAt] = useState<string | null>(null);
   const [subscriptionCancelAt, setSubscriptionCancelAt] = useState<string | null>(null);
   const [loraUnlocked, setLoraUnlocked] = useState(false);
+  const [freeCreditsDisabled, setFreeCreditsDisabled] = useState(false);
+  const [maintenanceMessage, setMaintenanceMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [purchasing, setPurchasing] = useState(false);
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
@@ -51,6 +53,8 @@ export function useCredits(user: AuthUser | null) {
       setSubscriptionRenewsAt(data.subscription_renews_at ?? null);
       setSubscriptionCancelAt(data.subscription_cancel_at ?? null);
       setLoraUnlocked(data.lora_unlocked ?? false);
+      setFreeCreditsDisabled(!!data.free_credits_disabled);
+      setMaintenanceMessage(data.maintenance_message ?? null);
     } catch (err: any) {
       console.warn("[useCredits] Error fetching:", err.message);
     } finally {
@@ -239,6 +243,8 @@ export function useCredits(user: AuthUser | null) {
     subscriptionRenewsAt,
     subscriptionCancelAt,
     loraUnlocked,
+    freeCreditsDisabled,
+    maintenanceMessage,
     hasSubscription: !!subscriptionTier,
     isCancelling: !!subscriptionTier && !!subscriptionCancelAt,
     loading,
@@ -258,7 +264,8 @@ export function useCredits(user: AuthUser | null) {
   }), [
     totalCredits, dailyCredits, subCredits, packCredits,
     subscriptionTier, subscriptionRenewsAt, subscriptionCancelAt,
-    loraUnlocked, loading, purchasing, purchaseError,
+    loraUnlocked, freeCreditsDisabled, maintenanceMessage,
+    loading, purchasing, purchaseError,
     clearPurchaseError, hasEnoughCredits,
     user, purchaseCredits, purchaseLoraUnlock, subscribeToPlan,
     manageSubscription, deductCreditsLocally, fetchCredits,

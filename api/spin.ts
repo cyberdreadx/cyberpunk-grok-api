@@ -21,6 +21,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getDb } from "./_lib/db";
 import { getUserFromRequest } from "./_lib/auth";
 import { checkRateLimit } from "./_lib/ratelimit";
+import { freeCreditsDisabled, FREE_CREDITS_MAINTENANCE_MESSAGE } from "./_lib/freeCredits";
 
 /* ── Prize table ─────────────────────────────────────────────── */
 
@@ -115,13 +116,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const currentStreak = (lastSpin > 0 && Date.now() - lastSpin > STREAK_BREAK_MS) ? 0 : (user.spin_streak || 0);
     const minPrize = getStreakMinimum(currentStreak + (freeAvailable ? 1 : 0));
 
+    const maintenance = freeCreditsDisabled();
     return res.status(200).json({
-      freeAvailable,
+      freeAvailable: maintenance ? false : freeAvailable,
       nextFreeAt,
       paidSpinCost: PAID_SPIN_COST,
       streak: currentStreak,
       nextMinPrize: minPrize,
       prizes: PRIZES.map(p => ({ id: p.id, label: p.label, color: p.color })),
+      freeCreditsDisabled: maintenance,
+      maintenanceMessage: maintenance ? FREE_CREDITS_MAINTENANCE_MESSAGE : null,
     });
   }
 
@@ -129,6 +133,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   const { paid } = req.body || {};
+
+  if (!paid && freeCreditsDisabled()) {
+    return res.status(503).json({ error: FREE_CREDITS_MAINTENANCE_MESSAGE, maintenance: true });
+  }
+
 
   const [user] = await sql`
     SELECT daily_credits, sub_credits, pack_credits, last_free_spin, COALESCE(spin_streak, 0) as spin_streak

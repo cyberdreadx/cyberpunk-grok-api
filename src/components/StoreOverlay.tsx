@@ -42,6 +42,8 @@ const StoreOverlay: React.FC<StoreOverlayProps> = ({ open, onOpenChange }) => {
       externalOpen={open}
       onExternalOpenChange={onOpenChange}
       hideTrigger
+      freeCreditsDisabled={credits.freeCreditsDisabled}
+      maintenanceMessage={credits.maintenanceMessage}
     />
   );
 };

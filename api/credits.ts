@@ -3,6 +3,7 @@ import { getDb } from "./_lib/db";
 import { getUserFromRequest } from "./_lib/auth";
 import { applyCors } from "./_lib/cors";
 import { checkRateLimit } from "./_lib/ratelimit";
+import { freeCreditsDisabled, FREE_CREDITS_MAINTENANCE_MESSAGE } from "./_lib/freeCredits";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   applyCors(req, res, "GET, OPTIONS");
@@ -39,6 +40,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       subscription_cancel_at: u.subscription_cancel_at,
       lora_unlocked: u.lora_unlocked,
       has_purchased,
+      free_credits_disabled: freeCreditsDisabled(),
+      maintenance_message: freeCreditsDisabled() ? FREE_CREDITS_MAINTENANCE_MESSAGE : null,
     });
   } catch (err: any) {
     console.error("[credits]", err.message);
