@@ -304,8 +304,8 @@ function AnnouncementPanel() {
 
   useEffect(() => { fetchStats(); }, [fetchStats]);
 
-  // Reset custom HTML when switching campaigns so the right default loads
-  useEffect(() => { setHtmlContent(""); }, [campaign]);
+  // Reset custom HTML and cancel state when switching campaigns
+  useEffect(() => { setHtmlContent(""); setCancelled(false); }, [campaign]);
 
   // Live poll while a background campaign is running. Stops when remaining
   // reaches 0 or the user switches campaigns / leaves the panel.
