@@ -409,11 +409,14 @@ function AnnouncementPanel() {
     if (!confirm(
       "Send in BACKGROUND mode?\n\n" +
       "The server will keep sending after you close this page. " +
-      "Progress here will stop updating, but emails will keep going. " +
-      "Use the REFRESH stats button to track progress."
+      "The live dashboard below will update automatically every few seconds."
     )) return;
     setSending(true);
     setResult(null);
+    // Capture the starting "remaining" so the dashboard can compute progress
+    const startingRemaining = stats?.remaining ?? null;
+    setBgInitialRemaining(startingRemaining);
+    setBgStartedAt(Date.now());
     try {
       const body: any = {
         action: "send-announcement",
@@ -431,9 +434,15 @@ function AnnouncementPanel() {
         total: res.totalUsers,
         remaining: res.remainingAfter,
       });
+      // Initialise the baseline if stats hadn't loaded yet
+      if (startingRemaining === null && typeof res.totalUsers === "number") {
+        setBgInitialRemaining(res.totalUsers);
+      }
+      setBgRunning(true);
       fetchStats();
     } catch (err: any) {
       setResult({ error: err.message });
+      setBgRunning(false);
     } finally {
       setSending(false);
     }
