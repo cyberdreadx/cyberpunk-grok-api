@@ -59,8 +59,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const sql = getDb();
   const { action } = req.body || {};
 
+  // Background self-continuation: server-to-server call from a previous
+  // send-announcement batch. Authorized via CRON_SECRET instead of JWT so
+  // the campaign keeps running even after the admin closes the browser.
+  const cronSecret = process.env.CRON_SECRET;
+  const isBackgroundContinuation =
+    action === "send-announcement" &&
+    req.body?._bg === true &&
+    !!cronSecret &&
+    req.headers["x-bg-secret"] === cronSecret;
+
   // Admins can perform all actions; feed mods only a small subset
-  const admin = isAdmin(req);
+  const admin = isAdmin(req) || isBackgroundContinuation;
   const modAllowed = !admin && MOD_ALLOWED_ACTIONS.has(action) && (await isFeedMod(req));
   if (!admin && !modAllowed) {
     return res.status(403).json({ error: "Access denied" });
