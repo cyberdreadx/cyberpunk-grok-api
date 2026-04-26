@@ -286,12 +286,16 @@ function AnnouncementPanel() {
   const [showEditor, setShowEditor] = useState(false);
   const [htmlContent, setHtmlContent] = useState("");
   const [showPreview, setShowPreview] = useState(false);
+  const [bgRunning, setBgRunning] = useState(false);
+  const [bgStartedAt, setBgStartedAt] = useState<number | null>(null);
+  const [bgInitialRemaining, setBgInitialRemaining] = useState<number | null>(null);
 
   const fetchStats = useCallback(async () => {
     setStatsLoading(true);
     try {
       const res = await apiFetch("/admin", { method: "POST", body: { action: "announcement-stats", campaign } });
       setStats(res);
+      return res;
     } catch { /* ignore */ }
     finally { setStatsLoading(false); }
   }, [campaign]);
@@ -300,6 +304,40 @@ function AnnouncementPanel() {
 
   // Reset custom HTML when switching campaigns so the right default loads
   useEffect(() => { setHtmlContent(""); }, [campaign]);
+
+  // Live poll while a background campaign is running. Stops when remaining
+  // reaches 0 or the user switches campaigns / leaves the panel.
+  useEffect(() => {
+    if (!bgRunning) return;
+    let cancelled = false;
+    let stallCount = 0;
+    let lastRemaining: number | null = null;
+
+    const tick = async () => {
+      const res: any = await fetchStats();
+      if (cancelled || !res) return;
+      if (typeof res.remaining === "number") {
+        if (res.remaining === 0) {
+          setBgRunning(false);
+          return;
+        }
+        // Detect stalled campaign (no progress for 6 polls = ~24s).
+        if (lastRemaining !== null && res.remaining === lastRemaining) {
+          stallCount++;
+          if (stallCount >= 6) {
+            setBgRunning(false);
+            return;
+          }
+        } else {
+          stallCount = 0;
+        }
+        lastRemaining = res.remaining;
+      }
+    };
+
+    const id = setInterval(tick, 4000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [bgRunning, fetchStats]);
 
   const handleDryRun = async () => {
     setDryRunning(true);
