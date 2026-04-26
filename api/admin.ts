@@ -707,8 +707,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const customSubject = req.body.subject || null;
         const customHtml = req.body.html || null;
         const campaign = (req.body.campaign as string) || "announcement";
+        const background = req.body.background === true || req.body._bg === true;
 
-        // Get verified users who haven't already received THIS campaign
+        // Get verified users who haven't already received THIS campaign.
+        // In background mode the offset is ALWAYS 0 because each batch
+        // already-sent users are filtered out by the dedupe subquery.
+        const effectiveOffset = background ? 0 : offset;
+
         const users = await sql`
           SELECT u.email FROM users u
           WHERE u.email_verified = true
@@ -717,7 +722,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               WHERE email_type = ${campaign} AND status = 'sent'
             )
           ORDER BY u.created_at ASC
-          LIMIT ${batchSize} OFFSET ${offset}
+          LIMIT ${batchSize} OFFSET ${effectiveOffset}
         `;
 
         // Get total count for progress tracking
@@ -760,6 +765,42 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           }
         }
 
+        // Background mode: kick off the next batch as a fire-and-forget
+        // server-to-server call. This survives the admin closing the tab.
+        const remainingAfter = count - users.length;
+        if (background && users.length > 0 && remainingAfter > 0) {
+          if (!cronSecret) {
+            console.warn("[admin] background announcement requested but CRON_SECRET is not set — cannot self-continue");
+          } else {
+            try {
+              const proto = (req.headers["x-forwarded-proto"] as string) || "https";
+              const host = req.headers["host"];
+              const selfUrl = `${proto}://${host}/api/admin`;
+              // Fire-and-forget — DO NOT await. Vercel will keep this child
+              // request alive on its own function instance.
+              fetch(selfUrl, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "x-bg-secret": cronSecret,
+                },
+                body: JSON.stringify({
+                  action: "send-announcement",
+                  background: true,
+                  _bg: true,
+                  batchSize,
+                  campaign,
+                  subject: customSubject,
+                  html: customHtml,
+                }),
+              }).catch((e) => console.error("[admin] bg continue fetch failed:", e?.message));
+              console.log(`[admin] bg announcement: queued next batch, ${remainingAfter} users remaining`);
+            } catch (e: any) {
+              console.error("[admin] bg continue setup failed:", e?.message);
+            }
+          }
+        }
+
         return res.status(200).json({
           sent,
           failed,
@@ -769,6 +810,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           offset,
           nextOffset: offset + batchSize,
           hasMore: offset + batchSize < count,
+          background,
+          remainingAfter,
         });
       }
 
