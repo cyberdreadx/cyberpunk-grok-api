@@ -316,7 +316,16 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ onCreditsRefresh }) => {
 
       {/* Spin buttons */}
       <div className="flex flex-col items-center gap-2 w-full max-w-[260px]">
-        {freeAvailable ? (
+        {maintenance ? (
+          <div className="w-full text-center px-3 py-2 rounded-md border border-yellow-500/30 bg-yellow-500/5">
+            <p className="font-orbitron text-[10px] tracking-widest text-yellow-400 uppercase">
+              ⚠ Down for maintenance
+            </p>
+            <p className="font-mono-share text-[9px] text-muted-foreground mt-1">
+              {maintenanceMsg || "Free spins are temporarily paused."}
+            </p>
+          </div>
+        ) : freeAvailable ? (
           <Button
             onClick={() => doSpin(false)}
             disabled={spinning}
