@@ -709,6 +709,18 @@ function AnnouncementPanel() {
                   ? `Campaign finished. ${result.failed > 0 ? `${result.failed} failures in the first batch — check email logs.` : ""}`
                   : "Server keeps sending in the background — safe to close this page. Dashboard auto-refreshes from the database."}
             </div>
+
+            {/* Surface a clear warning when the server-to-server continuation
+                handoff failed — without this, the loop silently dies and
+                Refresh just returns the same 'remaining' count forever. */}
+            {result.bgQueueError && !isComplete && (
+              <div className="bg-destructive/10 border border-destructive/30 rounded p-2 text-[10px] text-destructive">
+                ⚠️ Background loop NOT queued: {result.bgQueueError}
+                <div className="text-destructive/70 mt-1">
+                  Only the first batch sent. Check that <code>CRON_SECRET</code> is set in Vercel env. Hit SEND_IN_BG again to retry.
+                </div>
+              </div>
+            )}
           </div>
         );
       })()}
