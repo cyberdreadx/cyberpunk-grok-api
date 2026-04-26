@@ -40,6 +40,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return await getStatus(sql, auth.userId, res);
     }
     if (req.method === "POST") {
+      if (freeCreditsDisabled()) {
+        return res.status(503).json({ error: FREE_CREDITS_MAINTENANCE_MESSAGE, maintenance: true });
+      }
       const { mission, url } = req.body || {};
       if (mission === "streak_bonus") {
         return await claimStreakBonus(sql, auth.userId, res);
