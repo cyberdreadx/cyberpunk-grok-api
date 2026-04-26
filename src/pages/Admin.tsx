@@ -563,6 +563,13 @@ function AnnouncementPanel() {
         </div>
       )}
 
+      {result?.background && (
+        <div className="bg-accent/5 border border-accent/20 rounded p-3 font-mono-share text-xs space-y-1">
+          <div><span className="text-accent">⚡ Running in background:</span> first batch sent {result.sent} ({result.failed} failed). {result.remaining} users remaining.</div>
+          <div className="text-muted-foreground/70 text-[10px]">The server will keep sending automatically. Safe to close this page. Use REFRESH stats to track progress.</div>
+        </div>
+      )}
+
       {result?.error && (
         <div className="bg-destructive/5 border border-destructive/20 rounded p-3 space-y-2">
           <div className="font-mono-share text-xs text-destructive">
