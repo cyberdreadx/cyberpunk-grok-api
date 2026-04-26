@@ -116,13 +116,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const currentStreak = (lastSpin > 0 && Date.now() - lastSpin > STREAK_BREAK_MS) ? 0 : (user.spin_streak || 0);
     const minPrize = getStreakMinimum(currentStreak + (freeAvailable ? 1 : 0));
 
+    const maintenance = freeCreditsDisabled();
     return res.status(200).json({
-      freeAvailable,
+      freeAvailable: maintenance ? false : freeAvailable,
       nextFreeAt,
       paidSpinCost: PAID_SPIN_COST,
       streak: currentStreak,
       nextMinPrize: minPrize,
       prizes: PRIZES.map(p => ({ id: p.id, label: p.label, color: p.color })),
+      freeCreditsDisabled: maintenance,
+      maintenanceMessage: maintenance ? FREE_CREDITS_MAINTENANCE_MESSAGE : null,
     });
   }
 
