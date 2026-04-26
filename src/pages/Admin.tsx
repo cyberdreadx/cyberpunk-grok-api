@@ -654,12 +654,18 @@ function AnnouncementPanel() {
         const isComplete = currentRemaining === 0;
 
         return (
-          <div className={`border rounded p-3 font-mono-share text-xs space-y-2 ${isComplete ? "bg-secondary/5 border-secondary/30" : "bg-accent/5 border-accent/20"}`}>
+          <div className={`border rounded p-3 font-mono-share text-xs space-y-2 ${
+            cancelled ? "bg-destructive/5 border-destructive/30"
+            : isComplete ? "bg-secondary/5 border-secondary/30"
+            : "bg-accent/5 border-accent/20"
+          }`}>
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-2">
-                {isComplete
-                  ? <span className="text-secondary">✓ Background campaign complete</span>
-                  : <><Loader2 className="w-3 h-3 animate-spin text-accent" /><span className="text-accent">Live: campaign running on server</span></>
+                {cancelled
+                  ? <span className="text-destructive">⛔ Campaign cancelled — current batch finishes, then loop stops</span>
+                  : isComplete
+                    ? <span className="text-secondary">✓ Background campaign complete</span>
+                    : <><Loader2 className="w-3 h-3 animate-spin text-accent" /><span className="text-accent">Live: campaign running on server</span></>
                 }
               </div>
               <span className="text-muted-foreground/70 text-[10px]">
@@ -688,14 +694,20 @@ function AnnouncementPanel() {
                 <span>elapsed {Math.floor(elapsedSec / 60)}m {elapsedSec % 60}s · ETA {etaLabel}</span>
               </div>
               <div className="w-full bg-muted/30 rounded-full h-1.5 overflow-hidden">
-                <div className={`h-1.5 rounded-full transition-all ${isComplete ? "bg-secondary" : "bg-accent"}`} style={{ width: `${pct}%` }} />
+                <div className={`h-1.5 rounded-full transition-all ${
+                  cancelled ? "bg-destructive"
+                  : isComplete ? "bg-secondary"
+                  : "bg-accent"
+                }`} style={{ width: `${pct}%` }} />
               </div>
             </div>
 
             <div className="text-muted-foreground/70 text-[10px]">
-              {isComplete
-                ? `Campaign finished. ${result.failed > 0 ? `${result.failed} failures in the first batch — check email logs.` : ""}`
-                : "Server keeps sending in the background — safe to close this page. Dashboard auto-refreshes from the database."}
+              {cancelled
+                ? `Cancel signal sent. The remaining ${currentRemaining} users will NOT be emailed. Hit SEND_IN_BG again to resume — already-sent users will be skipped automatically.`
+                : isComplete
+                  ? `Campaign finished. ${result.failed > 0 ? `${result.failed} failures in the first batch — check email logs.` : ""}`
+                  : "Server keeps sending in the background — safe to close this page. Dashboard auto-refreshes from the database."}
             </div>
           </div>
         );
