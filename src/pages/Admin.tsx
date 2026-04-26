@@ -289,6 +289,8 @@ function AnnouncementPanel() {
   const [bgRunning, setBgRunning] = useState(false);
   const [bgStartedAt, setBgStartedAt] = useState<number | null>(null);
   const [bgInitialRemaining, setBgInitialRemaining] = useState<number | null>(null);
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelled, setCancelled] = useState(false);
 
   const fetchStats = useCallback(async () => {
     setStatsLoading(true);
