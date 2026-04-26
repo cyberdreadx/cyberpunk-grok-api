@@ -11,6 +11,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getDb } from "./_lib/db";
 import { getResend, getFromAddress, buildDailyCreditsHtml } from "./_lib/email";
+import { freeCreditsDisabled } from "./_lib/freeCredits";
 
 const DAILY_AMOUNT = 10;
 const BATCH_SIZE = 100;
