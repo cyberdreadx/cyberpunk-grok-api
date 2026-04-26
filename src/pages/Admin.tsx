@@ -485,12 +485,19 @@ function AnnouncementPanel() {
             {sending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
             {sending ? "SENDING..." : "SEND_TO_ALL"}
           </Button>
-          <Button variant="outline" size="sm" onClick={handleSendBackground} disabled={sending || dryRunning}
+          <Button variant="outline" size="sm" onClick={handleSendBackground} disabled={sending || dryRunning || bgRunning}
             className="font-mono-share text-xs gap-1.5 border-accent/30 hover:bg-accent/10 text-accent">
             <Send className="w-3 h-3" />
             SEND_IN_BG
           </Button>
-          {sending && (
+          {bgRunning && (
+            <Button variant="outline" size="sm" onClick={handleCancelBackground} disabled={cancelling}
+              className="font-mono-share text-xs gap-1.5 border-destructive/30 hover:bg-destructive/10 text-destructive">
+              {cancelling ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+              {cancelling ? "CANCELLING..." : "CANCEL_BG"}
+            </Button>
+          )}
+          {sending && !bgRunning && (
             <Button variant="outline" size="sm" onClick={() => { abortRef.current = true; }}
               className="font-mono-share text-xs gap-1.5 border-destructive/30 hover:bg-destructive/10 text-destructive">
               ABORT
