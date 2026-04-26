@@ -53,6 +53,8 @@ export function useCredits(user: AuthUser | null) {
       setSubscriptionRenewsAt(data.subscription_renews_at ?? null);
       setSubscriptionCancelAt(data.subscription_cancel_at ?? null);
       setLoraUnlocked(data.lora_unlocked ?? false);
+      setFreeCreditsDisabled(!!data.free_credits_disabled);
+      setMaintenanceMessage(data.maintenance_message ?? null);
     } catch (err: any) {
       console.warn("[useCredits] Error fetching:", err.message);
     } finally {
