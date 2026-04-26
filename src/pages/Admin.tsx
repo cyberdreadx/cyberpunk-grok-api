@@ -367,6 +367,40 @@ function AnnouncementPanel() {
     }
   };
 
+  const handleSendBackground = async () => {
+    if (!confirm(
+      "Send in BACKGROUND mode?\n\n" +
+      "The server will keep sending after you close this page. " +
+      "Progress here will stop updating, but emails will keep going. " +
+      "Use the REFRESH stats button to track progress."
+    )) return;
+    setSending(true);
+    setResult(null);
+    try {
+      const body: any = {
+        action: "send-announcement",
+        background: true,
+        batchSize: 25,
+        campaign,
+      };
+      if (subject) body.subject = subject;
+      if (htmlContent) body.html = htmlContent;
+      const res = await apiFetch("/admin", { method: "POST", body });
+      setResult({
+        background: true,
+        sent: res.sent,
+        failed: res.failed,
+        total: res.totalUsers,
+        remaining: res.remainingAfter,
+      });
+      fetchStats();
+    } catch (err: any) {
+      setResult({ error: err.message });
+    } finally {
+      setSending(false);
+    }
+  };
+
   return (
     <section className="border border-primary/20 rounded-lg bg-card/40 backdrop-blur-sm p-3 sm:p-4 space-y-3">
       <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -384,6 +418,11 @@ function AnnouncementPanel() {
             className="font-mono-share text-xs gap-1.5 border-secondary/30 hover:bg-secondary/10 text-secondary">
             {sending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
             {sending ? "SENDING..." : "SEND_TO_ALL"}
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleSendBackground} disabled={sending || dryRunning}
+            className="font-mono-share text-xs gap-1.5 border-accent/30 hover:bg-accent/10 text-accent">
+            <Send className="w-3 h-3" />
+            SEND_IN_BG
           </Button>
           {sending && (
             <Button variant="outline" size="sm" onClick={() => { abortRef.current = true; }}
@@ -521,6 +560,13 @@ function AnnouncementPanel() {
       {result?.done && (
         <div className="bg-secondary/5 border border-secondary/20 rounded p-3 font-mono-share text-xs">
           <span className="text-secondary">✓ Complete:</span> {result.sent} sent, {result.failed} failed out of {result.total} users
+        </div>
+      )}
+
+      {result?.background && (
+        <div className="bg-accent/5 border border-accent/20 rounded p-3 font-mono-share text-xs space-y-1">
+          <div><span className="text-accent">⚡ Running in background:</span> first batch sent {result.sent} ({result.failed} failed). {result.remaining} users remaining.</div>
+          <div className="text-muted-foreground/70 text-[10px]">The server will keep sending automatically. Safe to close this page. Use REFRESH stats to track progress.</div>
         </div>
       )}
 
