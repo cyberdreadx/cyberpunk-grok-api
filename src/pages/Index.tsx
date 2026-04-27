@@ -248,7 +248,9 @@ const Index = () => {
 
   // Engine selectors per mode — persisted per mode across sessions
   type EditEngine = "grok" | "gltch";
-  type ComfyEngine = "grok" | "comfy" | "gltch" | "seedance";
+  type ComfyEngine = "grok" | "comfy" | "gltch" | "seedance" | "seedance-fast" | "seedance-pro";
+  const isSeedanceTier = (v: string | null): v is "seedance" | "seedance-fast" | "seedance-pro" =>
+    v === "seedance" || v === "seedance-fast" || v === "seedance-pro";
 
   const [editEngine, setEditEngineRaw] = useState<EditEngine>(() => {
     const v = localStorage.getItem("engine-edit-image");
@@ -270,7 +272,7 @@ const Index = () => {
 
   const [renderEngine, setRenderEngineRaw] = useState<ComfyEngine>(() => {
     const v = localStorage.getItem("engine-text-to-video");
-    return (v === "comfy" || v === "gltch" || v === "seedance" || v === "grok") ? v as ComfyEngine : "comfy";
+    return (v === "comfy" || v === "gltch" || v === "grok" || isSeedanceTier(v)) ? v as ComfyEngine : "comfy";
   });
   const setRenderEngine = useCallback((v: ComfyEngine) => {
     localStorage.setItem("engine-text-to-video", v);
@@ -279,7 +281,7 @@ const Index = () => {
 
   const [animateEngine, setAnimateEngineRaw] = useState<ComfyEngine>(() => {
     const v = localStorage.getItem("engine-image-to-video");
-    return (v === "comfy" || v === "gltch" || v === "seedance" || v === "grok") ? v as ComfyEngine : "gltch";
+    return (v === "comfy" || v === "gltch" || v === "grok" || isSeedanceTier(v)) ? v as ComfyEngine : "gltch";
   });
   const setAnimateEngine = useCallback((v: ComfyEngine) => {
     localStorage.setItem("engine-image-to-video", v);
@@ -563,8 +565,10 @@ const Index = () => {
     }
     if (isGltchEdit) return calculateCreditCost("comfy-image");
     if (isZimage || isComfyGen) return calculateCreditCost("comfy-image");
-    const isSeedance = (mode === "text-to-video" && renderEngine === "seedance") || (mode === "image-to-video" && animateEngine === "seedance");
-    if (isSeedance) return 2 * videoSettings.duration; // SEEDANCE: 2 cr/sec
+    const seedTier = mode === "text-to-video" ? renderEngine : (mode === "image-to-video" ? animateEngine : null);
+    if (seedTier === "seedance") return 2 * videoSettings.duration;        // SEEDANCE Lite: 2 cr/s
+    if (seedTier === "seedance-fast") return 5 * videoSettings.duration;   // SEEDANCE 2.0 Fast: 5 cr/s
+    if (seedTier === "seedance-pro") return 15 * videoSettings.duration;   // SEEDANCE 2.0 Pro: 15 cr/s
     if (isComfyRender || isComfyAnimate || isGltchWan) return calculateCreditCost("comfy-video");
     if (isGrokRender || isGrokAnimate) return calculateCreditCost("text-to-video", 1, videoSettings.duration);
     if (isComfyLongLook) return calculateCreditCost("comfy-longlook", longLookSeqCount);
@@ -895,10 +899,10 @@ const Index = () => {
           await generateImage({ prompt: data.prompt, settings, pro: grokPro, ...(adminTestCredits ? { testCredits: true } : {}) });
           break;
         case "text-to-video":
-          await generateVideo({ prompt: data.prompt, videoSettings, ...(renderEngine === "seedance" ? { provider: "seedance" as const } : {}), ...(adminTestCredits ? { testCredits: true } : {}) });
+          await generateVideo({ prompt: data.prompt, videoSettings, ...(isSeedanceTier(renderEngine) ? { provider: renderEngine as "seedance" | "seedance-fast" | "seedance-pro" } : {}), ...(adminTestCredits ? { testCredits: true } : {}) });
           break;
         case "image-to-video":
-          await generateVideo({ prompt: data.prompt, image_url: data.imageUrl, videoSettings, ...(animateEngine === "seedance" ? { provider: "seedance" as const } : {}), ...(adminTestCredits ? { testCredits: true } : {}) });
+          await generateVideo({ prompt: data.prompt, image_url: data.imageUrl, videoSettings, ...(isSeedanceTier(animateEngine) ? { provider: animateEngine as "seedance" | "seedance-fast" | "seedance-pro" } : {}), ...(adminTestCredits ? { testCredits: true } : {}) });
           break;
         case "edit-video":
           await editVideo({ prompt: data.prompt, video_url: data.imageUrl!, ...(adminTestCredits ? { testCredits: true } : {}) });
@@ -1659,7 +1663,7 @@ const Index = () => {
                   <Zap className="w-3 h-3" />
                   ENGINE
                 </label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   <button type="button" onClick={() => setRenderEngine("comfy")}
                     className={`p-2.5 border rounded text-left transition-all duration-200 ${renderEngine === "comfy" ? "border-purple-500 bg-purple-500/5 shadow-[0_0_8px_rgba(168,85,247,0.15)]" : "border-border bg-card/30 hover:border-purple-500/40"}`}>
                     <div className={`font-orbitron text-[11px] ${renderEngine === "comfy" ? "text-purple-400" : "text-foreground"}`}>COMFY</div>
@@ -1668,16 +1672,32 @@ const Index = () => {
                       <span className={renderEngine === "comfy" ? "text-purple-400/70" : "text-muted-foreground/50"}>15 cr</span>
                     </div>
                   </button>
+                  <button type="button" onClick={() => setRenderEngine("seedance-pro")}
+                    className={`p-2.5 border rounded text-left transition-all duration-200 ${renderEngine === "seedance-pro" ? "border-fuchsia-400 bg-fuchsia-400/5 shadow-[0_0_8px_rgba(232,121,249,0.2)]" : "border-border bg-card/30 hover:border-fuchsia-400/40"}`}>
+                    <div className={`font-orbitron text-[11px] ${renderEngine === "seedance-pro" ? "text-fuchsia-300" : "text-foreground"}`}>SEEDANCE PRO</div>
+                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
+                      <span>fal.ai 2.0 • cinematic</span>
+                      <span className={renderEngine === "seedance-pro" ? "text-fuchsia-300/70" : "text-muted-foreground/50"}>15 cr/s</span>
+                    </div>
+                  </button>
+                  <button type="button" onClick={() => setRenderEngine("seedance-fast")}
+                    className={`p-2.5 border rounded text-left transition-all duration-200 ${renderEngine === "seedance-fast" ? "border-emerald-400 bg-emerald-400/5 shadow-[0_0_8px_rgba(52,211,153,0.18)]" : "border-border bg-card/30 hover:border-emerald-400/40"}`}>
+                    <div className={`font-orbitron text-[11px] ${renderEngine === "seedance-fast" ? "text-emerald-300" : "text-foreground"}`}>SEEDANCE FAST</div>
+                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
+                      <span>fal.ai 2.0 • quick</span>
+                      <span className={renderEngine === "seedance-fast" ? "text-emerald-300/70" : "text-muted-foreground/50"}>5 cr/s</span>
+                    </div>
+                  </button>
                   <button type="button" onClick={() => setRenderEngine("seedance")}
                     className={`p-2.5 border rounded text-left transition-all duration-200 ${renderEngine === "seedance" ? "border-cyan-400 bg-cyan-400/5 shadow-[0_0_8px_rgba(34,211,238,0.15)]" : "border-border bg-card/30 hover:border-cyan-400/40"}`}>
-                    <div className={`font-orbitron text-[11px] ${renderEngine === "seedance" ? "text-cyan-300" : "text-foreground"}`}>SEEDANCE</div>
+                    <div className={`font-orbitron text-[11px] ${renderEngine === "seedance" ? "text-cyan-300" : "text-foreground"}`}>SEEDANCE LITE</div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
-                      <span>fal.ai 2.0</span>
+                      <span>fal.ai v1 • cheap</span>
                       <span className={renderEngine === "seedance" ? "text-cyan-300/70" : "text-muted-foreground/50"}>2 cr/s</span>
                     </div>
                   </button>
                   <button type="button" onClick={() => setRenderEngine("grok")}
-                    className={`p-2.5 border rounded text-left transition-all duration-200 ${renderEngine === "grok" ? "border-primary neon-border bg-primary/5" : "border-border bg-card/30 hover:border-primary/40"}`}>
+                    className={`col-span-2 p-2.5 border rounded text-left transition-all duration-200 ${renderEngine === "grok" ? "border-primary neon-border bg-primary/5" : "border-border bg-card/30 hover:border-primary/40"}`}>
                     <div className={`font-orbitron text-[11px] flex items-center gap-1.5 ${renderEngine === "grok" ? "text-primary" : "text-foreground"}`}>
                       GROK
                     </div>
@@ -1808,11 +1828,27 @@ const Index = () => {
                       <span className={animateEngine === "gltch" ? "text-secondary/70" : "text-muted-foreground/50"}>15 cr</span>
                     </div>
                   </button>
+                  <button type="button" onClick={() => { setAnimateEngine("seedance-pro"); setLongLookEnabled(false); }}
+                    className={`p-2.5 border rounded text-left transition-all duration-200 ${animateEngine === "seedance-pro" ? "border-fuchsia-400 bg-fuchsia-400/5 shadow-[0_0_8px_rgba(232,121,249,0.2)]" : "border-border bg-card/30 hover:border-fuchsia-400/40"}`}>
+                    <div className={`font-orbitron text-[11px] ${animateEngine === "seedance-pro" ? "text-fuchsia-300" : "text-foreground"}`}>SEEDANCE PRO</div>
+                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
+                      <span>fal.ai 2.0 • cinematic</span>
+                      <span className={animateEngine === "seedance-pro" ? "text-fuchsia-300/70" : "text-muted-foreground/50"}>15 cr/s</span>
+                    </div>
+                  </button>
+                  <button type="button" onClick={() => { setAnimateEngine("seedance-fast"); setLongLookEnabled(false); }}
+                    className={`p-2.5 border rounded text-left transition-all duration-200 ${animateEngine === "seedance-fast" ? "border-emerald-400 bg-emerald-400/5 shadow-[0_0_8px_rgba(52,211,153,0.18)]" : "border-border bg-card/30 hover:border-emerald-400/40"}`}>
+                    <div className={`font-orbitron text-[11px] ${animateEngine === "seedance-fast" ? "text-emerald-300" : "text-foreground"}`}>SEEDANCE FAST</div>
+                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
+                      <span>fal.ai 2.0 • quick</span>
+                      <span className={animateEngine === "seedance-fast" ? "text-emerald-300/70" : "text-muted-foreground/50"}>5 cr/s</span>
+                    </div>
+                  </button>
                   <button type="button" onClick={() => { setAnimateEngine("seedance"); setLongLookEnabled(false); }}
                     className={`p-2.5 border rounded text-left transition-all duration-200 ${animateEngine === "seedance" ? "border-cyan-400 bg-cyan-400/5 shadow-[0_0_8px_rgba(34,211,238,0.15)]" : "border-border bg-card/30 hover:border-cyan-400/40"}`}>
-                    <div className={`font-orbitron text-[11px] ${animateEngine === "seedance" ? "text-cyan-300" : "text-foreground"}`}>SEEDANCE</div>
+                    <div className={`font-orbitron text-[11px] ${animateEngine === "seedance" ? "text-cyan-300" : "text-foreground"}`}>SEEDANCE LITE</div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
-                      <span>fal.ai 2.0</span>
+                      <span>fal.ai v1 • cheap</span>
                       <span className={animateEngine === "seedance" ? "text-cyan-300/70" : "text-muted-foreground/50"}>2 cr/s</span>
                     </div>
                   </button>

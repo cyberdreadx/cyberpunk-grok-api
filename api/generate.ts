@@ -21,7 +21,9 @@ const CREDIT_COSTS = {
   imageGenPro: 10,
   imageEditPro: 12,
   videoPerSecond: 6,
-  seedanceVideoPerSecond: 2, // SEEDANCE 2.0 via fal.ai (~$0.036/s)
+  seedanceVideoPerSecond: 2,        // SEEDANCE Lite (v1) via fal.ai — cost ~$0.036/s, sell 2 cr/s ≈ $0.058 (~38% margin)
+  seedanceFastVideoPerSecond: 5,    // SEEDANCE 2.0 Fast — cost ~$0.10/s, sell 5 cr/s ≈ $0.145 (~31% margin)
+  seedanceProVideoPerSecond: 15,    // SEEDANCE 2.0 Pro — cost ~$0.30/s @ 720p, sell 15 cr/s ≈ $0.435 (~31% margin)
 };
 
 const FAL_BASE = "https://fal.run";
@@ -295,15 +297,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: "Prompt too long (max 10,000 characters)." });
     }
 
-    // ── SEEDANCE 2.0 (fal.ai) provider branch ────────────────────────────────
-    // Mirrors the Grok video flow but routes to ByteDance Seedance 2.0 via fal.ai.
-    // Cheaper (~$0.036/s) → 2 cr/sec. Supports text-to-video and image-to-video.
-    if (params.provider === "seedance" && (action === "generate-video" || action === "edit-video")) {
+    // ── SEEDANCE (fal.ai) provider branch ────────────────────────────────────
+    // Three tiers:
+    //   "seedance"      → Seedance v1 Lite        — 2 cr/s   (~$0.036/s cost)
+    //   "seedance-fast" → Seedance 2.0 Fast       — 5 cr/s   (~$0.10/s  cost)
+    //   "seedance-pro"  → Seedance 2.0 Pro        — 15 cr/s  (~$0.30/s  cost @ 720p)
+    const seedanceProviders = ["seedance", "seedance-fast", "seedance-pro"] as const;
+    if (seedanceProviders.includes(params.provider as any) && (action === "generate-video" || action === "edit-video")) {
       const FAL_KEY = process.env.FAL_KEY;
       if (!FAL_KEY) return res.status(500).json({ error: "SEEDANCE not configured (missing FAL_KEY)." });
 
+      const tier = params.provider as "seedance" | "seedance-fast" | "seedance-pro";
       const seedDuration = Math.max(3, Math.min(12, Math.floor(Number(params.duration) || 5)));
-      const seedCost = CREDIT_COSTS.seedanceVideoPerSecond * seedDuration;
+      const perSec =
+        tier === "seedance-pro" ? CREDIT_COSTS.seedanceProVideoPerSecond :
+        tier === "seedance-fast" ? CREDIT_COSTS.seedanceFastVideoPerSecond :
+        CREDIT_COSTS.seedanceVideoPerSecond;
+      const seedCost = perSec * seedDuration;
       const isAdminSeed = auth.email === ADMIN_EMAIL;
       const adminTestSeed = isAdminSeed && req.body.testCredits === true;
 
@@ -342,10 +352,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         (params.image && typeof params.image === "object" && params.image.url) ||
         undefined;
       const isI2V = !!seedImageUrl;
-      // fal.ai Seedance 2.0 model IDs (per https://fal.ai/models)
-      const seedModelId = isI2V
-        ? "fal-ai/bytedance/seedance/v1/lite/image-to-video"
-        : "fal-ai/bytedance/seedance/v1/lite/text-to-video";
+      // fal.ai Seedance model IDs per tier
+      let seedModelId: string;
+      if (tier === "seedance-pro") {
+        seedModelId = isI2V
+          ? "fal-ai/bytedance/seedance-2.0/image-to-video"
+          : "fal-ai/bytedance/seedance-2.0/text-to-video";
+      } else if (tier === "seedance-fast") {
+        seedModelId = isI2V
+          ? "fal-ai/bytedance/seedance-2.0/fast/image-to-video"
+          : "fal-ai/bytedance/seedance-2.0/fast/text-to-video";
+      } else {
+        seedModelId = isI2V
+          ? "fal-ai/bytedance/seedance/v1/lite/image-to-video"
+          : "fal-ai/bytedance/seedance/v1/lite/text-to-video";
+      }
 
       const seedBody: Record<string, unknown> = {
         prompt: params.prompt,
@@ -431,17 +452,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           return res.status(502).json({ error: "SEEDANCE returned no video URL. Credits refunded." });
         }
 
-        // Log usage (api cost ~ $0.036/s → cents)
-        const apiCostCents = Math.round(3.6 * seedDuration);
+        // Log usage with per-tier api cost (cents/sec): Lite 3.6, Fast 10, Pro 30
+        const costCentsPerSec = tier === "seedance-pro" ? 30 : tier === "seedance-fast" ? 10 : 3.6;
+        const apiCostCents = Math.round(costCentsPerSec * seedDuration);
+        const modeLabel = `${tier}-${isI2V ? 'i2v' : 't2v'}`;
         await sql`
           INSERT INTO usage_log (user_id, mode, credits_used, prompt, api_cost_cents)
-          VALUES (${auth.userId}::uuid, ${'seedance-' + (isI2V ? 'i2v' : 't2v')}, ${seedCost}, ${(params.prompt || "").slice(0, 500)}, ${apiCostCents})
+          VALUES (${auth.userId}::uuid, ${modeLabel}, ${seedCost}, ${(params.prompt || "").slice(0, 500)}, ${apiCostCents})
         `;
 
         return res.status(200).json({
           video: { url: videoUrl },
           video_url: videoUrl,
-          provider: "seedance",
+          provider: tier,
           duration: seedDuration,
         });
       } catch (err: any) {
