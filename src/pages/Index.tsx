@@ -248,7 +248,7 @@ const Index = () => {
 
   // Engine selectors per mode — persisted per mode across sessions
   type EditEngine = "grok" | "gltch";
-  type ComfyEngine = "grok" | "comfy" | "gltch";
+  type ComfyEngine = "grok" | "comfy" | "gltch" | "seedance";
 
   const [editEngine, setEditEngineRaw] = useState<EditEngine>(() => {
     const v = localStorage.getItem("engine-edit-image");
@@ -270,7 +270,7 @@ const Index = () => {
 
   const [renderEngine, setRenderEngineRaw] = useState<ComfyEngine>(() => {
     const v = localStorage.getItem("engine-text-to-video");
-    return (v === "comfy" || v === "gltch") ? v : "comfy";
+    return (v === "comfy" || v === "gltch" || v === "seedance" || v === "grok") ? v as ComfyEngine : "comfy";
   });
   const setRenderEngine = useCallback((v: ComfyEngine) => {
     localStorage.setItem("engine-text-to-video", v);
@@ -279,7 +279,7 @@ const Index = () => {
 
   const [animateEngine, setAnimateEngineRaw] = useState<ComfyEngine>(() => {
     const v = localStorage.getItem("engine-image-to-video");
-    return (v === "comfy" || v === "gltch") ? v : "gltch";
+    return (v === "comfy" || v === "gltch" || v === "seedance" || v === "grok") ? v as ComfyEngine : "gltch";
   });
   const setAnimateEngine = useCallback((v: ComfyEngine) => {
     localStorage.setItem("engine-image-to-video", v);
