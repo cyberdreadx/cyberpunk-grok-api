@@ -566,9 +566,9 @@ const Index = () => {
     if (isGltchEdit) return calculateCreditCost("comfy-image");
     if (isZimage || isComfyGen) return calculateCreditCost("comfy-image");
     const seedTier = mode === "text-to-video" ? renderEngine : (mode === "image-to-video" ? animateEngine : null);
-    if (seedTier === "seedance") return 2 * videoSettings.duration;        // SEEDANCE Lite: 2 cr/s
-    if (seedTier === "seedance-fast") return 5 * videoSettings.duration;   // SEEDANCE 2.0 Fast: 5 cr/s
-    if (seedTier === "seedance-pro") return 15 * videoSettings.duration;   // SEEDANCE 2.0 Pro: 15 cr/s
+    if (seedTier === "seedance") return 3 * videoSettings.duration;        // SEEDANCE Lite: 3 cr/s
+    if (seedTier === "seedance-fast") return 8 * videoSettings.duration;   // SEEDANCE 2.0 Fast: 8 cr/s
+    if (seedTier === "seedance-pro") return 25 * videoSettings.duration;   // SEEDANCE 2.0 Pro: 25 cr/s
     if (isComfyRender || isComfyAnimate || isGltchWan) return calculateCreditCost("comfy-video");
     if (isGrokRender || isGrokAnimate) return calculateCreditCost("text-to-video", 1, videoSettings.duration);
     if (isComfyLongLook) return calculateCreditCost("comfy-longlook", longLookSeqCount);
@@ -1677,7 +1677,7 @@ const Index = () => {
                     <div className={`font-orbitron text-[11px] ${renderEngine === "seedance-pro" ? "text-fuchsia-300" : "text-foreground"}`}>SEEDANCE PRO</div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>fal.ai 2.0 • cinematic</span>
-                      <span className={renderEngine === "seedance-pro" ? "text-fuchsia-300/70" : "text-muted-foreground/50"}>15 cr/s</span>
+                      <span className={renderEngine === "seedance-pro" ? "text-fuchsia-300/70" : "text-muted-foreground/50"}>25 cr/s</span>
                     </div>
                   </button>
                   <button type="button" onClick={() => setRenderEngine("seedance-fast")}
@@ -1685,7 +1685,7 @@ const Index = () => {
                     <div className={`font-orbitron text-[11px] ${renderEngine === "seedance-fast" ? "text-emerald-300" : "text-foreground"}`}>SEEDANCE FAST</div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>fal.ai 2.0 • quick</span>
-                      <span className={renderEngine === "seedance-fast" ? "text-emerald-300/70" : "text-muted-foreground/50"}>5 cr/s</span>
+                      <span className={renderEngine === "seedance-fast" ? "text-emerald-300/70" : "text-muted-foreground/50"}>8 cr/s</span>
                     </div>
                   </button>
                   <button type="button" onClick={() => setRenderEngine("seedance")}
@@ -1693,7 +1693,7 @@ const Index = () => {
                     <div className={`font-orbitron text-[11px] ${renderEngine === "seedance" ? "text-cyan-300" : "text-foreground"}`}>SEEDANCE LITE</div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>fal.ai v1 • cheap</span>
-                      <span className={renderEngine === "seedance" ? "text-cyan-300/70" : "text-muted-foreground/50"}>2 cr/s</span>
+                      <span className={renderEngine === "seedance" ? "text-cyan-300/70" : "text-muted-foreground/50"}>3 cr/s</span>
                     </div>
                   </button>
                   <button type="button" onClick={() => setRenderEngine("grok")}
@@ -1833,7 +1833,7 @@ const Index = () => {
                     <div className={`font-orbitron text-[11px] ${animateEngine === "seedance-pro" ? "text-fuchsia-300" : "text-foreground"}`}>SEEDANCE PRO</div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>fal.ai 2.0 • cinematic</span>
-                      <span className={animateEngine === "seedance-pro" ? "text-fuchsia-300/70" : "text-muted-foreground/50"}>15 cr/s</span>
+                      <span className={animateEngine === "seedance-pro" ? "text-fuchsia-300/70" : "text-muted-foreground/50"}>25 cr/s</span>
                     </div>
                   </button>
                   <button type="button" onClick={() => { setAnimateEngine("seedance-fast"); setLongLookEnabled(false); }}
@@ -1841,7 +1841,7 @@ const Index = () => {
                     <div className={`font-orbitron text-[11px] ${animateEngine === "seedance-fast" ? "text-emerald-300" : "text-foreground"}`}>SEEDANCE FAST</div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>fal.ai 2.0 • quick</span>
-                      <span className={animateEngine === "seedance-fast" ? "text-emerald-300/70" : "text-muted-foreground/50"}>5 cr/s</span>
+                      <span className={animateEngine === "seedance-fast" ? "text-emerald-300/70" : "text-muted-foreground/50"}>8 cr/s</span>
                     </div>
                   </button>
                   <button type="button" onClick={() => { setAnimateEngine("seedance"); setLongLookEnabled(false); }}
@@ -1849,7 +1849,7 @@ const Index = () => {
                     <div className={`font-orbitron text-[11px] ${animateEngine === "seedance" ? "text-cyan-300" : "text-foreground"}`}>SEEDANCE LITE</div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>fal.ai v1 • cheap</span>
-                      <span className={animateEngine === "seedance" ? "text-cyan-300/70" : "text-muted-foreground/50"}>2 cr/s</span>
+                      <span className={animateEngine === "seedance" ? "text-cyan-300/70" : "text-muted-foreground/50"}>3 cr/s</span>
                     </div>
                   </button>
                   <button type="button" onClick={() => { setAnimateEngine("grok"); setLongLookEnabled(false); }}
