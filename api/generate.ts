@@ -21,7 +21,9 @@ const CREDIT_COSTS = {
   imageGenPro: 10,
   imageEditPro: 12,
   videoPerSecond: 6,
-  seedanceVideoPerSecond: 2, // SEEDANCE 2.0 via fal.ai (~$0.036/s)
+  seedanceVideoPerSecond: 2,        // SEEDANCE Lite (v1) via fal.ai — cost ~$0.036/s, sell 2 cr/s ≈ $0.058 (~38% margin)
+  seedanceFastVideoPerSecond: 5,    // SEEDANCE 2.0 Fast — cost ~$0.10/s, sell 5 cr/s ≈ $0.145 (~31% margin)
+  seedanceProVideoPerSecond: 15,    // SEEDANCE 2.0 Pro — cost ~$0.30/s @ 720p, sell 15 cr/s ≈ $0.435 (~31% margin)
 };
 
 const FAL_BASE = "https://fal.run";
