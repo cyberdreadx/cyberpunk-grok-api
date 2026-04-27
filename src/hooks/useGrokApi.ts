@@ -204,6 +204,8 @@ interface GenerateVideoParams {
   image_url?: string;
   videoSettings: VideoSettings;
   testCredits?: boolean;
+  /** Optional provider override. "seedance" routes to fal.ai Seedance 2.0 (2 cr/sec). */
+  provider?: "grok" | "seedance";
 }
 
 interface EditVideoParams {
