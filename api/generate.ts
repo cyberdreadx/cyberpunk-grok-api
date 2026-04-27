@@ -21,7 +21,10 @@ const CREDIT_COSTS = {
   imageGenPro: 10,
   imageEditPro: 12,
   videoPerSecond: 6,
+  seedanceVideoPerSecond: 2, // SEEDANCE 2.0 via fal.ai (~$0.036/s)
 };
+
+const FAL_BASE = "https://fal.run";
 
 const PRO_MODEL = "grok-imagine-image-pro";
 
