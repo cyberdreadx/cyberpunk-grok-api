@@ -1828,11 +1828,27 @@ const Index = () => {
                       <span className={animateEngine === "gltch" ? "text-secondary/70" : "text-muted-foreground/50"}>15 cr</span>
                     </div>
                   </button>
+                  <button type="button" onClick={() => { setAnimateEngine("seedance-pro"); setLongLookEnabled(false); }}
+                    className={`p-2.5 border rounded text-left transition-all duration-200 ${animateEngine === "seedance-pro" ? "border-fuchsia-400 bg-fuchsia-400/5 shadow-[0_0_8px_rgba(232,121,249,0.2)]" : "border-border bg-card/30 hover:border-fuchsia-400/40"}`}>
+                    <div className={`font-orbitron text-[11px] ${animateEngine === "seedance-pro" ? "text-fuchsia-300" : "text-foreground"}`}>SEEDANCE PRO</div>
+                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
+                      <span>fal.ai 2.0 • cinematic</span>
+                      <span className={animateEngine === "seedance-pro" ? "text-fuchsia-300/70" : "text-muted-foreground/50"}>15 cr/s</span>
+                    </div>
+                  </button>
+                  <button type="button" onClick={() => { setAnimateEngine("seedance-fast"); setLongLookEnabled(false); }}
+                    className={`p-2.5 border rounded text-left transition-all duration-200 ${animateEngine === "seedance-fast" ? "border-emerald-400 bg-emerald-400/5 shadow-[0_0_8px_rgba(52,211,153,0.18)]" : "border-border bg-card/30 hover:border-emerald-400/40"}`}>
+                    <div className={`font-orbitron text-[11px] ${animateEngine === "seedance-fast" ? "text-emerald-300" : "text-foreground"}`}>SEEDANCE FAST</div>
+                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
+                      <span>fal.ai 2.0 • quick</span>
+                      <span className={animateEngine === "seedance-fast" ? "text-emerald-300/70" : "text-muted-foreground/50"}>5 cr/s</span>
+                    </div>
+                  </button>
                   <button type="button" onClick={() => { setAnimateEngine("seedance"); setLongLookEnabled(false); }}
                     className={`p-2.5 border rounded text-left transition-all duration-200 ${animateEngine === "seedance" ? "border-cyan-400 bg-cyan-400/5 shadow-[0_0_8px_rgba(34,211,238,0.15)]" : "border-border bg-card/30 hover:border-cyan-400/40"}`}>
-                    <div className={`font-orbitron text-[11px] ${animateEngine === "seedance" ? "text-cyan-300" : "text-foreground"}`}>SEEDANCE</div>
+                    <div className={`font-orbitron text-[11px] ${animateEngine === "seedance" ? "text-cyan-300" : "text-foreground"}`}>SEEDANCE LITE</div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
-                      <span>fal.ai 2.0</span>
+                      <span>fal.ai v1 • cheap</span>
                       <span className={animateEngine === "seedance" ? "text-cyan-300/70" : "text-muted-foreground/50"}>2 cr/s</span>
                     </div>
                   </button>
