@@ -2556,12 +2556,14 @@ Rules:
           audioPrompt: audioPrompt || undefined,
         });
       } else if (workflowType === "longlook") {
-        // LongLook multi-clip workflow — split prompt via Grok LLM
+        // LongLook multi-clip workflow — split prompt via DeepSeek LLM (xAI fallback)
         const seqN = Math.min(4, Math.max(1, Number(sequenceCount)));
 
-        // Call xAI Grok to split the user prompt into N sub-prompts
+        const deepseekKey = process.env.DEEPSEEK_API_KEY;
         const xaiKey = process.env.XAI_API_KEY;
-        if (!xaiKey) throw new Error("XAI_API_KEY not configured for LongLook prompt splitting");
+        if (!deepseekKey && !xaiKey) {
+          throw new Error("No LLM key configured for LongLook prompt splitting (set DEEPSEEK_API_KEY)");
+        }
 
         const llmSystemPrompt = `You are an AI prompt artist specialized in cinematic video generation.
 Using one input image and one user prompt, generate ${seqN} fully independent but logically connected prompts that together form a short, dynamic video sequence.
@@ -2574,25 +2576,33 @@ Rules for each prompt:
 - Include both motion description and camera movement
 Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3..." with no line breaks.`;
 
-        const llmResp = await fetch("https://api.x.ai/v1/chat/completions", {
+        const useDeepseek = !!deepseekKey;
+        const llmEndpoint = useDeepseek
+          ? "https://api.deepseek.com/v1/chat/completions"
+          : "https://api.x.ai/v1/chat/completions";
+        const llmModel = useDeepseek ? "deepseek-chat" : "grok-3-mini";
+        const llmAuth = useDeepseek ? deepseekKey! : xaiKey!;
+
+        const llmResp = await fetch(llmEndpoint, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${xaiKey}`,
+            "Authorization": `Bearer ${llmAuth}`,
           },
           body: JSON.stringify({
-            model: "grok-3-mini",
+            model: llmModel,
             messages: [
               { role: "system", content: llmSystemPrompt },
               { role: "user", content: prompt.trim() },
             ],
+            temperature: 0.8,
           }),
           signal: AbortSignal.timeout(30000),
         });
 
         if (!llmResp.ok) {
           const errText = await llmResp.text().catch(() => "");
-          throw new Error(`LLM prompt split failed (${llmResp.status}): ${errText.slice(0, 300)}`);
+          throw new Error(`LLM prompt split failed (${llmResp.status}) via ${useDeepseek ? "DeepSeek" : "xAI"}: ${errText.slice(0, 300)}`);
         }
 
         const llmData = (await llmResp.json()) as any;
