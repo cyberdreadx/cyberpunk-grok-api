@@ -1663,7 +1663,7 @@ const Index = () => {
                   <Zap className="w-3 h-3" />
                   ENGINE
                 </label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   <button type="button" onClick={() => setRenderEngine("comfy")}
                     className={`p-2.5 border rounded text-left transition-all duration-200 ${renderEngine === "comfy" ? "border-purple-500 bg-purple-500/5 shadow-[0_0_8px_rgba(168,85,247,0.15)]" : "border-border bg-card/30 hover:border-purple-500/40"}`}>
                     <div className={`font-orbitron text-[11px] ${renderEngine === "comfy" ? "text-purple-400" : "text-foreground"}`}>COMFY</div>
@@ -1672,16 +1672,32 @@ const Index = () => {
                       <span className={renderEngine === "comfy" ? "text-purple-400/70" : "text-muted-foreground/50"}>15 cr</span>
                     </div>
                   </button>
+                  <button type="button" onClick={() => setRenderEngine("seedance-pro")}
+                    className={`p-2.5 border rounded text-left transition-all duration-200 ${renderEngine === "seedance-pro" ? "border-fuchsia-400 bg-fuchsia-400/5 shadow-[0_0_8px_rgba(232,121,249,0.2)]" : "border-border bg-card/30 hover:border-fuchsia-400/40"}`}>
+                    <div className={`font-orbitron text-[11px] ${renderEngine === "seedance-pro" ? "text-fuchsia-300" : "text-foreground"}`}>SEEDANCE PRO</div>
+                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
+                      <span>fal.ai 2.0 • cinematic</span>
+                      <span className={renderEngine === "seedance-pro" ? "text-fuchsia-300/70" : "text-muted-foreground/50"}>15 cr/s</span>
+                    </div>
+                  </button>
+                  <button type="button" onClick={() => setRenderEngine("seedance-fast")}
+                    className={`p-2.5 border rounded text-left transition-all duration-200 ${renderEngine === "seedance-fast" ? "border-emerald-400 bg-emerald-400/5 shadow-[0_0_8px_rgba(52,211,153,0.18)]" : "border-border bg-card/30 hover:border-emerald-400/40"}`}>
+                    <div className={`font-orbitron text-[11px] ${renderEngine === "seedance-fast" ? "text-emerald-300" : "text-foreground"}`}>SEEDANCE FAST</div>
+                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
+                      <span>fal.ai 2.0 • quick</span>
+                      <span className={renderEngine === "seedance-fast" ? "text-emerald-300/70" : "text-muted-foreground/50"}>5 cr/s</span>
+                    </div>
+                  </button>
                   <button type="button" onClick={() => setRenderEngine("seedance")}
                     className={`p-2.5 border rounded text-left transition-all duration-200 ${renderEngine === "seedance" ? "border-cyan-400 bg-cyan-400/5 shadow-[0_0_8px_rgba(34,211,238,0.15)]" : "border-border bg-card/30 hover:border-cyan-400/40"}`}>
-                    <div className={`font-orbitron text-[11px] ${renderEngine === "seedance" ? "text-cyan-300" : "text-foreground"}`}>SEEDANCE</div>
+                    <div className={`font-orbitron text-[11px] ${renderEngine === "seedance" ? "text-cyan-300" : "text-foreground"}`}>SEEDANCE LITE</div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
-                      <span>fal.ai 2.0</span>
+                      <span>fal.ai v1 • cheap</span>
                       <span className={renderEngine === "seedance" ? "text-cyan-300/70" : "text-muted-foreground/50"}>2 cr/s</span>
                     </div>
                   </button>
                   <button type="button" onClick={() => setRenderEngine("grok")}
-                    className={`p-2.5 border rounded text-left transition-all duration-200 ${renderEngine === "grok" ? "border-primary neon-border bg-primary/5" : "border-border bg-card/30 hover:border-primary/40"}`}>
+                    className={`col-span-2 p-2.5 border rounded text-left transition-all duration-200 ${renderEngine === "grok" ? "border-primary neon-border bg-primary/5" : "border-border bg-card/30 hover:border-primary/40"}`}>
                     <div className={`font-orbitron text-[11px] flex items-center gap-1.5 ${renderEngine === "grok" ? "text-primary" : "text-foreground"}`}>
                       GROK
                     </div>
