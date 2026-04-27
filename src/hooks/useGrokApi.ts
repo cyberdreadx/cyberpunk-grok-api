@@ -846,9 +846,9 @@ export function useGrokApi() {
       }
 
       // SEEDANCE provider override → routed to fal.ai via /api/generate proxy.
-      // Always uses credits mode (no BYOK for fal.ai).
-      if (params.provider === "seedance") {
-        const data = await makeProxyRequest("generate-video", { ...body, provider: "seedance" });
+      // Always uses credits mode (no BYOK for fal.ai). Three tiers supported.
+      if (params.provider === "seedance" || params.provider === "seedance-fast" || params.provider === "seedance-pro") {
+        const data = await makeProxyRequest("generate-video", { ...body, provider: params.provider });
         const videoUrl = data.video?.url || data.video_url || data.url;
         if (!videoUrl) throw new Error("SEEDANCE returned no video URL");
         const newResults: GrokResult[] = [{
