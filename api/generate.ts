@@ -425,12 +425,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           const st: any = await statusRes.json().catch(() => ({}));
           const status = st?.status;
           if (status === "COMPLETED") {
-            const respRes = await fetch(responseUrl, { headers: { Authorization: `Key ${FAL_KEY}` } });
-            if (!respRes.ok) {
+            // Retry response fetch up to 4 times — fal occasionally lags between
+            // status=COMPLETED and the result being readable on the response_url.
+            let respOk = false;
+            let lastStatus = 0;
+            let lastBody = "";
+            for (let attempt = 0; attempt < 4; attempt++) {
+              await new Promise((r) => setTimeout(r, attempt === 0 ? 0 : 2000));
+              let respRes: Response;
+              try {
+                respRes = await fetch(responseUrl, { headers: { Authorization: `Key ${FAL_KEY}` } });
+              } catch (e: any) {
+                lastBody = e?.message || "fetch threw";
+                continue;
+              }
+              lastStatus = respRes.status;
+              if (respRes.ok) {
+                finalData = await respRes.json().catch(() => null);
+                if (finalData) { respOk = true; break; }
+              } else {
+                lastBody = await respRes.text().catch(() => "");
+              }
+            }
+            if (!respOk) {
               await refundSeed();
+              console.error("[seedance] response fetch failed", lastStatus, lastBody.slice(0, 300), "url:", responseUrl);
               return res.status(502).json({ error: "SEEDANCE result fetch failed. Credits refunded." });
             }
-            finalData = await respRes.json();
             break;
           }
           if (status === "FAILED" || status === "ERROR") {
