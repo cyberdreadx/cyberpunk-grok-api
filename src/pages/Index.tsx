@@ -566,9 +566,9 @@ const Index = () => {
     if (isGltchEdit) return calculateCreditCost("comfy-image");
     if (isZimage || isComfyGen) return calculateCreditCost("comfy-image");
     const seedTier = mode === "text-to-video" ? renderEngine : (mode === "image-to-video" ? animateEngine : null);
-    if (seedTier === "seedance") return 2 * videoSettings.duration;        // SEEDANCE Lite: 2 cr/s
-    if (seedTier === "seedance-fast") return 5 * videoSettings.duration;   // SEEDANCE 2.0 Fast: 5 cr/s
-    if (seedTier === "seedance-pro") return 15 * videoSettings.duration;   // SEEDANCE 2.0 Pro: 15 cr/s
+    if (seedTier === "seedance") return 3 * videoSettings.duration;        // SEEDANCE Lite: 3 cr/s
+    if (seedTier === "seedance-fast") return 8 * videoSettings.duration;   // SEEDANCE 2.0 Fast: 8 cr/s
+    if (seedTier === "seedance-pro") return 25 * videoSettings.duration;   // SEEDANCE 2.0 Pro: 25 cr/s
     if (isComfyRender || isComfyAnimate || isGltchWan) return calculateCreditCost("comfy-video");
     if (isGrokRender || isGrokAnimate) return calculateCreditCost("text-to-video", 1, videoSettings.duration);
     if (isComfyLongLook) return calculateCreditCost("comfy-longlook", longLookSeqCount);
