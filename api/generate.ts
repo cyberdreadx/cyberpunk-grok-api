@@ -25,6 +25,7 @@ const CREDIT_COSTS = {
 };
 
 const FAL_BASE = "https://fal.run";
+const FAL_QUEUE_BASE = "https://queue.fal.run";
 
 const PRO_MODEL = "grok-imagine-image-pro";
 
@@ -341,9 +342,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         (params.image && typeof params.image === "object" && params.image.url) ||
         undefined;
       const isI2V = !!seedImageUrl;
-      const seedEndpoint = isI2V
-        ? "/bytedance/seedance/v1/lite/image-to-video"
-        : "/bytedance/seedance/v1/lite/text-to-video";
+      // fal.ai Seedance 2.0 model IDs (per https://fal.ai/models)
+      const seedModelId = isI2V
+        ? "fal-ai/bytedance/seedance/v1/lite/image-to-video"
+        : "fal-ai/bytedance/seedance/v1/lite/text-to-video";
 
       const seedBody: Record<string, unknown> = {
         prompt: params.prompt,
@@ -354,7 +356,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       else if (params.aspect_ratio) seedBody.aspect_ratio = params.aspect_ratio;
 
       try {
-        const falRes = await fetch(`${FAL_BASE}${seedEndpoint}`, {
+        // 1) Submit to fal queue
+        const submitRes = await fetch(`${FAL_QUEUE_BASE}/${seedModelId}`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -363,20 +366,68 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           body: JSON.stringify(seedBody),
         });
 
-        if (!falRes.ok) {
-          const errText = await falRes.text().catch(() => "");
+        if (!submitRes.ok) {
+          const errText = await submitRes.text().catch(() => "");
           await refundSeed();
-          console.error("[seedance] fal error", falRes.status, errText.slice(0, 300));
-          if (falRes.status === 400 && /safety|moderat|nsfw|content/i.test(errText)) {
+          console.error("[seedance] submit error", submitRes.status, errText.slice(0, 500));
+          if (submitRes.status === 400 && /safety|moderat|nsfw|content/i.test(errText)) {
             return res.status(451).json({ error: "Prompt blocked by SEEDANCE safety filter. Credits refunded.", moderated: true });
           }
-          return res.status(502).json({ error: "SEEDANCE generation failed. Credits refunded." });
+          if (submitRes.status === 401 || submitRes.status === 403) {
+            return res.status(502).json({ error: "SEEDANCE auth failed (check FAL_KEY). Credits refunded." });
+          }
+          return res.status(502).json({ error: `SEEDANCE submit failed (${submitRes.status}). Credits refunded.` });
         }
 
-        const falData: any = await falRes.json();
-        const videoUrl = falData?.video?.url || falData?.video_url || falData?.url;
+        const submitData: any = await submitRes.json();
+        const requestId: string | undefined = submitData?.request_id;
+        const statusUrl: string = submitData?.status_url || `${FAL_QUEUE_BASE}/${seedModelId}/requests/${requestId}/status`;
+        const responseUrl: string = submitData?.response_url || `${FAL_QUEUE_BASE}/${seedModelId}/requests/${requestId}`;
+
+        if (!requestId) {
+          await refundSeed();
+          console.error("[seedance] no request_id", JSON.stringify(submitData).slice(0, 300));
+          return res.status(502).json({ error: "SEEDANCE returned no request id. Credits refunded." });
+        }
+
+        // 2) Poll until COMPLETED (cap ~270s to stay under Vercel 300s limit)
+        const deadline = Date.now() + 270_000;
+        let finalData: any = null;
+        while (Date.now() < deadline) {
+          await new Promise((r) => setTimeout(r, 3000));
+          let statusRes: Response;
+          try {
+            statusRes = await fetch(statusUrl, { headers: { Authorization: `Key ${FAL_KEY}` } });
+          } catch { continue; }
+          if (!statusRes.ok) continue;
+          const st: any = await statusRes.json().catch(() => ({}));
+          const status = st?.status;
+          if (status === "COMPLETED") {
+            const respRes = await fetch(responseUrl, { headers: { Authorization: `Key ${FAL_KEY}` } });
+            if (!respRes.ok) {
+              await refundSeed();
+              return res.status(502).json({ error: "SEEDANCE result fetch failed. Credits refunded." });
+            }
+            finalData = await respRes.json();
+            break;
+          }
+          if (status === "FAILED" || status === "ERROR") {
+            await refundSeed();
+            console.error("[seedance] job failed", JSON.stringify(st).slice(0, 300));
+            return res.status(502).json({ error: "SEEDANCE generation failed. Credits refunded." });
+          }
+          // IN_QUEUE / IN_PROGRESS → keep polling
+        }
+
+        if (!finalData) {
+          await refundSeed();
+          return res.status(504).json({ error: "SEEDANCE generation timed out. Credits refunded." });
+        }
+
+        const videoUrl = finalData?.video?.url || finalData?.video_url || finalData?.url;
         if (!videoUrl) {
           await refundSeed();
+          console.error("[seedance] no video url in result", JSON.stringify(finalData).slice(0, 300));
           return res.status(502).json({ error: "SEEDANCE returned no video URL. Credits refunded." });
         }
 
