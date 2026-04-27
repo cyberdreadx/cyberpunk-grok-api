@@ -248,7 +248,7 @@ const Index = () => {
 
   // Engine selectors per mode — persisted per mode across sessions
   type EditEngine = "grok" | "gltch";
-  type ComfyEngine = "grok" | "comfy" | "gltch";
+  type ComfyEngine = "grok" | "comfy" | "gltch" | "seedance";
 
   const [editEngine, setEditEngineRaw] = useState<EditEngine>(() => {
     const v = localStorage.getItem("engine-edit-image");
@@ -270,7 +270,7 @@ const Index = () => {
 
   const [renderEngine, setRenderEngineRaw] = useState<ComfyEngine>(() => {
     const v = localStorage.getItem("engine-text-to-video");
-    return (v === "comfy" || v === "gltch") ? v : "comfy";
+    return (v === "comfy" || v === "gltch" || v === "seedance" || v === "grok") ? v as ComfyEngine : "comfy";
   });
   const setRenderEngine = useCallback((v: ComfyEngine) => {
     localStorage.setItem("engine-text-to-video", v);
@@ -279,7 +279,7 @@ const Index = () => {
 
   const [animateEngine, setAnimateEngineRaw] = useState<ComfyEngine>(() => {
     const v = localStorage.getItem("engine-image-to-video");
-    return (v === "comfy" || v === "gltch") ? v : "gltch";
+    return (v === "comfy" || v === "gltch" || v === "seedance" || v === "grok") ? v as ComfyEngine : "gltch";
   });
   const setAnimateEngine = useCallback((v: ComfyEngine) => {
     localStorage.setItem("engine-image-to-video", v);
@@ -563,6 +563,8 @@ const Index = () => {
     }
     if (isGltchEdit) return calculateCreditCost("comfy-image");
     if (isZimage || isComfyGen) return calculateCreditCost("comfy-image");
+    const isSeedance = (mode === "text-to-video" && renderEngine === "seedance") || (mode === "image-to-video" && animateEngine === "seedance");
+    if (isSeedance) return 2 * videoSettings.duration; // SEEDANCE: 2 cr/sec
     if (isComfyRender || isComfyAnimate || isGltchWan) return calculateCreditCost("comfy-video");
     if (isGrokRender || isGrokAnimate) return calculateCreditCost("text-to-video", 1, videoSettings.duration);
     if (isComfyLongLook) return calculateCreditCost("comfy-longlook", longLookSeqCount);
@@ -893,10 +895,10 @@ const Index = () => {
           await generateImage({ prompt: data.prompt, settings, pro: grokPro, ...(adminTestCredits ? { testCredits: true } : {}) });
           break;
         case "text-to-video":
-          await generateVideo({ prompt: data.prompt, videoSettings, ...(adminTestCredits ? { testCredits: true } : {}) });
+          await generateVideo({ prompt: data.prompt, videoSettings, ...(renderEngine === "seedance" ? { provider: "seedance" as const } : {}), ...(adminTestCredits ? { testCredits: true } : {}) });
           break;
         case "image-to-video":
-          await generateVideo({ prompt: data.prompt, image_url: data.imageUrl, videoSettings, ...(adminTestCredits ? { testCredits: true } : {}) });
+          await generateVideo({ prompt: data.prompt, image_url: data.imageUrl, videoSettings, ...(animateEngine === "seedance" ? { provider: "seedance" as const } : {}), ...(adminTestCredits ? { testCredits: true } : {}) });
           break;
         case "edit-video":
           await editVideo({ prompt: data.prompt, video_url: data.imageUrl!, ...(adminTestCredits ? { testCredits: true } : {}) });
@@ -1657,13 +1659,21 @@ const Index = () => {
                   <Zap className="w-3 h-3" />
                   ENGINE
                 </label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   <button type="button" onClick={() => setRenderEngine("comfy")}
                     className={`p-2.5 border rounded text-left transition-all duration-200 ${renderEngine === "comfy" ? "border-purple-500 bg-purple-500/5 shadow-[0_0_8px_rgba(168,85,247,0.15)]" : "border-border bg-card/30 hover:border-purple-500/40"}`}>
                     <div className={`font-orbitron text-[11px] ${renderEngine === "comfy" ? "text-purple-400" : "text-foreground"}`}>COMFY</div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>WAN Video</span>
                       <span className={renderEngine === "comfy" ? "text-purple-400/70" : "text-muted-foreground/50"}>15 cr</span>
+                    </div>
+                  </button>
+                  <button type="button" onClick={() => setRenderEngine("seedance")}
+                    className={`p-2.5 border rounded text-left transition-all duration-200 ${renderEngine === "seedance" ? "border-cyan-400 bg-cyan-400/5 shadow-[0_0_8px_rgba(34,211,238,0.15)]" : "border-border bg-card/30 hover:border-cyan-400/40"}`}>
+                    <div className={`font-orbitron text-[11px] ${renderEngine === "seedance" ? "text-cyan-300" : "text-foreground"}`}>SEEDANCE</div>
+                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
+                      <span>fal.ai 2.0</span>
+                      <span className={renderEngine === "seedance" ? "text-cyan-300/70" : "text-muted-foreground/50"}>2 cr/s</span>
                     </div>
                   </button>
                   <button type="button" onClick={() => setRenderEngine("grok")}
@@ -1781,7 +1791,7 @@ const Index = () => {
                   <Zap className="w-3 h-3" />
                   ENGINE
                 </label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   <button type="button" onClick={() => { setAnimateEngine("comfy"); setLongLookEnabled(true); }}
                     className={`p-2.5 border rounded text-left transition-all duration-200 ${animateEngine === "comfy" ? "border-purple-500 bg-purple-500/5 shadow-[0_0_8px_rgba(168,85,247,0.15)]" : "border-border bg-card/30 hover:border-purple-500/40"}`}>
                     <div className={`font-orbitron text-[11px] ${animateEngine === "comfy" ? "text-purple-400" : "text-foreground"}`}>GLTCH PRO</div>
@@ -1796,6 +1806,14 @@ const Index = () => {
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>WAN 2.2 I2V / T2V</span>
                       <span className={animateEngine === "gltch" ? "text-secondary/70" : "text-muted-foreground/50"}>15 cr</span>
+                    </div>
+                  </button>
+                  <button type="button" onClick={() => { setAnimateEngine("seedance"); setLongLookEnabled(false); }}
+                    className={`p-2.5 border rounded text-left transition-all duration-200 ${animateEngine === "seedance" ? "border-cyan-400 bg-cyan-400/5 shadow-[0_0_8px_rgba(34,211,238,0.15)]" : "border-border bg-card/30 hover:border-cyan-400/40"}`}>
+                    <div className={`font-orbitron text-[11px] ${animateEngine === "seedance" ? "text-cyan-300" : "text-foreground"}`}>SEEDANCE</div>
+                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
+                      <span>fal.ai 2.0</span>
+                      <span className={animateEngine === "seedance" ? "text-cyan-300/70" : "text-muted-foreground/50"}>2 cr/s</span>
                     </div>
                   </button>
                   <button type="button" onClick={() => { setAnimateEngine("grok"); setLongLookEnabled(false); }}

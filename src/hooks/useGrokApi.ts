@@ -204,6 +204,8 @@ interface GenerateVideoParams {
   image_url?: string;
   videoSettings: VideoSettings;
   testCredits?: boolean;
+  /** Optional provider override. "seedance" routes to fal.ai Seedance 2.0 (2 cr/sec). */
+  provider?: "grok" | "seedance";
 }
 
 interface EditVideoParams {
@@ -838,8 +840,26 @@ export function useGrokApi() {
 
       if (params.image_url) {
         body.image = { url: params.image_url };
+        body.image_url = params.image_url; // fal.ai expects image_url
       } else {
         body.aspect_ratio = params.videoSettings.aspectRatio;
+      }
+
+      // SEEDANCE provider override → routed to fal.ai via /api/generate proxy.
+      // Always uses credits mode (no BYOK for fal.ai).
+      if (params.provider === "seedance") {
+        const data = await makeProxyRequest("generate-video", { ...body, provider: "seedance" });
+        const videoUrl = data.video?.url || data.video_url || data.url;
+        if (!videoUrl) throw new Error("SEEDANCE returned no video URL");
+        const newResults: GrokResult[] = [{
+          id: `vid-seed-${Date.now()}`,
+          url: videoUrl,
+          type: "video" as const,
+          timestamp: Date.now(),
+        }];
+        prependResults(newResults);
+        persistNewResults(newResults);
+        return newResults;
       }
 
       // Credits mode: the edge function handles submission + polling + deduction

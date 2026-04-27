@@ -21,7 +21,10 @@ const CREDIT_COSTS = {
   imageGenPro: 10,
   imageEditPro: 12,
   videoPerSecond: 6,
+  seedanceVideoPerSecond: 2, // SEEDANCE 2.0 via fal.ai (~$0.036/s)
 };
+
+const FAL_BASE = "https://fal.run";
 
 const PRO_MODEL = "grok-imagine-image-pro";
 
@@ -290,6 +293,113 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (params.prompt && typeof params.prompt === "string" && params.prompt.length > 10000) {
       return res.status(400).json({ error: "Prompt too long (max 10,000 characters)." });
     }
+
+    // ── SEEDANCE 2.0 (fal.ai) provider branch ────────────────────────────────
+    // Mirrors the Grok video flow but routes to ByteDance Seedance 2.0 via fal.ai.
+    // Cheaper (~$0.036/s) → 2 cr/sec. Supports text-to-video and image-to-video.
+    if (params.provider === "seedance" && (action === "generate-video" || action === "edit-video")) {
+      const FAL_KEY = process.env.FAL_KEY;
+      if (!FAL_KEY) return res.status(500).json({ error: "SEEDANCE not configured (missing FAL_KEY)." });
+
+      const seedDuration = Math.max(3, Math.min(12, Math.floor(Number(params.duration) || 5)));
+      const seedCost = CREDIT_COSTS.seedanceVideoPerSecond * seedDuration;
+      const isAdminSeed = auth.email === ADMIN_EMAIL;
+      const adminTestSeed = isAdminSeed && req.body.testCredits === true;
+
+      // Credit gate
+      if (!isAdminSeed || adminTestSeed) {
+        const rows = await sql`
+          SELECT daily_credits, sub_credits, pack_credits FROM users WHERE id = ${auth.userId}
+        `;
+        if (rows.length === 0) return res.status(404).json({ error: "User not found" });
+        const totalCredits = (rows[0].daily_credits || 0) + (rows[0].sub_credits || 0) + (rows[0].pack_credits || 0);
+        if (totalCredits < seedCost) {
+          return res.status(402).json({ error: "Insufficient credits. Please purchase more in the Credit Store." });
+        }
+      }
+
+      // Deduct credits up front
+      if (!isAdminSeed || adminTestSeed) {
+        try {
+          await sql`SELECT deduct_credits(${auth.userId}::uuid, ${seedCost})`;
+        } catch (err: any) {
+          console.error("[seedance] deduct failed:", err.message);
+          return res.status(402).json({ error: "Failed to deduct credits" });
+        }
+      }
+
+      const refundSeed = async () => {
+        if (isAdminSeed && !adminTestSeed) return;
+        try {
+          await sql`SELECT add_pack_credits(${auth.userId}::uuid, ${seedCost})`;
+        } catch (e: any) { console.error("[seedance] refund failed:", e.message); }
+      };
+
+      // Determine endpoint: image-to-video if image provided, else text-to-video.
+      const seedImageUrl: string | undefined =
+        (typeof params.image_url === "string" && params.image_url) ||
+        (params.image && typeof params.image === "object" && params.image.url) ||
+        undefined;
+      const isI2V = !!seedImageUrl;
+      const seedEndpoint = isI2V
+        ? "/bytedance/seedance/v1/lite/image-to-video"
+        : "/bytedance/seedance/v1/lite/text-to-video";
+
+      const seedBody: Record<string, unknown> = {
+        prompt: params.prompt,
+        duration: String(seedDuration),
+        resolution: "720p",
+      };
+      if (isI2V) seedBody.image_url = seedImageUrl;
+      else if (params.aspect_ratio) seedBody.aspect_ratio = params.aspect_ratio;
+
+      try {
+        const falRes = await fetch(`${FAL_BASE}${seedEndpoint}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Key ${FAL_KEY}`,
+          },
+          body: JSON.stringify(seedBody),
+        });
+
+        if (!falRes.ok) {
+          const errText = await falRes.text().catch(() => "");
+          await refundSeed();
+          console.error("[seedance] fal error", falRes.status, errText.slice(0, 300));
+          if (falRes.status === 400 && /safety|moderat|nsfw|content/i.test(errText)) {
+            return res.status(451).json({ error: "Prompt blocked by SEEDANCE safety filter. Credits refunded.", moderated: true });
+          }
+          return res.status(502).json({ error: "SEEDANCE generation failed. Credits refunded." });
+        }
+
+        const falData: any = await falRes.json();
+        const videoUrl = falData?.video?.url || falData?.video_url || falData?.url;
+        if (!videoUrl) {
+          await refundSeed();
+          return res.status(502).json({ error: "SEEDANCE returned no video URL. Credits refunded." });
+        }
+
+        // Log usage (api cost ~ $0.036/s → cents)
+        const apiCostCents = Math.round(3.6 * seedDuration);
+        await sql`
+          INSERT INTO usage_log (user_id, mode, credits_used, prompt, api_cost_cents)
+          VALUES (${auth.userId}::uuid, ${'seedance-' + (isI2V ? 'i2v' : 't2v')}, ${seedCost}, ${(params.prompt || "").slice(0, 500)}, ${apiCostCents})
+        `;
+
+        return res.status(200).json({
+          video: { url: videoUrl },
+          video_url: videoUrl,
+          provider: "seedance",
+          duration: seedDuration,
+        });
+      } catch (err: any) {
+        await refundSeed();
+        console.error("[seedance] exception", err.message);
+        return res.status(500).json({ error: "SEEDANCE generation failed. Credits refunded." });
+      }
+    }
+
 
     const isPro = params.model === PRO_MODEL;
     const is2k = params.resolution === "2k";
