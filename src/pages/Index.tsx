@@ -893,10 +893,10 @@ const Index = () => {
           await generateImage({ prompt: data.prompt, settings, pro: grokPro, ...(adminTestCredits ? { testCredits: true } : {}) });
           break;
         case "text-to-video":
-          await generateVideo({ prompt: data.prompt, videoSettings, ...(adminTestCredits ? { testCredits: true } : {}) });
+          await generateVideo({ prompt: data.prompt, videoSettings, ...(renderEngine === "seedance" ? { provider: "seedance" as const } : {}), ...(adminTestCredits ? { testCredits: true } : {}) });
           break;
         case "image-to-video":
-          await generateVideo({ prompt: data.prompt, image_url: data.imageUrl, videoSettings, ...(adminTestCredits ? { testCredits: true } : {}) });
+          await generateVideo({ prompt: data.prompt, image_url: data.imageUrl, videoSettings, ...(animateEngine === "seedance" ? { provider: "seedance" as const } : {}), ...(adminTestCredits ? { testCredits: true } : {}) });
           break;
         case "edit-video":
           await editVideo({ prompt: data.prompt, video_url: data.imageUrl!, ...(adminTestCredits ? { testCredits: true } : {}) });
