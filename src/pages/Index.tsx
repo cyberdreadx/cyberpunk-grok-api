@@ -563,6 +563,8 @@ const Index = () => {
     }
     if (isGltchEdit) return calculateCreditCost("comfy-image");
     if (isZimage || isComfyGen) return calculateCreditCost("comfy-image");
+    const isSeedance = (mode === "text-to-video" && renderEngine === "seedance") || (mode === "image-to-video" && animateEngine === "seedance");
+    if (isSeedance) return 2 * videoSettings.duration; // SEEDANCE: 2 cr/sec
     if (isComfyRender || isComfyAnimate || isGltchWan) return calculateCreditCost("comfy-video");
     if (isGrokRender || isGrokAnimate) return calculateCreditCost("text-to-video", 1, videoSettings.duration);
     if (isComfyLongLook) return calculateCreditCost("comfy-longlook", longLookSeqCount);
