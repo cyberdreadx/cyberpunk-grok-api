@@ -25,6 +25,7 @@ const CREDIT_COSTS = {
 };
 
 const FAL_BASE = "https://fal.run";
+const FAL_QUEUE_BASE = "https://queue.fal.run";
 
 const PRO_MODEL = "grok-imagine-image-pro";
 
