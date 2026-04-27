@@ -452,17 +452,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           return res.status(502).json({ error: "SEEDANCE returned no video URL. Credits refunded." });
         }
 
-        // Log usage (api cost ~ $0.036/s → cents)
-        const apiCostCents = Math.round(3.6 * seedDuration);
+        // Log usage with per-tier api cost (cents/sec): Lite 3.6, Fast 10, Pro 30
+        const costCentsPerSec = tier === "seedance-pro" ? 30 : tier === "seedance-fast" ? 10 : 3.6;
+        const apiCostCents = Math.round(costCentsPerSec * seedDuration);
+        const modeLabel = `${tier}-${isI2V ? 'i2v' : 't2v'}`;
         await sql`
           INSERT INTO usage_log (user_id, mode, credits_used, prompt, api_cost_cents)
-          VALUES (${auth.userId}::uuid, ${'seedance-' + (isI2V ? 'i2v' : 't2v')}, ${seedCost}, ${(params.prompt || "").slice(0, 500)}, ${apiCostCents})
+          VALUES (${auth.userId}::uuid, ${modeLabel}, ${seedCost}, ${(params.prompt || "").slice(0, 500)}, ${apiCostCents})
         `;
 
         return res.status(200).json({
           video: { url: videoUrl },
           video_url: videoUrl,
-          provider: "seedance",
+          provider: tier,
           duration: seedDuration,
         });
       } catch (err: any) {
