@@ -846,10 +846,34 @@ export function useGrokApi() {
       }
 
       // SEEDANCE provider override → routed to fal.ai via /api/generate proxy.
-      // Always uses credits mode (no BYOK for fal.ai). Three tiers supported.
+      // Fast/Pro tiers can take 3–7 min, exceeding Vercel's 300s function limit.
+      // Server now returns a job token immediately; we poll /api/seedance-status.
       if (params.provider === "seedance" || params.provider === "seedance-fast" || params.provider === "seedance-pro") {
-        const data = await makeProxyRequest("generate-video", { ...body, provider: params.provider });
-        const videoUrl = data.video?.url || data.video_url || data.url;
+        const submit = await makeProxyRequest("generate-video", { ...body, provider: params.provider });
+        let videoUrl: string | undefined = submit.video?.url || submit.video_url || submit.url;
+
+        if (!videoUrl && submit.async && submit.job_token) {
+          const jobToken = submit.job_token as string;
+          // Poll up to ~10 min (200 × 3s). Fast=2-4min, Pro=3-7min typical.
+          const MAX_ATTEMPTS = 200;
+          const INTERVAL_MS = 3000;
+          for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+            await new Promise((r) => setTimeout(r, INTERVAL_MS));
+            const poll = await apiFetch("/seedance-status", {
+              method: "POST",
+              body: { job_token: jobToken },
+            });
+            if (poll?.error) throw new Error(typeof poll.error === "string" ? poll.error : "SEEDANCE polling failed");
+            if (poll?.status === "COMPLETED") {
+              videoUrl = poll.video?.url || poll.video_url;
+              if (videoUrl) break;
+              // result_pending → keep polling for the response_url to settle
+            }
+            // IN_QUEUE / IN_PROGRESS → continue
+          }
+          if (!videoUrl) throw new Error("SEEDANCE generation timed out (job still running on fal.ai).");
+        }
+
         if (!videoUrl) throw new Error("SEEDANCE returned no video URL");
         const newResults: GrokResult[] = [{
           id: `vid-seed-${Date.now()}`,
@@ -861,6 +885,7 @@ export function useGrokApi() {
         persistNewResults(newResults);
         return newResults;
       }
+
 
       // Credits mode: the edge function handles submission + polling + deduction
       if (apiMode === "credits") {
