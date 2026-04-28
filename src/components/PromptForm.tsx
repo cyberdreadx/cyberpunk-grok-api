@@ -114,25 +114,21 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
     });
 
   /**
-   * Resize + compress an image blob so the payload stays small enough for the
-   * API proxy (≤ 50 MB body).  4K screenshots / camera photos are 20-40MB raw
-   * and ~30-55MB as base64, which blows past the limit.
+   * Resize + compress an image blob so the request body stays under Vercel's
+   * platform-level 4.5 MB serverless function payload limit.
    *
-   * Strategy:
-   *  - Cap the longest edge at MAX_DIM (4096 px — plenty for xAI's 2K output)
-   *  - Re-encode as JPEG at 0.92 quality → typically 1-5 MB
-   *  - Small images that are already under the cap pass through untouched
+   * Base64 inflates binary by ~33%, so the JPEG must be ≤ ~3 MB to leave room
+   * for headers + JSON overhead. We iteratively step down dimension/quality
+   * until the encoded data URL fits comfortably.
    */
-  const MAX_DIM = 4096;
+  const MAX_DIM = 2048;
+  const TARGET_BYTES = 3 * 1024 * 1024; // ~3 MB binary → ~4 MB base64
+  const canvasToDataUrl = (canvas: HTMLCanvasElement, q: number) =>
+    canvas.toDataURL("image/jpeg", q);
+
   const compressBlob = async (blob: Blob): Promise<string> => {
     const bitmap = await createImageBitmap(blob);
     let w = bitmap.width, h = bitmap.height;
-    // If already small enough, just read as-is (preserves PNG transparency etc.)
-    if (w <= MAX_DIM && h <= MAX_DIM && blob.size < 4 * 1024 * 1024) {
-      bitmap.close();
-      return readBlobAsDataUrl(blob);
-    }
-    // Downscale to fit within MAX_DIM × MAX_DIM
     if (w > MAX_DIM || h > MAX_DIM) {
       const scale = MAX_DIM / Math.max(w, h);
       w = Math.round(w * scale);
@@ -144,7 +140,29 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
     const ctx = canvas.getContext("2d")!;
     ctx.drawImage(bitmap, 0, 0, w, h);
     bitmap.close();
-    return canvas.toDataURL("image/jpeg", 0.92);
+
+    // Try progressively lower quality, then dimension, until under target.
+    const qualities = [0.9, 0.82, 0.72, 0.6];
+    for (let attempt = 0; attempt < 4; attempt++) {
+      for (const q of qualities) {
+        const dataUrl = canvasToDataUrl(canvas, q);
+        // base64 length × 0.75 ≈ binary byte size
+        const approxBytes = (dataUrl.length - dataUrl.indexOf(",") - 1) * 0.75;
+        if (approxBytes <= TARGET_BYTES) return dataUrl;
+      }
+      // Still too big — shrink dimensions 25% and retry
+      w = Math.round(w * 0.75);
+      h = Math.round(h * 0.75);
+      const c2 = document.createElement("canvas");
+      c2.width = w;
+      c2.height = h;
+      c2.getContext("2d")!.drawImage(canvas, 0, 0, w, h);
+      canvas.width = w;
+      canvas.height = h;
+      canvas.getContext("2d")!.drawImage(c2, 0, 0);
+    }
+    // Last resort
+    return canvasToDataUrl(canvas, 0.5);
   };
 
   const fileToDataUrl = async (file: File): Promise<string> => {
