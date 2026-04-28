@@ -10,6 +10,7 @@
 
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { put } from "@vercel/blob";
+import jwt from "jsonwebtoken";
 import { getDb } from "./_lib/db";
 import { getUserFromRequest, ADMIN_EMAIL, checkBan } from "./_lib/auth";
 import { checkRateLimit, getClientIp } from "./_lib/ratelimit";
