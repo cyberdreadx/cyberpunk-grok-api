@@ -115,21 +115,21 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
     });
 
   /**
-   * Resize + compress an image blob so the request body stays under Vercel's
-   * platform-level 4.5 MB serverless function payload limit.
+   * Resize an image client-side (cap at 4096px) and upload it to Vercel Blob
+   * via the client-upload protocol. Returns the public CDN URL.
    *
-   * Base64 inflates binary by ~33%, so the JPEG must be ≤ ~3 MB to leave room
-   * for headers + JSON overhead. We iteratively step down dimension/quality
-   * until the encoded data URL fits comfortably.
+   * This bypasses Vercel's 4.5 MB serverless function body limit entirely
+   * (browser → Blob storage direct, just like fal.ai's CDN upload pattern).
    */
-  const MAX_DIM = 2048;
-  const TARGET_BYTES = 3 * 1024 * 1024; // ~3 MB binary → ~4 MB base64
-  const canvasToDataUrl = (canvas: HTMLCanvasElement, q: number) =>
-    canvas.toDataURL("image/jpeg", q);
+  const MAX_DIM = 4096;
 
-  const compressBlob = async (blob: Blob): Promise<string> => {
+  const resizeBlobIfNeeded = async (blob: Blob): Promise<Blob> => {
     const bitmap = await createImageBitmap(blob);
     let w = bitmap.width, h = bitmap.height;
+    if (w <= MAX_DIM && h <= MAX_DIM && blob.size <= 8 * 1024 * 1024) {
+      bitmap.close();
+      return blob; // already reasonable
+    }
     if (w > MAX_DIM || h > MAX_DIM) {
       const scale = MAX_DIM / Math.max(w, h);
       w = Math.round(w * scale);
@@ -138,69 +138,44 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
     const canvas = document.createElement("canvas");
     canvas.width = w;
     canvas.height = h;
-    const ctx = canvas.getContext("2d")!;
-    ctx.drawImage(bitmap, 0, 0, w, h);
+    canvas.getContext("2d")!.drawImage(bitmap, 0, 0, w, h);
     bitmap.close();
-
-    // Try progressively lower quality, then dimension, until under target.
-    const qualities = [0.9, 0.82, 0.72, 0.6];
-    for (let attempt = 0; attempt < 4; attempt++) {
-      for (const q of qualities) {
-        const dataUrl = canvasToDataUrl(canvas, q);
-        // base64 length × 0.75 ≈ binary byte size
-        const approxBytes = (dataUrl.length - dataUrl.indexOf(",") - 1) * 0.75;
-        if (approxBytes <= TARGET_BYTES) return dataUrl;
-      }
-      // Still too big — shrink dimensions 25% and retry
-      w = Math.round(w * 0.75);
-      h = Math.round(h * 0.75);
-      const c2 = document.createElement("canvas");
-      c2.width = w;
-      c2.height = h;
-      c2.getContext("2d")!.drawImage(canvas, 0, 0, w, h);
-      canvas.width = w;
-      canvas.height = h;
-      canvas.getContext("2d")!.drawImage(c2, 0, 0);
-    }
-    // Last resort
-    return canvasToDataUrl(canvas, 0.5);
+    return await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(
+        (b) => (b ? resolve(b) : reject(new Error("toBlob failed"))),
+        "image/jpeg",
+        0.9,
+      );
+    });
   };
 
-  const fileToDataUrl = async (file: File): Promise<string> => {
+  const uploadToBlob = async (blob: Blob, filename: string): Promise<string> => {
+    const token = localStorage.getItem("auth-token") || "";
+    if (!token) throw new Error("Sign in required to upload images.");
+    const ext = blob.type === "image/png" ? "png"
+      : blob.type === "image/webp" ? "webp"
+      : blob.type.startsWith("video/") ? (blob.type.split("/")[1] || "mp4")
+      : "jpg";
+    const safeName = `${Date.now()}-${filename.replace(/[^\w.-]/g, "_") || "upload"}.${ext}`;
+    const result = await upload(safeName, blob, {
+      access: "public",
+      handleUploadUrl: "/api/blob-upload",
+      clientPayload: token,
+    });
+    return result.url;
+  };
+
+  const fileToUploadedUrl = async (file: File): Promise<string> => {
     let blob: Blob = file;
     if (isHeicLike(file)) {
       const { default: heic2any } = await import("heic2any");
-      const converted = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.85 });
+      const converted = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.9 });
       blob = Array.isArray(converted) ? converted[0] : converted;
-      // iPhone HEIC can be 48MP — always force through canvas resize to keep payload manageable
-      const bitmap = await createImageBitmap(blob);
-      let w = bitmap.width, h = bitmap.height;
-      const cap = 2048;
-      if (w > cap || h > cap) {
-        const scale = cap / Math.max(w, h);
-        w = Math.round(w * scale);
-        h = Math.round(h * scale);
-      }
-      const canvas = document.createElement("canvas");
-      canvas.width = w;
-      canvas.height = h;
-      canvas.getContext("2d")!.drawImage(bitmap, 0, 0, w, h);
-      bitmap.close();
-      return await new Promise<string>((resolve, reject) => {
-        canvas.toBlob(
-          (b) => {
-            if (!b) return reject(new Error("toBlob failed"));
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.onerror = reject;
-            reader.readAsDataURL(b);
-          },
-          "image/jpeg",
-          0.85,
-        );
-      });
     }
-    return compressBlob(blob);
+    if (blob.type.startsWith("image/")) {
+      blob = await resizeBlobIfNeeded(blob);
+    }
+    return uploadToBlob(blob, file.name || "upload");
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
