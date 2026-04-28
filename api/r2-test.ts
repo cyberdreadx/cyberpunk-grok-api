@@ -13,7 +13,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { applyCors } from "./_lib/cors";
 import { verifyToken } from "./_lib/auth";
 import { uploadToR2, getPublicUrl } from "./_lib/r2";
-import { sql } from "./_lib/db";
+import { getDb } from "./_lib/db";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   applyCors(req, res, "GET, OPTIONS");
@@ -26,7 +26,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const auth = verifyToken(token);
   if (!auth) return res.status(401).json({ error: "Unauthorized" });
   try {
-    const rows = await sql`SELECT is_admin FROM users WHERE id = ${auth.userId} LIMIT 1`;
+    const sql = getDb();
+    const rows = await sql`SELECT is_admin FROM users WHERE id = ${auth.userId} LIMIT 1` as any[];
     if (!rows[0]?.is_admin) return res.status(403).json({ error: "Admin only" });
   } catch (e: any) {
     return res.status(500).json({ error: "DB check failed", detail: e?.message });
