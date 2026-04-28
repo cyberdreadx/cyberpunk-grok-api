@@ -302,15 +302,16 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
         const file = item.getAsFile();
         if (!file) return;
         setUploadError(null);
-        fileToDataUrl(file)
-          .then((dataUrl) => {
-            setImageUrl(dataUrl);
-            setUploadPreview(dataUrl);
-            setImageSource("upload");
+        const localPreview = URL.createObjectURL(file);
+        setUploadPreview(localPreview);
+        setImageSource("upload");
+        fileToUploadedUrl(file)
+          .then((url) => {
+            setImageUrl(url);
           })
           .catch((err: any) => {
-            console.error("[PromptForm] Paste conversion failed:", err?.message || err);
-            setUploadError("Clipboard image format is unsupported. Try JPEG/PNG/WebP.");
+            console.error("[PromptForm] Paste upload failed:", err?.message || err);
+            setUploadError(err?.message || "Clipboard image upload failed.");
           });
         return;
       }
