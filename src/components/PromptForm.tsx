@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { GrokMode, GenerationSettings } from "@/hooks/useGrokApi";
 import { apiFetch } from "@/lib/api";
+import { upload } from "@vercel/blob/client";
 import { toast } from "sonner";
 
 interface CostBreakdown {
