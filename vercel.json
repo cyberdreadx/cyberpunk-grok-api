@@ -7,8 +7,12 @@
       "memory": 1024
     },
     "api/generate.ts": {
-      "maxDuration": 300,
+      "maxDuration": 60,
       "memory": 1024
+    },
+    "api/seedance-status.ts": {
+      "maxDuration": 30,
+      "memory": 512
     },
     "api/gltch.ts": {
       "maxDuration": 60,

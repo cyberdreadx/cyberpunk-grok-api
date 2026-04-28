@@ -10,6 +10,7 @@
 
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { put } from "@vercel/blob";
+import jwt from "jsonwebtoken";
 import { getDb } from "./_lib/db";
 import { getUserFromRequest, ADMIN_EMAIL, checkBan } from "./_lib/auth";
 import { checkRateLimit, getClientIp } from "./_lib/ratelimit";
@@ -413,7 +414,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       else if (params.aspect_ratio) seedBody.aspect_ratio = params.aspect_ratio;
 
       try {
-        // 1) Submit to fal queue
+        // Submit to fal queue and return immediately. Client polls /api/seedance-status.
+        // This avoids Vercel's 300s function ceiling that was killing Fast/Pro tiers.
         const submitRes = await fetch(`${FAL_QUEUE_BASE}/${seedModelId}`, {
           method: "POST",
           headers: {
@@ -447,87 +449,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           return res.status(502).json({ error: "SEEDANCE returned no request id. Credits refunded." });
         }
 
-        // 2) Poll until COMPLETED (cap ~270s to stay under Vercel 300s limit)
-        const deadline = Date.now() + 270_000;
-        let finalData: any = null;
-        while (Date.now() < deadline) {
-          await new Promise((r) => setTimeout(r, 3000));
-          let statusRes: Response;
-          try {
-            statusRes = await fetch(statusUrl, { headers: { Authorization: `Key ${FAL_KEY}` } });
-          } catch { continue; }
-          if (!statusRes.ok) continue;
-          const st: any = await statusRes.json().catch(() => ({}));
-          const status = st?.status;
-          if (status === "COMPLETED") {
-            // Retry response fetch up to 4 times — fal occasionally lags between
-            // status=COMPLETED and the result being readable on the response_url.
-            let respOk = false;
-            let lastStatus = 0;
-            let lastBody = "";
-            for (let attempt = 0; attempt < 4; attempt++) {
-              await new Promise((r) => setTimeout(r, attempt === 0 ? 0 : 2000));
-              let respRes: Response;
-              try {
-                respRes = await fetch(responseUrl, { headers: { Authorization: `Key ${FAL_KEY}` } });
-              } catch (e: any) {
-                lastBody = e?.message || "fetch threw";
-                continue;
-              }
-              lastStatus = respRes.status;
-              if (respRes.ok) {
-                finalData = await respRes.json().catch(() => null);
-                if (finalData) { respOk = true; break; }
-              } else {
-                lastBody = await respRes.text().catch(() => "");
-              }
-            }
-            if (!respOk) {
-              await refundSeed();
-              console.error("[seedance] response fetch failed", lastStatus, lastBody.slice(0, 300), "url:", responseUrl);
-              return res.status(502).json({ error: "SEEDANCE result fetch failed. Credits refunded." });
-            }
-            break;
-          }
-          if (status === "FAILED" || status === "ERROR") {
-            await refundSeed();
-            console.error("[seedance] job failed", JSON.stringify(st).slice(0, 300));
-            return res.status(502).json({ error: "SEEDANCE generation failed. Credits refunded." });
-          }
-          // IN_QUEUE / IN_PROGRESS → keep polling
-        }
+        // Sign a short-lived job token. Client passes it back to /api/seedance-status,
+        // which uses it to poll fal, refund on failure, and log usage on success.
+        const jobToken = jwt.sign(
+          {
+            kind: "seedance-job",
+            userId: auth.userId,
+            email: auth.email,
+            tier,
+            isI2V,
+            seedCost,
+            seedDuration,
+            isAdmin: !!isAdminSeed && !adminTestSeed,
+            requestId,
+            statusUrl,
+            responseUrl,
+            prompt: (params.prompt || "").slice(0, 500),
+          },
+          process.env.JWT_SECRET as string,
+          { expiresIn: "30m" },
+        );
 
-        if (!finalData) {
-          await refundSeed();
-          return res.status(504).json({ error: "SEEDANCE generation timed out. Credits refunded." });
-        }
-
-        const videoUrl = finalData?.video?.url || finalData?.video_url || finalData?.url;
-        if (!videoUrl) {
-          await refundSeed();
-          console.error("[seedance] no video url in result", JSON.stringify(finalData).slice(0, 300));
-          return res.status(502).json({ error: "SEEDANCE returned no video URL. Credits refunded." });
-        }
-
-        // Log usage with per-tier api cost (cents/sec): Lite 3.6, Fast 10, Pro 30
-        const costCentsPerSec = tier === "seedance-pro" ? 30 : tier === "seedance-fast" ? 10 : 3.6;
-        const apiCostCents = Math.round(costCentsPerSec * seedDuration);
-        const modeLabel = `${tier}-${isI2V ? 'i2v' : 't2v'}`;
-        await sql`
-          INSERT INTO usage_log (user_id, mode, credits_used, prompt, api_cost_cents)
-          VALUES (${auth.userId}::uuid, ${modeLabel}, ${seedCost}, ${(params.prompt || "").slice(0, 500)}, ${apiCostCents})
-        `;
-
-        return res.status(200).json({
-          video: { url: videoUrl },
-          video_url: videoUrl,
+        return res.status(202).json({
+          async: true,
           provider: tier,
-          duration: seedDuration,
+          job_token: jobToken,
+          request_id: requestId,
         });
       } catch (err: any) {
         await refundSeed();
-        console.error("[seedance] exception", err.message);
-        return res.status(500).json({ error: "SEEDANCE generation failed. Credits refunded." });
+        console.error("[seedance] submit exception", err.message);
+        return res.status(500).json({ error: "SEEDANCE submit failed. Credits refunded." });
       }
     }
 
