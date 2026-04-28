@@ -184,14 +184,17 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
     if (!file.type.startsWith("image/") && !isHeicLike(file)) return;
     setUploadError(null);
 
+    // Show local preview immediately while upload happens in background
+    const localPreview = URL.createObjectURL(file);
+    setUploadPreview(localPreview);
+    setImageSource("upload");
+
     try {
-      const dataUrl = await fileToDataUrl(file);
-      setImageUrl(dataUrl);
-      setUploadPreview(dataUrl);
-      setImageSource("upload");
+      const url = await fileToUploadedUrl(file);
+      setImageUrl(url);
     } catch (err: any) {
-      console.error("[PromptForm] Upload conversion failed:", err?.message || err);
-      setUploadError("Could not read this image format. Try JPEG/PNG/WebP, or convert HEIC to JPEG.");
+      console.error("[PromptForm] Upload failed:", err?.message || err);
+      setUploadError(err?.message || "Upload failed. Try a smaller JPEG/PNG/WebP.");
       clearUpload();
     }
   };
@@ -207,15 +210,22 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
   const handleExtraFileChange = async (e: React.ChangeEvent<HTMLInputElement>, slotIndex: number) => {
     const file = e.target.files?.[0];
     if (!file || (!file.type.startsWith("image/") && !isHeicLike(file))) return;
+    const localPreview = URL.createObjectURL(file);
+    setExtraImages(prev => {
+      const next = [...prev];
+      next[slotIndex] = { url: "", preview: localPreview };
+      return next;
+    });
     try {
-      const dataUrl = await fileToDataUrl(file);
+      const url = await fileToUploadedUrl(file);
       setExtraImages(prev => {
         const next = [...prev];
-        next[slotIndex] = { url: dataUrl, preview: dataUrl };
+        next[slotIndex] = { url, preview: localPreview };
         return next;
       });
     } catch {
-      // silently skip bad image
+      // remove failed slot
+      setExtraImages(prev => prev.filter((_, i) => i !== slotIndex));
     }
   };
 
@@ -237,10 +247,17 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
       return;
     }
     setUploadError(null);
-    const dataUrl = await readBlobAsDataUrl(file);
-    setImageUrl(dataUrl);
-    setVideoPreview(dataUrl);
+    const localPreview = URL.createObjectURL(file);
+    setVideoPreview(localPreview);
     setVideoSource("upload");
+    try {
+      const url = await uploadToBlob(file, file.name || "video");
+      setImageUrl(url);
+    } catch (err: any) {
+      console.error("[PromptForm] Video upload failed:", err?.message || err);
+      setUploadError(err?.message || "Video upload failed.");
+      clearVideoUpload();
+    }
   };
 
   const clearVideoUpload = () => {
