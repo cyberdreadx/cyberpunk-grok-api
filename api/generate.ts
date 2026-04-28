@@ -9,6 +9,7 @@
  */
 
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { put } from "@vercel/blob";
 import { getDb } from "./_lib/db";
 import { getUserFromRequest, ADMIN_EMAIL, checkBan } from "./_lib/auth";
 import { checkRateLimit, getClientIp } from "./_lib/ratelimit";
@@ -96,6 +97,36 @@ const MODERATION_KEYWORDS = [
 function isModerationError(errorText: string): boolean {
   const lower = errorText.toLowerCase();
   return MODERATION_KEYWORDS.some((kw) => lower.includes(kw));
+}
+
+function extFromImageMime(mime: string): "jpg" | "png" | "webp" {
+  if (mime === "image/png") return "png";
+  if (mime === "image/webp") return "webp";
+  return "jpg";
+}
+
+async function dataUrlToPublicBlobUrl(dataUrl: string, userId: string): Promise<string> {
+  const match = dataUrl.match(/^data:(image\/(?:png|jpe?g|webp));base64,(.+)$/s);
+  if (!match) throw new Error("Invalid SEEDANCE image upload. Use JPEG, PNG, or WebP.");
+
+  const token = process.env.BLOB_READ_WRITE_TOKEN || process.env.grokrun_READ_WRITE_TOKEN || "";
+  if (!token) throw new Error("SEEDANCE image upload storage is not configured.");
+
+  const mime = match[1];
+  let rawBase64 = match[2].replace(/\s/g, "");
+  const pad = rawBase64.length % 4;
+  if (pad) rawBase64 += "=".repeat(4 - pad);
+
+  const buffer = Buffer.from(rawBase64, "base64");
+  if (!buffer.length) throw new Error("SEEDANCE image upload is empty.");
+  if (buffer.length > 30 * 1024 * 1024) throw new Error("SEEDANCE source image is over 30 MB.");
+
+  const blob = await put(`seedance/${userId}-${Date.now()}.${extFromImageMime(mime)}`, buffer, {
+    access: "public",
+    contentType: mime,
+    token,
+  });
+  return blob.url;
 }
 
 // Map generation action → moderation log mode
@@ -374,7 +405,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         duration: String(seedDuration),
         resolution: "720p",
       };
-      if (isI2V) seedBody.image_url = seedImageUrl;
+      if (isI2V) {
+        seedBody.image_url = seedImageUrl!.startsWith("data:")
+          ? await dataUrlToPublicBlobUrl(seedImageUrl!, auth.userId)
+          : seedImageUrl;
+      }
       else if (params.aspect_ratio) seedBody.aspect_ratio = params.aspect_ratio;
 
       try {
