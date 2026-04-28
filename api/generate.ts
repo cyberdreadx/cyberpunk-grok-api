@@ -405,7 +405,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         duration: String(seedDuration),
         resolution: "720p",
       };
-      if (isI2V) seedBody.image_url = seedImageUrl;
+      if (isI2V) {
+        seedBody.image_url = seedImageUrl!.startsWith("data:")
+          ? await dataUrlToPublicBlobUrl(seedImageUrl!, auth.userId)
+          : seedImageUrl;
+      }
       else if (params.aspect_ratio) seedBody.aspect_ratio = params.aspect_ratio;
 
       try {
