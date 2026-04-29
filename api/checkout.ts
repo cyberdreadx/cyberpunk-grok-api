@@ -8,23 +8,27 @@ import { getDb } from "./_lib/db";
 import { getUserFromRequest } from "./_lib/auth";
 import { checkRateLimit } from "./_lib/ratelimit";
 
+// Pack credits — must stay in sync with src/lib/api.ts CREDIT_PACKAGES.
 const PACKAGES: Record<string, { priceEnvKey: string; credits: number }> = {
-  starter: { priceEnvKey: "STRIPE_PRICE_STARTER", credits: 50 },
-  pro: { priceEnvKey: "STRIPE_PRICE_PRO", credits: 175 },
-  mega: { priceEnvKey: "STRIPE_PRICE_MEGA", credits: 450 },
-  ultra: { priceEnvKey: "STRIPE_PRICE_ULTRA", credits: 2200 },
-  enterprise: { priceEnvKey: "STRIPE_PRICE_ENTERPRISE", credits: 4500 },
+  starter:    { priceEnvKey: "STRIPE_PRICE_STARTER",    credits: 75 },
+  pro:        { priceEnvKey: "STRIPE_PRICE_PRO",        credits: 240 },
+  mega:       { priceEnvKey: "STRIPE_PRICE_MEGA",       credits: 600 },
+  ultra:      { priceEnvKey: "STRIPE_PRICE_ULTRA",      credits: 2600 },
+  enterprise: { priceEnvKey: "STRIPE_PRICE_ENTERPRISE", credits: 5400 },
 };
 
-const SUBSCRIPTIONS: Record<string, { priceEnvKey: string; creditsPerMonth: number }> = {
-  basic: { priceEnvKey: "STRIPE_PRICE_SUB_BASIC", creditsPerMonth: 150 },
-  premium: { priceEnvKey: "STRIPE_PRICE_SUB_PREMIUM", creditsPerMonth: 500 },
-  pro: { priceEnvKey: "STRIPE_PRICE_SUB_PRO", creditsPerMonth: 2000 },
-  elite: { priceEnvKey: "STRIPE_PRICE_SUB_ELITE", creditsPerMonth: 10000 },
-  "basic-yearly": { priceEnvKey: "STRIPE_PRICE_SUB_BASIC_YEARLY", creditsPerMonth: 150 },
-  "premium-yearly": { priceEnvKey: "STRIPE_PRICE_SUB_PREMIUM_YEARLY", creditsPerMonth: 500 },
-  "pro-yearly": { priceEnvKey: "STRIPE_PRICE_SUB_PRO_YEARLY", creditsPerMonth: 2000 },
-  "elite-yearly": { priceEnvKey: "STRIPE_PRICE_SUB_ELITE_YEARLY", creditsPerMonth: 10000 },
+// Subscriptions no longer grant monthly credits — they apply a per-generation
+// discount instead (see TIER_DISCOUNT). creditsPerMonth kept at 0 for back-compat
+// with webhook code; discountPercent is the new source of value.
+const SUBSCRIPTIONS: Record<string, { priceEnvKey: string; creditsPerMonth: number; discountPercent: number }> = {
+  basic:            { priceEnvKey: "STRIPE_PRICE_SUB_BASIC",            creditsPerMonth: 0, discountPercent: 15 },
+  premium:          { priceEnvKey: "STRIPE_PRICE_SUB_PREMIUM",          creditsPerMonth: 0, discountPercent: 30 },
+  pro:              { priceEnvKey: "STRIPE_PRICE_SUB_PRO",              creditsPerMonth: 0, discountPercent: 50 },
+  elite:            { priceEnvKey: "STRIPE_PRICE_SUB_ELITE",            creditsPerMonth: 0, discountPercent: 70 },
+  "basic-yearly":   { priceEnvKey: "STRIPE_PRICE_SUB_BASIC_YEARLY",     creditsPerMonth: 0, discountPercent: 15 },
+  "premium-yearly": { priceEnvKey: "STRIPE_PRICE_SUB_PREMIUM_YEARLY",   creditsPerMonth: 0, discountPercent: 30 },
+  "pro-yearly":     { priceEnvKey: "STRIPE_PRICE_SUB_PRO_YEARLY",       creditsPerMonth: 0, discountPercent: 50 },
+  "elite-yearly":   { priceEnvKey: "STRIPE_PRICE_SUB_ELITE_YEARLY",     creditsPerMonth: 0, discountPercent: 70 },
 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
