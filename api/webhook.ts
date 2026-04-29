@@ -222,11 +222,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Detect payment method (card, paypal, apple_pay, etc.)
       const paymentMethod = await detectPaymentMethod(stripe, session);
 
+      // Subscriber bonus: if buyer has an active discount, grant equivalent
+      // bonus credits so the in-app pack price effectively matches the discount.
+      // bonus = credits * pct / (100 - pct)  (e.g. 30% sub → +43%; 50% sub → +100%)
+      const [subRow] = await sql`SELECT COALESCE(subscription_discount_pct, 0)::int AS pct FROM users WHERE id = ${userId}::uuid`.catch(() => [{ pct: 0 }]);
+      const subPct = Math.max(0, Math.min(95, subRow?.pct ?? 0));
+      const bonusCredits = subPct > 0 ? Math.floor((credits * subPct) / (100 - subPct)) : 0;
+      const totalCreditsToGrant = credits + bonusCredits;
+
       // Atomic + idempotent: insert transaction first, then add credits only if inserted.
       const rows = await sql`
         WITH ins AS (
           INSERT INTO transactions (user_id, credits, amount_cents, stripe_session_id, package, type, payment_method)
-          VALUES (${userId}::uuid, ${credits}, ${session.amount_total || 0}, ${session.id}, ${packageId}, 'pack', ${paymentMethod})
+          VALUES (${userId}::uuid, ${totalCreditsToGrant}, ${session.amount_total || 0}, ${session.id}, ${packageId}, 'pack', ${paymentMethod})
           ON CONFLICT DO NOTHING
           RETURNING user_id, credits
         ), upd AS (
@@ -241,7 +249,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       `;
       const inserted = !!rows?.[0]?.inserted;
       if (inserted) {
-        console.log(`Added ${credits} pack credits to ${userId}`);
+        console.log(`Added ${totalCreditsToGrant} pack credits to ${userId} (base ${credits} + ${bonusCredits} subscriber bonus @ ${subPct}%)`);
       } else {
         console.log(`[webhook] Duplicate pack transaction skipped for session ${session.id}`);
       }
