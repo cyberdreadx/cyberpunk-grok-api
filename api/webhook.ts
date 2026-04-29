@@ -258,14 +258,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
-    // ── invoice.paid: subscription renewal → reset sub_credits ──
+    // ── invoice.paid: subscription renewal/start → activate per-generation discount ──
+    // (No more bonus credits — that's the whole point: stops cancel→resubscribe farming.)
     if (event.type === "invoice.paid") {
       const invoice = event.data.object as Stripe.Invoice;
       const subscriptionId = (invoice as any).subscription as string | null;
       if (!subscriptionId) return res.status(200).json({ received: true });
 
-      // Extract metadata from the invoice payload directly (avoids extra API call
-      // that can fail with restricted keys). Metadata is in multiple places:
       const subDetails = (invoice as any).parent?.subscription_details?.metadata
         || (invoice as any).subscription_details?.metadata
         || {};
@@ -273,16 +272,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const meta = {
         user_id: subDetails.user_id || lineItemMeta.user_id || "",
         tier: subDetails.tier || lineItemMeta.tier || "",
-        credits_per_month: subDetails.credits_per_month || lineItemMeta.credits_per_month || "0",
+        discount_pct: subDetails.discount_pct || lineItemMeta.discount_pct || "",
       };
 
-      // Fallback: if metadata not in invoice, retrieve subscription from Stripe
       if (!meta.user_id || !meta.tier) {
         try {
           const subscription = await stripe.subscriptions.retrieve(subscriptionId);
           meta.user_id = meta.user_id || subscription.metadata?.user_id || "";
           meta.tier = meta.tier || subscription.metadata?.tier || "";
-          meta.credits_per_month = meta.credits_per_month || subscription.metadata?.credits_per_month || "0";
+          meta.discount_pct = meta.discount_pct || subscription.metadata?.discount_pct || "";
         } catch (subErr: any) {
           console.warn("[webhook] subscription retrieve failed:", subErr.message);
         }
@@ -290,35 +288,41 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       const userId = meta.user_id;
       const tier = meta.tier;
-      let creditsPerMonth = parseInt(meta.credits_per_month, 10);
-      if (creditsPerMonth <= 0 && tier) {
-        creditsPerMonth = TIER_CREDITS[tier] || 0;
-      }
+      const discountPct = parseInt(meta.discount_pct, 10) || TIER_DISCOUNT_PCT[tier] || 0;
 
-      if (!userId || !tier || creditsPerMonth <= 0) {
-        console.error("invoice.paid: missing metadata", { userId, tier, creditsPerMonth, subDetails, lineItemMeta });
+      if (!userId || !tier || discountPct <= 0) {
+        console.error("invoice.paid: missing metadata", { userId, tier, discountPct, subDetails, lineItemMeta });
         return res.status(200).json({ received: true });
       }
 
-      // Compute renewal date from line item period or current time + 30 days
       const periodEnd = (invoice as any).lines?.data?.[0]?.period?.end;
       const renewsAt = periodEnd
         ? new Date(periodEnd * 1000).toISOString()
         : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
-      await sql`SELECT reset_sub_credits(${userId}::uuid, ${creditsPerMonth}, ${tier}, ${renewsAt}::timestamptz)`;
+      // Activate the discount + record the active tier; do NOT touch sub_credits.
+      await sql`
+        UPDATE users SET
+          subscription_tier = ${tier},
+          subscription_renews_at = ${renewsAt}::timestamptz,
+          subscription_cancel_at = NULL,
+          subscription_discount_pct = ${discountPct},
+          updated_at = now()
+        WHERE id = ${userId}::uuid
+      `;
 
       if (invoice.customer) {
         await sql`UPDATE users SET stripe_customer_id = ${invoice.customer as string} WHERE id = ${userId}::uuid`;
       }
 
       const invoicePayMethod = await detectPaymentMethod(stripe, invoice);
+      // credits=0 because subscriptions no longer grant credits.
       await sql`
         INSERT INTO transactions (user_id, credits, amount_cents, stripe_session_id, package, type, payment_method)
-        VALUES (${userId}::uuid, ${creditsPerMonth}, ${invoice.amount_paid || 0}, ${invoice.id}, ${tier}, 'subscription', ${invoicePayMethod})
+        VALUES (${userId}::uuid, 0, ${invoice.amount_paid || 0}, ${invoice.id}, ${tier}, 'subscription', ${invoicePayMethod})
         ON CONFLICT (stripe_session_id) DO NOTHING
       `;
-      console.log(`Reset sub_credits to ${creditsPerMonth} for ${userId} (${tier}) via ${invoicePayMethod}`);
+      console.log(`[webhook] Activated ${discountPct}% discount for ${userId} (${tier}) via ${invoicePayMethod}`);
     }
 
     // ── customer.subscription.updated ──
