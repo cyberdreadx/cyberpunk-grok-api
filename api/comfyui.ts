@@ -19,6 +19,7 @@ import { put } from "@vercel/blob";
 import { getUserFromRequest, ADMIN_EMAIL, checkBan } from "./_lib/auth";
 import { getDb } from "./_lib/db";
 import { checkRateLimit } from "./_lib/ratelimit";
+import { applyDiscount, getUserDiscountPct } from "./_lib/discount";
 
 // ── Strip data URI prefix and fix base64 padding ───────────────────────
 function cleanBase64(b64: string): string {
@@ -2347,7 +2348,9 @@ Rules:
             : workflowType;
       const baseCost = COMFY_COSTS[costKey] ?? 1;
       const audioCost = audioMode === "ambient" ? 1 : 0;
-      const cost = skipCredits ? 0 : (baseCost + audioCost);
+      const rawCost = skipCredits ? 0 : (baseCost + audioCost);
+      const discountPct = rawCost > 0 ? await getUserDiscountPct(auth.userId) : 0;
+      const cost = applyDiscount(rawCost, discountPct);
       let creditDeducted = false;
 
       if (!isAdminUser || adminTestCredits) {
