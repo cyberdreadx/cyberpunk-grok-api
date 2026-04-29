@@ -2,12 +2,24 @@
  * Shared credit helpers for v1 API endpoints.
  *
  * Uses GREATEST(..., 0) on UPDATE to prevent negative credits from race conditions.
+ * Also exposes `applyDiscountToCost` so v1 endpoints can honor active subscriptions.
  */
+
+import { applyDiscount } from "../../_lib/discount";
 
 export interface CreditDeduction {
   dDaily: number;
   dSub: number;
   dPack: number;
+}
+
+/**
+ * Apply the user's active subscription discount to a base cost.
+ * `user` row should already include `subscription_discount_pct`.
+ */
+export function applyDiscountToCost(baseCost: number, user: any): number {
+  const pct = Math.max(0, Math.min(95, parseInt(user?.subscription_discount_pct ?? 0, 10) || 0));
+  return applyDiscount(baseCost, pct);
 }
 
 /**
