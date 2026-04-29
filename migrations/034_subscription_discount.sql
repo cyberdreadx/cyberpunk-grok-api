@@ -24,23 +24,18 @@ WHERE subscription_tier IS NOT NULL
 
 -- Clear discount when subscription ends (used by clear_subscription fn if present).
 -- Safe to re-run.
-DO $$
-BEGIN
-  IF EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'clear_subscription') THEN
-    -- Recreate to also zero out discount
-    EXECUTE $sql$
-      CREATE OR REPLACE FUNCTION clear_subscription(_uid uuid)
-      RETURNS void
-      LANGUAGE sql
-      AS $body$
-        UPDATE users
-        SET subscription_tier = NULL,
-            subscription_renews_at = NULL,
-            subscription_cancel_at = NULL,
-            subscription_discount_pct = 0,
-            updated_at = now()
-        WHERE id = _uid;
-      $body$;
-    $sql$;
-  END IF;
-END$$;
+-- Drop any existing variant (parameter names can't change via CREATE OR REPLACE)
+DROP FUNCTION IF EXISTS clear_subscription(uuid);
+
+CREATE FUNCTION clear_subscription(p_user_id uuid)
+RETURNS void
+LANGUAGE sql
+AS $body$
+  UPDATE users
+  SET subscription_tier = NULL,
+      subscription_renews_at = NULL,
+      subscription_cancel_at = NULL,
+      subscription_discount_pct = 0,
+      updated_at = now()
+  WHERE id = p_user_id;
+$body$;
