@@ -68,14 +68,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const aspectRatio = body.aspect_ratio || "1:1";
     const size = ASPECT_MAP[aspectRatio] || "1024*1024";
     const hd = body.hd === true;
-    const totalCost = hd ? GLTCH_HD_COST : GLTCH_COST;
 
     const sql = getDb();
     const ip = (req.headers["x-forwarded-for"] as string) || "unknown";
 
-    const [user] = await sql`SELECT daily_credits, sub_credits, pack_credits FROM users WHERE id = ${auth.userId}`;
+    const [user] = await sql`SELECT daily_credits, sub_credits, pack_credits, COALESCE(subscription_discount_pct, 0) AS subscription_discount_pct FROM users WHERE id = ${auth.userId}`;
     if (!user) return res.status(404).json({ error: "User not found" });
 
+    const totalCost = applyDiscountToCost(hd ? GLTCH_HD_COST : GLTCH_COST, user);
     const available = getUserCredits(user);
     if (available < totalCost) {
       return res.status(402).json({ error: "Insufficient credits", required: totalCost, available });
