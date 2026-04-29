@@ -14,6 +14,7 @@ import { getUserFromRequest, ADMIN_EMAIL, checkBan } from "./_lib/auth";
 import { getDb } from "./_lib/db";
 import { checkRateLimit } from "./_lib/ratelimit";
 import { checkPrompt, logSafetyViolation } from "./_lib/safety";
+import { applyDiscount, getUserDiscountPct } from "./_lib/discount";
 
 const GLTCH_COST = 5;
 const GLTCH_HD_COST = 7;
@@ -120,7 +121,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(429).json({ error: "Too many GLTCH requests. Please wait a moment." });
       }
 
-      const cost = hd ? GLTCH_HD_COST : GLTCH_COST;
+      const baseCost = hd ? GLTCH_HD_COST : GLTCH_COST;
+      const discountPct = await getUserDiscountPct(auth.userId);
+      const cost = applyDiscount(baseCost, discountPct);
       const isAdminUser = auth.email === ADMIN_EMAIL;
       const adminTestCredits = isAdminUser && req.body.testCredits === true;
 
