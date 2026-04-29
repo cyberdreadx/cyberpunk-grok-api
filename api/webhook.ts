@@ -64,15 +64,20 @@ async function detectPaymentMethod(stripe: Stripe, session: any): Promise<string
   return "unknown";
 }
 
+// Subscriptions no longer grant monthly credits — they apply a permanent
+// per-generation discount while active. This map is the single source of truth
+// for the discount % per tier on the backend (mirrors src/lib/api.ts).
+const TIER_DISCOUNT_PCT: Record<string, number> = {
+  basic: 15, "basic-yearly": 15,
+  premium: 30, "premium-yearly": 30,
+  pro: 50, "pro-yearly": 50,
+  elite: 70, "elite-yearly": 70,
+};
+
+// Legacy: still used for transaction logging, but no longer added to sub_credits.
 const TIER_CREDITS: Record<string, number> = {
-  basic: 150,
-  premium: 500,
-  pro: 2000,
-  elite: 10000,
-  "basic-yearly": 150,
-  "premium-yearly": 500,
-  "pro-yearly": 2000,
-  "elite-yearly": 10000,
+  basic: 0, premium: 0, pro: 0, elite: 0,
+  "basic-yearly": 0, "premium-yearly": 0, "pro-yearly": 0, "elite-yearly": 0,
 };
 
 /**
