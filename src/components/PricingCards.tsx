@@ -10,6 +10,8 @@ interface PricingCardsProps {
   packages: CreditPackage[];
   subscriptionTiers: SubscriptionTier[];
   currentTier: string | null;
+  /** Active per-generation discount % (0 if not subscribed). */
+  discountPct?: number;
   purchasing: boolean;
   onPurchase: (packageId: string) => Promise<void> | void;
   onSubscribe: (tierId: string) => Promise<void> | void;
@@ -20,6 +22,7 @@ interface PricingCardsProps {
 const PricingCards: React.FC<PricingCardsProps> = ({
   packages,
   currentTier,
+  discountPct = 0,
   purchasing,
   onPurchase,
   onSubscribe,
@@ -135,15 +138,19 @@ const PricingCards: React.FC<PricingCardsProps> = ({
                 <div className="mb-2 flex items-center gap-1">
                   <Zap className="h-3 w-3 shrink-0 text-secondary" />
                   <span className="font-mono-share text-sm font-bold text-secondary">
-                    {t("pricing.creditsPerMonth", { count: tier.creditsPerMonth })}
+                    {tier.discountPercent}% OFF every generation
                   </span>
                 </div>
 
                 <p className="mb-1 font-mono-share text-[10px] text-muted-foreground">
-                  {tier.perCredit}/credit
+                  Permanent discount · No expiry · No math
                 </p>
                 <p className="mb-4 flex-1 font-mono-share text-[9px] leading-snug text-muted-foreground/75">
-                  {t("pricing.creditsReset")}
+                  {(() => {
+                    const example = 10;
+                    const discounted = Math.max(1, Math.ceil(example * (1 - tier.discountPercent / 100)));
+                    return `Example: a ${example}-credit edit costs you only ${discounted}.`;
+                  })()}
                 </p>
 
                 {(() => {
@@ -230,7 +237,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
         {/* Standard packs (3 cols) */}
         <div className="grid w-full min-w-0 max-w-full grid-cols-1 sm:grid-cols-3 gap-3">
           {packages.slice(0, 3).map((pkg) => (
-            <PackCard key={pkg.id} pkg={pkg} purchasing={purchasing} onPurchase={onPurchase} onXrgePurchase={onXrgePurchase} />
+            <PackCard key={pkg.id} pkg={pkg} purchasing={purchasing} onPurchase={onPurchase} onXrgePurchase={onXrgePurchase} discountPct={discountPct} />
           ))}
         </div>
 
@@ -246,7 +253,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
             </div>
             <div className="grid w-full min-w-0 max-w-full grid-cols-1 sm:grid-cols-2 gap-3">
               {packages.slice(3).map((pkg) => (
-                <PackCard key={pkg.id} pkg={pkg} purchasing={purchasing} onPurchase={onPurchase} onXrgePurchase={onXrgePurchase} isBulk />
+                <PackCard key={pkg.id} pkg={pkg} purchasing={purchasing} onPurchase={onPurchase} onXrgePurchase={onXrgePurchase} discountPct={discountPct} isBulk />
               ))}
             </div>
           </>
@@ -263,16 +270,24 @@ function PackCard({
   onPurchase,
   onXrgePurchase,
   isBulk,
+  discountPct = 0,
 }: {
   pkg: CreditPackage;
   purchasing: boolean;
   onPurchase: (id: string) => Promise<void> | void;
   onXrgePurchase?: (id: string) => void;
   isBulk?: boolean;
+  discountPct?: number;
 }) {
   const { t } = useTranslation();
   const { sale: flashSale, appliesTo: flashApplies } = useFlashSale();
   const onFlash = !!flashSale && flashApplies(pkg.id);
+
+  // Subscriber bonus: matches webhook formula. Effectively makes the in-app
+  // pack price scale with the user's subscription discount.
+  const bonusCredits =
+    discountPct > 0 ? Math.floor((pkg.credits * discountPct) / (100 - discountPct)) : 0;
+  const totalCredits = pkg.credits + bonusCredits;
 
   return (
     <div
@@ -310,20 +325,25 @@ function PackCard({
 
       <div className="mb-2 min-w-0 space-y-1">
         <p className="font-orbitron text-xl font-bold tabular-nums leading-none text-foreground sm:text-2xl break-words">
-          ${(pkg.priceCents / 100).toFixed(0)}
+          ${(pkg.priceCents / 100).toFixed(2)}
         </p>
         <p className="font-mono-share text-[10px] uppercase tracking-wide text-muted-foreground">{t("pricing.oneTime")}</p>
       </div>
 
-      <div className="mb-3 flex items-center gap-1">
+      <div className="mb-1 flex items-center gap-1">
         <Zap className="h-3 w-3 shrink-0 text-secondary" />
         <span className="font-mono-share text-sm font-bold text-secondary">
-          {t("pricing.credits", { count: pkg.credits.toLocaleString() })}
+          {totalCredits.toLocaleString()} credits
         </span>
+        {bonusCredits > 0 && (
+          <span className="font-mono-share text-[8px] text-green-400 bg-green-400/10 px-1 py-0.5 rounded">
+            +{bonusCredits} sub bonus
+          </span>
+        )}
       </div>
 
       <p className="mb-1 flex-1 font-mono-share text-[10px] text-muted-foreground">
-        {t("pricing.perCredit", { price: pkg.perCredit })} &mdash; {t("pricing.neverExpires")}
+        {pkg.perCredit}/credit &mdash; never expires
       </p>
 
       <div className="space-y-2">

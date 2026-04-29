@@ -27,6 +27,8 @@ interface CreditDisplayProps {
   subscriptionTier: string | null;
   subscriptionRenewsAt: string | null;
   subscriptionCancelAt: string | null;
+  /** Active per-generation discount % (0 if not subscribed). */
+  subscriptionDiscountPct?: number;
   loading: boolean;
   purchasing: boolean;
   purchaseError: string | null;
@@ -54,6 +56,7 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
   subscriptionTier,
   subscriptionRenewsAt,
   subscriptionCancelAt,
+  subscriptionDiscountPct = 0,
   loading,
   purchasing,
   purchaseError,
@@ -359,6 +362,7 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
               packages={packages}
               subscriptionTiers={subscriptionTiers}
               currentTier={subscriptionTier}
+              discountPct={subscriptionDiscountPct}
               purchasing={purchasing}
               onPurchase={async (id) => {
                 await onPurchase(id);

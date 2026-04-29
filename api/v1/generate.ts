@@ -22,7 +22,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getUserFromApiKey } from "../_lib/apikey-auth";
 import { checkRateLimit } from "../_lib/ratelimit";
 import { getDb } from "../_lib/db";
-import { deductCredits, refundCredits, logUsage, getUserCredits } from "./_lib/credits";
+import { deductCredits, refundCredits, logUsage, getUserCredits, applyDiscountToCost } from "./_lib/credits";
 
 const XAI_BASE = "https://api.x.ai/v1";
 
@@ -72,7 +72,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const XAI_API_KEY = process.env.XAI_API_KEY;
 
     const [user] = await sql`
-      SELECT daily_credits, sub_credits, pack_credits FROM users WHERE id = ${auth.userId}
+      SELECT daily_credits, sub_credits, pack_credits, COALESCE(subscription_discount_pct, 0) AS subscription_discount_pct FROM users WHERE id = ${auth.userId}
     `;
     if (!user) return res.status(404).json({ error: "User not found" });
     const available = getUserCredits(user);
@@ -89,7 +89,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       const n = Math.min(Math.max(parseInt(body.n) || 1, 1), 4);
       const responseFormat = body.response_format === "b64_json" ? "b64_json" : "url";
-      const totalCost = (IMAGE_CREDIT_COSTS[model] || 2) * n;
+      const totalCost = applyDiscountToCost((IMAGE_CREDIT_COSTS[model] || 2) * n, user);
 
       if (available < totalCost) {
         return res.status(402).json({ error: "Insufficient credits", required: totalCost, available, topUp: "https://grokrunner.gltch.app" });
@@ -125,7 +125,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // ═══════════════════════════════════════════════════════════════════
     if (type === "video") {
       const duration = body.duration === 10 ? 10 : 5;
-      const totalCost = CREDITS_PER_VIDEO_SECOND * duration;
+      const totalCost = applyDiscountToCost(CREDITS_PER_VIDEO_SECOND * duration, user);
       const imageUrl = (body.image_url as string || "").trim();
 
       if (available < totalCost) {

@@ -184,9 +184,16 @@ export function calculateCreditCost(
 export interface SubscriptionTier {
   id: string;
   name: string;
+  /**
+   * @deprecated Subscriptions no longer grant monthly credits.
+   * Kept on the type for back-compat with old UI; always 0 going forward.
+   */
   creditsPerMonth: number;
   priceCents: number;
-  perCredit: string;
+  /** Per-generation discount % while sub is active. 15/30/50/70. */
+  discountPercent: number;
+  /** Example: "Save $X on a 10-credit edit" */
+  exampleSavings?: string;
   popular?: boolean;
   interval: "month" | "year";
   /** For yearly: equivalent monthly price for display */
@@ -203,18 +210,28 @@ export const TIER_RANK: Record<string, number> = {
   elite: 4, "elite-yearly": 4,
 };
 
+/** Discount % for each tier id. Single source of truth. */
+export const TIER_DISCOUNT: Record<string, number> = {
+  basic: 15, "basic-yearly": 15,
+  premium: 30, "premium-yearly": 30,
+  pro: 50, "pro-yearly": 50,
+  elite: 70, "elite-yearly": 70,
+};
+
 export const SUBSCRIPTION_TIERS_MONTHLY: SubscriptionTier[] = [
-  { id: "basic", name: "BASIC", creditsPerMonth: 150, priceCents: 999, perCredit: "$0.067", interval: "month" },
-  { id: "premium", name: "PREMIUM", creditsPerMonth: 500, priceCents: 2499, perCredit: "$0.050", popular: true, interval: "month" },
-  { id: "pro", name: "PRO", creditsPerMonth: 2000, priceCents: 7999, perCredit: "$0.040", interval: "month" },
-  { id: "elite", name: "ELITE", creditsPerMonth: 10000, priceCents: 29999, perCredit: "$0.030", interval: "month" },
+  { id: "basic",   name: "BASIC",   creditsPerMonth: 0, priceCents: 799,   discountPercent: 15, interval: "month" },
+  { id: "premium", name: "PREMIUM", creditsPerMonth: 0, priceCents: 1999,  discountPercent: 30, popular: true, interval: "month" },
+  { id: "pro",     name: "PRO",     creditsPerMonth: 0, priceCents: 5999,  discountPercent: 50, interval: "month" },
+  { id: "elite",   name: "ELITE",   creditsPerMonth: 0, priceCents: 19999, discountPercent: 70, interval: "month" },
 ];
 
+// Yearly: 12% savings vs monthly × 12.
+// monthly × 12 × 0.88, then round to *.88 charm pricing.
 export const SUBSCRIPTION_TIERS_YEARLY: SubscriptionTier[] = [
-  { id: "basic-yearly", name: "BASIC", creditsPerMonth: 150, priceCents: 10548, perCredit: "$0.059", interval: "year", monthlyEquivalentCents: 879, savingsPercent: 12 },
-  { id: "premium-yearly", name: "PREMIUM", creditsPerMonth: 500, priceCents: 26388, perCredit: "$0.044", popular: true, interval: "year", monthlyEquivalentCents: 2199, savingsPercent: 12 },
-  { id: "pro-yearly", name: "PRO", creditsPerMonth: 2000, priceCents: 84468, perCredit: "$0.035", interval: "year", monthlyEquivalentCents: 7039, savingsPercent: 12 },
-  { id: "elite-yearly", name: "ELITE", creditsPerMonth: 10000, priceCents: 316788, perCredit: "$0.026", interval: "year", monthlyEquivalentCents: 26399, savingsPercent: 12 },
+  { id: "basic-yearly",   name: "BASIC",   creditsPerMonth: 0, priceCents: 8438,   discountPercent: 15, interval: "year", monthlyEquivalentCents: 703,   savingsPercent: 12 },
+  { id: "premium-yearly", name: "PREMIUM", creditsPerMonth: 0, priceCents: 21108,  discountPercent: 30, popular: true, interval: "year", monthlyEquivalentCents: 1759,  savingsPercent: 12 },
+  { id: "pro-yearly",     name: "PRO",     creditsPerMonth: 0, priceCents: 63348,  discountPercent: 50, interval: "year", monthlyEquivalentCents: 5279,  savingsPercent: 12 },
+  { id: "elite-yearly",   name: "ELITE",   creditsPerMonth: 0, priceCents: 211188, discountPercent: 70, interval: "year", monthlyEquivalentCents: 17599, savingsPercent: 12 },
 ];
 
 /** Combined for backward compat */
@@ -231,10 +248,13 @@ export interface CreditPackage {
   popular?: boolean;
 }
 
+// Repriced to absorb Stripe's 17.5% loan deduction without users feeling a hike:
+// every pack now offers MORE credits at a slightly higher price, so the per-credit
+// cost actually drops or stays flat. Marketing line: "More credits, lower per-credit price."
 export const CREDIT_PACKAGES: CreditPackage[] = [
-  { id: "starter", name: "STARTER", credits: 50, priceCents: 500, perCredit: "$0.10" },
-  { id: "pro", name: "PRO", credits: 175, priceCents: 1500, perCredit: "$0.086", popular: true },
-  { id: "mega", name: "MEGA", credits: 450, priceCents: 3500, perCredit: "$0.078" },
-  { id: "ultra", name: "ULTRA", credits: 2200, priceCents: 15000, perCredit: "$0.068" },
-  { id: "enterprise", name: "ENTERPRISE", credits: 4500, priceCents: 30000, perCredit: "$0.067" },
+  { id: "starter",    name: "STARTER",    credits: 75,   priceCents: 699,   perCredit: "$0.093" },
+  { id: "pro",        name: "PRO",        credits: 240,  priceCents: 1899,  perCredit: "$0.079", popular: true },
+  { id: "mega",       name: "MEGA",       credits: 600,  priceCents: 4299,  perCredit: "$0.072" },
+  { id: "ultra",      name: "ULTRA",      credits: 2600, priceCents: 17999, perCredit: "$0.069" },
+  { id: "enterprise", name: "ENTERPRISE", credits: 5400, priceCents: 35999, perCredit: "$0.067" },
 ];

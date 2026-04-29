@@ -20,7 +20,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const sql = getDb();
     const rows = await sql`
       SELECT daily_credits, sub_credits, pack_credits, subscription_tier, subscription_renews_at, subscription_cancel_at, lora_unlocked,
-             stripe_customer_id, COALESCE(xrge_lifetime_spend, 0)::numeric AS xrge_lifetime_spend
+             stripe_customer_id, COALESCE(xrge_lifetime_spend, 0)::numeric AS xrge_lifetime_spend,
+             COALESCE(subscription_discount_pct, 0)::int AS subscription_discount_pct
       FROM users
       WHERE id = ${auth.userId}
     `;
@@ -38,6 +39,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       subscription_tier: u.subscription_tier,
       subscription_renews_at: u.subscription_renews_at,
       subscription_cancel_at: u.subscription_cancel_at,
+      subscription_discount_pct: u.subscription_discount_pct,
       lora_unlocked: u.lora_unlocked,
       has_purchased,
       free_credits_disabled: freeCreditsDisabled(),

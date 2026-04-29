@@ -21,7 +21,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getUserFromApiKey } from "../_lib/apikey-auth";
 import { checkRateLimit } from "../_lib/ratelimit";
 import { getDb } from "../_lib/db";
-import { deductCredits, refundCredits, logUsage, getUserCredits } from "./_lib/credits";
+import { deductCredits, refundCredits, logUsage, getUserCredits, applyDiscountToCost } from "./_lib/credits";
 
 const RUNPOD_API_BASE = "https://api.runpod.ai/v2";
 
@@ -496,11 +496,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const sql = getDb();
     const ip = (req.headers["x-forwarded-for"] as string) || "unknown";
 
-    const [user] = await sql`SELECT daily_credits, sub_credits, pack_credits FROM users WHERE id = ${auth.userId}`;
+    const [user] = await sql`SELECT daily_credits, sub_credits, pack_credits, COALESCE(subscription_discount_pct, 0) AS subscription_discount_pct FROM users WHERE id = ${auth.userId}`;
     if (!user) return res.status(404).json({ error: "User not found" });
 
     const available = getUserCredits(user);
-    const totalCost = COMFY_COSTS[workflowType] ?? 3;
+    const totalCost = applyDiscountToCost(COMFY_COSTS[workflowType] ?? 3, user);
 
     if (available < totalCost) {
       return res.status(402).json({ error: "Insufficient credits", required: totalCost, available });

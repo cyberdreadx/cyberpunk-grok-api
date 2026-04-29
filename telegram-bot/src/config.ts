@@ -24,10 +24,10 @@ export const COSTS = {
 } as const;
 
 export const CREDIT_PACKS = [
-  { id: "starter", credits: 50, priceCents: 500, stars: 75, label: "Starter" },
-  { id: "pro", credits: 175, priceCents: 1500, stars: 225, label: "Pro" },
-  { id: "mega", credits: 450, priceCents: 3500, stars: 525, label: "Mega" },
-  { id: "ultra", credits: 2200, priceCents: 15000, stars: 2250, label: "Ultra" },
+  { id: "starter", credits: 75,   priceCents: 699,   stars: 105,  label: "Starter" },
+  { id: "pro",     credits: 240,  priceCents: 1899,  stars: 285,  label: "Pro" },
+  { id: "mega",    credits: 600,  priceCents: 4299,  stars: 645,  label: "Mega" },
+  { id: "ultra",   credits: 2600, priceCents: 17999, stars: 2700, label: "Ultra" },
 ] as const;
 
 export const XRGE_BONUS_MULTIPLIER = 0.30;
