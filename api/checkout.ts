@@ -162,9 +162,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         customer: customerId,
         line_items: [{ price: priceId, quantity: 1 }],
         client_reference_id: auth.userId,
-        metadata: { user_id: auth.userId, tier: tierId, credits_per_month: String(tier.creditsPerMonth) },
+        metadata: { user_id: auth.userId, tier: tierId, credits_per_month: String(tier.creditsPerMonth), discount_pct: String(tier.discountPercent) },
         subscription_data: {
-          metadata: { user_id: auth.userId, tier: tierId, credits_per_month: String(tier.creditsPerMonth) },
+          metadata: { user_id: auth.userId, tier: tierId, credits_per_month: String(tier.creditsPerMonth), discount_pct: String(tier.discountPercent) },
         },
         success_url: `${SITE_URL}?checkout=success`,
         cancel_url: `${SITE_URL}?checkout=cancelled`,
