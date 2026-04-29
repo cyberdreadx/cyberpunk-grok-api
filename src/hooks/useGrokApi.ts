@@ -857,6 +857,8 @@ export function useGrokApi() {
           // Poll up to ~10 min (200 × 3s). Fast=2-4min, Pro=3-7min typical.
           const MAX_ATTEMPTS = 200;
           const INTERVAL_MS = 3000;
+          let consecutiveTransient = 0;
+          let lastStatus: string | undefined;
           for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
             await new Promise((r) => setTimeout(r, INTERVAL_MS));
             const poll = await apiFetch("/seedance-status", {
@@ -864,14 +866,25 @@ export function useGrokApi() {
               body: { job_token: jobToken },
             });
             if (poll?.error) throw new Error(typeof poll.error === "string" ? poll.error : "SEEDANCE polling failed");
+            lastStatus = poll?.status;
+            if (poll?.transient) {
+              consecutiveTransient++;
+              if (attempt % 5 === 0) console.warn("[seedance] transient poll", { attempt, debug: poll?.debug });
+              // Fail fast if fal status endpoint is unreachable for ~90s straight
+              if (consecutiveTransient >= 30) {
+                throw new Error(`SEEDANCE status endpoint unreachable (${poll?.debug || "transient"}).`);
+              }
+            } else {
+              consecutiveTransient = 0;
+            }
             if (poll?.status === "COMPLETED") {
               videoUrl = poll.video?.url || poll.video_url;
               if (videoUrl) break;
-              // result_pending → keep polling for the response_url to settle
+              // result_pending → keep polling for response_url to settle
             }
             // IN_QUEUE / IN_PROGRESS → continue
           }
-          if (!videoUrl) throw new Error("SEEDANCE generation timed out (job still running on fal.ai).");
+          if (!videoUrl) throw new Error(`SEEDANCE generation timed out (last status: ${lastStatus || "unknown"}).`);
         }
 
         if (!videoUrl) throw new Error("SEEDANCE returned no video URL");
