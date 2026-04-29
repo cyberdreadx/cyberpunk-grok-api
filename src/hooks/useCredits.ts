@@ -55,6 +55,7 @@ export function useCredits(user: AuthUser | null) {
       setSubscriptionRenewsAt(data.subscription_renews_at ?? null);
       setSubscriptionCancelAt(data.subscription_cancel_at ?? null);
       setLoraUnlocked(data.lora_unlocked ?? false);
+      setSubscriptionDiscountPct(data.subscription_discount_pct ?? 0);
       setFreeCreditsDisabled(!!data.free_credits_disabled);
       setMaintenanceMessage(data.maintenance_message ?? null);
     } catch (err: any) {
@@ -244,6 +245,7 @@ export function useCredits(user: AuthUser | null) {
     subscriptionTier,
     subscriptionRenewsAt,
     subscriptionCancelAt,
+    subscriptionDiscountPct,
     loraUnlocked,
     freeCreditsDisabled,
     maintenanceMessage,
@@ -266,6 +268,7 @@ export function useCredits(user: AuthUser | null) {
   }), [
     totalCredits, dailyCredits, subCredits, packCredits,
     subscriptionTier, subscriptionRenewsAt, subscriptionCancelAt,
+    subscriptionDiscountPct,
     loraUnlocked, freeCreditsDisabled, maintenanceMessage,
     loading, purchasing, purchaseError,
     clearPurchaseError, hasEnoughCredits,
