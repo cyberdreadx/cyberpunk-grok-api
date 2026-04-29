@@ -352,10 +352,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (chars.length === 0) return res.status(404).json({ error: "Character not found" });
       const char = chars[0];
 
-      if (char.llm_backend === "deepseek") {
-        char.llm_backend = "grok";
-        sql`UPDATE characters SET llm_backend = 'grok' WHERE id = ${characterId}`.catch(() => {});
-      }
+      // Default to DeepSeek for character chat (cheaper, less filtered, faster).
+      if (!char.llm_backend) char.llm_backend = "deepseek";
 
       // Subscribers get 30 free chat messages per day before credits are deducted
       const FREE_CHAT_LIMIT = 30;
@@ -427,7 +425,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         messages.push({ role: "user", content: message.trim() });
       }
 
-      const response = await callLLM(char.llm_backend || "grok", messages, { vision: hasImage });
+      const response = await callLLM(char.llm_backend || "deepseek", messages, { vision: hasImage });
 
       const mediaTrigger = extractMediaTrigger(response);
       const cleanText = stripMediaTags(response);
@@ -455,7 +453,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ];
 
       extractMemory(
-        char.llm_backend || "grok",
+        char.llm_backend || "deepseek",
         char.name,
         char.memory_summary || "",
         char.relationship_notes || "",
