@@ -59,10 +59,7 @@ const TRAIT_OPTIONS = [
   "intellectual", "seductive", "nurturing", "rebellious",
 ];
 
-const LLM_OPTIONS = [
-  { value: "grok", label: "Grok (recommended)", cost: "1 cr/msg" },
-  { value: "deepseek", label: "DeepSeek", cost: "1 cr/msg" },
-];
+const DEFAULT_BACKEND = "deepseek";
 
 /** Tiny component that ticks every second showing elapsed time */
 function ElapsedTimer({ startTime }: { startTime: number }) {
@@ -95,7 +92,7 @@ export default function Characters() {
   const [personality, setPersonality] = useState("");
   const [traits, setTraits] = useState<string[]>([]);
   const [portrait, setPortrait] = useState<string | null>(null);
-  const [llmBackend, setLlmBackend] = useState("grok");
+  const [llmBackend, setLlmBackend] = useState(DEFAULT_BACKEND);
   const [saving, setSaving] = useState(false);
   const portraitRef = useRef<HTMLInputElement>(null);
 
@@ -146,7 +143,7 @@ export default function Characters() {
 
   const resetCreator = () => {
     setName(""); setPersonality(""); setTraits([]); setPortrait(null);
-    setLlmBackend("grok"); setEditingChar(null);
+    setLlmBackend(DEFAULT_BACKEND); setEditingChar(null);
   };
 
   const openCreator = (char?: Character) => {
@@ -156,7 +153,7 @@ export default function Characters() {
       setPersonality(char.personality);
       setTraits(char.traits || []);
       setPortrait(char.portrait_url);
-      setLlmBackend(char.llm_backend || "grok");
+      setLlmBackend(char.llm_backend || DEFAULT_BACKEND);
     } else {
       resetCreator();
     }
@@ -783,23 +780,6 @@ export default function Characters() {
               </div>
             </div>
 
-            {/* LLM Backend */}
-            <div>
-              <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">AI MODEL</label>
-              <div className="space-y-1.5">
-                {LLM_OPTIONS.map(opt => (
-                  <button key={opt.value} onClick={() => setLlmBackend(opt.value)}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded border font-mono-share text-[10px] transition-all ${llmBackend === opt.value
-                      ? "border-secondary/50 bg-secondary/10 text-foreground"
-                      : "border-border bg-card/40 text-muted-foreground hover:border-muted-foreground/40"
-                      }`}>
-                    <span>{opt.label}</span>
-                    <span className="text-muted-foreground/50">{opt.cost}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {/* Save */}
             <button onClick={handleSave} disabled={saving || !name.trim() || !personality.trim()}
               className="w-full py-3 bg-secondary/30 border border-secondary/50 rounded font-orbitron text-xs tracking-wider text-secondary hover:bg-secondary/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
@@ -822,7 +802,7 @@ export default function Characters() {
               )}
               <div>
                 <h3 className="font-orbitron text-xs tracking-wider">{activeChar.name}</h3>
-                <p className="font-mono-share text-[8px] text-muted-foreground/60 capitalize">{activeChar.llm_backend === "deepseek" ? "grok" : activeChar.llm_backend} model</p>
+                <p className="font-mono-share text-[8px] text-muted-foreground/60">AI companion</p>
               </div>
             </div>
 
