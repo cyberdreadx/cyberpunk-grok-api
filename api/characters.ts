@@ -84,7 +84,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const traitList = Array.isArray(traits) ? traits.slice(0, 10).map(String) : [];
       const portraitUrl = portrait && typeof portrait === "string" && portrait.length <= MAX_PORTRAIT_SIZE
         ? portrait : null;
-      const backend = llmBackend === "deepseek" ? "deepseek" : "grok";
+      const backend = llmBackend === "grok" ? "grok" : "deepseek";
       const sysPrompt = systemPrompt && typeof systemPrompt === "string"
         ? systemPrompt.slice(0, 3000)
         : buildSystemPrompt(name.trim(), personality.trim(), traitList);
