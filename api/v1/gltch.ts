@@ -15,7 +15,7 @@ import { getUserFromApiKey } from "../_lib/apikey-auth";
 import { checkRateLimit } from "../_lib/ratelimit";
 import { getDb } from "../_lib/db";
 import { put, del } from "@vercel/blob";
-import { deductCredits, refundCredits, logUsage, getUserCredits } from "./_lib/credits";
+import { deductCredits, refundCredits, logUsage, getUserCredits, applyDiscountToCost } from "./_lib/credits";
 
 const GLTCH_COST = 5;
 const GLTCH_HD_COST = 7;
