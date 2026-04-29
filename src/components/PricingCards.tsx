@@ -135,15 +135,19 @@ const PricingCards: React.FC<PricingCardsProps> = ({
                 <div className="mb-2 flex items-center gap-1">
                   <Zap className="h-3 w-3 shrink-0 text-secondary" />
                   <span className="font-mono-share text-sm font-bold text-secondary">
-                    {t("pricing.creditsPerMonth", { count: tier.creditsPerMonth })}
+                    {tier.discountPercent}% OFF every generation
                   </span>
                 </div>
 
                 <p className="mb-1 font-mono-share text-[10px] text-muted-foreground">
-                  {tier.perCredit}/credit
+                  Permanent discount · No expiry · No math
                 </p>
                 <p className="mb-4 flex-1 font-mono-share text-[9px] leading-snug text-muted-foreground/75">
-                  {t("pricing.creditsReset")}
+                  {(() => {
+                    const example = 10;
+                    const discounted = Math.max(1, Math.ceil(example * (1 - tier.discountPercent / 100)));
+                    return `Example: a ${example}-credit edit costs you only ${discounted}.`;
+                  })()}
                 </p>
 
                 {(() => {
