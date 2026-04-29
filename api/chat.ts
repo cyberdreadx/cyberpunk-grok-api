@@ -425,7 +425,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         messages.push({ role: "user", content: message.trim() });
       }
 
-      const response = await callLLM(char.llm_backend || "grok", messages, { vision: hasImage });
+      const response = await callLLM(char.llm_backend || "deepseek", messages, { vision: hasImage });
 
       const mediaTrigger = extractMediaTrigger(response);
       const cleanText = stripMediaTags(response);
@@ -453,7 +453,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ];
 
       extractMemory(
-        char.llm_backend || "grok",
+        char.llm_backend || "deepseek",
         char.name,
         char.memory_summary || "",
         char.relationship_notes || "",
