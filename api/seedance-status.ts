@@ -66,15 +66,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     statusRes = await fetch(job.statusUrl, { headers: { Authorization: `Key ${FAL_KEY}` } });
   } catch (e: any) {
+    console.warn("[seedance-status] fetch threw:", e.message, "url:", job.statusUrl);
     // Transient — let client retry, do NOT refund.
-    return res.status(200).json({ status: "IN_PROGRESS", transient: true });
+    return res.status(200).json({ status: "IN_PROGRESS", transient: true, debug: `fetch-threw: ${e.message}` });
   }
   if (!statusRes.ok) {
-    return res.status(200).json({ status: "IN_PROGRESS", transient: true });
+    const errBody = await statusRes.text().catch(() => "");
+    console.warn("[seedance-status] status not ok", statusRes.status, errBody.slice(0, 200), "url:", job.statusUrl);
+    // 404 = bad request id / wrong url; refund and fail fast instead of looping forever.
+    if (statusRes.status === 404 || statusRes.status === 401 || statusRes.status === 403) {
+      await refund();
+      return res.status(502).json({
+        error: `SEEDANCE status check failed (${statusRes.status}). Credits refunded.`,
+        debug: errBody.slice(0, 300),
+      });
+    }
+    return res.status(200).json({ status: "IN_PROGRESS", transient: true, debug: `status-${statusRes.status}` });
   }
 
   const st: any = await statusRes.json().catch(() => ({}));
   const status = st?.status as string | undefined;
+  console.log("[seedance-status]", job.tier, job.requestId, "→", status);
 
   if (status === "FAILED" || status === "ERROR") {
     await refund();
