@@ -29,6 +29,7 @@ const StoreOverlay: React.FC<StoreOverlayProps> = ({ open, onOpenChange }) => {
       subscriptionTier={credits.subscriptionTier}
       subscriptionRenewsAt={credits.subscriptionRenewsAt}
       subscriptionCancelAt={credits.subscriptionCancelAt}
+      subscriptionDiscountPct={credits.subscriptionDiscountPct}
       loading={credits.loading}
       purchasing={credits.purchasing}
       purchaseError={credits.purchaseError}
