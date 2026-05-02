@@ -88,12 +88,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ), bank_txn AS (
         INSERT INTO xrge_bank_txns (user_id, type, amount, balance_after, metadata)
         SELECT id, 'purchase', ${xrgeCost}::numeric, xrge_bank_balance,
-               ${JSON.stringify({ package: packageId, credits: totalCredits, baseCredits: pkg.credits, bonusCredits })}::jsonb
+               ${JSON.stringify({ package: packageId, credits: totalCredits, baseCredits: pkg.credits, bonusCredits, flashSaleId, flashDiscountPercent, flashBonusPercent })}::jsonb
         FROM deduct
         RETURNING user_id
       ), credit_txn AS (
         INSERT INTO transactions (user_id, credits, amount_cents, package, type, payment_method)
-        SELECT id, ${totalCredits}, ${pkg.priceCents}, ${packageId}, 'pack', 'xrge-bank'
+        SELECT id, ${totalCredits}, ${priceCents}, ${packageId}, 'pack', 'xrge-bank'
         FROM deduct
         RETURNING user_id
       )
