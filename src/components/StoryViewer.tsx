@@ -325,10 +325,16 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
       <div className="absolute left-0 right-0 flex items-center justify-between px-3 z-20"
         style={{ top: "calc(env(safe-area-inset-top, 0px) + 20px)" }}>
         <div className="flex items-center gap-2 min-w-0">
-          <div className="w-8 h-8 shrink-0 rounded-full bg-gradient-to-br from-primary/50 to-secondary/50 flex items-center justify-center text-xs font-bold text-white uppercase">
-            {currentUser.username.slice(0, 2)}
-          </div>
-          <span className="text-white text-sm font-medium truncate">{currentUser.username}</span>
+          <Link
+            to={`/profile/${currentUser.username}`}
+            onClick={(e) => { e.stopPropagation(); onClose(); }}
+            className="flex items-center gap-2 min-w-0 hover:opacity-80 transition-opacity"
+          >
+            <div className="w-8 h-8 shrink-0 rounded-full bg-gradient-to-br from-primary/50 to-secondary/50 flex items-center justify-center text-xs font-bold text-white uppercase">
+              {currentUser.username.slice(0, 2)}
+            </div>
+            <span className="text-white text-sm font-medium truncate hover:underline">{currentUser.username}</span>
+          </Link>
           <span className="text-white/50 text-xs shrink-0">
             {new Date(currentStory.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
           </span>
