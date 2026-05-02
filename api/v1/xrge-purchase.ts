@@ -31,7 +31,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const sql = getDb();
     const config = await getXrgeConfig();
-    const xrgeCost = parseFloat(centsToXrge(pkg.priceCents, config.usdRate));
+
+    // Check for active flash sale (mirrors api/xrge-checkout.ts)
+    let flashSaleId: string | null = null;
+    let flashDiscountPercent = 0;
+    let flashBonusPercent = 0;
+    const [activeSale] = await sql`
+      SELECT id, discount_percent, bonus_credits_percent, packages
+      FROM xrge_flash_sales
+      WHERE active = true AND starts_at <= now() AND ends_at > now()
+        AND (max_uses IS NULL OR uses < max_uses)
+      ORDER BY discount_percent DESC
+      LIMIT 1
+    `;
+    let priceCents = pkg.priceCents;
+    if (activeSale) {
+      const applicablePackages = activeSale.packages;
+      if (!applicablePackages || applicablePackages.includes(packageId)) {
+        flashSaleId = activeSale.id;
+        flashDiscountPercent = activeSale.discount_percent;
+        flashBonusPercent = activeSale.bonus_credits_percent || 0;
+        priceCents = Math.round(pkg.priceCents * (1 - flashDiscountPercent / 100));
+      }
+    }
+
+    const xrgeCost = parseFloat(centsToXrge(priceCents, config.usdRate));
 
     const user = await getBankUser(sql, userId);
     if (!user) return res.status(404).json({ error: "User not found" });
@@ -44,9 +68,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // Loyalty tier bonus
+    // Loyalty tier + flash sale bonus credits
     const tier = getTierForSpend(user.lifetimeSpend);
-    const bonusCredits = Math.floor(pkg.credits * (tier.bonusPercent / 100));
+    const loyaltyBonusCredits = Math.floor(pkg.credits * (tier.bonusPercent / 100));
+    const flashBonusCredits = Math.floor(pkg.credits * (flashBonusPercent / 100));
+    const bonusCredits = loyaltyBonusCredits + flashBonusCredits;
     const totalCredits = pkg.credits + bonusCredits;
 
     // Atomic: deduct XRGE, credit user, record txn + transaction
