@@ -108,6 +108,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     await refreshLoyaltyTier(sql, userId);
 
+    // Increment flash sale usage if applied
+    if (flashSaleId) {
+      await sql`UPDATE xrge_flash_sales SET uses = uses + 1 WHERE id = ${flashSaleId}::uuid`;
+    }
+
     const newBalance = parseFloat(result.new_balance);
 
     console.log(`[xrge-purchase] ${userId} bought ${totalCredits} credits (${packageId}) for ${xrgeCost} XRGE`);
