@@ -3127,7 +3127,37 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
 
         if (data.status === "FAILED" || data.status === "CANCELLED" || data.status === "TIMED_OUT") {
           const errMsg = data.error || data.output?.error || `Job ${data.status.toLowerCase()}`;
-          return res.status(200).json({ status: "error", error: errMsg });
+
+          // Refund credits — RunPod-side failures (insufficient balance, worker
+          // crash, OOM, timeout, etc.) are not the user's fault. We refund based
+          // on the most recent comfy-* usage_log row for this user that hasn't
+          // been finalized (no execution_time_ms set). Same row the COMPLETED
+          // branch updates with execution time, so the matching is consistent.
+          let refunded = 0;
+          if (auth?.userId) {
+            try {
+              const sql = getDb();
+              const rows = await sql`
+                SELECT id, credits_used FROM usage_log
+                WHERE user_id = ${auth.userId}::uuid
+                  AND mode LIKE 'comfy-%'
+                  AND execution_time_ms IS NULL
+                ORDER BY created_at DESC LIMIT 1
+              ` as any[];
+              if (rows.length > 0 && rows[0].credits_used > 0) {
+                refunded = rows[0].credits_used;
+                await sql`SELECT add_pack_credits(${auth.userId}::uuid, ${refunded})`;
+                // Mark this row as refunded so it isn't matched again.
+                await sql`UPDATE usage_log SET execution_time_ms = 0, mode = mode || '-refunded' WHERE id = ${rows[0].id}`;
+                console.log(`[comfyui-poll] Refunded ${refunded} credits to ${auth.userId} after RunPod ${data.status}`);
+              }
+            } catch (e: any) {
+              console.error("[comfyui-poll] refund failed:", e.message);
+            }
+          }
+
+          const refundNote = refunded > 0 ? ` ${refunded} credit${refunded !== 1 ? "s" : ""} refunded.` : "";
+          return res.status(200).json({ status: "error", error: `${errMsg}.${refundNote}`, refunded });
         }
 
         // IN_QUEUE or IN_PROGRESS
