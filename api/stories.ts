@@ -112,10 +112,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const grouped: Record<string, any> = {};
       for (const r of rows) {
         if (!grouped[r.user_id]) {
-          const name = (r.email || "").split("@")[0] || "user";
+          const fallback = (r.email || "").split("@")[0] || "user";
           grouped[r.user_id] = {
             userId: r.user_id,
-            username: name,
+            username: r.profile_username || fallback,
             stories: [],
             hasUnviewed: false,
           };
