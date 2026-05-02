@@ -93,6 +93,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           COALESCE(s.is_mature, false) AS is_mature,
           COALESCE(s.lock_xrge_amount, '') AS lock_xrge_amount,
           u.email,
+          p.username AS profile_username,
           CASE WHEN sv.viewer_id IS NOT NULL THEN true ELSE false END AS viewed,
           (SELECT COUNT(*)::int FROM story_views sv2 WHERE sv2.story_id = s.id) AS view_count,
           CASE WHEN su.user_id IS NOT NULL THEN true ELSE false END AS unlocked,
@@ -100,6 +101,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           CASE WHEN EXISTS (SELECT 1 FROM story_likes sl2 WHERE sl2.story_id = s.id AND sl2.user_id = ${viewerId}::uuid) THEN true ELSE false END AS user_liked
         FROM stories s
         JOIN users u ON u.id = s.user_id
+        LEFT JOIN profiles p ON p.user_id = s.user_id
         LEFT JOIN story_views sv ON sv.story_id = s.id AND sv.viewer_id = ${viewerId}::uuid
         LEFT JOIN story_unlocks su ON su.story_id = s.id AND su.user_id = ${viewerId}::uuid
         WHERE s.expires_at > now()
