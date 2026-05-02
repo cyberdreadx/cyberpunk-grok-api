@@ -380,10 +380,15 @@ const Index = () => {
   // or when simple mode is active (simple mode always uses credits)
   const canUseCredits = auth.isAuthenticated && creditsHook.enabled;
   React.useEffect(() => {
-    if (canUseCredits && apiMode === "byok" && (simpleMode || !apiKeySet)) {
+    // Force credits mode in simple mode (simple mode never uses BYOK).
+    // Do NOT auto-switch away from BYOK just because the key isn't set yet —
+    // the user needs to stay in BYOK mode to see the "SET_API_KEY" dialog
+    // and actually add their key. The useGrokApi hook handles BYOK→credits
+    // fallback if the key is later removed.
+    if (canUseCredits && apiMode === "byok" && simpleMode) {
       setApiMode("credits");
     }
-  }, [canUseCredits, apiKeySet, apiMode, setApiMode, simpleMode]);
+  }, [canUseCredits, apiMode, setApiMode, simpleMode]);
   const effectiveApiMode = apiMode;
 
   const handleSaveApiKey = useCallback((key: string) => {
