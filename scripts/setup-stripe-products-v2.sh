@@ -18,6 +18,47 @@ STRIPE_FLAGS=""
 [[ "$MODE" == "live" ]] && STRIPE_FLAGS="--live"
 echo "=== ${MODE^^} MODE ==="
 
+resolve_stripe_bin() {
+  # Prefer a normal PATH lookup first.
+  local bin=""
+  bin="$(command -v stripe 2>/dev/null || true)"
+  [[ -n "$bin" ]] && { echo "$bin"; return 0; }
+  bin="$(command -v stripe.exe 2>/dev/null || true)"
+  [[ -n "$bin" ]] && { echo "$bin"; return 0; }
+
+  # On Git Bash / MSYS, WinGet installs often aren't on the bash PATH.
+  # Try Windows' where.exe, then convert to a POSIX path if possible.
+  if command -v where.exe >/dev/null 2>&1; then
+    local win_path=""
+    win_path="$(where.exe stripe 2>/dev/null | head -n 1 || true)"
+    if [[ -n "$win_path" ]]; then
+      if command -v cygpath >/dev/null 2>&1; then
+        bin="$(cygpath -u "$win_path")"
+      else
+        # Best-effort fallback: C:\foo\bar -> /c/foo/bar
+        bin="$(printf '%s' "$win_path" | sed -E 's#^([A-Za-z]):#/\L\\1#; s#\\\\#/#g')"
+      fi
+      [[ -n "$bin" ]] && { echo "$bin"; return 0; }
+    fi
+  fi
+
+  return 1
+}
+
+STRIPE_BIN="$(resolve_stripe_bin || true)"
+if [[ -z "${STRIPE_BIN:-}" ]]; then
+  echo "ERROR: Stripe CLI not found in this shell."
+  echo "Install Stripe CLI and/or ensure 'stripe' is on PATH."
+  exit 1
+fi
+
+STRIPE_AUTH_FLAGS=()
+# Optional: allow overriding the API key for this script run (useful for live mode).
+# Example (PowerShell): $env:STRIPE_API_KEY="sk_live_..."; bash scripts/setup-stripe-products-v2.sh --live
+if [[ -n "${STRIPE_API_KEY:-}" ]]; then
+  STRIPE_AUTH_FLAGS=(--api-key "$STRIPE_API_KEY")
+fi
+
 create_price() {
   local name="$1" amount="$2" interval="$3" meta="$4"
   local args=(prices create $STRIPE_FLAGS --currency usd --unit-amount "$amount"
@@ -26,7 +67,25 @@ create_price() {
   while IFS='=' read -r k v; do
     [[ -n "$k" ]] && args+=(-d "product_data[metadata][$k]=$v")
   done <<< "$meta"
-  stripe "${args[@]}" --format json | grep -o '"id": "[^"]*"' | head -1 | cut -d'"' -f4
+
+  local out=""
+  if ! out="$("$STRIPE_BIN" "${STRIPE_AUTH_FLAGS[@]}" "${args[@]}" 2>&1)"; then
+    echo "" >&2
+    echo "ERROR: Stripe CLI call failed while creating price for: $name" >&2
+    echo "$out" >&2
+    return 1
+  fi
+
+  local id=""
+  id="$(printf '%s' "$out" | grep -o '\"id\": \"[^\"]*\"' | head -1 | cut -d'"' -f4 || true)"
+  if [[ -z "$id" ]]; then
+    echo "" >&2
+    echo "ERROR: Could not parse price id from Stripe response for: $name" >&2
+    echo "$out" >&2
+    return 1
+  fi
+
+  printf '%s\n' "$id"
 }
 
 echo ""

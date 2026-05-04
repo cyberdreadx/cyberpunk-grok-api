@@ -1,13 +1,17 @@
 # ============================================================
-# Creates all Stripe products & prices for Grok Imagine SaaS.
-# Requires: stripe CLI installed & authenticated (stripe login)
+# DEPRECATED - DO NOT RUN. Kept only for historical reference.
 #
-# Usage:
-#   .\scripts\setup-stripe-products.ps1            # test mode
-#   .\scripts\setup-stripe-products.ps1 -Live       # production
+# This is the v1 pricing setup (basic + premium tiers only).
+# It does NOT match what the frontend or backend now expect.
+#
+# Use scripts/setup-stripe-products-v2.sh instead, which creates
+# the full 4-tier ladder (basic/premium/pro/elite + yearly).
 # ============================================================
 
 param([switch]$Live)
+
+Write-Error "This script is deprecated. Use scripts/setup-stripe-products-v2.sh instead."
+exit 1
 
 $ErrorActionPreference = "Stop"
 
