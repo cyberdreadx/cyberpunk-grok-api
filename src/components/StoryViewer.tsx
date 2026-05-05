@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
-import { X, ChevronLeft, ChevronRight, Volume2, VolumeX, Trash2, Loader2, Eye, Lock, Unlock, Heart, Zap, EyeOff } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Volume2, VolumeX, Trash2, Loader2, Eye, Lock, Unlock, Heart, Zap, EyeOff, Copy } from "lucide-react";
 import XrgeUnlockDialog from "@/components/XrgeUnlockDialog";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
@@ -476,7 +476,22 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
                 </p>
               )}
             </div>
-            <div className="flex flex-col items-center gap-1 shrink-0">
+            <div className="flex flex-col items-center gap-2 shrink-0">
+              {currentStory.prompt && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigator.clipboard.writeText(currentStory.prompt)
+                      .then(() => toast.success("Prompt copied"))
+                      .catch(() => toast.error("Failed to copy"));
+                  }}
+                  className="p-2.5 rounded-full backdrop-blur-sm bg-black/30 text-white/70 hover:text-primary transition-all active:scale-90"
+                  title="Copy prompt"
+                  aria-label="Copy prompt"
+                >
+                  <Copy className="w-5 h-5" />
+                </button>
+              )}
               <button onClick={(e) => { e.stopPropagation(); handleLike(); }}
                 className={`p-2.5 rounded-full backdrop-blur-sm transition-all active:scale-90 ${
                   liked ? "bg-red-500/20 text-red-400" : "bg-black/30 text-white/70"
