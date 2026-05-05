@@ -17,6 +17,7 @@ import {
   EyeOff,
   MoreHorizontal,
   Link2,
+  Copy,
   ShieldOff,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
