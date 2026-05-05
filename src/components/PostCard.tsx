@@ -170,6 +170,20 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
     }
   };
 
+  const handleCopyPrompt = async () => {
+    const text = revealedText || post.text;
+    if (!text) {
+      toast({ title: "No prompt to copy", variant: "destructive" });
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({ title: "Prompt copied" });
+    } catch {
+      toast({ title: "Failed to copy", variant: "destructive" });
+    }
+  };
+
   const handleAdminBan = async () => {
     if (!confirm(`Ban @${post.username}? This blocks the user from posting.`)) return;
     try {
