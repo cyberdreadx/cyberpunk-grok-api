@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
-import { X, ChevronLeft, ChevronRight, Volume2, VolumeX, Trash2, Loader2, Eye, Lock, Unlock, Heart, Zap, EyeOff } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Volume2, VolumeX, Trash2, Loader2, Eye, Lock, Unlock, Heart, Zap, EyeOff, Copy } from "lucide-react";
 import XrgeUnlockDialog from "@/components/XrgeUnlockDialog";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
