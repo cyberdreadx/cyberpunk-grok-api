@@ -286,6 +286,12 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
               <Link2 className="w-3.5 h-3.5 mr-2" />
               Copy link
             </DropdownMenuItem>
+            {(post.text || revealedText) && !isLocked && (
+              <DropdownMenuItem onClick={handleCopyPrompt} className="cursor-pointer">
+                <Copy className="w-3.5 h-3.5 mr-2" />
+                Copy prompt
+              </DropdownMenuItem>
+            )}
             {user?.id !== post.userId && (
               <DropdownMenuItem
                 onClick={handleFlag}
