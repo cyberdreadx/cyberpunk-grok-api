@@ -17,6 +17,7 @@ import {
   EyeOff,
   MoreHorizontal,
   Link2,
+  Copy,
   ShieldOff,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -169,6 +170,20 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
     }
   };
 
+  const handleCopyPrompt = async () => {
+    const text = revealedText || post.text;
+    if (!text) {
+      toast({ title: "No prompt to copy", variant: "destructive" });
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({ title: "Prompt copied" });
+    } catch {
+      toast({ title: "Failed to copy", variant: "destructive" });
+    }
+  };
+
   const handleAdminBan = async () => {
     if (!confirm(`Ban @${post.username}? This blocks the user from posting.`)) return;
     try {
@@ -271,6 +286,12 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
               <Link2 className="w-3.5 h-3.5 mr-2" />
               Copy link
             </DropdownMenuItem>
+            {(post.text || revealedText) && !isLocked && (
+              <DropdownMenuItem onClick={handleCopyPrompt} className="cursor-pointer">
+                <Copy className="w-3.5 h-3.5 mr-2" />
+                Copy prompt
+              </DropdownMenuItem>
+            )}
             {user?.id !== post.userId && (
               <DropdownMenuItem
                 onClick={handleFlag}
