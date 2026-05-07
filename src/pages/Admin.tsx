@@ -1146,6 +1146,43 @@ export default function Admin() {
 
   useEffect(() => { fetchFreeCredits(); }, [fetchFreeCredits]);
 
+  // ── Creator applications queue ─────────────────────────────────
+  interface CreatorApp {
+    id: string; email: string; handle: string; display_name: string; country: string | null;
+    socials: any; pitch: string; niche: string | null; languages: string | null;
+    sample_urls: string[]; payout_pref: string; status: string; created_at: string;
+  }
+  const [caStatus, setCaStatus] = useState<"pending" | "approved" | "rejected">("pending");
+  const [caList, setCaList] = useState<CreatorApp[] | null>(null);
+  const [caBusy, setCaBusy] = useState<string | null>(null);
+
+  const fetchCreatorApps = useCallback(async (status: "pending" | "approved" | "rejected") => {
+    setCaList(null);
+    try {
+      const r = await apiFetch<{ applications: CreatorApp[] }>("/creator-applications", {
+        method: "POST", body: { action: "list", status },
+      });
+      setCaList(r.applications || []);
+    } catch {
+      setCaList([]);
+    }
+  }, []);
+
+  const reviewCreatorApp = useCallback(async (id: string, decision: "approve" | "reject") => {
+    setCaBusy(id);
+    try {
+      await apiFetch("/creator-applications", { method: "POST", body: { action: "review", id, decision } });
+      setCaList((l) => l ? l.filter((a) => a.id !== id) : l);
+    } catch (e: any) {
+      alert(e?.message || "Failed");
+    } finally {
+      setCaBusy(null);
+    }
+  }, []);
+
+  useEffect(() => { fetchCreatorApps(caStatus); }, [caStatus, fetchCreatorApps]);
+
+
 
 
   // Feed moderators
@@ -1825,6 +1862,66 @@ export default function Admin() {
                       {fcResult.msg}
                     </div>
                   )}
+                </div>
+              )}
+            </section>
+
+            {/* Creator Applications Queue */}
+            <section className="border border-secondary/30 rounded-lg bg-card/40 backdrop-blur-sm p-3 sm:p-4 space-y-3">
+              <h2 className="font-orbitron text-xs tracking-wider text-secondary/80 flex items-center gap-2">
+                <Zap className="w-3.5 h-3.5" />
+                CREATOR_APPLICATIONS
+              </h2>
+              <div className="flex gap-1 flex-wrap">
+                {(["pending", "approved", "rejected"] as const).map((s) => (
+                  <Button key={s} size="sm" variant={caStatus === s ? "default" : "outline"}
+                    className="font-mono-share text-[10px] h-7 px-2"
+                    onClick={() => setCaStatus(s)}>
+                    {s.toUpperCase()}
+                  </Button>
+                ))}
+                <Button size="sm" variant="ghost" className="font-mono-share text-[10px] h-7 px-2 ml-auto"
+                  onClick={() => fetchCreatorApps(caStatus)}>REFRESH</Button>
+              </div>
+              {caList === null ? (
+                <div className="font-mono-share text-[10px] text-muted-foreground/60">Loading…</div>
+              ) : caList.length === 0 ? (
+                <div className="font-mono-share text-[10px] text-muted-foreground/60">No {caStatus} applications.</div>
+              ) : (
+                <div className="space-y-2">
+                  {caList.map((a) => (
+                    <div key={a.id} className="border border-border/40 rounded p-3 bg-background/40 space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="font-orbitron text-xs">{a.display_name} <span className="text-muted-foreground/60">@{a.handle}</span></div>
+                          <div className="font-mono-share text-[10px] text-muted-foreground truncate">{a.email} · {a.country || "—"} · payout: {a.payout_pref}</div>
+                        </div>
+                        <div className="font-mono-share text-[9px] text-muted-foreground/60 shrink-0">{new Date(a.created_at).toLocaleDateString()}</div>
+                      </div>
+                      <p className="font-mono-share text-[11px] text-foreground/80 leading-relaxed line-clamp-3">{a.pitch}</p>
+                      {a.socials && Object.values(a.socials).some(Boolean) && (
+                        <div className="font-mono-share text-[10px] text-secondary/80 flex flex-wrap gap-x-2">
+                          {Object.entries(a.socials).filter(([, v]) => v).map(([k, v]) => (
+                            <a key={k} href={String(v)} target="_blank" rel="noopener noreferrer" className="underline">{k}</a>
+                          ))}
+                        </div>
+                      )}
+                      {caStatus === "pending" && (
+                        <div className="flex gap-2 pt-1">
+                          <Button size="sm" disabled={caBusy === a.id}
+                            className="font-mono-share text-[10px] h-7 px-3 bg-green-600 hover:bg-green-500"
+                            onClick={() => reviewCreatorApp(a.id, "approve")}>
+                            {caBusy === a.id ? <Loader2 className="w-3 h-3 animate-spin" /> : "APPROVE"}
+                          </Button>
+                          <Button size="sm" variant="outline" disabled={caBusy === a.id}
+                            className="font-mono-share text-[10px] h-7 px-3 border-destructive/40 text-destructive hover:bg-destructive/10"
+                            onClick={() => reviewCreatorApp(a.id, "reject")}>
+                            REJECT
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               )}
             </section>
