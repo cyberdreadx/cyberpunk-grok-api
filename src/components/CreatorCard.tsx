@@ -1,169 +1,62 @@
-import React, { useEffect, useRef } from "react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Lock, ImageIcon, MessageSquare, EyeOff } from "lucide-react";
-import VerifiedBadge from "@/components/VerifiedBadge";
-import { useMatureFilter } from "@/hooks/useMatureFilter";
+import { ShieldCheck, BadgeCheck } from "lucide-react";
 
-export interface FeedCreator {
-  userId: string;
-  username: string;
-  avatarUrl: string | null;
-  postCount: number;
-  recentScore: number;
-  latestPostId: string;
-  latestText: string;
-  latestImage: string | null;
-  previewImage?: string;
-  latestAt: string;
-  latestLocked: boolean;
-  verified?: boolean;
-  isMature?: boolean;
+export interface CreatorCardData {
+  display_name?: string | null;
+  username?: string | null;
+  avatar_url?: string | null;
+  niche?: string | null;
+  verification_status?: string | null;
 }
 
 interface Props {
-  creator: FeedCreator;
-  onOpen: (c: FeedCreator) => void;
-  active?: boolean;
-  /** When true, blur all previews regardless of lock state (used for logged-out teaser). */
-  forceBlur?: boolean;
+  data: CreatorCardData;
+  /** Show "VERIFIED SOON" overlay (apply preview). When false, uses verification_status. */
+  pendingBadge?: boolean;
+  className?: string;
 }
 
-const timeAgo = (iso: string) => {
-  const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
-  if (s < 60) return `${s}s`;
-  const m = Math.floor(s / 60);
-  if (m < 60) return `${m}m`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h`;
-  const d = Math.floor(h / 24);
-  return `${d}d`;
-};
-
-const isVideoUrl = (u?: string | null) => !!u && /\.(mp4|webm|mov|m4v)(\?|$)/i.test(u);
-
-const CreatorCard: React.FC<Props> = ({ creator, onOpen, active, forceBlur }) => {
-  const { matureFilter } = useMatureFilter();
-  const previewImg = creator.latestImage || creator.previewImage;
-  const initials = (creator.username || "?").slice(0, 2).toUpperCase();
-  const matureBlur = matureFilter && !!creator.isMature;
-  const showLocked = creator.latestLocked || forceBlur;
-  const showBlur = showLocked || matureBlur;
-  const previewIsVideo = isVideoUrl(previewImg);
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-
-  // Play/pause based on viewport visibility — reliable mobile autoplay pattern.
-  useEffect(() => {
-    if (!previewIsVideo) return;
-    const v = videoRef.current;
-    if (!v) return;
-    const obs = new IntersectionObserver(
-      (entries) => {
-        for (const e of entries) {
-          if (e.isIntersecting) {
-            v.play().catch(() => {});
-          } else {
-            v.pause();
-          }
-        }
-      },
-      { threshold: 0.25 }
-    );
-    obs.observe(v);
-    return () => obs.disconnect();
-  }, [previewIsVideo, previewImg]);
-
+export default function CreatorCard({ data, pendingBadge = false, className = "" }: Props) {
+  const initial = (data.display_name || data.username || "?").slice(0, 1).toUpperCase();
+  const verified = data.verification_status === "verified";
   return (
-    <button
-      onClick={() => onOpen(creator)}
-      className={`group relative w-full text-left overflow-hidden rounded-lg border bg-card/60 transition-all aspect-[3/4] flex flex-col ${
-        active
-          ? "border-primary/60 ring-1 ring-primary/40"
-          : "border-border/40 hover:border-primary/40"
-      }`}
+    <div
+      className={`border border-border/40 rounded-lg overflow-hidden bg-card/40 hover:border-secondary/60 transition-colors ${className}`}
     >
-      {/* Preview */}
-      <div className="relative flex-1 bg-muted/30 overflow-hidden">
-        {previewImg ? (
-          previewIsVideo ? (
-            <video
-              ref={videoRef}
-              src={previewImg}
-              muted
-              loop
-              playsInline
-              {...({ "webkit-playsinline": "true", "x5-playsinline": "true" } as any)}
-              preload="metadata"
-              autoPlay
-              disablePictureInPicture
-              disableRemotePlayback
-              className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${
-                showBlur ? "blur-2xl scale-110" : ""
-              }`}
-            />
-          ) : (
-            <img
-              src={previewImg}
-              alt={`${creator.username}'s latest`}
-              loading="lazy"
-              decoding="async"
-              className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${
-                showBlur ? "blur-2xl scale-110" : ""
-              }`}
-            />
-          )
-        ) : creator.latestText ? (
-          <div className="absolute inset-0 p-3 flex items-center justify-center">
-            <p className={`font-mono-share text-[11px] text-foreground/80 line-clamp-6 text-center leading-snug ${forceBlur ? "blur-sm select-none" : ""}`}>
-              {creator.latestText}
-            </p>
-          </div>
+      <div className="aspect-square bg-muted/20 flex items-center justify-center overflow-hidden relative">
+        {data.avatar_url ? (
+          <img
+            src={data.avatar_url}
+            alt={data.display_name || data.username || ""}
+            className="w-full h-full object-cover"
+            loading="lazy"
+          />
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center text-muted-foreground/40">
-            <ImageIcon className="w-8 h-8" />
-          </div>
+          <span className="font-orbitron text-3xl text-muted-foreground/40">{initial}</span>
         )}
-
-        {showLocked && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="bg-black/60 backdrop-blur-sm rounded-full p-2 border border-primary/40">
-              <Lock className="w-4 h-4 text-primary" />
-            </div>
-          </div>
+        {pendingBadge && (
+          <span className="absolute top-1 left-1 font-mono-share text-[8px] tracking-widest px-1.5 py-0.5 rounded bg-background/70 text-secondary border border-secondary/40">
+            VERIFIED SOON
+          </span>
         )}
-        {!showLocked && matureBlur && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="bg-black/60 backdrop-blur-sm rounded-full p-2 border border-amber-400/40 flex items-center gap-1.5 px-3">
-              <EyeOff className="w-3.5 h-3.5 text-amber-300" />
-              <span className="font-mono-share text-[9px] tracking-wider text-amber-300/90">MATURE</span>
-            </div>
-          </div>
-        )}
-
-        {/* Time chip */}
-        <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-black/60 backdrop-blur-sm font-mono-share text-[9px] text-white/90">
-          {timeAgo(creator.latestAt)}
-        </div>
       </div>
-
-      {/* Footer: avatar + name */}
-      <div className="flex items-center gap-2 p-2 bg-card/80 border-t border-border/30">
-        <Avatar className="w-7 h-7 shrink-0">
-          {creator.avatarUrl && <AvatarImage src={creator.avatarUrl} alt={creator.username} />}
-          <AvatarFallback className="text-[9px] font-mono-share bg-muted">{initials}</AvatarFallback>
-        </Avatar>
-        <div className="min-w-0 flex-1">
-          <div className="font-mono-share text-[11px] text-foreground truncate flex items-center gap-1">
-            <span className="truncate">@{creator.username}</span>
-            {creator.verified && <VerifiedBadge size="xs" />}
-          </div>
-          <div className="font-mono-share text-[9px] text-muted-foreground flex items-center gap-1">
-            <MessageSquare className="w-2.5 h-2.5" />
-            {creator.postCount} {creator.postCount === 1 ? "post" : "posts"}
-          </div>
+      <div className="p-3 space-y-1">
+        <div className="flex items-center gap-1 font-orbitron text-xs truncate">
+          {data.display_name || data.username || "Display name"}
+          {pendingBadge ? (
+            <ShieldCheck className="w-3 h-3 text-secondary/60 shrink-0" />
+          ) : (
+            verified && <BadgeCheck className="w-3 h-3 text-secondary shrink-0" />
+          )}
         </div>
+        {(data.username || pendingBadge) && (
+          <div className="font-mono-share text-[10px] text-muted-foreground truncate">
+            @{data.username || "handle"}
+          </div>
+        )}
+        {data.niche && (
+          <div className="font-mono-share text-[9px] text-secondary/70 truncate">{data.niche}</div>
+        )}
       </div>
-    </button>
+    </div>
   );
-};
-
-export default CreatorCard;
+}
