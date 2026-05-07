@@ -13,9 +13,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const sql = getDb();
   try {
     const rows = await sql`
-      SELECT u.id, u.username, u.display_name, u.avatar_url, u.bio,
-             u.verification_status, u.featured_at
+      SELECT u.id,
+             p.username,
+             p.username AS display_name,
+             p.avatar_url,
+             p.bio,
+             u.verification_status,
+             u.featured_at
       FROM users u
+      LEFT JOIN profiles p ON p.user_id = u.id
       WHERE u.is_featured_creator = true
       ORDER BY u.featured_at DESC NULLS LAST
       LIMIT 100
