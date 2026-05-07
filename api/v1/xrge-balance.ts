@@ -33,7 +33,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const tier = getTierForSpend(user.lifetimeSpend);
     const nextTier = getNextTier(tier.id);
 
-    const config = await getXrgeConfig();
+    // XRGE config (price feed + deposit address). Don't fail the whole
+    // balance endpoint if the price feed is briefly down or env is missing.
+    let config: { depositAddress: string | null; usdRate: number | null } = {
+      depositAddress: null,
+      usdRate: null,
+    };
+    try {
+      const c = await getXrgeConfig();
+      config = { depositAddress: c.depositAddress, usdRate: c.usdRate };
+    } catch (e: any) {
+      console.warn("[xrge-balance] getXrgeConfig failed:", e.message);
+    }
 
     // Recent bank transactions (last 20)
     const txns = await sql`
@@ -42,7 +53,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       WHERE user_id = ${userId}
       ORDER BY created_at DESC
       LIMIT 20
-    `;
+    `.catch((e: any) => {
+      console.warn("[xrge-balance] txns query failed:", e.message);
+      return [];
+    });
 
     // Pending withdrawals
     const pendingWithdrawals = await sql`
@@ -50,10 +64,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       FROM xrge_withdrawals
       WHERE user_id = ${userId} AND status IN ('pending', 'processing')
       ORDER BY created_at DESC
-    `;
+    `.catch((e: any) => {
+      console.warn("[xrge-balance] withdrawals query failed:", e.message);
+      return [];
+    });
 
-    // Holder tier (hold-based, separate from spend-based loyalty)
-    const holder = await getHolderState(sql, userId);
+    // Holder tier (hold-based, separate from spend-based loyalty).
+    // Migration 035 may not be applied in all envs — degrade gracefully.
+    let holder: Awaited<ReturnType<typeof getHolderState>> | null = null;
+    try {
+      holder = await getHolderState(sql, userId);
+    } catch (e: any) {
+      console.warn("[xrge-balance] getHolderState failed:", e.message);
+    }
 
     return res.status(200).json({
       bankBalance: user.bankBalance,
