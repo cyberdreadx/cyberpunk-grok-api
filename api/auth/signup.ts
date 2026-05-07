@@ -4,6 +4,7 @@ import { getDb } from "../_lib/db";
 import { signToken } from "../_lib/auth";
 import { generateVerificationCode, sendVerificationEmail } from "../_lib/email";
 import { checkRateLimit, getClientIp } from "../_lib/ratelimit";
+import { isDisposableEmail } from "../_lib/disposable-domains";
 /** Basic email format validation. */
 function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -20,6 +21,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
     if (!isValidEmail(email)) {
       return res.status(400).json({ error: "Invalid email format" });
+    }
+    if (isDisposableEmail(email)) {
+      return res.status(400).json({ error: "Disposable email addresses are not allowed. Please use a permanent email." });
     }
     if (password.length < 6) {
       return res.status(400).json({ error: "Password must be at least 6 characters" });
