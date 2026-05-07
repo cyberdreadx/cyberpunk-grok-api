@@ -656,7 +656,7 @@ export default function ApplyPage() {
       {cropTarget && (
         <CropDialog
           open={!!cropTarget}
-          imageUrl={cropTarget.uploadedUrl || cropTarget.previewUrl}
+          imageUrl={cropTarget.previewUrl || cropTarget.uploadedUrl || ""}
           aspect={1}
           onClose={() => setCropTargetId(null)}
           onCropped={(blob) => applyCrop(cropTarget.id, blob)}
