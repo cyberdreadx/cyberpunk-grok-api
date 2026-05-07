@@ -20,7 +20,7 @@ interface AuthDialogProps {
   isAuthenticated: boolean;
   userEmail?: string | null;
   onSignIn: (email: string, password: string) => Promise<any>;
-  onSignUp: (email: string, password: string, referralCode?: string) => Promise<any>;
+  onSignUp: (email: string, password: string, referralCode?: string, captcha?: { token: string; answer: string }) => Promise<any>;
   onSignOut: () => Promise<void>;
   pendingVerificationEmail?: string | null;
   onVerify?: (email: string, code: string) => Promise<any>;
