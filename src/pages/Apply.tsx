@@ -724,6 +724,7 @@ export default function ApplyPage() {
                 )}
               </div>
             </div>
+            </>
           )}
         </section>
       </main>
