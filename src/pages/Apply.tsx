@@ -532,6 +532,17 @@ export default function ApplyPage() {
                           )}
                           {/* Actions */}
                           <div className="absolute top-1 right-1 flex gap-1">
+                            {p.status === "done" && primaryPhoto?.id !== p.id && (
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); setPrimaryId(p.id); }}
+                                className="bg-background/80 hover:bg-secondary hover:text-background rounded-full p-1 transition-colors"
+                                aria-label="Set as primary"
+                                title="Set as primary"
+                              >
+                                <Star className="w-3 h-3" />
+                              </button>
+                            )}
                             {p.status === "done" && (
                               <button
                                 type="button"
