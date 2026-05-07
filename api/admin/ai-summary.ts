@@ -125,6 +125,44 @@ async function aggregateStats(sql: ReturnType<typeof getDb>) {
     FROM users
   `, [{ sub_outstanding: 0, pack_outstanding: 0, daily_outstanding: 0 }]);
 
+  // ── Daily time series for anomaly detection (last 30 days) ──
+  const revSeries = await safe(sql`
+    SELECT date_trunc('day', created_at)::date AS d,
+           COALESCE(SUM(amount_cents), 0)::int AS v
+    FROM transactions
+    WHERE created_at >= now() - interval '30 days'
+    GROUP BY 1 ORDER BY 1
+  `, [] as { d: string; v: number }[]);
+
+  const signupSeries = await safe(sql`
+    SELECT date_trunc('day', created_at)::date AS d, COUNT(*)::int AS v
+    FROM users
+    WHERE created_at >= now() - interval '30 days'
+    GROUP BY 1 ORDER BY 1
+  `, [] as { d: string; v: number }[]);
+
+  const activeSeries = await safe(sql`
+    SELECT date_trunc('day', created_at)::date AS d,
+           COUNT(DISTINCT user_id)::int AS v
+    FROM usage_log
+    WHERE created_at >= now() - interval '30 days'
+    GROUP BY 1 ORDER BY 1
+  `, [] as { d: string; v: number }[]);
+
+  const genSeries = await safe(sql`
+    SELECT date_trunc('day', created_at)::date AS d, COUNT(*)::int AS v
+    FROM usage_log
+    WHERE created_at >= now() - interval '30 days'
+    GROUP BY 1 ORDER BY 1
+  `, [] as { d: string; v: number }[]);
+
+  const anomalies = detectAnomalies({
+    revenue_cents: revSeries,
+    signups: signupSeries,
+    active_users: activeSeries,
+    generations: genSeries,
+  });
+
   return {
     generated_at: new Date().toISOString(),
     revenue,
@@ -135,7 +173,97 @@ async function aggregateStats(sql: ReturnType<typeof getDb>) {
     costs,
     creator: { totals: creatorTotals, top: creatorTop },
     creditPool,
+    anomalies,
   };
+}
+
+// ── Anomaly detection ─────────────────────────────────────────────────
+// Z-score today/yesterday vs the trailing 28-day baseline (excluding today).
+// Flags |z| ≥ 2 as anomaly; ≥ 3 as severe. Also emits direction & % change vs avg.
+
+export interface Anomaly {
+  metric: string;          // human label
+  key: string;             // machine key
+  date: string;            // ISO date
+  value: number;           // observed value
+  baseline_avg: number;    // mean of trailing baseline
+  baseline_stddev: number;
+  z_score: number;
+  pct_vs_avg: number;      // % delta vs baseline mean
+  direction: "spike" | "drop";
+  severity: "moderate" | "severe";
+}
+
+function stddev(values: number[], mean: number): number {
+  if (values.length < 2) return 0;
+  const sq = values.reduce((s, v) => s + (v - mean) ** 2, 0);
+  return Math.sqrt(sq / (values.length - 1));
+}
+
+function fillSeries(rows: { d: string; v: number }[], days = 30): { d: string; v: number }[] {
+  const map = new Map(rows.map(r => [new Date(r.d).toISOString().slice(0, 10), Number(r.v) || 0]));
+  const out: { d: string; v: number }[] = [];
+  const today = new Date(); today.setUTCHours(0, 0, 0, 0);
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(today); d.setUTCDate(today.getUTCDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    out.push({ d: key, v: map.get(key) || 0 });
+  }
+  return out;
+}
+
+function checkAnomaly(metric: string, key: string, series: { d: string; v: number }[]): Anomaly[] {
+  if (series.length < 8) return []; // need a meaningful baseline
+  const out: Anomaly[] = [];
+  // Inspect today (last) and yesterday (-2) against trailing 28 days excluding the inspected day.
+  for (const offset of [1, 2]) {
+    const idx = series.length - offset;
+    if (idx < 7) continue;
+    const point = series[idx];
+    const baseline = series.slice(Math.max(0, idx - 28), idx).map(s => s.v);
+    if (baseline.length < 7) continue;
+    const avg = baseline.reduce((a, b) => a + b, 0) / baseline.length;
+    const sd = stddev(baseline, avg);
+    if (sd === 0 && avg === 0) continue;
+    // Use a small floor to avoid divide-by-near-zero noise on flat metrics
+    const denom = Math.max(sd, Math.max(1, avg * 0.1));
+    const z = (point.v - avg) / denom;
+    const absZ = Math.abs(z);
+    if (absZ < 2) continue;
+    out.push({
+      metric, key, date: point.d, value: point.v,
+      baseline_avg: Math.round(avg * 100) / 100,
+      baseline_stddev: Math.round(sd * 100) / 100,
+      z_score: Math.round(z * 100) / 100,
+      pct_vs_avg: avg > 0 ? Math.round(((point.v - avg) / avg) * 1000) / 10 : 0,
+      direction: z > 0 ? "spike" : "drop",
+      severity: absZ >= 3 ? "severe" : "moderate",
+    });
+  }
+  return out;
+}
+
+function detectAnomalies(input: {
+  revenue_cents: { d: string; v: number }[];
+  signups: { d: string; v: number }[];
+  active_users: { d: string; v: number }[];
+  generations: { d: string; v: number }[];
+}): { items: Anomaly[]; summary: string } {
+  const items = [
+    ...checkAnomaly("Daily revenue", "revenue_cents", fillSeries(input.revenue_cents)),
+    ...checkAnomaly("New signups", "signups", fillSeries(input.signups)),
+    ...checkAnomaly("Daily active users", "active_users", fillSeries(input.active_users)),
+    ...checkAnomaly("Generations", "generations", fillSeries(input.generations)),
+  ];
+  // Sort by severity then |z|
+  items.sort((a, b) => {
+    if (a.severity !== b.severity) return a.severity === "severe" ? -1 : 1;
+    return Math.abs(b.z_score) - Math.abs(a.z_score);
+  });
+  const summary = items.length === 0
+    ? "No statistical anomalies detected in the last 30 days."
+    : `${items.length} anomal${items.length === 1 ? "y" : "ies"} detected (${items.filter(i => i.severity === "severe").length} severe).`;
+  return { items, summary };
 }
 
 function buildPrompt(stats: any): string {
