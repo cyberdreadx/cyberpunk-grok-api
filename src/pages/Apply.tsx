@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { Loader2, Sparkles, DollarSign, ShieldCheck, Globe2, ChevronRight, Check } from "lucide-react";
+import { Loader2, Sparkles, DollarSign, ShieldCheck, Globe2, ChevronRight, Check, Upload, X, ImagePlus, AlertCircle } from "lucide-react";
+import { upload } from "@vercel/blob/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import CyberLayout from "@/components/CyberLayout";
 import GlitchText from "@/components/GlitchText";
 import { useToast } from "@/hooks/use-toast";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, apiUrl } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 
 interface FormState {
@@ -38,7 +39,24 @@ const empty: FormState = {
   payout_pref: "stripe",
 };
 
-const STEPS = ["Identity", "Socials", "Persona", "Payout", "Submit"] as const;
+const STEPS = ["Identity", "Socials", "Persona", "Photos", "Payout", "Submit"] as const;
+
+// Photo upload constraints
+const MAX_PHOTOS = 5;
+const MIN_PHOTOS_RECOMMENDED = 3;
+const MAX_PHOTO_BYTES = 8 * 1024 * 1024; // 8MB
+const ACCEPTED_TYPES = ["image/png", "image/jpeg", "image/webp"];
+
+type PhotoStatus = "pending" | "uploading" | "done" | "error";
+interface PhotoItem {
+  id: string;
+  file: File;
+  previewUrl: string;
+  status: PhotoStatus;
+  progress: number; // 0..100
+  uploadedUrl?: string;
+  error?: string;
+}
 
 export default function ApplyPage() {
   const { toast } = useToast();
@@ -66,19 +84,129 @@ export default function ApplyPage() {
   const updateSocial = (k: keyof FormState["socials"], v: string) =>
     setForm((f) => ({ ...f, socials: { ...f.socials, [k]: v } }));
 
+  // ── Photo upload state ────────────────────────────────────────
+  const [photos, setPhotos] = useState<PhotoItem[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const photosUploading = photos.some((p) => p.status === "uploading");
+  const photosDone = photos.filter((p) => p.status === "done");
+  const photosErrored = photos.filter((p) => p.status === "error");
+
+  // Revoke object URLs on unmount/replace
+  useEffect(() => {
+    return () => {
+      photos.forEach((p) => URL.revokeObjectURL(p.previewUrl));
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const validateFile = (f: File): string | null => {
+    if (!ACCEPTED_TYPES.includes(f.type)) return "Only PNG, JPEG, or WebP";
+    if (f.size > MAX_PHOTO_BYTES) return `Max ${Math.round(MAX_PHOTO_BYTES / 1024 / 1024)}MB`;
+    if (f.size < 1024) return "File too small";
+    return null;
+  };
+
+  const uploadOne = async (item: PhotoItem) => {
+    setPhotos((prev) => prev.map((p) => p.id === item.id ? { ...p, status: "uploading", progress: 5, error: undefined } : p));
+    try {
+      if (!user) throw new Error("Sign in required to upload photos");
+      const authToken = localStorage.getItem("auth-token") || "";
+      if (!authToken) throw new Error("Not authenticated");
+      const ext = item.file.type === "image/png" ? "png" : item.file.type === "image/webp" ? "webp" : "jpg";
+      const path = `creator-applications/sample.${ext}`;
+      const result = await upload(path, item.file, {
+        access: "public",
+        handleUploadUrl: `${apiUrl("")}/blob-upload`,
+        clientPayload: authToken,
+        onUploadProgress: ({ percentage }) => {
+          setPhotos((prev) => prev.map((p) =>
+            p.id === item.id ? { ...p, progress: Math.max(5, Math.min(99, percentage)) } : p
+          ));
+        },
+      });
+      setPhotos((prev) => prev.map((p) =>
+        p.id === item.id ? { ...p, status: "done", progress: 100, uploadedUrl: result.url } : p
+      ));
+    } catch (e: any) {
+      setPhotos((prev) => prev.map((p) =>
+        p.id === item.id ? { ...p, status: "error", error: e?.message || "Upload failed" } : p
+      ));
+    }
+  };
+
+  const addFiles = (files: FileList | File[]) => {
+    if (!user) {
+      toast({ title: "Sign in required", description: "Create an account before uploading photos.", variant: "destructive" });
+      return;
+    }
+    const incoming = Array.from(files);
+    const remaining = MAX_PHOTOS - photos.length;
+    if (remaining <= 0) {
+      toast({ title: "Photo limit reached", description: `Max ${MAX_PHOTOS} photos.`, variant: "destructive" });
+      return;
+    }
+    const slice = incoming.slice(0, remaining);
+    const next: PhotoItem[] = [];
+    for (const f of slice) {
+      const err = validateFile(f);
+      if (err) {
+        toast({ title: `Skipped ${f.name}`, description: err, variant: "destructive" });
+        continue;
+      }
+      next.push({
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        file: f,
+        previewUrl: URL.createObjectURL(f),
+        status: "pending",
+        progress: 0,
+      });
+    }
+    if (next.length === 0) return;
+    setPhotos((prev) => [...prev, ...next]);
+    next.forEach((item) => { void uploadOne(item); });
+  };
+
+  const removePhoto = (id: string) => {
+    setPhotos((prev) => {
+      const target = prev.find((p) => p.id === id);
+      if (target) URL.revokeObjectURL(target.previewUrl);
+      return prev.filter((p) => p.id !== id);
+    });
+  };
+
+  const retryPhoto = (id: string) => {
+    const item = photos.find((p) => p.id === id);
+    if (item) void uploadOne(item);
+  };
+
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (e.dataTransfer.files?.length) addFiles(e.dataTransfer.files);
+  };
+
   const canNext = () => {
     if (step === 0) return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)
       && /^[a-zA-Z0-9_]{3,24}$/.test(form.handle)
       && form.display_name.trim().length >= 2
       && form.age_confirmed;
     if (step === 2) return form.pitch.trim().length >= 30;
+    if (step === 3) return !photosUploading && photosDone.length >= 1 && photosErrored.length === 0;
     return true;
   };
 
   const submit = async () => {
+    if (photosUploading) {
+      toast({ title: "Uploads in progress", description: "Wait for photos to finish." });
+      return;
+    }
     setSubmitting(true);
     try {
-      await apiFetch("/creator-applications", { method: "POST", body: form, auth: !!user });
+      const sample_urls = photosDone.map((p) => p.uploadedUrl!).filter(Boolean);
+      await apiFetch("/creator-applications", {
+        method: "POST",
+        body: { ...form, sample_urls },
+        auth: !!user,
+      });
       setDone(true);
     } catch (e: any) {
       toast({ title: "Submission failed", description: e?.message || "Try again", variant: "destructive" });
@@ -86,6 +214,7 @@ export default function ApplyPage() {
       setSubmitting(false);
     }
   };
+
 
   return (
     <CyberLayout>
@@ -292,6 +421,111 @@ export default function ApplyPage() {
 
               {step === 3 && (
                 <div className="space-y-3">
+                  <p className="font-mono-share text-[11px] text-muted-foreground leading-relaxed">
+                    Upload {MIN_PHOTOS_RECOMMENDED}–{MAX_PHOTOS} reference photos so we can confirm identity and build your AI persona. Clear face shots, varied angles. PNG/JPEG/WebP, max 8MB each.
+                  </p>
+                  {!user && (
+                    <div className="flex items-start gap-2 border border-amber-400/40 bg-amber-400/5 rounded p-2 font-mono-share text-[10px] text-amber-300">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                      Sign in to upload — uploads are tied to your account.
+                    </div>
+                  )}
+
+                  {/* Dropzone */}
+                  <div
+                    onDrop={onDrop}
+                    onDragOver={(e) => e.preventDefault()}
+                    onClick={() => fileInputRef.current?.click()}
+                    role="button"
+                    tabIndex={0}
+                    className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+                      photos.length >= MAX_PHOTOS || !user
+                        ? "border-border/30 bg-muted/10 cursor-not-allowed opacity-60"
+                        : "border-secondary/40 bg-secondary/5 hover:border-secondary"
+                    }`}
+                  >
+                    <ImagePlus className="w-7 h-7 mx-auto text-secondary mb-2" />
+                    <div className="font-orbitron text-xs">
+                      {photos.length >= MAX_PHOTOS ? "PHOTO LIMIT REACHED" : "DROP PHOTOS OR CLICK TO BROWSE"}
+                    </div>
+                    <div className="font-mono-share text-[10px] text-muted-foreground mt-1">
+                      {photos.length} / {MAX_PHOTOS} uploaded
+                    </div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept={ACCEPTED_TYPES.join(",")}
+                      multiple
+                      hidden
+                      disabled={!user || photos.length >= MAX_PHOTOS}
+                      onChange={(e) => {
+                        if (e.target.files?.length) addFiles(e.target.files);
+                        e.target.value = "";
+                      }}
+                    />
+                  </div>
+
+                  {/* Previews */}
+                  {photos.length > 0 && (
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                      {photos.map((p) => (
+                        <div key={p.id} className="relative group border border-border/40 rounded overflow-hidden bg-background/40 aspect-square">
+                          <img src={p.previewUrl} alt="" className="w-full h-full object-cover" />
+                          {/* Status overlay */}
+                          {p.status === "uploading" && (
+                            <div className="absolute inset-0 bg-background/70 backdrop-blur-sm flex flex-col items-center justify-center gap-1">
+                              <Loader2 className="w-4 h-4 animate-spin text-secondary" />
+                              <div className="font-mono-share text-[9px] text-secondary">{Math.round(p.progress)}%</div>
+                            </div>
+                          )}
+                          {p.status === "done" && (
+                            <div className="absolute top-1 left-1 bg-green-500/90 rounded-full p-0.5">
+                              <Check className="w-3 h-3 text-background" />
+                            </div>
+                          )}
+                          {p.status === "error" && (
+                            <div className="absolute inset-0 bg-destructive/80 flex flex-col items-center justify-center gap-1 p-1 text-center">
+                              <AlertCircle className="w-4 h-4 text-background" />
+                              <div className="font-mono-share text-[8px] text-background line-clamp-2">{p.error}</div>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); retryPhoto(p.id); }}
+                                className="font-mono-share text-[9px] underline text-background"
+                              >
+                                Retry
+                              </button>
+                            </div>
+                          )}
+                          {/* Progress bar */}
+                          {p.status === "uploading" && (
+                            <div className="absolute bottom-0 left-0 right-0 h-1 bg-background/60">
+                              <div className="h-full bg-secondary transition-all" style={{ width: `${p.progress}%` }} />
+                            </div>
+                          )}
+                          {/* Remove */}
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); removePhoto(p.id); }}
+                            className="absolute top-1 right-1 bg-background/80 hover:bg-destructive hover:text-background rounded-full p-1 transition-colors"
+                            aria-label="Remove"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between font-mono-share text-[10px]">
+                    <span className={photosDone.length >= MIN_PHOTOS_RECOMMENDED ? "text-green-400" : "text-muted-foreground"}>
+                      {photosDone.length} uploaded · {MIN_PHOTOS_RECOMMENDED} recommended
+                    </span>
+                    {photosUploading && <span className="text-secondary flex items-center gap-1"><Upload className="w-3 h-3" /> uploading…</span>}
+                  </div>
+                </div>
+              )}
+
+              {step === 4 && (
+                <div className="space-y-3">
                   <Label className="font-mono-share text-[11px]">Preferred payout method</Label>
                   <div className="grid sm:grid-cols-2 gap-2">
                     {(["stripe", "xrge"] as const).map((p) => (
@@ -311,12 +545,13 @@ export default function ApplyPage() {
                 </div>
               )}
 
-              {step === 4 && (
+              {step === 5 && (
                 <div className="space-y-3 font-mono-share text-[11px] text-muted-foreground">
                   <p>Review and submit. By submitting you agree to the creator terms, content rules, and acknowledge that approval requires ID + age verification.</p>
                   <div className="border border-border/40 rounded p-3 space-y-1 text-foreground">
                     <div><span className="text-muted-foreground">Handle:</span> @{form.handle}</div>
                     <div><span className="text-muted-foreground">Email:</span> {form.email}</div>
+                    <div><span className="text-muted-foreground">Photos:</span> {photosDone.length} uploaded</div>
                     <div><span className="text-muted-foreground">Payout:</span> {form.payout_pref}</div>
                   </div>
                 </div>
