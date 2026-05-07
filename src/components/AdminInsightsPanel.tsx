@@ -8,6 +8,19 @@ import { Sparkles, RefreshCw, Loader2, AlertTriangle, Clock } from "lucide-react
 import { Button } from "@/components/ui/button";
 import { apiFetch, apiUrl, getAuthToken } from "@/lib/api";
 
+interface AnomalyItem {
+  metric: string;
+  key: string;
+  date: string;
+  value: number;
+  baseline_avg: number;
+  baseline_stddev: number;
+  z_score: number;
+  pct_vs_avg: number;
+  direction: "spike" | "drop";
+  severity: "moderate" | "severe";
+}
+
 interface CachedSummary {
   generated_at: string;
   age_ms?: number;
@@ -22,6 +35,7 @@ interface CachedSummary {
   costs?: any;
   creator?: { totals?: any; top?: { name: string; credits_earned: number; cents_earned: number; unlocks: number }[] };
   creditPool?: any;
+  anomalies?: { items: AnomalyItem[]; summary: string };
 }
 
 function fmtAge(ms: number): string {
@@ -220,6 +234,39 @@ export default function AdminInsightsPanel() {
           </div>
         )}
       </section>
+
+      {/* Anomaly banner */}
+      {data?.anomalies && data.anomalies.items.length > 0 && (
+        <section className={`border rounded-lg p-3 sm:p-4 backdrop-blur-sm ${
+          data.anomalies.items.some(a => a.severity === "severe")
+            ? "border-destructive/50 bg-destructive/5"
+            : "border-yellow-500/40 bg-yellow-500/5"
+        }`}>
+          <div className="flex items-center gap-2 mb-2">
+            <AlertTriangle className={`w-4 h-4 ${data.anomalies.items.some(a => a.severity === "severe") ? "text-destructive" : "text-yellow-500"}`} />
+            <h3 className="font-mono-share text-xs tracking-wider text-foreground">
+              ANOMALIES_DETECTED <span className="text-muted-foreground/70">({data.anomalies.items.length})</span>
+            </h3>
+          </div>
+          <div className="space-y-1.5">
+            {data.anomalies.items.slice(0, 6).map((a, i) => (
+              <div key={i} className="flex items-start gap-2 font-mono-share text-[11px]">
+                <span className="shrink-0">
+                  {a.severity === "severe" ? "🔴" : "🟡"} {a.direction === "spike" ? "📈" : "📉"}
+                </span>
+                <span className="text-foreground/90">
+                  <span className="font-semibold">{a.metric}</span> on {a.date}:{" "}
+                  <span className={a.direction === "spike" ? "text-secondary" : "text-destructive"}>
+                    {a.key === "revenue_cents" ? `$${(a.value / 100).toFixed(2)}` : a.value.toLocaleString()}
+                  </span>
+                  {" "}vs avg {a.key === "revenue_cents" ? `$${(a.baseline_avg / 100).toFixed(2)}` : a.baseline_avg.toLocaleString()}
+                  {" "}<span className="text-muted-foreground/70">({a.pct_vs_avg > 0 ? "+" : ""}{a.pct_vs_avg}%, z={a.z_score})</span>
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Markdown summary */}
       {(showMarkdown || streaming || loading) && (
