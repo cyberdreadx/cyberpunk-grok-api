@@ -46,8 +46,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       credit_discount_pct: creditDiscountPct,
       lora_unlocked: u.lora_unlocked,
       has_purchased,
-      free_credits_disabled: freeCreditsDisabled(),
-      maintenance_message: freeCreditsDisabled() ? FREE_CREDITS_MAINTENANCE_MESSAGE : null,
+      free_credits_disabled: await freeCreditsDisabled(),
+      maintenance_message: (await freeCreditsDisabled()) ? FREE_CREDITS_MAINTENANCE_MESSAGE : null,
     });
   } catch (err: any) {
     console.error("[credits]", err.message);
