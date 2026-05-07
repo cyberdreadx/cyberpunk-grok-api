@@ -34,7 +34,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
-
+import AdminInsightsPanel from "@/components/AdminInsightsPanel";
 import {
   AreaChart,
   Area,
