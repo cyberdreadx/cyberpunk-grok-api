@@ -61,6 +61,33 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
   /** When set, shows the password reset flow */
   const [resetEmail, setResetEmail] = useState<string | null>(null);
 
+  // CAPTCHA state for signup
+  const [captchaToken, setCaptchaToken] = useState<string>("");
+  const [captchaQuestion, setCaptchaQuestion] = useState<string>("");
+  const [captchaAnswer, setCaptchaAnswer] = useState<string>("");
+  const [captchaLoading, setCaptchaLoading] = useState(false);
+
+  const loadCaptcha = useCallback(async () => {
+    setCaptchaLoading(true);
+    setCaptchaAnswer("");
+    try {
+      const { apiFetch } = await import("@/lib/api");
+      const data = await apiFetch<{ question: string; token: string }>("/auth/captcha", { auth: false });
+      setCaptchaQuestion(data.question);
+      setCaptchaToken(data.token);
+    } catch {
+      setCaptchaQuestion("");
+      setCaptchaToken("");
+    } finally {
+      setCaptchaLoading(false);
+    }
+  }, []);
+
+  // Fetch challenge when dialog opens
+  useEffect(() => {
+    if (open && !captchaToken) loadCaptcha();
+  }, [open, captchaToken, loadCaptcha]);
+
   // Read referral code from URL (?ref=CODE)
   const referralCode = React.useMemo(() => {
     try {
