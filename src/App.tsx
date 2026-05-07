@@ -22,6 +22,8 @@ const ReferralPage = lazyWithRetry(() => import("./pages/ReferralPage"), "referr
 const TerminalMode = lazyWithRetry(() => import("./pages/TerminalMode"), "terminal");
 const VerificationStatusPage = lazyWithRetry(() => import("./pages/VerificationStatusPage"), "verification");
 const StripePriceSwap = lazyWithRetry(() => import("./pages/StripePriceSwap"), "stripe-price-swap");
+const Apply = lazyWithRetry(() => import("./pages/Apply"), "apply");
+const CreatorsDirectory = lazyWithRetry(() => import("./pages/CreatorsDirectory"), "creators-directory");
 import AgeGateDialog from "@/components/AgeGateDialog";
 import KonamiTerminalUnlock from "@/components/KonamiTerminalUnlock";
 
@@ -64,6 +66,8 @@ const App = () => (
           <Route path="/terminal" element={<PageShell><TerminalMode /></PageShell>} />
           <Route path="/verification" element={<PageShell><VerificationStatusPage /></PageShell>} />
           <Route path="/admin/stripe-prices" element={<PageShell><StripePriceSwap /></PageShell>} />
+          <Route path="/apply" element={<PageShell><Apply /></PageShell>} />
+          <Route path="/creators" element={<PageShell><CreatorsDirectory /></PageShell>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
