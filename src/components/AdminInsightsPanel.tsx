@@ -8,6 +8,19 @@ import { Sparkles, RefreshCw, Loader2, AlertTriangle, Clock } from "lucide-react
 import { Button } from "@/components/ui/button";
 import { apiFetch, apiUrl, getAuthToken } from "@/lib/api";
 
+interface AnomalyItem {
+  metric: string;
+  key: string;
+  date: string;
+  value: number;
+  baseline_avg: number;
+  baseline_stddev: number;
+  z_score: number;
+  pct_vs_avg: number;
+  direction: "spike" | "drop";
+  severity: "moderate" | "severe";
+}
+
 interface CachedSummary {
   generated_at: string;
   age_ms?: number;
@@ -22,6 +35,7 @@ interface CachedSummary {
   costs?: any;
   creator?: { totals?: any; top?: { name: string; credits_earned: number; cents_earned: number; unlocks: number }[] };
   creditPool?: any;
+  anomalies?: { items: AnomalyItem[]; summary: string };
 }
 
 function fmtAge(ms: number): string {
