@@ -15,7 +15,7 @@ interface Props {
   className?: string;
 }
 
-export default function CreatorCard({ data, pendingBadge = false, className = "" }: Props) {
+export default function CreatorPreviewCard({ data, pendingBadge = false, className = "" }: Props) {
   const initial = (data.display_name || data.username || "?").slice(0, 1).toUpperCase();
   const verified = data.verification_status === "verified";
   return (
