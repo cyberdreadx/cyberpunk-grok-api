@@ -4,6 +4,7 @@ import { getDb } from "../_lib/db";
 import { signToken } from "../_lib/auth";
 import { generateVerificationCode, sendVerificationEmail } from "../_lib/email";
 import { checkRateLimit, getClientIp } from "../_lib/ratelimit";
+import { isDisposableEmail } from "../_lib/disposable-domains";
 /** Basic email format validation. */
 function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
