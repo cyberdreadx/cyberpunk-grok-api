@@ -110,6 +110,7 @@ interface BankData {
     status: string;
     createdAt: string;
   }>;
+  warnings?: Array<{ code: string; message: string }>;
 }
 
 interface XrgeBankDialogProps {
