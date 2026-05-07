@@ -365,8 +365,28 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
           {error && (
             <div className="mt-3 flex items-start gap-2 border border-destructive/40 bg-destructive/10 rounded-lg px-3 py-2.5">
               <AlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
-              <p className="font-mono-share text-xs text-destructive leading-relaxed flex-1">{error}</p>
+              <div className="flex-1 space-y-1.5">
+                <p className="font-mono-share text-xs text-destructive leading-relaxed">{error}</p>
+                <button
+                  onClick={() => fetchBalance()}
+                  className="font-mono-share text-[11px] uppercase tracking-wider text-destructive/80 hover:text-destructive underline underline-offset-2"
+                >
+                  Try again
+                </button>
+              </div>
               <button onClick={() => setError(null)} className="text-destructive/60 hover:text-destructive">✕</button>
+            </div>
+          )}
+
+          {/* Soft warnings (partial degradation) */}
+          {data?.warnings?.length > 0 && (
+            <div className="mt-3 space-y-1.5">
+              {data.warnings.map((w: { code: string; message: string }) => (
+                <div key={w.code} className="flex items-start gap-2 border border-amber-500/40 bg-amber-500/10 rounded-lg px-3 py-2">
+                  <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                  <p className="font-mono-share text-xs text-amber-200 leading-relaxed flex-1">{w.message}</p>
+                </div>
+              ))}
             </div>
           )}
 
