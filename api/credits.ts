@@ -34,6 +34,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const u = rows[0];
     const has_purchased = !!u.stripe_customer_id || !!u.subscription_tier || parseFloat(u.xrge_lifetime_spend || "0") > 0;
     const creditDiscountPct = await getCombinedCreditDiscountPct(auth.userId);
+    const fcConfig = await getFreeCreditsConfig();
     return res.status(200).json({
       daily_credits: u.daily_credits,
       sub_credits: u.sub_credits,
