@@ -653,6 +653,15 @@ export default function ApplyPage() {
           )}
         </section>
       </main>
+      {cropTarget && (
+        <CropDialog
+          open={!!cropTarget}
+          imageUrl={cropTarget.uploadedUrl || cropTarget.previewUrl}
+          aspect={1}
+          onClose={() => setCropTargetId(null)}
+          onCropped={(blob) => applyCrop(cropTarget.id, blob)}
+        />
+      )}
     </CyberLayout>
   );
 }
