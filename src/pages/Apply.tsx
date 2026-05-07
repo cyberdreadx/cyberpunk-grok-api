@@ -556,8 +556,6 @@ export default function ApplyPage() {
                   </div>
                 </div>
               )}
-                </div>
-              )}
 
               <div className="flex justify-between pt-2">
                 <Button variant="ghost" disabled={step === 0} onClick={() => setStep((s) => Math.max(0, s - 1))}>
