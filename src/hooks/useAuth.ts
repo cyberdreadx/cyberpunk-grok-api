@@ -106,9 +106,11 @@ export function useAuth() {
     };
   }, [user, refreshUser]);
 
-  const signUp = useCallback(async (email: string, password: string, referralCode?: string) => {
+  const signUp = useCallback(async (email: string, password: string, referralCode?: string, captcha?: { token: string; answer: string }) => {
     const body: Record<string, string> = { email, password };
     if (referralCode) body.referral_code = referralCode;
+    if (captcha?.token) body.captcha_token = captcha.token;
+    if (captcha?.answer) body.captcha_answer = captcha.answer;
     try { body.device_fingerprint = getBrowserFingerprint(); } catch { /* non-fatal */ }
     const data = await apiFetch<{ token: string; user: AuthUser; email_verified: boolean; needsVerification: boolean }>("/auth/signup", {
       method: "POST",
