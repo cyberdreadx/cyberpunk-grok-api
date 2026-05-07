@@ -1146,6 +1146,43 @@ export default function Admin() {
 
   useEffect(() => { fetchFreeCredits(); }, [fetchFreeCredits]);
 
+  // ── Creator applications queue ─────────────────────────────────
+  interface CreatorApp {
+    id: string; email: string; handle: string; display_name: string; country: string | null;
+    socials: any; pitch: string; niche: string | null; languages: string | null;
+    sample_urls: string[]; payout_pref: string; status: string; created_at: string;
+  }
+  const [caStatus, setCaStatus] = useState<"pending" | "approved" | "rejected">("pending");
+  const [caList, setCaList] = useState<CreatorApp[] | null>(null);
+  const [caBusy, setCaBusy] = useState<string | null>(null);
+
+  const fetchCreatorApps = useCallback(async (status: "pending" | "approved" | "rejected") => {
+    setCaList(null);
+    try {
+      const r = await apiFetch<{ applications: CreatorApp[] }>("/creator-applications", {
+        method: "POST", body: { action: "list", status },
+      });
+      setCaList(r.applications || []);
+    } catch {
+      setCaList([]);
+    }
+  }, []);
+
+  const reviewCreatorApp = useCallback(async (id: string, decision: "approve" | "reject") => {
+    setCaBusy(id);
+    try {
+      await apiFetch("/creator-applications", { method: "POST", body: { action: "review", id, decision } });
+      setCaList((l) => l ? l.filter((a) => a.id !== id) : l);
+    } catch (e: any) {
+      alert(e?.message || "Failed");
+    } finally {
+      setCaBusy(null);
+    }
+  }, []);
+
+  useEffect(() => { fetchCreatorApps(caStatus); }, [caStatus, fetchCreatorApps]);
+
+
 
 
   // Feed moderators
