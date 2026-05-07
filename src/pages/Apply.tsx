@@ -88,9 +88,24 @@ export default function ApplyPage() {
   // ── Photo upload state ────────────────────────────────────────
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [cropTargetId, setCropTargetId] = useState<string | null>(null);
   const photosUploading = photos.some((p) => p.status === "uploading");
   const photosDone = photos.filter((p) => p.status === "done");
   const photosErrored = photos.filter((p) => p.status === "error");
+  const cropTarget = photos.find((p) => p.id === cropTargetId) || null;
+
+  const applyCrop = async (id: string, blob: Blob) => {
+    const orig = photos.find((p) => p.id === id);
+    if (!orig) return;
+    const ext = blob.type === "image/png" ? "png" : "jpg";
+    const baseName = orig.file.name.replace(/\.[^.]+$/, "");
+    const file = new File([blob], `${baseName}-cropped.${ext}`, { type: blob.type });
+    const previewUrl = URL.createObjectURL(blob);
+    URL.revokeObjectURL(orig.previewUrl);
+    const updated: PhotoItem = { ...orig, file, previewUrl, status: "pending", progress: 0, uploadedUrl: undefined, error: undefined };
+    setPhotos((prev) => prev.map((p) => (p.id === id ? updated : p)));
+    void uploadOne(updated);
+  };
 
   // Revoke object URLs on unmount/replace
   useEffect(() => {
