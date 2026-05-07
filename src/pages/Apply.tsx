@@ -366,6 +366,56 @@ export default function ApplyPage() {
               </div>
             </div>
           ) : (
+            <>
+            {/* Live preview — visible on every step */}
+            <div className="mb-5">
+              <div className="font-orbitron text-[10px] tracking-widest text-secondary/80 mb-2">
+                // LIVE PREVIEW · /CREATORS CARD
+              </div>
+              <div className="border border-dashed border-border/40 rounded-lg p-3 bg-background/40">
+                <div className="grid grid-cols-[140px,1fr] gap-3 items-stretch">
+                  <div className="border border-border/40 rounded-lg overflow-hidden bg-card/40">
+                    <div className="aspect-square bg-muted/20 flex items-center justify-center overflow-hidden relative">
+                      {primaryPhoto?.uploadedUrl ? (
+                        <img
+                          src={primaryPhoto.uploadedUrl}
+                          alt={form.display_name || form.handle || "preview"}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span className="font-orbitron text-3xl text-muted-foreground/40">
+                          {(form.display_name || form.handle || "?").slice(0, 1).toUpperCase()}
+                        </span>
+                      )}
+                      <span className="absolute top-1 left-1 font-mono-share text-[8px] tracking-widest px-1.5 py-0.5 rounded bg-background/70 text-secondary border border-secondary/40">
+                        VERIFIED SOON
+                      </span>
+                    </div>
+                    <div className="p-2 space-y-0.5">
+                      <div className="flex items-center gap-1 font-orbitron text-[11px] truncate">
+                        {form.display_name || "Display name"}
+                        <ShieldCheck className="w-3 h-3 text-secondary/60 shrink-0" />
+                      </div>
+                      <div className="font-mono-share text-[9px] text-muted-foreground truncate">
+                        @{form.handle || "handle"}
+                      </div>
+                      {form.niche && (
+                        <div className="font-mono-share text-[9px] text-secondary/70 truncate">{form.niche}</div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="font-mono-share text-[10px] text-muted-foreground/80 leading-relaxed flex flex-col justify-center">
+                    <p>Updates live as you fill the form. This is exactly how subscribers will discover you.</p>
+                    {photosDone.length === 0 && (
+                      <p className="mt-1 text-amber-400/80">No photo yet — initial placeholder shown.</p>
+                    )}
+                    {form.pitch && (
+                      <p className="mt-1 line-clamp-2 text-foreground/70">"{form.pitch}"</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
             <div className="border border-border/40 rounded-lg p-5 sm:p-6 bg-card/40 space-y-5">
               {/* Step indicator */}
               <div className="flex items-center justify-between gap-1">
@@ -600,55 +650,6 @@ export default function ApplyPage() {
 
               {step === 5 && (
                 <div className="space-y-4 font-mono-share text-[11px] text-muted-foreground">
-                  {/* Live preview of /creators grid card */}
-                  <div>
-                    <div className="font-orbitron text-[10px] tracking-widest text-secondary/80 mb-2">
-                      // PREVIEW · HOW YOU'LL APPEAR ON /CREATORS
-                    </div>
-                    <div className="border border-dashed border-border/40 rounded-lg p-4 bg-background/40">
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                        <div className="border border-border/40 rounded-lg overflow-hidden bg-card/40 hover:border-secondary/60 transition-colors">
-                          <div className="aspect-square bg-muted/20 flex items-center justify-center overflow-hidden relative">
-                            {primaryPhoto?.uploadedUrl ? (
-                              <img
-                                src={primaryPhoto.uploadedUrl}
-                                alt={form.display_name || form.handle || "preview"}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <span className="font-orbitron text-3xl text-muted-foreground/40">
-                                {(form.display_name || form.handle || "?").slice(0, 1).toUpperCase()}
-                              </span>
-                            )}
-                            <span className="absolute top-1 left-1 font-mono-share text-[8px] tracking-widest px-1.5 py-0.5 rounded bg-background/70 text-secondary border border-secondary/40">
-                              VERIFIED SOON
-                            </span>
-                          </div>
-                          <div className="p-3 space-y-1">
-                            <div className="flex items-center gap-1 font-orbitron text-xs truncate">
-                              {form.display_name || "Display name"}
-                              <ShieldCheck className="w-3 h-3 text-secondary/60 shrink-0" />
-                            </div>
-                            <div className="font-mono-share text-[10px] text-muted-foreground truncate">
-                              @{form.handle || "handle"}
-                            </div>
-                            {form.niche && (
-                              <div className="font-mono-share text-[9px] text-secondary/70 truncate">{form.niche}</div>
-                            )}
-                          </div>
-                        </div>
-                        <div className="hidden sm:flex flex-col justify-center font-mono-share text-[10px] text-muted-foreground/70 col-span-2">
-                          <p className="leading-relaxed">
-                            This is exactly how subscribers will discover you in the public directory once approved. The verified badge unlocks after ID + age verification.
-                          </p>
-                          {photosDone.length === 0 && (
-                            <p className="mt-2 text-amber-400/80">No photo uploaded — your card will show an initial placeholder.</p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
                   <p>Review and submit. By submitting you agree to the creator terms, content rules, and acknowledge that approval requires ID + age verification.</p>
                   <div className="border border-border/40 rounded p-3 space-y-1 text-foreground">
                     <div><span className="text-muted-foreground">Handle:</span> @{form.handle}</div>
@@ -674,6 +675,7 @@ export default function ApplyPage() {
                 )}
               </div>
             </div>
+            </>
           )}
         </section>
       </main>
