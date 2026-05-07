@@ -1543,6 +1543,9 @@ export default function Admin() {
           </>
         )}
 
+        {/* ═══ INSIGHTS TAB ═══ */}
+        {activeTab === "insights" && <AdminInsightsPanel />}
+
         {/* ═══ REVENUE TAB ═══ */}
         {activeTab === "revenue" && (
           <>
