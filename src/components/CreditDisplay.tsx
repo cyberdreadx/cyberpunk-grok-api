@@ -334,15 +334,33 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
 
           {/* Free credits maintenance banner */}
           {freeCreditsDisabled && (
-            <div className="mt-4 border border-yellow-500/30 bg-yellow-500/5 rounded-lg px-3 py-3 text-center">
-              <p className="font-orbitron text-[11px] tracking-widest text-yellow-400 uppercase">
-                ⚠ Free credits paused
-              </p>
-              <p className="font-mono-share text-[10px] text-muted-foreground mt-1.5 leading-relaxed">
-                {maintenanceMessage || "Free credits are temporarily down for maintenance updates. Paid credit packs and subscriptions are unaffected."}
-              </p>
+            <div className="mt-4 border border-yellow-500/30 bg-yellow-500/5 rounded-lg px-3 py-3 space-y-2.5">
+              <div className="text-center">
+                <p className="font-orbitron text-[11px] tracking-widest text-yellow-400 uppercase">
+                  ⚠ Free credits paused
+                </p>
+                <p className="font-mono-share text-[10px] text-muted-foreground mt-1.5 leading-relaxed">
+                  {maintenanceMessage || "Daily free credits, the spin wheel, and daily missions are temporarily off. Paid packs and subscriptions are unaffected."}
+                </p>
+              </div>
+              <div className="border-t border-yellow-500/20 pt-2.5">
+                <p className="font-orbitron text-[10px] tracking-wider text-orange-400 uppercase mb-1.5 text-center">
+                  🎯 You can still earn free credits
+                </p>
+                <ul className="font-mono-share text-[10px] text-muted-foreground/90 leading-relaxed space-y-1">
+                  <li className="flex gap-2">
+                    <span className="text-orange-400 shrink-0">▸</span>
+                    <span>Post a generation to <span className="text-orange-400 font-bold">r/grok</span> or <span className="text-orange-400 font-bold">r/GrokRunner</span> and grab the secret reward code from the pinned post — <span className="text-yellow-400 font-bold">+10 credits</span> (one-time per account).</span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="text-orange-400 shrink-0">▸</span>
+                    <span>Use the <span className="text-orange-400 font-bold">"Share on Reddit"</span> action in the share dialog — your post link counts toward future rewards.</span>
+                  </li>
+                </ul>
+              </div>
             </div>
           )}
+
 
           {/* Spin Wheel Section — hidden during maintenance */}
           {!freeCreditsDisabled && (
