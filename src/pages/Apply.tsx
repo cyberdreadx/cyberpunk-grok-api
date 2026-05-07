@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { Loader2, Sparkles, DollarSign, ShieldCheck, Globe2, ChevronRight, Check, Upload, X, ImagePlus, AlertCircle } from "lucide-react";
+import { Loader2, Sparkles, DollarSign, ShieldCheck, Globe2, ChevronRight, Check, Upload, X, ImagePlus, AlertCircle, Crop as CropIcon } from "lucide-react";
 import { upload } from "@vercel/blob/client";
+import CropDialog from "@/components/CropDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -87,9 +88,24 @@ export default function ApplyPage() {
   // ── Photo upload state ────────────────────────────────────────
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [cropTargetId, setCropTargetId] = useState<string | null>(null);
   const photosUploading = photos.some((p) => p.status === "uploading");
   const photosDone = photos.filter((p) => p.status === "done");
   const photosErrored = photos.filter((p) => p.status === "error");
+  const cropTarget = photos.find((p) => p.id === cropTargetId) || null;
+
+  const applyCrop = async (id: string, blob: Blob) => {
+    const orig = photos.find((p) => p.id === id);
+    if (!orig) return;
+    const ext = blob.type === "image/png" ? "png" : "jpg";
+    const baseName = orig.file.name.replace(/\.[^.]+$/, "");
+    const file = new File([blob], `${baseName}-cropped.${ext}`, { type: blob.type });
+    const previewUrl = URL.createObjectURL(blob);
+    URL.revokeObjectURL(orig.previewUrl);
+    const updated: PhotoItem = { ...orig, file, previewUrl, status: "pending", progress: 0, uploadedUrl: undefined, error: undefined };
+    setPhotos((prev) => prev.map((p) => (p.id === id ? updated : p)));
+    void uploadOne(updated);
+  };
 
   // Revoke object URLs on unmount/replace
   useEffect(() => {
@@ -501,15 +517,28 @@ export default function ApplyPage() {
                               <div className="h-full bg-secondary transition-all" style={{ width: `${p.progress}%` }} />
                             </div>
                           )}
-                          {/* Remove */}
-                          <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); removePhoto(p.id); }}
-                            className="absolute top-1 right-1 bg-background/80 hover:bg-destructive hover:text-background rounded-full p-1 transition-colors"
-                            aria-label="Remove"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
+                          {/* Actions */}
+                          <div className="absolute top-1 right-1 flex gap-1">
+                            {p.status === "done" && (
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); setCropTargetId(p.id); }}
+                                className="bg-background/80 hover:bg-secondary hover:text-background rounded-full p-1 transition-colors"
+                                aria-label="Crop"
+                                title="Crop"
+                              >
+                                <CropIcon className="w-3 h-3" />
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); removePhoto(p.id); }}
+                              className="bg-background/80 hover:bg-destructive hover:text-background rounded-full p-1 transition-colors"
+                              aria-label="Remove"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -624,6 +653,15 @@ export default function ApplyPage() {
           )}
         </section>
       </main>
+      {cropTarget && (
+        <CropDialog
+          open={!!cropTarget}
+          imageUrl={cropTarget.previewUrl || cropTarget.uploadedUrl || ""}
+          aspect={1}
+          onClose={() => setCropTargetId(null)}
+          onCropped={(blob) => applyCrop(cropTarget.id, blob)}
+        />
+      )}
     </CyberLayout>
   );
 }
