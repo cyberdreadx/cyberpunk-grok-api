@@ -14,7 +14,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getDb } from "./_lib/db";
 import { getResend, getFromAddress, buildDailyCreditsHtml } from "./_lib/email";
-import { freeCreditsDisabled } from "./_lib/freeCredits";
+import { isSourceDisabled } from "./_lib/freeCredits";
 
 const DAILY_BASE = 10;
 const BATCH_SIZE = 100;
@@ -28,7 +28,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    if (await freeCreditsDisabled()) {
+    if (await isSourceDisabled("daily")) {
       console.log("[cron-reset-daily] Skipped — free credits disabled");
       return res.status(200).json({
         success: true,

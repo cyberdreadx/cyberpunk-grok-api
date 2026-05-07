@@ -3,7 +3,7 @@ import { getDb } from "./_lib/db";
 import { getUserFromRequest } from "./_lib/auth";
 import { applyCors } from "./_lib/cors";
 import { checkRateLimit } from "./_lib/ratelimit";
-import { freeCreditsDisabled, FREE_CREDITS_MAINTENANCE_MESSAGE } from "./_lib/freeCredits";
+import { getFreeCreditsConfig, FREE_CREDITS_MAINTENANCE_MESSAGE } from "./_lib/freeCredits";
 import { getCombinedCreditDiscountPct } from "./_lib/discount";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -34,6 +34,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const u = rows[0];
     const has_purchased = !!u.stripe_customer_id || !!u.subscription_tier || parseFloat(u.xrge_lifetime_spend || "0") > 0;
     const creditDiscountPct = await getCombinedCreditDiscountPct(auth.userId);
+    const fcConfig = await getFreeCreditsConfig();
     return res.status(200).json({
       daily_credits: u.daily_credits,
       sub_credits: u.sub_credits,
@@ -46,8 +47,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       credit_discount_pct: creditDiscountPct,
       lora_unlocked: u.lora_unlocked,
       has_purchased,
-      free_credits_disabled: await freeCreditsDisabled(),
-      maintenance_message: (await freeCreditsDisabled()) ? FREE_CREDITS_MAINTENANCE_MESSAGE : null,
+      free_credits_disabled: !fcConfig.daily && !fcConfig.spin && !fcConfig.missions,
+      free_credits_sources: { daily: fcConfig.daily, spin: fcConfig.spin, missions: fcConfig.missions },
+      maintenance_message: (!fcConfig.daily && !fcConfig.spin && !fcConfig.missions) ? FREE_CREDITS_MAINTENANCE_MESSAGE : null,
     });
   } catch (err: any) {
     console.error("[credits]", err.message);

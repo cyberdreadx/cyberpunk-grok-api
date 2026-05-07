@@ -1109,16 +1109,20 @@ export default function Admin() {
   const [granting, setGranting] = useState(false);
   const [grantResult, setGrantResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
-  // Free credits kill switch
+  // Free credits per-source kill switch
+  type FcState = {
+    master: boolean; daily: boolean; spin: boolean; missions: boolean;
+    reddit: boolean; envForcedDisabled: boolean; envEnabled: boolean;
+  };
   const [fcLoading, setFcLoading] = useState(false);
-  const [fcSaving, setFcSaving] = useState(false);
-  const [fcState, setFcState] = useState<{ enabled: boolean; source: string; envForcedDisabled: boolean; envEnabled: boolean } | null>(null);
+  const [fcSaving, setFcSaving] = useState<string | null>(null); // key being saved
+  const [fcState, setFcState] = useState<FcState | null>(null);
   const [fcResult, setFcResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
   const fetchFreeCredits = useCallback(async () => {
     setFcLoading(true);
     try {
-      const res = await apiFetch<{ enabled: boolean; source: string; envForcedDisabled: boolean; envEnabled: boolean }>("/admin/free-credits");
+      const res = await apiFetch<FcState>("/admin/free-credits");
       setFcState(res);
     } catch (err: any) {
       setFcResult({ ok: false, msg: err.message || "Failed to load" });
@@ -1127,7 +1131,21 @@ export default function Admin() {
     }
   }, []);
 
+  const updateFreeCreditSource = useCallback(async (key: "master" | "daily" | "spin" | "missions", enabled: boolean) => {
+    setFcSaving(key); setFcResult(null);
+    try {
+      const res = await apiFetch<FcState & { ok: boolean }>("/admin/free-credits", { method: "POST", body: { [key]: enabled } });
+      setFcState((s) => s ? { ...s, ...res } : s);
+      setFcResult({ ok: true, msg: `${key.toUpperCase()} ${enabled ? "ENABLED" : "DISABLED"}` });
+    } catch (err: any) {
+      setFcResult({ ok: false, msg: err.message || "Failed" });
+    } finally {
+      setFcSaving(null);
+    }
+  }, []);
+
   useEffect(() => { fetchFreeCredits(); }, [fetchFreeCredits]);
+
 
 
   // Feed moderators
@@ -1740,74 +1758,67 @@ export default function Admin() {
                 FREE_CREDITS_SWITCH
               </h2>
               <p className="font-mono-share text-[10px] text-muted-foreground/70 leading-relaxed">
-                Master toggle for free-credit sources: daily reset, spin wheel, and daily missions.
-                Reddit posting reward is <span className="text-secondary">always active</span> and not affected.
+                Toggle each free-credit source independently. Reddit posting reward is <span className="text-secondary">always on</span> and cannot be disabled here.
               </p>
               {fcLoading || !fcState ? (
                 <div className="font-mono-share text-[10px] text-muted-foreground/60">Loading…</div>
               ) : (
-                <div className="space-y-2">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <div className={`font-mono-share text-[10px] px-2 py-1 rounded border ${fcState.enabled ? "bg-green-500/10 border-green-500/30 text-green-400" : "bg-amber-500/10 border-amber-500/30 text-amber-400"}`}>
-                      {fcState.enabled ? "● ENABLED" : "○ DISABLED"}
-                    </div>
-                    <span className="font-mono-share text-[9px] text-muted-foreground/60">
-                      source: {fcState.source}
-                    </span>
-                  </div>
+                <div className="space-y-3">
                   {fcState.envForcedDisabled && (
                     <div className="font-mono-share text-[10px] px-2 py-1.5 rounded bg-destructive/10 border border-destructive/30 text-destructive">
-                      ⚠ FREE_CREDITS_DISABLED env var is set — UI toggle is overridden. Unset it in Vercel to use this switch.
+                      ⚠ FREE_CREDITS_DISABLED env var is set — all sources are forced OFF and UI toggles are ignored. Unset it in Vercel to use these switches.
                     </div>
                   )}
+                  <div className="grid gap-2">
+                    {([
+                      { key: "master", label: "MASTER (default for unset sources)", value: fcState.master, locked: false },
+                      { key: "daily", label: "Daily credit refill (cron)", value: fcState.daily, locked: false },
+                      { key: "spin", label: "Free spin wheel", value: fcState.spin, locked: false },
+                      { key: "missions", label: "Daily missions + streak bonus", value: fcState.missions, locked: false },
+                      { key: "reddit", label: "Reddit posting reward (always on)", value: true, locked: true },
+                    ] as const).map((row) => {
+                      const saving = fcSaving === row.key;
+                      const disabled = row.locked || saving || fcState.envForcedDisabled;
+                      return (
+                        <div key={row.key} className="flex items-center justify-between gap-3 border border-border/40 rounded px-3 py-2 bg-background/40">
+                          <div className="flex-1 min-w-0">
+                            <div className="font-mono-share text-[11px] text-foreground truncate">{row.label}</div>
+                            <div className={`font-mono-share text-[9px] ${row.value ? "text-green-400" : "text-amber-400"}`}>
+                              {row.value ? "● ENABLED" : "○ DISABLED"}
+                              {row.locked && <span className="text-muted-foreground/60 ml-1">(locked)</span>}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <Button
+                              variant="outline" size="sm"
+                              disabled={disabled || row.value}
+                              className="font-mono-share text-[10px] h-7 px-2 gap-1 border-green-500/40 hover:bg-green-500/10 text-green-400"
+                              onClick={() => !row.locked && updateFreeCreditSource(row.key as any, true)}
+                            >
+                              {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : "ON"}
+                            </Button>
+                            <Button
+                              variant="outline" size="sm"
+                              disabled={disabled || !row.value}
+                              className="font-mono-share text-[10px] h-7 px-2 gap-1 border-amber-500/40 hover:bg-amber-500/10 text-amber-400"
+                              onClick={() => !row.locked && updateFreeCreditSource(row.key as any, false)}
+                            >
+                              {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : "OFF"}
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                   <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={fcSaving || fcState.envForcedDisabled || fcState.enabled}
-                      className="font-mono-share text-xs gap-1.5 border-green-500/40 hover:bg-green-500/10 text-green-400"
-                      onClick={async () => {
-                        setFcSaving(true); setFcResult(null);
-                        try {
-                          await apiFetch("/admin/free-credits", { method: "POST", body: { enabled: true } });
-                          setFcResult({ ok: true, msg: "Free credits ENABLED globally." });
-                          fetchFreeCredits();
-                        } catch (err: any) {
-                          setFcResult({ ok: false, msg: err.message || "Failed" });
-                        } finally { setFcSaving(false); }
-                      }}
-                    >
-                      {fcSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
-                      ENABLE
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={fcSaving || (!fcState.envForcedDisabled && !fcState.enabled)}
-                      className="font-mono-share text-xs gap-1.5 border-amber-500/40 hover:bg-amber-500/10 text-amber-400"
-                      onClick={async () => {
-                        setFcSaving(true); setFcResult(null);
-                        try {
-                          await apiFetch("/admin/free-credits", { method: "POST", body: { enabled: false } });
-                          setFcResult({ ok: true, msg: "Free credits DISABLED globally." });
-                          fetchFreeCredits();
-                        } catch (err: any) {
-                          setFcResult({ ok: false, msg: err.message || "Failed" });
-                        } finally { setFcSaving(false); }
-                      }}
-                    >
-                      {fcSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Shield className="w-3 h-3" />}
-                      DISABLE
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      disabled={fcLoading}
+                    <Button variant="ghost" size="sm" disabled={fcLoading}
                       className="font-mono-share text-xs gap-1.5 text-muted-foreground"
-                      onClick={fetchFreeCredits}
-                    >
+                      onClick={fetchFreeCredits}>
                       REFRESH
                     </Button>
+                    <p className="font-mono-share text-[9px] text-muted-foreground/50">
+                      Per-source values override MASTER. Reddit posting is permanently on.
+                    </p>
                   </div>
                   {fcResult && (
                     <div className={`font-mono-share text-[10px] px-2 py-1.5 rounded ${fcResult.ok ? "bg-green-500/10 text-green-400" : "bg-destructive/10 text-destructive"}`}>
