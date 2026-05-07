@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Loader2 } from "lucide-react";
 import CyberLayout from "@/components/CyberLayout";
 import { Button } from "@/components/ui/button";
 import CreatorPreviewCard from "@/components/CreatorPreviewCard";
+import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api";
 
 interface Creator {
@@ -38,7 +38,26 @@ export default function CreatorsDirectory() {
         </div>
 
         {list === null ? (
-          <div className="flex justify-center py-12"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
+          <div
+            className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3"
+            aria-busy
+            aria-label="Loading creators"
+          >
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div
+                key={i}
+                className="border border-border/40 rounded-lg overflow-hidden bg-card/40"
+                style={{ animationDelay: `${i * 60}ms` }}
+              >
+                <Skeleton className="aspect-square w-full rounded-none bg-muted/30" />
+                <div className="p-3 space-y-1.5">
+                  <Skeleton className="h-3 w-3/4 bg-muted/30" />
+                  <Skeleton className="h-2 w-1/2 bg-muted/20" />
+                  <Skeleton className="h-2 w-1/3 bg-muted/15" />
+                </div>
+              </div>
+            ))}
+          </div>
         ) : list.length === 0 ? (
           <div className="border border-border/40 rounded-lg p-8 text-center bg-card/30">
             <p className="font-mono-share text-sm text-muted-foreground mb-3">No featured creators yet — be the first.</p>
