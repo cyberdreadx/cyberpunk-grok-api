@@ -1109,16 +1109,20 @@ export default function Admin() {
   const [granting, setGranting] = useState(false);
   const [grantResult, setGrantResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
-  // Free credits kill switch
+  // Free credits per-source kill switch
+  type FcState = {
+    master: boolean; daily: boolean; spin: boolean; missions: boolean;
+    reddit: boolean; envForcedDisabled: boolean; envEnabled: boolean;
+  };
   const [fcLoading, setFcLoading] = useState(false);
-  const [fcSaving, setFcSaving] = useState(false);
-  const [fcState, setFcState] = useState<{ enabled: boolean; source: string; envForcedDisabled: boolean; envEnabled: boolean } | null>(null);
+  const [fcSaving, setFcSaving] = useState<string | null>(null); // key being saved
+  const [fcState, setFcState] = useState<FcState | null>(null);
   const [fcResult, setFcResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
   const fetchFreeCredits = useCallback(async () => {
     setFcLoading(true);
     try {
-      const res = await apiFetch<{ enabled: boolean; source: string; envForcedDisabled: boolean; envEnabled: boolean }>("/admin/free-credits");
+      const res = await apiFetch<FcState>("/admin/free-credits");
       setFcState(res);
     } catch (err: any) {
       setFcResult({ ok: false, msg: err.message || "Failed to load" });
@@ -1127,7 +1131,21 @@ export default function Admin() {
     }
   }, []);
 
+  const updateFreeCreditSource = useCallback(async (key: "master" | "daily" | "spin" | "missions", enabled: boolean) => {
+    setFcSaving(key); setFcResult(null);
+    try {
+      const res = await apiFetch<FcState & { ok: boolean }>("/admin/free-credits", { method: "POST", body: { [key]: enabled } });
+      setFcState((s) => s ? { ...s, ...res } : s);
+      setFcResult({ ok: true, msg: `${key.toUpperCase()} ${enabled ? "ENABLED" : "DISABLED"}` });
+    } catch (err: any) {
+      setFcResult({ ok: false, msg: err.message || "Failed" });
+    } finally {
+      setFcSaving(null);
+    }
+  }, []);
+
   useEffect(() => { fetchFreeCredits(); }, [fetchFreeCredits]);
+
 
 
   // Feed moderators
