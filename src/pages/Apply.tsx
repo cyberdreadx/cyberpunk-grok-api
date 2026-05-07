@@ -84,19 +84,129 @@ export default function ApplyPage() {
   const updateSocial = (k: keyof FormState["socials"], v: string) =>
     setForm((f) => ({ ...f, socials: { ...f.socials, [k]: v } }));
 
+  // ── Photo upload state ────────────────────────────────────────
+  const [photos, setPhotos] = useState<PhotoItem[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const photosUploading = photos.some((p) => p.status === "uploading");
+  const photosDone = photos.filter((p) => p.status === "done");
+  const photosErrored = photos.filter((p) => p.status === "error");
+
+  // Revoke object URLs on unmount/replace
+  useEffect(() => {
+    return () => {
+      photos.forEach((p) => URL.revokeObjectURL(p.previewUrl));
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const validateFile = (f: File): string | null => {
+    if (!ACCEPTED_TYPES.includes(f.type)) return "Only PNG, JPEG, or WebP";
+    if (f.size > MAX_PHOTO_BYTES) return `Max ${Math.round(MAX_PHOTO_BYTES / 1024 / 1024)}MB`;
+    if (f.size < 1024) return "File too small";
+    return null;
+  };
+
+  const uploadOne = async (item: PhotoItem) => {
+    setPhotos((prev) => prev.map((p) => p.id === item.id ? { ...p, status: "uploading", progress: 5, error: undefined } : p));
+    try {
+      if (!user) throw new Error("Sign in required to upload photos");
+      const authToken = localStorage.getItem("auth-token") || "";
+      if (!authToken) throw new Error("Not authenticated");
+      const ext = item.file.type === "image/png" ? "png" : item.file.type === "image/webp" ? "webp" : "jpg";
+      const path = `creator-applications/sample.${ext}`;
+      const result = await upload(path, item.file, {
+        access: "public",
+        handleUploadUrl: `${apiUrl("")}/blob-upload`,
+        clientPayload: authToken,
+        onUploadProgress: ({ percentage }) => {
+          setPhotos((prev) => prev.map((p) =>
+            p.id === item.id ? { ...p, progress: Math.max(5, Math.min(99, percentage)) } : p
+          ));
+        },
+      });
+      setPhotos((prev) => prev.map((p) =>
+        p.id === item.id ? { ...p, status: "done", progress: 100, uploadedUrl: result.url } : p
+      ));
+    } catch (e: any) {
+      setPhotos((prev) => prev.map((p) =>
+        p.id === item.id ? { ...p, status: "error", error: e?.message || "Upload failed" } : p
+      ));
+    }
+  };
+
+  const addFiles = (files: FileList | File[]) => {
+    if (!user) {
+      toast({ title: "Sign in required", description: "Create an account before uploading photos.", variant: "destructive" });
+      return;
+    }
+    const incoming = Array.from(files);
+    const remaining = MAX_PHOTOS - photos.length;
+    if (remaining <= 0) {
+      toast({ title: "Photo limit reached", description: `Max ${MAX_PHOTOS} photos.`, variant: "destructive" });
+      return;
+    }
+    const slice = incoming.slice(0, remaining);
+    const next: PhotoItem[] = [];
+    for (const f of slice) {
+      const err = validateFile(f);
+      if (err) {
+        toast({ title: `Skipped ${f.name}`, description: err, variant: "destructive" });
+        continue;
+      }
+      next.push({
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        file: f,
+        previewUrl: URL.createObjectURL(f),
+        status: "pending",
+        progress: 0,
+      });
+    }
+    if (next.length === 0) return;
+    setPhotos((prev) => [...prev, ...next]);
+    next.forEach((item) => { void uploadOne(item); });
+  };
+
+  const removePhoto = (id: string) => {
+    setPhotos((prev) => {
+      const target = prev.find((p) => p.id === id);
+      if (target) URL.revokeObjectURL(target.previewUrl);
+      return prev.filter((p) => p.id !== id);
+    });
+  };
+
+  const retryPhoto = (id: string) => {
+    const item = photos.find((p) => p.id === id);
+    if (item) void uploadOne(item);
+  };
+
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (e.dataTransfer.files?.length) addFiles(e.dataTransfer.files);
+  };
+
   const canNext = () => {
     if (step === 0) return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)
       && /^[a-zA-Z0-9_]{3,24}$/.test(form.handle)
       && form.display_name.trim().length >= 2
       && form.age_confirmed;
     if (step === 2) return form.pitch.trim().length >= 30;
+    if (step === 3) return !photosUploading && photosDone.length >= 1 && photosErrored.length === 0;
     return true;
   };
 
   const submit = async () => {
+    if (photosUploading) {
+      toast({ title: "Uploads in progress", description: "Wait for photos to finish." });
+      return;
+    }
     setSubmitting(true);
     try {
-      await apiFetch("/creator-applications", { method: "POST", body: form, auth: !!user });
+      const sample_urls = photosDone.map((p) => p.uploadedUrl!).filter(Boolean);
+      await apiFetch("/creator-applications", {
+        method: "POST",
+        body: { ...form, sample_urls },
+        auth: !!user,
+      });
       setDone(true);
     } catch (e: any) {
       toast({ title: "Submission failed", description: e?.message || "Try again", variant: "destructive" });
@@ -104,6 +214,7 @@ export default function ApplyPage() {
       setSubmitting(false);
     }
   };
+
 
   return (
     <CyberLayout>
