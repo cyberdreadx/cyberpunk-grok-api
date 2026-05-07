@@ -421,6 +421,111 @@ export default function ApplyPage() {
 
               {step === 3 && (
                 <div className="space-y-3">
+                  <p className="font-mono-share text-[11px] text-muted-foreground leading-relaxed">
+                    Upload {MIN_PHOTOS_RECOMMENDED}–{MAX_PHOTOS} reference photos so we can confirm identity and build your AI persona. Clear face shots, varied angles. PNG/JPEG/WebP, max 8MB each.
+                  </p>
+                  {!user && (
+                    <div className="flex items-start gap-2 border border-amber-400/40 bg-amber-400/5 rounded p-2 font-mono-share text-[10px] text-amber-300">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                      Sign in to upload — uploads are tied to your account.
+                    </div>
+                  )}
+
+                  {/* Dropzone */}
+                  <div
+                    onDrop={onDrop}
+                    onDragOver={(e) => e.preventDefault()}
+                    onClick={() => fileInputRef.current?.click()}
+                    role="button"
+                    tabIndex={0}
+                    className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+                      photos.length >= MAX_PHOTOS || !user
+                        ? "border-border/30 bg-muted/10 cursor-not-allowed opacity-60"
+                        : "border-secondary/40 bg-secondary/5 hover:border-secondary"
+                    }`}
+                  >
+                    <ImagePlus className="w-7 h-7 mx-auto text-secondary mb-2" />
+                    <div className="font-orbitron text-xs">
+                      {photos.length >= MAX_PHOTOS ? "PHOTO LIMIT REACHED" : "DROP PHOTOS OR CLICK TO BROWSE"}
+                    </div>
+                    <div className="font-mono-share text-[10px] text-muted-foreground mt-1">
+                      {photos.length} / {MAX_PHOTOS} uploaded
+                    </div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept={ACCEPTED_TYPES.join(",")}
+                      multiple
+                      hidden
+                      disabled={!user || photos.length >= MAX_PHOTOS}
+                      onChange={(e) => {
+                        if (e.target.files?.length) addFiles(e.target.files);
+                        e.target.value = "";
+                      }}
+                    />
+                  </div>
+
+                  {/* Previews */}
+                  {photos.length > 0 && (
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                      {photos.map((p) => (
+                        <div key={p.id} className="relative group border border-border/40 rounded overflow-hidden bg-background/40 aspect-square">
+                          <img src={p.previewUrl} alt="" className="w-full h-full object-cover" />
+                          {/* Status overlay */}
+                          {p.status === "uploading" && (
+                            <div className="absolute inset-0 bg-background/70 backdrop-blur-sm flex flex-col items-center justify-center gap-1">
+                              <Loader2 className="w-4 h-4 animate-spin text-secondary" />
+                              <div className="font-mono-share text-[9px] text-secondary">{Math.round(p.progress)}%</div>
+                            </div>
+                          )}
+                          {p.status === "done" && (
+                            <div className="absolute top-1 left-1 bg-green-500/90 rounded-full p-0.5">
+                              <Check className="w-3 h-3 text-background" />
+                            </div>
+                          )}
+                          {p.status === "error" && (
+                            <div className="absolute inset-0 bg-destructive/80 flex flex-col items-center justify-center gap-1 p-1 text-center">
+                              <AlertCircle className="w-4 h-4 text-background" />
+                              <div className="font-mono-share text-[8px] text-background line-clamp-2">{p.error}</div>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); retryPhoto(p.id); }}
+                                className="font-mono-share text-[9px] underline text-background"
+                              >
+                                Retry
+                              </button>
+                            </div>
+                          )}
+                          {/* Progress bar */}
+                          {p.status === "uploading" && (
+                            <div className="absolute bottom-0 left-0 right-0 h-1 bg-background/60">
+                              <div className="h-full bg-secondary transition-all" style={{ width: `${p.progress}%` }} />
+                            </div>
+                          )}
+                          {/* Remove */}
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); removePhoto(p.id); }}
+                            className="absolute top-1 right-1 bg-background/80 hover:bg-destructive hover:text-background rounded-full p-1 transition-colors"
+                            aria-label="Remove"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between font-mono-share text-[10px]">
+                    <span className={photosDone.length >= MIN_PHOTOS_RECOMMENDED ? "text-green-400" : "text-muted-foreground"}>
+                      {photosDone.length} uploaded · {MIN_PHOTOS_RECOMMENDED} recommended
+                    </span>
+                    {photosUploading && <span className="text-secondary flex items-center gap-1"><Upload className="w-3 h-3" /> uploading…</span>}
+                  </div>
+                </div>
+              )}
+
+              {step === 4 && (
+                <div className="space-y-3">
                   <Label className="font-mono-share text-[11px]">Preferred payout method</Label>
                   <div className="grid sm:grid-cols-2 gap-2">
                     {(["stripe", "xrge"] as const).map((p) => (
@@ -440,14 +545,17 @@ export default function ApplyPage() {
                 </div>
               )}
 
-              {step === 4 && (
+              {step === 5 && (
                 <div className="space-y-3 font-mono-share text-[11px] text-muted-foreground">
                   <p>Review and submit. By submitting you agree to the creator terms, content rules, and acknowledge that approval requires ID + age verification.</p>
                   <div className="border border-border/40 rounded p-3 space-y-1 text-foreground">
                     <div><span className="text-muted-foreground">Handle:</span> @{form.handle}</div>
                     <div><span className="text-muted-foreground">Email:</span> {form.email}</div>
+                    <div><span className="text-muted-foreground">Photos:</span> {photosDone.length} uploaded</div>
                     <div><span className="text-muted-foreground">Payout:</span> {form.payout_pref}</div>
                   </div>
+                </div>
+              )}
                 </div>
               )}
 
