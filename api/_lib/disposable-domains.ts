@@ -5357,6 +5357,9 @@ export const DISPOSABLE_DOMAINS = new Set<string>([
   "zzi.us",
   "zzrgg.com",
   "zzz.com",
+  // Manually added — observed signup abuse
+  "minitts.net",
+  "imashr.com",
 ]);
 
 /**
