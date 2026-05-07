@@ -1758,8 +1758,7 @@ export default function Admin() {
                 FREE_CREDITS_SWITCH
               </h2>
               <p className="font-mono-share text-[10px] text-muted-foreground/70 leading-relaxed">
-                Master toggle for free-credit sources: daily reset, spin wheel, and daily missions.
-                Reddit posting reward is <span className="text-secondary">always active</span> and not affected.
+                Toggle each free-credit source independently. Reddit posting reward is <span className="text-secondary">always on</span> and cannot be disabled here.
               </p>
               {fcLoading || !fcState ? (
                 <div className="font-mono-share text-[10px] text-muted-foreground/60">Loading…</div>
