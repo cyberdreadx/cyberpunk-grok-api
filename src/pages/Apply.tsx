@@ -208,7 +208,10 @@ export default function ApplyPage() {
               <p className="font-mono-share text-[12px] text-muted-foreground">
                 We'll email <span className="text-foreground">{form.email}</span> with the next steps within 48 hours. If approved, you'll be invited to complete ID verification and set up your monetization.
               </p>
-              <Link to="/"><Button variant="outline" size="sm">Back to feed</Button></Link>
+              <div className="flex flex-wrap gap-2 justify-center">
+                <Link to="/apply/status"><Button size="sm">View status</Button></Link>
+                <Link to="/"><Button variant="outline" size="sm">Back to feed</Button></Link>
+              </div>
             </div>
           ) : (
             <div className="border border-border/40 rounded-lg p-5 sm:p-6 bg-card/40 space-y-5">
