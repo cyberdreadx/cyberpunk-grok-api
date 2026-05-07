@@ -22,6 +22,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!isValidEmail(email)) {
       return res.status(400).json({ error: "Invalid email format" });
     }
+    if (isDisposableEmail(email)) {
+      return res.status(400).json({ error: "Disposable email addresses are not allowed. Please use a permanent email." });
+    }
     if (password.length < 6) {
       return res.status(400).json({ error: "Password must be at least 6 characters" });
     }
