@@ -128,10 +128,11 @@ function CyberTooltip({ active, payload, label }: any) {
 
 // ── Tab Definitions ──
 
-type TabId = "overview" | "revenue" | "users" | "usage" | "moderation" | "referrals" | "payouts" | "emails" | "api" | "system" | "flash-sales";
+type TabId = "overview" | "insights" | "revenue" | "users" | "usage" | "moderation" | "referrals" | "payouts" | "emails" | "api" | "system" | "flash-sales";
 
 const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
   { id: "overview", label: "OVERVIEW", icon: <Eye className="w-3.5 h-3.5" /> },
+  { id: "insights", label: "INSIGHTS", icon: <Sparkles className="w-3.5 h-3.5" /> },
   { id: "revenue", label: "REVENUE", icon: <DollarSign className="w-3.5 h-3.5" /> },
   { id: "users", label: "USERS", icon: <Users className="w-3.5 h-3.5" /> },
   { id: "usage", label: "USAGE", icon: <BarChart3 className="w-3.5 h-3.5" /> },
