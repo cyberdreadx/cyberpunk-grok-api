@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { Loader2, Sparkles, DollarSign, ShieldCheck, Globe2, ChevronRight, Check, Upload, X, ImagePlus, AlertCircle, Crop as CropIcon } from "lucide-react";
+import { Loader2, Sparkles, DollarSign, ShieldCheck, Globe2, ChevronRight, Check, Upload, X, ImagePlus, AlertCircle, Crop as CropIcon, Star } from "lucide-react";
 import { upload } from "@vercel/blob/client";
 import CropDialog from "@/components/CropDialog";
 import { Button } from "@/components/ui/button";
@@ -87,12 +87,15 @@ export default function ApplyPage() {
 
   // ── Photo upload state ────────────────────────────────────────
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
+  const [primaryId, setPrimaryId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [cropTargetId, setCropTargetId] = useState<string | null>(null);
   const photosUploading = photos.some((p) => p.status === "uploading");
   const photosDone = photos.filter((p) => p.status === "done");
   const photosErrored = photos.filter((p) => p.status === "error");
   const cropTarget = photos.find((p) => p.id === cropTargetId) || null;
+  const primaryPhoto =
+    photosDone.find((p) => p.id === primaryId) || photosDone[0] || null;
 
   const applyCrop = async (id: string, blob: Blob) => {
     const orig = photos.find((p) => p.id === id);
@@ -188,6 +191,7 @@ export default function ApplyPage() {
       if (target) URL.revokeObjectURL(target.previewUrl);
       return prev.filter((p) => p.id !== id);
     });
+    setPrimaryId((cur) => (cur === id ? null : cur));
   };
 
   const retryPhoto = (id: string) => {
@@ -217,7 +221,10 @@ export default function ApplyPage() {
     }
     setSubmitting(true);
     try {
-      const sample_urls = photosDone.map((p) => p.uploadedUrl!).filter(Boolean);
+      const ordered = primaryPhoto
+        ? [primaryPhoto, ...photosDone.filter((p) => p.id !== primaryPhoto.id)]
+        : photosDone;
+      const sample_urls = ordered.map((p) => p.uploadedUrl!).filter(Boolean);
       await apiFetch("/creator-applications", {
         method: "POST",
         body: { ...form, sample_urls },
@@ -485,7 +492,7 @@ export default function ApplyPage() {
                   {photos.length > 0 && (
                     <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                       {photos.map((p) => (
-                        <div key={p.id} className="relative group border border-border/40 rounded overflow-hidden bg-background/40 aspect-square">
+                        <div key={p.id} className={`relative group border rounded overflow-hidden bg-background/40 aspect-square ${primaryPhoto?.id === p.id ? "border-secondary ring-2 ring-secondary/40" : "border-border/40"}`}>
                           <img src={p.previewUrl} alt="" className="w-full h-full object-cover" />
                           {/* Status overlay */}
                           {p.status === "uploading" && (
@@ -494,7 +501,13 @@ export default function ApplyPage() {
                               <div className="font-mono-share text-[9px] text-secondary">{Math.round(p.progress)}%</div>
                             </div>
                           )}
-                          {p.status === "done" && (
+                          {p.status === "done" && primaryPhoto?.id === p.id && (
+                            <div className="absolute top-1 left-1 bg-secondary rounded px-1.5 py-0.5 flex items-center gap-1">
+                              <Star className="w-2.5 h-2.5 text-background fill-background" />
+                              <span className="font-mono-share text-[8px] tracking-widest text-background">PRIMARY</span>
+                            </div>
+                          )}
+                          {p.status === "done" && primaryPhoto?.id !== p.id && (
                             <div className="absolute top-1 left-1 bg-green-500/90 rounded-full p-0.5">
                               <Check className="w-3 h-3 text-background" />
                             </div>
@@ -519,6 +532,17 @@ export default function ApplyPage() {
                           )}
                           {/* Actions */}
                           <div className="absolute top-1 right-1 flex gap-1">
+                            {p.status === "done" && primaryPhoto?.id !== p.id && (
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); setPrimaryId(p.id); }}
+                                className="bg-background/80 hover:bg-secondary hover:text-background rounded-full p-1 transition-colors"
+                                aria-label="Set as primary"
+                                title="Set as primary"
+                              >
+                                <Star className="w-3 h-3" />
+                              </button>
+                            )}
                             {p.status === "done" && (
                               <button
                                 type="button"
@@ -585,9 +609,9 @@ export default function ApplyPage() {
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                         <div className="border border-border/40 rounded-lg overflow-hidden bg-card/40 hover:border-secondary/60 transition-colors">
                           <div className="aspect-square bg-muted/20 flex items-center justify-center overflow-hidden relative">
-                            {photosDone[0]?.uploadedUrl ? (
+                            {primaryPhoto?.uploadedUrl ? (
                               <img
-                                src={photosDone[0].uploadedUrl}
+                                src={primaryPhoto.uploadedUrl}
                                 alt={form.display_name || form.handle || "preview"}
                                 className="w-full h-full object-cover"
                               />
