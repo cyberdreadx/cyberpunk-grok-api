@@ -1,21 +1,26 @@
 /**
- * Subscription discount helper.
+ * Subscription + XRGE holder discount helpers.
  *
- * Subscriptions no longer grant monthly credits; instead, while a user has
- * `subscription_discount_pct > 0` set on their row, every credit cost is
- * reduced by that percentage. Minimum cost is 1 credit (so we never bill 0
- * for a real generation, which would also break refund logic).
+ * Subscriptions: while `subscription_discount_pct > 0`, credit costs are reduced.
+ * Holder tiers (see api/v1/_lib/xrge-holder.ts): additional discount stacks
+ * multiplicatively with subscription — combined equivalent pct:
+ *   combined = 100 - (100 - sub) * (100 - holder) / 100
+ * Minimum cost stays 1 credit for paid actions (refund-safe).
  *
  * Pack purchases by subscribers get equivalent value via bonus credits in
  * the webhook (see api/webhook.ts).
  */
 
 import { getDb } from "./db";
+import { getHolderState } from "../v1/_lib/xrge-holder";
 
 const cache = new Map<string, { pct: number; expires: number }>();
+const combinedCache = new Map<string, { pct: number; expires: number }>();
 const TTL_MS = 30_000;
 
-/** Fetch and briefly cache a user's active discount %. 0 if no sub. */
+/**
+ * Subscription-only discount %. For combined sub + holder use getCombinedCreditDiscountPct.
+ */
 export async function getUserDiscountPct(userId: string): Promise<number> {
   const now = Date.now();
   const hit = cache.get(userId);
@@ -35,6 +40,31 @@ export async function getUserDiscountPct(userId: string): Promise<number> {
   }
 }
 
+/**
+ * Effective credit discount % after stacking subscription + XRGE holder tier
+ * (multiplicative). Cached briefly like subscription pct.
+ */
+export async function getCombinedCreditDiscountPct(userId: string): Promise<number> {
+  const now = Date.now();
+  const hit = combinedCache.get(userId);
+  if (hit && hit.expires > now) return hit.pct;
+
+  const sub = await getUserDiscountPct(userId);
+  let holderPct = 0;
+  try {
+    const sql = getDb();
+    const holder = await getHolderState(sql, userId);
+    if (holder?.tier.id !== "none") holderPct = holder.effectiveDiscount;
+  } catch (e: any) {
+    console.warn("[discount] getHolderState failed:", e?.message);
+  }
+
+  const combined = 100 - (100 - sub) * (100 - holderPct) / 100;
+  const pct = Math.max(0, Math.min(95, Math.round(combined * 10) / 10));
+  combinedCache.set(userId, { pct, expires: now + TTL_MS });
+  return pct;
+}
+
 /** Apply discount, never go below 1 credit for paid actions. */
 export function applyDiscount(cost: number, pct: number): number {
   if (cost <= 0) return cost;
@@ -43,13 +73,14 @@ export function applyDiscount(cost: number, pct: number): number {
   return Math.max(1, reduced);
 }
 
-/** One-shot: resolve user's pct and return discounted cost. */
+/** One-shot: resolve combined pct and return discounted cost. */
 export async function discountedCost(userId: string, cost: number): Promise<{ cost: number; pct: number; original: number }> {
-  const pct = await getUserDiscountPct(userId);
+  const pct = await getCombinedCreditDiscountPct(userId);
   return { cost: applyDiscount(cost, pct), pct, original: cost };
 }
 
-/** Invalidate cache (call after sub changes via webhook if endpoint allows). */
+/** Invalidate caches (call after subscription or holder tier changes). */
 export function invalidateDiscount(userId: string) {
   cache.delete(userId);
+  combinedCache.delete(userId);
 }

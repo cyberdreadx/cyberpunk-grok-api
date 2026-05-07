@@ -22,7 +22,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getUserFromApiKey } from "../_lib/apikey-auth";
 import { checkRateLimit } from "../_lib/ratelimit";
 import { getDb } from "../_lib/db";
-import { deductCredits, refundCredits, logUsage, getUserCredits, applyDiscountToCost } from "./_lib/credits";
+import { deductCredits, refundCredits, logUsage, getUserCredits, discountedCostForUser } from "./_lib/credits";
 
 const XAI_BASE = "https://api.x.ai/v1";
 
@@ -89,7 +89,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       const n = Math.min(Math.max(parseInt(body.n) || 1, 1), 4);
       const responseFormat = body.response_format === "b64_json" ? "b64_json" : "url";
-      const totalCost = applyDiscountToCost((IMAGE_CREDIT_COSTS[model] || 2) * n, user);
+      const totalCost = await discountedCostForUser(
+        auth.userId,
+        (IMAGE_CREDIT_COSTS[model] || 2) * n,
+      );
 
       if (available < totalCost) {
         return res.status(402).json({ error: "Insufficient credits", required: totalCost, available, topUp: "https://grokrunner.gltch.app" });
@@ -125,7 +128,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // ═══════════════════════════════════════════════════════════════════
     if (type === "video") {
       const duration = body.duration === 10 ? 10 : 5;
-      const totalCost = applyDiscountToCost(CREDITS_PER_VIDEO_SECOND * duration, user);
+      const totalCost = await discountedCostForUser(auth.userId, CREDITS_PER_VIDEO_SECOND * duration);
       const imageUrl = (body.image_url as string || "").trim();
 
       if (available < totalCost) {

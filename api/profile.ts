@@ -22,6 +22,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           SELECT p.user_id, p.username, p.avatar_url, p.bio, p.created_at,
                  u.email, p.wallet_address,
                  u.verification_status, u.verification_renews_at,
+                 u.holder_tier, u.holder_tier_since, u.last_snapshot_total,
                  (SELECT count(*)::int FROM follows WHERE following_id = p.user_id) AS followers,
                  (SELECT count(*)::int FROM follows WHERE follower_id = p.user_id) AS following,
                  (SELECT count(*)::int FROM feed_posts WHERE user_id = p.user_id) AS post_count
@@ -33,6 +34,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           SELECT p.user_id, p.username, p.avatar_url, p.bio, p.created_at,
                  u.email, p.wallet_address,
                  u.verification_status, u.verification_renews_at,
+                 u.holder_tier, u.holder_tier_since, u.last_snapshot_total,
                  (SELECT count(*)::int FROM follows WHERE following_id = p.user_id) AS followers,
                  (SELECT count(*)::int FROM follows WHERE follower_id = p.user_id) AS following,
                  (SELECT count(*)::int FROM feed_posts WHERE user_id = p.user_id) AS post_count
@@ -52,6 +54,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           SELECT p.user_id, p.username, p.avatar_url, p.bio, p.created_at,
                  u.email, p.wallet_address,
                  u.verification_status, u.verification_renews_at,
+                 u.holder_tier, u.holder_tier_since, u.last_snapshot_total,
                  (SELECT count(*)::int FROM follows WHERE following_id = p.user_id) AS followers,
                  (SELECT count(*)::int FROM follows WHERE follower_id = p.user_id) AS following,
                  (SELECT count(*)::int FROM feed_posts WHERE user_id = p.user_id) AS post_count
@@ -85,6 +88,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         (p.verification_status === "verified" &&
           (!p.verification_renews_at || new Date(p.verification_renews_at) > new Date()));
 
+      // Holder tier — public on every profile (social proof of long-term holders)
+      const holderTier = p.holder_tier || "none";
+      let holderStreakDays = 0;
+      if (p.holder_tier_since && holderTier !== "none") {
+        const since = new Date(p.holder_tier_since).getTime();
+        if (!Number.isNaN(since)) {
+          holderStreakDays = Math.max(0, Math.floor((Date.now() - since) / (1000 * 60 * 60 * 24)));
+        }
+      }
+      const holderTotalHeld = parseFloat(p.last_snapshot_total) || 0;
+
       return res.json({
         userId: p.user_id,
         username: p.username,
@@ -101,6 +115,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         isBanned,
         banReason,
         verified: isVerifiedActive,
+        holderTier,
+        holderStreakDays,
+        // Public total only shown if tier > none
+        holderTotalHeld: holderTier === "none" ? null : holderTotalHeld,
       });
     } catch (err: any) {
       console.error("[profile GET]", err.message);

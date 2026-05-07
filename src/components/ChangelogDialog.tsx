@@ -7,7 +7,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Zap, ImagePlus, Film, Download, Sparkles, Bug, FolderOpen, Smartphone, Share2, Users, Clock, Link2, ExternalLink, ShieldAlert, Camera, Wrench, Shield, Search, Globe, Trash2, Tag, BookOpen, Code, HelpCircle, Eye } from "lucide-react";
+import { Zap, ImagePlus, Film, Download, Sparkles, Bug, FolderOpen, Smartphone, Share2, Users, Clock, Link2, ExternalLink, ShieldAlert, Camera, Wrench, Shield, Search, Globe, Trash2, Tag, BookOpen, Code, HelpCircle, Eye, Gem, Wallet } from "lucide-react";
 
 /* ─── Changelog entries ─── */
 // Bump APP_BUILD in src/lib/version.ts when deploying.
@@ -23,6 +23,19 @@ interface ChangelogEntry {
 }
 
 const CHANGELOG: ChangelogEntry[] = [
+    {
+        version: "2026.05.06",
+        date: "May 6, 2026",
+        title: "v4.9 — XRGE Holders, Real Discounts & Security",
+        items: [
+            { icon: <Gem className="w-3.5 h-3.5" />, text: "XRGE Holder program — tiers based on wallet + bank holdings (Initiate through Architect), daily on-chain snapshots, and streak multipliers for long-term holders", tag: "new" },
+            { icon: <Wallet className="w-3.5 h-3.5" />, text: "XRGE Bank — new Holder tab: bind your Base wallet without a deposit, view tier ladder, streak milestones, and combined on-chain + custodial balance", tag: "new" },
+            { icon: <Users className="w-3.5 h-3.5" />, text: "Holder badge on your profile when you qualify — visible to everyone for social proof", tag: "new" },
+            { icon: <Zap className="w-3.5 h-3.5" />, text: "Discounts that actually apply — holder tier stacks multiplicatively with subscription savings on credit generation (app, SEEDANCE, GLTCH PRO, and public API)", tag: "new" },
+            { icon: <Clock className="w-3.5 h-3.5" />, text: "Daily free credits — still 10 base for verified accounts; Operative+ holders get extra dailies from tier and continuous-hold streak", tag: "improve" },
+            { icon: <Shield className="w-3.5 h-3.5" />, text: "ComfyUI billing hardened — chained-workflow free steps locked to the Z-Image start-frame path only, with per-user rate limits", tag: "fix" },
+        ],
+    },
     {
         version: "2026.04.23",
         date: "April 23, 2026",

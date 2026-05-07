@@ -5,7 +5,7 @@
 ![Banner](public/og-image.png)
 
 **Live:** [grokrunner.gltch.app](https://grokrunner.gltch.app)
-**Current version:** v4.7 (2026.04.20)
+**Current version:** v4.9 (2026.05.06)
 
 ## ✨ What it does
 
@@ -27,13 +27,12 @@ A cyberpunk-themed app for generating, editing, and sharing AI media. It bundles
 - **GLTCH** (default) — fast and balanced
 - **GROK** (xAI) — official xAI Imagine pipeline
 
-## 🆕 Recent highlights (v4.7)
+## 🆕 Recent highlights (v4.9)
 
-- **Auto-purge media** — deleting a post, story, avatar, or shared result also removes the file from Vercel Blob storage
-- **Owner-only share takedowns** — `share_owners` table tracks creators, with admin backfill for legacy shares
-- **Weekly orphan-cleanup cron** — sweeps Blob storage for files no longer referenced by any post, story, profile, or share
-- **Stable creator-feed pagination** — secondary cursor key prevents stalls on tied rank scores
-- **End-of-feed indicator** — clear "You're all caught up" marker
+- **XRGE Holder program** — tiers from holding XRGE (wallet + bank), daily snapshots, streak multipliers; Holder tab in XRGE Bank and profile badge
+- **Discounts that bill correctly** — holder savings stack with subscription discounts on generations (including SEEDANCE and the public API)
+- **Daily credits** — 10 base for verified users plus extra dailies for Operative+ tiers based on streak
+- **ComfyUI billing fix** — chained free steps restricted to the Z-Image start-frame workflow with rate limits
 
 See the in-app **Changelog** dialog for the full history.
 

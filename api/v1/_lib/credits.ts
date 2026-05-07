@@ -2,10 +2,10 @@
  * Shared credit helpers for v1 API endpoints.
  *
  * Uses GREATEST(..., 0) on UPDATE to prevent negative credits from race conditions.
- * Also exposes `applyDiscountToCost` so v1 endpoints can honor active subscriptions.
+ * Discounts stack subscription + XRGE holder tier via getCombinedCreditDiscountPct.
  */
 
-import { applyDiscount } from "../../_lib/discount";
+import { applyDiscount, getCombinedCreditDiscountPct } from "../../_lib/discount";
 
 export interface CreditDeduction {
   dDaily: number;
@@ -14,11 +14,10 @@ export interface CreditDeduction {
 }
 
 /**
- * Apply the user's active subscription discount to a base cost.
- * `user` row should already include `subscription_discount_pct`.
+ * Apply subscription + holder tier discount to a base credit cost.
  */
-export function applyDiscountToCost(baseCost: number, user: any): number {
-  const pct = Math.max(0, Math.min(95, parseInt(user?.subscription_discount_pct ?? 0, 10) || 0));
+export async function discountedCostForUser(userId: string, baseCost: number): Promise<number> {
+  const pct = await getCombinedCreditDiscountPct(userId);
   return applyDiscount(baseCost, pct);
 }
 

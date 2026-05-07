@@ -1,7 +1,7 @@
 /**
  * GET /api/v1/xrge-balance
- * Returns the user's XRGE bank balance, loyalty tier, lifetime spend,
- * recent transactions, and deposit address.
+ * Returns the user's XRGE bank balance, loyalty tier (spend-based),
+ * holder tier (hold-based), recent transactions, and deposit address.
  *
  * Auth: X-API-Key or Authorization: Bearer JWT.
  */
@@ -12,6 +12,7 @@ import { getUserFromApiKey } from "../_lib/apikey-auth";
 import { getUserFromRequest } from "../_lib/auth";
 import { getXrgeConfig } from "../_lib/xrge";
 import { getBankUser, getTierForSpend, getNextTier, LOYALTY_TIERS } from "./_lib/xrge-bank";
+import { getHolderState, HOLDER_TIERS, STREAK_BONUSES } from "./_lib/xrge-holder";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -51,6 +52,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ORDER BY created_at DESC
     `;
 
+    // Holder tier (hold-based, separate from spend-based loyalty)
+    const holder = await getHolderState(sql, userId);
+
     return res.status(200).json({
       bankBalance: user.bankBalance,
       lifetimeSpend: user.lifetimeSpend,
@@ -68,6 +72,35 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       walletAddress: user.walletAddress,
       depositAddress: config.depositAddress,
       xrgeUsdRate: config.usdRate,
+      // ── Holder tier block ──────────────────────────────────────────
+      holder: holder ? {
+        tier: holder.tier.id,
+        tierName: holder.tier.name,
+        tierRank: holder.tier.rank,
+        discountPercent: holder.tier.discountPercent,
+        dailyCreditBonus: holder.tier.dailyCreditBonus,
+        description: holder.tier.description,
+        totalHeld: holder.totalHeld,
+        walletBalance: holder.walletBalance,
+        bankBalance: holder.bankBalance,
+        walletAddress: holder.walletAddress,
+        streakDays: holder.streakDays,
+        streakBonus: holder.streakBonus,
+        effectiveDiscount: holder.effectiveDiscount,
+        effectiveDailyBonus: holder.effectiveDailyBonus,
+        lastSnapshotAt: holder.lastSnapshotAt,
+        nextTier: holder.nextTier ? {
+          id: holder.nextTier.id,
+          name: holder.nextTier.name,
+          rank: holder.nextTier.rank,
+          minHeld: holder.nextTier.minHeld,
+          discountPercent: holder.nextTier.discountPercent,
+          dailyCreditBonus: holder.nextTier.dailyCreditBonus,
+          xrgeRemaining: holder.spendToNext,
+        } : null,
+        allTiers: HOLDER_TIERS,
+        streakBonuses: STREAK_BONUSES,
+      } : null,
       transactions: txns.map((t: any) => ({
         id: t.id,
         type: t.type,

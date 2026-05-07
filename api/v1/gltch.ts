@@ -15,7 +15,7 @@ import { getUserFromApiKey } from "../_lib/apikey-auth";
 import { checkRateLimit } from "../_lib/ratelimit";
 import { getDb } from "../_lib/db";
 import { put, del } from "@vercel/blob";
-import { deductCredits, refundCredits, logUsage, getUserCredits, applyDiscountToCost } from "./_lib/credits";
+import { deductCredits, refundCredits, logUsage, getUserCredits, discountedCostForUser } from "./_lib/credits";
 
 const GLTCH_COST = 5;
 const GLTCH_HD_COST = 7;
@@ -75,7 +75,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const [user] = await sql`SELECT daily_credits, sub_credits, pack_credits, COALESCE(subscription_discount_pct, 0) AS subscription_discount_pct FROM users WHERE id = ${auth.userId}`;
     if (!user) return res.status(404).json({ error: "User not found" });
 
-    const totalCost = applyDiscountToCost(hd ? GLTCH_HD_COST : GLTCH_COST, user);
+    const totalCost = await discountedCostForUser(auth.userId, hd ? GLTCH_HD_COST : GLTCH_COST);
     const available = getUserCredits(user);
     if (available < totalCost) {
       return res.status(402).json({ error: "Insufficient credits", required: totalCost, available });

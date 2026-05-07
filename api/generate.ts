@@ -14,7 +14,7 @@ import jwt from "jsonwebtoken";
 import { getDb } from "./_lib/db";
 import { getUserFromRequest, ADMIN_EMAIL, checkBan } from "./_lib/auth";
 import { checkRateLimit, getClientIp } from "./_lib/ratelimit";
-import { applyDiscount, getUserDiscountPct } from "./_lib/discount";
+import { applyDiscount, getCombinedCreditDiscountPct } from "./_lib/discount";
 
 const XAI_API_BASE = "https://api.x.ai/v1";
 
@@ -347,9 +347,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         tier === "seedance-pro" ? CREDIT_COSTS.seedanceProVideoPerSecond :
         tier === "seedance-fast" ? CREDIT_COSTS.seedanceFastVideoPerSecond :
         CREDIT_COSTS.seedanceVideoPerSecond;
-      const seedCost = perSec * seedDuration;
+      const seedCostRaw = perSec * seedDuration;
       const isAdminSeed = auth.email === ADMIN_EMAIL;
       const adminTestSeed = isAdminSeed && req.body.testCredits === true;
+      const seedDiscountPct = await getCombinedCreditDiscountPct(auth.userId);
+      const seedCost = applyDiscount(seedCostRaw, seedDiscountPct);
 
       // Credit gate
       if (!isAdminSeed || adminTestSeed) {
@@ -488,7 +490,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const isPro = params.model === PRO_MODEL;
     const is2k = params.resolution === "2k";
     const baseCost = calculateCost(action as AllowedAction, imageCount, videoDuration, isPro, is2k);
-    const discountPct = await getUserDiscountPct(auth.userId);
+    const discountPct = await getCombinedCreditDiscountPct(auth.userId);
     const cost = applyDiscount(baseCost, discountPct);
     const isAdminUser = auth.email === ADMIN_EMAIL;
     const adminTestCredits = isAdminUser && req.body.testCredits === true;

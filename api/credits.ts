@@ -4,6 +4,7 @@ import { getUserFromRequest } from "./_lib/auth";
 import { applyCors } from "./_lib/cors";
 import { checkRateLimit } from "./_lib/ratelimit";
 import { freeCreditsDisabled, FREE_CREDITS_MAINTENANCE_MESSAGE } from "./_lib/freeCredits";
+import { getCombinedCreditDiscountPct } from "./_lib/discount";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   applyCors(req, res, "GET, OPTIONS");
@@ -32,6 +33,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const u = rows[0];
     const has_purchased = !!u.stripe_customer_id || !!u.subscription_tier || parseFloat(u.xrge_lifetime_spend || "0") > 0;
+    const creditDiscountPct = await getCombinedCreditDiscountPct(auth.userId);
     return res.status(200).json({
       daily_credits: u.daily_credits,
       sub_credits: u.sub_credits,
@@ -40,6 +42,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       subscription_renews_at: u.subscription_renews_at,
       subscription_cancel_at: u.subscription_cancel_at,
       subscription_discount_pct: u.subscription_discount_pct,
+      /** Subscription + XRGE holder tier, combined (what generation billing uses). */
+      credit_discount_pct: creditDiscountPct,
       lora_unlocked: u.lora_unlocked,
       has_purchased,
       free_credits_disabled: freeCreditsDisabled(),

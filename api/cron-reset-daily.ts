@@ -1,7 +1,10 @@
 /**
- * /api/cron-reset-daily — Reset daily_credits to 10 for all verified users.
+ * /api/cron-reset-daily — Reset daily_credits for all verified users.
  *
- * Runs at midnight UTC via Vercel Cron. No rollover — overwrites to exactly 10.
+ * Runs at midnight UTC via Vercel Cron. No rollover — overwrites each cycle.
+ * Base amount is 10; XRGE holders (operative+) get extra credits from tier +
+ * continuous-hold streak (same rules as api/v1/_lib/xrge-holder.ts).
+ *
  * Secured via CRON_SECRET Bearer token (same pattern as cron-reset-credits).
  *
  * Pass ?notify=true to also send "credits refilled" emails (adds ~60-120s
@@ -13,7 +16,7 @@ import { getDb } from "./_lib/db";
 import { getResend, getFromAddress, buildDailyCreditsHtml } from "./_lib/email";
 import { freeCreditsDisabled } from "./_lib/freeCredits";
 
-const DAILY_AMOUNT = 10;
+const DAILY_BASE = 10;
 const BATCH_SIZE = 100;
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -37,17 +40,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const sql = getDb();
 
-    // 1. Reset credits
+    // 1. Reset daily credits: base + XRGE holder tier bonus (operative / runner / architect)
     const result = await sql`
       UPDATE users
-      SET daily_credits = ${DAILY_AMOUNT},
+      SET daily_credits = (
+        ${DAILY_BASE} + FLOOR(
+          (CASE COALESCE(holder_tier, 'none')
+            WHEN 'operative' THEN 2::numeric
+            WHEN 'runner' THEN 5::numeric
+            WHEN 'architect' THEN 10::numeric
+            ELSE 0::numeric
+          END) *
+          CASE
+            WHEN COALESCE(holder_tier, 'none') IN ('none', 'initiate') THEN 1::numeric
+            WHEN holder_tier_since IS NULL THEN 1::numeric
+            WHEN EXTRACT(EPOCH FROM (now() - holder_tier_since)) / 86400 >= 180 THEN 2::numeric
+            WHEN EXTRACT(EPOCH FROM (now() - holder_tier_since)) / 86400 >= 90 THEN 1.5::numeric
+            WHEN EXTRACT(EPOCH FROM (now() - holder_tier_since)) / 86400 >= 30 THEN 1.25::numeric
+            ELSE 1::numeric
+          END
+        )
+      )::int,
           daily_credits_reset_at = now(),
           updated_at = now()
       WHERE email_verified = true
     `;
 
     const resetCount = (result as any).count ?? 0;
-    console.log(`[cron-reset-daily] Reset ${resetCount} users to ${DAILY_AMOUNT} daily credits`);
+    console.log(`[cron-reset-daily] Reset ${resetCount} users (base ${DAILY_BASE} + holder bonuses where applicable)`);
 
     // 2. Send email notifications only when ?notify=true
     const shouldNotify = req.query.notify === "true";
@@ -63,8 +83,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (users.length > 0) {
           const resend = getResend();
           const fromAddress = getFromAddress();
-          const html = buildDailyCreditsHtml(DAILY_AMOUNT);
-          const subject = `Your ${DAILY_AMOUNT} daily credits are ready`;
+          const html = buildDailyCreditsHtml(DAILY_BASE);
+          const subject = `Your daily credits are ready`;
 
           for (let i = 0; i < users.length; i += BATCH_SIZE) {
             const batch = users.slice(i, i + BATCH_SIZE);
@@ -93,8 +113,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     return res.status(200).json({
       success: true,
+      dailyBase: DAILY_BASE,
       reset: resetCount,
-      dailyAmount: DAILY_AMOUNT,
       notified: shouldNotify,
       emailsSent,
       emailsFailed,

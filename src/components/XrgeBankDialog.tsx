@@ -24,6 +24,10 @@ import {
   Gem,
   Star,
   Award,
+  Diamond,
+  Flame,
+  Trash2,
+  Sparkles,
 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import {
@@ -33,6 +37,44 @@ import {
   basescanAddressUrl,
   basescanTxUrl,
 } from "@/lib/xrgePublic";
+import HolderBadge from "@/components/HolderBadge";
+
+interface HolderTierInfo {
+  id: string;
+  name: string;
+  rank: number;
+  minHeld: number;
+  discountPercent: number;
+  dailyCreditBonus: number;
+  description?: string;
+}
+
+interface StreakBonusInfo {
+  days: number;
+  multiplier: number;
+  label: string;
+}
+
+interface HolderBlock {
+  tier: string;
+  tierName: string;
+  tierRank: number;
+  discountPercent: number;
+  dailyCreditBonus: number;
+  description: string;
+  totalHeld: number;
+  walletBalance: number;
+  bankBalance: number;
+  walletAddress: string | null;
+  streakDays: number;
+  streakBonus: StreakBonusInfo;
+  effectiveDiscount: number;
+  effectiveDailyBonus: number;
+  lastSnapshotAt: string | null;
+  nextTier: (HolderTierInfo & { xrgeRemaining: number }) | null;
+  allTiers: HolderTierInfo[];
+  streakBonuses: StreakBonusInfo[];
+}
 
 interface BankData {
   bankBalance: number;
@@ -51,6 +93,7 @@ interface BankData {
   depositAddress: string;
   xrgeUsdRate: number;
   walletAddress: string | null;
+  holder: HolderBlock | null;
   transactions: Array<{
     id: string;
     type: string;
@@ -75,7 +118,7 @@ interface XrgeBankDialogProps {
   onCreditsRefresh?: () => void;
 }
 
-type Tab = "overview" | "deposit" | "buy" | "withdraw";
+type Tab = "overview" | "holder" | "deposit" | "buy" | "withdraw";
 
 const TIER_ICONS: Record<string, React.ReactNode> = {
   bronze: <Award className="w-4 h-4" />,
@@ -124,6 +167,14 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
   const [withdrawing, setWithdrawing] = useState(false);
   const [withdrawResult, setWithdrawResult] = useState<{ amount: number; status: string } | null>(null);
 
+  // Holder wallet binding state
+  const [walletInput, setWalletInput] = useState("");
+  const [bindingWallet, setBindingWallet] = useState(false);
+  const [walletResult, setWalletResult] = useState<{
+    walletAddress: string;
+    snapshot: { totalHeld: number; tierName: string } | null;
+  } | null>(null);
+
   // Flash sale state
   const [flashSale, setFlashSale] = useState<{ id: string; title: string; discount_percent: number; bonus_credits_percent: number; ends_at: string } | null>(null);
 
@@ -153,6 +204,8 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
       setWithdrawResult(null);
       setWithdrawAmount("");
       setWithdrawAddress("");
+      setWalletInput("");
+      setWalletResult(null);
       // Fetch active flash sales
       apiFetch("/flash-sales").then(r => {
         if (r.sales && r.sales.length > 0) setFlashSale(r.sales[0]);
@@ -160,6 +213,49 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
       }).catch(() => setFlashSale(null));
     }
   }, [open, fetchBalance]);
+
+  const handleBindWallet = async () => {
+    const clean = walletInput.trim().toLowerCase();
+    if (!/^0x[a-f0-9]{40}$/.test(clean)) {
+      setError("Invalid wallet address — must be 0x followed by 40 hex characters");
+      return;
+    }
+    setBindingWallet(true);
+    setError(null);
+    try {
+      const result = await apiFetch("/v1/xrge-wallet", {
+        method: "POST",
+        body: { walletAddress: clean },
+      });
+      setWalletResult({
+        walletAddress: result.walletAddress,
+        snapshot: result.snapshot
+          ? { totalHeld: result.snapshot.totalHeld, tierName: result.snapshot.tier }
+          : null,
+      });
+      setWalletInput("");
+      await fetchBalance();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setBindingWallet(false);
+    }
+  };
+
+  const handleUnbindWallet = async () => {
+    if (!confirm("Unbind your wallet? Your holder tier will reset until you re-bind.")) return;
+    setBindingWallet(true);
+    setError(null);
+    try {
+      await apiFetch("/v1/xrge-wallet", { method: "DELETE" });
+      setWalletResult(null);
+      await fetchBalance();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setBindingWallet(false);
+    }
+  };
 
   const handleDeposit = async () => {
     if (!depositTxHash.trim()) return;
@@ -245,8 +341,9 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
           <div className="flex gap-1 mt-4 bg-input/50 rounded-lg p-1 border border-border/30">
             {([
               { id: "overview" as Tab, label: "Overview", icon: <TrendingUp className="w-3 h-3" /> },
+              { id: "holder" as Tab, label: "Holder", icon: <Diamond className="w-3 h-3" /> },
               { id: "deposit" as Tab, label: "Deposit", icon: <ArrowDownToLine className="w-3 h-3" /> },
-              { id: "buy" as Tab, label: "Buy Credits", icon: <ShoppingCart className="w-3 h-3" /> },
+              { id: "buy" as Tab, label: "Buy", icon: <ShoppingCart className="w-3 h-3" /> },
               { id: "withdraw" as Tab, label: "Withdraw", icon: <ArrowUpFromLine className="w-3 h-3" /> },
             ]).map(t => (
               <button
@@ -388,6 +485,290 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                           </div>
                         ))}
                       </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ── HOLDER ── */}
+              {tab === "holder" && (
+                <div className="mt-4 space-y-4">
+                  {data.holder ? (
+                    <>
+                      {/* Header strap */}
+                      <div className="rounded-lg border border-violet-500/25 bg-gradient-to-br from-violet-950/30 to-pink-950/20 p-4 space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Diamond className="w-4 h-4 text-violet-300" />
+                          <span className="font-orbitron text-[11px] tracking-wider bg-gradient-to-r from-violet-300 to-pink-300 bg-clip-text text-transparent font-bold">
+                            HOLDER_PROTOCOL
+                          </span>
+                          {data.holder.tier !== "none" && (
+                            <span className="ml-auto">
+                              <HolderBadge
+                                tier={data.holder.tier}
+                                tierName={data.holder.tierName}
+                                streakDays={data.holder.streakDays}
+                                size="sm"
+                              />
+                            </span>
+                          )}
+                        </div>
+                        <p className="font-mono-share text-[10px] text-muted-foreground/70 leading-relaxed">
+                          Hold $XRGE in your wallet or bank to unlock recurring perks. Tier perks
+                          compound the longer you hold continuously — sells reset your streak.
+                        </p>
+
+                        {/* Total held card */}
+                        <div className="grid grid-cols-2 gap-2 pt-1">
+                          <div className="rounded border border-violet-500/20 bg-violet-500/5 p-2.5">
+                            <p className="font-mono-share text-[8px] text-muted-foreground/50 uppercase tracking-wider">Wallet</p>
+                            <p className="font-mono-share text-xs text-foreground font-bold mt-0.5">
+                              {data.holder.walletBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                            </p>
+                            <p className="font-mono-share text-[8px] text-muted-foreground/40">XRGE on-chain</p>
+                          </div>
+                          <div className="rounded border border-pink-500/20 bg-pink-500/5 p-2.5">
+                            <p className="font-mono-share text-[8px] text-muted-foreground/50 uppercase tracking-wider">Bank</p>
+                            <p className="font-mono-share text-xs text-foreground font-bold mt-0.5">
+                              {data.holder.bankBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                            </p>
+                            <p className="font-mono-share text-[8px] text-muted-foreground/40">XRGE custodial</p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-baseline gap-2 pt-1 border-t border-violet-500/15">
+                          <span className="font-mono-share text-[9px] text-muted-foreground/50 uppercase tracking-wider">Total Held</span>
+                          <span className="font-orbitron text-base font-black bg-gradient-to-r from-violet-300 to-pink-300 bg-clip-text text-transparent ml-auto">
+                            {data.holder.totalHeld.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                            <span className="text-[10px] ml-1">XRGE</span>
+                          </span>
+                          <span className="font-mono-share text-[9px] text-muted-foreground/40">
+                            ≈ ${(data.holder.totalHeld * data.xrgeUsdRate).toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Active perks summary */}
+                      {data.holder.tier !== "none" && (
+                        <div className="rounded-lg border border-pink-500/25 bg-pink-500/5 p-3 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Sparkles className="w-3.5 h-3.5 text-pink-300" />
+                            <span className="font-orbitron text-[10px] tracking-wider text-pink-300">ACTIVE_PERKS</span>
+                            <span className="ml-auto font-mono-share text-[9px] text-muted-foreground/50">
+                              ×{data.holder.streakBonus.multiplier.toFixed(2)} streak multiplier
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="rounded border border-border/30 bg-card/30 px-2.5 py-2">
+                              <p className="font-mono-share text-[8px] text-muted-foreground/50 uppercase">Gen Discount</p>
+                              <p className="font-mono-share text-base text-green-400 font-bold mt-0.5">
+                                {data.holder.effectiveDiscount}%
+                              </p>
+                              <p className="font-mono-share text-[8px] text-muted-foreground/40">
+                                base {data.holder.discountPercent}% × {data.holder.streakBonus.multiplier.toFixed(2)}
+                              </p>
+                            </div>
+                            <div className="rounded border border-border/30 bg-card/30 px-2.5 py-2">
+                              <p className="font-mono-share text-[8px] text-muted-foreground/50 uppercase">Daily Credits</p>
+                              <p className="font-mono-share text-base text-green-400 font-bold mt-0.5">
+                                +{data.holder.effectiveDailyBonus}
+                              </p>
+                              <p className="font-mono-share text-[8px] text-muted-foreground/40">
+                                on top of standard 10/day
+                              </p>
+                            </div>
+                          </div>
+                          {data.holder.description && (
+                            <p className="font-mono-share text-[9px] text-pink-200/70 leading-relaxed pt-1 border-t border-pink-500/15">
+                              {data.holder.description}
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Streak strip */}
+                      {data.holder.tier !== "none" && (
+                        <div className="rounded-lg border border-orange-500/25 bg-gradient-to-r from-orange-950/20 to-amber-950/10 p-3">
+                          <div className="flex items-center gap-2">
+                            <Flame className={`w-4 h-4 ${data.holder.streakDays >= 30 ? "text-orange-400 drop-shadow-[0_0_6px_rgba(255,140,40,0.6)]" : "text-muted-foreground/40"}`} />
+                            <span className="font-orbitron text-[10px] tracking-wider text-orange-300">
+                              {data.holder.streakBonus.label.toUpperCase()}
+                            </span>
+                            <span className="ml-auto font-mono-share text-xs text-orange-300 font-bold">
+                              {data.holder.streakDays}d
+                            </span>
+                          </div>
+                          <div className="mt-2 grid grid-cols-3 gap-1.5 text-center">
+                            {data.holder.streakBonuses.filter(b => b.days > 0).map(b => {
+                              const reached = data.holder!.streakDays >= b.days;
+                              return (
+                                <div
+                                  key={b.days}
+                                  className={`rounded border px-2 py-1.5 transition-all ${
+                                    reached
+                                      ? "border-orange-500/40 bg-orange-500/10 text-orange-300"
+                                      : "border-border/20 bg-card/20 text-muted-foreground/40"
+                                  }`}
+                                >
+                                  <p className="font-orbitron text-[9px] tracking-wider font-bold">{b.days}d</p>
+                                  <p className="font-mono-share text-[8px]">×{b.multiplier.toFixed(2)}</p>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Tier ladder */}
+                      <div className="space-y-1.5">
+                        <p className="font-orbitron text-[10px] tracking-wider text-muted-foreground/60">TIER_LADDER</p>
+                        <div className="space-y-1">
+                          {data.holder.allTiers
+                            .filter(t => t.id !== "none")
+                            .map(t => {
+                              const isCurrent = t.id === data.holder!.tier;
+                              const reached = (data.holder!.totalHeld) >= t.minHeld;
+                              return (
+                                <div
+                                  key={t.id}
+                                  className={`flex items-center gap-2 rounded border px-2.5 py-2 transition-all ${
+                                    isCurrent
+                                      ? "border-pink-500/40 bg-pink-500/10"
+                                      : reached
+                                      ? "border-violet-500/25 bg-violet-500/5"
+                                      : "border-border/20 bg-card/20 opacity-60"
+                                  }`}
+                                >
+                                  <HolderBadge tier={t.id} tierName={t.name} size="xs" showStreak={false} />
+                                  <div className="flex-1 min-w-0">
+                                    <p className="font-mono-share text-[9px] text-foreground/70 truncate">
+                                      ≥ {t.minHeld >= 1_000_000 ? `${t.minHeld / 1_000_000}M` : t.minHeld.toLocaleString()} XRGE
+                                    </p>
+                                    <p className="font-mono-share text-[8px] text-muted-foreground/50">
+                                      +{t.discountPercent}% discount{t.dailyCreditBonus > 0 && ` · +${t.dailyCreditBonus} daily`}
+                                    </p>
+                                  </div>
+                                  {isCurrent && (
+                                    <span className="font-orbitron text-[8px] tracking-wider text-pink-300">YOU</span>
+                                  )}
+                                </div>
+                              );
+                            })}
+                        </div>
+                      </div>
+
+                      {/* Progress to next tier */}
+                      {data.holder.nextTier && (
+                        <div className="rounded-lg border border-border/30 bg-card/30 p-3 space-y-1.5">
+                          <div className="flex justify-between font-mono-share text-[9px]">
+                            <span className="text-muted-foreground/60">Progress to {data.holder.nextTier.name}</span>
+                            <span className="text-foreground/80">
+                              {data.holder.nextTier.xrgeRemaining.toLocaleString(undefined, { maximumFractionDigits: 0 })} XRGE to go
+                            </span>
+                          </div>
+                          <div className="h-1.5 rounded-full bg-black/30 overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-gradient-to-r from-violet-400 to-pink-400 transition-all duration-700"
+                              style={{
+                                width: `${Math.min(100, Math.max(0, (data.holder.totalHeld / data.holder.nextTier.minHeld) * 100))}%`,
+                              }}
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Wallet binding */}
+                      <div className="rounded-lg border border-cyan-500/20 bg-cyan-500/5 p-3 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Wallet className="w-3.5 h-3.5 text-cyan-300" />
+                          <span className="font-orbitron text-[10px] tracking-wider text-cyan-300">WALLET_BINDING</span>
+                        </div>
+                        {data.holder.walletAddress ? (
+                          <div className="space-y-2">
+                            <p className="font-mono-share text-[10px] text-muted-foreground/70 leading-relaxed">
+                              Bound wallet — on-chain XRGE here counts toward your tier daily.
+                            </p>
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1 bg-input/60 border border-border/30 rounded px-3 py-2 font-mono-share text-[10px] text-foreground/80 truncate select-all">
+                                {data.holder.walletAddress}
+                              </div>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => copyAddress(data.holder!.walletAddress!)}
+                                className="shrink-0 gap-1 border-cyan-500/30 hover:bg-cyan-500/10"
+                              >
+                                {copied ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+                              </Button>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <a
+                                href={basescanAddressUrl(data.holder.walletAddress)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 font-mono-share text-[9px] text-cyan-400/70 hover:text-cyan-400"
+                              >
+                                View on BaseScan <ExternalLink className="w-2.5 h-2.5" />
+                              </a>
+                              <button
+                                onClick={handleUnbindWallet}
+                                disabled={bindingWallet}
+                                className="inline-flex items-center gap-1 font-mono-share text-[9px] text-destructive/70 hover:text-destructive disabled:opacity-50"
+                              >
+                                <Trash2 className="w-2.5 h-2.5" /> Unbind
+                              </button>
+                            </div>
+                            {data.holder.lastSnapshotAt && (
+                              <p className="font-mono-share text-[8px] text-muted-foreground/40">
+                                Last snapshot: {new Date(data.holder.lastSnapshotAt).toLocaleString()}
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <p className="font-mono-share text-[10px] text-muted-foreground/70 leading-relaxed">
+                              Bind your Base wallet to count on-chain XRGE toward your holder tier.
+                              No transactions or signatures required — read-only balance check.
+                            </p>
+                            {walletResult && (
+                              <div className="rounded border border-green-500/30 bg-green-500/10 p-2">
+                                <p className="font-mono-share text-[9px] text-green-300">
+                                  Wallet bound · {walletResult.snapshot
+                                    ? `Snapshot: ${walletResult.snapshot.totalHeld.toLocaleString(undefined, { maximumFractionDigits: 0 })} XRGE held → ${walletResult.snapshot.tierName} tier`
+                                    : "Snapshot pending — check back in a moment"}
+                                </p>
+                              </div>
+                            )}
+                            <Input
+                              value={walletInput}
+                              onChange={e => setWalletInput(e.target.value)}
+                              placeholder="0x... (Base wallet address)"
+                              className="font-mono-share text-xs bg-input/50 border-border/30"
+                            />
+                            <Button
+                              onClick={handleBindWallet}
+                              disabled={bindingWallet || !walletInput.trim()}
+                              className="w-full font-orbitron text-xs tracking-wider bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/30"
+                            >
+                              {bindingWallet ? (
+                                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                              ) : (
+                                <Wallet className="w-4 h-4 mr-2" />
+                              )}
+                              BIND WALLET
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+
+                      <p className="font-mono-share text-[8px] text-muted-foreground/40 leading-relaxed text-center">
+                        Snapshots run daily at 03:10 UTC · holder tiers refresh after each snapshot ·
+                        only your latest snapshot counts toward perks
+                      </p>
+                    </>
+                  ) : (
+                    <div className="text-center py-12 text-muted-foreground/50 font-mono-share text-[10px]">
+                      Holder data unavailable
                     </div>
                   )}
                 </div>

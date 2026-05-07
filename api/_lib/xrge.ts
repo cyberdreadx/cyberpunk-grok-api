@@ -136,6 +136,40 @@ async function rpcCall(rpcUrl: string, method: string, params: any[]): Promise<a
 }
 
 /**
+ * Read an ERC-20 wallet balance for XRGE on Base via eth_call → balanceOf(address).
+ * Returns the balance in wei as a string. Throws on RPC error or invalid address.
+ *
+ * Function selector for balanceOf(address) = first 4 bytes of keccak256("balanceOf(address)")
+ *   = 0x70a08231
+ * Calldata = selector + 32-byte left-padded address (12 zero bytes + 20-byte address)
+ */
+export async function getXrgeBalanceOnChain(
+  address: string,
+  rpcUrl?: string,
+): Promise<string> {
+  const url = rpcUrl || process.env.BASE_RPC_URL || "https://mainnet.base.org";
+  const cleanAddr = address.toLowerCase().replace(/^0x/, "");
+  if (!/^[a-f0-9]{40}$/.test(cleanAddr)) {
+    throw new Error(`Invalid address: ${address}`);
+  }
+  const data = "0x70a08231" + "0".repeat(24) + cleanAddr;
+  const result = await rpcCall(url, "eth_call", [
+    { to: XRGE_CONTRACT, data },
+    "latest",
+  ]);
+  if (typeof result !== "string" || !result.startsWith("0x")) {
+    throw new Error("Invalid balanceOf result from RPC");
+  }
+  // Empty/zero result handling: BigInt("0x") throws; treat as zero.
+  if (result === "0x" || result === "0x0") return "0";
+  try {
+    return BigInt(result).toString();
+  } catch {
+    throw new Error(`Could not parse balanceOf result: ${result}`);
+  }
+}
+
+/**
  * Verify an XRGE transfer on Base chain.
  * Returns transfer details if valid, throws if not.
  */

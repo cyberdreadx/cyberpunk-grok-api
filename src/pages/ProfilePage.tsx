@@ -12,6 +12,7 @@ import { UserPlus, UserMinus, Edit2, Check, X, ArrowLeft, Camera, Loader2, Walle
 import EarningsPanel from "@/components/EarningsPanel";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import VerificationDialog from "@/components/VerificationDialog";
+import HolderBadge from "@/components/HolderBadge";
 import { useToast } from "@/hooks/use-toast";
 import { upload } from "@vercel/blob/client";
 import MobileBottomNav from "@/components/MobileBottomNav";
@@ -35,6 +36,9 @@ interface Profile {
   isBanned?: boolean;
   banReason?: string | null;
   verified?: boolean;
+  holderTier?: string;
+  holderStreakDays?: number;
+  holderTotalHeld?: number | null;
 }
 
 interface FeedPost {
@@ -294,9 +298,23 @@ const ProfilePage: React.FC = () => {
                 </div>
               ) : (
                 <>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <h1 className="font-orbitron text-lg text-foreground truncate">@{profile.username}</h1>
                     {profile.verified && <VerifiedBadge size="md" />}
+                    {profile.holderTier && profile.holderTier !== "none" && (
+                      <HolderBadge
+                        tier={profile.holderTier}
+                        streakDays={profile.holderStreakDays || 0}
+                        size="sm"
+                        title={
+                          profile.holderTotalHeld
+                            ? `${Math.floor(profile.holderTotalHeld).toLocaleString()} XRGE held${
+                                profile.holderStreakDays ? ` · ${profile.holderStreakDays}-day streak` : ""
+                              }`
+                            : undefined
+                        }
+                      />
+                    )}
                     {profile.isBanned && (
                       <span className="px-1.5 py-0.5 bg-destructive/20 text-destructive font-mono-share text-[9px] rounded tracking-wider" title={profile.banReason || undefined}>
                         BANNED

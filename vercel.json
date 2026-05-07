@@ -25,6 +25,10 @@
       "maxDuration": 300,
       "memory": 1024
     },
+    "api/cron-xrge-snapshot.ts": {
+      "maxDuration": 300,
+      "memory": 512
+    },
     "api/v1/generate.ts": {
       "maxDuration": 120,
       "memory": 1024
@@ -64,6 +68,10 @@
     {
       "path": "/api/cron-blob-orphans?confirm=1",
       "schedule": "0 4 * * 0"
+    },
+    {
+      "path": "/api/cron-xrge-snapshot",
+      "schedule": "10 3 * * *"
     }
   ],
   "headers": [

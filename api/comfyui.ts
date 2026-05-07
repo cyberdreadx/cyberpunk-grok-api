@@ -19,7 +19,7 @@ import { put } from "@vercel/blob";
 import { getUserFromRequest, ADMIN_EMAIL, checkBan } from "./_lib/auth";
 import { getDb } from "./_lib/db";
 import { checkRateLimit } from "./_lib/ratelimit";
-import { applyDiscount, getUserDiscountPct } from "./_lib/discount";
+import { applyDiscount, getCombinedCreditDiscountPct } from "./_lib/discount";
 
 // ── Strip data URI prefix and fix base64 padding ───────────────────────
 function cleanBase64(b64: string): string {
@@ -172,6 +172,19 @@ const COMFY_COSTS: Record<string, number> = {
   "gltch-wan-hd": 18,
   "longlook": 20, // flat cost regardless of sequence count
 };
+
+/**
+ * Workflows that may legitimately be invoked with `skipCredits: true`
+ * as the first step of a server-chained pipeline. Currently only the
+ * Z-Image Turbo start-frame for image→video flows
+ * (see useGrokApi.ts where the wan-video step pays for the chain).
+ *
+ * Anything outside this set with `skipCredits: true` is rejected.
+ */
+const SKIPPABLE_WORKFLOWS = new Set<string>(["zimage"]);
+
+/** Per-user rate limit on the skipCredits path (anti-abuse). */
+const SKIP_CREDITS_RATE_LIMIT = { max: 8, windowSeconds: 60 } as const;
 
 /** Flux 2 Klein image edit — canonical `klein`; `qwen-edit` kept for backward compatibility */
 function isKleinEditWorkflow(workflowType: string): boolean {
@@ -2338,9 +2351,42 @@ Rules:
       }
 
       // ── Credit gate (admin is free unless testCredits is set) ──
-      // skipCredits: client passes true for the first step of a chained workflow
-      // (e.g. txt2img as part of text-to-video — the video step pays for both)
-      const skipCredits = req.body.skipCredits === true;
+      // skipCredits: client passes true for the first step of a server-chained
+      // workflow (e.g. zimage start-frame for an image→video render — the
+      // wan-video step pays for both). Restricted to SKIPPABLE_WORKFLOWS
+      // and rate-limited per-user to prevent free-generation abuse.
+      const skipCreditsRequested = req.body.skipCredits === true;
+      let skipCredits = false;
+      if (skipCreditsRequested) {
+        if (!SKIPPABLE_WORKFLOWS.has(workflowType)) {
+          // Reject loudly so client bugs surface and so abuse is blocked.
+          // Admins may still bypass via the existing admin-free path.
+          if (!isAdminUser) {
+            console.warn(
+              `[comfyui] skipCredits rejected for non-skippable workflow "${workflowType}" (user ${auth.userId})`,
+            );
+            return res.status(400).json({
+              error: `skipCredits is not allowed for workflow "${workflowType}"`,
+            });
+          }
+        } else if (!isAdminUser) {
+          const { allowed } = await checkRateLimit(
+            auth.userId,
+            "comfyui-skip-credits",
+            SKIP_CREDITS_RATE_LIMIT,
+          );
+          if (!allowed) {
+            console.warn(`[comfyui] skipCredits rate-limited for user ${auth.userId}`);
+            return res.status(429).json({
+              error: "Too many free-step requests. Please wait a moment.",
+            });
+          }
+          skipCredits = true;
+        } else {
+          // Admin on a skippable workflow — honor the skip
+          skipCredits = true;
+        }
+      }
       const adminTestCredits = isAdminUser && req.body.testCredits === true;
       const costKey = isKleinEditWorkflow(workflowType) && upscale ? "klein-hd"
         : isKleinEditWorkflow(workflowType) ? "klein"
@@ -2349,7 +2395,7 @@ Rules:
       const baseCost = COMFY_COSTS[costKey] ?? 1;
       const audioCost = audioMode === "ambient" ? 1 : 0;
       const rawCost = skipCredits ? 0 : (baseCost + audioCost);
-      const discountPct = rawCost > 0 ? await getUserDiscountPct(auth.userId) : 0;
+      const discountPct = rawCost > 0 ? await getCombinedCreditDiscountPct(auth.userId) : 0;
       const cost = applyDiscount(rawCost, discountPct);
       let creditDeducted = false;
 
