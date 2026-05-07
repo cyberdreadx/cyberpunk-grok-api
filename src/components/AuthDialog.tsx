@@ -20,7 +20,7 @@ interface AuthDialogProps {
   isAuthenticated: boolean;
   userEmail?: string | null;
   onSignIn: (email: string, password: string) => Promise<any>;
-  onSignUp: (email: string, password: string, referralCode?: string) => Promise<any>;
+  onSignUp: (email: string, password: string, referralCode?: string, captcha?: { token: string; answer: string }) => Promise<any>;
   onSignOut: () => Promise<void>;
   pendingVerificationEmail?: string | null;
   onVerify?: (email: string, code: string) => Promise<any>;
@@ -61,6 +61,33 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
   /** When set, shows the password reset flow */
   const [resetEmail, setResetEmail] = useState<string | null>(null);
 
+  // CAPTCHA state for signup
+  const [captchaToken, setCaptchaToken] = useState<string>("");
+  const [captchaQuestion, setCaptchaQuestion] = useState<string>("");
+  const [captchaAnswer, setCaptchaAnswer] = useState<string>("");
+  const [captchaLoading, setCaptchaLoading] = useState(false);
+
+  const loadCaptcha = useCallback(async () => {
+    setCaptchaLoading(true);
+    setCaptchaAnswer("");
+    try {
+      const { apiFetch } = await import("@/lib/api");
+      const data = await apiFetch<{ question: string; token: string }>("/auth/captcha", { auth: false });
+      setCaptchaQuestion(data.question);
+      setCaptchaToken(data.token);
+    } catch {
+      setCaptchaQuestion("");
+      setCaptchaToken("");
+    } finally {
+      setCaptchaLoading(false);
+    }
+  }, []);
+
+  // Fetch challenge when dialog opens
+  useEffect(() => {
+    if (open && !captchaToken) loadCaptcha();
+  }, [open, captchaToken, loadCaptcha]);
+
   // Read referral code from URL (?ref=CODE)
   const referralCode = React.useMemo(() => {
     try {
@@ -91,7 +118,12 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
         await onSignIn(email, password);
         setOpen(false);
       } else {
-        const result = await onSignUp(email, password, referralCode);
+        if (!captchaAnswer.trim()) {
+          setError("Please answer the CAPTCHA challenge.");
+          setLoading(false);
+          return;
+        }
+        const result = await onSignUp(email, password, referralCode, { token: captchaToken, answer: captchaAnswer });
         if (result?.emailWarning) {
           setError(result.emailWarning);
         }
@@ -101,7 +133,12 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
       setEmail("");
       setPassword("");
     } catch (err: any) {
-      setError(err.message || "Authentication failed");
+      const msg = err.message || "Authentication failed";
+      setError(msg);
+      // If captcha failed, fetch a fresh challenge
+      if (msg.toLowerCase().includes("captcha")) {
+        loadCaptcha();
+      }
     } finally {
       setLoading(false);
     }
@@ -280,6 +317,36 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
                   buttonLabel="CREATE_ACCOUNT"
                   buttonIcon={<UserPlus className="w-3 h-3" />}
                 />
+                {/* Self-hosted CAPTCHA challenge */}
+                <div className="space-y-1.5 pt-1">
+                  <label className="font-mono-share text-[10px] text-muted-foreground/60 uppercase tracking-wider flex items-center gap-1">
+                    <ShieldCheck className="w-3 h-3" /> Human Check
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 bg-input border border-border rounded px-3 py-2 font-mono-share text-xs text-foreground/90 select-none">
+                      {captchaLoading ? "Loading challenge…" : (captchaQuestion || "Challenge unavailable")}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={loadCaptcha}
+                      disabled={captchaLoading}
+                      title="New challenge"
+                      className="p-2 rounded border border-border hover:border-primary/50 transition-colors text-muted-foreground hover:text-primary disabled:opacity-50"
+                    >
+                      <RefreshCw className={`w-3 h-3 ${captchaLoading ? "animate-spin" : ""}`} />
+                    </button>
+                  </div>
+                  <Input
+                    type="text"
+                    inputMode="text"
+                    autoComplete="off"
+                    value={captchaAnswer}
+                    onChange={(e) => setCaptchaAnswer(e.target.value)}
+                    placeholder="Your answer"
+                    className="bg-input border-border font-mono-share text-sm"
+                    onKeyDown={(e) => e.key === "Enter" && handleSubmit("signup")}
+                  />
+                </div>
               </TabsContent>
             </Tabs>
 

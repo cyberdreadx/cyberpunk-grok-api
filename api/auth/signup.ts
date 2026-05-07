@@ -5,6 +5,7 @@ import { signToken } from "../_lib/auth";
 import { generateVerificationCode, sendVerificationEmail } from "../_lib/email";
 import { checkRateLimit, getClientIp } from "../_lib/ratelimit";
 import { isDisposableEmail } from "../_lib/disposable-domains";
+import { verifyCaptcha } from "../_lib/captcha";
 /** Basic email format validation. */
 function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -15,9 +16,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   try {
-    const { email, password, referral_code, device_fingerprint } = req.body || {};
+    const { email, password, referral_code, device_fingerprint, captcha_token, captcha_answer } = req.body || {};
     if (!email || !password) {
       return res.status(400).json({ error: "Email and password required" });
+    }
+    if (!verifyCaptcha(captcha_token, captcha_answer)) {
+      return res.status(400).json({ error: "CAPTCHA verification failed. Please try the new challenge.", code: "captcha_failed" });
     }
     if (!isValidEmail(email)) {
       return res.status(400).json({ error: "Invalid email format" });
