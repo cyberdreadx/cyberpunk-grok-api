@@ -48,7 +48,7 @@ import {
   Legend,
 } from "recharts";
 import { Button } from "@/components/ui/button";
-import { apiFetch, hasAuthToken } from "@/lib/api";
+import { apiFetch, hasAuthToken, apiUrl, getAuthToken } from "@/lib/api";
 
 // Admin check is now server-side via /api/auth/me is_admin flag
 
