@@ -161,9 +161,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         status: w.status,
         createdAt: w.created_at,
       })),
+      warnings,
     });
   } catch (err: any) {
     console.error("[xrge-balance]", err.message, err.stack);
-    return res.status(500).json({ error: "Failed to fetch balance" });
+    const msg = String(err?.message || "");
+    let userMessage = "We couldn't load your XRGE balance right now. Please try again in a moment.";
+    let code = "unknown";
+    if (msg.toLowerCase().includes("unauthorized") || msg.toLowerCase().includes("auth")) {
+      userMessage = "Your session expired. Please sign in again to view your XRGE balance.";
+      code = "auth";
+    } else if (msg.toLowerCase().includes("database") || msg.toLowerCase().includes("connect") || msg.toLowerCase().includes("econn")) {
+      userMessage = "We can't reach the database right now. This is usually brief — please try again in a moment.";
+      code = "db_unreachable";
+    }
+    return res.status(500).json({ error: userMessage, code, detail: msg });
   }
 }
