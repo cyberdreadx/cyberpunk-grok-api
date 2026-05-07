@@ -191,6 +191,7 @@ export default function ApplyPage() {
       if (target) URL.revokeObjectURL(target.previewUrl);
       return prev.filter((p) => p.id !== id);
     });
+    setPrimaryId((cur) => (cur === id ? null : cur));
   };
 
   const retryPhoto = (id: string) => {
