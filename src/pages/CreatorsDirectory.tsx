@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Loader2, BadgeCheck } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import CyberLayout from "@/components/CyberLayout";
 import { Button } from "@/components/ui/button";
+import CreatorPreviewCard from "@/components/CreatorPreviewCard";
 import { apiFetch } from "@/lib/api";
 
 interface Creator {
