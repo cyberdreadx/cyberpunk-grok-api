@@ -1109,6 +1109,27 @@ export default function Admin() {
   const [granting, setGranting] = useState(false);
   const [grantResult, setGrantResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
+  // Free credits kill switch
+  const [fcLoading, setFcLoading] = useState(false);
+  const [fcSaving, setFcSaving] = useState(false);
+  const [fcState, setFcState] = useState<{ enabled: boolean; source: string; envForcedDisabled: boolean; envEnabled: boolean } | null>(null);
+  const [fcResult, setFcResult] = useState<{ ok: boolean; msg: string } | null>(null);
+
+  const fetchFreeCredits = useCallback(async () => {
+    setFcLoading(true);
+    try {
+      const res = await apiFetch<{ enabled: boolean; source: string; envForcedDisabled: boolean; envEnabled: boolean }>("/admin/free-credits");
+      setFcState(res);
+    } catch (err: any) {
+      setFcResult({ ok: false, msg: err.message || "Failed to load" });
+    } finally {
+      setFcLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchFreeCredits(); }, [fetchFreeCredits]);
+
+
   // Feed moderators
   const [modEmail, setModEmail] = useState("");
   const [mods, setMods] = useState<any[]>([]);
