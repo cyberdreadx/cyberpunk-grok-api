@@ -267,21 +267,26 @@ function detectAnomalies(input: {
 }
 
 function buildPrompt(stats: any): string {
-  return `You are a no-nonsense business analyst for a cyberpunk AI image/video generation platform called GLTCH.
-The owner just opened the admin dashboard. Write a tight executive summary in **markdown** with:
+  const anomalyCount = stats.anomalies?.items?.length || 0;
+  const severeCount = (stats.anomalies?.items || []).filter((a: any) => a.severity === "severe").length;
 
-1. **TL;DR** — 2 sentences max, headline numbers + the single most important signal.
-2. **Revenue & monetization** — today / week / month, paying users, sub vs pack mix, ARPU if useful.
-3. **Growth & retention** — signups vs DAU/WAU/MAU, verified rate, churn signals (cancelling subs).
-4. **Creator economy** — total unlocks, top earners, anything unusual.
-5. **Generation usage & costs** — volume, top modes, gross margin estimate (revenue vs api cost) when data exists.
-6. **3 Recommended actions** — specific, concrete, prioritized. No fluff.
+  return `You are a no-nonsense business analyst for a cyberpunk AI image/video generation platform called GLTCH.
+The owner just opened the admin dashboard. Write a tight executive summary in **markdown** with these sections in order:
+
+1. **TL;DR** — 2 sentences max, headline numbers + the single most important signal (lead with anomalies if any are severe).
+2. **🚨 Anomalies** — REQUIRED if anomalies.items is non-empty. For each item, one bullet: emoji (📈 spike / 📉 drop, 🔴 severe / 🟡 moderate), metric name, the value, % vs baseline, and a one-line plausible cause hypothesis. If empty, write "No statistical anomalies detected — metrics are within normal range." and skip the bullets.
+3. **Revenue & monetization** — today / week / month, paying users, sub vs pack mix, ARPU if useful.
+4. **Growth & retention** — signups vs DAU/WAU/MAU, verified rate, churn signals (cancelling subs).
+5. **Creator economy** — total unlocks, top earners, anything unusual.
+6. **Generation usage & costs** — volume, top modes, gross margin estimate (revenue vs api cost) when data exists.
+7. **Recommended actions** — 3-5 specific, concrete, prioritized actions. **Each anomaly in section 2 MUST map to at least one action here** (e.g. "Investigate the revenue drop on YYYY-MM-DD — check Stripe webhook log"). No fluff, no generic advice.
 
 Rules:
+- Anomaly detection used z-score vs trailing 28d baseline. |z|≥2 = moderate, |z|≥3 = severe. Trust these flags.
 - Use cents → dollars ($X.XX) for revenue. Format big numbers with commas.
-- Call out anomalies, spikes, or concerning trends.
 - Skip metrics that are zero or missing rather than padding.
-- Keep total length under ~350 words.
+- Keep total length under ~450 words.
+- Currently flagged: ${anomalyCount} anomal${anomalyCount === 1 ? "y" : "ies"}${severeCount ? `, ${severeCount} SEVERE` : ""}.
 
 Stats JSON:
 \`\`\`json
