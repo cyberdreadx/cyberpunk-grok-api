@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Loader2, Sparkles, DollarSign, ShieldCheck, Globe2, ChevronRight, Check, Upload, X, ImagePlus, AlertCircle, Crop as CropIcon, Star } from "lucide-react";
 import { upload } from "@vercel/blob/client";
 import CropDialog from "@/components/CropDialog";
+import CreatorPreviewCard from "@/components/CreatorPreviewCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
