@@ -517,15 +517,28 @@ export default function ApplyPage() {
                               <div className="h-full bg-secondary transition-all" style={{ width: `${p.progress}%` }} />
                             </div>
                           )}
-                          {/* Remove */}
-                          <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); removePhoto(p.id); }}
-                            className="absolute top-1 right-1 bg-background/80 hover:bg-destructive hover:text-background rounded-full p-1 transition-colors"
-                            aria-label="Remove"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
+                          {/* Actions */}
+                          <div className="absolute top-1 right-1 flex gap-1">
+                            {p.status === "done" && (
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); setCropTargetId(p.id); }}
+                                className="bg-background/80 hover:bg-secondary hover:text-background rounded-full p-1 transition-colors"
+                                aria-label="Crop"
+                                title="Crop"
+                              >
+                                <CropIcon className="w-3 h-3" />
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); removePhoto(p.id); }}
+                              className="bg-background/80 hover:bg-destructive hover:text-background rounded-full p-1 transition-colors"
+                              aria-label="Remove"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>
