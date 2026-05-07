@@ -95,7 +95,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // ── Public submission ──────────────────────────────────────────
   const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || "unknown";
-  const rl = await checkRateLimit(`creator-apply:${ip}`, 3, 3600);
+  const rl = await checkRateLimit(ip, "creator-apply", { max: 3, windowSeconds: 3600 });
   if (!rl.allowed) return res.status(429).json({ error: "Too many submissions. Try again later." });
 
   const {
