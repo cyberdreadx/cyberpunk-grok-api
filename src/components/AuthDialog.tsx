@@ -118,7 +118,12 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
         await onSignIn(email, password);
         setOpen(false);
       } else {
-        const result = await onSignUp(email, password, referralCode);
+        if (!captchaAnswer.trim()) {
+          setError("Please answer the CAPTCHA challenge.");
+          setLoading(false);
+          return;
+        }
+        const result = await onSignUp(email, password, referralCode, { token: captchaToken, answer: captchaAnswer });
         if (result?.emailWarning) {
           setError(result.emailWarning);
         }
@@ -128,7 +133,12 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
       setEmail("");
       setPassword("");
     } catch (err: any) {
-      setError(err.message || "Authentication failed");
+      const msg = err.message || "Authentication failed";
+      setError(msg);
+      // If captcha failed, fetch a fresh challenge
+      if (msg.toLowerCase().includes("captcha")) {
+        loadCaptcha();
+      }
     } finally {
       setLoading(false);
     }
