@@ -31,7 +31,10 @@ import {
   ChevronDown,
   ChevronUp,
   Shield,
+  Sparkles,
 } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import { apiUrl, getAuthToken } from "@/lib/api";
 import {
   AreaChart,
   Area,
