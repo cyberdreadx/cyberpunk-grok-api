@@ -1733,6 +1733,91 @@ export default function Admin() {
               )}
             </section>
 
+            {/* Free Credits Kill Switch */}
+            <section className="border border-secondary/30 rounded-lg bg-card/40 backdrop-blur-sm p-3 sm:p-4 space-y-3">
+              <h2 className="font-orbitron text-xs tracking-wider text-secondary/80 flex items-center gap-2">
+                <Zap className="w-3.5 h-3.5" />
+                FREE_CREDITS_SWITCH
+              </h2>
+              <p className="font-mono-share text-[10px] text-muted-foreground/70 leading-relaxed">
+                Master toggle for free-credit sources: daily reset, spin wheel, and daily missions.
+                Reddit posting reward is <span className="text-secondary">always active</span> and not affected.
+              </p>
+              {fcLoading || !fcState ? (
+                <div className="font-mono-share text-[10px] text-muted-foreground/60">Loading…</div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <div className={`font-mono-share text-[10px] px-2 py-1 rounded border ${fcState.enabled ? "bg-green-500/10 border-green-500/30 text-green-400" : "bg-amber-500/10 border-amber-500/30 text-amber-400"}`}>
+                      {fcState.enabled ? "● ENABLED" : "○ DISABLED"}
+                    </div>
+                    <span className="font-mono-share text-[9px] text-muted-foreground/60">
+                      source: {fcState.source}
+                    </span>
+                  </div>
+                  {fcState.envForcedDisabled && (
+                    <div className="font-mono-share text-[10px] px-2 py-1.5 rounded bg-destructive/10 border border-destructive/30 text-destructive">
+                      ⚠ FREE_CREDITS_DISABLED env var is set — UI toggle is overridden. Unset it in Vercel to use this switch.
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={fcSaving || fcState.envForcedDisabled || fcState.enabled}
+                      className="font-mono-share text-xs gap-1.5 border-green-500/40 hover:bg-green-500/10 text-green-400"
+                      onClick={async () => {
+                        setFcSaving(true); setFcResult(null);
+                        try {
+                          await apiFetch("/admin/free-credits", { method: "POST", body: { enabled: true } });
+                          setFcResult({ ok: true, msg: "Free credits ENABLED globally." });
+                          fetchFreeCredits();
+                        } catch (err: any) {
+                          setFcResult({ ok: false, msg: err.message || "Failed" });
+                        } finally { setFcSaving(false); }
+                      }}
+                    >
+                      {fcSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
+                      ENABLE
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={fcSaving || (!fcState.envForcedDisabled && !fcState.enabled)}
+                      className="font-mono-share text-xs gap-1.5 border-amber-500/40 hover:bg-amber-500/10 text-amber-400"
+                      onClick={async () => {
+                        setFcSaving(true); setFcResult(null);
+                        try {
+                          await apiFetch("/admin/free-credits", { method: "POST", body: { enabled: false } });
+                          setFcResult({ ok: true, msg: "Free credits DISABLED globally." });
+                          fetchFreeCredits();
+                        } catch (err: any) {
+                          setFcResult({ ok: false, msg: err.message || "Failed" });
+                        } finally { setFcSaving(false); }
+                      }}
+                    >
+                      {fcSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Shield className="w-3 h-3" />}
+                      DISABLE
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={fcLoading}
+                      className="font-mono-share text-xs gap-1.5 text-muted-foreground"
+                      onClick={fetchFreeCredits}
+                    >
+                      REFRESH
+                    </Button>
+                  </div>
+                  {fcResult && (
+                    <div className={`font-mono-share text-[10px] px-2 py-1.5 rounded ${fcResult.ok ? "bg-green-500/10 text-green-400" : "bg-destructive/10 text-destructive"}`}>
+                      {fcResult.msg}
+                    </div>
+                  )}
+                </div>
+              )}
+            </section>
+
             {/* Feed Moderators */}
             <section className="border border-secondary/30 rounded-lg bg-card/40 backdrop-blur-sm p-3 sm:p-4 space-y-3">
               <h2 className="font-orbitron text-xs tracking-wider text-secondary/80 flex items-center gap-2">
