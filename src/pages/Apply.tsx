@@ -87,12 +87,15 @@ export default function ApplyPage() {
 
   // ── Photo upload state ────────────────────────────────────────
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
+  const [primaryId, setPrimaryId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [cropTargetId, setCropTargetId] = useState<string | null>(null);
   const photosUploading = photos.some((p) => p.status === "uploading");
   const photosDone = photos.filter((p) => p.status === "done");
   const photosErrored = photos.filter((p) => p.status === "error");
   const cropTarget = photos.find((p) => p.id === cropTargetId) || null;
+  const primaryPhoto =
+    photosDone.find((p) => p.id === primaryId) || photosDone[0] || null;
 
   const applyCrop = async (id: string, blob: Blob) => {
     const orig = photos.find((p) => p.id === id);
