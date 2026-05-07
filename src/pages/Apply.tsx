@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { Loader2, Sparkles, DollarSign, ShieldCheck, Globe2, ChevronRight, Check } from "lucide-react";
+import { Loader2, Sparkles, DollarSign, ShieldCheck, Globe2, ChevronRight, Check, Upload, X, ImagePlus, AlertCircle } from "lucide-react";
+import { upload } from "@vercel/blob/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import CyberLayout from "@/components/CyberLayout";
 import GlitchText from "@/components/GlitchText";
 import { useToast } from "@/hooks/use-toast";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, apiUrl } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 
 interface FormState {
@@ -38,7 +39,24 @@ const empty: FormState = {
   payout_pref: "stripe",
 };
 
-const STEPS = ["Identity", "Socials", "Persona", "Payout", "Submit"] as const;
+const STEPS = ["Identity", "Socials", "Persona", "Photos", "Payout", "Submit"] as const;
+
+// Photo upload constraints
+const MAX_PHOTOS = 5;
+const MIN_PHOTOS_RECOMMENDED = 3;
+const MAX_PHOTO_BYTES = 8 * 1024 * 1024; // 8MB
+const ACCEPTED_TYPES = ["image/png", "image/jpeg", "image/webp"];
+
+type PhotoStatus = "pending" | "uploading" | "done" | "error";
+interface PhotoItem {
+  id: string;
+  file: File;
+  previewUrl: string;
+  status: PhotoStatus;
+  progress: number; // 0..100
+  uploadedUrl?: string;
+  error?: string;
+}
 
 export default function ApplyPage() {
   const { toast } = useToast();
