@@ -1,17 +1,19 @@
 /**
  * /api/admin/free-credits — admin-only kill switch for free credits.
  *
- * GET  → { enabled, source, envForcedDisabled, envEnabled }
- * POST { enabled: boolean } → updates the DB override and returns new state.
+ * GET  → { master, daily, spin, missions, source, envForcedDisabled, envEnabled }
+ * POST { master?, daily?, spin?, missions? } → updates DB override (any subset).
  *
- * Note: the FREE_CREDITS_DISABLED env var (if set) overrides the DB and
- * cannot be cleared from this endpoint. The admin UI surfaces that fact.
+ * Reddit posting reward is NEVER gated by this endpoint.
+ *
+ * If FREE_CREDITS_DISABLED env var is set, all sources are forced off and the
+ * UI override is ignored.
  */
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getDb } from "../_lib/db";
 import { getUserFromRequest, ADMIN_EMAIL } from "../_lib/auth";
 import { applyCors } from "../_lib/cors";
-import { invalidateFreeCreditsCache } from "../_lib/freeCredits";
+import { invalidateFreeCreditsCache, getFreeCreditsConfig } from "../_lib/freeCredits";
 
 const KEY = "free_credits";
 
@@ -30,14 +32,13 @@ function envEnabled(): boolean {
   return v === "true" || v === "1" || v === "yes";
 }
 
-async function readDbOverride(): Promise<boolean | null> {
+async function readDbRaw(): Promise<Record<string, unknown> | null> {
   try {
     const sql = getDb();
     const rows = await sql`SELECT value FROM app_config WHERE key = ${KEY}`;
     const row = rows[0] as { value: any } | undefined;
     if (!row || row.value == null) return null;
-    const v = typeof row.value === "string" ? JSON.parse(row.value) : row.value;
-    return typeof v?.enabled === "boolean" ? v.enabled : null;
+    return typeof row.value === "string" ? JSON.parse(row.value) : row.value;
   } catch (e) {
     console.warn("[admin/free-credits] read failed:", (e as Error).message);
     return null;
@@ -53,19 +54,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   if (req.method === "GET") {
-    const dbOverride = await readDbOverride();
-    const forcedDisabled = envForcedDisabled();
-    const enabled = forcedDisabled
-      ? false
-      : dbOverride !== null
-      ? dbOverride
-      : envEnabled();
+    const cfg = await getFreeCreditsConfig();
+    const dbRaw = await readDbRaw();
     return res.status(200).json({
-      enabled,
-      source: forcedDisabled ? "env_forced_disabled" : dbOverride !== null ? "db" : "env_default",
-      dbOverride,
-      envForcedDisabled: forcedDisabled,
+      master: cfg.master,
+      daily: cfg.daily,
+      spin: cfg.spin,
+      missions: cfg.missions,
+      reddit: true, // always-on, included for UI clarity
+      envForcedDisabled: envForcedDisabled(),
       envEnabled: envEnabled(),
+      dbRaw,
     });
   }
 
@@ -73,26 +72,42 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const { enabled } = req.body || {};
-  if (typeof enabled !== "boolean") {
-    return res.status(400).json({ error: "Body must be { enabled: boolean }" });
+  const body = req.body || {};
+  const updates: Record<string, boolean> = {};
+  for (const k of ["master", "daily", "spin", "missions"]) {
+    if (typeof body[k] === "boolean") updates[k] = body[k];
+  }
+  if (Object.keys(updates).length === 0) {
+    return res.status(400).json({
+      error: "Body must include at least one boolean: master, daily, spin, missions.",
+    });
   }
 
   try {
+    const existing = (await readDbRaw()) || {};
+    // Strip legacy `enabled` field — we use `master` going forward.
+    const { enabled: _legacy, ...rest } = existing as any;
+    const merged = {
+      ...rest,
+      ...updates,
+      updated_at: new Date().toISOString(),
+    };
     const sql = getDb();
-    const payload = JSON.stringify({ enabled, updated_at: new Date().toISOString() });
+    const payload = JSON.stringify(merged);
     await sql`
       INSERT INTO app_config (key, value, updated_at)
       VALUES (${KEY}, ${payload}::jsonb, now())
       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()
     `;
     invalidateFreeCreditsCache();
-    const forcedDisabled = envForcedDisabled();
+    const cfg = await getFreeCreditsConfig();
     return res.status(200).json({
       ok: true,
-      enabled: forcedDisabled ? false : enabled,
-      effective: forcedDisabled ? "env_forced_disabled" : "db",
-      envForcedDisabled: forcedDisabled,
+      master: cfg.master,
+      daily: cfg.daily,
+      spin: cfg.spin,
+      missions: cfg.missions,
+      envForcedDisabled: envForcedDisabled(),
     });
   } catch (e: any) {
     console.error("[admin/free-credits]", e.message);
