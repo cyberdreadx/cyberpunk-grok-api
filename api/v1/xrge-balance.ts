@@ -96,6 +96,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       holder = await getHolderState(sql, userId);
     } catch (e: any) {
       console.warn("[xrge-balance] getHolderState failed:", e.message);
+      warnings.push({ code: "holder_unavailable", message: "Holder tier info is temporarily unavailable." });
     }
 
     return res.status(200).json({
