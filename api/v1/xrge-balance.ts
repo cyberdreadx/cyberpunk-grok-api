@@ -39,11 +39,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       depositAddress: null,
       usdRate: null,
     };
+    const warnings: { code: string; message: string }[] = [];
     try {
       const c = await getXrgeConfig();
       config = { depositAddress: c.depositAddress, usdRate: c.usdRate };
     } catch (e: any) {
       console.warn("[xrge-balance] getXrgeConfig failed:", e.message);
+      const msg = String(e?.message || "");
+      if (msg.includes("XRGE_DEPOSIT_ADDRESS")) {
+        warnings.push({
+          code: "deposit_address_missing",
+          message: "Deposits are temporarily unavailable — the deposit address isn't configured on the server.",
+        });
+      } else if (msg.includes("DexScreener") || msg.includes("XRGE price") || msg.includes("trading pair")) {
+        warnings.push({
+          code: "price_feed_down",
+          message: "Live XRGE/USD price feed is unavailable right now. Your balance is still correct; pricing-dependent actions may be delayed.",
+        });
+      } else {
+        warnings.push({
+          code: "config_unavailable",
+          message: "XRGE configuration couldn't be loaded. Some actions may be temporarily limited.",
+        });
+      }
     }
 
     // Recent bank transactions (last 20)
@@ -55,6 +73,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       LIMIT 20
     `.catch((e: any) => {
       console.warn("[xrge-balance] txns query failed:", e.message);
+      warnings.push({ code: "txns_unavailable", message: "Recent transaction history is temporarily unavailable." });
       return [];
     });
 
@@ -66,6 +85,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ORDER BY created_at DESC
     `.catch((e: any) => {
       console.warn("[xrge-balance] withdrawals query failed:", e.message);
+      warnings.push({ code: "withdrawals_unavailable", message: "Pending withdrawals couldn't be loaded right now." });
       return [];
     });
 
@@ -76,6 +96,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       holder = await getHolderState(sql, userId);
     } catch (e: any) {
       console.warn("[xrge-balance] getHolderState failed:", e.message);
+      warnings.push({ code: "holder_unavailable", message: "Holder tier info is temporarily unavailable." });
     }
 
     return res.status(200).json({
@@ -140,9 +161,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         status: w.status,
         createdAt: w.created_at,
       })),
+      warnings,
     });
   } catch (err: any) {
     console.error("[xrge-balance]", err.message, err.stack);
-    return res.status(500).json({ error: "Failed to fetch balance" });
+    const msg = String(err?.message || "");
+    let userMessage = "We couldn't load your XRGE balance right now. Please try again in a moment.";
+    let code = "unknown";
+    if (msg.toLowerCase().includes("unauthorized") || msg.toLowerCase().includes("auth")) {
+      userMessage = "Your session expired. Please sign in again to view your XRGE balance.";
+      code = "auth";
+    } else if (msg.toLowerCase().includes("database") || msg.toLowerCase().includes("connect") || msg.toLowerCase().includes("econn")) {
+      userMessage = "We can't reach the database right now. This is usually brief — please try again in a moment.";
+      code = "db_unreachable";
+    }
+    return res.status(500).json({ error: userMessage, code, detail: msg });
   }
 }
