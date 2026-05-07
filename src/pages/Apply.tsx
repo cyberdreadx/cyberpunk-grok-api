@@ -492,7 +492,7 @@ export default function ApplyPage() {
                   {photos.length > 0 && (
                     <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                       {photos.map((p) => (
-                        <div key={p.id} className="relative group border border-border/40 rounded overflow-hidden bg-background/40 aspect-square">
+                        <div key={p.id} className={`relative group border rounded overflow-hidden bg-background/40 aspect-square ${primaryPhoto?.id === p.id ? "border-secondary ring-2 ring-secondary/40" : "border-border/40"}`}>
                           <img src={p.previewUrl} alt="" className="w-full h-full object-cover" />
                           {/* Status overlay */}
                           {p.status === "uploading" && (
@@ -501,7 +501,13 @@ export default function ApplyPage() {
                               <div className="font-mono-share text-[9px] text-secondary">{Math.round(p.progress)}%</div>
                             </div>
                           )}
-                          {p.status === "done" && (
+                          {p.status === "done" && primaryPhoto?.id === p.id && (
+                            <div className="absolute top-1 left-1 bg-secondary rounded px-1.5 py-0.5 flex items-center gap-1">
+                              <Star className="w-2.5 h-2.5 text-background fill-background" />
+                              <span className="font-mono-share text-[8px] tracking-widest text-background">PRIMARY</span>
+                            </div>
+                          )}
+                          {p.status === "done" && primaryPhoto?.id !== p.id && (
                             <div className="absolute top-1 left-1 bg-green-500/90 rounded-full p-0.5">
                               <Check className="w-3 h-3 text-background" />
                             </div>
