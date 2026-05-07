@@ -1,8 +1,7 @@
-import React, { useEffect, useRef } from "react";
+import React from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Lock, ImageIcon, MessageSquare, EyeOff } from "lucide-react";
+import { Lock, ImageIcon, MessageSquare } from "lucide-react";
 import VerifiedBadge from "@/components/VerifiedBadge";
-import { useMatureFilter } from "@/hooks/useMatureFilter";
 
 export interface FeedCreator {
   userId: string;
@@ -17,7 +16,6 @@ export interface FeedCreator {
   latestAt: string;
   latestLocked: boolean;
   verified?: boolean;
-  isMature?: boolean;
 }
 
 interface Props {
@@ -39,38 +37,10 @@ const timeAgo = (iso: string) => {
   return `${d}d`;
 };
 
-const isVideoUrl = (u?: string | null) => !!u && /\.(mp4|webm|mov|m4v)(\?|$)/i.test(u);
-
 const CreatorCard: React.FC<Props> = ({ creator, onOpen, active, forceBlur }) => {
-  const { matureFilter } = useMatureFilter();
   const previewImg = creator.latestImage || creator.previewImage;
   const initials = (creator.username || "?").slice(0, 2).toUpperCase();
-  const matureBlur = matureFilter && !!creator.isMature;
   const showLocked = creator.latestLocked || forceBlur;
-  const showBlur = showLocked || matureBlur;
-  const previewIsVideo = isVideoUrl(previewImg);
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-
-  // Play/pause based on viewport visibility — reliable mobile autoplay pattern.
-  useEffect(() => {
-    if (!previewIsVideo) return;
-    const v = videoRef.current;
-    if (!v) return;
-    const obs = new IntersectionObserver(
-      (entries) => {
-        for (const e of entries) {
-          if (e.isIntersecting) {
-            v.play().catch(() => {});
-          } else {
-            v.pause();
-          }
-        }
-      },
-      { threshold: 0.25 }
-    );
-    obs.observe(v);
-    return () => obs.disconnect();
-  }, [previewIsVideo, previewImg]);
 
   return (
     <button
@@ -84,33 +54,15 @@ const CreatorCard: React.FC<Props> = ({ creator, onOpen, active, forceBlur }) =>
       {/* Preview */}
       <div className="relative flex-1 bg-muted/30 overflow-hidden">
         {previewImg ? (
-          previewIsVideo ? (
-            <video
-              ref={videoRef}
-              src={previewImg}
-              muted
-              loop
-              playsInline
-              {...({ "webkit-playsinline": "true", "x5-playsinline": "true" } as any)}
-              preload="metadata"
-              autoPlay
-              disablePictureInPicture
-              disableRemotePlayback
-              className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${
-                showBlur ? "blur-2xl scale-110" : ""
-              }`}
-            />
-          ) : (
-            <img
-              src={previewImg}
-              alt={`${creator.username}'s latest`}
-              loading="lazy"
-              decoding="async"
-              className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${
-                showBlur ? "blur-2xl scale-110" : ""
-              }`}
-            />
-          )
+          <img
+            src={previewImg}
+            alt={`${creator.username}'s latest`}
+            loading="lazy"
+            decoding="async"
+            className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${
+              showLocked ? "blur-2xl scale-110" : ""
+            }`}
+          />
         ) : creator.latestText ? (
           <div className="absolute inset-0 p-3 flex items-center justify-center">
             <p className={`font-mono-share text-[11px] text-foreground/80 line-clamp-6 text-center leading-snug ${forceBlur ? "blur-sm select-none" : ""}`}>
@@ -127,14 +79,6 @@ const CreatorCard: React.FC<Props> = ({ creator, onOpen, active, forceBlur }) =>
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="bg-black/60 backdrop-blur-sm rounded-full p-2 border border-primary/40">
               <Lock className="w-4 h-4 text-primary" />
-            </div>
-          </div>
-        )}
-        {!showLocked && matureBlur && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="bg-black/60 backdrop-blur-sm rounded-full p-2 border border-amber-400/40 flex items-center gap-1.5 px-3">
-              <EyeOff className="w-3.5 h-3.5 text-amber-300" />
-              <span className="font-mono-share text-[9px] tracking-wider text-amber-300/90">MATURE</span>
             </div>
           </div>
         )}

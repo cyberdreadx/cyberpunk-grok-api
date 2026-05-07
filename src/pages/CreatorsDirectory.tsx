@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Loader2, BadgeCheck } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import CyberLayout from "@/components/CyberLayout";
 import { Button } from "@/components/ui/button";
+import CreatorPreviewCard from "@/components/CreatorPreviewCard";
 import { apiFetch } from "@/lib/api";
 
 interface Creator {
@@ -49,24 +50,9 @@ export default function CreatorsDirectory() {
               <Link
                 key={c.id}
                 to={c.username ? `/profile/${c.username}` : "#"}
-                className="border border-border/40 rounded-lg overflow-hidden bg-card/40 hover:border-secondary/60 transition-colors"
+                className="block"
               >
-                <div className="aspect-square bg-muted/20 flex items-center justify-center overflow-hidden">
-                  {c.avatar_url ? (
-                    <img src={c.avatar_url} alt={c.display_name || c.username || ""} className="w-full h-full object-cover" loading="lazy" />
-                  ) : (
-                    <span className="font-orbitron text-3xl text-muted-foreground/40">{(c.display_name || c.username || "?").slice(0, 1).toUpperCase()}</span>
-                  )}
-                </div>
-                <div className="p-3 space-y-1">
-                  <div className="flex items-center gap-1 font-orbitron text-xs truncate">
-                    {c.display_name || c.username}
-                    {c.verification_status === "verified" && <BadgeCheck className="w-3 h-3 text-secondary shrink-0" />}
-                  </div>
-                  {c.username && (
-                    <div className="font-mono-share text-[10px] text-muted-foreground truncate">@{c.username}</div>
-                  )}
-                </div>
+                <CreatorPreviewCard data={c} />
               </Link>
             ))}
           </div>
