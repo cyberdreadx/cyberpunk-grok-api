@@ -73,6 +73,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       LIMIT 20
     `.catch((e: any) => {
       console.warn("[xrge-balance] txns query failed:", e.message);
+      warnings.push({ code: "txns_unavailable", message: "Recent transaction history is temporarily unavailable." });
       return [];
     });
 
