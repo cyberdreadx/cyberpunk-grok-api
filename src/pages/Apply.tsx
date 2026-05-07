@@ -221,7 +221,10 @@ export default function ApplyPage() {
     }
     setSubmitting(true);
     try {
-      const sample_urls = photosDone.map((p) => p.uploadedUrl!).filter(Boolean);
+      const ordered = primaryPhoto
+        ? [primaryPhoto, ...photosDone.filter((p) => p.id !== primaryPhoto.id)]
+        : photosDone;
+      const sample_urls = ordered.map((p) => p.uploadedUrl!).filter(Boolean);
       await apiFetch("/creator-applications", {
         method: "POST",
         body: { ...form, sample_urls },
