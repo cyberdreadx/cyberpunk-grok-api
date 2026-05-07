@@ -85,6 +85,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ORDER BY created_at DESC
     `.catch((e: any) => {
       console.warn("[xrge-balance] withdrawals query failed:", e.message);
+      warnings.push({ code: "withdrawals_unavailable", message: "Pending withdrawals couldn't be loaded right now." });
       return [];
     });
 
