@@ -28,8 +28,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    if (freeCreditsDisabled()) {
-      console.log("[cron-reset-daily] Skipped — FREE_CREDITS_DISABLED is on");
+    if (await freeCreditsDisabled()) {
+      console.log("[cron-reset-daily] Skipped — free credits disabled");
       return res.status(200).json({
         success: true,
         skipped: true,

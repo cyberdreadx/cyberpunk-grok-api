@@ -40,7 +40,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return await getStatus(sql, auth.userId, res);
     }
     if (req.method === "POST") {
-      if (freeCreditsDisabled()) {
+      if (await freeCreditsDisabled()) {
         return res.status(503).json({ error: FREE_CREDITS_MAINTENANCE_MESSAGE, maintenance: true });
       }
       const { mission, url } = req.body || {};
@@ -141,8 +141,8 @@ async function getStatus(sql: any, userId: string, res: VercelResponse) {
     streakBonus: STREAK_BONUS,
     cycleDays: CYCLE_DAYS,
     lastFeedPost,
-    freeCreditsDisabled: freeCreditsDisabled(),
-    maintenanceMessage: freeCreditsDisabled() ? FREE_CREDITS_MAINTENANCE_MESSAGE : null,
+    freeCreditsDisabled: await freeCreditsDisabled(),
+    maintenanceMessage: (await freeCreditsDisabled()) ? FREE_CREDITS_MAINTENANCE_MESSAGE : null,
   });
 }
 
