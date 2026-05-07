@@ -609,9 +609,9 @@ export default function ApplyPage() {
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                         <div className="border border-border/40 rounded-lg overflow-hidden bg-card/40 hover:border-secondary/60 transition-colors">
                           <div className="aspect-square bg-muted/20 flex items-center justify-center overflow-hidden relative">
-                            {photosDone[0]?.uploadedUrl ? (
+                            {primaryPhoto?.uploadedUrl ? (
                               <img
-                                src={photosDone[0].uploadedUrl}
+                                src={primaryPhoto.uploadedUrl}
                                 alt={form.display_name || form.handle || "preview"}
                                 className="w-full h-full object-cover"
                               />
