@@ -85,6 +85,20 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
   const [xrgeOpen, setXrgeOpen] = useState(false);
   const [xrgePackageId, setXrgePackageId] = useState<string | null>(null);
   const [bankOpen, setBankOpen] = useState(false);
+  const [holderTipShow, setHolderTipShow] = useState(() => {
+    try { return localStorage.getItem("holder-tip-show") === "1"; } catch { return false; }
+  });
+  useEffect(() => {
+    const handler = () => {
+      try { setHolderTipShow(localStorage.getItem("holder-tip-show") === "1"); } catch { /* ignore */ }
+    };
+    window.addEventListener("holder-tip-changed", handler);
+    window.addEventListener("storage", handler);
+    return () => {
+      window.removeEventListener("holder-tip-changed", handler);
+      window.removeEventListener("storage", handler);
+    };
+  }, []);
 
   const handleXrgePurchase = (packageId: string) => {
     setXrgePackageId(packageId);
@@ -172,15 +186,38 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
                   </a>
                 </p>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => { setOpen(false); setBankOpen(true); }}
-                className="shrink-0 font-orbitron text-[9px] tracking-wider gap-1.5 border-pink-500/30 text-pink-300 hover:bg-pink-500/15 hover:text-pink-200"
-              >
-                <Wallet className="w-3 h-3" />
-                {t("store.bank")}
-              </Button>
+              <div className="relative shrink-0">
+                {holderTipShow && (
+                  <>
+                    <span className="pointer-events-none absolute -top-1 -right-1 z-10 flex h-2.5 w-2.5">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet-400 opacity-75" />
+                      <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-violet-300 shadow-[0_0_8px_hsl(280_90%_70%)]" />
+                    </span>
+                    <span
+                      role="tooltip"
+                      className="pointer-events-none absolute right-0 top-full mt-1.5 z-20 whitespace-nowrap rounded-md border border-violet-500/40 bg-card/95 px-2 py-1 font-mono-share text-[9px] text-violet-100 shadow-[0_4px_16px_hsl(280_80%_60%/0.3)] animate-slide-up"
+                    >
+                      {t("store.holderTip", "Check your holder tier here →")}
+                    </span>
+                  </>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setOpen(false);
+                    setBankOpen(true);
+                    if (holderTipShow) {
+                      try { localStorage.removeItem("holder-tip-show"); } catch { /* ignore */ }
+                      setHolderTipShow(false);
+                    }
+                  }}
+                  className="font-orbitron text-[9px] tracking-wider gap-1.5 border-pink-500/30 text-pink-300 hover:bg-pink-500/15 hover:text-pink-200"
+                >
+                  <Wallet className="w-3 h-3" />
+                  {t("store.bank")}
+                </Button>
+              </div>
             </div>
           </DialogHeader>
 
