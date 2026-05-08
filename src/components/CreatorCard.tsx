@@ -50,6 +50,8 @@ const CreatorCard: React.FC<Props> = ({ creator, onOpen, active, forceBlur }) =>
   const showBlur = showLocked || isMatureBlur;
   const isVideo = !!previewImg && isVideoUrl(previewImg);
   const [mediaFailed, setMediaFailed] = useState(false);
+  const [mediaLoaded, setMediaLoaded] = useState(false);
+  const showSkeleton = !!previewImg && !mediaFailed && !mediaLoaded;
 
   return (
     <button
