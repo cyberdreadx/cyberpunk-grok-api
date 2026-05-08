@@ -33,8 +33,6 @@ const BuyHoldBanner: React.FC = () => {
     setDismissed(true);
   };
 
-  // Show tiers from lowest unlock → highest, skip 'none'
-  const tiers = HOLDER_TIERS.filter(t => t.id !== "none").slice().reverse();
 
   return (
     <section
