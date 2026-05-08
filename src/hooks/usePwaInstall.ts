@@ -79,7 +79,7 @@ export function usePwaInstall() {
   }, []);
 
   const canPrompt = deferredPrompt !== null;
-  const shouldShow = isMobile && !isInstalled && !dismissed;
+  const shouldShow = isMobile && !isInstalled && !dismissed && enoughVisits;
 
   return { canPrompt, isIos, isMobile, isInstalled, shouldShow, install, dismiss };
 }
