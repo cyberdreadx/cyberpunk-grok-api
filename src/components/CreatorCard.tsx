@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Lock, ImageIcon, MessageSquare } from "lucide-react";
+import { Lock, ImageIcon, MessageSquare, ShieldAlert, Film } from "lucide-react";
 import VerifiedBadge from "@/components/VerifiedBadge";
+import { useMatureFilter } from "@/hooks/useMatureFilter";
 
 export interface FeedCreator {
   userId: string;
@@ -16,6 +17,7 @@ export interface FeedCreator {
   latestAt: string;
   latestLocked: boolean;
   verified?: boolean;
+  isMature?: boolean;
 }
 
 interface Props {
@@ -25,6 +27,8 @@ interface Props {
   /** When true, blur all previews regardless of lock state (used for logged-out teaser). */
   forceBlur?: boolean;
 }
+
+const isVideoUrl = (url: string) => /\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(url);
 
 const timeAgo = (iso: string) => {
   const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
@@ -40,7 +44,12 @@ const timeAgo = (iso: string) => {
 const CreatorCard: React.FC<Props> = ({ creator, onOpen, active, forceBlur }) => {
   const previewImg = creator.latestImage || creator.previewImage;
   const initials = (creator.username || "?").slice(0, 2).toUpperCase();
+  const { matureFilter } = useMatureFilter();
+  const isMatureBlur = !!creator.isMature && matureFilter && !creator.latestLocked;
   const showLocked = creator.latestLocked || forceBlur;
+  const showBlur = showLocked || isMatureBlur;
+  const isVideo = !!previewImg && isVideoUrl(previewImg);
+  const [mediaFailed, setMediaFailed] = useState(false);
 
   return (
     <button
@@ -53,19 +62,35 @@ const CreatorCard: React.FC<Props> = ({ creator, onOpen, active, forceBlur }) =>
     >
       {/* Preview */}
       <div className="relative flex-1 bg-muted/30 overflow-hidden">
-        {previewImg ? (
-          <img
-            src={previewImg}
-            alt={`${creator.username}'s latest`}
-            loading="lazy"
-            decoding="async"
-            className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${
-              showLocked ? "blur-2xl scale-110" : ""
-            }`}
-          />
+        {previewImg && !mediaFailed ? (
+          isVideo ? (
+            <video
+              src={`${previewImg}#t=0.1`}
+              muted
+              playsInline
+              // @ts-ignore - iOS Safari attribute
+              webkit-playsinline="true"
+              preload="metadata"
+              className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${
+                showBlur ? "blur-2xl scale-110" : ""
+              }`}
+              onError={() => setMediaFailed(true)}
+            />
+          ) : (
+            <img
+              src={previewImg}
+              alt={`${creator.username}'s latest`}
+              loading="lazy"
+              decoding="async"
+              className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${
+                showBlur ? "blur-2xl scale-110" : ""
+              }`}
+              onError={() => setMediaFailed(true)}
+            />
+          )
         ) : creator.latestText ? (
           <div className="absolute inset-0 p-3 flex items-center justify-center">
-            <p className={`font-mono-share text-[11px] text-foreground/80 line-clamp-6 text-center leading-snug ${forceBlur ? "blur-sm select-none" : ""}`}>
+            <p className={`font-mono-share text-[11px] text-foreground/80 line-clamp-6 text-center leading-snug ${forceBlur || isMatureBlur ? "blur-sm select-none" : ""}`}>
               {creator.latestText}
             </p>
           </div>
@@ -80,6 +105,22 @@ const CreatorCard: React.FC<Props> = ({ creator, onOpen, active, forceBlur }) =>
             <div className="bg-black/60 backdrop-blur-sm rounded-full p-2 border border-primary/40">
               <Lock className="w-4 h-4 text-primary" />
             </div>
+          </div>
+        )}
+
+        {isMatureBlur && !showLocked && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="bg-black/60 backdrop-blur-sm rounded-full px-2 py-1 border border-amber-400/50 flex items-center gap-1">
+              <ShieldAlert className="w-3 h-3 text-amber-300" />
+              <span className="font-mono-share text-[9px] text-amber-200 tracking-wider">18+</span>
+            </div>
+          </div>
+        )}
+
+        {/* Video indicator */}
+        {isVideo && !mediaFailed && (
+          <div className="absolute top-2 left-2 px-1 py-0.5 rounded bg-black/60 backdrop-blur-sm flex items-center gap-1">
+            <Film className="w-2.5 h-2.5 text-white/90" />
           </div>
         )}
 
