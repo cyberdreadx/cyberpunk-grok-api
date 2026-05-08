@@ -59,3 +59,17 @@ export const HOLDER_TIERS: HolderTierInfo[] = [
     description: "Hold ≥ 1M XRGE to unlock holder perks",
   },
 ];
+
+export interface StreakBonusInfo {
+  days: number;
+  multiplier: number;
+  label: string;
+  description: string;
+}
+
+export const STREAK_BONUSES: StreakBonusInfo[] = [
+  { days: 0,   multiplier: 1.0,  label: "Standard",     description: "Hold any qualifying amount" },
+  { days: 30,  multiplier: 1.25, label: "Committed",    description: "30 days continuous hold" },
+  { days: 90,  multiplier: 1.5,  label: "Veteran",      description: "90 days continuous hold" },
+  { days: 180, multiplier: 2.0,  label: "Diamond Hands", description: "180 days continuous hold" },
+];
