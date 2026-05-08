@@ -142,6 +142,7 @@ const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
   { id: "emails", label: "EMAILS", icon: <Mail className="w-3.5 h-3.5" /> },
   { id: "api", label: "API", icon: <Key className="w-3.5 h-3.5" /> },
   { id: "system", label: "SYSTEM", icon: <Server className="w-3.5 h-3.5" /> },
+  { id: "media-errors", label: "MEDIA ERR", icon: <ImageOff className="w-3.5 h-3.5" /> },
 ];
 
 // ── RunPod Worker Status Panel ──
