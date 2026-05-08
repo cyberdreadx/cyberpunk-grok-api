@@ -172,6 +172,57 @@ export default function HowToUseDialog({ open, onOpenChange }: HowToUseDialogPro
       ),
     },
     {
+      icon: <Cpu className="w-8 h-8 text-primary" />,
+      title: t("howToUse.engines.title", "Engines & Quality"),
+      subtitle: t("howToUse.engines.subtitle", "Pick the right model for the job"),
+      body: (
+        <div className="space-y-3">
+          <div className="border border-primary/20 rounded-lg p-3 bg-primary/5">
+            <div className="font-semibold text-sm mb-1">{t("howToUse.engines.gltchProLabel", "GLTCH PRO")}</div>
+            <p className="text-sm text-muted-foreground">
+              {t("howToUse.engines.gltchProDesc", "Highest quality. Best for finished work — slower, slightly more expensive.")}
+            </p>
+          </div>
+          <div className="border border-secondary/20 rounded-lg p-3 bg-secondary/5">
+            <div className="font-semibold text-sm mb-1">{t("howToUse.engines.gltchLabel", "GLTCH (default)")}</div>
+            <p className="text-sm text-muted-foreground">
+              {t("howToUse.engines.gltchDesc", "Balanced speed and quality. Great for everyday generation, edits, and animation.")}
+            </p>
+          </div>
+          <div className="border border-border/40 rounded-lg p-3 bg-card/40">
+            <div className="font-semibold text-sm mb-1">{t("howToUse.engines.grokLabel", "GROK")}</div>
+            <p className="text-sm text-muted-foreground">
+              {t("howToUse.engines.grokDesc", "xAI's official Grok models. Costs are doubled vs GLTCH; use BYOK to skip credits entirely.")}
+            </p>
+          </div>
+          <p className="text-xs text-muted-foreground/60">
+            {t("howToUse.engines.tip", "Tip: GLTCH is selected by default for Generate and Modify. You can switch engines from the Advanced panel.")}
+          </p>
+        </div>
+      ),
+    },
+    {
+      icon: <Crown className="w-8 h-8 text-secondary" />,
+      title: t("howToUse.subscriberCredits.title", "Subscriber-only Free Credits"),
+      subtitle: t("howToUse.subscriberCredits.subtitle", "How daily credits, spin & missions work"),
+      body: (
+        <div className="space-y-3">
+          <div className="flex gap-3 items-start">
+            <Crown className="w-5 h-5 text-secondary shrink-0 mt-0.5" />
+            <p className="text-sm">{t("howToUse.subscriberCredits.body1", "Daily free credits, the spin wheel, and the daily missions are exclusive to active subscribers. Pick any plan to unlock them.")}</p>
+          </div>
+          <div className="flex gap-3 items-start">
+            <Coins className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+            <p className="text-sm">{t("howToUse.subscriberCredits.body2", "Credit packs and existing balances are unaffected — they always work, with or without a subscription.")}</p>
+          </div>
+          <div className="flex gap-3 items-start">
+            <Key className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+            <p className="text-sm">{t("howToUse.subscriberCredits.body3", "BYOK users skip credits entirely and pay xAI directly.")}</p>
+          </div>
+        </div>
+      ),
+    },
+    {
       icon: <FolderOpen className="w-8 h-8 text-primary" />,
       title: t("howToUse.organizing.title", "Your Library"),
       subtitle: t("howToUse.organizing.subtitle", "Manage your creations"),
