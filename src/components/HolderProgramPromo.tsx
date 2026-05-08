@@ -194,6 +194,8 @@ const HolderProgramPromo: React.FC<Props> = ({ onOpenBank }) => {
           </ul>
         </div>
       )}
+
+      <HolderProgramDialog open={learnOpen} onOpenChange={setLearnOpen} onOpenBank={onOpenBank} />
     </section>
   );
 };
