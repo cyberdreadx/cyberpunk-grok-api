@@ -71,7 +71,10 @@ export async function apiFetch<T = any>(path: string, options: ApiOptions = {}):
     }
   }
 
-  const fetchOptions: RequestInit = { method, headers, credentials: isSameOriginApi ? "include" : "omit" };
+  // Always include credentials so the cross-origin `td` (trusted-device) cookie set by
+  // /auth/verify-2fa can be stored and sent on subsequent /auth/login calls.
+  // Server CORS already returns Access-Control-Allow-Credentials: true and a specific origin.
+  const fetchOptions: RequestInit = { method, headers, credentials: "include" };
   if (body !== undefined) {
     fetchOptions.body = JSON.stringify(body);
   }
