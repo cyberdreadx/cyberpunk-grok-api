@@ -85,9 +85,12 @@ export async function issueTrustedDevice(res: VercelResponse, req: VercelRequest
     VALUES (${userId}::uuid, ${hash(token)}, ${ua}, ${ip}, now() + (${TTL_DAYS} || ' days')::interval)
   `.catch((e) => { console.error("[trustedDevice] insert failed", (e as any)?.message); });
   const maxAge = TTL_DAYS * 24 * 60 * 60;
+  // SameSite=None is required so the cookie is stored & sent on cross-origin
+  // calls from the web app (e.g. grokrunner.com → cyberpunk-grok-api.vercel.app).
+  // Secure is mandatory whenever SameSite=None.
   res.setHeader(
     "Set-Cookie",
-    `${COOKIE_NAME}=${token}; Path=/; Max-Age=${maxAge}; HttpOnly; Secure; SameSite=Lax`,
+    `${COOKIE_NAME}=${token}; Path=/; Max-Age=${maxAge}; HttpOnly; Secure; SameSite=None`,
   );
 }
 
