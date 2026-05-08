@@ -66,9 +66,7 @@ const CreatorCard: React.FC<Props> = ({ creator, onOpen, active, forceBlur }) =>
       <div className="relative flex-1 bg-muted/30 overflow-hidden">
         {/* Skeleton shimmer while media resolves */}
         {showSkeleton && (
-          <div className="absolute inset-0 bg-gradient-to-br from-muted/40 via-muted/20 to-muted/40 animate-pulse">
-            <div className="absolute inset-0 bg-[linear-gradient(110deg,transparent_30%,hsl(var(--primary)/0.08)_50%,transparent_70%)] bg-[length:200%_100%] animate-[shimmer_1.6s_linear_infinite]" />
-          </div>
+          <div className="skeleton-cyber absolute inset-0" aria-hidden />
         )}
         {previewImg && !mediaFailed ? (
           isVideo ? (
