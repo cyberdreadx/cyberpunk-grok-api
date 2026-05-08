@@ -74,9 +74,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const contentType = upstream.headers.get("content-type") || "application/octet-stream";
     const contentLength = upstream.headers.get("content-length");
+    const inline = req.query.inline === "1" || req.query.inline === "true";
 
     res.setHeader("Content-Type", contentType);
-    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    if (inline) {
+      res.setHeader("Content-Disposition", `inline; filename="${filename}"`);
+    } else {
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    }
     if (contentLength) res.setHeader("Content-Length", contentLength);
     res.setHeader("Cache-Control", "public, max-age=3600");
 
