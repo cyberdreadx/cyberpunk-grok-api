@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { Diamond, Wallet, Flame, ChevronRight } from "lucide-react";
+import { Diamond, Wallet, Flame, ChevronRight, BookOpen } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { HOLDER_TIERS } from "@/lib/holderTiers";
 import { XRGE_DEXSCREENER_URL } from "@/lib/xrgePublic";
 import HolderBadge, { type HolderTierId } from "@/components/HolderBadge";
+import HolderProgramDialog from "@/components/HolderProgramDialog";
 import { Button } from "@/components/ui/button";
 
 interface HolderState {
@@ -30,7 +31,7 @@ interface Props {
  */
 const HolderProgramPromo: React.FC<Props> = ({ onOpenBank }) => {
   const [holder, setHolder] = useState<HolderState | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [learnOpen, setLearnOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
