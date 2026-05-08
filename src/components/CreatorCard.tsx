@@ -55,6 +55,20 @@ const CreatorCard: React.FC<Props> = ({ creator, onOpen, active, forceBlur, curr
   const isVideo = !!previewImg && isVideoUrl(previewImg);
   const [mediaFailed, setMediaFailed] = useState(false);
   const [mediaLoaded, setMediaLoaded] = useState(false);
+  const [poster, setPoster] = useState<string | null>(() =>
+    isVideo && previewImg ? (getCachedPoster(previewImg) ?? null) : null
+  );
+
+  // Lazily extract a frame from the video to use as a stable poster image.
+  // If extraction fails (CORS, codec) we silently fall back to the inline <video>.
+  useEffect(() => {
+    if (!isVideo || !previewImg) return;
+    if (getCachedPoster(previewImg) !== undefined) return;
+    let cancelled = false;
+    extractPoster(previewImg).then((p) => { if (!cancelled) setPoster(p); });
+    return () => { cancelled = true; };
+  }, [isVideo, previewImg]);
+
   const showSkeleton = !!previewImg && !mediaFailed && !mediaLoaded;
 
   return (
