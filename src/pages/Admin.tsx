@@ -32,6 +32,7 @@ import {
   ChevronUp,
   Shield,
   Sparkles,
+  ImageOff,
 } from "lucide-react";
 import AdminInsightsPanel from "@/components/AdminInsightsPanel";
 import {
