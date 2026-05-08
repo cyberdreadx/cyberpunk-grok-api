@@ -86,7 +86,7 @@ export default function HowToUseDialog({ open, onOpenChange }: HowToUseDialogPro
               <span className="font-semibold text-sm">{t("howToUse.twoWays.optionB", "Option B: Credits")}</span>
             </div>
             <p className="text-sm text-muted-foreground">
-              {t("howToUse.twoWays.optionBDesc", "Sign up for 10 free credits daily. Buy packs or subscribe for more.")}
+              {t("howToUse.twoWays.optionBDesc", "Subscribe to any plan to unlock 10 free daily credits, the spin wheel, and daily missions. You can also buy credit packs anytime — they never expire.")}
             </p>
           </div>
         </div>
@@ -100,15 +100,15 @@ export default function HowToUseDialog({ open, onOpenChange }: HowToUseDialogPro
         <div className="space-y-3">
           <div className="flex gap-3 items-start">
             <span className="shrink-0 w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold flex items-center justify-center">1</span>
-            <p className="text-sm">{t("howToUse.gettingStarted.byok1", "BYOK: Tap the key icon in the status bar, paste your xAI API key, and you're ready.")}</p>
+            <p className="text-sm">{t("howToUse.gettingStarted.byok1", "BYOK: Tap the key icon in the top bar, paste your xAI API key, and you're ready — generations bill xAI directly.")}</p>
           </div>
           <div className="flex gap-3 items-start">
             <span className="shrink-0 w-6 h-6 rounded-full bg-secondary/20 text-secondary text-xs font-bold flex items-center justify-center">1</span>
-            <p className="text-sm">{t("howToUse.gettingStarted.credits1", "Credits: Create an account to get 10 free credits each day.")}</p>
+            <p className="text-sm">{t("howToUse.gettingStarted.credits1", "Credits: Create an account, verify your email, then either subscribe (unlocks daily free credits + spin + missions) or buy a credit pack.")}</p>
           </div>
           <div className="flex gap-3 items-start">
             <span className="shrink-0 w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold flex items-center justify-center">2</span>
-            <p className="text-sm">{t("howToUse.gettingStarted.step2", "Choose a mode — Generate, Edit, or Animate — and type a prompt.")}</p>
+            <p className="text-sm">{t("howToUse.gettingStarted.step2", "Pick a mode — Generate, Edit, or Animate — choose an engine (GLTCH is the default; GLTCH PRO is highest quality), and type a prompt.")}</p>
           </div>
         </div>
       ),
