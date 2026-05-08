@@ -1549,6 +1549,9 @@ export default function Admin() {
         {/* ═══ INSIGHTS TAB ═══ */}
         {activeTab === "insights" && <AdminInsightsPanel />}
 
+        {/* ═══ MEDIA ERRORS TAB ═══ */}
+        {activeTab === "media-errors" && <MediaErrorsPanel />}
+
         {/* ═══ REVENUE TAB ═══ */}
         {activeTab === "revenue" && (
           <>
