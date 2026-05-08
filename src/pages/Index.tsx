@@ -396,6 +396,17 @@ const Index = () => {
   }, [canUseCredits, apiMode, setApiMode, simpleMode]);
   const effectiveApiMode = apiMode;
 
+  // When the user clicks the BYOK pill with no key set, `<ApiKeyDialog />` only
+  // mounts on this render (after `effectiveApiMode` flips to "byok"). We dispatch
+  // the open event from a post-render effect so the dialog's event listener is
+  // guaranteed to be attached before the event fires.
+  useEffect(() => {
+    if (!pendingOpenApiKey) return;
+    if (simpleMode || effectiveApiMode !== "byok") return;
+    window.dispatchEvent(new Event("open-api-key-dialog"));
+    setPendingOpenApiKey(false);
+  }, [pendingOpenApiKey, simpleMode, effectiveApiMode]);
+
   const handleSaveApiKey = useCallback((key: string) => {
     setApiKeyRaw(key);
     setApiKeySet(true);
