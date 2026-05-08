@@ -1,8 +1,7 @@
 import React, { useState } from "react";
-import { Diamond, X, ChevronDown, ChevronUp, ExternalLink, Flame } from "lucide-react";
-import { HOLDER_TIERS } from "@/lib/holderTiers";
+import { Diamond, X, BookOpen, ExternalLink, Flame } from "lucide-react";
 import { XRGE_DEXSCREENER_URL } from "@/lib/xrgePublic";
-import HolderBadge from "@/components/HolderBadge";
+import HolderProgramDialog from "@/components/HolderProgramDialog";
 
 const STORAGE_KEY = "buy_hold_banner_dismissed_v1";
 
@@ -21,7 +20,7 @@ const BuyHoldBanner: React.FC = () => {
       return false;
     }
   });
-  const [expanded, setExpanded] = useState(false);
+  const [learnOpen, setLearnOpen] = useState(false);
 
   if (dismissed) return null;
 
@@ -85,43 +84,18 @@ const BuyHoldBanner: React.FC = () => {
                 <ExternalLink className="w-3 h-3" />
               </a>
               <button
-                onClick={() => setExpanded(v => !v)}
-                aria-expanded={expanded}
+                onClick={() => setLearnOpen(true)}
                 className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md border border-border/60 bg-card/40 hover:bg-card/70 transition-colors text-[10px] sm:text-[11px] font-orbitron uppercase tracking-wider text-foreground/80"
               >
-                {expanded ? "Hide tiers" : "See tiers"}
-                {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                <BookOpen className="w-3 h-3" />
+                Learn more
               </button>
             </div>
-
-            {expanded && (
-              <ul className="mt-3 grid gap-1.5 sm:grid-cols-2 animate-slide-up">
-                {tiers.map(t => (
-                  <li
-                    key={t.id}
-                    className="flex items-start gap-2 px-2.5 py-2 rounded border border-border/40 bg-card/40"
-                  >
-                    <HolderBadge tier={t.id as any} tierName={t.name} size="xs" showStreak={false} showLabel={false} />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-baseline gap-1.5 flex-wrap">
-                        <span className="text-[10px] font-orbitron uppercase tracking-wider text-foreground">
-                          {t.name}
-                        </span>
-                        <span className="text-[9px] font-mono-share text-muted-foreground/70">
-                          ≥ {(t.minHeld / 1_000_000).toLocaleString()}M XRGE
-                        </span>
-                      </div>
-                      <p className="mt-0.5 text-[10px] font-mono-share text-foreground/70 leading-snug">
-                        {t.description}
-                      </p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
           </div>
         </div>
       </div>
+
+      <HolderProgramDialog open={learnOpen} onOpenChange={setLearnOpen} />
     </section>
   );
 };
