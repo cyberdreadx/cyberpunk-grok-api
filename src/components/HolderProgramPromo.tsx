@@ -80,16 +80,27 @@ const HolderProgramPromo: React.FC<Props> = ({ onOpenBank }) => {
             />
           </span>
         )}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onOpenBank}
-          className="ml-auto shrink-0 font-orbitron text-[9px] tracking-wider gap-1.5 border-violet-500/30 text-violet-200 hover:bg-violet-500/15 hover:text-violet-100"
-        >
-          <Wallet className="w-3 h-3" />
-          XRGE Bank
-          <ChevronRight className="w-3 h-3" />
-        </Button>
+        <div className="ml-auto flex items-center gap-1.5">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setLearnOpen(true)}
+            className="shrink-0 font-orbitron text-[9px] tracking-wider gap-1 text-muted-foreground hover:text-violet-200"
+          >
+            <BookOpen className="w-3 h-3" />
+            Learn
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onOpenBank}
+            className="shrink-0 font-orbitron text-[9px] tracking-wider gap-1.5 border-violet-500/30 text-violet-200 hover:bg-violet-500/15 hover:text-violet-100"
+          >
+            <Wallet className="w-3 h-3" />
+            XRGE Bank
+            <ChevronRight className="w-3 h-3" />
+          </Button>
+        </div>
       </div>
 
       {/* Body — current holder summary OR discovery copy */}
