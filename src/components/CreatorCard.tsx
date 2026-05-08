@@ -50,6 +50,8 @@ const CreatorCard: React.FC<Props> = ({ creator, onOpen, active, forceBlur }) =>
   const showBlur = showLocked || isMatureBlur;
   const isVideo = !!previewImg && isVideoUrl(previewImg);
   const [mediaFailed, setMediaFailed] = useState(false);
+  const [mediaLoaded, setMediaLoaded] = useState(false);
+  const showSkeleton = !!previewImg && !mediaFailed && !mediaLoaded;
 
   return (
     <button
@@ -62,6 +64,10 @@ const CreatorCard: React.FC<Props> = ({ creator, onOpen, active, forceBlur }) =>
     >
       {/* Preview */}
       <div className="relative flex-1 bg-muted/30 overflow-hidden">
+        {/* Skeleton shimmer while media resolves */}
+        {showSkeleton && (
+          <div className="skeleton-cyber absolute inset-0" aria-hidden />
+        )}
         {previewImg && !mediaFailed ? (
           isVideo ? (
             <video
@@ -71,9 +77,10 @@ const CreatorCard: React.FC<Props> = ({ creator, onOpen, active, forceBlur }) =>
               // @ts-ignore - iOS Safari attribute
               webkit-playsinline="true"
               preload="metadata"
-              className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${
+              className={`w-full h-full object-cover transition-[transform,opacity] duration-500 group-hover:scale-105 ${
                 showBlur ? "blur-2xl scale-110" : ""
-              }`}
+              } ${mediaLoaded ? "opacity-100" : "opacity-0"}`}
+              onLoadedData={() => setMediaLoaded(true)}
               onError={() => setMediaFailed(true)}
             />
           ) : (
@@ -82,9 +89,10 @@ const CreatorCard: React.FC<Props> = ({ creator, onOpen, active, forceBlur }) =>
               alt={`${creator.username}'s latest`}
               loading="lazy"
               decoding="async"
-              className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${
+              className={`w-full h-full object-cover transition-[transform,opacity] duration-500 group-hover:scale-105 ${
                 showBlur ? "blur-2xl scale-110" : ""
-              }`}
+              } ${mediaLoaded ? "opacity-100" : "opacity-0"}`}
+              onLoad={() => setMediaLoaded(true)}
               onError={() => setMediaFailed(true)}
             />
           )
