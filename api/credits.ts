@@ -5,6 +5,7 @@ import { applyCors } from "./_lib/cors";
 import { checkRateLimit } from "./_lib/ratelimit";
 import { getFreeCreditsConfig, FREE_CREDITS_MAINTENANCE_MESSAGE } from "./_lib/freeCredits";
 import { getCombinedCreditDiscountPct } from "./_lib/discount";
+import { FREE_CREDITS_SUBSCRIBER_ONLY_MESSAGE } from "./_lib/subscriberGate";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   applyCors(req, res, "GET, OPTIONS");
