@@ -6,6 +6,8 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 const DISMISSED_KEY = "pwa-install-dismissed";
+const VISIT_COUNT_KEY = "pwa-install-visits";
+const MIN_VISITS_BEFORE_PROMPT = 2;
 const DISMISSED_DURATION_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 export function usePwaInstall() {
@@ -14,6 +16,7 @@ export function usePwaInstall() {
   const [dismissed, setDismissed] = useState(false);
   const [isIos, setIsIos] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [enoughVisits, setEnoughVisits] = useState(false);
 
   useEffect(() => {
     const ua = navigator.userAgent;
@@ -35,6 +38,14 @@ export function usePwaInstall() {
         const ts = parseInt(raw, 10);
         if (Date.now() - ts < DISMISSED_DURATION_MS) setDismissed(true);
       }
+    } catch { /* ignore */ }
+
+    // Visit counter — only prompt after the user has come back at least once
+    try {
+      const raw = localStorage.getItem(VISIT_COUNT_KEY);
+      const next = (raw ? parseInt(raw, 10) || 0 : 0) + 1;
+      localStorage.setItem(VISIT_COUNT_KEY, String(next));
+      if (next >= MIN_VISITS_BEFORE_PROMPT) setEnoughVisits(true);
     } catch { /* ignore */ }
 
     // Chrome/Edge/Android install prompt
@@ -68,7 +79,7 @@ export function usePwaInstall() {
   }, []);
 
   const canPrompt = deferredPrompt !== null;
-  const shouldShow = isMobile && !isInstalled && !dismissed;
+  const shouldShow = isMobile && !isInstalled && !dismissed && enoughVisits;
 
   return { canPrompt, isIos, isMobile, isInstalled, shouldShow, install, dismiss };
 }
