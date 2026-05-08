@@ -4,6 +4,7 @@ import { Lock, ImageIcon, MessageSquare, ShieldAlert, Film } from "lucide-react"
 import VerifiedBadge from "@/components/VerifiedBadge";
 import { useMatureFilter } from "@/hooks/useMatureFilter";
 import { extractPoster, getCachedPoster } from "@/lib/videoPoster";
+import { mediaCandidates } from "@/lib/mediaUrl";
 
 export interface FeedCreator {
   userId: string;
@@ -55,6 +56,18 @@ const CreatorCard: React.FC<Props> = ({ creator, onOpen, active, forceBlur, curr
   const isVideo = !!previewImg && isVideoUrl(previewImg);
   const [mediaFailed, setMediaFailed] = useState(false);
   const [mediaLoaded, setMediaLoaded] = useState(false);
+  const [srcIdx, setSrcIdx] = useState(0);
+  const candidates = previewImg ? mediaCandidates(previewImg) : [];
+  const activeSrc = candidates[srcIdx] || previewImg || "";
+
+  const handleMediaError = () => {
+    if (srcIdx < candidates.length - 1) {
+      setSrcIdx((i) => i + 1);
+    } else {
+      setMediaFailed(true);
+    }
+  };
+
   const [poster, setPoster] = useState<string | null>(() =>
     isVideo && previewImg ? (getCachedPoster(previewImg) ?? null) : null
   );
@@ -102,7 +115,8 @@ const CreatorCard: React.FC<Props> = ({ creator, onOpen, active, forceBlur, curr
               />
             ) : (
               <video
-                src={`${previewImg}#t=0.1`}
+                key={activeSrc}
+                src={`${activeSrc}${activeSrc.includes("#") ? "" : "#t=0.1"}`}
                 muted
                 playsInline
                 // @ts-ignore - iOS Safari attribute
@@ -112,12 +126,13 @@ const CreatorCard: React.FC<Props> = ({ creator, onOpen, active, forceBlur, curr
                   showBlur ? "blur-2xl scale-110" : ""
                 } ${mediaLoaded ? "opacity-100" : "opacity-0"}`}
                 onLoadedData={() => setMediaLoaded(true)}
-                onError={() => setMediaFailed(true)}
+                onError={handleMediaError}
               />
             )
           ) : (
             <img
-              src={previewImg}
+              key={activeSrc}
+              src={activeSrc}
               alt={`${creator.username}'s latest`}
               loading="lazy"
               decoding="async"
@@ -125,7 +140,7 @@ const CreatorCard: React.FC<Props> = ({ creator, onOpen, active, forceBlur, curr
                 showBlur ? "blur-2xl scale-110" : ""
               } ${mediaLoaded ? "opacity-100" : "opacity-0"}`}
               onLoad={() => setMediaLoaded(true)}
-              onError={() => setMediaFailed(true)}
+              onError={handleMediaError}
             />
           )
         ) : creator.latestText ? (
