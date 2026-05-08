@@ -181,9 +181,9 @@
   "ageGate": {
     "title": "NEURAL LINK VERIFICATION",
     "subtitle": "// SECTOR_RESTRICTED // AUTH_REQUIRED //",
-    "description": "This sector of the net is restricted to operatives aged {age} or older. By proceeding, you confirm your biological chassis has completed at least 18 solar rotations around the nearest star.",
+    "description": "This sector of the net is restricted to operatives aged {{age}} or older. By proceeding, you confirm your biological chassis has completed at least 18 solar rotations around the nearest star.",
     "warning": "Minors caught in this zone will be escorted out by corporate security drones. No exceptions. No appeals.",
-    "ageCheck": "I confirm I am {age} years or older",
+    "ageCheck": "I confirm I am {{age}} years or older",
     "tosCheck": "I have read and agree to the",
     "tosLink": "Terms of Service",
     "privacyCheck": "I have read and acknowledge the",

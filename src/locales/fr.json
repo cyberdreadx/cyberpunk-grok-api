@@ -181,9 +181,9 @@
   "ageGate": {
     "title": "VÉRIFICATION DU LIEN NEURAL",
     "subtitle": "// SECTEUR_RESTREINT // AUTH_REQUISE //",
-    "description": "Ce secteur du réseau est réservé aux opérateurs de {age} ans ou plus. En continuant, vous confirmez avoir effectué au moins 18 rotations solaires.",
+    "description": "Ce secteur du réseau est réservé aux opérateurs de {{age}} ans ou plus. En continuant, vous confirmez avoir effectué au moins 18 rotations solaires.",
     "warning": "Les mineurs surpris dans cette zone seront escortés par les drones de sécurité. Aucune exception. Aucun appel.",
-    "ageCheck": "Je confirme avoir {age} ans ou plus",
+    "ageCheck": "Je confirme avoir {{age}} ans ou plus",
     "tosCheck": "J'ai lu et j'accepte les",
     "tosLink": "Conditions d'utilisation",
     "privacyCheck": "J'ai lu et je reconnais la",
