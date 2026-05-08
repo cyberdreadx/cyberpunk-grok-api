@@ -1030,9 +1030,9 @@ const Index = () => {
         {/* Stories */}
         <StoriesBar currentUserId={auth.user?.id} isAdmin={auth.user?.is_admin} />
 
-        {/* Header with Orb */}
+        {/* Header — minimal: orb (desktop) · title · status dot · primary actions · overflow menu */}
         <header className="text-center space-y-2 animate-slide-up">
-          {/* Grok Orb — hidden on mobile (shown in loading state instead), lazy-loaded */}
+          {/* Grok Orb — desktop only, lazy-loaded */}
           <div className="hidden sm:block sm:w-48 sm:h-48 md:w-64 md:h-64 mx-auto">
             <Suspense fallback={<div className="w-full h-full rounded-full bg-primary/5 animate-pulse" />}>
               <GrokOrb isGenerating={isLoading} />
@@ -1045,68 +1045,19 @@ const Index = () => {
             className="font-orbitron text-2xl sm:text-3xl md:text-5xl font-black tracking-wider neon-text-cyan"
             glitchIntensity="medium"
           />
-          <p className="font-mono-share text-xs sm:text-sm text-muted-foreground animate-flicker">
-            <span className="text-primary/50">$</span> {t("header.subtitle")} // v{APP_VERSION}
-            <span className="inline-block w-2 h-4 bg-primary/70 ml-1 animate-pulse align-middle" />
-          </p>
 
-          {/* Status bar */}
-          <div className="flex items-center justify-center gap-2 sm:gap-4 font-mono-share text-[9px] sm:text-[10px] text-muted-foreground/50 pt-2 flex-wrap">
-            <span className="flex items-center gap-1">
-              <Terminal className="w-3 h-3" />
-              {t("header.sysOnline")}
-            </span>
+          {/* Compact action row — only essentials are inline; everything else lives behind "More". */}
+          <div className="flex items-center justify-center gap-2 pt-2 flex-wrap">
+            {/* Status indicator (just the dot — no text) */}
             <span
-              className={`w-1.5 h-1.5 rounded-full transition-colors duration-500 ${isLoading ? "bg-secondary animate-pulse" : "bg-primary animate-pulse-glow"
-                }`}
+              aria-label={t("header.sysOnline")}
+              title={t("header.sysOnline")}
+              className={`w-1.5 h-1.5 rounded-full transition-colors duration-500 ${
+                isLoading ? "bg-secondary animate-pulse" : "bg-primary animate-pulse-glow"
+              }`}
             />
 
-            {/* API Mode toggle: BYOK vs Credits — hidden in simple mode */}
-            {!simpleMode && (
-              <div className="flex items-center bg-card/60 border border-border/50 rounded overflow-hidden">
-                <button
-                  onClick={() => {
-                    setApiMode("byok");
-                    // Schedule the dialog open — the post-render effect above
-                    // dispatches `open-api-key-dialog` once <ApiKeyDialog /> has
-                    // mounted (effectiveApiMode === "byok") and its listener is wired.
-                    if (!apiKeySet) setPendingOpenApiKey(true);
-                  }}
-                  title={apiKeySet ? t("header.byok") : "Use your own xAI API key (click to set)"}
-                  className={`flex items-center gap-1 px-2 py-1 text-[9px] sm:text-[10px] font-mono-share transition-colors ${effectiveApiMode === "byok"
-                    ? "bg-primary/20 text-primary"
-                    : "text-muted-foreground/50 hover:text-muted-foreground"
-                    }`}
-                >
-                  <Key className="w-2.5 h-2.5" />
-                  {t("header.byok")}
-                </button>
-                {canUseCredits && (
-                  <button
-                    onClick={() => setApiMode("credits")}
-                    className={`flex items-center gap-1 px-2 py-1 text-[9px] sm:text-[10px] font-mono-share transition-colors ${effectiveApiMode === "credits"
-                      ? "bg-secondary/20 text-secondary"
-                      : "text-muted-foreground/50 hover:text-muted-foreground"
-                      }`}
-                  >
-                    <Coins className="w-2.5 h-2.5" />
-                    {t("credits.credits")}
-                  </button>
-                )}
-              </div>
-            )}
-
-            {/* BYOK: API key dialog — hidden in simple mode */}
-            {!simpleMode && effectiveApiMode === "byok" && (
-              <ApiKeyDialog
-                hasKey={apiKeySet}
-                onSave={handleSaveApiKey}
-                onClear={handleClearApiKey}
-              />
-            )}
-
-
-            {/* Credits: balance display — always visible for authenticated users (store + balance) */}
+            {/* Credits — primary, always visible for authenticated users */}
             {canUseCredits && (
               <CreditDisplay
                 totalCredits={creditsHook.totalCredits}
@@ -1134,87 +1085,10 @@ const Index = () => {
               />
             )}
 
-            {/* Daily Missions */}
-            {auth.isAuthenticated && (
-              <DailyMissionsDialog
-                status={missionsHook.status}
-                loading={missionsHook.loading}
-                claiming={missionsHook.claiming}
-                onClaim={missionsHook.claimMission}
-                onClaimStreak={missionsHook.claimStreakBonus}
-                onCreditsRefresh={creditsHook.refreshCredits}
-              />
-            )}
-
-            {/* Admin: test credit spending toggle */}
-            {isAdmin && (
-              <button
-                onClick={() => setAdminTestCredits(prev => !prev)}
-                className={`px-2 py-1 rounded text-[10px] font-mono border transition-colors ${adminTestCredits
-                  ? "border-yellow-500/60 bg-yellow-500/20 text-yellow-300"
-                  : "border-white/10 bg-white/5 text-white/40 hover:text-white/60"
-                  }`}
-                title={adminTestCredits ? "Credits WILL be deducted (testing mode)" : "Credits are bypassed (admin mode)"}
-              >
-                {adminTestCredits ? "TEST CR: ON" : "TEST CR: OFF"}
-              </button>
-            )}
-
-            {/* Theme Picker */}
-            <ThemePicker />
-
-            {/* Simple / Advanced toggle */}
-            <div className="relative">
-              <button
-                onClick={() => {
-                  const next = !simpleMode;
-                  setSimpleMode(next);
-                  localStorage.setItem("ui-mode", next ? "simple" : "advanced");
-                  localStorage.setItem("onboarding-toggle-seen", "1");
-                  setShowToggleTooltip(false);
-                  if (next && !["edit-image", "text-to-image", "image-to-video"].includes(mode)) {
-                    setMode("edit-image");
-                  }
-                }}
-                className={`flex items-center gap-1 px-2 py-1 text-[9px] sm:text-[10px] font-mono-share transition-colors rounded border ${
-                  simpleMode
-                    ? "border-primary/30 bg-primary/10 text-primary"
-                    : "border-border/50 bg-card/40 text-muted-foreground/60 hover:text-muted-foreground"
-                }${showToggleTooltip ? " ring-2 ring-primary/50 ring-offset-1 ring-offset-background" : ""}`}
-                title={simpleMode ? t("header.switchToAdvanced") : t("header.switchToSimple")}
-              >
-                {simpleMode ? <ToggleLeft className="w-3 h-3" /> : <ToggleRight className="w-3 h-3" />}
-                {simpleMode ? t("header.simple") : t("header.advanced")}
-              </button>
-
-              {/* First-time onboarding tooltip */}
-              {showToggleTooltip && (
-                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 animate-slide-up">
-                  <div className="relative bg-card border border-primary/40 rounded-lg px-3 py-2.5 shadow-lg shadow-primary/10 max-w-[220px]">
-                    {/* Arrow */}
-                    <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 bg-card border-l border-t border-primary/40" />
-                    <p className="font-mono-share text-[10px] text-foreground/80 leading-relaxed relative z-10">
-                      💡 <span className="text-primary font-bold">{t("header.onboardingNew")}</span> {t("header.onboardingTip")}
-                    </p>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowToggleTooltip(false);
-                        localStorage.setItem("onboarding-toggle-seen", "1");
-                      }}
-                      className="mt-1.5 font-mono-share text-[9px] text-primary/60 hover:text-primary transition-colors relative z-10"
-                    >
-                      {t("header.onboardingGotIt")}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Notification bell */}
+            {/* Notifications — primary */}
             <NotificationBell isAuthenticated={auth.isAuthenticated} />
 
-            {/* Auth: login/logout */}
+            {/* Auth — primary */}
             {auth.enabled && (
               <AuthDialog
                 isAuthenticated={auth.isAuthenticated}
@@ -1234,8 +1108,157 @@ const Index = () => {
                 onDeleteAccount={auth.deleteAccount}
               />
             )}
+
+            {/* Overflow menu — everything secondary lives here */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  title={t("header.more", "More")}
+                  aria-label={t("header.more", "More")}
+                  className={`flex items-center justify-center w-7 h-7 rounded border border-border/50 bg-card/40 text-muted-foreground/70 hover:text-foreground hover:border-primary/40 transition-colors ${
+                    showToggleTooltip ? "ring-2 ring-primary/50 ring-offset-1 ring-offset-background animate-pulse" : ""
+                  }`}
+                  onClick={() => {
+                    if (showToggleTooltip) {
+                      setShowToggleTooltip(false);
+                      localStorage.setItem("onboarding-toggle-seen", "1");
+                    }
+                  }}
+                >
+                  <MoreHorizontal className="w-3.5 h-3.5" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-60 p-3 space-y-3">
+                {/* Simple / Advanced toggle */}
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-mono-share text-[10px] text-muted-foreground/70 uppercase tracking-wider">
+                    {t("header.mode", "Mode")}
+                  </span>
+                  <button
+                    onClick={() => {
+                      const next = !simpleMode;
+                      setSimpleMode(next);
+                      localStorage.setItem("ui-mode", next ? "simple" : "advanced");
+                      localStorage.setItem("onboarding-toggle-seen", "1");
+                      setShowToggleTooltip(false);
+                      if (next && !["edit-image", "text-to-image", "image-to-video"].includes(mode)) {
+                        setMode("edit-image");
+                      }
+                    }}
+                    className={`flex items-center gap-1 px-2 py-1 text-[10px] font-mono-share transition-colors rounded border ${
+                      simpleMode
+                        ? "border-primary/30 bg-primary/10 text-primary"
+                        : "border-border/50 bg-card/40 text-muted-foreground/60 hover:text-muted-foreground"
+                    }`}
+                  >
+                    {simpleMode ? <ToggleLeft className="w-3 h-3" /> : <ToggleRight className="w-3 h-3" />}
+                    {simpleMode ? t("header.simple") : t("header.advanced")}
+                  </button>
+                </div>
+
+                {/* API Mode toggle: BYOK vs Credits — only when advanced */}
+                {!simpleMode && (
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-mono-share text-[10px] text-muted-foreground/70 uppercase tracking-wider">
+                      {t("header.api", "API")}
+                    </span>
+                    <div className="flex items-center bg-card/60 border border-border/50 rounded overflow-hidden">
+                      <button
+                        onClick={() => {
+                          setApiMode("byok");
+                          if (!apiKeySet) setPendingOpenApiKey(true);
+                        }}
+                        title={apiKeySet ? t("header.byok") : "Use your own xAI API key (click to set)"}
+                        className={`flex items-center gap-1 px-2 py-1 text-[10px] font-mono-share transition-colors ${
+                          effectiveApiMode === "byok"
+                            ? "bg-primary/20 text-primary"
+                            : "text-muted-foreground/50 hover:text-muted-foreground"
+                        }`}
+                      >
+                        <Key className="w-2.5 h-2.5" />
+                        {t("header.byok")}
+                      </button>
+                      {canUseCredits && (
+                        <button
+                          onClick={() => setApiMode("credits")}
+                          className={`flex items-center gap-1 px-2 py-1 text-[10px] font-mono-share transition-colors ${
+                            effectiveApiMode === "credits"
+                              ? "bg-secondary/20 text-secondary"
+                              : "text-muted-foreground/50 hover:text-muted-foreground"
+                          }`}
+                        >
+                          <Coins className="w-2.5 h-2.5" />
+                          {t("credits.credits")}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* BYOK key dialog trigger */}
+                {!simpleMode && effectiveApiMode === "byok" && (
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-mono-share text-[10px] text-muted-foreground/70 uppercase tracking-wider">
+                      {t("header.apiKey", "API Key")}
+                    </span>
+                    <ApiKeyDialog
+                      hasKey={apiKeySet}
+                      onSave={handleSaveApiKey}
+                      onClear={handleClearApiKey}
+                    />
+                  </div>
+                )}
+
+                {/* Daily Missions */}
+                {auth.isAuthenticated && (
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-mono-share text-[10px] text-muted-foreground/70 uppercase tracking-wider">
+                      {t("header.missions", "Missions")}
+                    </span>
+                    <DailyMissionsDialog
+                      status={missionsHook.status}
+                      loading={missionsHook.loading}
+                      claiming={missionsHook.claiming}
+                      onClaim={missionsHook.claimMission}
+                      onClaimStreak={missionsHook.claimStreakBonus}
+                      onCreditsRefresh={creditsHook.refreshCredits}
+                    />
+                  </div>
+                )}
+
+                {/* Theme */}
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-mono-share text-[10px] text-muted-foreground/70 uppercase tracking-wider">
+                    {t("header.theme", "Theme")}
+                  </span>
+                  <ThemePicker />
+                </div>
+
+                {/* Admin: test credit spending toggle */}
+                {isAdmin && (
+                  <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/30">
+                    <span className="font-mono-share text-[10px] text-muted-foreground/70 uppercase tracking-wider">
+                      Admin
+                    </span>
+                    <button
+                      onClick={() => setAdminTestCredits(prev => !prev)}
+                      className={`px-2 py-1 rounded text-[10px] font-mono border transition-colors ${
+                        adminTestCredits
+                          ? "border-yellow-500/60 bg-yellow-500/20 text-yellow-300"
+                          : "border-white/10 bg-white/5 text-white/40 hover:text-white/60"
+                      }`}
+                      title={adminTestCredits ? "Credits WILL be deducted (testing mode)" : "Credits are bypassed (admin mode)"}
+                    >
+                      {adminTestCredits ? "TEST CR: ON" : "TEST CR: OFF"}
+                    </button>
+                  </div>
+                )}
+              </PopoverContent>
+            </Popover>
           </div>
         </header>
+
 
         {/* Value prop strip */}
         <Collapsible defaultOpen={false}>
