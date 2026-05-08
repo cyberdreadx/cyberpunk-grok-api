@@ -23,6 +23,8 @@ import {
   Diamond,
   Wallet,
   Flame,
+  Cpu,
+  Crown,
 } from "lucide-react";
 
 const HOLDER_TIP_OPTIN_KEY = "holder-tip-show";
@@ -84,7 +86,7 @@ export default function HowToUseDialog({ open, onOpenChange }: HowToUseDialogPro
               <span className="font-semibold text-sm">{t("howToUse.twoWays.optionB", "Option B: Credits")}</span>
             </div>
             <p className="text-sm text-muted-foreground">
-              {t("howToUse.twoWays.optionBDesc", "Sign up for 10 free credits daily. Buy packs or subscribe for more.")}
+              {t("howToUse.twoWays.optionBDesc", "Subscribe to any plan to unlock 10 free daily credits, the spin wheel, and daily missions. You can also buy credit packs anytime — they never expire.")}
             </p>
           </div>
         </div>
@@ -98,15 +100,15 @@ export default function HowToUseDialog({ open, onOpenChange }: HowToUseDialogPro
         <div className="space-y-3">
           <div className="flex gap-3 items-start">
             <span className="shrink-0 w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold flex items-center justify-center">1</span>
-            <p className="text-sm">{t("howToUse.gettingStarted.byok1", "BYOK: Tap the key icon in the status bar, paste your xAI API key, and you're ready.")}</p>
+            <p className="text-sm">{t("howToUse.gettingStarted.byok1", "BYOK: Tap the key icon in the top bar, paste your xAI API key, and you're ready — generations bill xAI directly.")}</p>
           </div>
           <div className="flex gap-3 items-start">
             <span className="shrink-0 w-6 h-6 rounded-full bg-secondary/20 text-secondary text-xs font-bold flex items-center justify-center">1</span>
-            <p className="text-sm">{t("howToUse.gettingStarted.credits1", "Credits: Create an account to get 10 free credits each day.")}</p>
+            <p className="text-sm">{t("howToUse.gettingStarted.credits1", "Credits: Create an account, verify your email, then either subscribe (unlocks daily free credits + spin + missions) or buy a credit pack.")}</p>
           </div>
           <div className="flex gap-3 items-start">
             <span className="shrink-0 w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold flex items-center justify-center">2</span>
-            <p className="text-sm">{t("howToUse.gettingStarted.step2", "Choose a mode — Generate, Edit, or Animate — and type a prompt.")}</p>
+            <p className="text-sm">{t("howToUse.gettingStarted.step2", "Pick a mode — Generate, Edit, or Animate — choose an engine (GLTCH is the default; GLTCH PRO is highest quality), and type a prompt.")}</p>
           </div>
         </div>
       ),
@@ -165,6 +167,57 @@ export default function HowToUseDialog({ open, onOpenChange }: HowToUseDialogPro
             <p className="text-sm text-muted-foreground">
               {t("howToUse.editing.videoDesc", "Upload an image and describe the motion to bring it to life as a short video.")}
             </p>
+          </div>
+        </div>
+      ),
+    },
+    {
+      icon: <Cpu className="w-8 h-8 text-primary" />,
+      title: t("howToUse.engines.title", "Engines & Quality"),
+      subtitle: t("howToUse.engines.subtitle", "Pick the right model for the job"),
+      body: (
+        <div className="space-y-3">
+          <div className="border border-primary/20 rounded-lg p-3 bg-primary/5">
+            <div className="font-semibold text-sm mb-1">{t("howToUse.engines.gltchProLabel", "GLTCH PRO")}</div>
+            <p className="text-sm text-muted-foreground">
+              {t("howToUse.engines.gltchProDesc", "Highest quality. Best for finished work — slower, slightly more expensive.")}
+            </p>
+          </div>
+          <div className="border border-secondary/20 rounded-lg p-3 bg-secondary/5">
+            <div className="font-semibold text-sm mb-1">{t("howToUse.engines.gltchLabel", "GLTCH (default)")}</div>
+            <p className="text-sm text-muted-foreground">
+              {t("howToUse.engines.gltchDesc", "Balanced speed and quality. Great for everyday generation, edits, and animation.")}
+            </p>
+          </div>
+          <div className="border border-border/40 rounded-lg p-3 bg-card/40">
+            <div className="font-semibold text-sm mb-1">{t("howToUse.engines.grokLabel", "GROK")}</div>
+            <p className="text-sm text-muted-foreground">
+              {t("howToUse.engines.grokDesc", "xAI's official Grok models. Costs are doubled vs GLTCH; use BYOK to skip credits entirely.")}
+            </p>
+          </div>
+          <p className="text-xs text-muted-foreground/60">
+            {t("howToUse.engines.tip", "Tip: GLTCH is selected by default for Generate and Modify. You can switch engines from the Advanced panel.")}
+          </p>
+        </div>
+      ),
+    },
+    {
+      icon: <Crown className="w-8 h-8 text-secondary" />,
+      title: t("howToUse.subscriberCredits.title", "Subscriber-only Free Credits"),
+      subtitle: t("howToUse.subscriberCredits.subtitle", "How daily credits, spin & missions work"),
+      body: (
+        <div className="space-y-3">
+          <div className="flex gap-3 items-start">
+            <Crown className="w-5 h-5 text-secondary shrink-0 mt-0.5" />
+            <p className="text-sm">{t("howToUse.subscriberCredits.body1", "Daily free credits, the spin wheel, and the daily missions are exclusive to active subscribers. Pick any plan to unlock them.")}</p>
+          </div>
+          <div className="flex gap-3 items-start">
+            <Coins className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+            <p className="text-sm">{t("howToUse.subscriberCredits.body2", "Credit packs and existing balances are unaffected — they always work, with or without a subscription.")}</p>
+          </div>
+          <div className="flex gap-3 items-start">
+            <Key className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+            <p className="text-sm">{t("howToUse.subscriberCredits.body3", "BYOK users skip credits entirely and pay xAI directly.")}</p>
           </div>
         </div>
       ),

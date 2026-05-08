@@ -6,7 +6,7 @@
  */
 
 /** Semver-style version shown in the header, HUD, and legal page */
-export const APP_VERSION = "4.9";
+export const APP_VERSION = "5.0";
 
 /** Date-based build tag used by the changelog seen-check */
-export const APP_BUILD = "2026.05.06";
+export const APP_BUILD = "2026.05.08";
