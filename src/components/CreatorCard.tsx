@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Lock, ImageIcon, MessageSquare } from "lucide-react";
+import { Lock, ImageIcon, MessageSquare, ShieldAlert, Film } from "lucide-react";
 import VerifiedBadge from "@/components/VerifiedBadge";
+import { useMatureFilter } from "@/hooks/useMatureFilter";
 
 export interface FeedCreator {
   userId: string;
@@ -16,6 +17,7 @@ export interface FeedCreator {
   latestAt: string;
   latestLocked: boolean;
   verified?: boolean;
+  isMature?: boolean;
 }
 
 interface Props {
@@ -25,6 +27,8 @@ interface Props {
   /** When true, blur all previews regardless of lock state (used for logged-out teaser). */
   forceBlur?: boolean;
 }
+
+const isVideoUrl = (url: string) => /\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(url);
 
 const timeAgo = (iso: string) => {
   const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
