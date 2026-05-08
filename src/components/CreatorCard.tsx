@@ -56,6 +56,18 @@ const CreatorCard: React.FC<Props> = ({ creator, onOpen, active, forceBlur, curr
   const isVideo = !!previewImg && isVideoUrl(previewImg);
   const [mediaFailed, setMediaFailed] = useState(false);
   const [mediaLoaded, setMediaLoaded] = useState(false);
+  const [srcIdx, setSrcIdx] = useState(0);
+  const candidates = previewImg ? mediaCandidates(previewImg) : [];
+  const activeSrc = candidates[srcIdx] || previewImg || "";
+
+  const handleMediaError = () => {
+    if (srcIdx < candidates.length - 1) {
+      setSrcIdx((i) => i + 1);
+    } else {
+      setMediaFailed(true);
+    }
+  };
+
   const [poster, setPoster] = useState<string | null>(() =>
     isVideo && previewImg ? (getCachedPoster(previewImg) ?? null) : null
   );
