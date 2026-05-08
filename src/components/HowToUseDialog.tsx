@@ -23,6 +23,8 @@ import {
   Diamond,
   Wallet,
   Flame,
+  Cpu,
+  Crown,
 } from "lucide-react";
 
 const HOLDER_TIP_OPTIN_KEY = "holder-tip-show";
