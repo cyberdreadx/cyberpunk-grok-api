@@ -22,6 +22,7 @@ import { getDb } from "./_lib/db";
 import { getUserFromRequest } from "./_lib/auth";
 import { checkRateLimit } from "./_lib/ratelimit";
 import { isSourceDisabled, FREE_CREDITS_MAINTENANCE_MESSAGE } from "./_lib/freeCredits";
+import { isSubscriber, FREE_CREDITS_SUBSCRIBER_ONLY_MESSAGE } from "./_lib/subscriberGate";
 
 /* ── Prize table ─────────────────────────────────────────────── */
 
