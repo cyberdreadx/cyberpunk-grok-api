@@ -31,6 +31,7 @@ interface Props {
  */
 const HolderProgramPromo: React.FC<Props> = ({ onOpenBank }) => {
   const [holder, setHolder] = useState<HolderState | null>(null);
+  const [loading, setLoading] = useState(true);
   const [learnOpen, setLearnOpen] = useState(false);
 
   useEffect(() => {
