@@ -115,7 +115,8 @@ const CreatorCard: React.FC<Props> = ({ creator, onOpen, active, forceBlur, curr
               />
             ) : (
               <video
-                src={`${previewImg}#t=0.1`}
+                key={activeSrc}
+                src={`${activeSrc}${activeSrc.includes("#") ? "" : "#t=0.1"}`}
                 muted
                 playsInline
                 // @ts-ignore - iOS Safari attribute
@@ -125,12 +126,13 @@ const CreatorCard: React.FC<Props> = ({ creator, onOpen, active, forceBlur, curr
                   showBlur ? "blur-2xl scale-110" : ""
                 } ${mediaLoaded ? "opacity-100" : "opacity-0"}`}
                 onLoadedData={() => setMediaLoaded(true)}
-                onError={() => setMediaFailed(true)}
+                onError={handleMediaError}
               />
             )
           ) : (
             <img
-              src={previewImg}
+              key={activeSrc}
+              src={activeSrc}
               alt={`${creator.username}'s latest`}
               loading="lazy"
               decoding="async"
@@ -138,7 +140,7 @@ const CreatorCard: React.FC<Props> = ({ creator, onOpen, active, forceBlur, curr
                 showBlur ? "blur-2xl scale-110" : ""
               } ${mediaLoaded ? "opacity-100" : "opacity-0"}`}
               onLoad={() => setMediaLoaded(true)}
-              onError={() => setMediaFailed(true)}
+              onError={handleMediaError}
             />
           )
         ) : creator.latestText ? (
