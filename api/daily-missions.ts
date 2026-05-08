@@ -41,6 +41,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return await getStatus(sql, auth.userId, res);
     }
     if (req.method === "POST") {
+      if (!(await isSubscriber(auth.userId))) {
+        return res.status(403).json({ error: FREE_CREDITS_SUBSCRIBER_ONLY_MESSAGE, subscriberOnly: true });
+      }
       if (await isSourceDisabled("missions")) {
         return res.status(503).json({ error: FREE_CREDITS_MAINTENANCE_MESSAGE, maintenance: true });
       }
