@@ -145,11 +145,14 @@ const PricingCards: React.FC<PricingCardsProps> = ({
                 <p className="mb-1 font-mono-share text-[10px] text-muted-foreground">
                   Permanent discount · No expiry · No math
                 </p>
+                <p className="mb-1 font-mono-share text-[9px] uppercase tracking-wider text-amber-400/90">
+                  ⚠ No monthly credits — discount only
+                </p>
                 <p className="mb-4 flex-1 font-mono-share text-[9px] leading-snug text-muted-foreground/75">
                   {(() => {
                     const example = 10;
                     const discounted = Math.max(1, Math.ceil(example * (1 - tier.discountPercent / 100)));
-                    return `Example: a ${example}-credit edit costs you only ${discounted}.`;
+                    return `Example: a ${example}-credit edit costs you only ${discounted}. Buy credit packs separately.`;
                   })()}
                 </p>
 
