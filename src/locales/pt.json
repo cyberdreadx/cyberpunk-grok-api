@@ -181,9 +181,9 @@
   "ageGate": {
     "title": "VERIFICAÇÃO DE LINK NEURAL",
     "subtitle": "// SETOR_RESTRITO // AUTH_NECESSÁRIA //",
-    "description": "Este setor da rede é restrito a operadores com {age} anos ou mais. Ao continuar, você confirma ter completado pelo menos 18 rotações solares.",
+    "description": "Este setor da rede é restrito a operadores com {{age}} anos ou mais. Ao continuar, você confirma ter completado pelo menos 18 rotações solares.",
     "warning": "Menores encontrados nesta zona serão escoltados por drones de segurança. Sem exceções. Sem recursos.",
-    "ageCheck": "Confirmo que tenho {age} anos ou mais",
+    "ageCheck": "Confirmo que tenho {{age}} anos ou mais",
     "tosCheck": "Li e concordo com os",
     "tosLink": "Termos de Serviço",
     "privacyCheck": "Li e reconheço a",

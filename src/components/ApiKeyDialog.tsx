@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Key, Shield, ExternalLink, Eye, EyeOff, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,14 @@ const ApiKeyDialog: React.FC<ApiKeyDialogProps> = ({ hasKey, onSave, onClear }) 
   const [showKey, setShowKey] = useState(false);
   const [showStored, setShowStored] = useState(false);
   const [open, setOpen] = useState(false);
+
+  // Allow other parts of the UI (e.g. the BYOK toggle pill) to programmatically
+  // open this dialog by dispatching `window`-level "open-api-key-dialog" event.
+  useEffect(() => {
+    const handler = () => setOpen(true);
+    window.addEventListener("open-api-key-dialog", handler);
+    return () => window.removeEventListener("open-api-key-dialog", handler);
+  }, []);
 
   const storedKey = hasKey ? (localStorage.getItem("xai-api-key") || "") : "";
 
