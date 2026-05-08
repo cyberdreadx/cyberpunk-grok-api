@@ -40,7 +40,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const sql = getDb();
 
-    // 1. Reset daily credits: base + XRGE holder tier bonus (operative / runner / architect)
+    // 1. Zero out non-subscribers (free credits are subscriber-only).
+    await sql`
+      UPDATE users
+      SET daily_credits = 0,
+          daily_credits_reset_at = now(),
+          updated_at = now()
+      WHERE email_verified = true
+        AND subscription_tier IS NULL
+    `;
+
+    // 2. Reset daily credits for subscribers: base + XRGE holder tier bonus.
     const result = await sql`
       UPDATE users
       SET daily_credits = (
