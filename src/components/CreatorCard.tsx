@@ -43,11 +43,12 @@ const timeAgo = (iso: string) => {
   return `${d}d`;
 };
 
-const CreatorCard: React.FC<Props> = ({ creator, onOpen, active, forceBlur }) => {
+const CreatorCard: React.FC<Props> = ({ creator, onOpen, active, forceBlur, currentUserId }) => {
   const previewImg = creator.latestImage || creator.previewImage;
   const initials = (creator.username || "?").slice(0, 2).toUpperCase();
   const { matureFilter } = useMatureFilter();
-  const isMatureBlur = !!creator.isMature && matureFilter && !creator.latestLocked;
+  const isOwner = !!currentUserId && currentUserId === creator.userId;
+  const isMatureBlur = !!creator.isMature && matureFilter && !creator.latestLocked && !isOwner;
   const showLocked = creator.latestLocked || forceBlur;
   const showBlur = showLocked || isMatureBlur;
   const isVideo = !!previewImg && isVideoUrl(previewImg);
