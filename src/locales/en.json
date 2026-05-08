@@ -285,6 +285,24 @@
       "download": "Download any result by clicking the download icon.",
       "folders": "Organize results into folders. Create, rename, and pin folders from the Library page.",
       "warning": "Important: Results are stored in your browser. Clearing browser data will delete them. Use folders and downloads to keep your work safe."
+    },
+    "engines": {
+      "title": "Engines & Quality",
+      "subtitle": "Pick the right model for the job",
+      "gltchProLabel": "GLTCH PRO",
+      "gltchProDesc": "Highest quality. Best for finished work — slower, slightly more expensive.",
+      "gltchLabel": "GLTCH (default)",
+      "gltchDesc": "Balanced speed and quality. Great for everyday generation, edits, and animation.",
+      "grokLabel": "GROK",
+      "grokDesc": "xAI's official Grok models. Costs are doubled vs GLTCH; use BYOK to skip credits entirely.",
+      "tip": "Tip: GLTCH is selected by default for Generate and Modify. You can switch engines from the Advanced panel."
+    },
+    "subscriberCredits": {
+      "title": "Subscriber-only Free Credits",
+      "subtitle": "How daily credits, spin & missions work",
+      "body1": "Daily free credits, the spin wheel, and the daily missions are exclusive to active subscribers. Pick any plan to unlock them.",
+      "body2": "Credit packs and existing balances are unaffected — they always work, with or without a subscription.",
+      "body3": "BYOK users skip credits entirely and pay xAI directly."
     }
   },
   "store": {
