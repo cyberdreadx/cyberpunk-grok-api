@@ -582,7 +582,7 @@ const FeedPage: React.FC = () => {
                 <div className="grid grid-cols-2 gap-0 -mx-px">
                   {creators.map((c) => (
                     <div key={c.userId} className="-ml-px -mt-px">
-                      <CreatorCard creator={c} onOpen={openCreator} forceBlur={!isAuthenticated} />
+                      <CreatorCard creator={c} onOpen={openCreator} forceBlur={!isAuthenticated} currentUserId={user?.id} />
                     </div>
                   ))}
                 </div>
@@ -771,6 +771,7 @@ const FeedPage: React.FC = () => {
                     onOpen={openCreator}
                     active={activeCreator?.userId === c.userId}
                     forceBlur={!isAuthenticated}
+                    currentUserId={user?.id}
                   />
                 </div>
               ))}

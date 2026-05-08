@@ -26,6 +26,8 @@ interface Props {
   active?: boolean;
   /** When true, blur all previews regardless of lock state (used for logged-out teaser). */
   forceBlur?: boolean;
+  /** Currently logged-in user id — owners never see their own posts blurred for maturity. */
+  currentUserId?: string | null;
 }
 
 const isVideoUrl = (url: string) => /\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(url);
@@ -41,11 +43,12 @@ const timeAgo = (iso: string) => {
   return `${d}d`;
 };
 
-const CreatorCard: React.FC<Props> = ({ creator, onOpen, active, forceBlur }) => {
+const CreatorCard: React.FC<Props> = ({ creator, onOpen, active, forceBlur, currentUserId }) => {
   const previewImg = creator.latestImage || creator.previewImage;
   const initials = (creator.username || "?").slice(0, 2).toUpperCase();
   const { matureFilter } = useMatureFilter();
-  const isMatureBlur = !!creator.isMature && matureFilter && !creator.latestLocked;
+  const isOwner = !!currentUserId && currentUserId === creator.userId;
+  const isMatureBlur = !!creator.isMature && matureFilter && !creator.latestLocked && !isOwner;
   const showLocked = creator.latestLocked || forceBlur;
   const showBlur = showLocked || isMatureBlur;
   const isVideo = !!previewImg && isVideoUrl(previewImg);
