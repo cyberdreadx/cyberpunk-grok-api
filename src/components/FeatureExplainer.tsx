@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Globe, Eye, Clock, Lock, AlertTriangle, Sparkles } from "lucide-react";
+import { Globe, Eye, Clock, Lock, AlertTriangle, Sparkles, Diamond, Flame, Wallet, Coins } from "lucide-react";
 
-type ExplainerKey = "feed" | "stories";
+type ExplainerKey = "feed" | "stories" | "holder";
 
 interface FeatureExplainerProps {
   feature: ExplainerKey;
@@ -45,6 +45,16 @@ const CONTENT: Record<ExplainerKey, {
       { icon: Globe, title: "Public to all users", body: "Everyone on the platform can see your stories. Lock them with credits or XRGE if you want them paid-only." },
       { icon: Eye, title: "You can see who watched", body: "Tap the views counter on your own story to see the list of viewers." },
       { icon: AlertTriangle, title: "Same community rules", body: "All Feed rules apply to Stories. Reports trigger removal — don't post anything you wouldn't on the Feed.", tone: "warn" },
+    ],
+  },
+  holder: {
+    title: "Holder Program",
+    tagline: "Hold XRGE to unlock permanent generation discounts and bonus credits.",
+    points: [
+      { icon: Coins, title: "Tiered perks (1M → 250M XRGE)", body: "Initiate (+5%), Operative (+10% & +2/day), Runner (+15%, +5/day, NSFW LoRA), Architect (+25%, +10/day, GLTCH PRO)." },
+      { icon: Flame, title: "Continuous-hold streak", body: "Holding without dropping a tier earns a multiplier — ×1.25 at 30d, ×1.50 at 90d, ×2.00 at 180d. Selling below the threshold resets it." },
+      { icon: Wallet, title: "Where to check your tier", body: "Open the Store → XRGE Bank → Holder tab to see your tier, balance, streak, and next-tier requirement. Your badge also shows on your profile." },
+      { icon: Diamond, title: "On-chain + bank both count", body: "We snapshot your bound Base wallet plus your custodial bank balance every 24h. Bind your wallet from the XRGE Bank to get credit for on-chain holdings." },
     ],
   },
 };
