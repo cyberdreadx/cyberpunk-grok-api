@@ -380,14 +380,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           subMetadata: subscription?.metadata,
           linePriceId: (invoice as any).lines?.data?.[0]?.price?.id,
         });
-        // Still record a transaction so it shows up in the admin dashboard for triage.
-        try {
-          await sql`
-            INSERT INTO transactions (user_id, credits, amount_cents, stripe_session_id, package, type, payment_method)
-            VALUES (NULL, 0, ${invoice.amount_paid || 0}, ${invoice.id}, 'unresolved-subscription', 'subscription', 'unknown')
-            ON CONFLICT (stripe_session_id) DO NOTHING
-          `.catch(() => {});
-        } catch {}
+        // Note: not logging an orphan transaction row because user_id is likely NOT NULL.
+        // The loud console.error above is sufficient for admin triage via Vercel logs.
         return res.status(200).json({ received: true, unresolved: true });
       }
 
