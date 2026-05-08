@@ -64,6 +64,12 @@ const CreatorCard: React.FC<Props> = ({ creator, onOpen, active, forceBlur }) =>
     >
       {/* Preview */}
       <div className="relative flex-1 bg-muted/30 overflow-hidden">
+        {/* Skeleton shimmer while media resolves */}
+        {showSkeleton && (
+          <div className="absolute inset-0 bg-gradient-to-br from-muted/40 via-muted/20 to-muted/40 animate-pulse">
+            <div className="absolute inset-0 bg-[linear-gradient(110deg,transparent_30%,hsl(var(--primary)/0.08)_50%,transparent_70%)] bg-[length:200%_100%] animate-[shimmer_1.6s_linear_infinite]" />
+          </div>
+        )}
         {previewImg && !mediaFailed ? (
           isVideo ? (
             <video
@@ -73,9 +79,10 @@ const CreatorCard: React.FC<Props> = ({ creator, onOpen, active, forceBlur }) =>
               // @ts-ignore - iOS Safari attribute
               webkit-playsinline="true"
               preload="metadata"
-              className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${
+              className={`w-full h-full object-cover transition-[transform,opacity] duration-500 group-hover:scale-105 ${
                 showBlur ? "blur-2xl scale-110" : ""
-              }`}
+              } ${mediaLoaded ? "opacity-100" : "opacity-0"}`}
+              onLoadedData={() => setMediaLoaded(true)}
               onError={() => setMediaFailed(true)}
             />
           ) : (
@@ -84,9 +91,10 @@ const CreatorCard: React.FC<Props> = ({ creator, onOpen, active, forceBlur }) =>
               alt={`${creator.username}'s latest`}
               loading="lazy"
               decoding="async"
-              className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${
+              className={`w-full h-full object-cover transition-[transform,opacity] duration-500 group-hover:scale-105 ${
                 showBlur ? "blur-2xl scale-110" : ""
-              }`}
+              } ${mediaLoaded ? "opacity-100" : "opacity-0"}`}
+              onLoad={() => setMediaLoaded(true)}
               onError={() => setMediaFailed(true)}
             />
           )
