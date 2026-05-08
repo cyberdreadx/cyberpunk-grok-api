@@ -5,6 +5,7 @@ import VerifiedBadge from "@/components/VerifiedBadge";
 import { useMatureFilter } from "@/hooks/useMatureFilter";
 import { extractPoster, getCachedPoster } from "@/lib/videoPoster";
 import { mediaCandidates } from "@/lib/mediaUrl";
+import { reportMediaError } from "@/lib/mediaErrorReporter";
 
 export interface FeedCreator {
   userId: string;
