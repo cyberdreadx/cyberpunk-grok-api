@@ -46,6 +46,7 @@ interface CreditDisplayProps {
   /** When true, hide the inline balance + cart trigger and only render the dialog. */
   hideTrigger?: boolean;
   freeCreditsDisabled?: boolean;
+  subscriberOnlyFreeCredits?: boolean;
   maintenanceMessage?: string | null;
 }
 
