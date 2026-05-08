@@ -73,6 +73,7 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
   onExternalOpenChange,
   hideTrigger = false,
   freeCreditsDisabled = false,
+  subscriberOnlyFreeCredits = false,
   maintenanceMessage = null,
 }) => {
   const { t } = useTranslation();
