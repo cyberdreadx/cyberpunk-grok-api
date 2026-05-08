@@ -7,7 +7,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Zap, ImagePlus, Film, Download, Sparkles, Bug, FolderOpen, Smartphone, Share2, Users, Clock, Link2, ExternalLink, ShieldAlert, Camera, Wrench, Shield, Search, Globe, Trash2, Tag, BookOpen, Code, HelpCircle, Eye, Gem, Wallet } from "lucide-react";
+import { Zap, ImagePlus, Film, Download, Sparkles, Bug, FolderOpen, Smartphone, Share2, Users, Clock, Link2, ExternalLink, ShieldAlert, Camera, Wrench, Shield, Search, Globe, Trash2, Tag, BookOpen, Code, HelpCircle, Eye, Gem, Wallet, Key } from "lucide-react";
 
 /* ─── Changelog entries ─── */
 // Bump APP_BUILD in src/lib/version.ts when deploying.
