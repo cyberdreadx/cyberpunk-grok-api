@@ -16,6 +16,7 @@ export function usePwaInstall() {
   const [dismissed, setDismissed] = useState(false);
   const [isIos, setIsIos] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [enoughVisits, setEnoughVisits] = useState(false);
 
   useEffect(() => {
     const ua = navigator.userAgent;
