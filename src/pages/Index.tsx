@@ -1088,6 +1088,13 @@ const Index = () => {
               />
             )}
 
+            {/* BYOK — always visible so users can discover Bring-Your-Own-Key from any mode */}
+            <ApiKeyDialog
+              hasKey={apiKeySet}
+              onSave={handleSaveApiKey}
+              onClear={handleClearApiKey}
+            />
+
             {/* Notifications — primary */}
             <NotificationBell isAuthenticated={auth.isAuthenticated} />
 
