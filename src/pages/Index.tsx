@@ -67,6 +67,10 @@ const Index = () => {
   const [simpleMode, setSimpleMode] = useState(() => localStorage.getItem("ui-mode") !== "advanced");
   const [showToggleTooltip, setShowToggleTooltip] = useState(() => !localStorage.getItem("onboarding-toggle-seen"));
   const [showResultsTip, setShowResultsTip] = useState(false);
+  // When the user clicks the BYOK pill without a key set, this flips true so a
+  // post-render effect can dispatch the open event AFTER `<ApiKeyDialog />` mounts
+  // (and its event listener is attached). Avoids the setTimeout race.
+  const [pendingOpenApiKey, setPendingOpenApiKey] = useState(false);
   const hasShownResultsTip = useRef(!!localStorage.getItem("results-tip-seen"));
   const [mode, setMode] = useState<GrokMode>("text-to-image");
   const [dismissedAnnouncements, setDismissedAnnouncements] = useState<string[]>(() => {
