@@ -771,6 +771,7 @@ const FeedPage: React.FC = () => {
                     onOpen={openCreator}
                     active={activeCreator?.userId === c.userId}
                     forceBlur={!isAuthenticated}
+                    currentUserId={user?.id}
                   />
                 </div>
               ))}
