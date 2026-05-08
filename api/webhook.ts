@@ -74,6 +74,46 @@ const TIER_DISCOUNT_PCT: Record<string, number> = {
   elite: 70, "elite-yearly": 70,
 };
 
+// Map from Stripe price ID → tier id. Built lazily from env vars + an optional
+// STRIPE_LEGACY_PRICE_MAP (JSON like {"price_xxx":"premium","price_yyy":"pro-yearly"}).
+// Used as a fallback when subscription/invoice metadata is missing or out of date
+// (e.g. customers who subscribed BEFORE we started writing tier metadata, or on a
+// previous price ID that has since been replaced).
+let _priceIdTierMap: Record<string, string> | null = null;
+function getPriceIdTierMap(): Record<string, string> {
+  if (_priceIdTierMap) return _priceIdTierMap;
+  const map: Record<string, string> = {};
+  const envKeys: Record<string, string> = {
+    STRIPE_PRICE_SUB_BASIC: "basic",
+    STRIPE_PRICE_SUB_PREMIUM: "premium",
+    STRIPE_PRICE_SUB_PRO: "pro",
+    STRIPE_PRICE_SUB_ELITE: "elite",
+    STRIPE_PRICE_SUB_BASIC_YEARLY: "basic-yearly",
+    STRIPE_PRICE_SUB_PREMIUM_YEARLY: "premium-yearly",
+    STRIPE_PRICE_SUB_PRO_YEARLY: "pro-yearly",
+    STRIPE_PRICE_SUB_ELITE_YEARLY: "elite-yearly",
+  };
+  for (const [envKey, tier] of Object.entries(envKeys)) {
+    const id = process.env[envKey];
+    if (id) map[id] = tier;
+  }
+  // Legacy price IDs (from previous price tables). Format:
+  // STRIPE_LEGACY_PRICE_MAP='{"price_abc":"premium","price_def":"pro-yearly"}'
+  try {
+    const raw = process.env.STRIPE_LEGACY_PRICE_MAP;
+    if (raw) {
+      const legacy = JSON.parse(raw) as Record<string, string>;
+      for (const [pid, tier] of Object.entries(legacy)) {
+        if (TIER_DISCOUNT_PCT[tier] != null) map[pid] = tier;
+      }
+    }
+  } catch (e: any) {
+    console.warn("[webhook] STRIPE_LEGACY_PRICE_MAP parse failed:", e.message);
+  }
+  _priceIdTierMap = map;
+  return map;
+}
+
 // Legacy: still used for transaction logging, but no longer added to sub_credits.
 const TIER_CREDITS: Record<string, number> = {
   basic: 0, premium: 0, pro: 0, elite: 0,
@@ -283,24 +323,72 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         discount_pct: subDetails.discount_pct || lineItemMeta.discount_pct || "",
       };
 
-      if (!meta.user_id || !meta.tier) {
-        try {
-          const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-          meta.user_id = meta.user_id || subscription.metadata?.user_id || "";
-          meta.tier = meta.tier || subscription.metadata?.tier || "";
-          meta.discount_pct = meta.discount_pct || subscription.metadata?.discount_pct || "";
-        } catch (subErr: any) {
-          console.warn("[webhook] subscription retrieve failed:", subErr.message);
+      // Always pull the live subscription so we have customer + price IDs to fall back on.
+      let subscription: Stripe.Subscription | null = null;
+      try {
+        subscription = await stripe.subscriptions.retrieve(subscriptionId);
+        meta.user_id = meta.user_id || subscription.metadata?.user_id || "";
+        meta.tier = meta.tier || subscription.metadata?.tier || "";
+        meta.discount_pct = meta.discount_pct || subscription.metadata?.discount_pct || "";
+      } catch (subErr: any) {
+        console.warn("[webhook] subscription retrieve failed:", subErr.message);
+      }
+
+      // Fallback 1: resolve tier from the price ID on the invoice line OR subscription item.
+      // This rescues legacy customers whose subscription was created BEFORE we started writing
+      // `tier` into metadata, or who are on an old price ID that has since been swapped.
+      let resolvedTier = meta.tier;
+      if (!resolvedTier || !TIER_DISCOUNT_PCT[resolvedTier]) {
+        const priceMap = getPriceIdTierMap();
+        const candidatePriceIds: string[] = [];
+        const invLine = (invoice as any).lines?.data?.[0];
+        const invPriceId = invLine?.price?.id || invLine?.pricing?.price_details?.price;
+        if (invPriceId) candidatePriceIds.push(invPriceId);
+        const subItem: any = subscription?.items?.data?.[0];
+        if (subItem?.price?.id) candidatePriceIds.push(subItem.price.id);
+        for (const pid of candidatePriceIds) {
+          if (priceMap[pid]) { resolvedTier = priceMap[pid]; break; }
+        }
+        if (resolvedTier) {
+          console.log(`[webhook] invoice.paid: resolved tier '${resolvedTier}' via price ID fallback (candidates: ${candidatePriceIds.join(",")})`);
         }
       }
 
-      const userId = meta.user_id;
-      const tier = meta.tier;
+      // Fallback 2: resolve user_id from stripe_customer_id on file.
+      let userId = meta.user_id;
+      if (!userId && invoice.customer) {
+        const [u] = await sql`SELECT id FROM users WHERE stripe_customer_id = ${invoice.customer as string} LIMIT 1`.catch(() => [null]);
+        if (u?.id) {
+          userId = u.id;
+          console.log(`[webhook] invoice.paid: resolved user ${userId} via stripe_customer_id fallback`);
+        }
+      }
+
+      const tier = resolvedTier;
       const discountPct = parseInt(meta.discount_pct, 10) || TIER_DISCOUNT_PCT[tier] || 0;
 
       if (!userId || !tier || discountPct <= 0) {
-        console.error("invoice.paid: missing metadata", { userId, tier, discountPct, subDetails, lineItemMeta });
-        return res.status(200).json({ received: true });
+        // LOUD log so admin can manually reconcile + refund. Previously this exited silently,
+        // which is exactly how paying customers ended up with no discount and no credits.
+        console.error("[webhook] invoice.paid UNRESOLVED — manual reconciliation needed", {
+          invoiceId: invoice.id,
+          subscriptionId,
+          customerId: invoice.customer,
+          amountPaidCents: invoice.amount_paid,
+          userId, tier, discountPct,
+          subDetails, lineItemMeta,
+          subMetadata: subscription?.metadata,
+          linePriceId: (invoice as any).lines?.data?.[0]?.price?.id,
+        });
+        // Still record a transaction so it shows up in the admin dashboard for triage.
+        try {
+          await sql`
+            INSERT INTO transactions (user_id, credits, amount_cents, stripe_session_id, package, type, payment_method)
+            VALUES (NULL, 0, ${invoice.amount_paid || 0}, ${invoice.id}, 'unresolved-subscription', 'subscription', 'unknown')
+            ON CONFLICT (stripe_session_id) DO NOTHING
+          `.catch(() => {});
+        } catch {}
+        return res.status(200).json({ received: true, unresolved: true });
       }
 
       const periodEnd = (invoice as any).lines?.data?.[0]?.period?.end;
