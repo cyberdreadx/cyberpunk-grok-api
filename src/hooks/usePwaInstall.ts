@@ -6,6 +6,8 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 const DISMISSED_KEY = "pwa-install-dismissed";
+const VISIT_COUNT_KEY = "pwa-install-visits";
+const MIN_VISITS_BEFORE_PROMPT = 2;
 const DISMISSED_DURATION_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 export function usePwaInstall() {
