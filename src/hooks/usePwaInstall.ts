@@ -40,6 +40,14 @@ export function usePwaInstall() {
       }
     } catch { /* ignore */ }
 
+    // Visit counter — only prompt after the user has come back at least once
+    try {
+      const raw = localStorage.getItem(VISIT_COUNT_KEY);
+      const next = (raw ? parseInt(raw, 10) || 0 : 0) + 1;
+      localStorage.setItem(VISIT_COUNT_KEY, String(next));
+      if (next >= MIN_VISITS_BEFORE_PROMPT) setEnoughVisits(true);
+    } catch { /* ignore */ }
+
     // Chrome/Edge/Android install prompt
     const handler = (e: Event) => {
       e.preventDefault();
