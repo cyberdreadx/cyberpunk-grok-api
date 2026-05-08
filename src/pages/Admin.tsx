@@ -32,8 +32,10 @@ import {
   ChevronUp,
   Shield,
   Sparkles,
+  ImageOff,
 } from "lucide-react";
 import AdminInsightsPanel from "@/components/AdminInsightsPanel";
+import MediaErrorsPanel from "@/components/MediaErrorsPanel";
 import {
   AreaChart,
   Area,
@@ -127,7 +129,7 @@ function CyberTooltip({ active, payload, label }: any) {
 
 // ── Tab Definitions ──
 
-type TabId = "overview" | "insights" | "revenue" | "users" | "usage" | "moderation" | "referrals" | "payouts" | "emails" | "api" | "system" | "flash-sales";
+type TabId = "overview" | "insights" | "revenue" | "users" | "usage" | "moderation" | "referrals" | "payouts" | "emails" | "api" | "system" | "flash-sales" | "media-errors";
 
 const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
   { id: "overview", label: "OVERVIEW", icon: <Eye className="w-3.5 h-3.5" /> },
@@ -142,6 +144,7 @@ const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
   { id: "emails", label: "EMAILS", icon: <Mail className="w-3.5 h-3.5" /> },
   { id: "api", label: "API", icon: <Key className="w-3.5 h-3.5" /> },
   { id: "system", label: "SYSTEM", icon: <Server className="w-3.5 h-3.5" /> },
+  { id: "media-errors", label: "MEDIA ERR", icon: <ImageOff className="w-3.5 h-3.5" /> },
 ];
 
 // ── RunPod Worker Status Panel ──
@@ -1545,6 +1548,9 @@ export default function Admin() {
 
         {/* ═══ INSIGHTS TAB ═══ */}
         {activeTab === "insights" && <AdminInsightsPanel />}
+
+        {/* ═══ MEDIA ERRORS TAB ═══ */}
+        {activeTab === "media-errors" && <MediaErrorsPanel />}
 
         {/* ═══ REVENUE TAB ═══ */}
         {activeTab === "revenue" && (
