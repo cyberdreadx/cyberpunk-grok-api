@@ -62,6 +62,9 @@ const CreatorCard: React.FC<Props> = ({ creator, onOpen, active, forceBlur, curr
   const activeSrc = candidates[srcIdx] || previewImg || "";
 
   const handleMediaError = () => {
+    // Report the URL that just failed (not the whole chain) so the dashboard
+    // can spot the actual broken host/extension.
+    if (activeSrc) reportMediaError(activeSrc, isVideo ? "video" : "image", "feed-card");
     if (srcIdx < candidates.length - 1) {
       setSrcIdx((i) => i + 1);
     } else {
