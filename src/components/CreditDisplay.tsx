@@ -15,6 +15,7 @@ import {
 import PricingCards from "@/components/PricingCards";
 import XrgePaymentDialog from "@/components/XrgePaymentDialog";
 import XrgeBankDialog from "@/components/XrgeBankDialog";
+import HolderProgramPromo from "@/components/HolderProgramPromo";
 import SpinWheel from "@/components/SpinWheel";
 import type { CreditPackage, SubscriptionTier } from "@/lib/api";
 import { XRGE_DEXSCREENER_URL, XRGE_CHAIN_NAME } from "@/lib/xrgePublic";
@@ -182,6 +183,9 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
               </Button>
             </div>
           </DialogHeader>
+
+          {/* Holder Program promo — current tier hints + bank CTA */}
+          <HolderProgramPromo onOpenBank={() => { setOpen(false); setBankOpen(true); }} />
 
           {/* Flash sale banner — prominent, in-store */}
           {flashSale && (
