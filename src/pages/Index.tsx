@@ -979,24 +979,27 @@ const Index = () => {
   return (
     <CyberLayout>
       <div className="max-w-5xl mx-auto px-3 sm:px-4 py-4 sm:py-8 pb-24 sm:pb-8 space-y-4 sm:space-y-6">
-        {/* Flash sale banner — sitewide */}
-        <FlashSaleBanner onClick={() => setStoreOpen(true)} />
+        {/* Promo strip — flash sale takes priority; otherwise Buy & Hold discovery. Only one ever shows. */}
+        {flashSaleActive ? (
+          <FlashSaleBanner onClick={() => setStoreOpen(true)} />
+        ) : (
+          <BuyHoldBanner />
+        )}
 
-        {/* Buy & Hold Program discovery banner */}
-        <BuyHoldBanner />
-
-        {/* Verify email banner for unverified users */}
+        {/* Verify email — compact inline pill (no longer a full-width banner) */}
         {auth.isAuthenticated && auth.user && !auth.user.email_verified && (
-          <div className="flex items-center gap-3 bg-secondary/10 border border-secondary/30 rounded-lg px-4 py-3 animate-slide-up">
-            <AlertCircle className="w-4 h-4 text-secondary shrink-0" />
-            <p className="font-mono-share text-xs text-secondary flex-1">
-              {t("header.verifyEmailNotice")}
-            </p>
+          <div className="flex justify-center animate-slide-up">
             <button
               onClick={() => auth.requestVerification()}
-              className="shrink-0 px-3 py-1.5 bg-secondary/20 border border-secondary/40 rounded text-[10px] font-mono-share text-secondary hover:bg-secondary/30 transition-colors"
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary/10 border border-secondary/30 hover:bg-secondary/20 transition-colors"
             >
-              {t("header.verifyNow")}
+              <AlertCircle className="w-3 h-3 text-secondary shrink-0" />
+              <span className="font-mono-share text-[10px] text-secondary">
+                {t("header.verifyEmailNotice")}
+              </span>
+              <span className="font-mono-share text-[10px] text-secondary/80 underline underline-offset-2">
+                {t("header.verifyNow")}
+              </span>
             </button>
           </div>
         )}
