@@ -251,14 +251,14 @@
       "optionADesc": "Paste your xAI API key and generate for free — you pay xAI directly.",
       "optionANote": "Get an API key at console.x.ai",
       "optionB": "Option B: Credits",
-      "optionBDesc": "Sign up for 10 free credits daily. Buy packs or subscribe for more."
+      "optionBDesc": "Subscribe to any plan to unlock 10 free daily credits, the spin wheel, and daily missions. You can also buy credit packs anytime — they never expire."
     },
     "gettingStarted": {
       "title": "Getting Started",
       "subtitle": "Set up in under a minute",
-      "byok1": "BYOK: Tap the key icon in the status bar, paste your xAI API key, and you're ready.",
-      "credits1": "Credits: Create an account to get 10 free credits each day.",
-      "step2": "Choose a mode — Generate, Edit, or Animate — and type a prompt."
+      "byok1": "BYOK: Tap the key icon in the top bar, paste your xAI API key, and you're ready — generations bill xAI directly.",
+      "credits1": "Credits: Create an account, verify your email, then either subscribe (unlocks daily free credits + spin + missions) or buy a credit pack.",
+      "step2": "Pick a mode — Generate, Edit, or Animate — choose an engine (GLTCH is the default; GLTCH PRO is highest quality), and type a prompt."
     },
     "generating": {
       "title": "Generating Images",
