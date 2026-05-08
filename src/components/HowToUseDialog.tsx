@@ -20,7 +20,12 @@ import {
   FolderOpen,
   Download,
   Pencil,
+  Diamond,
+  Wallet,
+  Flame,
 } from "lucide-react";
+
+const HOLDER_TIP_OPTIN_KEY = "holder-tip-show";
 
 const SEEN_KEY = "how-to-use-seen";
 
@@ -187,6 +192,66 @@ export default function HowToUseDialog({ open, onOpenChange }: HowToUseDialogPro
               </strong>
             </p>
           </div>
+        </div>
+      ),
+    },
+    {
+      icon: <Diamond className="w-8 h-8 text-violet-300" />,
+      title: t("howToUse.holder.title", "Holder Program (optional)"),
+      subtitle: t("howToUse.holder.subtitle", "Hold XRGE for permanent perks"),
+      body: (
+        <div className="space-y-3">
+          <p className="text-sm">
+            {t(
+              "howToUse.holder.body1",
+              "Hold XRGE to unlock generation discounts, bonus daily credits, NSFW LoRAs and GLTCH PRO. Continuous holders earn streak multipliers up to ×2.",
+            )}
+          </p>
+          <ul className="space-y-1.5 text-sm">
+            <li className="flex items-start gap-2">
+              <Coins className="w-4 h-4 text-secondary shrink-0 mt-0.5" />
+              <span>{t("howToUse.holder.perk1", "Up to +25% off generations and +10 daily credits.")}</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <Flame className="w-4 h-4 text-orange-300 shrink-0 mt-0.5" />
+              <span>{t("howToUse.holder.perk2", "Streak multiplier grows with continuous holding (30/90/180 days).")}</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <Wallet className="w-4 h-4 text-violet-300 shrink-0 mt-0.5" />
+              <span>
+                {t(
+                  "howToUse.holder.where",
+                  "Check your tier anytime: Store → XRGE Bank → Holder tab. Your badge also shows on your profile.",
+                )}
+              </span>
+            </li>
+          </ul>
+          <label className="mt-2 flex items-start gap-2 cursor-pointer rounded-md border border-violet-500/30 bg-violet-500/5 px-3 py-2 hover:bg-violet-500/10 transition-colors">
+            <input
+              type="checkbox"
+              defaultChecked={typeof window !== "undefined" && localStorage.getItem(HOLDER_TIP_OPTIN_KEY) === "1"}
+              onChange={(e) => {
+                try {
+                  if (e.target.checked) localStorage.setItem(HOLDER_TIP_OPTIN_KEY, "1");
+                  else localStorage.removeItem(HOLDER_TIP_OPTIN_KEY);
+                  window.dispatchEvent(new CustomEvent("holder-tip-changed"));
+                } catch { /* ignore */ }
+              }}
+              className="mt-0.5 accent-violet-400"
+            />
+            <span className="text-xs text-violet-100/90 leading-snug">
+              {t(
+                "howToUse.holder.optIn",
+                "Show me a tooltip pointing to where I can check my holder tier.",
+              )}
+            </span>
+          </label>
+          <p className="text-xs text-muted-foreground/60">
+            {t(
+              "howToUse.holder.tip",
+              "Optional — you can ignore this and still use everything in the app.",
+            )}
+          </p>
         </div>
       ),
     },
