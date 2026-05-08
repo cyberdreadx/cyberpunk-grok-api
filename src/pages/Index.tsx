@@ -415,7 +415,10 @@ const Index = () => {
   const handleSaveApiKey = useCallback((key: string) => {
     setApiKeyRaw(key);
     setApiKeySet(true);
-  }, [setApiKeyRaw]);
+    // Auto-switch to BYOK so the key takes effect immediately, even if the
+    // user discovered the dialog from simple mode.
+    setApiMode("byok");
+  }, [setApiKeyRaw, setApiMode]);
 
   const handleClearApiKey = useCallback(() => {
     clearApiKeyRaw();
@@ -1085,6 +1088,13 @@ const Index = () => {
               />
             )}
 
+            {/* BYOK — always visible so users can discover Bring-Your-Own-Key from any mode */}
+            <ApiKeyDialog
+              hasKey={apiKeySet}
+              onSave={handleSaveApiKey}
+              onClear={handleClearApiKey}
+            />
+
             {/* Notifications — primary */}
             <NotificationBell isAuthenticated={auth.isAuthenticated} />
 
@@ -1196,19 +1206,7 @@ const Index = () => {
                   </div>
                 )}
 
-                {/* BYOK key dialog trigger */}
-                {!simpleMode && effectiveApiMode === "byok" && (
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-mono-share text-[10px] text-muted-foreground/70 uppercase tracking-wider">
-                      {t("header.apiKey", "API Key")}
-                    </span>
-                    <ApiKeyDialog
-                      hasKey={apiKeySet}
-                      onSave={handleSaveApiKey}
-                      onClear={handleClearApiKey}
-                    />
-                  </div>
-                )}
+                {/* BYOK key dialog now lives in the always-visible action row above. */}
 
                 {/* Daily Missions */}
                 {auth.isAuthenticated && (
