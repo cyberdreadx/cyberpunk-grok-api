@@ -415,7 +415,10 @@ const Index = () => {
   const handleSaveApiKey = useCallback((key: string) => {
     setApiKeyRaw(key);
     setApiKeySet(true);
-  }, [setApiKeyRaw]);
+    // Auto-switch to BYOK so the key takes effect immediately, even if the
+    // user discovered the dialog from simple mode.
+    setApiMode("byok");
+  }, [setApiKeyRaw, setApiMode]);
 
   const handleClearApiKey = useCallback(() => {
     clearApiKeyRaw();
