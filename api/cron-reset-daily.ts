@@ -88,7 +88,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (shouldNotify) {
       try {
         const users = await sql`
-          SELECT email FROM users WHERE email_verified = true
+          SELECT email FROM users WHERE email_verified = true AND subscription_tier IS NOT NULL
         `;
 
         if (users.length > 0) {
