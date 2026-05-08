@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Lock, ImageIcon, MessageSquare, ShieldAlert, Film } from "lucide-react";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import { useMatureFilter } from "@/hooks/useMatureFilter";
+import { extractPoster, getCachedPoster } from "@/lib/videoPoster";
 
 export interface FeedCreator {
   userId: string;
@@ -54,6 +55,20 @@ const CreatorCard: React.FC<Props> = ({ creator, onOpen, active, forceBlur, curr
   const isVideo = !!previewImg && isVideoUrl(previewImg);
   const [mediaFailed, setMediaFailed] = useState(false);
   const [mediaLoaded, setMediaLoaded] = useState(false);
+  const [poster, setPoster] = useState<string | null>(() =>
+    isVideo && previewImg ? (getCachedPoster(previewImg) ?? null) : null
+  );
+
+  // Lazily extract a frame from the video to use as a stable poster image.
+  // If extraction fails (CORS, codec) we silently fall back to the inline <video>.
+  useEffect(() => {
+    if (!isVideo || !previewImg) return;
+    if (getCachedPoster(previewImg) !== undefined) return;
+    let cancelled = false;
+    extractPoster(previewImg).then((p) => { if (!cancelled) setPoster(p); });
+    return () => { cancelled = true; };
+  }, [isVideo, previewImg]);
+
   const showSkeleton = !!previewImg && !mediaFailed && !mediaLoaded;
 
   return (
@@ -73,19 +88,33 @@ const CreatorCard: React.FC<Props> = ({ creator, onOpen, active, forceBlur, curr
         )}
         {previewImg && !mediaFailed ? (
           isVideo ? (
-            <video
-              src={`${previewImg}#t=0.1`}
-              muted
-              playsInline
-              // @ts-ignore - iOS Safari attribute
-              webkit-playsinline="true"
-              preload="metadata"
-              className={`w-full h-full object-cover transition-[transform,opacity] duration-500 group-hover:scale-105 ${
-                showBlur ? "blur-2xl scale-110" : ""
-              } ${mediaLoaded ? "opacity-100" : "opacity-0"}`}
-              onLoadedData={() => setMediaLoaded(true)}
-              onError={() => setMediaFailed(true)}
-            />
+            poster ? (
+              <img
+                src={poster}
+                alt={`${creator.username}'s latest`}
+                loading="lazy"
+                decoding="async"
+                className={`w-full h-full object-cover transition-[transform,opacity] duration-500 group-hover:scale-105 ${
+                  showBlur ? "blur-2xl scale-110" : ""
+                } ${mediaLoaded ? "opacity-100" : "opacity-0"}`}
+                onLoad={() => setMediaLoaded(true)}
+                onError={() => setPoster(null)}
+              />
+            ) : (
+              <video
+                src={`${previewImg}#t=0.1`}
+                muted
+                playsInline
+                // @ts-ignore - iOS Safari attribute
+                webkit-playsinline="true"
+                preload="metadata"
+                className={`w-full h-full object-cover transition-[transform,opacity] duration-500 group-hover:scale-105 ${
+                  showBlur ? "blur-2xl scale-110" : ""
+                } ${mediaLoaded ? "opacity-100" : "opacity-0"}`}
+                onLoadedData={() => setMediaLoaded(true)}
+                onError={() => setMediaFailed(true)}
+              />
+            )
           ) : (
             <img
               src={previewImg}
