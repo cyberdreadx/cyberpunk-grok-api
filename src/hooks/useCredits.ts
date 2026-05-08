@@ -66,6 +66,7 @@ export function useCredits(user: AuthUser | null) {
           : (data.subscription_discount_pct ?? 0),
       );
       setFreeCreditsDisabled(!!data.free_credits_disabled);
+      setSubscriberOnlyFreeCredits(!!data.free_credits_subscriber_only);
       setMaintenanceMessage(data.maintenance_message ?? null);
     } catch (err: any) {
       console.warn("[useCredits] Error fetching:", err.message);
