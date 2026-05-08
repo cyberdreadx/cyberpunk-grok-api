@@ -24,6 +24,20 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
     {
+        version: "2026.05.08",
+        date: "May 8, 2026",
+        title: "v5.0 — Subscriber-Only Free Credits, Cleaner UI & Always-On BYOK",
+        items: [
+            { icon: <Gem className="w-3.5 h-3.5" />, text: "Free credits are now subscriber-only — daily refill, spin wheel, and daily missions unlock with any active plan. Credit packs and existing balances are unaffected", tag: "new" },
+            { icon: <ShieldAlert className="w-3.5 h-3.5" />, text: "Store banner & in-app messaging clearly explain the new model and link straight to plan selection", tag: "improve" },
+            { icon: <Key className="w-3.5 h-3.5" />, text: "BYOK (Bring Your Own xAI Key) is always visible from any mode — saving a key auto-switches you to BYOK so it works immediately", tag: "improve" },
+            { icon: <Sparkles className="w-3.5 h-3.5" />, text: "Heavy header cleanup — removed ASCII subtitle, collapsed Theme / Notifications / Mode-toggle / Daily Missions into a single overflow menu", tag: "improve" },
+            { icon: <Eye className="w-3.5 h-3.5" />, text: "De-stacked overlays — Flash sale and Hold-to-Buy banners now show one at a time with priority, and the verify-email banner is a compact pill chip", tag: "improve" },
+            { icon: <Smartphone className="w-3.5 h-3.5" />, text: "PWA install prompt deferred until the second visit so first-time users see the actual product first", tag: "improve" },
+            { icon: <HelpCircle className="w-3.5 h-3.5" />, text: "How-to-Use tour expanded with Engines (GLTCH PRO / GLTCH / GROK) and Subscriber Credits steps so the walkthrough matches today's app", tag: "improve" },
+        ],
+    },
+    {
         version: "2026.05.06",
         date: "May 6, 2026",
         title: "v4.9 — XRGE Holders, Real Discounts & Security",
