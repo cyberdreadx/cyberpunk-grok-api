@@ -26,6 +26,8 @@ interface Props {
   active?: boolean;
   /** When true, blur all previews regardless of lock state (used for logged-out teaser). */
   forceBlur?: boolean;
+  /** Currently logged-in user id — owners never see their own posts blurred for maturity. */
+  currentUserId?: string | null;
 }
 
 const isVideoUrl = (url: string) => /\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(url);
