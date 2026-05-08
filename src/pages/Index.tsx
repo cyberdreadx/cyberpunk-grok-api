@@ -1059,13 +1059,10 @@ const Index = () => {
                 <button
                   onClick={() => {
                     setApiMode("byok");
-                    // If no key is set yet, immediately surface the dialog so the
-                    // pill click visibly *does something* — fixes "BYOK button
-                    // seems to do nothing" UX trap.
-                    if (!apiKeySet) {
-                      // defer so the dialog (which only renders in BYOK mode) is mounted first
-                      setTimeout(() => window.dispatchEvent(new Event("open-api-key-dialog")), 0);
-                    }
+                    // Schedule the dialog open — the post-render effect above
+                    // dispatches `open-api-key-dialog` once <ApiKeyDialog /> has
+                    // mounted (effectiveApiMode === "byok") and its listener is wired.
+                    if (!apiKeySet) setPendingOpenApiKey(true);
                   }}
                   title={apiKeySet ? t("header.byok") : "Use your own xAI API key (click to set)"}
                   className={`flex items-center gap-1 px-2 py-1 text-[9px] sm:text-[10px] font-mono-share transition-colors ${effectiveApiMode === "byok"
