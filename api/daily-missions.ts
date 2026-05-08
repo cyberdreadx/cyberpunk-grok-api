@@ -5,6 +5,7 @@ import { checkRateLimit } from "./_lib/ratelimit";
 import { awardKarma } from "./_lib/karma";
 import { notify } from "./_lib/notify";
 import { isSourceDisabled, FREE_CREDITS_MAINTENANCE_MESSAGE } from "./_lib/freeCredits";
+import { isSubscriber, FREE_CREDITS_SUBSCRIBER_ONLY_MESSAGE } from "./_lib/subscriberGate";
 
 const MISSIONS = ["login", "story", "reddit", "grok_subreddit", "twitter", "share"] as const;
 const MISSION_CREDITS: Record<string, number> = {
@@ -40,6 +41,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return await getStatus(sql, auth.userId, res);
     }
     if (req.method === "POST") {
+      if (!(await isSubscriber(auth.userId))) {
+        return res.status(403).json({ error: FREE_CREDITS_SUBSCRIBER_ONLY_MESSAGE, subscriberOnly: true });
+      }
       if (await isSourceDisabled("missions")) {
         return res.status(503).json({ error: FREE_CREDITS_MAINTENANCE_MESSAGE, maintenance: true });
       }
@@ -141,8 +145,11 @@ async function getStatus(sql: any, userId: string, res: VercelResponse) {
     streakBonus: STREAK_BONUS,
     cycleDays: CYCLE_DAYS,
     lastFeedPost,
-    freeCreditsDisabled: await isSourceDisabled("missions"),
-    maintenanceMessage: (await isSourceDisabled("missions")) ? FREE_CREDITS_MAINTENANCE_MESSAGE : null,
+    freeCreditsDisabled: (await isSourceDisabled("missions")) || !(await isSubscriber(userId)),
+    subscriberOnly: !(await isSubscriber(userId)),
+    maintenanceMessage: !(await isSubscriber(userId))
+      ? FREE_CREDITS_SUBSCRIBER_ONLY_MESSAGE
+      : (await isSourceDisabled("missions")) ? FREE_CREDITS_MAINTENANCE_MESSAGE : null,
   });
 }
 

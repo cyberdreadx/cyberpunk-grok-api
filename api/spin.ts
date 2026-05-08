@@ -22,6 +22,7 @@ import { getDb } from "./_lib/db";
 import { getUserFromRequest } from "./_lib/auth";
 import { checkRateLimit } from "./_lib/ratelimit";
 import { isSourceDisabled, FREE_CREDITS_MAINTENANCE_MESSAGE } from "./_lib/freeCredits";
+import { isSubscriber, FREE_CREDITS_SUBSCRIBER_ONLY_MESSAGE } from "./_lib/subscriberGate";
 
 /* ── Prize table ─────────────────────────────────────────────── */
 
@@ -117,15 +118,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const minPrize = getStreakMinimum(currentStreak + (freeAvailable ? 1 : 0));
 
     const maintenance = await isSourceDisabled("spin");
+    const subscriber = await isSubscriber(auth.userId);
+    const blocked = maintenance || !subscriber;
+    const blockMessage = !subscriber
+      ? FREE_CREDITS_SUBSCRIBER_ONLY_MESSAGE
+      : maintenance ? FREE_CREDITS_MAINTENANCE_MESSAGE : null;
     return res.status(200).json({
-      freeAvailable: maintenance ? false : freeAvailable,
+      freeAvailable: blocked ? false : freeAvailable,
       nextFreeAt,
       paidSpinCost: PAID_SPIN_COST,
       streak: currentStreak,
       nextMinPrize: minPrize,
       prizes: PRIZES.map(p => ({ id: p.id, label: p.label, color: p.color })),
-      freeCreditsDisabled: maintenance,
-      maintenanceMessage: maintenance ? FREE_CREDITS_MAINTENANCE_MESSAGE : null,
+      freeCreditsDisabled: blocked,
+      subscriberOnly: !subscriber,
+      maintenanceMessage: blockMessage,
     });
   }
 
@@ -134,8 +141,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const { paid } = req.body || {};
 
-  if (!paid && (await isSourceDisabled("spin"))) {
-    return res.status(503).json({ error: FREE_CREDITS_MAINTENANCE_MESSAGE, maintenance: true });
+  if (!paid) {
+    if (!(await isSubscriber(auth.userId))) {
+      return res.status(403).json({ error: FREE_CREDITS_SUBSCRIBER_ONLY_MESSAGE, subscriberOnly: true });
+    }
+    if (await isSourceDisabled("spin")) {
+      return res.status(503).json({ error: FREE_CREDITS_MAINTENANCE_MESSAGE, maintenance: true });
+    }
   }
 
 

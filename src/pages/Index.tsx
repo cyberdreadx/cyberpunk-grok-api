@@ -1085,6 +1085,7 @@ const Index = () => {
                 onExternalOpenChange={setStoreOpen}
                 freeCreditsDisabled={creditsHook.freeCreditsDisabled}
                 maintenanceMessage={creditsHook.maintenanceMessage}
+                subscriberOnlyFreeCredits={creditsHook.subscriberOnlyFreeCredits}
               />
             )}
 

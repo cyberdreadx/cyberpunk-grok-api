@@ -46,6 +46,7 @@ interface CreditDisplayProps {
   /** When true, hide the inline balance + cart trigger and only render the dialog. */
   hideTrigger?: boolean;
   freeCreditsDisabled?: boolean;
+  subscriberOnlyFreeCredits?: boolean;
   maintenanceMessage?: string | null;
 }
 
@@ -72,6 +73,7 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
   onExternalOpenChange,
   hideTrigger = false,
   freeCreditsDisabled = false,
+  subscriberOnlyFreeCredits = false,
   maintenanceMessage = null,
 }) => {
   const { t } = useTranslation();
@@ -378,11 +380,16 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
             <div className="mt-4 border border-yellow-500/30 bg-yellow-500/5 rounded-lg px-3 py-3 space-y-2.5">
               <div className="text-center">
                 <p className="font-orbitron text-[11px] tracking-widest text-yellow-400 uppercase">
-                  ⚠ Free credits paused
+                  {subscriberOnlyFreeCredits ? "★ Subscribers only" : "⚠ Free credits paused"}
                 </p>
                 <p className="font-mono-share text-[10px] text-muted-foreground mt-1.5 leading-relaxed">
                   {maintenanceMessage || "Daily free credits, the spin wheel, and daily missions are temporarily off. Paid packs and subscriptions are unaffected."}
                 </p>
+                {subscriberOnlyFreeCredits && (
+                  <p className="font-mono-share text-[10px] text-yellow-300/80 mt-2 leading-relaxed">
+                    Pick any plan below to unlock daily credits, the spin wheel, and daily missions.
+                  </p>
+                )}
               </div>
               <div className="border-t border-yellow-500/20 pt-2.5">
                 <p className="font-orbitron text-[10px] tracking-wider text-orange-400 uppercase mb-1.5 text-center">
