@@ -145,8 +145,11 @@ async function getStatus(sql: any, userId: string, res: VercelResponse) {
     streakBonus: STREAK_BONUS,
     cycleDays: CYCLE_DAYS,
     lastFeedPost,
-    freeCreditsDisabled: await isSourceDisabled("missions"),
-    maintenanceMessage: (await isSourceDisabled("missions")) ? FREE_CREDITS_MAINTENANCE_MESSAGE : null,
+    freeCreditsDisabled: (await isSourceDisabled("missions")) || !(await isSubscriber(userId)),
+    subscriberOnly: !(await isSubscriber(userId)),
+    maintenanceMessage: !(await isSubscriber(userId))
+      ? FREE_CREDITS_SUBSCRIBER_ONLY_MESSAGE
+      : (await isSourceDisabled("missions")) ? FREE_CREDITS_MAINTENANCE_MESSAGE : null,
   });
 }
 
