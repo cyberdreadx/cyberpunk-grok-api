@@ -67,7 +67,10 @@ const isNsfwLora = (name: string) => !SFW_LORA_KEYWORDS.some(k => name.toLowerCa
 
 const Index = () => {
   const [simpleMode, setSimpleMode] = useState(() => localStorage.getItem("ui-mode") !== "advanced");
+  // Keep the ring highlight on first visit, but the popover tooltip itself is gone.
   const [showToggleTooltip, setShowToggleTooltip] = useState(() => !localStorage.getItem("onboarding-toggle-seen"));
+  const { sale: activeFlashSale, expired: flashSaleExpired } = useFlashSale();
+  const flashSaleActive = !!activeFlashSale && !flashSaleExpired;
   const [showResultsTip, setShowResultsTip] = useState(false);
   // When the user clicks the BYOK pill without a key set, this flips true so a
   // post-render effect can dispatch the open event AFTER `<ApiKeyDialog />` mounts
