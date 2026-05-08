@@ -27,6 +27,7 @@ export function useCredits(user: AuthUser | null) {
   /** Subscription + XRGE holder combined — matches server billing (api/_lib/discount.ts). */
   const [creditDiscountPct, setCreditDiscountPct] = useState<number>(0);
   const [freeCreditsDisabled, setFreeCreditsDisabled] = useState(false);
+  const [subscriberOnlyFreeCredits, setSubscriberOnlyFreeCredits] = useState(false);
   const [maintenanceMessage, setMaintenanceMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [purchasing, setPurchasing] = useState(false);
