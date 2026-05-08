@@ -88,19 +88,33 @@ const CreatorCard: React.FC<Props> = ({ creator, onOpen, active, forceBlur, curr
         )}
         {previewImg && !mediaFailed ? (
           isVideo ? (
-            <video
-              src={`${previewImg}#t=0.1`}
-              muted
-              playsInline
-              // @ts-ignore - iOS Safari attribute
-              webkit-playsinline="true"
-              preload="metadata"
-              className={`w-full h-full object-cover transition-[transform,opacity] duration-500 group-hover:scale-105 ${
-                showBlur ? "blur-2xl scale-110" : ""
-              } ${mediaLoaded ? "opacity-100" : "opacity-0"}`}
-              onLoadedData={() => setMediaLoaded(true)}
-              onError={() => setMediaFailed(true)}
-            />
+            poster ? (
+              <img
+                src={poster}
+                alt={`${creator.username}'s latest`}
+                loading="lazy"
+                decoding="async"
+                className={`w-full h-full object-cover transition-[transform,opacity] duration-500 group-hover:scale-105 ${
+                  showBlur ? "blur-2xl scale-110" : ""
+                } ${mediaLoaded ? "opacity-100" : "opacity-0"}`}
+                onLoad={() => setMediaLoaded(true)}
+                onError={() => setPoster(null)}
+              />
+            ) : (
+              <video
+                src={`${previewImg}#t=0.1`}
+                muted
+                playsInline
+                // @ts-ignore - iOS Safari attribute
+                webkit-playsinline="true"
+                preload="metadata"
+                className={`w-full h-full object-cover transition-[transform,opacity] duration-500 group-hover:scale-105 ${
+                  showBlur ? "blur-2xl scale-110" : ""
+                } ${mediaLoaded ? "opacity-100" : "opacity-0"}`}
+                onLoadedData={() => setMediaLoaded(true)}
+                onError={() => setMediaFailed(true)}
+              />
+            )
           ) : (
             <img
               src={previewImg}
