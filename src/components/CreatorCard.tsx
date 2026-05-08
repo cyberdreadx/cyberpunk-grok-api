@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Lock, ImageIcon, MessageSquare, ShieldAlert, Film } from "lucide-react";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import { useMatureFilter } from "@/hooks/useMatureFilter";
+import { extractPoster, getCachedPoster } from "@/lib/videoPoster";
 
 export interface FeedCreator {
   userId: string;
