@@ -54,10 +54,6 @@
   ],
   "crons": [
     {
-      "path": "/api/cron-reset-credits",
-      "schedule": "0 0 * * *"
-    },
-    {
       "path": "/api/cron-reset-daily",
       "schedule": "0 0 * * *"
     },
