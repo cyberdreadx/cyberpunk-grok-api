@@ -36,6 +36,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const has_purchased = !!u.stripe_customer_id || !!u.subscription_tier || parseFloat(u.xrge_lifetime_spend || "0") > 0;
     const creditDiscountPct = await getCombinedCreditDiscountPct(auth.userId);
     const fcConfig = await getFreeCreditsConfig();
+    const isSub = !!u.subscription_tier;
+    const adminPaused = !fcConfig.daily && !fcConfig.spin && !fcConfig.missions;
+    const freeCreditsDisabled = adminPaused || !isSub;
+    const maintenanceMessage = !isSub
+      ? FREE_CREDITS_SUBSCRIBER_ONLY_MESSAGE
+      : adminPaused ? FREE_CREDITS_MAINTENANCE_MESSAGE : null;
     return res.status(200).json({
       daily_credits: u.daily_credits,
       sub_credits: u.sub_credits,
@@ -48,9 +54,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       credit_discount_pct: creditDiscountPct,
       lora_unlocked: u.lora_unlocked,
       has_purchased,
-      free_credits_disabled: !fcConfig.daily && !fcConfig.spin && !fcConfig.missions,
+      free_credits_disabled: freeCreditsDisabled,
       free_credits_sources: { daily: fcConfig.daily, spin: fcConfig.spin, missions: fcConfig.missions },
-      maintenance_message: (!fcConfig.daily && !fcConfig.spin && !fcConfig.missions) ? FREE_CREDITS_MAINTENANCE_MESSAGE : null,
+      free_credits_subscriber_only: !isSub,
+      maintenance_message: maintenanceMessage,
     });
   } catch (err: any) {
     console.error("[credits]", err.message);
