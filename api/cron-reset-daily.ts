@@ -74,6 +74,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           daily_credits_reset_at = now(),
           updated_at = now()
       WHERE email_verified = true
+        AND subscription_tier IS NOT NULL
     `;
 
     const resetCount = (result as any).count ?? 0;
