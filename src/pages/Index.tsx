@@ -67,6 +67,10 @@ const Index = () => {
   const [simpleMode, setSimpleMode] = useState(() => localStorage.getItem("ui-mode") !== "advanced");
   const [showToggleTooltip, setShowToggleTooltip] = useState(() => !localStorage.getItem("onboarding-toggle-seen"));
   const [showResultsTip, setShowResultsTip] = useState(false);
+  // When the user clicks the BYOK pill without a key set, this flips true so a
+  // post-render effect can dispatch the open event AFTER `<ApiKeyDialog />` mounts
+  // (and its event listener is attached). Avoids the setTimeout race.
+  const [pendingOpenApiKey, setPendingOpenApiKey] = useState(false);
   const hasShownResultsTip = useRef(!!localStorage.getItem("results-tip-seen"));
   const [mode, setMode] = useState<GrokMode>("text-to-image");
   const [dismissedAnnouncements, setDismissedAnnouncements] = useState<string[]>(() => {
@@ -391,6 +395,17 @@ const Index = () => {
     }
   }, [canUseCredits, apiMode, setApiMode, simpleMode]);
   const effectiveApiMode = apiMode;
+
+  // When the user clicks the BYOK pill with no key set, `<ApiKeyDialog />` only
+  // mounts on this render (after `effectiveApiMode` flips to "byok"). We dispatch
+  // the open event from a post-render effect so the dialog's event listener is
+  // guaranteed to be attached before the event fires.
+  useEffect(() => {
+    if (!pendingOpenApiKey) return;
+    if (simpleMode || effectiveApiMode !== "byok") return;
+    window.dispatchEvent(new Event("open-api-key-dialog"));
+    setPendingOpenApiKey(false);
+  }, [pendingOpenApiKey, simpleMode, effectiveApiMode]);
 
   const handleSaveApiKey = useCallback((key: string) => {
     setApiKeyRaw(key);
@@ -1044,13 +1059,10 @@ const Index = () => {
                 <button
                   onClick={() => {
                     setApiMode("byok");
-                    // If no key is set yet, immediately surface the dialog so the
-                    // pill click visibly *does something* — fixes "BYOK button
-                    // seems to do nothing" UX trap.
-                    if (!apiKeySet) {
-                      // defer so the dialog (which only renders in BYOK mode) is mounted first
-                      setTimeout(() => window.dispatchEvent(new Event("open-api-key-dialog")), 0);
-                    }
+                    // Schedule the dialog open — the post-render effect above
+                    // dispatches `open-api-key-dialog` once <ApiKeyDialog /> has
+                    // mounted (effectiveApiMode === "byok") and its listener is wired.
+                    if (!apiKeySet) setPendingOpenApiKey(true);
                   }}
                   title={apiKeySet ? t("header.byok") : "Use your own xAI API key (click to set)"}
                   className={`flex items-center gap-1 px-2 py-1 text-[9px] sm:text-[10px] font-mono-share transition-colors ${effectiveApiMode === "byok"
