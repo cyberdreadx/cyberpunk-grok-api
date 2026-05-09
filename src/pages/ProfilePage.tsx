@@ -84,18 +84,24 @@ const ProfilePage: React.FC = () => {
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const fetchProfile = useCallback(async () => {
     try {
-      const query = username ? `?username=${username}` : "";
+      const query = username ? `?username=${encodeURIComponent(username)}` : "";
       const data = await apiFetch<Profile>(`/profile${query}`);
       setProfile(data);
       setEditUsername(data.username);
       setEditBio(data.bio || "");
       setEditWallet(data.walletAddress || "");
 
-      // Fetch user posts
-      const feed = await apiFetch<{ posts: FeedPost[] }>(`/feed?userId=${data.userId}`);
-      setPosts(feed.posts);
-    } catch {
-      toast({ title: "Profile not found", variant: "destructive" });
+      // Fetch user posts (non-fatal — profile still renders if this fails)
+      try {
+        const feed = await apiFetch<{ posts: FeedPost[] }>(`/feed?userId=${data.userId}`);
+        setPosts(feed.posts);
+      } catch (feedErr: any) {
+        console.warn("[profile] failed to load posts:", feedErr?.message);
+        setPosts([]);
+      }
+    } catch (err: any) {
+      const msg = err?.message || "Profile not found";
+      toast({ title: msg, variant: "destructive" });
     } finally {
       setLoading(false);
     }
