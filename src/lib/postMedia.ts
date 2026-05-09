@@ -22,6 +22,18 @@ function isPermanentPublicUrl(url: string): boolean {
   }
 }
 
+async function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const dataUrl = reader.result as string;
+      resolve(dataUrl.split(",")[1] || "");
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
 async function uploadBlobDirect(blob: Blob, type: "image" | "video"): Promise<string> {
   const apiBase = apiUrl("");
   const ext = type === "video" ? "mp4" : "png";
