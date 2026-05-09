@@ -46,6 +46,7 @@ import HowToUseDialog from "@/components/HowToUseDialog";
 import ChangelogDialog, { hasUnseenChangelog } from "@/components/ChangelogDialog";
 import ThemePicker from "@/components/ThemePicker";
 import PwaInstallBanner from "@/components/PwaInstallBanner";
+import SupportBotDialog, { SupportBotLauncher } from "@/components/SupportBotDialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useFlashSale } from "@/hooks/useFlashSale";
 import { useGrokApi, urlToBase64, getImageDimensions, type GrokMode, type GenerationSettings, type VideoSettings, type ApiMode, type VideoLoraEntry, type ComfyJob, DEFAULT_SETTINGS, DEFAULT_VIDEO_SETTINGS } from "@/hooks/useGrokApi";
