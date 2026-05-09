@@ -22,6 +22,18 @@ function isPermanentPublicUrl(url: string): boolean {
   }
 }
 
+async function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const dataUrl = reader.result as string;
+      resolve(dataUrl.split(",")[1] || "");
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
 async function uploadBlobDirect(blob: Blob, type: "image" | "video"): Promise<string> {
   const apiBase = apiUrl("");
   const ext = type === "video" ? "mp4" : "png";
@@ -82,7 +94,32 @@ export async function uploadLibraryItemForPost(result: GrokResult): Promise<stri
 
   // 2) If we have bytes locally, upload directly to Vercel Blob (best path).
   if (mediaBlob) {
-    return uploadBlobDirect(mediaBlob, result.type);
+    try {
+      return await uploadBlobDirect(mediaBlob, result.type);
+    } catch (directErr) {
+      // Fallback: base64 → /api/share (server-side blob upload, avoids browser→blob CORS issues)
+      try {
+        const base64 = await blobToBase64(mediaBlob);
+        const token = localStorage.getItem("auth-token");
+        const resp = await fetch(apiUrl("/share"), {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({
+            mediaBase64: base64,
+            mediaType: result.type === "video" ? "video/mp4" : "image/png",
+            prompt: result.revised_prompt || "",
+          }),
+        });
+        if (resp.ok) {
+          const j = await resp.json();
+          if (j?.r2Url || j?.url) return j.r2Url || j.url;
+        }
+      } catch {}
+      throw directErr;
+    }
   }
 
   // 3) Remote URL with no local bytes — try to fetch in browser first.
