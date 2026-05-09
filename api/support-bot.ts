@@ -263,7 +263,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
       const details: Record<string, unknown> = {};
       if (issue_code === "failed_jobs_refund") {
-        details.refunded_job_ids = (typeof refundIds !== "undefined" ? refundIds : []);
+        details.refunded_job_ids = refundIds;
       }
       await sql`
         INSERT INTO support_requests (user_id, username, issue_code, resolution, credits_refunded, details_json)
