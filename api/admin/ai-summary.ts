@@ -352,7 +352,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const apiKey = process.env.LOVABLE_API_KEY;
-  if (!apiKey) return res.status(500).json({ error: "LOVABLE_API_KEY not configured" });
+  if (!apiKey) {
+    return res.status(503).json({
+      code: "LOVABLE_API_KEY_MISSING",
+      error:
+        "LOVABLE_API_KEY is not configured on the server. Add it as an environment variable in your Vercel project (Settings → Environment Variables → LOVABLE_API_KEY) and redeploy. The key is provisioned automatically inside the Lovable editor sandbox but must be copied to your deployment environment for production use.",
+    });
+  }
 
   let stats: any;
   try {
@@ -368,7 +374,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     aiResp = await fetch(GATEWAY_URL, {
       method: "POST",
       headers: {
+        "Lovable-API-Key": apiKey,
         Authorization: `Bearer ${apiKey}`,
+        "X-Lovable-AIG-SDK": "vercel-ai-sdk",
         "Content-Type": "application/json",
       },
       body: JSON.stringify({

@@ -93,7 +93,17 @@ export default function AdminInsightsPanel() {
       if (!resp.ok) {
         const txt = await resp.text().catch(() => "");
         let msg = `HTTP ${resp.status}`;
-        try { msg = JSON.parse(txt).error || msg; } catch { if (txt) msg = txt.slice(0, 200); }
+        let code: string | null = null;
+        try {
+          const parsed = JSON.parse(txt);
+          msg = parsed.error || msg;
+          code = parsed.code || null;
+        } catch { if (txt) msg = txt.slice(0, 400); }
+        if (code === "LOVABLE_API_KEY_MISSING" || /LOVABLE_API_KEY/i.test(msg)) {
+          throw new Error(
+            "AI gateway not configured. Add LOVABLE_API_KEY to your Vercel project (Settings → Environment Variables → LOVABLE_API_KEY for Production), then redeploy. The key works automatically inside the Lovable editor sandbox but must be copied into your deployment environment."
+          );
+        }
         throw new Error(msg);
       }
 
