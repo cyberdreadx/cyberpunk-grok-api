@@ -374,7 +374,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     aiResp = await fetch(GATEWAY_URL, {
       method: "POST",
       headers: {
+        "Lovable-API-Key": apiKey,
         Authorization: `Bearer ${apiKey}`,
+        "X-Lovable-AIG-SDK": "vercel-ai-sdk",
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
