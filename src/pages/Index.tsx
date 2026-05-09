@@ -367,6 +367,7 @@ const Index = () => {
   });
   const [storeOpen, setStoreOpen] = useState(false);
   const [prefsOpen, setPrefsOpen] = useState(false);
+  const [supportOpen, setSupportOpen] = useState(false);
   const [apiKeySet, setApiKeySet] = useState(() => hasApiKey());
 
   React.useEffect(() => {
