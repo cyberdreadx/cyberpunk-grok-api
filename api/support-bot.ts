@@ -193,7 +193,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const eligible = failedJobs.filter(j => !alreadyRefunded.has(j.id));
 
       let toRefund = 0;
-      const refundIds: string[] = [];
+      refundIds = [];
       for (const j of eligible) {
         if (toRefund + j.credits > REFUND_CAP) break;
         toRefund += j.credits;
