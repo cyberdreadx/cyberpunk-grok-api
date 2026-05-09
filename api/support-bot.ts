@@ -258,20 +258,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       resolution = "diagnosed";
     }
 
-    // Log the request
+    // Log the request (saves refunded_job_ids so dedupe works on next call)
     try {
+      const details: Record<string, unknown> = {};
+      if (issue_code === "failed_jobs_refund") {
+        details.refunded_job_ids = (typeof refundIds !== "undefined" ? refundIds : []);
+      }
       await sql`
         INSERT INTO support_requests (user_id, username, issue_code, resolution, credits_refunded, details_json)
         VALUES (
           ${auth.userId}::uuid, ${username}, ${issue_code}, ${resolution}, ${refunded},
-          ${JSON.stringify({ refunded_job_ids: issue_code === "failed_jobs_refund" ? undefined : undefined })}::jsonb
+          ${JSON.stringify(details)}::jsonb
         )
       `;
-      // Patch in refunded_job_ids properly when applicable (small follow-up)
-      if (issue_code === "failed_jobs_refund" && refunded > 0) {
-        // already inserted above with empty details; rewrite details_json
-        // (skip; the cap & dedupe check uses prior rows so we want refunded_job_ids saved)
-      }
     } catch (e: any) {
       console.error("[support-bot] log failed:", e?.message);
     }
