@@ -26,12 +26,29 @@ async function uploadBlobDirect(blob: Blob, type: "image" | "video"): Promise<st
   const apiBase = apiUrl("");
   const ext = type === "video" ? "mp4" : "png";
   const authToken = localStorage.getItem("auth-token") || "";
-  const { url: blobUrl } = await upload(`feed/post.${ext}`, blob, {
-    access: "public",
-    handleUploadUrl: `${apiBase}/blob-upload`,
-    clientPayload: authToken,
-  });
-  return blobUrl;
+  if (!authToken) {
+    throw new Error("Sign in required to attach media to a post.");
+  }
+  try {
+    const { url: blobUrl } = await upload(`feed/post.${ext}`, blob, {
+      access: "public",
+      handleUploadUrl: `${apiBase}/blob-upload`,
+      clientPayload: authToken,
+    });
+    return blobUrl;
+  } catch (e: any) {
+    const raw = String(e?.message || e || "").toLowerCase();
+    if (raw.includes("unauthorized") || raw.includes("401")) {
+      throw new Error("Your session expired — sign in again to post media.");
+    }
+    if (raw.includes("not configured") || raw.includes("503")) {
+      throw new Error("Media uploads are temporarily unavailable. Try again shortly.");
+    }
+    if (raw.includes("load failed") || raw.includes("failed to fetch") || raw.includes("network")) {
+      throw new Error("Network error uploading media — check your connection and retry.");
+    }
+    throw new Error(`Upload failed: ${e?.message || "unknown error"}`);
+  }
 }
 
 export async function uploadLibraryItemForPost(result: GrokResult): Promise<string> {
