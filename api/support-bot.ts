@@ -110,6 +110,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   let reply = "";
   let refunded = 0;
   let resolution = "info";
+  let refundIds: string[] = [];
 
   try {
     if (issue_code === "grok_edits_not_working") {
