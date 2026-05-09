@@ -2613,6 +2613,19 @@ const Index = () => {
         onOpenSettings={() => setPrefsOpen(true)}
       />
       <PreferencesDialog open={prefsOpen} onOpenChange={setPrefsOpen} />
+
+      {/* Preset-only AI support bot */}
+      {auth.isAuthenticated && (
+        <>
+          <SupportBotLauncher onClick={() => setSupportOpen(true)} />
+          <SupportBotDialog
+            open={supportOpen}
+            onOpenChange={setSupportOpen}
+            username={auth.user?.email?.split("@")[0]}
+            onRefunded={() => creditsHook.refreshCredits?.()}
+          />
+        </>
+      )}
     </CyberLayout>
   );
 };
