@@ -16,32 +16,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === "GET") {
     try {
       const { username } = req.query;
-      let rows;
-      if (username) {
-        rows = await sql`
+
+      // Core query — only depends on always-present columns. Optional fields
+      // (verification_*, holder_*) are fetched separately so a missing migration
+      // on a self-hosted deploy doesn't 500 the whole endpoint.
+      const fetchCore = async () => {
+        if (username) {
+          return await sql`
+            SELECT p.user_id, p.username, p.avatar_url, p.bio, p.created_at,
+                   u.email, p.wallet_address,
+                   (SELECT count(*)::int FROM follows WHERE following_id = p.user_id) AS followers,
+                   (SELECT count(*)::int FROM follows WHERE follower_id = p.user_id) AS following,
+                   (SELECT count(*)::int FROM feed_posts WHERE user_id = p.user_id) AS post_count
+            FROM profiles p JOIN users u ON u.id = p.user_id
+            WHERE p.username = ${username}
+          `;
+        }
+        return await sql`
           SELECT p.user_id, p.username, p.avatar_url, p.bio, p.created_at,
                  u.email, p.wallet_address,
-                 u.verification_status, u.verification_renews_at,
-                 u.holder_tier, u.holder_tier_since, u.last_snapshot_total,
-                 (SELECT count(*)::int FROM follows WHERE following_id = p.user_id) AS followers,
-                 (SELECT count(*)::int FROM follows WHERE follower_id = p.user_id) AS following,
-                 (SELECT count(*)::int FROM feed_posts WHERE user_id = p.user_id) AS post_count
-          FROM profiles p JOIN users u ON u.id = p.user_id
-          WHERE p.username = ${username}
-        `;
-      } else {
-        rows = await sql`
-          SELECT p.user_id, p.username, p.avatar_url, p.bio, p.created_at,
-                 u.email, p.wallet_address,
-                 u.verification_status, u.verification_renews_at,
-                 u.holder_tier, u.holder_tier_since, u.last_snapshot_total,
                  (SELECT count(*)::int FROM follows WHERE following_id = p.user_id) AS followers,
                  (SELECT count(*)::int FROM follows WHERE follower_id = p.user_id) AS following,
                  (SELECT count(*)::int FROM feed_posts WHERE user_id = p.user_id) AS post_count
           FROM profiles p JOIN users u ON u.id = p.user_id
           WHERE p.user_id = ${auth.userId}
         `;
-      }
+      };
+
+      let rows = await fetchCore();
       // Auto-create profile for authenticated user if missing
       if (rows.length === 0 && !username) {
         await sql`
@@ -49,18 +51,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           VALUES (${auth.userId}, 'user_' || substr(${auth.userId}::text, 1, 8))
           ON CONFLICT DO NOTHING
         `;
-        // Re-fetch
-        rows = await sql`
-          SELECT p.user_id, p.username, p.avatar_url, p.bio, p.created_at,
-                 u.email, p.wallet_address,
-                 u.verification_status, u.verification_renews_at,
-                 u.holder_tier, u.holder_tier_since, u.last_snapshot_total,
-                 (SELECT count(*)::int FROM follows WHERE following_id = p.user_id) AS followers,
-                 (SELECT count(*)::int FROM follows WHERE follower_id = p.user_id) AS following,
-                 (SELECT count(*)::int FROM feed_posts WHERE user_id = p.user_id) AS post_count
-          FROM profiles p JOIN users u ON u.id = p.user_id
-          WHERE p.user_id = ${auth.userId}
-        `;
+        rows = await fetchCore();
+      }
+
+      // Best-effort enrichment with optional columns
+      if (rows.length > 0) {
+        const uid = rows[0].user_id;
+        const extras = await sql`
+          SELECT verification_status, verification_renews_at,
+                 holder_tier, holder_tier_since, last_snapshot_total
+          FROM users WHERE id = ${uid}
+        `.catch(() => [] as any[]);
+        if (extras.length > 0) Object.assign(rows[0], extras[0]);
       }
       if (rows.length === 0) return res.status(404).json({ error: "Profile not found" });
 
@@ -121,8 +123,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         holderTotalHeld: holderTier === "none" ? null : holderTotalHeld,
       });
     } catch (err: any) {
-      console.error("[profile GET]", err.message);
-      return res.status(500).json({ error: "Failed to fetch profile" });
+      console.error("[profile GET]", err?.message, err?.stack);
+      return res.status(500).json({ error: err?.message || "Failed to fetch profile" });
     }
   }
 
