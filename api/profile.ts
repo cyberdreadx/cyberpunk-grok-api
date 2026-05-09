@@ -123,8 +123,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         holderTotalHeld: holderTier === "none" ? null : holderTotalHeld,
       });
     } catch (err: any) {
-      console.error("[profile GET]", err.message);
-      return res.status(500).json({ error: "Failed to fetch profile" });
+      console.error("[profile GET]", err?.message, err?.stack);
+      return res.status(500).json({ error: err?.message || "Failed to fetch profile" });
     }
   }
 
