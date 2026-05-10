@@ -87,8 +87,21 @@ export function useFolders() {
     await deleteResultsBulkStorage(ids);
   }, []);
 
-  const emptyTrashFolder = useCallback(async () => {
-    return await emptyTrashStorage();
+  const emptyTrashFolder = useCallback(async (): Promise<string[]> => {
+    const { deletedIds, urls } = await emptyTrashStorage();
+    // Best-effort: ask the backend to purge any owned blob/R2 objects behind those URLs.
+    // Failures here must never block the local trash deletion.
+    if (urls.length > 0) {
+      try {
+        const { apiFetch } = await import("@/lib/api");
+        await apiFetch("/library-purge", { method: "POST", body: { urls } }).catch((err: any) => {
+          console.warn("[trash] backend purge failed:", err?.message || err);
+        });
+      } catch (err: any) {
+        console.warn("[trash] purge dispatch failed:", err?.message || err);
+      }
+    }
+    return deletedIds;
   }, []);
 
   const selectFilter = useCallback((filter: FolderFilter) => {
