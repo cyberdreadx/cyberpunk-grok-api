@@ -187,6 +187,20 @@ const CreatorCard: React.FC<Props> = ({ creator, onOpen, active, forceBlur, curr
           </div>
         )}
 
+        {/* Owner-only LOCKED · price badge so creator can verify locks at a glance */}
+        {creator.isOwner && ((creator.lockCost || 0) > 0 || (creator.lockPriceCents || 0) > 0 || !!(creator.lockXrgeAmount && parseFloat(creator.lockXrgeAmount) > 0)) && (
+          <div
+            className="absolute top-2 left-2 flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-sm border border-amber-400/50 font-mono-share text-[9px] text-amber-300 tracking-wider"
+            title="Locked for other viewers — they see a blurred preview and must unlock."
+          >
+            <Lock className="w-2.5 h-2.5" />
+            <span>LOCKED ·</span>
+            {(creator.lockCost || 0) > 0 && <span>{creator.lockCost}c</span>}
+            {(creator.lockPriceCents || 0) > 0 && <span>${((creator.lockPriceCents || 0) / 100).toFixed(2)}</span>}
+            {!!(creator.lockXrgeAmount && parseFloat(creator.lockXrgeAmount) > 0) && <span>{creator.lockXrgeAmount} XRGE</span>}
+          </div>
+        )}
+
         {/* Time chip */}
         <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-black/60 backdrop-blur-sm font-mono-share text-[9px] text-white/90">
           {timeAgo(creator.latestAt)}
