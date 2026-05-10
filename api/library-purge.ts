@@ -12,6 +12,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getUserFromRequest } from "./_lib/auth";
 import { deleteBlobs, isVercelBlobUrl } from "./_lib/blob";
 import { deleteR2Objects, isR2Url, r2KeyFromUrl } from "./_lib/r2";
+import { recordPurge } from "./_lib/purgeLog";
 
 function blobKeyFromUrl(url: string): string | null {
   try {
