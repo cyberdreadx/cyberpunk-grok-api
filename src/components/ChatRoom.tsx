@@ -9,6 +9,7 @@ import { setLastSeen } from "@/hooks/useChatUnread";
 import { Send, Hash, RefreshCw, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 const CHANNELS = ["general", "help", "showcase", "nsfw"] as const;
 type Channel = typeof CHANNELS[number];
@@ -26,6 +27,7 @@ const POLL_MS = 3500;
 
 const ChatRoom: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { user } = useAuth();
   const authed = !!user && hasAuthToken();
   const [channel, setChannel] = useState<Channel>(() => {
@@ -105,7 +107,7 @@ const ChatRoom: React.FC = () => {
       }
       setText("");
     } catch (e: any) {
-      toast.error(e?.message || "Failed to send");
+      toast.error(e?.message || t("chat.failedSend"));
     } finally {
       setSending(false);
     }
@@ -128,18 +130,18 @@ const ChatRoom: React.FC = () => {
             <button
               onClick={() => { if (window.history.length > 1) navigate(-1); else navigate("/"); }}
               className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary -ml-1 pr-2 py-1"
-              aria-label="Back"
+              aria-label={t("chat.back")}
             >
-              <ArrowLeft className="w-4 h-4" /> back
+              <ArrowLeft className="w-4 h-4" /> {t("chat.back")}
             </button>
-            <span className="text-xs uppercase tracking-[0.2em] text-primary/80">// chat</span>
+            <span className="text-xs uppercase tracking-[0.2em] text-primary/80">{t("chat.title")}</span>
           </div>
           <button
             onClick={() => { lastTs.current = 0; setMessages([]); poll(); }}
             className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1"
-            aria-label="Refresh"
+            aria-label={t("chat.refresh")}
           >
-            <RefreshCw className="w-3 h-3" /> refresh
+            <RefreshCw className="w-3 h-3" /> {t("chat.refresh")}
           </button>
         </div>
         <div className="flex gap-1 px-2 pb-2 overflow-x-auto no-scrollbar">
@@ -163,17 +165,17 @@ const ChatRoom: React.FC = () => {
       <div ref={listRef} className="flex-1 overflow-y-auto px-3 py-2 space-y-2">
         {!authed && (
           <div className="text-center text-sm text-muted-foreground py-12">
-            Sign in to join the chat.
+            {t("chat.signInPrompt")}
           </div>
         )}
         {authed && loading && (
           <div className="text-center text-xs text-muted-foreground py-8">
-            Connecting to #{channel}…
+            {t("chat.connecting", { channel })}
           </div>
         )}
         {authed && !loading && grouped.length === 0 && (
           <div className="text-center text-xs text-muted-foreground py-12">
-            No messages yet in #{channel}. Say hi 👋
+            {t("chat.empty", { channel })}
           </div>
         )}
         {grouped.map((m) => {
@@ -212,7 +214,7 @@ const ChatRoom: React.FC = () => {
                 }
               }}
               rows={1}
-              placeholder={`Message #${channel}`}
+              placeholder={t("chat.placeholder", { channel })}
               className="flex-1 resize-none bg-muted/20 border border-border/60 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-primary/60 max-h-32"
             />
             <button
@@ -220,11 +222,11 @@ const ChatRoom: React.FC = () => {
               disabled={sending || !text.trim()}
               className="shrink-0 h-10 px-3 rounded-md bg-primary/15 border border-primary/50 text-primary hover:bg-primary/25 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 text-xs uppercase tracking-wider"
             >
-              <Send className="w-3.5 h-3.5" /> send
+              <Send className="w-3.5 h-3.5" /> {t("chat.send")}
             </button>
           </div>
           <div className="text-[10px] text-muted-foreground/70 mt-1 text-right">
-            {text.length}/500 · ephemeral · last 100 msgs
+            {t("chat.footer", { count: text.length })}
           </div>
         </div>
       )}

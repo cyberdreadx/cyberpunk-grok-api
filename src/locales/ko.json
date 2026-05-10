@@ -374,5 +374,17 @@
     "error": "오류:",
     "routeNotFound": "경로 \"{{path}}\"가 neural_map에서 발견되지 않음",
     "goHome": "$ cd /홈"
+  },
+  "chat": {
+    "title": "// 채팅",
+    "back": "뒤로",
+    "refresh": "새로고침",
+    "signInPrompt": "채팅에 참여하려면 로그인하세요.",
+    "connecting": "#{{channel}}에 연결 중…",
+    "empty": "#{{channel}}에 메시지가 없습니다. 인사해보세요 👋",
+    "placeholder": "#{{channel}}에 메시지",
+    "send": "전송",
+    "footer": "{{count}}/500 · 임시 · 최근 100개",
+    "failedSend": "전송 실패"
   }
 }

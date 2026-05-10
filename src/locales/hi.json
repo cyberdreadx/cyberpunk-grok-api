@@ -374,5 +374,17 @@
     "error": "त्रुटि:",
     "routeNotFound": "रूट \"{{path}}\" neural_map में नहीं मिला",
     "goHome": "$ cd /होम"
+  },
+  "chat": {
+    "title": "// चैट",
+    "back": "वापस",
+    "refresh": "रीफ्रेश",
+    "signInPrompt": "चैट में शामिल होने के लिए साइन इन करें।",
+    "connecting": "#{{channel}} से कनेक्ट हो रहा है…",
+    "empty": "#{{channel}} में अभी कोई संदेश नहीं। नमस्ते कहें 👋",
+    "placeholder": "#{{channel}} को संदेश",
+    "send": "भेजें",
+    "footer": "{{count}}/500 · अस्थायी · अंतिम 100 संदेश",
+    "failedSend": "भेजने में विफल"
   }
 }

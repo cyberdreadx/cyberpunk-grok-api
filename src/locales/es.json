@@ -374,5 +374,17 @@
     "error": "error:",
     "routeNotFound": "ruta \"{{path}}\" no encontrada en neural_map",
     "goHome": "$ cd /inicio"
+  },
+  "chat": {
+    "title": "// chat",
+    "back": "volver",
+    "refresh": "actualizar",
+    "signInPrompt": "Inicia sesión para unirte al chat.",
+    "connecting": "Conectando a #{{channel}}…",
+    "empty": "Aún no hay mensajes en #{{channel}}. Saluda 👋",
+    "placeholder": "Mensaje a #{{channel}}",
+    "send": "enviar",
+    "footer": "{{count}}/500 · efímero · últimos 100 msj",
+    "failedSend": "Error al enviar"
   }
 }
