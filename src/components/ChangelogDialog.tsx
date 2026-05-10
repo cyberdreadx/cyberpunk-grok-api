@@ -24,6 +24,20 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
     {
+        version: "2026.05.10",
+        date: "May 10, 2026",
+        title: "v5.1 — Chat Room, Storage Audit Trail & Checkout Diagnostics",
+        items: [
+            { icon: <Users className="w-3.5 h-3.5" />, text: "Lightweight chat room — four topic channels (#general, #help, #showcase, #nsfw) with ephemeral last-100 history, available from the More menu", tag: "new" },
+            { icon: <Trash2 className="w-3.5 h-3.5" />, text: "Trash purge now deletes the underlying R2/Vercel Blob objects (not just the Library DB rows) when you empty trash", tag: "new" },
+            { icon: <Shield className="w-3.5 h-3.5" />, text: "Admin orphan-share sweeper — one-shot script scans shares/ storage and removes blobs whose share_owners row no longer exists, with dry-run + 24h safety window", tag: "new" },
+            { icon: <Eye className="w-3.5 h-3.5" />, text: "Purge audit log — new admin PURGES tab summarizes every account-deletion and cleanup run with found vs deleted counts and success rates", tag: "new" },
+            { icon: <Tag className="w-3.5 h-3.5" />, text: "Owner-side LOCKED · {price} badge on your profile grid and post list so you can verify locks without opening each post", tag: "improve" },
+            { icon: <Smartphone className="w-3.5 h-3.5" />, text: "Support bot launcher repositioned above the mobile bottom nav with safe-area insets, and the 'invalid issue code' send error is fixed", tag: "fix" },
+            { icon: <Bug className="w-3.5 h-3.5" />, text: "Subscription checkout error toasts now surface the actual Stripe code + message instead of a generic 'Checkout failed'", tag: "fix" },
+        ],
+    },
+    {
         version: "2026.05.08",
         date: "May 8, 2026",
         title: "v5.0 — Subscriber-Only Free Credits, Cleaner UI & Always-On BYOK",
