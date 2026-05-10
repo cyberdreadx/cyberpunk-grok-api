@@ -9,6 +9,7 @@ import { setLastSeen } from "@/hooks/useChatUnread";
 import { Send, Hash, RefreshCw, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 const CHANNELS = ["general", "help", "showcase", "nsfw"] as const;
 type Channel = typeof CHANNELS[number];
