@@ -1,10 +1,6 @@
 /**
- * Lightweight ephemeral chat — topic channels, last 100 msgs per channel,
- * in-memory ring buffer (no DB). Auth required for both read & write.
- *
- * Caveat: Vercel runs multiple isolated instances, so users may briefly see
- * different views until messages propagate via repeated polling. Acceptable
- * for a casual chat room and keeps cost at zero.
+ * Persistent ephemeral chat — topic channels, last 100 msgs per channel kept,
+ * stored in Neon (chat_messages table). Auth required for both read & write.
  */
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { applyCors } from "./_lib/cors";
@@ -14,27 +10,11 @@ import { neon } from "@neondatabase/serverless";
 export const CHANNELS = ["general", "help", "showcase", "nsfw"] as const;
 type Channel = typeof CHANNELS[number];
 
-interface ChatMessage {
-  id: string;
-  channel: Channel;
-  userId: string;
-  username: string;
-  text: string;
-  ts: number;
-}
-
 const MAX_PER_CHANNEL = 100;
 const MAX_TEXT = 500;
 
-// Module-level store survives warm invocations on the same instance.
+// Per-user simple rate limit: 1 msg/sec, 20/min (best-effort, in-memory)
 const g = globalThis as any;
-if (!g.__chatStore) {
-  g.__chatStore = new Map<Channel, ChatMessage[]>();
-  for (const c of CHANNELS) g.__chatStore.set(c, []);
-}
-const store: Map<Channel, ChatMessage[]> = g.__chatStore;
-
-// Per-user simple rate limit: 1 msg/sec, 20/min
 if (!g.__chatRate) g.__chatRate = new Map<string, number[]>();
 const rate: Map<string, number[]> = g.__chatRate;
 
@@ -48,6 +28,24 @@ function rateLimit(userId: string): { ok: boolean; retry?: number } {
   return { ok: true };
 }
 
+let schemaReady = false;
+async function ensureSchema(sql: ReturnType<typeof neon>) {
+  if (schemaReady) return;
+  await sql`
+    CREATE TABLE IF NOT EXISTS chat_messages (
+      id          TEXT PRIMARY KEY,
+      channel     TEXT NOT NULL,
+      user_id     UUID NOT NULL,
+      username    TEXT NOT NULL,
+      text        TEXT NOT NULL,
+      ts          BIGINT NOT NULL,
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS idx_chat_messages_channel_ts ON chat_messages (channel, ts DESC)`;
+  schemaReady = true;
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   applyCors(req, res, "GET, POST, DELETE, OPTIONS");
   if (req.method === "OPTIONS") return res.status(204).end();
@@ -55,15 +53,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const user = getUserFromRequest(req);
   if (!user) return res.status(401).json({ error: "Unauthorized" });
 
-  // Lightweight summary mode: returns latest ts per channel for unread badges.
+  if (!process.env.DATABASE_URL) return res.status(500).json({ error: "DB not configured" });
+  const sql = neon(process.env.DATABASE_URL);
+  try { await ensureSchema(sql); } catch (e: any) {
+    return res.status(500).json({ error: "Schema init failed", detail: String(e?.message || e) });
+  }
+
+  // Lightweight summary mode: latest ts per channel for unread badges.
   if (req.method === "GET" && (req.query.summary === "1" || req.query.summary === "true")) {
-    return res.status(200).json({
-      channels: CHANNELS.map((c) => {
-        const arr = store.get(c) || [];
-        const last = arr[arr.length - 1];
-        return { id: c, count: arr.length, latest: last?.ts || 0 };
-      }),
-    });
+    try {
+      const rows = await sql`
+        SELECT channel, COUNT(*)::int AS count, COALESCE(MAX(ts), 0)::bigint AS latest
+        FROM chat_messages GROUP BY channel
+      `;
+      const map = new Map<string, { count: number; latest: number }>();
+      for (const r of rows as any[]) map.set(r.channel, { count: Number(r.count), latest: Number(r.latest) });
+      return res.status(200).json({
+        channels: CHANNELS.map((c) => ({
+          id: c,
+          count: map.get(c)?.count || 0,
+          latest: map.get(c)?.latest || 0,
+        })),
+      });
+    } catch (e: any) {
+      return res.status(500).json({ error: "Summary failed", detail: String(e?.message || e) });
+    }
   }
 
   const channel = String(req.query.channel || "general") as Channel;
@@ -71,13 +85,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (req.method === "GET") {
     const since = Number(req.query.since || 0);
-    const all = store.get(channel) || [];
-    const messages = since ? all.filter((m) => m.ts > since) : all.slice(-MAX_PER_CHANNEL);
-    return res.status(200).json({
-      channel,
-      messages,
-      channels: CHANNELS.map((c) => ({ id: c, count: (store.get(c) || []).length })),
-    });
+    try {
+      const rows = since
+        ? await sql`SELECT id, channel, user_id, username, text, ts FROM chat_messages WHERE channel = ${channel} AND ts > ${since} ORDER BY ts ASC LIMIT ${MAX_PER_CHANNEL}`
+        : await sql`SELECT * FROM (SELECT id, channel, user_id, username, text, ts FROM chat_messages WHERE channel = ${channel} ORDER BY ts DESC LIMIT ${MAX_PER_CHANNEL}) t ORDER BY ts ASC`;
+      const messages = (rows as any[]).map((r) => ({
+        id: r.id, channel: r.channel, userId: r.user_id, username: r.username, text: r.text, ts: Number(r.ts),
+      }));
+      return res.status(200).json({
+        channel,
+        messages,
+        channels: CHANNELS.map((c) => ({ id: c })),
+      });
+    } catch (e: any) {
+      return res.status(500).json({ error: "Read failed", detail: String(e?.message || e) });
+    }
   }
 
   if (req.method === "POST") {
@@ -89,35 +111,45 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const rl = rateLimit(user.userId);
     if (!rl.ok) return res.status(429).json({ error: "Slow down", retry: rl.retry });
 
-    // Look up display name
     let username = (user.email || "anon").split("@")[0];
     try {
-      if (process.env.DATABASE_URL) {
-        const sql = neon(process.env.DATABASE_URL);
-        const rows = await sql`SELECT username FROM profiles WHERE user_id = ${user.userId}::uuid LIMIT 1`;
-        if (rows[0]?.username) username = String(rows[0].username);
-      }
-    } catch { /* fall back to email handle */ }
+      const rows = await sql`SELECT username FROM profiles WHERE user_id = ${user.userId}::uuid LIMIT 1`;
+      if ((rows as any[])[0]?.username) username = String((rows as any[])[0].username);
+    } catch { /* fall back */ }
 
-    const msg: ChatMessage = {
-      id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
-      channel,
-      userId: user.userId,
-      username,
-      text,
-      ts: Date.now(),
-    };
-    const arr = store.get(channel) || [];
-    arr.push(msg);
-    if (arr.length > MAX_PER_CHANNEL) arr.splice(0, arr.length - MAX_PER_CHANNEL);
-    store.set(channel, arr);
-    return res.status(200).json({ ok: true, message: msg });
+    const id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    const ts = Date.now();
+    try {
+      await sql`
+        INSERT INTO chat_messages (id, channel, user_id, username, text, ts)
+        VALUES (${id}, ${channel}, ${user.userId}::uuid, ${username}, ${text}, ${ts})
+      `;
+      // Trim channel to last MAX_PER_CHANNEL — best effort
+      await sql`
+        DELETE FROM chat_messages
+        WHERE channel = ${channel}
+          AND id NOT IN (
+            SELECT id FROM chat_messages WHERE channel = ${channel}
+            ORDER BY ts DESC LIMIT ${MAX_PER_CHANNEL}
+          )
+      `;
+    } catch (e: any) {
+      return res.status(500).json({ error: "Write failed", detail: String(e?.message || e) });
+    }
+
+    return res.status(200).json({
+      ok: true,
+      message: { id, channel, userId: user.userId, username, text, ts },
+    });
   }
 
   if (req.method === "DELETE") {
-    // Admin-only: clear a channel
     if (user.email !== ADMIN_EMAIL) return res.status(403).json({ error: "Forbidden" });
-    store.set(channel, []);
+    try {
+      await sql`DELETE FROM chat_messages WHERE channel = ${channel}`;
+    } catch (e: any) {
+      return res.status(500).json({ error: "Clear failed", detail: String(e?.message || e) });
+    }
     return res.status(200).json({ ok: true, cleared: channel });
   }
 
