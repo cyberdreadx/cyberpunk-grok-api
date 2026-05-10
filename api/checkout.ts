@@ -196,8 +196,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const stripeCode = err?.code || err?.raw?.code;
     const message = err?.message || "Unknown error";
     console.error("[checkout]", { stripeType, stripeCode, message, stack: err?.stack });
+    const friendly = stripeCode
+      ? `Checkout failed (${stripeCode}): ${message}`
+      : `Checkout failed: ${message}`;
     return res.status(500).json({
-      error: "Checkout failed",
+      error: friendly,
       detail: message,
       stripeType,
       stripeCode,
