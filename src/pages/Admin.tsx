@@ -35,6 +35,7 @@ import {
   ImageOff,
 } from "lucide-react";
 import AdminInsightsPanel from "@/components/AdminInsightsPanel";
+import PurgeLogPanel from "@/components/PurgeLogPanel";
 import MediaErrorsPanel from "@/components/MediaErrorsPanel";
 import {
   AreaChart,
