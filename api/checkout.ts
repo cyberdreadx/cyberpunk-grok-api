@@ -190,7 +190,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
     return res.status(200).json({ url: session.url });
   } catch (err: any) {
-    console.error("[checkout]", err.message, err.stack);
-    return res.status(500).json({ error: "Checkout failed" });
+    // Surface a useful message so support can diagnose without digging through logs.
+    // Stripe errors expose `type`, `code`, `message` — all safe to return.
+    const stripeType = err?.type || err?.raw?.type;
+    const stripeCode = err?.code || err?.raw?.code;
+    const message = err?.message || "Unknown error";
+    console.error("[checkout]", { stripeType, stripeCode, message, stack: err?.stack });
+    return res.status(500).json({
+      error: "Checkout failed",
+      detail: message,
+      stripeType,
+      stripeCode,
+    });
   }
 }
