@@ -11,7 +11,7 @@ const PREVIEW_API_BASE = "https://cyberpunk-grok-api.vercel.app/api";
 const currentOrigin = typeof window !== "undefined" ? window.location.origin : "";
 const currentHost = typeof window !== "undefined" ? window.location.hostname : "";
 const isLovablePreviewHost = currentHost.endsWith(".lovable.app") || currentHost.endsWith(".lovableproject.com");
-const API_BASE = import.meta.env.VITE_API_URL || (isLovablePreviewHost ? PREVIEW_API_BASE : "/api");
+const API_BASE = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "/api" : (isLovablePreviewHost ? PREVIEW_API_BASE : "/api"));
 const isSameOriginApi = API_BASE.startsWith("/") || API_BASE.startsWith(currentOrigin);
 
 /** Resolved API base (e.g. "/api" or "https://your-app.vercel.app/api"). Use for direct fetch() calls. */
