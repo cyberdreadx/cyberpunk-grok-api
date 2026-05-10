@@ -478,6 +478,8 @@ export function buildV48AnnouncementHtml(): string {
     </div>
   `;
 }
+
+/**
  * Triggered from the Stripe webhook on checkout.session.completed for the
  * creator_verification flow. Idempotency-safe: webhook itself is idempotent.
  */
