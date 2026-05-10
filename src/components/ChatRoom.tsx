@@ -5,6 +5,7 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { apiFetch, hasAuthToken } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
+import { setLastSeen } from "@/hooks/useChatUnread";
 import { Send, Hash, RefreshCw, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
