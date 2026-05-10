@@ -124,12 +124,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (action === "get") {
       const { characterId } = req.body;
       if (!characterId) return res.status(400).json({ error: "characterId required" });
+      // Owner can fetch their own character; anyone can fetch a public one (read-only)
       const rows = await sql`
-        SELECT id, name, portrait_url, personality, traits, system_prompt, llm_backend, voice_style, created_at, updated_at
-        FROM characters WHERE id = ${characterId} AND user_id = ${auth.userId}
+        SELECT id, user_id, name, portrait_url, personality, traits, system_prompt, llm_backend, voice_style,
+               is_public, created_at, updated_at
+        FROM characters
+        WHERE id = ${characterId} AND (user_id = ${auth.userId} OR is_public = true)
       `;
       if (rows.length === 0) return res.status(404).json({ error: "Character not found" });
-      return res.status(200).json({ character: rows[0] });
+      const c: any = rows[0];
+      c.is_owner = c.user_id === auth.userId;
+      delete c.user_id;
+      return res.status(200).json({ character: c });
     }
 
     if (action === "update") {
