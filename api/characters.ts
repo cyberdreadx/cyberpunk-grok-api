@@ -166,6 +166,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           ? buildSystemPrompt(newName, newPersonality, JSON.parse(newTraits))
           : cur.system_prompt;
 
+      const newIsPublic = isPublic === undefined ? !!cur.is_public : !!isPublic;
+      const newPublishedAt = newIsPublic
+        ? (cur.is_public ? cur.published_at : new Date().toISOString())
+        : null;
+
       // If the personality fundamentally changed, reset emotional memory
       const rows = await sql`
         UPDATE characters SET
@@ -175,12 +180,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           portrait_url = ${newPortrait},
           llm_backend = ${newBackend},
           system_prompt = ${newSysPrompt},
+          is_public = ${newIsPublic},
+          published_at = ${newPublishedAt},
           mood = ${personalityChanged ? "neutral" : (cur.mood || "neutral")},
           memory_summary = ${personalityChanged ? "" : (cur.memory_summary || "")},
           relationship_notes = ${personalityChanged ? "" : (cur.relationship_notes || "")},
           updated_at = now()
         WHERE id = ${characterId} AND user_id = ${auth.userId}
-        RETURNING id, name, portrait_url, personality, traits, system_prompt, llm_backend, updated_at
+        RETURNING id, name, portrait_url, personality, traits, system_prompt, llm_backend, is_public, updated_at
       `;
       return res.status(200).json({ character: rows[0] });
     }
