@@ -215,6 +215,11 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ onCreditsRefresh }) => {
           <p className="font-mono-share text-[10px] text-muted-foreground/60 mt-0.5">
             Added to your balance
           </p>
+          {result.potContribution ? (
+            <p className="font-mono-share text-[10px] text-fuchsia-400/90 mt-1.5">
+              💧 +{result.potContribution} credit dropped into the Community Pot
+            </p>
+          ) : null}
           <Button
             variant="outline"
             size="sm"
