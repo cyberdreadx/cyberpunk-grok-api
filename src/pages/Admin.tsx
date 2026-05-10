@@ -2483,6 +2483,9 @@ export default function Admin() {
           </section>
         )}
 
+        {/* ═══ CHAT MODERATION ═══ */}
+        {activeTab === "moderation" && <AdminChatModerationPanel />}
+
         {/* ═══ REFERRALS TAB ═══ */}
         {activeTab === "referrals" && referralStats && (
           <section className="border border-green-500/30 rounded-lg bg-green-950/10 backdrop-blur-sm overflow-hidden">
