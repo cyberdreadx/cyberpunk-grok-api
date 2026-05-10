@@ -19,7 +19,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import Stripe from "stripe";
 import { getDb } from "./_lib/db";
 import { getUserFromRequest, ADMIN_EMAIL } from "./_lib/auth";
-import { sendAnnouncementEmail, buildAnnouncementHtml, buildV47AnnouncementHtml } from "./_lib/email";
+import { sendAnnouncementEmail, buildAnnouncementHtml, buildV47AnnouncementHtml, buildV48AnnouncementHtml } from "./_lib/email";
 
 function isAdmin(req: VercelRequest): boolean {
   const auth = getUserFromRequest(req);
