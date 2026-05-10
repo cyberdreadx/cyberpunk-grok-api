@@ -19,7 +19,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import Stripe from "stripe";
 import { getDb } from "./_lib/db";
 import { getUserFromRequest, ADMIN_EMAIL } from "./_lib/auth";
-import { sendAnnouncementEmail, buildAnnouncementHtml, buildV47AnnouncementHtml } from "./_lib/email";
+import { sendAnnouncementEmail, buildAnnouncementHtml, buildV47AnnouncementHtml, buildV48AnnouncementHtml } from "./_lib/email";
 
 function isAdmin(req: VercelRequest): boolean {
   const auth = getUserFromRequest(req);
@@ -637,6 +637,39 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
 
+      // -- Grant the SAME credit amount to every (verified) user in one go --
+      case "grant-all-credits": {
+        const { credits, type = "pack", verifiedOnly = true } = req.body;
+        const amount = parseInt(credits, 10);
+        if (!amount || amount < 1 || amount > 1000)
+          return res.status(400).json({ error: "credits must be 1–1000 for bulk grant" });
+
+        const users = verifiedOnly
+          ? await sql`SELECT id, email FROM users WHERE email_verified = true`
+          : await sql`SELECT id, email FROM users`;
+
+        const tag = `admin-bulk-${Date.now()}`;
+        let granted = 0;
+        for (const u of users as any[]) {
+          try {
+            if (type === "sub") {
+              await sql`UPDATE users SET sub_credits = sub_credits + ${amount}, updated_at = now() WHERE id = ${u.id}`;
+            } else {
+              await sql`SELECT add_pack_credits(${u.id}::uuid, ${amount})`;
+            }
+            await sql`
+              INSERT INTO transactions (user_id, credits, amount_cents, stripe_session_id, package, type, payment_method)
+              VALUES (${u.id}::uuid, ${amount}, 0, ${tag + '-' + u.id}, 'admin-bulk-grant', ${type === "sub" ? "subscription" : "pack"}, 'admin')
+            `.catch(() => {});
+            granted++;
+          } catch (e) {
+            console.warn(`[admin] bulk grant failed for ${u.email}:`, e);
+          }
+        }
+        console.log(`[admin] Bulk-granted ${amount} ${type} credits to ${granted}/${users.length} users (tag=${tag})`);
+        return res.status(200).json({ recipients: granted, totalUsers: users.length, amount, type, tag });
+      }
+
       // -- Email delivery logs --
       case "email-logs": {
         const { limit = 50, email_type, status: logStatus } = req.body;
@@ -801,7 +834,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       case "get-announcement-html": {
         const campaign = (req.body.campaign as string) || "announcement";
-        const html = campaign === "announcement_v47" ? buildV47AnnouncementHtml() : buildAnnouncementHtml();
+        const html = campaign === "announcement_v48"
+          ? buildV48AnnouncementHtml()
+          : campaign === "announcement_v47"
+            ? buildV47AnnouncementHtml()
+            : buildAnnouncementHtml();
         return res.status(200).json({ html, campaign });
       }
 

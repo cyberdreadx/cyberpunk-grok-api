@@ -548,7 +548,8 @@ function AnnouncementPanel() {
             }}
             className="w-full bg-background/50 border border-primary/20 rounded px-2 py-1.5 font-mono-share text-xs text-foreground focus:outline-none focus:border-primary/50"
           >
-            <option value="announcement_v47">v4.7 — Coolest Updates Drop (NEW)</option>
+            <option value="announcement_v48">v4.8 — Signal Boost (chat + locks + +10 credits)</option>
+            <option value="announcement_v47">v4.7 — Coolest Updates Drop</option>
             <option value="announcement">Original "Massive Upgrade" announcement</option>
           </select>
           <p className="font-mono-share text-[9px] text-muted-foreground/50">
@@ -1803,6 +1804,44 @@ export default function Admin() {
                   {grantResult.msg}
                 </div>
               )}
+
+              {/* Bulk grant — every verified user */}
+              <div className="border-t border-border/30 pt-3 mt-1 space-y-2">
+                <div className="font-mono-share text-[10px] uppercase tracking-wider text-secondary/70">
+                  BULK_GRANT // EVERY VERIFIED USER
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {[10, 25, 50].map((amt) => (
+                    <Button
+                      key={amt}
+                      variant="outline"
+                      size="sm"
+                      disabled={granting}
+                      className="font-mono-share text-xs gap-1.5 border-secondary/40 hover:bg-secondary/10 text-secondary"
+                      onClick={async () => {
+                        if (!confirm(`Grant ${amt} pack credits to ALL verified users? This cannot be undone.`)) return;
+                        setGranting(true); setGrantResult(null);
+                        try {
+                          const res = await apiFetch<{ recipients: number; totalUsers: number; amount: number }>("/admin", {
+                            method: "POST",
+                            body: { action: "grant-all-credits", credits: amt, type: "pack", verifiedOnly: true },
+                          });
+                          setGrantResult({ ok: true, msg: `Granted ${res.amount} credits to ${res.recipients}/${res.totalUsers} verified users` });
+                          fetchAll();
+                        } catch (err: any) {
+                          setGrantResult({ ok: false, msg: err.message || "Bulk grant failed" });
+                        } finally { setGranting(false); }
+                      }}
+                    >
+                      {granting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Gift className="w-3 h-3" />}
+                      +{amt} TO ALL
+                    </Button>
+                  ))}
+                  <span className="font-mono-share text-[9px] text-muted-foreground/50">
+                    Capped at 1000 per user per call.
+                  </span>
+                </div>
+              </div>
             </section>
 
             {/* Free Credits Kill Switch */}

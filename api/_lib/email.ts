@@ -412,8 +412,72 @@ export function buildV47AnnouncementHtml(): string {
   `;
 }
 
-/**
- * Send a receipt confirming the one-time creator verification fee was charged.
+export function buildV48AnnouncementHtml(): string {
+  return `
+    <div style="font-family: 'Courier New', monospace; background: #0a0a0f; color: #e0e0e0; padding: 32px; max-width: 540px; margin: 0 auto;">
+      <div style="border: 1px solid #00f0ff33; padding: 28px; border-radius: 4px;">
+
+        <h1 style="color: #00f0ff; font-size: 22px; letter-spacing: 4px; margin: 0 0 6px; text-align: center;">
+          GROK RUNNER
+        </h1>
+        <p style="color: #ff00e599; font-size: 11px; letter-spacing: 5px; text-align: center; margin: 0 0 28px;">
+          v4.8 // SIGNAL_BOOST
+        </p>
+
+        <div style="background: linear-gradient(135deg, #00f0ff15, #ff00e515); border: 1px solid #00f0ff66; padding: 18px; border-radius: 4px; margin: 0 0 24px; text-align: center;">
+          <p style="color: #00f0ff; font-size: 12px; letter-spacing: 3px; margin: 0 0 6px;">+10 CREDITS DROPPED</p>
+          <p style="font-size: 13px; color: #c0c0c0; margin: 0; line-height: 1.5;">
+            Already in your wallet. Thanks for sticking around — go burn them on something weird.
+          </p>
+        </div>
+
+        <p style="font-size: 14px; color: #c0c0c0; line-height: 1.7; margin: 0 0 24px; text-align: center;">
+          Quick rundown of what just shipped:
+        </p>
+
+        <div style="background: #111; border: 1px solid #00f0ff44; padding: 20px; border-radius: 4px; margin: 0 0 16px;">
+          <h2 style="color: #00f0ff; font-size: 15px; margin: 0 0 10px; letter-spacing: 1px;">
+            💬 LIVE CHAT ROOMS
+          </h2>
+          <p style="font-size: 13px; color: #b0b0b0; margin: 0; line-height: 1.6;">
+            Real-time topic channels (#general, #help, #showcase, #nsfw) baked into the app.
+            Persistent message history, unread badges on the nav, and a one-tap entry from the bottom bar on mobile.
+          </p>
+        </div>
+
+        <div style="background: #111; border: 1px solid #ff00e544; padding: 20px; border-radius: 4px; margin: 0 0 16px;">
+          <h2 style="color: #ff00e5; font-size: 15px; margin: 0 0 10px; letter-spacing: 1px;">
+            🔒 LOCKED-POST CLARITY
+          </h2>
+          <p style="font-size: 13px; color: #b0b0b0; margin: 0; line-height: 1.6;">
+            Creators now see exactly when a post is locked for other viewers, with the unlock price right on the card.
+            Viewers see the same chip — no more guessing what something costs to peek.
+          </p>
+        </div>
+
+        <div style="background: #111; border: 1px solid #39ff1444; padding: 20px; border-radius: 4px; margin: 0 0 16px;">
+          <h2 style="color: #39ff14; font-size: 15px; margin: 0 0 10px; letter-spacing: 1px;">
+            🛡️ TIGHTER MODERATION
+          </h2>
+          <p style="font-size: 13px; color: #b0b0b0; margin: 0; line-height: 1.6;">
+            Cleaner chat thanks to per-channel mutes and message takedowns running behind the scenes.
+            Spam doesn't last long around here.
+          </p>
+        </div>
+
+        <div style="text-align: center; margin: 0 0 20px;">
+          <a href="https://grokrunner.gltch.app/chat" style="display: inline-block; background: linear-gradient(135deg, #00f0ff22, #ff00e522); border: 1px solid #00f0ff55; color: #00f0ff; text-decoration: none; padding: 14px 36px; border-radius: 4px; font-size: 14px; letter-spacing: 3px; font-weight: bold;">
+            JOIN THE CHAT →
+          </a>
+        </div>
+
+        <p style="font-size: 11px; color: #444; margin: 0; text-align: center;">
+          Sent to verified Grok Runner accounts. Reply STOP to opt out of update emails.
+        </p>
+      </div>
+    </div>
+  `;
+}
  * Triggered from the Stripe webhook on checkout.session.completed for the
  * creator_verification flow. Idempotency-safe: webhook itself is idempotent.
  */
