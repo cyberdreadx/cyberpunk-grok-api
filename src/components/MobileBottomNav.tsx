@@ -212,6 +212,11 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
                         {tab.badge}
                       </span>
                     )}
+                    {tab.newBadge && (
+                      <span className="absolute -top-2 -right-3 rounded-full border border-fuchsia-400/60 bg-card px-1 py-0.5 text-center font-orbitron text-[7px] leading-none text-fuchsia-300 shadow-[0_0_8px_hsl(300_90%_60%/0.4)] animate-pulse">
+                        NEW
+                      </span>
+                    )}
                     {tab.active && (
                       <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary shadow-[0_0_4px_hsl(var(--primary))]" />
                     )}
