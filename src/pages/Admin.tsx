@@ -548,7 +548,8 @@ function AnnouncementPanel() {
             }}
             className="w-full bg-background/50 border border-primary/20 rounded px-2 py-1.5 font-mono-share text-xs text-foreground focus:outline-none focus:border-primary/50"
           >
-            <option value="announcement_v47">v4.7 — Coolest Updates Drop (NEW)</option>
+            <option value="announcement_v48">v4.8 — Signal Boost (chat + locks + +10 credits)</option>
+            <option value="announcement_v47">v4.7 — Coolest Updates Drop</option>
             <option value="announcement">Original "Massive Upgrade" announcement</option>
           </select>
           <p className="font-mono-share text-[9px] text-muted-foreground/50">
