@@ -67,7 +67,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     if (action === "create") {
-      const { name, personality, traits, portrait, llmBackend, systemPrompt } = req.body;
+      const { name, personality, traits, portrait, llmBackend, systemPrompt, isPublic } = req.body;
       if (!name || typeof name !== "string" || name.trim().length < 1)
         return res.status(400).json({ error: "Name is required" });
       if (!personality || typeof personality !== "string" || personality.trim().length < 5)
