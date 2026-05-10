@@ -37,6 +37,7 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   const { totalCredits, loading: creditsLoading } = useCredits(user);
   const { unread: chatUnread } = useChatUnread(!!isAuthenticated);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [potOpen, setPotOpen] = useState(false);
 
   const isFeed = location.pathname === "/" || location.pathname === "";
   const isCreate = location.pathname === "/create";
