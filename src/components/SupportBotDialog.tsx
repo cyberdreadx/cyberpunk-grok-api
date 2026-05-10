@@ -81,7 +81,7 @@ const SupportBotDialog: React.FC<Props> = ({ open, onOpenChange, username, onRef
     try {
       const data = await apiFetch<{ reply: string; refunded?: number }>("/support-bot", {
         method: "POST",
-        body: JSON.stringify({ issue_code: code }),
+        body: { issue_code: code },
       });
       setReply(data.reply);
       if (data.refunded && data.refunded > 0) {
