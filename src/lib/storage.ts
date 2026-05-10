@@ -423,8 +423,10 @@ export async function deleteStoredResults(ids: string[]): Promise<void> {
 
 /**
  * Permanently delete all results in the trash folder.
+ * Returns both the deleted record ids and the external URLs that were stored
+ * (so callers can ask the backend to purge any blob/R2 objects we own).
  */
-export async function emptyTrash(): Promise<string[]> {
+export async function emptyTrash(): Promise<{ deletedIds: string[]; urls: string[] }> {
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, "readwrite");
@@ -432,14 +434,16 @@ export async function emptyTrash(): Promise<string[]> {
     const idx = store.index("folderId");
     const req = idx.getAll(TRASH_FOLDER_ID);
     const deletedIds: string[] = [];
+    const urls: string[] = [];
     req.onsuccess = () => {
       const recs: StoredResult[] = req.result || [];
       for (const rec of recs) {
         deletedIds.push(rec.id);
+        if (rec.url && /^https?:\/\//i.test(rec.url)) urls.push(rec.url);
         store.delete(rec.id);
       }
     };
-    tx.oncomplete = () => { db.close(); resolve(deletedIds); };
+    tx.oncomplete = () => { db.close(); resolve({ deletedIds, urls }); };
     tx.onerror = () => { db.close(); reject(tx.error); };
   });
 }
