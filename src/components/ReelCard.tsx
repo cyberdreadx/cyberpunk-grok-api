@@ -289,6 +289,22 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate, active = true, moun
       )}
 
 
+      {/* Viewer-side LOCKED · price chip — quick at-a-glance signal in addition
+          to the centered unlock CTA below. Mirrors owner badge placement. */}
+      {isLocked && (
+        <div
+          className="absolute z-20 flex items-center gap-1 px-2 py-1 rounded-md bg-black/70 backdrop-blur-sm border border-amber-400/50 font-mono-share text-[10px] text-amber-300 tracking-wider shadow-[0_0_12px_rgba(251,191,36,0.25)]"
+          style={{ top: "calc(env(safe-area-inset-top, 0px) + 12px)", right: 12 }}
+          title="Locked content — unlock to view"
+        >
+          <Lock className="w-3 h-3" />
+          <span>LOCKED ·</span>
+          {(post.lockCost || 0) > 0 && <span>{post.lockCost}c</span>}
+          {(post.lockPriceCents || 0) > 0 && <span>${((post.lockPriceCents || 0) / 100).toFixed(2)}</span>}
+          {!!(post.lockXrgeAmount && parseFloat(post.lockXrgeAmount) > 0) && <span>{post.lockXrgeAmount} XRGE</span>}
+        </div>
+      )}
+
       {/* Locked overlay */}
       {isLocked ? (
         <div className="relative z-10 flex flex-col items-center gap-4 px-8">

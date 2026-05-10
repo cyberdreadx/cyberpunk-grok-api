@@ -263,8 +263,15 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
           <span className="font-mono-share text-[9px] text-muted-foreground">{timeAgo}</span>
         </div>
         {isLocked && (
-          <span className="flex items-center gap-1 text-amber-400 font-mono-share text-[9px]">
-            <Lock className="w-3 h-3" /> LOCKED
+          <span
+            className="flex items-center gap-1 text-amber-300 font-mono-share text-[9px] px-1.5 py-0.5 rounded border border-amber-400/50 bg-amber-400/10"
+            title="This post is locked — unlock to view full content"
+          >
+            <Lock className="w-3 h-3" />
+            <span>LOCKED ·</span>
+            {(post.lockCost || 0) > 0 && <span>{post.lockCost}c</span>}
+            {(post.lockPriceCents || 0) > 0 && <span>${((post.lockPriceCents || 0) / 100).toFixed(2)}</span>}
+            {!!(post.lockXrgeAmount && parseFloat(post.lockXrgeAmount) > 0) && <span>{post.lockXrgeAmount} XRGE</span>}
           </span>
         )}
         {post.isOwner && ((post.lockCost || 0) > 0 || (post.lockPriceCents || 0) > 0 || !!(post.lockXrgeAmount && parseFloat(post.lockXrgeAmount) > 0)) && (
