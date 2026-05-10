@@ -5,7 +5,8 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { apiFetch, hasAuthToken } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
-import { Send, Hash, RefreshCw } from "lucide-react";
+import { Send, Hash, RefreshCw, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 const CHANNELS = ["general", "help", "showcase", "nsfw"] as const;
@@ -23,6 +24,7 @@ interface Msg {
 const POLL_MS = 3500;
 
 const ChatRoom: React.FC = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const authed = !!user && hasAuthToken();
   const [channel, setChannel] = useState<Channel>(() => {
@@ -120,6 +122,13 @@ const ChatRoom: React.FC = () => {
       <div className="border-b border-border/60 backdrop-blur sticky top-0 z-10 bg-background/80">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => { if (window.history.length > 1) navigate(-1); else navigate("/"); }}
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary -ml-1 pr-2 py-1"
+              aria-label="Back"
+            >
+              <ArrowLeft className="w-4 h-4" /> back
+            </button>
             <span className="text-xs uppercase tracking-[0.2em] text-primary/80">// chat</span>
           </div>
           <button

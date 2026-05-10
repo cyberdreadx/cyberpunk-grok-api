@@ -38,9 +38,13 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   const isCreate = location.pathname === "/create";
   const isCharacters = location.pathname === "/characters";
   const isLibrary = location.pathname === "/library";
+  const isChat = location.pathname === "/chat";
   const creditsBadge = !isAuthenticated ? null : creditsLoading ? "…" : totalCredits > 999 ? "999+" : totalCredits.toString();
 
-  const tabs = [
+  const tabs: Array<{
+    id: string; label: string; icon: any; active: boolean;
+    onClick: () => void; badge?: string | null; newBadge?: boolean;
+  }> = [
     {
       id: "feed",
       label: "FEED",
@@ -64,11 +68,12 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
     },
     ...(isAuthenticated ? [
       {
-        id: "characters",
-        label: t("nav.characters").toUpperCase().slice(0, 5),
-        icon: Users,
-        active: isCharacters,
-        onClick: () => { navigate("/characters"); setMoreOpen(false); },
+        id: "chat",
+        label: "CHAT",
+        icon: MessageSquare,
+        active: isChat,
+        newBadge: true,
+        onClick: () => { if (!isChat) navigate("/chat"); setMoreOpen(false); },
       },
     ] : []),
     {
@@ -205,6 +210,11 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
                     {tab.badge && (
                       <span className="absolute -top-2 -right-4 min-w-[1.75rem] rounded-full border border-primary/40 bg-card px-1 py-0.5 text-center font-orbitron text-[8px] leading-none text-primary shadow-[0_0_8px_hsl(var(--primary)/0.2)]">
                         {tab.badge}
+                      </span>
+                    )}
+                    {tab.newBadge && (
+                      <span className="absolute -top-2 -right-3 rounded-full border border-fuchsia-400/60 bg-card px-1 py-0.5 text-center font-orbitron text-[7px] leading-none text-fuchsia-300 shadow-[0_0_8px_hsl(300_90%_60%/0.4)] animate-pulse">
+                        NEW
                       </span>
                     )}
                     {tab.active && (
