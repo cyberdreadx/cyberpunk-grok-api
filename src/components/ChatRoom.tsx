@@ -214,7 +214,7 @@ const ChatRoom: React.FC = () => {
                 }
               }}
               rows={1}
-              placeholder={`Message #${channel}`}
+              placeholder={t("chat.placeholder", { channel })}
               className="flex-1 resize-none bg-muted/20 border border-border/60 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-primary/60 max-h-32"
             />
             <button
@@ -222,11 +222,11 @@ const ChatRoom: React.FC = () => {
               disabled={sending || !text.trim()}
               className="shrink-0 h-10 px-3 rounded-md bg-primary/15 border border-primary/50 text-primary hover:bg-primary/25 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 text-xs uppercase tracking-wider"
             >
-              <Send className="w-3.5 h-3.5" /> send
+              <Send className="w-3.5 h-3.5" /> {t("chat.send")}
             </button>
           </div>
           <div className="text-[10px] text-muted-foreground/70 mt-1 text-right">
-            {text.length}/500 · ephemeral · last 100 msgs
+            {t("chat.footer", { count: text.length })}
           </div>
         </div>
       )}
