@@ -23,6 +23,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getDb } from "./_lib/db";
 import { getUserFromRequest, ADMIN_EMAIL } from "./_lib/auth";
+import { recordPurge } from "./_lib/purgeLog";
 
 const SAFETY_WINDOW_MS = 24 * 60 * 60 * 1000;
 const MAX_DELETIONS_PER_RUN = 5000;
