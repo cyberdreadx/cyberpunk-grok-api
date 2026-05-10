@@ -203,6 +203,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               latestAt: r.latest_at,
               latestLocked: isLocked,
               isMature: !!r.is_mature,
+              isOwner,
+              lockCost: r.lock_cost || 0,
+              lockPriceCents: r.lock_price_cents || 0,
+              lockXrgeAmount: xrgePrice > 0 ? r.lock_xrge_amount : undefined,
               rankScore: parseFloat(r.rank_score),
             };
           }),
