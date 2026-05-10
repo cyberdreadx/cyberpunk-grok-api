@@ -669,6 +669,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         console.log(`[admin] Bulk-granted ${amount} ${type} credits to ${granted}/${users.length} users (tag=${tag})`);
         return res.status(200).json({ recipients: granted, totalUsers: users.length, amount, type, tag });
       }
+
+      // -- Email delivery logs --
+      case "email-logs": {
         const { limit = 50, email_type, status: logStatus } = req.body;
         const rows = await sql`
           SELECT id, recipient, email_type, resend_id, status, error_message, created_at
