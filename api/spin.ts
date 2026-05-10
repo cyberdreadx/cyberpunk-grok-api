@@ -217,9 +217,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     WHERE id = ${auth.userId}
   `;
 
+  // ── Unlucky spin → drop 1 credit into the community pot ────────
+  // Any spin that lands on the lowest tier (1 credit) contributes 1 credit
+  // to the global Community Credit Pot. Best-effort; never fails the spin.
+  let potContribution = 0;
+  if (prize.credits <= 1) {
+    try {
+      const [updated] = await sql`
+        UPDATE community_pot
+        SET balance = balance + 1,
+            total_donated = total_donated + 1,
+            updated_at = now()
+        WHERE id = 1
+        RETURNING balance
+      `;
+      if (updated) {
+        potContribution = 1;
+        // Log as a system donation (best-effort; user_id may be required NOT NULL)
+        try {
+          await sql`
+            INSERT INTO pot_donations (user_id, amount)
+            VALUES (${auth.userId}::uuid, 1)
+          `;
+        } catch { /* ignore */ }
+      }
+    } catch { /* community_pot table may not exist yet */ }
+  }
+
   return res.status(200).json({
     prize: { id: prize.id, label: prize.label, credits: prize.credits },
     streak,
     minPrize: minCredits,
+    potContribution,
   });
 }

@@ -52,7 +52,7 @@ const StreakBadge: React.FC<{ streak: number; minPrize: number }> = ({ streak, m
 
 const SpinWheel: React.FC<SpinWheelProps> = ({ onCreditsRefresh }) => {
   const [spinning, setSpinning] = useState(false);
-  const [result, setResult] = useState<{ label: string; credits: number; streak?: number; minPrize?: number } | null>(null);
+  const [result, setResult] = useState<{ label: string; credits: number; streak?: number; minPrize?: number; potContribution?: number } | null>(null);
   const [freeAvailable, setFreeAvailable] = useState(false);
   const [nextFreeAt, setNextFreeAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -138,6 +138,7 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ onCreditsRefresh }) => {
           credits: prize.credits,
           streak: data.streak,
           minPrize: data.minPrize,
+          potContribution: data.potContribution || 0,
         });
         setShowConfetti(prize.credits >= 5);
         setSpinning(false);
@@ -214,6 +215,11 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ onCreditsRefresh }) => {
           <p className="font-mono-share text-[10px] text-muted-foreground/60 mt-0.5">
             Added to your balance
           </p>
+          {result.potContribution ? (
+            <p className="font-mono-share text-[10px] text-fuchsia-400/90 mt-1.5">
+              💧 +{result.potContribution} credit dropped into the Community Pot
+            </p>
+          ) : null}
           <Button
             variant="outline"
             size="sm"
