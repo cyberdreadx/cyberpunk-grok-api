@@ -77,14 +77,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   // Best-effort — never fail the request, since the local trash is already empty.
-  await Promise.all([
-    deleteBlobs(blobUrls).catch((err) => console.warn("[library-purge] blob:", err?.message || err)),
-    deleteR2Objects(r2Keys).catch((err) => console.warn("[library-purge] r2:", err?.message || err)),
+  const [blobTally, r2Tally] = await Promise.all([
+    deleteBlobs(blobUrls).catch((err) => {
+      console.warn("[library-purge] blob:", err?.message || err);
+      return { found: blobUrls.length, deleted: 0, failed: blobUrls.length };
+    }),
+    deleteR2Objects(r2Keys).catch((err) => {
+      console.warn("[library-purge] r2:", err?.message || err);
+      return { found: r2Keys.length, deleted: 0, failed: r2Keys.length };
+    }),
   ]);
 
+  await recordPurge({
+    kind: "library-trash",
+    actorUserId: auth.userId,
+    actorEmail: auth.email,
+    targetUserId: auth.userId,
+    targetEmail: auth.email,
+    blobsFound: blobTally.found,
+    blobsDeleted: blobTally.deleted,
+    r2Found: r2Tally.found,
+    r2Deleted: r2Tally.deleted,
+    errors: blobTally.failed + r2Tally.failed,
+    notes: { skipped, candidates: candidates.length },
+  });
+
   return res.status(200).json({
-    deletedBlobs: blobUrls.length,
-    deletedR2: r2Keys.length,
+    deletedBlobs: blobTally.deleted,
+    deletedR2: r2Tally.deleted,
+    failedBlobs: blobTally.failed,
+    failedR2: r2Tally.failed,
     skipped,
   });
 }
