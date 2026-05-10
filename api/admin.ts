@@ -834,7 +834,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       case "get-announcement-html": {
         const campaign = (req.body.campaign as string) || "announcement";
-        const html = campaign === "announcement_v47" ? buildV47AnnouncementHtml() : buildAnnouncementHtml();
+        const html = campaign === "announcement_v48"
+          ? buildV48AnnouncementHtml()
+          : campaign === "announcement_v47"
+            ? buildV47AnnouncementHtml()
+            : buildAnnouncementHtml();
         return res.status(200).json({ html, campaign });
       }
 
