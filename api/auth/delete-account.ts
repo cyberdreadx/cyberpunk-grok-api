@@ -57,8 +57,75 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
-    // Delete user (cascades to referrals, transactions, etc. due to ON DELETE CASCADE if set,
-    // otherwise we clean up manually)
+    // -----------------------------------------------------------------
+    // PRIVACY: purge all user-owned media from blob/R2 storage BEFORE
+    // dropping the DB rows. Without this, share links / feed posts /
+    // stories / avatars would remain publicly accessible after the
+    // account is gone (reported privacy bug).
+    // -----------------------------------------------------------------
+    const blobUrls: string[] = [];
+    const r2Keys: string[] = [];
+    const sharePrefixes: string[] = [];
+
+    const collect = (url?: string | null) => {
+      if (!url || typeof url !== "string") return;
+      if (isVercelBlobUrl(url)) blobUrls.push(url);
+      else if (isR2Url(url)) {
+        const key = r2KeyFromUrl(url);
+        if (key) r2Keys.push(key);
+      }
+    };
+
+    try {
+      // 1. Share links owned by this user — list each shares/<id>.* prefix.
+      const shares = await sql`SELECT share_id FROM share_owners WHERE user_id = ${user.id}`;
+      for (const row of shares) {
+        if (row.share_id && /^[a-zA-Z0-9_-]{4,16}$/.test(row.share_id)) {
+          sharePrefixes.push(`shares/${row.share_id}`);
+        }
+      }
+    } catch (e: any) { console.warn("[delete-account] share_owners scan:", e?.message); }
+
+    try {
+      const posts = await sql`SELECT image_url FROM feed_posts WHERE user_id = ${user.id}`;
+      for (const row of posts) collect(row.image_url);
+    } catch (e: any) { console.warn("[delete-account] feed_posts scan:", e?.message); }
+
+    try {
+      const storiesRows = await sql`SELECT media_url FROM stories WHERE user_id = ${user.id}`;
+      for (const row of storiesRows) collect(row.media_url);
+    } catch (e: any) { console.warn("[delete-account] stories scan:", e?.message); }
+
+    try {
+      const profs = await sql`SELECT avatar_url FROM profiles WHERE user_id = ${user.id}`;
+      for (const row of profs) collect(row.avatar_url);
+    } catch (e: any) { console.warn("[delete-account] profiles scan:", e?.message); }
+
+    // Fire-and-await purge (best-effort; never blocks deletion on errors).
+    try {
+      await Promise.all([
+        deleteBlobs(blobUrls),
+        deleteR2Objects(r2Keys),
+        ...sharePrefixes.map(async (p) => {
+          // Shares may live in either Vercel Blob (legacy) or R2 (current).
+          try {
+            const { list, del } = await import("@vercel/blob");
+            const token = process.env.BLOB_READ_WRITE_TOKEN || process.env.grokrun_READ_WRITE_TOKEN;
+            if (token) {
+              const { blobs } = await list({ prefix: p, token });
+              await Promise.all(blobs.map((b) => del(b.url, { token }).catch(() => {})));
+            }
+          } catch (e: any) { console.warn("[delete-account] share blob purge:", e?.message); }
+          await deleteR2Prefix(p);
+        }),
+      ]);
+      console.log(`[delete-account] purged media for ${user.email}: ${blobUrls.length} blobs, ${r2Keys.length} R2 objs, ${sharePrefixes.length} share prefixes`);
+    } catch (e: any) {
+      console.warn("[delete-account] media purge encountered errors:", e?.message);
+    }
+
+    // Delete user (cascades to referrals, transactions, share_owners, feed_posts,
+    // stories, profiles, etc. via ON DELETE CASCADE)
     await sql`DELETE FROM transactions WHERE user_id = ${user.id}`;
     await sql`DELETE FROM referrals WHERE referrer_id = ${user.id} OR referee_id = ${user.id}`;
     await sql`DELETE FROM users WHERE id = ${user.id}`;
