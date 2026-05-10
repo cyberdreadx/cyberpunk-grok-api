@@ -89,10 +89,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         ? systemPrompt.slice(0, 3000)
         : buildSystemPrompt(name.trim(), personality.trim(), traitList);
 
+      const pub = !!isPublic;
       const rows = await sql`
-        INSERT INTO characters (user_id, name, portrait_url, personality, traits, system_prompt, llm_backend)
-        VALUES (${auth.userId}, ${name.trim()}, ${portraitUrl}, ${personality.trim()}, ${JSON.stringify(traitList)}, ${sysPrompt}, ${backend})
-        RETURNING id, name, portrait_url, personality, traits, system_prompt, llm_backend, created_at
+        INSERT INTO characters (user_id, name, portrait_url, personality, traits, system_prompt, llm_backend, is_public, published_at)
+        VALUES (${auth.userId}, ${name.trim()}, ${portraitUrl}, ${personality.trim()}, ${JSON.stringify(traitList)}, ${sysPrompt}, ${backend}, ${pub}, ${pub ? new Date().toISOString() : null})
+        RETURNING id, name, portrait_url, personality, traits, system_prompt, llm_backend, is_public, created_at
       `;
       return res.status(200).json({ character: rows[0] });
     }
