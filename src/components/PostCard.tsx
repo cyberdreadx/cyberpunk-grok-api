@@ -267,6 +267,18 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
             <Lock className="w-3 h-3" /> LOCKED
           </span>
         )}
+        {post.isOwner && ((post.lockCost || 0) > 0 || (post.lockPriceCents || 0) > 0 || !!(post.lockXrgeAmount && parseFloat(post.lockXrgeAmount) > 0)) && (
+          <span
+            className="flex items-center gap-1 text-amber-400 font-mono-share text-[9px] px-1.5 py-0.5 rounded border border-amber-400/40 bg-amber-400/5"
+            title="Other viewers see a blurred preview and must unlock to view. You always see your own post unblurred."
+          >
+            <Lock className="w-3 h-3" />
+            LOCKED ·
+            {(post.lockCost || 0) > 0 && <span>{post.lockCost}c</span>}
+            {(post.lockPriceCents || 0) > 0 && <span>${((post.lockPriceCents || 0) / 100).toFixed(2)}</span>}
+            {!!(post.lockXrgeAmount && parseFloat(post.lockXrgeAmount) > 0) && <span>{post.lockXrgeAmount} XRGE</span>}
+          </span>
+        )}
         {post.isMature && (
           <span className="flex items-center gap-1 text-amber-300/80 font-mono-share text-[9px] px-1.5 py-0.5 rounded border border-amber-300/30">
             18+
