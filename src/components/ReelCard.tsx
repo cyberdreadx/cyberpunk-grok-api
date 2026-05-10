@@ -272,6 +272,23 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate, active = true, moun
 
       <div className="absolute inset-0 z-[2] bg-gradient-to-b from-black/40 via-transparent to-black/70 pointer-events-none" />
 
+      {/* Owner-only LOCKED · price badge — creator always sees own post unblurred,
+          so this confirms at a glance that the post IS locked for other viewers. */}
+      {post.isOwner && ((post.lockCost || 0) > 0 || (post.lockPriceCents || 0) > 0 || !!(post.lockXrgeAmount && parseFloat(post.lockXrgeAmount) > 0)) && (
+        <div
+          className="absolute z-20 flex items-center gap-1 px-2 py-1 rounded-md bg-black/70 backdrop-blur-sm border border-amber-400/50 font-mono-share text-[10px] text-amber-300 tracking-wider"
+          style={{ top: "calc(env(safe-area-inset-top, 0px) + 12px)", left: 12 }}
+          title="Locked for other viewers — they see a blurred preview and must unlock."
+        >
+          <Lock className="w-3 h-3" />
+          <span>LOCKED ·</span>
+          {(post.lockCost || 0) > 0 && <span>{post.lockCost}c</span>}
+          {(post.lockPriceCents || 0) > 0 && <span>${((post.lockPriceCents || 0) / 100).toFixed(2)}</span>}
+          {!!(post.lockXrgeAmount && parseFloat(post.lockXrgeAmount) > 0) && <span>{post.lockXrgeAmount} XRGE</span>}
+        </div>
+      )}
+
+
       {/* Locked overlay */}
       {isLocked ? (
         <div className="relative z-10 flex flex-col items-center gap-4 px-8">
