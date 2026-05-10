@@ -138,6 +138,7 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ onCreditsRefresh }) => {
           credits: prize.credits,
           streak: data.streak,
           minPrize: data.minPrize,
+          potContribution: data.potContribution || 0,
         });
         setShowConfetti(prize.credits >= 5);
         setSpinning(false);
