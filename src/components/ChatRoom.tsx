@@ -107,7 +107,7 @@ const ChatRoom: React.FC = () => {
       }
       setText("");
     } catch (e: any) {
-      toast.error(e?.message || "Failed to send");
+      toast.error(e?.message || t("chat.failedSend"));
     } finally {
       setSending(false);
     }
