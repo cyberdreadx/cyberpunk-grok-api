@@ -637,8 +637,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
 
-      // -- Email delivery logs --
-      case "email-logs": {
+      // -- Grant the SAME credit amount to every (verified) user in one go --
+      case "grant-all-credits": {
+        const { credits, type = "pack", verifiedOnly = true } = req.body;
+        const amount = parseInt(credits, 10);
+        if (!amount || amount < 1 || amount > 1000)
+          return res.status(400).json({ error: "credits must be 1–1000 for bulk grant" });
+
+        const users = verifiedOnly
+          ? await sql`SELECT id, email FROM users WHERE email_verified = true`
+          : await sql`SELECT id, email FROM users`;
+
+        const tag = `admin-bulk-${Date.now()}`;
+        let granted = 0;
+        for (const u of users as any[]) {
+          try {
+            if (type === "sub") {
+              await sql`UPDATE users SET sub_credits = sub_credits + ${amount}, updated_at = now() WHERE id = ${u.id}`;
+            } else {
+              await sql`SELECT add_pack_credits(${u.id}::uuid, ${amount})`;
+            }
+            await sql`
+              INSERT INTO transactions (user_id, credits, amount_cents, stripe_session_id, package, type, payment_method)
+              VALUES (${u.id}::uuid, ${amount}, 0, ${tag + '-' + u.id}, 'admin-bulk-grant', ${type === "sub" ? "subscription" : "pack"}, 'admin')
+            `.catch(() => {});
+            granted++;
+          } catch (e) {
+            console.warn(`[admin] bulk grant failed for ${u.email}:`, e);
+          }
+        }
+        console.log(`[admin] Bulk-granted ${amount} ${type} credits to ${granted}/${users.length} users (tag=${tag})`);
+        return res.status(200).json({ recipients: granted, totalUsers: users.length, amount, type, tag });
+      }
         const { limit = 50, email_type, status: logStatus } = req.body;
         const rows = await sql`
           SELECT id, recipient, email_type, resend_id, status, error_message, created_at
