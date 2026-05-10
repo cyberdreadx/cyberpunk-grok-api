@@ -687,69 +687,136 @@ export default function Characters() {
         {/* ── Gallery View ── */}
         {view === "gallery" && (
           <div className="space-y-4">
-            {loading ? (
-              <div className="text-center py-20 font-mono-share text-sm text-muted-foreground animate-pulse">Loading characters...</div>
-            ) : characters.length === 0 ? (
-              <div className="text-center py-20 space-y-4">
-                <Sparkles className="w-12 h-12 mx-auto text-secondary/50" />
-                <p className="font-mono-share text-sm text-muted-foreground">No characters yet</p>
-                <button onClick={() => openCreator()}
-                  className="px-4 py-2 bg-secondary/20 border border-secondary/40 rounded font-mono-share text-xs text-secondary hover:bg-secondary/30 transition-colors">
-                  Create your first character
+            {/* Tabs */}
+            <div className="flex items-center gap-1 border-b border-border">
+              {([
+                { id: "mine", label: "MY CHARACTERS" },
+                { id: "public", label: "PUBLIC" },
+              ] as const).map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setGalleryTab(tab.id)}
+                  className={`px-3 py-2 font-orbitron text-[10px] tracking-wider transition-colors border-b-2 -mb-[1px] ${
+                    galleryTab === tab.id
+                      ? "text-secondary border-secondary"
+                      : "text-muted-foreground/60 border-transparent hover:text-foreground"
+                  }`}
+                >
+                  {tab.label}
                 </button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {characters.map(c => (
-                  <div key={c.id} className="group relative bg-card/60 border border-border rounded-lg overflow-hidden hover:border-secondary/40 transition-all cursor-pointer"
-                    onClick={() => openChat(c)}>
-                    {c.portrait_url ? (
-                      <img src={c.portrait_url} alt={c.name} className="w-full aspect-[3/4] object-cover" />
-                    ) : (
-                      <div className="w-full aspect-[3/4] bg-gradient-to-br from-purple-900/30 to-cyan-900/30 flex items-center justify-center">
-                        <MessageSquare className="w-10 h-10 text-muted-foreground/30" />
-                      </div>
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                    <div className="absolute bottom-0 left-0 right-0 p-3">
-                      <h3 className="font-orbitron text-xs tracking-wider text-foreground truncate">{c.name}</h3>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {(c.traits || []).slice(0, 3).map(t => (
-                          <span key={t} className="px-1.5 py-0.5 bg-secondary/20 border border-secondary/30 rounded-full font-mono-share text-[7px] text-secondary/80">
-                            {t}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                    {/* Action buttons on hover */}
-                    <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      {confirmDeleteId === c.id ? (
-                        <>
-                          <button onClick={(e) => { e.stopPropagation(); handleDelete(c.id); }}
-                            className="px-2 py-1 bg-red-500/30 rounded border border-red-500/50 font-mono-share text-[9px] text-red-400 hover:bg-red-500/40 transition-colors">
-                            DELETE
-                          </button>
-                          <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(null); }}
-                            className="px-2 py-1 bg-black/70 rounded border border-border font-mono-share text-[9px] text-muted-foreground hover:text-foreground transition-colors">
-                            CANCEL
-                          </button>
-                        </>
+              ))}
+            </div>
+
+            {galleryTab === "mine" && (
+              loading ? (
+                <div className="text-center py-20 font-mono-share text-sm text-muted-foreground animate-pulse">Loading characters...</div>
+              ) : characters.length === 0 ? (
+                <div className="text-center py-20 space-y-4">
+                  <Sparkles className="w-12 h-12 mx-auto text-secondary/50" />
+                  <p className="font-mono-share text-sm text-muted-foreground">No characters yet</p>
+                  <button onClick={() => openCreator()}
+                    className="px-4 py-2 bg-secondary/20 border border-secondary/40 rounded font-mono-share text-xs text-secondary hover:bg-secondary/30 transition-colors">
+                    Create your first character
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {characters.map(c => (
+                    <div key={c.id} className="group relative bg-card/60 border border-border rounded-lg overflow-hidden hover:border-secondary/40 transition-all cursor-pointer"
+                      onClick={() => openChat(c)}>
+                      {c.portrait_url ? (
+                        <img src={c.portrait_url} alt={c.name} className="w-full aspect-[3/4] object-cover" />
                       ) : (
-                        <>
-                          <button onClick={(e) => { e.stopPropagation(); openCreator(c); }}
-                            className="p-1.5 bg-black/70 rounded border border-border hover:border-purple-400/50 transition-colors">
-                            <Edit className="w-3 h-3 text-purple-400" />
-                          </button>
-                          <button onClick={(e) => { e.stopPropagation(); handleDelete(c.id); }}
-                            className="p-1.5 bg-black/70 rounded border border-border hover:border-red-400/50 transition-colors">
-                            <Trash2 className="w-3 h-3 text-red-400" />
-                          </button>
-                        </>
+                        <div className="w-full aspect-[3/4] bg-gradient-to-br from-purple-900/30 to-cyan-900/30 flex items-center justify-center">
+                          <MessageSquare className="w-10 h-10 text-muted-foreground/30" />
+                        </div>
                       )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                      {c.is_public && (
+                        <span className="absolute top-2 left-2 px-1.5 py-0.5 rounded-full bg-cyan-500/20 border border-cyan-400/40 font-mono-share text-[8px] text-cyan-300 uppercase tracking-wider">
+                          public
+                        </span>
+                      )}
+                      <div className="absolute bottom-0 left-0 right-0 p-3">
+                        <h3 className="font-orbitron text-xs tracking-wider text-foreground truncate">{c.name}</h3>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {(c.traits || []).slice(0, 3).map(t => (
+                            <span key={t} className="px-1.5 py-0.5 bg-secondary/20 border border-secondary/30 rounded-full font-mono-share text-[7px] text-secondary/80">
+                              {t}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {confirmDeleteId === c.id ? (
+                          <>
+                            <button onClick={(e) => { e.stopPropagation(); handleDelete(c.id); }}
+                              className="px-2 py-1 bg-red-500/30 rounded border border-red-500/50 font-mono-share text-[9px] text-red-400 hover:bg-red-500/40 transition-colors">
+                              DELETE
+                            </button>
+                            <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(null); }}
+                              className="px-2 py-1 bg-black/70 rounded border border-border font-mono-share text-[9px] text-muted-foreground hover:text-foreground transition-colors">
+                              CANCEL
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button onClick={(e) => { e.stopPropagation(); openCreator(c); }}
+                              className="p-1.5 bg-black/70 rounded border border-border hover:border-purple-400/50 transition-colors">
+                              <Edit className="w-3 h-3 text-purple-400" />
+                            </button>
+                            <button onClick={(e) => { e.stopPropagation(); handleDelete(c.id); }}
+                              className="p-1.5 bg-black/70 rounded border border-border hover:border-red-400/50 transition-colors">
+                              <Trash2 className="w-3 h-3 text-red-400" />
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )
+            )}
+
+            {galleryTab === "public" && (
+              publicLoading ? (
+                <div className="text-center py-20 font-mono-share text-sm text-muted-foreground animate-pulse">Loading public characters...</div>
+              ) : publicChars.length === 0 ? (
+                <div className="text-center py-20 space-y-2">
+                  <Sparkles className="w-12 h-12 mx-auto text-secondary/30" />
+                  <p className="font-mono-share text-sm text-muted-foreground">No public characters yet</p>
+                  <p className="font-mono-share text-[10px] text-muted-foreground/60">Be the first — toggle "Allow others to chat" when creating one.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {publicChars.map(c => (
+                    <div key={c.id} className="group relative bg-card/60 border border-border rounded-lg overflow-hidden hover:border-cyan-400/40 transition-all cursor-pointer"
+                      onClick={() => openChat({ ...c, is_owner: false })}>
+                      {c.portrait_url ? (
+                        <img src={c.portrait_url} alt={c.name} className="w-full aspect-[3/4] object-cover" />
+                      ) : (
+                        <div className="w-full aspect-[3/4] bg-gradient-to-br from-cyan-900/30 to-purple-900/30 flex items-center justify-center">
+                          <MessageSquare className="w-10 h-10 text-muted-foreground/30" />
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                      <div className="absolute bottom-0 left-0 right-0 p-3">
+                        <h3 className="font-orbitron text-xs tracking-wider text-foreground truncate">{c.name}</h3>
+                        {c.author_username && (
+                          <p className="font-mono-share text-[8px] text-cyan-300/70 truncate">by @{c.author_username}</p>
+                        )}
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {(c.traits || []).slice(0, 3).map(t => (
+                            <span key={t} className="px-1.5 py-0.5 bg-secondary/20 border border-secondary/30 rounded-full font-mono-share text-[7px] text-secondary/80">
+                              {t}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )
             )}
           </div>
         )}
