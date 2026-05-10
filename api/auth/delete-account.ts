@@ -10,6 +10,7 @@ import { getDb } from "../_lib/db";
 import { getUserFromRequest } from "../_lib/auth";
 import { deleteBlobs, isVercelBlobUrl } from "../_lib/blob";
 import { isR2Url, r2KeyFromUrl, deleteR2Objects, deleteR2Prefix } from "../_lib/r2";
+import { recordPurge } from "../_lib/purgeLog";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === "OPTIONS") return res.status(200).end();
