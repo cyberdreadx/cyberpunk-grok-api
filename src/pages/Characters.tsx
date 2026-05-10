@@ -327,6 +327,7 @@ export default function Characters() {
         toast({ title: "Created", description: `${name} is ready to chat` });
       }
       await fetchCharacters();
+      setPublicChars([]); // invalidate public cache so toggle shows up next view
       resetCreator();
       setView("gallery");
     } catch (err: any) {
