@@ -316,13 +316,13 @@ export default function Characters() {
       if (editingChar) {
         await apiFetch("/characters", {
           method: "POST",
-          body: { action: "update", characterId: editingChar.id, name, personality, traits, portrait, llmBackend },
+          body: { action: "update", characterId: editingChar.id, name, personality, traits, portrait, llmBackend, isPublic },
         });
         toast({ title: "Updated", description: `${name} has been updated` });
       } else {
         await apiFetch("/characters", {
           method: "POST",
-          body: { action: "create", name, personality, traits, portrait, llmBackend },
+          body: { action: "create", name, personality, traits, portrait, llmBackend, isPublic },
         });
         toast({ title: "Created", description: `${name} is ready to chat` });
       }
