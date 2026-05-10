@@ -55,6 +55,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const user = getUserFromRequest(req);
   if (!user) return res.status(401).json({ error: "Unauthorized" });
 
+  // Lightweight summary mode: returns latest ts per channel for unread badges.
+  if (req.method === "GET" && (req.query.summary === "1" || req.query.summary === "true")) {
+    return res.status(200).json({
+      channels: CHANNELS.map((c) => {
+        const arr = store.get(c) || [];
+        const last = arr[arr.length - 1];
+        return { id: c, count: arr.length, latest: last?.ts || 0 };
+      }),
+    });
+  }
+
   const channel = String(req.query.channel || "general") as Channel;
   if (!CHANNELS.includes(channel)) return res.status(400).json({ error: "Invalid channel" });
 

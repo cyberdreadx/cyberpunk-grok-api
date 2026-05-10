@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Sparkles, Image, Users, ShoppingCart, MoreHorizontal, HelpCircle, FileText, Shield, ScrollText, Rss, User, Settings as SettingsIcon, BadgeCheck, MessageSquare } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCredits } from "@/hooks/useCredits";
+import { useChatUnread } from "@/hooks/useChatUnread";
 
 interface MobileBottomNavProps {
   isAuthenticated?: boolean;
@@ -32,6 +33,7 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   const { t } = useTranslation();
   const { user } = useAuth();
   const { totalCredits, loading: creditsLoading } = useCredits(user);
+  const { unread: chatUnread } = useChatUnread(!!isAuthenticated);
   const [moreOpen, setMoreOpen] = useState(false);
 
   const isFeed = location.pathname === "/" || location.pathname === "";
@@ -72,7 +74,8 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
         label: "CHAT",
         icon: MessageSquare,
         active: isChat,
-        newBadge: true,
+        badge: chatUnread > 0 ? (chatUnread > 9 ? "9+" : String(chatUnread)) : null,
+        newBadge: chatUnread === 0,
         onClick: () => { if (!isChat) navigate("/chat"); setMoreOpen(false); },
       },
     ] : []),

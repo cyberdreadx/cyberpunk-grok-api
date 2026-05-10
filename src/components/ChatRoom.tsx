@@ -5,6 +5,7 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { apiFetch, hasAuthToken } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
+import { setLastSeen } from "@/hooks/useChatUnread";
 import { Send, Hash, RefreshCw, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -62,8 +63,10 @@ const ChatRoom: React.FC = () => {
       }
       if (data.messages.length) {
         lastTs.current = data.messages[data.messages.length - 1].ts;
+        setLastSeen(channel, lastTs.current);
       } else if (lastTs.current === 0) {
         lastTs.current = Date.now();
+        setLastSeen(channel, lastTs.current);
       }
     } catch (e) {
       // silent — polling will retry
