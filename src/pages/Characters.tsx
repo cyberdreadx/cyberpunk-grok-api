@@ -97,8 +97,13 @@ export default function Characters() {
   const [traits, setTraits] = useState<string[]>([]);
   const [portrait, setPortrait] = useState<string | null>(null);
   const [llmBackend, setLlmBackend] = useState(DEFAULT_BACKEND);
+  const [isPublic, setIsPublic] = useState(false);
   const [saving, setSaving] = useState(false);
   const portraitRef = useRef<HTMLInputElement>(null);
+
+  const [galleryTab, setGalleryTab] = useState<GalleryTab>("mine");
+  const [publicChars, setPublicChars] = useState<Character[]>([]);
+  const [publicLoading, setPublicLoading] = useState(false);
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
