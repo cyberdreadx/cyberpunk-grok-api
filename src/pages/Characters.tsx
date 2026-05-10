@@ -876,6 +876,22 @@ export default function Characters() {
               </div>
             </div>
 
+            {/* Publish toggle */}
+            <label className="flex items-start gap-3 p-3 bg-card/40 border border-border rounded cursor-pointer hover:border-cyan-400/40 transition-colors">
+              <input
+                type="checkbox"
+                checked={isPublic}
+                onChange={(e) => setIsPublic(e.target.checked)}
+                className="mt-0.5 w-4 h-4 accent-cyan-400"
+              />
+              <div className="flex-1">
+                <div className="font-orbitron text-[10px] tracking-wider text-foreground">ALLOW OTHERS TO CHAT</div>
+                <p className="font-mono-share text-[9px] text-muted-foreground/70 mt-0.5">
+                  Publish this character so other users can find them in the Public tab and start their own conversations. Their chat history stays on their own device — your character data (personality, portrait, traits) becomes visible.
+                </p>
+              </div>
+            </label>
+
             {/* Save */}
             <button onClick={handleSave} disabled={saving || !name.trim() || !personality.trim()}
               className="w-full py-3 bg-secondary/30 border border-secondary/50 rounded font-orbitron text-xs tracking-wider text-secondary hover:bg-secondary/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
