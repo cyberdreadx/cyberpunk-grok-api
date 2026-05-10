@@ -139,7 +139,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (action === "update") {
-      const { characterId, name, personality, traits, portrait, llmBackend, systemPrompt } = req.body;
+      const { characterId, name, personality, traits, portrait, llmBackend, systemPrompt, isPublic } = req.body;
       if (!characterId) return res.status(400).json({ error: "characterId required" });
 
       // Fetch current to merge
