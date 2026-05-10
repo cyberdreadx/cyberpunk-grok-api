@@ -100,9 +100,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (action === "list") {
       const rows = await sql`
-        SELECT id, name, portrait_url, personality, traits, llm_backend, created_at, updated_at
+        SELECT id, name, portrait_url, personality, traits, llm_backend, is_public, created_at, updated_at
         FROM characters WHERE user_id = ${auth.userId}
         ORDER BY updated_at DESC
+      `;
+      return res.status(200).json({ characters: rows });
+    }
+
+    if (action === "list-public") {
+      const limit = Math.min(Math.max(parseInt(req.body.limit) || 60, 1), 100);
+      const rows = await sql`
+        SELECT c.id, c.name, c.portrait_url, c.personality, c.traits, c.llm_backend, c.published_at,
+               p.username AS author_username, c.user_id AS author_id
+        FROM characters c
+        LEFT JOIN profiles p ON p.user_id = c.user_id
+        WHERE c.is_public = true
+        ORDER BY c.published_at DESC NULLS LAST
+        LIMIT ${limit}
       `;
       return res.status(200).json({ characters: rows });
     }
