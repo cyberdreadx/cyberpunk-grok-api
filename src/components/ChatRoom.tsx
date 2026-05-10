@@ -130,18 +130,18 @@ const ChatRoom: React.FC = () => {
             <button
               onClick={() => { if (window.history.length > 1) navigate(-1); else navigate("/"); }}
               className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary -ml-1 pr-2 py-1"
-              aria-label="Back"
+              aria-label={t("chat.back")}
             >
-              <ArrowLeft className="w-4 h-4" /> back
+              <ArrowLeft className="w-4 h-4" /> {t("chat.back")}
             </button>
-            <span className="text-xs uppercase tracking-[0.2em] text-primary/80">// chat</span>
+            <span className="text-xs uppercase tracking-[0.2em] text-primary/80">{t("chat.title")}</span>
           </div>
           <button
             onClick={() => { lastTs.current = 0; setMessages([]); poll(); }}
             className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1"
-            aria-label="Refresh"
+            aria-label={t("chat.refresh")}
           >
-            <RefreshCw className="w-3 h-3" /> refresh
+            <RefreshCw className="w-3 h-3" /> {t("chat.refresh")}
           </button>
         </div>
         <div className="flex gap-1 px-2 pb-2 overflow-x-auto no-scrollbar">
