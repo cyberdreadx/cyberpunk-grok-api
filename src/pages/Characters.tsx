@@ -47,11 +47,15 @@ interface Character {
   traits: string[];
   system_prompt?: string;
   llm_backend: string;
+  is_public?: boolean;
+  is_owner?: boolean;
+  author_username?: string | null;
   created_at: string;
   updated_at: string;
 }
 
 type View = "gallery" | "creator" | "chat";
+type GalleryTab = "mine" | "public";
 
 const TRAIT_OPTIONS = [
   "flirty", "dominant", "submissive", "shy", "caring", "sarcastic",
