@@ -1554,6 +1554,8 @@ export default function Admin() {
         {/* ═══ MEDIA ERRORS TAB ═══ */}
         {activeTab === "media-errors" && <MediaErrorsPanel />}
 
+        {activeTab === "purges" && <PurgeLogPanel />}
+
         {/* ═══ REVENUE TAB ═══ */}
         {activeTab === "revenue" && (
           <>
