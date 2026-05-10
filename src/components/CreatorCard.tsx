@@ -21,6 +21,10 @@ export interface FeedCreator {
   latestLocked: boolean;
   verified?: boolean;
   isMature?: boolean;
+  isOwner?: boolean;
+  lockCost?: number;
+  lockPriceCents?: number;
+  lockXrgeAmount?: string;
 }
 
 interface Props {
