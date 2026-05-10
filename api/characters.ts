@@ -67,7 +67,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     if (action === "create") {
-      const { name, personality, traits, portrait, llmBackend, systemPrompt } = req.body;
+      const { name, personality, traits, portrait, llmBackend, systemPrompt, isPublic } = req.body;
       if (!name || typeof name !== "string" || name.trim().length < 1)
         return res.status(400).json({ error: "Name is required" });
       if (!personality || typeof personality !== "string" || personality.trim().length < 5)
@@ -89,19 +89,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         ? systemPrompt.slice(0, 3000)
         : buildSystemPrompt(name.trim(), personality.trim(), traitList);
 
+      const pub = !!isPublic;
       const rows = await sql`
-        INSERT INTO characters (user_id, name, portrait_url, personality, traits, system_prompt, llm_backend)
-        VALUES (${auth.userId}, ${name.trim()}, ${portraitUrl}, ${personality.trim()}, ${JSON.stringify(traitList)}, ${sysPrompt}, ${backend})
-        RETURNING id, name, portrait_url, personality, traits, system_prompt, llm_backend, created_at
+        INSERT INTO characters (user_id, name, portrait_url, personality, traits, system_prompt, llm_backend, is_public, published_at)
+        VALUES (${auth.userId}, ${name.trim()}, ${portraitUrl}, ${personality.trim()}, ${JSON.stringify(traitList)}, ${sysPrompt}, ${backend}, ${pub}, ${pub ? new Date().toISOString() : null})
+        RETURNING id, name, portrait_url, personality, traits, system_prompt, llm_backend, is_public, created_at
       `;
       return res.status(200).json({ character: rows[0] });
     }
 
     if (action === "list") {
       const rows = await sql`
-        SELECT id, name, portrait_url, personality, traits, llm_backend, created_at, updated_at
+        SELECT id, name, portrait_url, personality, traits, llm_backend, is_public, created_at, updated_at
         FROM characters WHERE user_id = ${auth.userId}
         ORDER BY updated_at DESC
+      `;
+      return res.status(200).json({ characters: rows });
+    }
+
+    if (action === "list-public") {
+      const limit = Math.min(Math.max(parseInt(req.body.limit) || 60, 1), 100);
+      const rows = await sql`
+        SELECT c.id, c.name, c.portrait_url, c.personality, c.traits, c.llm_backend, c.published_at,
+               p.username AS author_username, c.user_id AS author_id
+        FROM characters c
+        LEFT JOIN profiles p ON p.user_id = c.user_id
+        WHERE c.is_public = true
+        ORDER BY c.published_at DESC NULLS LAST
+        LIMIT ${limit}
       `;
       return res.status(200).json({ characters: rows });
     }
@@ -109,16 +124,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (action === "get") {
       const { characterId } = req.body;
       if (!characterId) return res.status(400).json({ error: "characterId required" });
+      // Owner can fetch their own character; anyone can fetch a public one (read-only)
       const rows = await sql`
-        SELECT id, name, portrait_url, personality, traits, system_prompt, llm_backend, voice_style, created_at, updated_at
-        FROM characters WHERE id = ${characterId} AND user_id = ${auth.userId}
+        SELECT id, user_id, name, portrait_url, personality, traits, system_prompt, llm_backend, voice_style,
+               is_public, created_at, updated_at
+        FROM characters
+        WHERE id = ${characterId} AND (user_id = ${auth.userId} OR is_public = true)
       `;
       if (rows.length === 0) return res.status(404).json({ error: "Character not found" });
-      return res.status(200).json({ character: rows[0] });
+      const c: any = rows[0];
+      c.is_owner = c.user_id === auth.userId;
+      delete c.user_id;
+      return res.status(200).json({ character: c });
     }
 
     if (action === "update") {
-      const { characterId, name, personality, traits, portrait, llmBackend, systemPrompt } = req.body;
+      const { characterId, name, personality, traits, portrait, llmBackend, systemPrompt, isPublic } = req.body;
       if (!characterId) return res.status(400).json({ error: "characterId required" });
 
       // Fetch current to merge
@@ -145,6 +166,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           ? buildSystemPrompt(newName, newPersonality, JSON.parse(newTraits))
           : cur.system_prompt;
 
+      const newIsPublic = isPublic === undefined ? !!cur.is_public : !!isPublic;
+      const newPublishedAt = newIsPublic
+        ? (cur.is_public ? cur.published_at : new Date().toISOString())
+        : null;
+
       // If the personality fundamentally changed, reset emotional memory
       const rows = await sql`
         UPDATE characters SET
@@ -154,12 +180,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           portrait_url = ${newPortrait},
           llm_backend = ${newBackend},
           system_prompt = ${newSysPrompt},
+          is_public = ${newIsPublic},
+          published_at = ${newPublishedAt},
           mood = ${personalityChanged ? "neutral" : (cur.mood || "neutral")},
           memory_summary = ${personalityChanged ? "" : (cur.memory_summary || "")},
           relationship_notes = ${personalityChanged ? "" : (cur.relationship_notes || "")},
           updated_at = now()
         WHERE id = ${characterId} AND user_id = ${auth.userId}
-        RETURNING id, name, portrait_url, personality, traits, system_prompt, llm_backend, updated_at
+        RETURNING id, name, portrait_url, personality, traits, system_prompt, llm_backend, is_public, updated_at
       `;
       return res.status(200).json({ character: rows[0] });
     }
