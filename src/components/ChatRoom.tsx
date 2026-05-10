@@ -27,6 +27,7 @@ const POLL_MS = 3500;
 
 const ChatRoom: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { user } = useAuth();
   const authed = !!user && hasAuthToken();
   const [channel, setChannel] = useState<Channel>(() => {
