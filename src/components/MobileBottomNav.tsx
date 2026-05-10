@@ -152,6 +152,15 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
                 <span className="font-mono-share text-[11px] text-foreground/80">CHAT ROOM</span>
               </button>
             )}
+            {isAuthenticated && (
+              <button
+                onClick={() => { navigate("/characters"); setMoreOpen(false); }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded hover:bg-primary/10 transition-colors"
+              >
+                <Heart className="w-4 h-4 text-primary/60" />
+                <span className="font-mono-share text-[11px] text-foreground/80">CHARACTER CHAT</span>
+              </button>
+            )}
             <button
               onClick={() => { onOpenSettings?.(); setMoreOpen(false); }}
               className="w-full flex items-center gap-3 px-3 py-2.5 rounded hover:bg-primary/10 transition-colors"
