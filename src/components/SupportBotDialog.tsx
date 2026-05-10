@@ -81,7 +81,7 @@ const SupportBotDialog: React.FC<Props> = ({ open, onOpenChange, username, onRef
     try {
       const data = await apiFetch<{ reply: string; refunded?: number }>("/support-bot", {
         method: "POST",
-        body: JSON.stringify({ issue_code: code }),
+        body: { issue_code: code },
       });
       setReply(data.reply);
       if (data.refunded && data.refunded > 0) {
@@ -205,7 +205,12 @@ export const SupportBotLauncher: React.FC<{ onClick: () => void }> = ({ onClick 
   <button
     onClick={onClick}
     aria-label="Open support bot"
-    className="fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-30 w-12 h-12 rounded-full border border-primary/40 bg-card/90 backdrop-blur-md shadow-lg shadow-primary/10 hover:bg-primary/10 hover:border-primary/70 hover:shadow-primary/30 transition-all flex items-center justify-center group"
+    style={{
+      // Sit clear of the mobile bottom nav (~64px) + iOS safe area, with a comfy gap.
+      bottom: "calc(env(safe-area-inset-bottom, 0px) + 84px)",
+      right: "calc(env(safe-area-inset-right, 0px) + 16px)",
+    }}
+    className="fixed sm:!bottom-6 sm:!right-6 z-30 w-11 h-11 sm:w-12 sm:h-12 rounded-full border border-primary/40 bg-card/90 backdrop-blur-md shadow-lg shadow-primary/10 hover:bg-primary/10 hover:border-primary/70 hover:shadow-primary/30 active:scale-95 transition-all flex items-center justify-center group"
   >
     <LifeBuoy className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
     <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-primary animate-pulse" />
