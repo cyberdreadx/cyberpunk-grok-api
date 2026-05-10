@@ -63,8 +63,10 @@ const ChatRoom: React.FC = () => {
       }
       if (data.messages.length) {
         lastTs.current = data.messages[data.messages.length - 1].ts;
+        setLastSeen(channel, lastTs.current);
       } else if (lastTs.current === 0) {
         lastTs.current = Date.now();
+        setLastSeen(channel, lastTs.current);
       }
     } catch (e) {
       // silent — polling will retry
