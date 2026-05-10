@@ -140,6 +140,24 @@ export default function Characters() {
 
   useEffect(() => { fetchCharacters(); }, [fetchCharacters]);
 
+  const fetchPublic = useCallback(async () => {
+    setPublicLoading(true);
+    try {
+      const data = await apiFetch<{ characters: Character[] }>("/characters", {
+        method: "POST", body: { action: "list-public" },
+      });
+      setPublicChars(data.characters || []);
+    } catch {
+      toast({ title: "Error", description: "Failed to load public characters" });
+    } finally {
+      setPublicLoading(false);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    if (galleryTab === "public" && publicChars.length === 0) fetchPublic();
+  }, [galleryTab, publicChars.length, fetchPublic]);
+
   useEffect(() => {
     if (auth.isAuthenticated) fetchComfyModels();
   }, [auth.isAuthenticated, fetchComfyModels]);
@@ -152,7 +170,7 @@ export default function Characters() {
 
   const resetCreator = () => {
     setName(""); setPersonality(""); setTraits([]); setPortrait(null);
-    setLlmBackend(DEFAULT_BACKEND); setEditingChar(null);
+    setLlmBackend(DEFAULT_BACKEND); setIsPublic(false); setEditingChar(null);
   };
 
   const openCreator = (char?: Character) => {
@@ -163,6 +181,7 @@ export default function Characters() {
       setTraits(char.traits || []);
       setPortrait(char.portrait_url);
       setLlmBackend(char.llm_backend || DEFAULT_BACKEND);
+      setIsPublic(!!char.is_public);
     } else {
       resetCreator();
     }
