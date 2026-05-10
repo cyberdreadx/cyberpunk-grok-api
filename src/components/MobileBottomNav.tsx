@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { createPortal } from "react-dom";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Sparkles, Image, Users, ShoppingCart, MoreHorizontal, HelpCircle, FileText, Shield, ScrollText, Rss, User, Settings as SettingsIcon, BadgeCheck } from "lucide-react";
+import { Sparkles, Image, Users, ShoppingCart, MoreHorizontal, HelpCircle, FileText, Shield, ScrollText, Rss, User, Settings as SettingsIcon, BadgeCheck, MessageSquare } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCredits } from "@/hooks/useCredits";
 
@@ -133,6 +133,15 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
               >
                 <BadgeCheck className="w-4 h-4 text-primary/60" />
                 <span className="font-mono-share text-[11px] text-foreground/80">VERIFICATION</span>
+              </button>
+            )}
+            {isAuthenticated && (
+              <button
+                onClick={() => { navigate("/chat"); setMoreOpen(false); }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded hover:bg-primary/10 transition-colors"
+              >
+                <MessageSquare className="w-4 h-4 text-primary/60" />
+                <span className="font-mono-share text-[11px] text-foreground/80">CHAT ROOM</span>
               </button>
             )}
             <button
