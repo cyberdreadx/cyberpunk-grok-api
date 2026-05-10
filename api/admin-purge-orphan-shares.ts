@@ -143,6 +143,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     };
 
     console.log("[admin-purge-orphan-shares]", JSON.stringify(report));
+    await recordPurge({
+      kind: "admin-orphan-shares",
+      actorUserId: auth.userId,
+      actorEmail: auth.email,
+      blobsFound: orphans.length,
+      blobsDeleted: deleted,
+      errors: failed,
+      notes: {
+        dryRun: report.dryRun,
+        aborted,
+        shareBlobs: allShares.length,
+        distinctShareIds: idsInBucket.size,
+        ownedShareIds: knownIds.size,
+        cappedAt: report.cappedAt,
+      },
+    });
     return res.status(200).json(report);
   } catch (err: any) {
     console.error("[admin-purge-orphan-shares] error:", err?.message || err);
