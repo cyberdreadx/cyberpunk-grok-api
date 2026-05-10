@@ -258,6 +258,12 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
           <div className="h-[env(safe-area-inset-bottom,0px)] bg-card/95" />
         </div>
       </nav>
+
+      {potOpen && (
+        <Suspense fallback={null}>
+          <CommunityPotDialog open={potOpen} onClose={() => setPotOpen(false)} />
+        </Suspense>
+      )}
     </>
   );
 
