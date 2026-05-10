@@ -10,6 +10,7 @@ import { getDb } from "../_lib/db";
 import { getUserFromRequest } from "../_lib/auth";
 import { deleteBlobs, isVercelBlobUrl } from "../_lib/blob";
 import { isR2Url, r2KeyFromUrl, deleteR2Objects, deleteR2Prefix } from "../_lib/r2";
+import { recordPurge } from "../_lib/purgeLog";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === "OPTIONS") return res.status(200).end();
@@ -102,27 +103,58 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     } catch (e: any) { console.warn("[delete-account] profiles scan:", e?.message); }
 
     // Fire-and-await purge (best-effort; never blocks deletion on errors).
+    let blobTally = { found: 0, deleted: 0, failed: 0 };
+    let r2Tally = { found: 0, deleted: 0, failed: 0 };
+    let sharePrefixDeleted = 0;
+    let sharePrefixErrors = 0;
     try {
-      await Promise.all([
+      const [b, r, ...prefixCounts] = await Promise.all([
         deleteBlobs(blobUrls),
         deleteR2Objects(r2Keys),
         ...sharePrefixes.map(async (p) => {
+          let n = 0;
           // Shares may live in either Vercel Blob (legacy) or R2 (current).
           try {
             const { list, del } = await import("@vercel/blob");
             const token = process.env.BLOB_READ_WRITE_TOKEN || process.env.grokrun_READ_WRITE_TOKEN;
             if (token) {
               const { blobs } = await list({ prefix: p, token });
-              await Promise.all(blobs.map((b) => del(b.url, { token }).catch(() => {})));
+              await Promise.all(blobs.map((bl) =>
+                del(bl.url, { token }).then(() => { n++; }).catch(() => { sharePrefixErrors++; })
+              ));
             }
-          } catch (e: any) { console.warn("[delete-account] share blob purge:", e?.message); }
-          await deleteR2Prefix(p);
+          } catch (e: any) { sharePrefixErrors++; console.warn("[delete-account] share blob purge:", e?.message); }
+          n += await deleteR2Prefix(p);
+          return n;
         }),
       ]);
-      console.log(`[delete-account] purged media for ${user.email}: ${blobUrls.length} blobs, ${r2Keys.length} R2 objs, ${sharePrefixes.length} share prefixes`);
+      blobTally = b;
+      r2Tally = r;
+      sharePrefixDeleted = (prefixCounts as number[]).reduce((a, b) => a + b, 0);
+      console.log(
+        `[delete-account] purged media for ${user.email}: ` +
+        `${blobTally.deleted}/${blobTally.found} blobs, ${r2Tally.deleted}/${r2Tally.found} R2 objs, ` +
+        `${sharePrefixDeleted} share-prefix files (${sharePrefixes.length} prefixes)`
+      );
     } catch (e: any) {
       console.warn("[delete-account] media purge encountered errors:", e?.message);
     }
+
+    // Audit log — survives the user-row delete because target_user_id is not FK'd.
+    await recordPurge({
+      kind: "account-delete",
+      actorUserId: auth.userId,
+      actorEmail: auth.email,
+      targetUserId: user.id,
+      targetEmail: user.email,
+      blobsFound: blobTally.found + sharePrefixDeleted + sharePrefixErrors,
+      blobsDeleted: blobTally.deleted + sharePrefixDeleted,
+      r2Found: r2Tally.found,
+      r2Deleted: r2Tally.deleted,
+      errors: blobTally.failed + r2Tally.failed + sharePrefixErrors,
+      notes: { sharePrefixes: sharePrefixes.length },
+    });
+
 
     // Delete user (cascades to referrals, transactions, share_owners, feed_posts,
     // stories, profiles, etc. via ON DELETE CASCADE)

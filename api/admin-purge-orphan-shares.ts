@@ -23,6 +23,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getDb } from "./_lib/db";
 import { getUserFromRequest, ADMIN_EMAIL } from "./_lib/auth";
+import { recordPurge } from "./_lib/purgeLog";
 
 const SAFETY_WINDOW_MS = 24 * 60 * 60 * 1000;
 const MAX_DELETIONS_PER_RUN = 5000;
@@ -142,6 +143,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     };
 
     console.log("[admin-purge-orphan-shares]", JSON.stringify(report));
+    await recordPurge({
+      kind: "admin-orphan-shares",
+      actorUserId: auth.userId,
+      actorEmail: auth.email,
+      blobsFound: orphans.length,
+      blobsDeleted: deleted,
+      errors: failed,
+      notes: {
+        dryRun: report.dryRun,
+        aborted,
+        shareBlobs: allShares.length,
+        distinctShareIds: idsInBucket.size,
+        ownedShareIds: knownIds.size,
+        cappedAt: report.cappedAt,
+      },
+    });
     return res.status(200).json(report);
   } catch (err: any) {
     console.error("[admin-purge-orphan-shares] error:", err?.message || err);

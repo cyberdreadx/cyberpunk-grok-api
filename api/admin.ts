@@ -449,7 +449,56 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       }
 
-      // -- Sync subscription cancellation status from Stripe --
+      // -- Media purge audit log (account deletes, library trash, admin sweeps) --
+      case "purge-log": {
+        const limit = Math.min(Math.max(parseInt(String(req.body?.limit || "100"), 10) || 100, 1), 500);
+        const kindFilter = typeof req.body?.kind === "string" ? req.body.kind : null;
+        try {
+          await sql`
+            CREATE TABLE IF NOT EXISTS purge_log (
+              id BIGSERIAL PRIMARY KEY,
+              run_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+              kind TEXT NOT NULL,
+              actor_user_id UUID, actor_email TEXT,
+              target_user_id UUID, target_email TEXT,
+              blobs_found INT NOT NULL DEFAULT 0, blobs_deleted INT NOT NULL DEFAULT 0,
+              r2_found INT NOT NULL DEFAULT 0, r2_deleted INT NOT NULL DEFAULT 0,
+              errors INT NOT NULL DEFAULT 0, notes JSONB
+            )
+          `.catch(() => {});
+
+          const rows = kindFilter
+            ? await sql`
+                SELECT * FROM purge_log
+                WHERE kind = ${kindFilter}
+                ORDER BY run_at DESC LIMIT ${limit}
+              `
+            : await sql`SELECT * FROM purge_log ORDER BY run_at DESC LIMIT ${limit}`;
+
+          const totals = await sql`
+            SELECT
+              kind,
+              COUNT(*)::int                       AS runs,
+              COALESCE(SUM(blobs_found), 0)::int  AS blobs_found,
+              COALESCE(SUM(blobs_deleted), 0)::int AS blobs_deleted,
+              COALESCE(SUM(r2_found), 0)::int     AS r2_found,
+              COALESCE(SUM(r2_deleted), 0)::int   AS r2_deleted,
+              COALESCE(SUM(errors), 0)::int       AS errors,
+              MAX(run_at)                         AS last_run_at
+            FROM purge_log
+            WHERE run_at > now() - interval '30 days'
+            GROUP BY kind
+            ORDER BY last_run_at DESC
+          `;
+
+          return res.status(200).json({ rows, totals });
+        } catch (err: any) {
+          console.error("[admin purge-log]", err.message);
+          return res.status(500).json({ error: "Failed to load purge log" });
+        }
+      }
+
+
       case "sync-subscriptions": {
         const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
         if (!STRIPE_SECRET_KEY) return res.status(500).json({ error: "Stripe not configured" });

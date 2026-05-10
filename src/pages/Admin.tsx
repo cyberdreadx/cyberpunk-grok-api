@@ -35,6 +35,7 @@ import {
   ImageOff,
 } from "lucide-react";
 import AdminInsightsPanel from "@/components/AdminInsightsPanel";
+import PurgeLogPanel from "@/components/PurgeLogPanel";
 import MediaErrorsPanel from "@/components/MediaErrorsPanel";
 import {
   AreaChart,
@@ -129,7 +130,7 @@ function CyberTooltip({ active, payload, label }: any) {
 
 // ── Tab Definitions ──
 
-type TabId = "overview" | "insights" | "revenue" | "users" | "usage" | "moderation" | "referrals" | "payouts" | "emails" | "api" | "system" | "flash-sales" | "media-errors";
+type TabId = "overview" | "insights" | "revenue" | "users" | "usage" | "moderation" | "referrals" | "payouts" | "emails" | "api" | "system" | "flash-sales" | "media-errors" | "purges";
 
 const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
   { id: "overview", label: "OVERVIEW", icon: <Eye className="w-3.5 h-3.5" /> },
@@ -145,6 +146,7 @@ const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
   { id: "api", label: "API", icon: <Key className="w-3.5 h-3.5" /> },
   { id: "system", label: "SYSTEM", icon: <Server className="w-3.5 h-3.5" /> },
   { id: "media-errors", label: "MEDIA ERR", icon: <ImageOff className="w-3.5 h-3.5" /> },
+  { id: "purges", label: "PURGES", icon: <Trash2 className="w-3.5 h-3.5" /> },
 ];
 
 // ── RunPod Worker Status Panel ──
@@ -1551,6 +1553,8 @@ export default function Admin() {
 
         {/* ═══ MEDIA ERRORS TAB ═══ */}
         {activeTab === "media-errors" && <MediaErrorsPanel />}
+
+        {activeTab === "purges" && <PurgeLogPanel />}
 
         {/* ═══ REVENUE TAB ═══ */}
         {activeTab === "revenue" && (
