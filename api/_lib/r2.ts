@@ -65,3 +65,70 @@ export function getPublicUrl(key: string): string {
   // Last resort: presigned will be used instead
   return "";
 }
+
+/** Returns true if the URL appears to be hosted on this project's R2 bucket. */
+export function isR2Url(url: string | null | undefined): boolean {
+  if (!url || typeof url !== "string") return false;
+  try {
+    const u = new URL(url);
+    const customDomain = (process.env.R2_PUBLIC_DOMAIN || "").toLowerCase();
+    const bucketPublic = (process.env.R2_PUBLIC_BUCKET_URL || "").toLowerCase();
+    const host = u.host.toLowerCase();
+    if (customDomain && host === customDomain) return true;
+    if (bucketPublic) {
+      try { if (host === new URL(bucketPublic).host) return true; } catch {}
+    }
+    return /\.r2\.cloudflarestorage\.com$/i.test(host) || /\.r2\.dev$/i.test(host);
+  } catch { return false; }
+}
+
+/** Extract the object key from a public R2 URL (or return null if not parseable). */
+export function r2KeyFromUrl(url: string): string | null {
+  try {
+    const u = new URL(url);
+    return u.pathname.replace(/^\/+/, "") || null;
+  } catch { return null; }
+}
+
+/** Best-effort delete a list of R2 object keys. Silently ignores failures. */
+export async function deleteR2Objects(keys: string[]): Promise<void> {
+  const filtered = keys.filter(Boolean);
+  if (filtered.length === 0) return;
+  try {
+    const client = getR2();
+    // Batch in chunks of 1000 (S3 limit)
+    for (let i = 0; i < filtered.length; i += 1000) {
+      const chunk = filtered.slice(i, i + 1000);
+      await client.send(new DeleteObjectsCommand({
+        Bucket: BUCKET,
+        Delete: { Objects: chunk.map((Key) => ({ Key })), Quiet: true },
+      })).catch((err) => console.warn("[r2] batch delete failed:", err?.message || err));
+    }
+  } catch (err: any) {
+    console.warn("[r2] delete skipped:", err?.message || err);
+  }
+}
+
+/** Best-effort list + delete all R2 objects under a key prefix. */
+export async function deleteR2Prefix(prefix: string): Promise<number> {
+  if (!prefix) return 0;
+  let deleted = 0;
+  try {
+    const client = getR2();
+    let token: string | undefined = undefined;
+    do {
+      const resp: any = await client.send(new ListObjectsV2Command({
+        Bucket: BUCKET, Prefix: prefix, ContinuationToken: token,
+      }));
+      const keys = (resp.Contents || []).map((o: any) => o.Key).filter(Boolean);
+      if (keys.length > 0) {
+        await deleteR2Objects(keys);
+        deleted += keys.length;
+      }
+      token = resp.IsTruncated ? resp.NextContinuationToken : undefined;
+    } while (token);
+  } catch (err: any) {
+    console.warn("[r2] prefix delete failed:", err?.message || err);
+  }
+  return deleted;
+}
