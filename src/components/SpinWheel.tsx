@@ -52,7 +52,7 @@ const StreakBadge: React.FC<{ streak: number; minPrize: number }> = ({ streak, m
 
 const SpinWheel: React.FC<SpinWheelProps> = ({ onCreditsRefresh }) => {
   const [spinning, setSpinning] = useState(false);
-  const [result, setResult] = useState<{ label: string; credits: number; streak?: number; minPrize?: number } | null>(null);
+  const [result, setResult] = useState<{ label: string; credits: number; streak?: number; minPrize?: number; potContribution?: number } | null>(null);
   const [freeAvailable, setFreeAvailable] = useState(false);
   const [nextFreeAt, setNextFreeAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
