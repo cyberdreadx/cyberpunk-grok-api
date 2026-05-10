@@ -164,6 +164,16 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
                 <span className="font-mono-share text-[11px] text-foreground/80">CHARACTER CHAT</span>
               </button>
             )}
+            {isAuthenticated && (
+              <button
+                onClick={() => { setPotOpen(true); setMoreOpen(false); }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded hover:bg-primary/10 transition-colors"
+              >
+                <Gift className="w-4 h-4 text-fuchsia-400/80" />
+                <span className="font-mono-share text-[11px] text-foreground/80">COMMUNITY POT</span>
+                <span className="ml-auto font-orbitron text-[8px] tracking-wider text-fuchsia-300 border border-fuchsia-400/40 px-1.5 py-0.5 rounded">FREE</span>
+              </button>
+            )}
             <button
               onClick={() => { onOpenSettings?.(); setMoreOpen(false); }}
               className="w-full flex items-center gap-3 px-3 py-2.5 rounded hover:bg-primary/10 transition-colors"
