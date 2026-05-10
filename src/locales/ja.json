@@ -374,5 +374,17 @@
     "error": "エラー：",
     "routeNotFound": "ルート\"{{path}}\"がneural_mapに見つかりません",
     "goHome": "$ cd /ホーム"
+  },
+  "chat": {
+    "title": "// チャット",
+    "back": "戻る",
+    "refresh": "更新",
+    "signInPrompt": "チャットに参加するにはサインインしてください。",
+    "connecting": "#{{channel}} に接続中…",
+    "empty": "#{{channel}} にまだメッセージはありません。挨拶しよう 👋",
+    "placeholder": "#{{channel}} にメッセージ",
+    "send": "送信",
+    "footer": "{{count}}/500 · 一時的 · 最新100件",
+    "failedSend": "送信に失敗しました"
   }
 }

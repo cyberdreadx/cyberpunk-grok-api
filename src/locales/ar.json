@@ -374,5 +374,17 @@
     "error": "خطأ:",
     "routeNotFound": "المسار \"{{path}}\" غير موجود في neural_map",
     "goHome": "$ cd /الرئيسية"
+  },
+  "chat": {
+    "title": "// دردشة",
+    "back": "رجوع",
+    "refresh": "تحديث",
+    "signInPrompt": "سجّل الدخول للانضمام إلى الدردشة.",
+    "connecting": "جارٍ الاتصال بـ #{{channel}}…",
+    "empty": "لا توجد رسائل في #{{channel}} بعد. قل مرحباً 👋",
+    "placeholder": "رسالة في #{{channel}}",
+    "send": "إرسال",
+    "footer": "{{count}}/500 · مؤقت · آخر 100 رسالة",
+    "failedSend": "فشل الإرسال"
   }
 }

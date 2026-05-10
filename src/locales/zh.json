@@ -374,5 +374,17 @@
     "error": "错误：",
     "routeNotFound": "路由\"{{path}}\"在neural_map中未找到",
     "goHome": "$ cd /首页"
+  },
+  "chat": {
+    "title": "// 聊天",
+    "back": "返回",
+    "refresh": "刷新",
+    "signInPrompt": "登录以加入聊天。",
+    "connecting": "正在连接 #{{channel}}…",
+    "empty": "#{{channel}} 还没有消息。打个招呼吧 👋",
+    "placeholder": "在 #{{channel}} 发消息",
+    "send": "发送",
+    "footer": "{{count}}/500 · 临时 · 最近 100 条",
+    "failedSend": "发送失败"
   }
 }
