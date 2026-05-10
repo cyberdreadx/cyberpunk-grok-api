@@ -38,9 +38,13 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   const isCreate = location.pathname === "/create";
   const isCharacters = location.pathname === "/characters";
   const isLibrary = location.pathname === "/library";
+  const isChat = location.pathname === "/chat";
   const creditsBadge = !isAuthenticated ? null : creditsLoading ? "…" : totalCredits > 999 ? "999+" : totalCredits.toString();
 
-  const tabs = [
+  const tabs: Array<{
+    id: string; label: string; icon: any; active: boolean;
+    onClick: () => void; badge?: string | null; newBadge?: boolean;
+  }> = [
     {
       id: "feed",
       label: "FEED",
@@ -64,11 +68,12 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
     },
     ...(isAuthenticated ? [
       {
-        id: "characters",
-        label: t("nav.characters").toUpperCase().slice(0, 5),
-        icon: Users,
-        active: isCharacters,
-        onClick: () => { navigate("/characters"); setMoreOpen(false); },
+        id: "chat",
+        label: "CHAT",
+        icon: MessageSquare,
+        active: isChat,
+        newBadge: true,
+        onClick: () => { if (!isChat) navigate("/chat"); setMoreOpen(false); },
       },
     ] : []),
     {
