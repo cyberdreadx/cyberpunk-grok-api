@@ -90,23 +90,41 @@ export function r2KeyFromUrl(url: string): string | null {
   } catch { return null; }
 }
 
-/** Best-effort delete a list of R2 object keys. Silently ignores failures. */
-export async function deleteR2Objects(keys: string[]): Promise<void> {
+/**
+ * Best-effort delete a list of R2 object keys.
+ * Returns `{ found, deleted, failed }` so callers can record audit trails.
+ * R2's batch DeleteObjects with Quiet:true only surfaces errors, not
+ * per-key successes, so we estimate `deleted = found - failed`.
+ */
+export async function deleteR2Objects(
+  keys: string[],
+): Promise<{ found: number; deleted: number; failed: number }> {
   const filtered = keys.filter(Boolean);
-  if (filtered.length === 0) return;
+  const found = filtered.length;
+  if (found === 0) return { found: 0, deleted: 0, failed: 0 };
+  let failed = 0;
+  let batchErrors = 0;
   try {
     const client = getR2();
-    // Batch in chunks of 1000 (S3 limit)
     for (let i = 0; i < filtered.length; i += 1000) {
       const chunk = filtered.slice(i, i + 1000);
-      await client.send(new DeleteObjectsCommand({
-        Bucket: BUCKET,
-        Delete: { Objects: chunk.map((Key) => ({ Key })), Quiet: true },
-      })).catch((err) => console.warn("[r2] batch delete failed:", err?.message || err));
+      try {
+        const resp: any = await client.send(new DeleteObjectsCommand({
+          Bucket: BUCKET,
+          Delete: { Objects: chunk.map((Key) => ({ Key })), Quiet: true },
+        }));
+        failed += (resp?.Errors?.length || 0);
+      } catch (err: any) {
+        batchErrors += chunk.length;
+        console.warn("[r2] batch delete failed:", err?.message || err);
+      }
     }
   } catch (err: any) {
     console.warn("[r2] delete skipped:", err?.message || err);
+    batchErrors += filtered.length;
   }
+  failed += batchErrors;
+  return { found, deleted: Math.max(0, found - failed), failed };
 }
 
 /** Best-effort list + delete all R2 objects under a key prefix. */
