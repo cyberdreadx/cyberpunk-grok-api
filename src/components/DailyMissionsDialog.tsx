@@ -128,6 +128,9 @@ export default function DailyMissionsDialog({ status, loading, claiming, onClaim
           </div>
         ) : (
           <div className="space-y-4">
+            {/* One-time follow-on-X bonus */}
+            <FollowBonusCard user={user ?? null} onCreditsRefresh={onCreditsRefresh} />
+
             {/* Streak tracker */}
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs text-muted-foreground">
