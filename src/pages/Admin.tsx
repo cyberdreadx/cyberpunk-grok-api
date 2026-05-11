@@ -38,6 +38,7 @@ import AdminInsightsPanel from "@/components/AdminInsightsPanel";
 import AdminChatModerationPanel from "@/components/AdminChatModerationPanel";
 import PurgeLogPanel from "@/components/PurgeLogPanel";
 import MediaErrorsPanel from "@/components/MediaErrorsPanel";
+import LegacySubReconcilePanel from "@/components/LegacySubReconcilePanel";
 import {
   AreaChart,
   Area,
