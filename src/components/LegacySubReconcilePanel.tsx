@@ -56,7 +56,7 @@ export default function LegacySubReconcilePanel() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const auth = () => {
-    const t = localStorage.getItem("gltch-auth-token");
+    const t = getAuthToken();
     return t ? { Authorization: `Bearer ${t}` } : {};
   };
 
