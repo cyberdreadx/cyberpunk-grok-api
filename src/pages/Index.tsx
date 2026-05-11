@@ -1224,6 +1224,7 @@ const Index = () => {
                       onClaim={missionsHook.claimMission}
                       onClaimStreak={missionsHook.claimStreakBonus}
                       onCreditsRefresh={creditsHook.refreshCredits}
+                      user={auth.user}
                     />
                   </div>
                 )}
