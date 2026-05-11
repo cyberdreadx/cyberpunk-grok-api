@@ -188,7 +188,17 @@ const ChatRoom: React.FC = () => {
                   : "bg-muted/30 border-border/60"
               }`}>
                 <div className="flex items-center gap-2 text-[10px] uppercase tracking-wider opacity-70 mb-0.5">
-                  <span className={mine ? "text-primary" : "text-accent-foreground"}>{m.username}</span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (m.username) navigate(`/profile/${encodeURIComponent(m.username)}`);
+                    }}
+                    className={`hover:underline focus:underline focus:outline-none ${mine ? "text-primary" : "text-accent-foreground"}`}
+                    aria-label={`Open profile ${m.username}`}
+                  >
+                    {m.username}
+                  </button>
                   <span>·</span>
                   <span>{fmt(m.ts)}</span>
                 </div>
