@@ -66,7 +66,7 @@ function buildShareIntent(
   };
 }
 
-export default function DailyMissionsDialog({ status, loading, claiming, onClaim, onClaimStreak, onCreditsRefresh }: Props) {
+export default function DailyMissionsDialog({ status, loading, claiming, onClaim, onClaimStreak, onCreditsRefresh, user }: Props) {
   const [open, setOpen] = useState(false);
   const [activeProof, setActiveProof] = useState<string | null>(null);
   const [proofUrl, setProofUrl] = useState("");
