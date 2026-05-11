@@ -338,19 +338,44 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // This rescues legacy customers whose subscription was created BEFORE we started writing
       // `tier` into metadata, or who are on an old price ID that has since been swapped.
       let resolvedTier = meta.tier;
+      const priceMap = getPriceIdTierMap();
+      const candidatePriceIds: string[] = [];
+      const invLine = (invoice as any).lines?.data?.[0];
+      const invPriceId = invLine?.price?.id || invLine?.pricing?.price_details?.price;
+      if (invPriceId) candidatePriceIds.push(invPriceId);
+      const subItem: any = subscription?.items?.data?.[0];
+      if (subItem?.price?.id) candidatePriceIds.push(subItem.price.id);
       if (!resolvedTier || !TIER_DISCOUNT_PCT[resolvedTier]) {
-        const priceMap = getPriceIdTierMap();
-        const candidatePriceIds: string[] = [];
-        const invLine = (invoice as any).lines?.data?.[0];
-        const invPriceId = invLine?.price?.id || invLine?.pricing?.price_details?.price;
-        if (invPriceId) candidatePriceIds.push(invPriceId);
-        const subItem: any = subscription?.items?.data?.[0];
-        if (subItem?.price?.id) candidatePriceIds.push(subItem.price.id);
         for (const pid of candidatePriceIds) {
           if (priceMap[pid]) { resolvedTier = priceMap[pid]; break; }
         }
         if (resolvedTier) {
           console.log(`[webhook] invoice.paid: resolved tier '${resolvedTier}' via price ID fallback (candidates: ${candidatePriceIds.join(",")})`);
+        }
+      }
+
+      // Detect legacy-price subscribers: price ID is NOT in our current STRIPE_PRICE_SUB_* map.
+      // These customers are still being billed at the OLD (often higher) price by Stripe,
+      // but the new model grants 0 monthly credits — so without compensation they pay for
+      // nothing. Grant equivalent credits derived from amount_paid (matches our pack ratio
+      // of ~13 credits/$ on the Pro pack so legacy subscribers aren't shortchanged).
+      const isLegacyPrice = candidatePriceIds.length > 0 && !candidatePriceIds.some(pid => priceMap[pid]);
+      let legacyCreditGrant = 0;
+      if (isLegacyPrice && (invoice.amount_paid || 0) > 0) {
+        try {
+          const overrideRaw = process.env.STRIPE_LEGACY_PRICE_CREDITS;
+          if (overrideRaw) {
+            const overrides = JSON.parse(overrideRaw) as Record<string, number>;
+            for (const pid of candidatePriceIds) {
+              if (overrides[pid] != null) { legacyCreditGrant = overrides[pid]; break; }
+            }
+          }
+        } catch (e: any) {
+          console.warn("[webhook] STRIPE_LEGACY_PRICE_CREDITS parse failed:", e.message);
+        }
+        if (legacyCreditGrant <= 0) {
+          // ~13 credits per $1 (matches Pro pack: 240 credits / $18.99).
+          legacyCreditGrant = Math.max(1, Math.floor(((invoice.amount_paid || 0) / 100) * 13));
         }
       }
 
