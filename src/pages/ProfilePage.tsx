@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UserPlus, UserMinus, Edit2, Check, X, ArrowLeft, Camera, Loader2, Wallet, Ban, BadgeCheck } from "lucide-react";
 import EarningsPanel from "@/components/EarningsPanel";
+import AdminUserPanel from "@/components/AdminUserPanel";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import VerificationDialog from "@/components/VerificationDialog";
 import HolderBadge from "@/components/HolderBadge";
@@ -423,6 +424,9 @@ const ProfilePage: React.FC = () => {
 
         {/* Earnings (own profile only) */}
         {profile.isOwn && <EarningsPanel />}
+
+        {/* Admin inspector (admins viewing other users) */}
+        {!profile.isOwn && user?.is_admin && <AdminUserPanel userId={profile.userId} />}
 
         {/* Gallery */}
         <div>

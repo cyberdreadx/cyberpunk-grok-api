@@ -1256,6 +1256,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           WHERE user_id = ${targetId}::uuid AND mode LIKE 'moderation-%'
         `.catch(() => [{ total_flags: 0 }]);
 
+        // Purchase history (last 30 transactions)
+        const transactions = await sql`
+          SELECT id, credits, amount_cents, package, type, payment_method,
+                 stripe_session_id, created_at
+          FROM transactions
+          WHERE user_id = ${targetId}::uuid
+          ORDER BY created_at DESC
+          LIMIT 30
+        `.catch(() => []);
+
+        const [spendStats] = await sql`
+          SELECT
+            COALESCE(SUM(amount_cents), 0)::int AS total_spent_cents,
+            COUNT(*)::int AS total_purchases
+          FROM transactions
+          WHERE user_id = ${targetId}::uuid AND amount_cents > 0
+        `.catch(() => [{ total_spent_cents: 0, total_purchases: 0 }]);
+
         return res.json({
           user: { ...userRow, ...profile },
           prompts,
@@ -1263,6 +1281,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           stories,
           ban,
           moderationFlags: modStats.total_flags,
+          transactions,
+          totalSpentCents: spendStats.total_spent_cents,
+          totalPurchases: spendStats.total_purchases,
         });
       }
 
