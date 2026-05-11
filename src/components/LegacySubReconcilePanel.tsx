@@ -64,7 +64,7 @@ export default function LegacySubReconcilePanel() {
     setScanning(true);
     setSelected(new Set());
     try {
-      const r = await fetch(`/api/admin/legacy-sub-reconcile?since=${since}&limit=${limit}`, { headers: auth() });
+      const r = await fetch(apiUrl(`/admin/legacy-sub-reconcile?since=${since}&limit=${limit}`), { headers: auth() });
       const j = await r.json();
       if (!r.ok) throw new Error(j.error || "scan failed");
       setRows(j.rows || []);
