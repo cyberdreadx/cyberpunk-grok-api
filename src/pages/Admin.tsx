@@ -2842,6 +2842,7 @@ export default function Admin() {
         {activeTab === "flash-sales" && <FlashSalesPanel />}
 
         {activeTab === "payouts" && <PayoutsPanel />}
+        {activeTab === "legacy-subs" && <LegacySubReconcilePanel />}
 
         {activeTab === "system" && (
           <div className="space-y-4">
