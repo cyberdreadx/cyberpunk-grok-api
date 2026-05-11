@@ -38,6 +38,7 @@ import AdminInsightsPanel from "@/components/AdminInsightsPanel";
 import AdminChatModerationPanel from "@/components/AdminChatModerationPanel";
 import PurgeLogPanel from "@/components/PurgeLogPanel";
 import MediaErrorsPanel from "@/components/MediaErrorsPanel";
+import LegacySubReconcilePanel from "@/components/LegacySubReconcilePanel";
 import {
   AreaChart,
   Area,
@@ -131,7 +132,7 @@ function CyberTooltip({ active, payload, label }: any) {
 
 // ── Tab Definitions ──
 
-type TabId = "overview" | "insights" | "revenue" | "users" | "usage" | "moderation" | "referrals" | "payouts" | "emails" | "api" | "system" | "flash-sales" | "media-errors" | "purges";
+type TabId = "overview" | "insights" | "revenue" | "users" | "usage" | "moderation" | "referrals" | "payouts" | "emails" | "api" | "system" | "flash-sales" | "media-errors" | "purges" | "legacy-subs";
 
 const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
   { id: "overview", label: "OVERVIEW", icon: <Eye className="w-3.5 h-3.5" /> },
@@ -142,6 +143,7 @@ const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
   { id: "moderation", label: "DEFENSE", icon: <ShieldX className="w-3.5 h-3.5" /> },
   { id: "referrals", label: "REFERRALS", icon: <Share2 className="w-3.5 h-3.5" /> },
   { id: "payouts", label: "PAYOUTS", icon: <CreditCard className="w-3.5 h-3.5" /> },
+  { id: "legacy-subs", label: "LEGACY SUBS", icon: <AlertTriangle className="w-3.5 h-3.5" /> },
   { id: "flash-sales", label: "FLASH SALES", icon: <Flame className="w-3.5 h-3.5" /> },
   { id: "emails", label: "EMAILS", icon: <Mail className="w-3.5 h-3.5" /> },
   { id: "api", label: "API", icon: <Key className="w-3.5 h-3.5" /> },
@@ -2840,6 +2842,7 @@ export default function Admin() {
         {activeTab === "flash-sales" && <FlashSalesPanel />}
 
         {activeTab === "payouts" && <PayoutsPanel />}
+        {activeTab === "legacy-subs" && <LegacySubReconcilePanel />}
 
         {activeTab === "system" && (
           <div className="space-y-4">
