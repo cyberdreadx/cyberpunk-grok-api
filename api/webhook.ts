@@ -392,21 +392,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const tier = resolvedTier;
       const discountPct = parseInt(meta.discount_pct, 10) || TIER_DISCOUNT_PCT[tier] || 0;
 
-      if (!userId || !tier || discountPct <= 0) {
-        // LOUD log so admin can manually reconcile + refund. Previously this exited silently,
-        // which is exactly how paying customers ended up with no discount and no credits.
+      // Allow legacy-price grants even when tier/discount can't be resolved — those
+      // customers are still being charged real money and must get value back.
+      if (!userId || (discountPct <= 0 && legacyCreditGrant <= 0)) {
         console.error("[webhook] invoice.paid UNRESOLVED — manual reconciliation needed", {
           invoiceId: invoice.id,
           subscriptionId,
           customerId: invoice.customer,
           amountPaidCents: invoice.amount_paid,
-          userId, tier, discountPct,
+          userId, tier, discountPct, legacyCreditGrant, isLegacyPrice,
           subDetails, lineItemMeta,
           subMetadata: subscription?.metadata,
           linePriceId: (invoice as any).lines?.data?.[0]?.price?.id,
         });
-        // Note: not logging an orphan transaction row because user_id is likely NOT NULL.
-        // The loud console.error above is sufficient for admin triage via Vercel logs.
         return res.status(200).json({ received: true, unresolved: true });
       }
 
@@ -415,29 +413,49 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         ? new Date(periodEnd * 1000).toISOString()
         : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
-      // Activate the discount + record the active tier; do NOT touch sub_credits.
-      await sql`
-        UPDATE users SET
-          subscription_tier = ${tier},
-          subscription_renews_at = ${renewsAt}::timestamptz,
-          subscription_cancel_at = NULL,
-          subscription_discount_pct = ${discountPct},
-          updated_at = now()
-        WHERE id = ${userId}::uuid
-      `;
+      // Activate the discount + record the active tier (when known).
+      if (tier && discountPct > 0) {
+        await sql`
+          UPDATE users SET
+            subscription_tier = ${tier},
+            subscription_renews_at = ${renewsAt}::timestamptz,
+            subscription_cancel_at = NULL,
+            subscription_discount_pct = ${discountPct},
+            updated_at = now()
+          WHERE id = ${userId}::uuid
+        `;
+      } else {
+        // Legacy with no resolvable tier — still record renewal so portal/UI works.
+        await sql`
+          UPDATE users SET
+            subscription_renews_at = ${renewsAt}::timestamptz,
+            subscription_cancel_at = NULL,
+            updated_at = now()
+          WHERE id = ${userId}::uuid
+        `;
+      }
+
+      // Grant equivalent credits for legacy-price subscribers (BYOC migration safety net).
+      if (legacyCreditGrant > 0) {
+        try {
+          await sql`SELECT add_pack_credits(${userId}::uuid, ${legacyCreditGrant})`;
+          console.log(`[webhook] LEGACY sub: granted ${legacyCreditGrant} credits to ${userId} (price=${candidatePriceIds.join(",")}, paid=${invoice.amount_paid}c)`);
+        } catch (e: any) {
+          console.error("[webhook] legacy credit grant failed:", e.message);
+        }
+      }
 
       if (invoice.customer) {
         await sql`UPDATE users SET stripe_customer_id = ${invoice.customer as string} WHERE id = ${userId}::uuid`;
       }
 
       const invoicePayMethod = await detectPaymentMethod(stripe, invoice);
-      // credits=0 because subscriptions no longer grant credits.
       await sql`
         INSERT INTO transactions (user_id, credits, amount_cents, stripe_session_id, package, type, payment_method)
-        VALUES (${userId}::uuid, 0, ${invoice.amount_paid || 0}, ${invoice.id}, ${tier}, 'subscription', ${invoicePayMethod})
+        VALUES (${userId}::uuid, ${legacyCreditGrant}, ${invoice.amount_paid || 0}, ${invoice.id}, ${tier || 'legacy'}, 'subscription', ${invoicePayMethod})
         ON CONFLICT (stripe_session_id) DO NOTHING
       `;
-      console.log(`[webhook] Activated ${discountPct}% discount for ${userId} (${tier}) via ${invoicePayMethod}`);
+      console.log(`[webhook] invoice.paid done: user=${userId} tier=${tier || 'legacy'} discount=${discountPct}% credits=${legacyCreditGrant} via ${invoicePayMethod}`);
     }
 
     // ── customer.subscription.updated ──
