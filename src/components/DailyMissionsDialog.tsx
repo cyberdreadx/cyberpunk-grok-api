@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CalendarCheck, Gift, Star, CheckCircle2, Circle, Trophy, Flame, Share2, MessageCircle, Loader2, ExternalLink, X } from "lucide-react";
 import type { MissionStatus } from "@/hooks/useDailyMissions";
+import FollowBonusCard from "@/components/FollowBonusCard";
+import type { AuthUser } from "@/hooks/useAuth";
 
 interface Props {
   status: MissionStatus | null;
@@ -12,6 +14,7 @@ interface Props {
   onClaim: (mission: string, url?: string) => Promise<boolean>;
   onClaimStreak: () => Promise<boolean>;
   onCreditsRefresh?: () => void;
+  user?: AuthUser | null;
 }
 
 type ProofPlatform = "reddit" | "grok_subreddit" | "twitter";
@@ -63,7 +66,7 @@ function buildShareIntent(
   };
 }
 
-export default function DailyMissionsDialog({ status, loading, claiming, onClaim, onClaimStreak, onCreditsRefresh }: Props) {
+export default function DailyMissionsDialog({ status, loading, claiming, onClaim, onClaimStreak, onCreditsRefresh, user }: Props) {
   const [open, setOpen] = useState(false);
   const [activeProof, setActiveProof] = useState<string | null>(null);
   const [proofUrl, setProofUrl] = useState("");
@@ -125,6 +128,9 @@ export default function DailyMissionsDialog({ status, loading, claiming, onClaim
           </div>
         ) : (
           <div className="space-y-4">
+            {/* One-time follow-on-X bonus */}
+            <FollowBonusCard user={user ?? null} onCreditsRefresh={onCreditsRefresh} />
+
             {/* Streak tracker */}
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs text-muted-foreground">
