@@ -64,6 +64,28 @@ const PricingCards: React.FC<PricingCardsProps> = ({
           <div className="h-px flex-1 bg-border/30" />
         </div>
 
+        {/* Always-visible Manage/Cancel button: rescues legacy/grandfathered subs
+            whose tier id no longer matches any current card (so no per-card
+            "Manage" button shows up). Routes to Stripe Customer Portal. */}
+        {onManageSubscription && (
+          <div className="mb-3 flex items-center justify-between gap-2 rounded-md border border-amber-500/30 bg-amber-500/5 px-3 py-2">
+            <span className="font-mono-share text-[10px] text-amber-300/90">
+              {currentTier
+                ? `Active sub: ${currentTier.toUpperCase()} — manage or cancel anytime`
+                : "Already subscribed? Manage or cancel below."}
+            </span>
+            <Button
+              onClick={() => { Promise.resolve(onManageSubscription?.()).catch(() => {}); }}
+              disabled={purchasing}
+              variant="outline"
+              size="sm"
+              className="rounded-md font-orbitron text-[9px] tracking-wider border-amber-500/50 text-amber-300 hover:bg-amber-500/10"
+            >
+              Manage / Cancel
+            </Button>
+          </div>
+        )}
+
         {/* Monthly / Yearly toggle */}
         <div className="flex items-center justify-center gap-1 mb-4">
           <button

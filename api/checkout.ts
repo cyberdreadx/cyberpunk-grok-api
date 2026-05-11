@@ -122,13 +122,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // ── Portal: redirect to Stripe Customer Portal ──
     if (body.action === "portal") {
       const rows = await sql`
-        SELECT stripe_customer_id FROM users WHERE id = ${auth.userId}
+        SELECT stripe_customer_id, email FROM users WHERE id = ${auth.userId}
       `;
-      if (!rows[0]?.stripe_customer_id) {
-        return res.status(404).json({ error: "No active subscription found" });
+      let customerId: string | null = rows[0]?.stripe_customer_id || null;
+
+      // Legacy fallback: many grandfathered subscribers never had stripe_customer_id
+      // persisted. Look them up by email so they can still reach the portal to cancel.
+      if (!customerId && rows[0]?.email) {
+        try {
+          const list = await stripe.customers.list({ email: rows[0].email, limit: 5 });
+          // Prefer customers with an active/past_due subscription.
+          for (const c of list.data) {
+            const subs = await stripe.subscriptions.list({ customer: c.id, status: "all", limit: 5 });
+            if (subs.data.some(s => ["active", "past_due", "trialing", "unpaid"].includes(s.status))) {
+              customerId = c.id;
+              break;
+            }
+          }
+          if (!customerId && list.data[0]) customerId = list.data[0].id;
+          if (customerId) {
+            await sql`UPDATE users SET stripe_customer_id = ${customerId} WHERE id = ${auth.userId}`;
+            console.log(`[checkout] portal: recovered stripe_customer_id ${customerId} for user ${auth.userId} via email lookup`);
+          }
+        } catch (e: any) {
+          console.warn("[checkout] portal email lookup failed:", e.message);
+        }
+      }
+
+      if (!customerId) {
+        return res.status(404).json({ error: "No Stripe customer on file. Email support@ to cancel." });
       }
       const portalSession = await stripe.billingPortal.sessions.create({
-        customer: rows[0].stripe_customer_id,
+        customer: customerId,
         return_url: SITE_URL,
       });
       return res.status(200).json({ url: portalSession.url });
