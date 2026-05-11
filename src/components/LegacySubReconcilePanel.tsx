@@ -85,7 +85,7 @@ export default function LegacySubReconcilePanel() {
     if (!confirm(`Grant missing credits for ${selected.size} invoice(s)? This is idempotent.`)) return;
     setApplying(true);
     try {
-      const r = await fetch("/api/admin/legacy-sub-reconcile", {
+      const r = await fetch(apiUrl("/admin/legacy-sub-reconcile"), {
         method: "POST",
         headers: { "Content-Type": "application/json", ...auth() },
         body: JSON.stringify({ invoiceIds: [...selected] }),
