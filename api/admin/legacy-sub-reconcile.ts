@@ -257,6 +257,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: "Method not allowed" });
   } catch (e: any) {
     console.error("[admin/legacy-sub-reconcile]", e.message);
-    return res.status(500).json({ error: e.message });
+    const msg: string = e?.message || "unknown error";
+    // Stripe restricted-key permission errors → return an actionable hint.
+    if (e?.type === "StripePermissionError" || /does not have the required permissions/i.test(msg) || /rak_/.test(msg)) {
+      return res.status(500).json({
+        error:
+          "Stripe key is missing permissions. STRIPE_SECRET_KEY needs READ access to: Invoices, Subscriptions, Customers, and Credit notes. " +
+          "Either grant rak_invoice_read, rak_subscription_read, rak_customer_read, rak_credit_note_read on the restricted key, or use the full-access secret key (sk_live_…). Original: " +
+          msg,
+      });
+    }
+    return res.status(500).json({ error: msg });
   }
 }
