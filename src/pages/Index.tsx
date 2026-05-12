@@ -176,6 +176,11 @@ const Index = () => {
   const isAdmin = !!auth.user?.is_admin;
   const [adminTestCredits, setAdminTestCredits] = useState(false);
   const adminBypass = isAdmin && !adminTestCredits;
+  const applyCreditDiscount = useCallback((cost: number) => {
+    const pct = Math.max(0, Math.min(95, creditsHook.creditDiscountPct || 0));
+    if (!pct || cost <= 0) return cost;
+    return Math.max(1, Math.ceil(cost * (1 - pct / 100)));
+  }, [creditsHook.creditDiscountPct]);
 
   const immersionSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleImmersionChange = useCallback(
