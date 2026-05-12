@@ -96,20 +96,29 @@ const ChatRoom: React.FC = () => {
     const v = text.trim();
     if (!v || sending) return;
     setSending(true);
+    const mentionsBot = /(^|\s)@gltch\b/i.test(v);
     try {
-      const res = await apiFetch<{ message: Msg }>(`/chat?channel=${channel}`, {
+      const res = await apiFetch<{ message: Msg; botMessage?: Msg }>(`/chat?channel=${channel}`, {
         method: "POST",
         body: { text: v },
       });
       if (res?.message) {
-        setMessages((prev) => [...prev, res.message].slice(-100));
-        lastTs.current = res.message.ts;
+        setMessages((prev) => {
+          const next = [...prev, res.message];
+          if (res.botMessage) next.push(res.botMessage);
+          return next.slice(-100);
+        });
+        lastTs.current = (res.botMessage?.ts || res.message.ts);
       }
       setText("");
     } catch (e: any) {
       toast.error(e?.message || t("chat.failedSend"));
     } finally {
       setSending(false);
+      if (mentionsBot) {
+        // ensure poll picks up bot message even if response omitted it
+        setTimeout(() => poll(), 600);
+      }
     }
   };
 
