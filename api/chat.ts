@@ -238,7 +238,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     await sql`
       DELETE FROM chat_messages WHERE channel = ${channel}
         AND id NOT IN (SELECT id FROM chat_messages WHERE channel = ${channel} ORDER BY ts DESC LIMIT ${MAX_PER_CHANNEL})`;
-    return res.status(200).json({ ok: true, message: { id, channel, userId: user.userId, username, text, ts } });
+
+    let botMessage: any = undefined;
+    if (BOT_TRIGGER.test(text)) {
+      try {
+        const recentRows = await sql`
+          SELECT username, text FROM chat_messages
+          WHERE channel = ${channel} ORDER BY ts DESC LIMIT 6`;
+        const recent = (recentRows as any[]).reverse().map((r) => ({ username: r.username, text: r.text }));
+        const userMsgClean = text.replace(BOT_TRIGGER, " ").trim() || text;
+        const reply = await callBotAI(userMsgClean, channel, recent);
+        botMessage = await postBotReply(sql, channel, reply);
+      } catch (e) {
+        // bot failures are silent — user message already saved
+      }
+    }
+
+    return res.status(200).json({
+      ok: true,
+      message: { id, channel, userId: user.userId, username, text, ts },
+      botMessage,
+    });
   }
 
   if (req.method === "DELETE") {
