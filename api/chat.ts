@@ -18,6 +18,65 @@ type Channel = typeof CHANNELS[number];
 const MAX_PER_CHANNEL = 100;
 const MAX_TEXT = 500;
 
+// ── @gltch in-chat AI bot ──
+const BOT_USER_ID = "00000000-0000-0000-0000-0000000067c4"; // reserved bot UUID
+const BOT_USERNAME = "gltch";
+const BOT_TRIGGER = /(^|\s)@gltch\b/i;
+
+const BOT_SYSTEM = `You are GLTCH, the in-chat AI assistant inside the GLTCH cyberpunk image/video generator app.
+Channels: general, help, showcase, nsfw. Be terse, neon-cyberpunk tone, max ~3 short sentences.
+
+You can:
+1) Answer questions about GLTCH (engines: GLTCH PRO > GLTCH (default) > GROK; credits: 10 free daily; LoRAs; image/edit/video modes).
+2) Help craft prompts for image, edit, or video. When the user asks for a prompt, output ONE refined prompt wrapped in:
+   ⟦prompt⟧the refined prompt text⟦/prompt⟧
+   so the UI can offer a one-click "Generate" button. Keep prompts vivid but under 60 words.
+3) Moderation help: if asked, briefly assess if a quoted message is toxic/spam (advisory only — you cannot ban).
+4) Inline media: if the user asks you to "generate" or "make" an image/video, craft the prompt and wrap it in ⟦prompt⟧…⟦/prompt⟧ so they can launch it.
+
+Never claim to perform actions you can't (no banning, no payments). If unsure, say so. No markdown headers, no lists unless tiny.`;
+
+async function callBotAI(userText: string, channel: Channel, recent: { username: string; text: string }[]): Promise<string> {
+  const apiKey = process.env.LOVABLE_API_KEY;
+  if (!apiKey) return "[gltch offline — AI key not configured]";
+  const context = recent.slice(-6).map((m) => `${m.username}: ${m.text}`).join("\n");
+  try {
+    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          { role: "system", content: BOT_SYSTEM },
+          { role: "user", content: `[#${channel}] Recent chat:\n${context}\n\nMessage to you: ${userText}` },
+        ],
+        max_tokens: 280,
+        temperature: 0.6,
+      }),
+      signal: AbortSignal.timeout(15000),
+    });
+    if (r.status === 429) return "[gltch is rate-limited, try again in a moment]";
+    if (r.status === 402) return "[gltch is out of credits — ping admin]";
+    if (!r.ok) return "[gltch glitched out, try again]";
+    const data = await r.json();
+    return String(data?.choices?.[0]?.message?.content || "").trim().slice(0, 800) || "[no reply]";
+  } catch {
+    return "[gltch timed out]";
+  }
+}
+
+async function postBotReply(sql: any, channel: Channel, text: string) {
+  const id = `bot-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  const ts = Date.now();
+  await sql`
+    INSERT INTO chat_messages (id, channel, user_id, username, text, ts)
+    VALUES (${id}, ${channel}, ${BOT_USER_ID}::uuid, ${BOT_USERNAME}, ${text}, ${ts})`;
+  await sql`
+    DELETE FROM chat_messages WHERE channel = ${channel}
+      AND id NOT IN (SELECT id FROM chat_messages WHERE channel = ${channel} ORDER BY ts DESC LIMIT ${MAX_PER_CHANNEL})`;
+  return { id, channel, userId: BOT_USER_ID, username: BOT_USERNAME, text, ts };
+}
+
 const g = globalThis as any;
 if (!g.__chatRate) g.__chatRate = new Map<string, number[]>();
 const rate: Map<string, number[]> = g.__chatRate;
@@ -179,7 +238,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     await sql`
       DELETE FROM chat_messages WHERE channel = ${channel}
         AND id NOT IN (SELECT id FROM chat_messages WHERE channel = ${channel} ORDER BY ts DESC LIMIT ${MAX_PER_CHANNEL})`;
-    return res.status(200).json({ ok: true, message: { id, channel, userId: user.userId, username, text, ts } });
+
+    let botMessage: any = undefined;
+    if (BOT_TRIGGER.test(text)) {
+      try {
+        const recentRows = await sql`
+          SELECT username, text FROM chat_messages
+          WHERE channel = ${channel} ORDER BY ts DESC LIMIT 6`;
+        const recent = (recentRows as any[]).reverse().map((r) => ({ username: r.username, text: r.text }));
+        const userMsgClean = text.replace(BOT_TRIGGER, " ").trim() || text;
+        const reply = await callBotAI(userMsgClean, channel, recent);
+        botMessage = await postBotReply(sql, channel, reply);
+      } catch (e) {
+        // bot failures are silent — user message already saved
+      }
+    }
+
+    return res.status(200).json({
+      ok: true,
+      message: { id, channel, userId: user.userId, username, text, ts },
+      botMessage,
+    });
   }
 
   if (req.method === "DELETE") {
