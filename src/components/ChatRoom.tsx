@@ -189,29 +189,50 @@ const ChatRoom: React.FC = () => {
         )}
         {grouped.map((m) => {
           const mine = user && m.userId === (user as any).id;
+          const isBot = m.username === "gltch" && m.userId?.startsWith("00000000-0000-0000-0000-0000000067c4");
+          const promptMatch = isBot ? m.text.match(/⟦prompt⟧([\s\S]+?)⟦\/prompt⟧/) : null;
+          const cleanText = promptMatch ? m.text.replace(promptMatch[0], "").trim() : m.text;
           return (
             <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
-              <div className={`max-w-[80%] rounded-lg px-3 py-2 text-sm border ${
-                mine
-                  ? "bg-primary/10 border-primary/40 text-foreground"
-                  : "bg-muted/30 border-border/60"
+              <div className={`max-w-[85%] rounded-lg px-3 py-2 text-sm border ${
+                isBot
+                  ? "bg-accent/10 border-accent/50 text-foreground shadow-[0_0_12px_hsl(var(--accent)/0.25)]"
+                  : mine
+                    ? "bg-primary/10 border-primary/40 text-foreground"
+                    : "bg-muted/30 border-border/60"
               }`}>
-                <div className="flex items-center gap-2 text-[10px] uppercase tracking-wider opacity-70 mb-0.5">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (m.username) navigate(`/profile/${encodeURIComponent(m.username)}`);
-                    }}
-                    className={`hover:underline focus:underline focus:outline-none ${mine ? "text-primary" : "text-accent-foreground"}`}
-                    aria-label={`Open profile ${m.username}`}
-                  >
-                    {m.username}
-                  </button>
+                <div className="flex items-center gap-2 text-[10px] uppercase tracking-wider opacity-80 mb-0.5">
+                  {isBot ? (
+                    <span className="text-accent font-bold">◆ {m.username} <span className="opacity-60">/ai</span></span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (m.username) navigate(`/profile/${encodeURIComponent(m.username)}`);
+                      }}
+                      className={`hover:underline focus:underline focus:outline-none ${mine ? "text-primary" : "text-accent-foreground"}`}
+                      aria-label={`Open profile ${m.username}`}
+                    >
+                      {m.username}
+                    </button>
+                  )}
                   <span>·</span>
                   <span>{fmt(m.ts)}</span>
                 </div>
-                <div className="whitespace-pre-wrap break-words">{m.text}</div>
+                <div className="whitespace-pre-wrap break-words">{cleanText}</div>
+                {promptMatch && (
+                  <div className="mt-2 rounded-md border border-primary/40 bg-primary/5 p-2">
+                    <div className="text-[10px] uppercase tracking-wider text-primary/80 mb-1">prompt</div>
+                    <div className="text-xs italic text-foreground/90 mb-2 whitespace-pre-wrap break-words">{promptMatch[1].trim()}</div>
+                    <button
+                      onClick={() => navigate(`/create?prompt=${encodeURIComponent(promptMatch[1].trim())}`)}
+                      className="text-[11px] uppercase tracking-wider px-2 py-1 rounded border border-primary/60 text-primary bg-primary/10 hover:bg-primary/20"
+                    >
+                      ▶ Use prompt
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           );
