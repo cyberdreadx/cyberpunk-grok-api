@@ -581,7 +581,7 @@ const Index = () => {
   }, [results.length, simpleMode]);
 
   // Preview credit cost shown on the GENERATE button
-  const previewCreditCost = React.useMemo((): number | undefined => {
+  const rawPreviewCreditCost = React.useMemo((): number | undefined => {
     if (effectiveApiMode !== "credits") return undefined;
     const isGrokEdit = mode === "edit-image" && editEngine === "grok";
     const isGltchEdit = mode === "edit-image" && editEngine === "gltch";
@@ -613,6 +613,10 @@ const Index = () => {
     const cm: CreditMode = grokPro && is2k ? "text-to-image-pro-2k" : grokPro ? "text-to-image-pro" : is2k ? "text-to-image-2k" : "text-to-image";
     return calculateCreditCost(cm, settings.count);
   }, [mode, editEngine, genEngine, renderEngine, animateEngine, longLookEnabled, settings, grokPro, longLookSeqCount, videoSettings.duration, effectiveApiMode]);
+  const previewCreditCost = React.useMemo(
+    () => rawPreviewCreditCost == null ? undefined : applyCreditDiscount(rawPreviewCreditCost),
+    [rawPreviewCreditCost, applyCreditDiscount],
+  );
 
   const handleSubmit = async (data: { prompt: string; imageUrl?: string; extraImageUrls?: string[] }) => {
     // Determine which engine pathway
