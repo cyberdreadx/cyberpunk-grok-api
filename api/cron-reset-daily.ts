@@ -46,8 +46,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       SET daily_credits = 0,
           daily_credits_reset_at = now(),
           updated_at = now()
-      WHERE email_verified = true
-        AND subscription_tier IS NULL
+      WHERE COALESCE(subscription_tier, '') = ''
+        AND COALESCE(subscription_discount_pct, 0) <= 0
     `;
 
     // 2. Reset daily credits for subscribers: base + XRGE holder tier bonus.
@@ -73,8 +73,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       )::int,
           daily_credits_reset_at = now(),
           updated_at = now()
-      WHERE email_verified = true
-        AND subscription_tier IS NOT NULL
+      WHERE subscription_tier IS NOT NULL
+         OR COALESCE(subscription_discount_pct, 0) > 0
     `;
 
     const resetCount = (result as any).count ?? 0;
@@ -88,7 +88,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (shouldNotify) {
       try {
         const users = await sql`
-          SELECT email FROM users WHERE email_verified = true AND subscription_tier IS NOT NULL
+          SELECT email FROM users WHERE subscription_tier IS NOT NULL OR COALESCE(subscription_discount_pct, 0) > 0
         `;
 
         if (users.length > 0) {
