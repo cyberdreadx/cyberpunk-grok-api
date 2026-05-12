@@ -176,6 +176,11 @@ const Index = () => {
   const isAdmin = !!auth.user?.is_admin;
   const [adminTestCredits, setAdminTestCredits] = useState(false);
   const adminBypass = isAdmin && !adminTestCredits;
+  const applyCreditDiscount = useCallback((cost: number) => {
+    const pct = Math.max(0, Math.min(95, creditsHook.creditDiscountPct || 0));
+    if (!pct || cost <= 0) return cost;
+    return Math.max(1, Math.ceil(cost * (1 - pct / 100)));
+  }, [creditsHook.creditDiscountPct]);
 
   const immersionSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleImmersionChange = useCallback(
@@ -576,7 +581,7 @@ const Index = () => {
   }, [results.length, simpleMode]);
 
   // Preview credit cost shown on the GENERATE button
-  const previewCreditCost = React.useMemo((): number | undefined => {
+  const rawPreviewCreditCost = React.useMemo((): number | undefined => {
     if (effectiveApiMode !== "credits") return undefined;
     const isGrokEdit = mode === "edit-image" && editEngine === "grok";
     const isGltchEdit = mode === "edit-image" && editEngine === "gltch";
@@ -608,6 +613,10 @@ const Index = () => {
     const cm: CreditMode = grokPro && is2k ? "text-to-image-pro-2k" : grokPro ? "text-to-image-pro" : is2k ? "text-to-image-2k" : "text-to-image";
     return calculateCreditCost(cm, settings.count);
   }, [mode, editEngine, genEngine, renderEngine, animateEngine, longLookEnabled, settings, grokPro, longLookSeqCount, videoSettings.duration, effectiveApiMode]);
+  const previewCreditCost = React.useMemo(
+    () => rawPreviewCreditCost == null ? undefined : applyCreditDiscount(rawPreviewCreditCost),
+    [rawPreviewCreditCost, applyCreditDiscount],
+  );
 
   const handleSubmit = async (data: { prompt: string; imageUrl?: string; extraImageUrls?: string[] }) => {
     // Determine which engine pathway
@@ -688,10 +697,11 @@ const Index = () => {
         cost = calculateCreditCost(creditMode, imageCount, videoDuration);
       }
 
-      if (!creditsHook.hasEnoughCredits(cost)) {
+      const discountedCost = applyCreditDiscount(cost);
+      if (!creditsHook.hasEnoughCredits(discountedCost)) {
         toast({
           title: t("toast.insufficientCredits"),
-          description: t("toast.insufficientCreditsDesc", { cost }),
+          description: t("toast.insufficientCreditsDesc", { cost: discountedCost }),
           variant: "destructive",
         });
         return;
@@ -715,7 +725,7 @@ const Index = () => {
         else if (isZimage || isComfyGen) cost = calculateCreditCost("comfy-image");
         else if (isComfyLongLook) cost = calculateCreditCost("comfy-longlook", longLookSeqCount);
         else cost = calculateCreditCost("comfy-video");
-        creditsHook.deductCreditsLocally(cost);
+        creditsHook.deductCreditsLocally(applyCreditDiscount(cost));
         setTimeout(() => creditsHook.refreshCredits(), 5000);
       }
 
@@ -952,7 +962,7 @@ const Index = () => {
         else if (isImageMode && is2k) creditMode = (mode === "text-to-image" ? "text-to-image-2k" : "edit-image-2k") as CreditMode;
         else creditMode = mode;
         const cost = calculateCreditCost(creditMode, imageCount, videoDuration);
-        creditsHook.deductCreditsLocally(cost);
+        creditsHook.deductCreditsLocally(applyCreditDiscount(cost));
         setTimeout(() => creditsHook.refreshCredits(), 2000);
       }
 

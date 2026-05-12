@@ -18,6 +18,13 @@ const cache = new Map<string, { pct: number; expires: number }>();
 const combinedCache = new Map<string, { pct: number; expires: number }>();
 const TTL_MS = 30_000;
 
+const TIER_DISCOUNT_PCT: Record<string, number> = {
+  basic: 15, "basic-yearly": 15,
+  premium: 30, "premium-yearly": 30,
+  pro: 50, "pro-yearly": 50,
+  elite: 70, "elite-yearly": 70,
+};
+
 /**
  * Subscription-only discount %. For combined sub + holder use getCombinedCreditDiscountPct.
  */
@@ -29,10 +36,11 @@ export async function getUserDiscountPct(userId: string): Promise<number> {
   try {
     const sql = getDb();
     const [row] = await sql`
-      SELECT COALESCE(subscription_discount_pct, 0)::int AS pct
+      SELECT subscription_tier, COALESCE(subscription_discount_pct, 0)::int AS pct
       FROM users WHERE id = ${userId}::uuid
     `;
-    const pct = Math.max(0, Math.min(95, row?.pct ?? 0));
+    const fallbackPct = row?.subscription_tier ? (TIER_DISCOUNT_PCT[row.subscription_tier] || 0) : 0;
+    const pct = Math.max(0, Math.min(95, (row?.pct ?? 0) || fallbackPct));
     cache.set(userId, { pct, expires: now + TTL_MS });
     return pct;
   } catch {

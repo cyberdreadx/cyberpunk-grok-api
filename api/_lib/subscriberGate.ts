@@ -26,9 +26,10 @@ export async function isSubscriber(userId: string): Promise<boolean> {
   try {
     const sql = getDb();
     const [row] = await sql`
-      SELECT subscription_tier FROM users WHERE id = ${userId}::uuid
+      SELECT subscription_tier, COALESCE(subscription_discount_pct, 0)::int AS subscription_discount_pct
+      FROM users WHERE id = ${userId}::uuid
     `;
-    const sub = !!row?.subscription_tier;
+    const sub = !!row?.subscription_tier || (row?.subscription_discount_pct || 0) > 0;
     cache.set(userId, { sub, expires: now + TTL_MS });
     return sub;
   } catch {
