@@ -693,10 +693,11 @@ const Index = () => {
         cost = calculateCreditCost(creditMode, imageCount, videoDuration);
       }
 
-      if (!creditsHook.hasEnoughCredits(cost)) {
+      const discountedCost = applyCreditDiscount(cost);
+      if (!creditsHook.hasEnoughCredits(discountedCost)) {
         toast({
           title: t("toast.insufficientCredits"),
-          description: t("toast.insufficientCreditsDesc", { cost }),
+          description: t("toast.insufficientCreditsDesc", { cost: discountedCost }),
           variant: "destructive",
         });
         return;
@@ -720,7 +721,7 @@ const Index = () => {
         else if (isZimage || isComfyGen) cost = calculateCreditCost("comfy-image");
         else if (isComfyLongLook) cost = calculateCreditCost("comfy-longlook", longLookSeqCount);
         else cost = calculateCreditCost("comfy-video");
-        creditsHook.deductCreditsLocally(cost);
+        creditsHook.deductCreditsLocally(applyCreditDiscount(cost));
         setTimeout(() => creditsHook.refreshCredits(), 5000);
       }
 
@@ -957,7 +958,7 @@ const Index = () => {
         else if (isImageMode && is2k) creditMode = (mode === "text-to-image" ? "text-to-image-2k" : "edit-image-2k") as CreditMode;
         else creditMode = mode;
         const cost = calculateCreditCost(creditMode, imageCount, videoDuration);
-        creditsHook.deductCreditsLocally(cost);
+        creditsHook.deductCreditsLocally(applyCreditDiscount(cost));
         setTimeout(() => creditsHook.refreshCredits(), 2000);
       }
 
