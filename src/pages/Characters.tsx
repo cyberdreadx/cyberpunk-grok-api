@@ -607,7 +607,7 @@ export default function Characters() {
       };
       if (attachedImage) apiBody.imageBase64 = attachedImage;
 
-      const data = await apiFetch<{ reply: string; mediaTrigger?: { type: "image" | "video"; prompt: string; videoLora?: string; videoLoraStrength?: number; cameraAngle?: string } }>("/chat", {
+      const data = await apiFetch<{ reply: string; mediaTrigger?: { type: "image" | "video"; prompt: string; videoLora?: string; videoLoraStrength?: number; cameraAngle?: string } }>("/character-chat", {
         method: "POST",
         body: apiBody,
       });
