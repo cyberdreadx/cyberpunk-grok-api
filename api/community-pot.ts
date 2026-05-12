@@ -42,26 +42,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         LIMIT 1
       `;
 
-      // Verified gate
+      // Email-verified gate (any confirmed account, not the paid Verification subscription)
       const [u] = await sql`
-        SELECT verification_status, verification_renews_at, sub_credits, pack_credits, created_at
+        SELECT email_verified, sub_credits, pack_credits, created_at
         FROM users WHERE id = ${auth.userId}
       `;
-      const isVerifiedActive =
-        u?.verification_status === "verified" &&
-        (!u?.verification_renews_at || new Date(u.verification_renews_at) > new Date());
+      const isEmailVerified = !!u?.email_verified;
       const accountAgeMs = u?.created_at ? Date.now() - new Date(u.created_at).getTime() : 0;
       const ageOk = accountAgeMs >= 24 * 60 * 60 * 1000;
 
       const claimAmount = Math.min(DAILY_RATION, balance);
       const eligible =
-        !!isVerifiedActive &&
+        isEmailVerified &&
         ageOk &&
         balance > 0 &&
         claimedToday.length === 0;
 
       let reason: string | null = null;
-      if (!isVerifiedActive) reason = "Verify your email to claim from the pot.";
+      if (!isEmailVerified) reason = "Confirm your email to claim from the pot.";
       else if (!ageOk) reason = "Account must be at least 24 hours old.";
       else if (balance <= 0) reason = "Pot is empty — donate to refill it!";
       else if (claimedToday.length > 0) reason = "Already claimed today. Comes back tomorrow (UTC midnight).";
@@ -111,13 +109,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // ── CLAIM ──
     if (action === "claim") {
       const [u] = await sql`
-        SELECT verification_status, verification_renews_at, created_at
+        SELECT email_verified, created_at
         FROM users WHERE id = ${auth.userId}
       `;
-      const isVerified =
-        u?.verification_status === "verified" &&
-        (!u?.verification_renews_at || new Date(u.verification_renews_at) > new Date());
-      if (!isVerified) return res.status(403).json({ error: "Verify your email first." });
+      if (!u?.email_verified) return res.status(403).json({ error: "Confirm your email first." });
       const ageMs = u?.created_at ? Date.now() - new Date(u.created_at).getTime() : 0;
       if (ageMs < 24 * 60 * 60 * 1000) return res.status(403).json({ error: "Account too new (24h minimum)." });
 

@@ -84,7 +84,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const traitList = Array.isArray(traits) ? traits.slice(0, 10).map(String) : [];
       const portraitUrl = portrait && typeof portrait === "string" && portrait.length <= MAX_PORTRAIT_SIZE
         ? portrait : null;
-      const backend = "deepseek";
+      const backend = (llmBackend === "gemini" || llmBackend === "deepseek") ? llmBackend : "deepseek";
       const sysPrompt = systemPrompt && typeof systemPrompt === "string"
         ? systemPrompt.slice(0, 3000)
         : buildSystemPrompt(name.trim(), personality.trim(), traitList);
@@ -158,7 +158,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const newPortrait = portrait !== undefined
         ? (portrait && typeof portrait === "string" && portrait.length <= MAX_PORTRAIT_SIZE ? portrait : null)
         : cur.portrait_url;
-      const newBackend = "deepseek";
+      const newBackend = (llmBackend === "gemini" || llmBackend === "deepseek")
+        ? llmBackend
+        : (cur.llm_backend || "deepseek");
       const personalityChanged = newName !== cur.name || newPersonality !== cur.personality || newTraits !== JSON.stringify(cur.traits || []);
       const newSysPrompt = systemPrompt !== undefined
         ? (systemPrompt ? String(systemPrompt).slice(0, 3000) : buildSystemPrompt(newName, newPersonality, JSON.parse(newTraits)))

@@ -607,7 +607,7 @@ export default function Characters() {
       };
       if (attachedImage) apiBody.imageBase64 = attachedImage;
 
-      const data = await apiFetch<{ reply: string; mediaTrigger?: { type: "image" | "video"; prompt: string; videoLora?: string; videoLoraStrength?: number; cameraAngle?: string } }>("/chat", {
+      const data = await apiFetch<{ reply: string; mediaTrigger?: { type: "image" | "video"; prompt: string; videoLora?: string; videoLoraStrength?: number; cameraAngle?: string } }>("/character-chat", {
         method: "POST",
         body: apiBody,
       });
@@ -871,6 +871,31 @@ export default function Characters() {
                       : "bg-card/40 border-border text-muted-foreground/60 hover:border-muted-foreground/40"
                       }`}>
                     {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* AI Backend selector */}
+            <div>
+              <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">AI BACKEND</label>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { v: "deepseek", label: "DEEPSEEK", hint: "uncensored · richer roleplay" },
+                  { v: "gemini", label: "GEMINI", hint: "fast · safer guardrails" },
+                ].map(opt => (
+                  <button
+                    key={opt.v}
+                    type="button"
+                    onClick={() => setLlmBackend(opt.v)}
+                    className={`p-2.5 rounded border text-left transition-all ${
+                      llmBackend === opt.v
+                        ? "bg-secondary/20 border-secondary/60 text-secondary"
+                        : "bg-card/40 border-border text-muted-foreground/70 hover:border-muted-foreground/40"
+                    }`}
+                  >
+                    <div className="font-orbitron text-[10px] tracking-wider">{opt.label}</div>
+                    <div className="font-mono-share text-[9px] opacity-70 mt-0.5">{opt.hint}</div>
                   </button>
                 ))}
               </div>
