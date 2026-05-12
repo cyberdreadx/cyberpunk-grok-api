@@ -109,13 +109,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // ── CLAIM ──
     if (action === "claim") {
       const [u] = await sql`
-        SELECT verification_status, verification_renews_at, created_at
+        SELECT email_verified, created_at
         FROM users WHERE id = ${auth.userId}
       `;
-      const isVerified =
-        u?.verification_status === "verified" &&
-        (!u?.verification_renews_at || new Date(u.verification_renews_at) > new Date());
-      if (!isVerified) return res.status(403).json({ error: "Verify your email first." });
+      if (!u?.email_verified) return res.status(403).json({ error: "Confirm your email first." });
       const ageMs = u?.created_at ? Date.now() - new Date(u.created_at).getTime() : 0;
       if (ageMs < 24 * 60 * 60 * 1000) return res.status(403).json({ error: "Account too new (24h minimum)." });
 
