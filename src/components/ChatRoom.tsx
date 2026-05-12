@@ -265,8 +265,11 @@ const ChatRoom: React.FC = () => {
               <Send className="w-3.5 h-3.5" /> {t("chat.send")}
             </button>
           </div>
-          <div className="text-[10px] text-muted-foreground/70 mt-1 text-right">
-            {t("chat.footer", { count: text.length })}
+          <div className="flex items-center justify-between mt-1">
+            <div className="text-[10px] text-accent/70">tip: type <span className="text-accent font-bold">@gltch</span> for AI help</div>
+            <div className="text-[10px] text-muted-foreground/70">
+              {t("chat.footer", { count: text.length })}
+            </div>
           </div>
         </div>
       )}
