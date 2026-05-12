@@ -8,7 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCredits } from "@/hooks/useCredits";
 import { useChatUnread } from "@/hooks/useChatUnread";
 
-const CommunityPotDialog = lazy(() => import("@/components/CommunityPotDialog"));
+const CommunityPotDialog = lazyWithRetry(() => import("@/components/CommunityPotDialog"), "community-pot-dialog");
 
 interface MobileBottomNavProps {
   isAuthenticated?: boolean;
