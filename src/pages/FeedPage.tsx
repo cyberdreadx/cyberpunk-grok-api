@@ -519,6 +519,158 @@ const FeedPage: React.FC = () => {
     </div>
   );
 
+  const filterLabel = filter === "all" ? "ALL" : filter === "trending" ? "TRENDING" : "FOLLOWING";
+
+  /** Hamburger button that opens the side nav drawer. */
+  const navTrigger = (
+    <button
+      type="button"
+      onClick={() => setNavOpen(true)}
+      className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-primary/40 bg-primary/10 text-primary font-orbitron text-[10px] tracking-widest hover:bg-primary/20 transition-colors shadow-[0_0_8px_hsl(var(--primary)/0.2)]"
+      aria-label="Open navigation menu"
+    >
+      <Menu className="w-4 h-4" />
+      <span className="flex items-center gap-1.5">
+        <Rss className="w-3 h-3" /> FEED
+        <span className="text-muted-foreground/60">·</span>
+        <span className="text-muted-foreground">{filterLabel}</span>
+      </span>
+    </button>
+  );
+
+  /** Side drawer that holds the page tabs + filter tabs. */
+  const navDrawer = (
+    <Sheet open={navOpen} onOpenChange={setNavOpen}>
+      <SheetContent
+        side="left"
+        className="w-[85vw] max-w-xs bg-card/95 border-r border-primary/30 backdrop-blur-md p-0 flex flex-col"
+      >
+        <SheetHeader
+          className="px-5 py-4 border-b border-border/30"
+          style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 16px)" }}
+        >
+          <SheetTitle className="font-orbitron text-xs tracking-[0.25em] text-primary">
+            ▌ NAVIGATION
+          </SheetTitle>
+        </SheetHeader>
+
+        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
+          {/* Pages */}
+          <div className="space-y-2">
+            <div className="px-2 font-mono-share text-[9px] tracking-[0.2em] text-muted-foreground/70">
+              ── PAGES ──
+            </div>
+            <div className="flex flex-col gap-1">
+              <button
+                type="button"
+                onClick={() => setNavOpen(false)}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-md font-orbitron text-xs tracking-widest bg-primary/15 text-primary border border-primary/40"
+                aria-current="page"
+              >
+                <Rss className="w-4 h-4" /> FEED
+              </button>
+              <button
+                type="button"
+                onClick={() => { setNavOpen(false); navigate("/create"); }}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-md font-orbitron text-xs tracking-widest text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
+              >
+                <Sparkles className="w-4 h-4" /> CREATE
+              </button>
+              <button
+                type="button"
+                onClick={() => { setNavOpen(false); navigate("/creators"); }}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-md font-orbitron text-xs tracking-widest text-muted-foreground hover:text-secondary hover:bg-secondary/10 transition-colors"
+              >
+                <Users className="w-4 h-4" /> MODELS
+              </button>
+              <button
+                type="button"
+                onClick={() => { setNavOpen(false); navigate("/apply"); }}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-md font-orbitron text-xs tracking-widest text-muted-foreground hover:text-amber-300 hover:bg-amber-400/10 transition-colors"
+              >
+                <Star className="w-4 h-4" /> APPLY
+              </button>
+              {isAuthenticated && (
+                <button
+                  type="button"
+                  onClick={() => { setNavOpen(false); navigate("/profile"); }}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-md font-orbitron text-xs tracking-widest text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
+                >
+                  <Star className="w-4 h-4" /> MY PROFILE
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Filters */}
+          <div className="space-y-2">
+            <div className="px-2 font-mono-share text-[9px] tracking-[0.2em] text-muted-foreground/70">
+              ── FEED FILTER ──
+            </div>
+            <div className="flex flex-col gap-1">
+              <button
+                onClick={() => { setFilter("all"); setLoading(true); setNavOpen(false); }}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-md font-mono-share text-xs transition-colors border ${
+                  filter === "all"
+                    ? "border-primary/50 bg-primary/10 text-primary"
+                    : "border-border/30 text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Globe className="w-4 h-4" /> ALL
+              </button>
+              <button
+                onClick={() => { setFilter("trending"); setLoading(true); setNavOpen(false); }}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-md font-mono-share text-xs transition-colors border ${
+                  filter === "trending"
+                    ? "border-secondary/50 bg-secondary/10 text-secondary"
+                    : "border-border/30 text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Flame className="w-4 h-4" /> TRENDING
+              </button>
+              <button
+                onClick={() => {
+                  if (requireAuth()) { setFilter("following"); setLoading(true); setNavOpen(false); }
+                }}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-md font-mono-share text-xs transition-colors border ${
+                  filter === "following"
+                    ? "border-primary/50 bg-primary/10 text-primary"
+                    : "border-border/30 text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Users className="w-4 h-4" /> FOLLOWING
+              </button>
+              <button
+                onClick={() => {
+                  setNavOpen(false);
+                  if (!isAuthenticated) {
+                    toast({ title: "Sign up to watch reels", description: "Create a free account to watch the video feed." });
+                    navigate("/create?signup=1");
+                    return;
+                  }
+                  setReelsOpen(true);
+                }}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-md font-mono-share text-xs transition-colors border border-accent/50 bg-accent/10 text-accent hover:bg-accent/20"
+              >
+                <Film className="w-4 h-4" /> REELS
+              </button>
+            </div>
+          </div>
+
+          {/* Community guidelines */}
+          <div>
+            <button
+              onClick={() => { setNavOpen(false); setShowRules(true); }}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-md font-mono-share text-xs text-muted-foreground hover:text-foreground transition-colors w-full"
+            >
+              <ShieldAlert className="w-4 h-4" /> COMMUNITY GUIDELINES
+            </button>
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+
   const skeletonGrid = (cols: string) => (
     <div className={`grid ${cols} gap-3`}>
       {[...Array(8)].map((_, i) => (
