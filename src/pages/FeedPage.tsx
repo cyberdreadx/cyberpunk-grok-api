@@ -707,11 +707,11 @@ const FeedPage: React.FC = () => {
         <div className="min-h-[100dvh] w-full max-w-full overflow-x-hidden bg-background pb-24">
           {/* Sticky header */}
           <div
-            className="sticky z-30 bg-background/85 backdrop-blur-md border-b border-border/30 px-3 py-2 space-y-2"
+            className="sticky z-30 bg-background/85 backdrop-blur-md border-b border-border/30 px-3 py-2"
             style={{ top: 0, paddingTop: "calc(env(safe-area-inset-top, 0px) + 8px)" }}
           >
             <div className="flex items-center justify-between gap-2 mobile-pill-clear">
-              {topTabs}
+              {navTrigger}
               <button
                 onClick={() => setShowRules(true)}
                 className="text-muted-foreground hover:text-foreground transition-colors p-1"
@@ -719,9 +719,6 @@ const FeedPage: React.FC = () => {
               >
                 <ShieldAlert className="w-4 h-4" />
               </button>
-            </div>
-            <div className="flex items-center justify-end">
-              {filterTabs("mobile")}
             </div>
           </div>
 
