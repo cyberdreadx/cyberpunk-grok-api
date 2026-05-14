@@ -68,6 +68,7 @@ const FeedPage: React.FC = () => {
   const [lockCredits, setLockCredits] = useState("");
   const [storeOpen, setStoreOpen] = useState(false);
   const [prefsOpen, setPrefsOpen] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
   const [lockPrice, setLockPrice] = useState("");
   const [matureFlag, setMatureFlag] = useState(false);
   const [lockXrge, setLockXrge] = useState("");
