@@ -21,7 +21,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Send, Users, Globe, Loader2, Plus, X, Lock, Zap, ShieldAlert, Sparkles, Rss, Flame, Film, FolderOpen, ImageIcon, Star } from "lucide-react";
+import { Send, Users, Globe, Loader2, Plus, X, Lock, Zap, ShieldAlert, Sparkles, Rss, Flame, Film, FolderOpen, ImageIcon, Star, Menu } from "lucide-react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import MobileCreditsPill from "@/components/MobileCreditsPill";
@@ -67,6 +68,7 @@ const FeedPage: React.FC = () => {
   const [lockCredits, setLockCredits] = useState("");
   const [storeOpen, setStoreOpen] = useState(false);
   const [prefsOpen, setPrefsOpen] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
   const [lockPrice, setLockPrice] = useState("");
   const [matureFlag, setMatureFlag] = useState(false);
   const [lockXrge, setLockXrge] = useState("");
@@ -517,6 +519,158 @@ const FeedPage: React.FC = () => {
     </div>
   );
 
+  const filterLabel = filter === "all" ? "ALL" : filter === "trending" ? "TRENDING" : "FOLLOWING";
+
+  /** Hamburger button that opens the side nav drawer. */
+  const navTrigger = (
+    <button
+      type="button"
+      onClick={() => setNavOpen(true)}
+      className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-primary/40 bg-primary/10 text-primary font-orbitron text-[10px] tracking-widest hover:bg-primary/20 transition-colors shadow-[0_0_8px_hsl(var(--primary)/0.2)]"
+      aria-label="Open navigation menu"
+    >
+      <Menu className="w-4 h-4" />
+      <span className="flex items-center gap-1.5">
+        <Rss className="w-3 h-3" /> FEED
+        <span className="text-muted-foreground/60">·</span>
+        <span className="text-muted-foreground">{filterLabel}</span>
+      </span>
+    </button>
+  );
+
+  /** Side drawer that holds the page tabs + filter tabs. */
+  const navDrawer = (
+    <Sheet open={navOpen} onOpenChange={setNavOpen}>
+      <SheetContent
+        side="left"
+        className="w-[85vw] max-w-xs bg-card/95 border-r border-primary/30 backdrop-blur-md p-0 flex flex-col"
+      >
+        <SheetHeader
+          className="px-5 py-4 border-b border-border/30"
+          style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 16px)" }}
+        >
+          <SheetTitle className="font-orbitron text-xs tracking-[0.25em] text-primary">
+            ▌ NAVIGATION
+          </SheetTitle>
+        </SheetHeader>
+
+        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
+          {/* Pages */}
+          <div className="space-y-2">
+            <div className="px-2 font-mono-share text-[9px] tracking-[0.2em] text-muted-foreground/70">
+              ── PAGES ──
+            </div>
+            <div className="flex flex-col gap-1">
+              <button
+                type="button"
+                onClick={() => setNavOpen(false)}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-md font-orbitron text-xs tracking-widest bg-primary/15 text-primary border border-primary/40"
+                aria-current="page"
+              >
+                <Rss className="w-4 h-4" /> FEED
+              </button>
+              <button
+                type="button"
+                onClick={() => { setNavOpen(false); navigate("/create"); }}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-md font-orbitron text-xs tracking-widest text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
+              >
+                <Sparkles className="w-4 h-4" /> CREATE
+              </button>
+              <button
+                type="button"
+                onClick={() => { setNavOpen(false); navigate("/creators"); }}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-md font-orbitron text-xs tracking-widest text-muted-foreground hover:text-secondary hover:bg-secondary/10 transition-colors"
+              >
+                <Users className="w-4 h-4" /> MODELS
+              </button>
+              <button
+                type="button"
+                onClick={() => { setNavOpen(false); navigate("/apply"); }}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-md font-orbitron text-xs tracking-widest text-muted-foreground hover:text-amber-300 hover:bg-amber-400/10 transition-colors"
+              >
+                <Star className="w-4 h-4" /> APPLY
+              </button>
+              {isAuthenticated && (
+                <button
+                  type="button"
+                  onClick={() => { setNavOpen(false); navigate("/profile"); }}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-md font-orbitron text-xs tracking-widest text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
+                >
+                  <Star className="w-4 h-4" /> MY PROFILE
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Filters */}
+          <div className="space-y-2">
+            <div className="px-2 font-mono-share text-[9px] tracking-[0.2em] text-muted-foreground/70">
+              ── FEED FILTER ──
+            </div>
+            <div className="flex flex-col gap-1">
+              <button
+                onClick={() => { setFilter("all"); setLoading(true); setNavOpen(false); }}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-md font-mono-share text-xs transition-colors border ${
+                  filter === "all"
+                    ? "border-primary/50 bg-primary/10 text-primary"
+                    : "border-border/30 text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Globe className="w-4 h-4" /> ALL
+              </button>
+              <button
+                onClick={() => { setFilter("trending"); setLoading(true); setNavOpen(false); }}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-md font-mono-share text-xs transition-colors border ${
+                  filter === "trending"
+                    ? "border-secondary/50 bg-secondary/10 text-secondary"
+                    : "border-border/30 text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Flame className="w-4 h-4" /> TRENDING
+              </button>
+              <button
+                onClick={() => {
+                  if (requireAuth()) { setFilter("following"); setLoading(true); setNavOpen(false); }
+                }}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-md font-mono-share text-xs transition-colors border ${
+                  filter === "following"
+                    ? "border-primary/50 bg-primary/10 text-primary"
+                    : "border-border/30 text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Users className="w-4 h-4" /> FOLLOWING
+              </button>
+              <button
+                onClick={() => {
+                  setNavOpen(false);
+                  if (!isAuthenticated) {
+                    toast({ title: "Sign up to watch reels", description: "Create a free account to watch the video feed." });
+                    navigate("/create?signup=1");
+                    return;
+                  }
+                  setReelsOpen(true);
+                }}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-md font-mono-share text-xs transition-colors border border-accent/50 bg-accent/10 text-accent hover:bg-accent/20"
+              >
+                <Film className="w-4 h-4" /> REELS
+              </button>
+            </div>
+          </div>
+
+          {/* Community guidelines */}
+          <div>
+            <button
+              onClick={() => { setNavOpen(false); setShowRules(true); }}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-md font-mono-share text-xs text-muted-foreground hover:text-foreground transition-colors w-full"
+            >
+              <ShieldAlert className="w-4 h-4" /> COMMUNITY GUIDELINES
+            </button>
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+
   const skeletonGrid = (cols: string) => (
     <div className={`grid ${cols} gap-3`}>
       {[...Array(8)].map((_, i) => (
@@ -553,11 +707,11 @@ const FeedPage: React.FC = () => {
         <div className="min-h-[100dvh] w-full max-w-full overflow-x-hidden bg-background pb-24">
           {/* Sticky header */}
           <div
-            className="sticky z-30 bg-background/85 backdrop-blur-md border-b border-border/30 px-3 py-2 space-y-2"
+            className="sticky z-30 bg-background/85 backdrop-blur-md border-b border-border/30 px-3 py-2"
             style={{ top: 0, paddingTop: "calc(env(safe-area-inset-top, 0px) + 8px)" }}
           >
             <div className="flex items-center justify-between gap-2 mobile-pill-clear">
-              {topTabs}
+              {navTrigger}
               <button
                 onClick={() => setShowRules(true)}
                 className="text-muted-foreground hover:text-foreground transition-colors p-1"
@@ -565,9 +719,6 @@ const FeedPage: React.FC = () => {
               >
                 <ShieldAlert className="w-4 h-4" />
               </button>
-            </div>
-            <div className="flex items-center justify-end">
-              {filterTabs("mobile")}
             </div>
           </div>
 
@@ -705,6 +856,7 @@ const FeedPage: React.FC = () => {
             mediaType="video"
           />
         )}
+        {navDrawer}
       </>
     );
   }
@@ -713,42 +865,17 @@ const FeedPage: React.FC = () => {
   return (
     <CyberLayout>
       <div className="max-w-6xl mx-auto px-4 py-6 space-y-4 pb-24">
-        {/* Top tabs + actions */}
+        {/* Top bar */}
         <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-3">
-            {topTabs}
+          {navTrigger}
+          {isAuthenticated && (
             <button
-              onClick={() => setShowRules(true)}
-              className="text-muted-foreground hover:text-foreground transition-colors"
-              title="View community guidelines"
+              onClick={() => navigate("/profile")}
+              className="font-mono-share text-[10px] text-primary hover:text-primary/80 transition-colors"
             >
-              <ShieldAlert className="w-4 h-4" />
+              MY PROFILE →
             </button>
-          </div>
-          <div className="flex items-center gap-3 flex-wrap justify-end">
-            <button
-              type="button"
-              onClick={() => navigate("/creators")}
-              className="font-mono-share text-[10px] text-muted-foreground hover:text-secondary transition-colors"
-            >
-              MODELS →
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate("/apply")}
-              className="font-mono-share text-[10px] text-muted-foreground hover:text-amber-300 transition-colors"
-            >
-              CREATOR APPLY →
-            </button>
-            {isAuthenticated && (
-              <button
-                onClick={() => navigate("/profile")}
-                className="font-mono-share text-[10px] text-primary hover:text-primary/80 transition-colors"
-              >
-                MY PROFILE →
-              </button>
-            )}
-          </div>
+          )}
         </div>
 
         {isAuthenticated && rulesBanner}
@@ -781,7 +908,7 @@ const FeedPage: React.FC = () => {
           <SignupTeaser variant="desktop" />
         )}
 
-        {filterTabs("desktop")}
+        
 
         {loading ? (
           skeletonGrid("grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5")
@@ -850,6 +977,7 @@ const FeedPage: React.FC = () => {
           mediaType="video"
         />
       )}
+      {navDrawer}
     </CyberLayout>
   );
 };
