@@ -1019,40 +1019,9 @@ const Index = () => {
           </div>
         )}
 
-        {/* Top tabs: Feed / Create — keeps navigation symmetrical with the
-            feed page. On mobile, the credits pill sits inline at the end of
-            the row so it never overlaps the toggle. */}
-        <div className="flex items-center justify-between sm:justify-start gap-2 flex-wrap">
-          <div className="flex flex-wrap items-center gap-1 p-1 rounded-lg border border-border/40 bg-card/40 w-fit max-w-full">
-            <Link
-              to="/"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md font-orbitron text-[10px] tracking-widest text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
-            >
-              <Rss className="w-3.5 h-3.5" /> FEED
-            </Link>
-            <button
-              type="button"
-              aria-current="page"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md font-orbitron text-[10px] tracking-widest bg-primary/15 text-primary border border-primary/40 shadow-[0_0_8px_hsl(var(--primary)/0.25)]"
-            >
-              <Zap className="w-3.5 h-3.5" /> CREATE
-            </button>
-            <Link
-              to="/creators"
-              title="Featured models directory"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md font-orbitron text-[10px] tracking-widest text-muted-foreground hover:text-secondary hover:bg-secondary/10 transition-colors"
-            >
-              <Users className="w-3.5 h-3.5" /> MODELS
-            </Link>
-            <Link
-              to="/apply"
-              title="Apply to the creator program"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md font-orbitron text-[10px] tracking-widest text-muted-foreground hover:text-amber-300 hover:bg-amber-400/10 transition-colors"
-            >
-              <Star className="w-3.5 h-3.5" /> APPLY
-            </Link>
-          </div>
-          {/* Inline credits pill — mobile only; desktop uses the header CreditDisplay */}
+        {/* Top tabs replaced by global hamburger MENU (GlobalNavMenu).
+            Keep the inline credits pill so mobile users still see balance. */}
+        <div className="flex items-center justify-end sm:justify-start gap-2 flex-wrap pl-24 sm:pl-28">
           <MobileCreditsPill inline onOpenStore={() => setStoreOpen(true)} />
         </div>
 
