@@ -33,14 +33,23 @@ const REFUND_CAP = 500; // safety cap per single support call
 const FAILURE_WINDOW_MIN = 5; // a usage_log row is "failed" if a media_error landed within this window
 
 async function callLovableAI(system: string, user: string): Promise<string> {
-  const apiKey = process.env.LOVABLE_API_KEY;
-  if (!apiKey) return "Support bot is offline: AI key not configured. Please contact support@grokrunner.ai.";
+  const deepseekKey = process.env.DEEPSEEK_API_KEY;
+  const lovableKey = process.env.LOVABLE_API_KEY;
+  if (!deepseekKey && !lovableKey) {
+    return "Support bot is offline: AI key not configured. Please contact support@grokrunner.ai.";
+  }
+  const useDeepseek = !!deepseekKey;
+  const url = useDeepseek
+    ? "https://api.deepseek.com/v1/chat/completions"
+    : "https://ai.gateway.lovable.dev/v1/chat/completions";
+  const model = useDeepseek ? "deepseek-chat" : "google/gemini-2.5-flash";
+  const apiKey = useDeepseek ? deepseekKey : lovableKey;
   try {
-    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const r = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model,
         messages: [
           { role: "system", content: system },
           { role: "user", content: user },
