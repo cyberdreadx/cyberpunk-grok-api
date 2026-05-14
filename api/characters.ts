@@ -213,6 +213,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (action === "delete") {
       const { characterId } = req.body;
       if (!characterId) return res.status(400).json({ error: "characterId required" });
+      await sql`
+        UPDATE users SET official_character_id = NULL, creator_persona_chat_enabled = false
+        WHERE id = ${auth.userId} AND official_character_id = ${characterId}::uuid
+      `.catch(() => {});
       const rows = await sql`DELETE FROM characters WHERE id = ${characterId} AND user_id = ${auth.userId} RETURNING id`;
       if (rows.length === 0) return res.status(404).json({ error: "Character not found" });
       return res.status(200).json({ deleted: true });

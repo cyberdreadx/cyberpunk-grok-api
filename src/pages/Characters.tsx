@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { apiFetch } from "@/lib/api";
 import { saveChatMessage, getChatHistory, clearChatHistory, deleteChatMessage, type ChatMessage } from "@/lib/storage";
 import { comfyPollUntilDone } from "@/hooks/useGrokApi";
@@ -37,6 +37,26 @@ function savePendingCharJob(job: PendingCharJob) {
 function removePendingCharJob(promptId: string) {
   const jobs = getPendingCharJobs().filter(j => j.promptId !== promptId);
   try { if (jobs.length) localStorage.setItem(CHAR_JOBS_KEY, JSON.stringify(jobs)); else localStorage.removeItem(CHAR_JOBS_KEY); } catch {}
+}
+
+/** History hints — do not use literal "[attached image]" (models echo it instead of MEDIA_IMAGE tags). */
+const HISTORY_NOTE_PRIOR_PHOTO =
+  "«Prior turn: you shared a photo — the user saw it. For a NEW picture use [MEDIA_IMAGE]short prompt[/MEDIA_IMAGE] only. Never write \"attached image\".»";
+const HISTORY_NOTE_PRIOR_VIDEO =
+  "«Prior turn: you shared a video — the user saw it. For NEW video use [MEDIA_VIDEO]short prompt[/MEDIA_VIDEO].»";
+
+function scrubModelEchoPlaceholders(s: string): string {
+  return s
+    .replace(/\[(attached image|attached video)\]/gi, "")
+    .replace(/\(\s*sent (?:a )?(?:photo|pic|picture|image)\s*\)/gi, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+function sanitizeAssistantReply(raw: string): string {
+  let s = scrubModelEchoPlaceholders(raw);
+  s = s.replace(/\[MEDIA_IMAGE\]\s*$/i, "").replace(/\[MEDIA_VIDEO\]\s*$/i, "").trim();
+  return s;
 }
 
 interface Character {
@@ -77,6 +97,7 @@ function ElapsedTimer({ startTime }: { startTime: number }) {
 
 export default function Characters() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
   const auth = useAuth();
   const { comfyModels, fetchComfyModels } = useGrokApi();
@@ -237,6 +258,46 @@ export default function Characters() {
     }
   };
 
+  const openChatRef = useRef(openChat);
+  openChatRef.current = openChat;
+
+  const chatLaunchId = searchParams.get("chat");
+  useEffect(() => {
+    if (!chatLaunchId || loading || auth.loading || !auth.isAuthenticated) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { character } = await apiFetch<{ character: Character }>("/characters", {
+          method: "POST",
+          body: { action: "get", characterId: chatLaunchId },
+        });
+        if (cancelled || !character) return;
+        await openChatRef.current(character);
+        setSearchParams(
+          (prev) => {
+            const next = new URLSearchParams(prev);
+            next.delete("chat");
+            return next;
+          },
+          { replace: true },
+        );
+      } catch (e: any) {
+        toast({ title: e?.message || "Could not open persona chat", variant: "destructive" });
+        setSearchParams(
+          (prev) => {
+            const next = new URLSearchParams(prev);
+            next.delete("chat");
+            return next;
+          },
+          { replace: true },
+        );
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [chatLaunchId, loading, auth.loading, auth.isAuthenticated, setSearchParams, toast]);
+
   const handlePortrait = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -386,16 +447,22 @@ export default function Characters() {
     return msgs
       .filter(m => !(m.content && /^\*(?:generating|animating)/.test(m.content)) && !m.content?.startsWith("*media generation failed"))
       .slice(-18)
-      .map(m => ({
-        role: m.role,
-        content: m.imageBase64
-          ? `[user sent a reference image] ${m.content || ""}`.trim()
-          : m.content?.trim()
-          ? m.content
-          : m.mediaType === "video" ? "[attached video]"
-          : m.mediaUrl ? "[attached image]"
-          : "",
-      }))
+      .map((m) => {
+        let content = "";
+        if (m.role === "user" && m.imageBase64) {
+          content = `[User attached a reference photo for you to see] ${scrubModelEchoPlaceholders(m.content || "")}`.trim();
+        } else if (m.mediaUrl) {
+          const text = scrubModelEchoPlaceholders(m.content?.trim() || "");
+          const isVid =
+            m.mediaType === "video" ||
+            !!(m.mediaUrl && /\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(m.mediaUrl));
+          const note = isVid ? HISTORY_NOTE_PRIOR_VIDEO : HISTORY_NOTE_PRIOR_PHOTO;
+          content = text ? `${text}\n${note}` : note;
+        } else {
+          content = scrubModelEchoPlaceholders(m.content?.trim() || "");
+        }
+        return { role: m.role, content };
+      })
       .filter(m => m.content);
   }
 
@@ -444,49 +511,76 @@ export default function Characters() {
           return;
         }
         const anglePrefix = trigger.cameraAngle && CAMERA_ANGLES[trigger.cameraAngle] ? CAMERA_ANGLES[trigger.cameraAngle] : "";
-        const imgSubmit = await apiFetch<{ promptId: string; outputType?: string; runpodEndpointId?: string }>(
-          "/comfyui", {
-            method: "POST",
-            body: {
-              action: "generate", workflow: "klein",
-              prompt: anglePrefix + trigger.prompt,
-              negativePrompt: negPrompt || undefined,
-              imageBase64: portrait64, imageFilename: "character_portrait.jpg",
-              width: 768, height: 768,
-              steps: 4, cfg: 1,
-              loras: editLora !== "none" ? [{ name: editLora, strengthModel: editLoraStrength, strengthClip: editLoraStrength }] : undefined,
-            },
-          },
-        );
 
-        savePendingCharJob({
-          characterId: char.id,
-          promptId: imgSubmit.promptId,
-          outputType: "image",
-          runpodEndpointId: imgSubmit.runpodEndpointId,
-          submittedAt: Date.now(),
-        });
+        let lastFail = "No image returned";
+        for (let attempt = 0; attempt < 2; attempt++) {
+          let pid: string | undefined;
+          try {
+            if (attempt > 0) updatePlaceholder("retrying image…");
+            const imgSubmit = await apiFetch<{ promptId: string; outputType?: string; runpodEndpointId?: string }>(
+              "/comfyui",
+              {
+                method: "POST",
+                body: {
+                  action: "generate",
+                  workflow: "klein",
+                  prompt: anglePrefix + trigger.prompt,
+                  negativePrompt: negPrompt || undefined,
+                  imageBase64: portrait64,
+                  imageFilename: "character_portrait.jpg",
+                  width: 768,
+                  height: 768,
+                  steps: 4,
+                  cfg: 1,
+                  loras:
+                    editLora !== "none"
+                      ? [{ name: editLora, strengthModel: editLoraStrength, strengthClip: editLoraStrength }]
+                      : undefined,
+                },
+              },
+            );
+            pid = imgSubmit.promptId;
 
-        const imgResult = await comfyPollUntilDone(
-          imgSubmit.promptId,
-          imgSubmit.outputType || "image",
-          { runpodEndpointId: imgSubmit.runpodEndpointId, pollInterval: 3000, maxAttempts: 120 },
-        );
+            savePendingCharJob({
+              characterId: char.id,
+              promptId: imgSubmit.promptId,
+              outputType: "image",
+              runpodEndpointId: imgSubmit.runpodEndpointId,
+              submittedAt: Date.now(),
+            });
 
-        removePendingCharJob(imgSubmit.promptId);
+            const imgResult = await comfyPollUntilDone(
+              imgSubmit.promptId,
+              imgSubmit.outputType || "image",
+              { runpodEndpointId: imgSubmit.runpodEndpointId, pollInterval: 3000, maxAttempts: 120 },
+            );
 
-        const imgOut = imgResult.image || null;
+            removePendingCharJob(imgSubmit.promptId);
 
-        if (imgOut) {
-          const mediaMsg: ChatMessage = {
-            characterId: char.id, role: "assistant", content: "",
-            mediaUrl: imgOut, mediaType: "image", timestamp: Date.now(),
-          };
-          replacePlaceholder(mediaMsg);
-          await saveChatMessage(mediaMsg);
-          return;
+            const imgOut = imgResult.image || null;
+
+            if (imgOut) {
+              const mediaMsg: ChatMessage = {
+                characterId: char.id,
+                role: "assistant",
+                content: "",
+                mediaUrl: imgOut,
+                mediaType: "image",
+                timestamp: Date.now(),
+              };
+              replacePlaceholder(mediaMsg);
+              await saveChatMessage(mediaMsg);
+              return;
+            }
+            lastFail = "No image returned";
+          } catch (err: any) {
+            lastFail = err?.message || "unknown error";
+            if (pid) removePendingCharJob(pid);
+            if (attempt === 0) await new Promise((r) => setTimeout(r, 1400));
+          }
         }
-        throw new Error("No image returned");
+        failPlaceholder(lastFail);
+        return;
       }
 
       if (trigger.type === "video") {
@@ -612,11 +706,32 @@ export default function Characters() {
         body: apiBody,
       });
 
-      const assistantMsg: ChatMessage = {
-        characterId: char.id, role: "assistant", content: data.reply, timestamp: Date.now(),
-      };
-      setMessages(prev => [...prev, assistantMsg]);
-      await saveChatMessage(assistantMsg);
+      const cleaned = sanitizeAssistantReply(data.reply);
+      const typingDelayMs = Math.min(
+        5600,
+        850 + Math.max(cleaned.length, data.reply?.length || 0) * 14 + Math.floor(Math.random() * 950),
+      );
+      await new Promise((r) => setTimeout(r, typingDelayMs));
+
+      if (cleaned) {
+        const assistantMsg: ChatMessage = {
+          characterId: char.id,
+          role: "assistant",
+          content: cleaned,
+          timestamp: Date.now(),
+        };
+        setMessages(prev => [...prev, assistantMsg]);
+        await saveChatMessage(assistantMsg);
+      } else if (!data.mediaTrigger) {
+        const fallback: ChatMessage = {
+          characterId: char.id,
+          role: "assistant",
+          content: "*…*",
+          timestamp: Date.now(),
+        };
+        setMessages(prev => [...prev, fallback]);
+        await saveChatMessage(fallback);
+      }
 
       if (data.mediaTrigger) {
         handleMediaTrigger(data.mediaTrigger, char);
@@ -1003,6 +1118,7 @@ export default function Characters() {
                       ) : msg.content ? (
                         <p className="font-mono-share text-[11px] leading-relaxed whitespace-pre-wrap">
                           {msg.content
+                            .replace(/\[(attached image|attached video)\]/gi, "")
                             .replace(/\[MEDIA_IMAGE\].*?\[\/MEDIA_IMAGE\]/gs, "")
                             .replace(/\[MEDIA_VIDEO\].*?\[\/MEDIA_VIDEO\]/gs, "")
                             .replace(/\[MEDIA_IMAGE\]/g, "")

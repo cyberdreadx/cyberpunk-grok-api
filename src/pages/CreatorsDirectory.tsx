@@ -13,6 +13,8 @@ interface Creator {
   avatar_url: string | null;
   bio: string | null;
   verification_status: string | null;
+  persona_chat_character_id?: string | null;
+  persona_chat_character_name?: string | null;
 }
 
 export default function CreatorsDirectory() {
@@ -66,13 +68,25 @@ export default function CreatorsDirectory() {
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             {list.map((c) => (
-              <Link
-                key={c.id}
-                to={c.username ? `/profile/${c.username}` : "#"}
-                className="block"
-              >
-                <CreatorPreviewCard data={c} />
-              </Link>
+              <div key={c.id} className="flex flex-col gap-1.5">
+                <Link
+                  to={c.username ? `/profile/${c.username}` : "#"}
+                  className="block"
+                >
+                  <CreatorPreviewCard data={c} />
+                </Link>
+                {c.persona_chat_character_id ? (
+                  <Link to={`/characters?chat=${encodeURIComponent(c.persona_chat_character_id)}`}>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="w-full font-orbitron text-[10px] tracking-wider h-8"
+                    >
+                      AI CHAT
+                    </Button>
+                  </Link>
+                ) : null}
+              </div>
             ))}
           </div>
         )}

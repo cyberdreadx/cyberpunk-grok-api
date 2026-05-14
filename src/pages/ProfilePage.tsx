@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { UserPlus, UserMinus, Edit2, Check, X, ArrowLeft, Camera, Loader2, Wallet, Ban, BadgeCheck } from "lucide-react";
+import { UserPlus, UserMinus, Edit2, Check, X, ArrowLeft, Camera, Loader2, Wallet, Ban, BadgeCheck, MessageSquare } from "lucide-react";
 import EarningsPanel from "@/components/EarningsPanel";
 import AdminUserPanel from "@/components/AdminUserPanel";
 import VerifiedBadge from "@/components/VerifiedBadge";
@@ -19,7 +19,7 @@ import { upload } from "@vercel/blob/client";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import MobileCreditsPill from "@/components/MobileCreditsPill";
 import StoreOverlay from "@/components/StoreOverlay";
-import PreferencesDialog from "@/components/PreferencesDialog";
+import CreatorPersonaChatPanel from "@/components/CreatorPersonaChatPanel";
 
 interface Profile {
   userId: string;
@@ -40,6 +40,10 @@ interface Profile {
   holderTier?: string;
   holderStreakDays?: number;
   holderTotalHeld?: number | null;
+  /** Fan opens Characters chat with creator's official persona */
+  personaChatCharacterId?: string | null;
+  creatorPersonaChatEnabled?: boolean;
+  officialCharacterId?: string | null;
 }
 
 interface FeedPost {
@@ -369,6 +373,16 @@ const ProfilePage: React.FC = () => {
                     <><UserPlus className="w-3 h-3 mr-1" /> FOLLOW</>
                   )}
                 </Button>
+                {profile.personaChatCharacterId && (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="font-mono-share text-[10px]"
+                    onClick={() => navigate(`/characters?chat=${encodeURIComponent(profile.personaChatCharacterId!)}`)}
+                  >
+                    <MessageSquare className="w-3 h-3 mr-1" /> AI CHAT
+                  </Button>
+                )}
                 {(user?.is_admin || user?.is_feed_mod) && (
                   <Button
                     size="sm"
@@ -424,6 +438,8 @@ const ProfilePage: React.FC = () => {
 
         {/* Earnings (own profile only) */}
         {profile.isOwn && <EarningsPanel />}
+
+        {profile.isOwn && <CreatorPersonaChatPanel />}
 
         {/* Admin inspector (admins viewing other users) */}
         {!profile.isOwn && user?.is_admin && <AdminUserPanel userId={profile.userId} />}

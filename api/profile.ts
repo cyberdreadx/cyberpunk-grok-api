@@ -59,7 +59,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const uid = rows[0].user_id;
         const extras = await sql`
           SELECT verification_status, verification_renews_at,
-                 holder_tier, holder_tier_since, last_snapshot_total
+                 holder_tier, holder_tier_since, last_snapshot_total,
+                 official_character_id, creator_persona_chat_enabled
           FROM users WHERE id = ${uid}
         `.catch(() => [] as any[]);
         if (extras.length > 0) Object.assign(rows[0], extras[0]);
@@ -101,6 +102,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
       const holderTotalHeld = parseFloat(p.last_snapshot_total) || 0;
 
+      const personaEnabled = !!p.creator_persona_chat_enabled;
+      const officialId = p.official_character_id || null;
+      const showFanChatCta = personaEnabled && !!officialId && p.user_id !== auth.userId;
+
       return res.json({
         userId: p.user_id,
         username: p.username,
@@ -121,6 +126,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         holderStreakDays,
         // Public total only shown if tier > none
         holderTotalHeld: holderTier === "none" ? null : holderTotalHeld,
+        /** Fan-visible: open Characters chat with this persona */
+        personaChatCharacterId: showFanChatCta ? officialId : null,
+        /** Own profile: settings panel */
+        creatorPersonaChatEnabled: p.user_id === auth.userId ? personaEnabled : undefined,
+        officialCharacterId: p.user_id === auth.userId ? officialId : undefined,
       });
     } catch (err: any) {
       console.error("[profile GET]", err?.message, err?.stack);

@@ -19,10 +19,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
              p.avatar_url,
              p.bio,
              u.verification_status,
-             u.featured_at
+             u.featured_at,
+             CASE
+               WHEN u.creator_persona_chat_enabled AND pc.id IS NOT NULL THEN pc.id
+               ELSE NULL
+             END AS persona_chat_character_id,
+             pc.name AS persona_chat_character_name
       FROM users u
       LEFT JOIN profiles p ON p.user_id = u.id
+      LEFT JOIN characters pc ON pc.id = u.official_character_id
+        AND u.creator_persona_chat_enabled = true
+        AND pc.is_public = true
       WHERE u.is_featured_creator = true
+        AND u.verification_status = 'verified'
+        AND (u.verification_renews_at IS NULL OR u.verification_renews_at > now())
       ORDER BY u.featured_at DESC NULLS LAST
       LIMIT 100
     `;

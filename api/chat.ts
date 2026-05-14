@@ -11,6 +11,14 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { applyCors } from "./_lib/cors";
 import { getUserFromRequest, ADMIN_EMAIL } from "./_lib/auth";
 import { neon } from "@neondatabase/serverless";
+import { getDb } from "./_lib/db";
+import { handleCharacterChatMessage } from "./_lib/character-chat-message";
+
+/** Character chat sends large base64 images; channel chat stays small. */
+export const config = {
+  maxDuration: 90,
+  api: { bodyParser: { sizeLimit: "12mb" } },
+};
 
 export const CHANNELS = ["general", "help", "showcase", "nsfw"] as const;
 type Channel = typeof CHANNELS[number];
@@ -209,7 +217,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   if (req.method === "POST") {
-    const body = (req.body || {}) as { text?: string };
+    const body = (req.body || {}) as { text?: string; action?: string; characterId?: string };
+    // AI character companion chat (IndexedDB history client-side; LLM here)
+    if (body.action === "message" && body.characterId) {
+      try {
+        const sqlChar = getDb();
+        await handleCharacterChatMessage(req, res, user, sqlChar);
+      } catch (e: any) {
+        console.error("[chat] character message", e?.message || e);
+        if (!res.writableEnded) res.status(500).json({ error: "Character chat failed" });
+      }
+      return;
+    }
+
     const text = String(body.text || "").trim();
     if (!text) return res.status(400).json({ error: "Empty message" });
     if (text.length > MAX_TEXT) return res.status(400).json({ error: `Max ${MAX_TEXT} chars` });

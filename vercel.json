@@ -6,6 +6,14 @@
       "maxDuration": 120,
       "memory": 1024
     },
+    "api/chat.ts": {
+      "maxDuration": 90,
+      "memory": 512
+    },
+    "api/character-chat.ts": {
+      "maxDuration": 90,
+      "memory": 512
+    },
     "api/generate.ts": {
       "maxDuration": 60,
       "memory": 1024
