@@ -1,9 +1,11 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getDb } from "../_lib/db";
 import { generateVerificationCode, sendVerificationEmail } from "../_lib/email";
+import { applyCors } from "../_lib/cors";
 import { checkRateLimit, getClientIp } from "../_lib/ratelimit";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  applyCors(req, res, "POST, OPTIONS");
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 

@@ -72,10 +72,11 @@ export async function apiFetch<T = any>(path: string, options: ApiOptions = {}):
   }
 
   // Only include credentials for auth endpoints that rely on the cross-origin
-  // `td` (trusted-device) cookie. Sending credentials on every request breaks
-  // CORS when the server responds with `Access-Control-Allow-Origin: *` (the
-  // browser blocks the response), which would take down the entire app.
-  const needsCredentials = isSameOriginApi || /^\/auth\/(login|verify-2fa|verify|two-factor)/.test(path);
+  // `td` (trusted-device) cookie (login / 2FA). Email signup verification uses
+  // only JSON body + JWT — `credentials: "include"` with `Allow-Origin: *`
+  // would block the response on cross-origin previews (Safari: "Load failed").
+  const needsCredentials =
+    isSameOriginApi || /^\/auth\/(login|verify-2fa|two-factor)/.test(path);
   const fetchOptions: RequestInit = {
     method,
     headers,
