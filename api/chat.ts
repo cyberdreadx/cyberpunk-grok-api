@@ -45,15 +45,22 @@ You can:
 Never claim to perform actions you can't (no banning, no payments). If unsure, say so. No markdown headers, no lists unless tiny.`;
 
 async function callBotAI(userText: string, channel: Channel, recent: { username: string; text: string }[]): Promise<string> {
-  const apiKey = process.env.LOVABLE_API_KEY;
-  if (!apiKey) return "[gltch offline — AI key not configured]";
+  const deepseekKey = process.env.DEEPSEEK_API_KEY;
+  const lovableKey = process.env.LOVABLE_API_KEY;
+  if (!deepseekKey && !lovableKey) return "[gltch offline — AI key not configured]";
   const context = recent.slice(-6).map((m) => `${m.username}: ${m.text}`).join("\n");
+  const useDeepseek = !!deepseekKey;
+  const url = useDeepseek
+    ? "https://api.deepseek.com/v1/chat/completions"
+    : "https://ai.gateway.lovable.dev/v1/chat/completions";
+  const auth = useDeepseek ? deepseekKey! : lovableKey!;
+  const model = useDeepseek ? "deepseek-chat" : "google/gemini-2.5-flash";
   try {
-    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const r = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${auth}` },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model,
         messages: [
           { role: "system", content: BOT_SYSTEM },
           { role: "user", content: `[#${channel}] Recent chat:\n${context}\n\nMessage to you: ${userText}` },
