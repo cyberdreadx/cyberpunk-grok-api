@@ -20,6 +20,7 @@ import MobileBottomNav from "@/components/MobileBottomNav";
 import MobileCreditsPill from "@/components/MobileCreditsPill";
 import StoreOverlay from "@/components/StoreOverlay";
 import CreatorPersonaChatPanel from "@/components/CreatorPersonaChatPanel";
+import PreferencesDialog from "@/components/PreferencesDialog";
 
 interface Profile {
   userId: string;
