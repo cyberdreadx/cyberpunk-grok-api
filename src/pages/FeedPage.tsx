@@ -21,7 +21,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Send, Users, Globe, Loader2, Plus, X, Lock, Zap, ShieldAlert, Sparkles, Rss, Flame, Film, FolderOpen, ImageIcon } from "lucide-react";
+import { Send, Users, Globe, Loader2, Plus, X, Lock, Zap, ShieldAlert, Sparkles, Rss, Flame, Film, FolderOpen, ImageIcon, Star } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import MobileCreditsPill from "@/components/MobileCreditsPill";
@@ -481,9 +481,9 @@ const FeedPage: React.FC = () => {
     );
   };
 
-  /** Top tab strip: Feed (current page) / Create (navigates to /create). */
+  /** Top tab strip: Feed / Create / Featured directory / Creator apply (parity with /create page). */
   const topTabs = (
-    <div className="flex items-center gap-1 p-1 rounded-lg border border-border/40 bg-card/40 w-fit">
+    <div className="flex flex-wrap items-center gap-1 p-1 rounded-lg border border-border/40 bg-card/40 w-fit max-w-[min(100%,28rem)]">
       <button
         type="button"
         className="flex items-center gap-1.5 px-3 py-1.5 rounded-md font-orbitron text-[10px] tracking-widest bg-primary/15 text-primary border border-primary/40 shadow-[0_0_8px_hsl(var(--primary)/0.25)]"
@@ -497,6 +497,22 @@ const FeedPage: React.FC = () => {
         className="flex items-center gap-1.5 px-3 py-1.5 rounded-md font-orbitron text-[10px] tracking-widest text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
       >
         <Sparkles className="w-3.5 h-3.5" /> CREATE
+      </button>
+      <button
+        type="button"
+        onClick={() => navigate("/creators")}
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md font-orbitron text-[10px] tracking-widest text-muted-foreground hover:text-secondary hover:bg-secondary/10 transition-colors"
+        title="Featured models directory"
+      >
+        <Users className="w-3.5 h-3.5" /> MODELS
+      </button>
+      <button
+        type="button"
+        onClick={() => navigate("/apply")}
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md font-orbitron text-[10px] tracking-widest text-muted-foreground hover:text-amber-300 hover:bg-amber-400/10 transition-colors"
+        title="Apply to the creator program"
+      >
+        <Star className="w-3.5 h-3.5" /> APPLY
       </button>
     </div>
   );
@@ -709,7 +725,21 @@ const FeedPage: React.FC = () => {
               <ShieldAlert className="w-4 h-4" />
             </button>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap justify-end">
+            <button
+              type="button"
+              onClick={() => navigate("/creators")}
+              className="font-mono-share text-[10px] text-muted-foreground hover:text-secondary transition-colors"
+            >
+              MODELS →
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/apply")}
+              className="font-mono-share text-[10px] text-muted-foreground hover:text-amber-300 transition-colors"
+            >
+              CREATOR APPLY →
+            </button>
             {isAuthenticated && (
               <button
                 onClick={() => navigate("/profile")}

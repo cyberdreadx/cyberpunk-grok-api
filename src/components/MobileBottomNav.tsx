@@ -3,7 +3,7 @@ import { lazyWithRetry } from "@/lib/lazyWithRetry";
 import { createPortal } from "react-dom";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Sparkles, Image, Users, ShoppingCart, MoreHorizontal, HelpCircle, FileText, Shield, ScrollText, Rss, User, Settings as SettingsIcon, BadgeCheck, MessageSquare, Heart, Gift } from "lucide-react";
+import { Sparkles, Image, Users, ShoppingCart, MoreHorizontal, HelpCircle, FileText, Shield, ScrollText, Rss, User, Settings as SettingsIcon, BadgeCheck, MessageSquare, Heart, Gift, Star, ClipboardList } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCredits } from "@/hooks/useCredits";
 import { useChatUnread } from "@/hooks/useChatUnread";
@@ -127,6 +127,38 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
             )}
             <button
               onClick={() => {
+                navigate("/creators");
+                setMoreOpen(false);
+              }}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded hover:bg-primary/10 transition-colors"
+            >
+              <Users className="w-4 h-4 text-secondary/80" />
+              <span className="font-mono-share text-[11px] text-foreground/80">FEATURED MODELS</span>
+            </button>
+            <button
+              onClick={() => {
+                navigate("/apply");
+                setMoreOpen(false);
+              }}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded hover:bg-primary/10 transition-colors"
+            >
+              <Star className="w-4 h-4 text-amber-400/80" />
+              <span className="font-mono-share text-[11px] text-foreground/80">CREATOR APPLY</span>
+            </button>
+            {isAuthenticated && (
+              <button
+                onClick={() => {
+                  navigate("/apply/status");
+                  setMoreOpen(false);
+                }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded hover:bg-primary/10 transition-colors"
+              >
+                <ClipboardList className="w-4 h-4 text-primary/60" />
+                <span className="font-mono-share text-[11px] text-foreground/80">APPLICATION STATUS</span>
+              </button>
+            )}
+            <button
+              onClick={() => {
                 if (isAuthenticated) navigate("/profile");
                 else onOpenAuth?.();
                 setMoreOpen(false);
@@ -138,6 +170,7 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
                 {isAuthenticated ? "PROFILE" : "SIGN IN"}
               </span>
             </button>
+            <div className="h-px bg-border/30 my-1" />
             {isAuthenticated && (
               <button
                 onClick={() => { navigate("/verification"); setMoreOpen(false); }}

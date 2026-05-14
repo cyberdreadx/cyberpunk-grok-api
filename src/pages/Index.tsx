@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect, Suspense } from "react";
 import { useTranslation } from "react-i18next";
-import { Terminal, Key, Coins, Shield, Eye, MessageCircle, HelpCircle, Server, Zap, Cpu, ChevronDown, Film, X, AlertCircle, CheckCircle2, Upload, Users, Image, Code, ToggleLeft, ToggleRight, Gift, Rss, BadgeCheck, MoreHorizontal } from "lucide-react";
+import { Terminal, Key, Coins, Shield, Eye, MessageCircle, HelpCircle, Server, Zap, Cpu, ChevronDown, Film, X, AlertCircle, CheckCircle2, Upload, Users, Image, Code, ToggleLeft, ToggleRight, Gift, Rss, BadgeCheck, MoreHorizontal, Star } from "lucide-react";
 import { Link } from "react-router-dom";
 import CyberLayout from "@/components/CyberLayout";
 import StoriesBar from "@/components/StoriesBar";
@@ -1022,8 +1022,8 @@ const Index = () => {
         {/* Top tabs: Feed / Create — keeps navigation symmetrical with the
             feed page. On mobile, the credits pill sits inline at the end of
             the row so it never overlaps the toggle. */}
-        <div className="flex items-center justify-between sm:justify-start gap-2">
-          <div className="flex items-center gap-1 p-1 rounded-lg border border-border/40 bg-card/40 w-fit">
+        <div className="flex items-center justify-between sm:justify-start gap-2 flex-wrap">
+          <div className="flex flex-wrap items-center gap-1 p-1 rounded-lg border border-border/40 bg-card/40 w-fit max-w-full">
             <Link
               to="/"
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-md font-orbitron text-[10px] tracking-widest text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
@@ -1037,6 +1037,20 @@ const Index = () => {
             >
               <Zap className="w-3.5 h-3.5" /> CREATE
             </button>
+            <Link
+              to="/creators"
+              title="Featured models directory"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md font-orbitron text-[10px] tracking-widest text-muted-foreground hover:text-secondary hover:bg-secondary/10 transition-colors"
+            >
+              <Users className="w-3.5 h-3.5" /> MODELS
+            </Link>
+            <Link
+              to="/apply"
+              title="Apply to the creator program"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md font-orbitron text-[10px] tracking-widest text-muted-foreground hover:text-amber-300 hover:bg-amber-400/10 transition-colors"
+            >
+              <Star className="w-3.5 h-3.5" /> APPLY
+            </Link>
           </div>
           {/* Inline credits pill — mobile only; desktop uses the header CreditDisplay */}
           <MobileCreditsPill inline onOpenStore={() => setStoreOpen(true)} />
