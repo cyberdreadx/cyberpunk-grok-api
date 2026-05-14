@@ -865,42 +865,17 @@ const FeedPage: React.FC = () => {
   return (
     <CyberLayout>
       <div className="max-w-6xl mx-auto px-4 py-6 space-y-4 pb-24">
-        {/* Top tabs + actions */}
+        {/* Top bar */}
         <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-3">
-            {topTabs}
+          {navTrigger}
+          {isAuthenticated && (
             <button
-              onClick={() => setShowRules(true)}
-              className="text-muted-foreground hover:text-foreground transition-colors"
-              title="View community guidelines"
+              onClick={() => navigate("/profile")}
+              className="font-mono-share text-[10px] text-primary hover:text-primary/80 transition-colors"
             >
-              <ShieldAlert className="w-4 h-4" />
+              MY PROFILE →
             </button>
-          </div>
-          <div className="flex items-center gap-3 flex-wrap justify-end">
-            <button
-              type="button"
-              onClick={() => navigate("/creators")}
-              className="font-mono-share text-[10px] text-muted-foreground hover:text-secondary transition-colors"
-            >
-              MODELS →
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate("/apply")}
-              className="font-mono-share text-[10px] text-muted-foreground hover:text-amber-300 transition-colors"
-            >
-              CREATOR APPLY →
-            </button>
-            {isAuthenticated && (
-              <button
-                onClick={() => navigate("/profile")}
-                className="font-mono-share text-[10px] text-primary hover:text-primary/80 transition-colors"
-              >
-                MY PROFILE →
-              </button>
-            )}
-          </div>
+          )}
         </div>
 
         {isAuthenticated && rulesBanner}
