@@ -977,6 +977,7 @@ const FeedPage: React.FC = () => {
           mediaType="video"
         />
       )}
+      {navDrawer}
     </CyberLayout>
   );
 };
