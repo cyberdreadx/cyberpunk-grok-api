@@ -17,8 +17,9 @@ const GlobalNavMenu: React.FC = () => {
   const { isAuthenticated } = useAuth();
   const [open, setOpen] = useState(false);
 
-  // Skip on feed page — it has its own nav drawer that also exposes filters.
-  if (location.pathname === "/" || location.pathname === "/feed") return null;
+  // Skip on routes that have their own header/nav to avoid overlap.
+  const HIDE_ON = ["/", "/feed", "/chat", "/terminal"];
+  if (HIDE_ON.includes(location.pathname)) return null;
 
   const go = (path: string) => {
     setOpen(false);
