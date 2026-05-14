@@ -28,6 +28,7 @@ const CreatorsDirectory = lazyWithRetry(() => import("./pages/CreatorsDirectory"
 const Chat = lazyWithRetry(() => import("./pages/Chat"), "chat");
 import AgeGateDialog from "@/components/AgeGateDialog";
 import KonamiTerminalUnlock from "@/components/KonamiTerminalUnlock";
+import GlobalNavMenu from "@/components/GlobalNavMenu";
 
 const queryClient = new QueryClient();
 
