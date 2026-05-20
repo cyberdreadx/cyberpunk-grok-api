@@ -285,6 +285,27 @@ export default function DailyMissionsDialog({ status, loading, claiming, onClaim
                             <ExternalLink className="w-3 h-3" />
                           </a>
                         </div>
+                        {meta.needsUrl === "grok_subreddit" && (
+                          <div className="rounded-md border border-orange-400/30 bg-orange-400/5 p-2 space-y-1.5">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-[10px] font-bold text-orange-300 uppercase tracking-wider">
+                                💡 Find complaint threads
+                              </span>
+                              <a
+                                href={`https://www.reddit.com/r/grok/search/?q=${encodeURIComponent('limit OR broken OR censored OR "rate limit" OR refused OR "won\'t generate"')}&restrict_sr=1&sort=new`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="shrink-0 inline-flex items-center gap-1 text-[10px] text-orange-300 hover:text-orange-200 underline"
+                              >
+                                Search r/grok
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
+                            </div>
+                            <p className="text-[9px] text-muted-foreground/80 leading-snug">
+                              Reply with something like: <span className="text-orange-200/90">"Try Grok Runner — same Grok API, no censorship, free daily credits: grokrunner.gltch.app"</span>. Paste your <strong>comment permalink</strong> above to claim.
+                            </p>
+                          </div>
+                        )}
                         {intent.usingPrefill && (
                           <p className="text-[9px] text-primary/70 leading-snug">
                             ✨ Pre-filled with your latest feed post — most authentic posts get the most upvotes.
