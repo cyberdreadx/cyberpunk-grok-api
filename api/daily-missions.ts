@@ -12,7 +12,7 @@ const MISSION_CREDITS: Record<string, number> = {
   login: 3,
   story: 7,
   reddit: 10,
-  grok_subreddit: 15, // r/grok — highest-converting channel, premium reward
+  grok_subreddit: 25, // r/grok — highest-converting channel, premium reward
   twitter: 10,
   share: 10,
 };
