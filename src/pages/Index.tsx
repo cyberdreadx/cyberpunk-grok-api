@@ -40,6 +40,7 @@ import FlashSaleBanner from "@/components/FlashSaleBanner";
 import BuyHoldBanner from "@/components/BuyHoldBanner";
 import NotificationBell from "@/components/NotificationBell";
 import DailyMissionsDialog from "@/components/DailyMissionsDialog";
+import GrokSubredditPromo from "@/components/GrokSubredditPromo";
 import { useDailyMissions } from "@/hooks/useDailyMissions";
 import LegalDialog from "@/components/LegalDialog";
 import HowToUseDialog from "@/components/HowToUseDialog";
@@ -1024,6 +1025,11 @@ const Index = () => {
         <div className="flex items-center justify-end sm:justify-start gap-2 flex-wrap pl-24 sm:pl-28">
           <MobileCreditsPill inline onOpenStore={() => setStoreOpen(true)} />
         </div>
+
+        {/* r/grok promo — pinned acquisition card */}
+        <GrokSubredditPromo
+          alreadyClaimedToday={missionsHook.status?.claimedToday?.includes("grok_subreddit")}
+        />
 
         {/* Stories */}
         <StoriesBar currentUserId={auth.user?.id} isAdmin={auth.user?.is_admin} />
