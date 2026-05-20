@@ -66,7 +66,7 @@ export default function GrokSubredditPromo({ alreadyClaimedToday }: Props) {
         <div className="flex-1 min-w-0 space-y-2">
           <div>
             <h3 className="font-orbitron text-sm sm:text-base text-orange-200 leading-tight">
-              Earn <span className="text-orange-300 font-bold">+15 ⚡</span> · Post in r/grok
+              Earn <span className="text-orange-300 font-bold">+25 ⚡</span> · Post in r/grok
             </h3>
             <p className="text-[11px] sm:text-xs text-muted-foreground leading-snug mt-0.5">
               Share a creation or reply to a complaint thread with Grok Runner —
