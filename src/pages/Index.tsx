@@ -40,6 +40,7 @@ import FlashSaleBanner from "@/components/FlashSaleBanner";
 import BuyHoldBanner from "@/components/BuyHoldBanner";
 import NotificationBell from "@/components/NotificationBell";
 import DailyMissionsDialog from "@/components/DailyMissionsDialog";
+import GrokSubredditPromo from "@/components/GrokSubredditPromo";
 import { useDailyMissions } from "@/hooks/useDailyMissions";
 import LegalDialog from "@/components/LegalDialog";
 import HowToUseDialog from "@/components/HowToUseDialog";
