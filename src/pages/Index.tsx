@@ -1026,6 +1026,11 @@ const Index = () => {
           <MobileCreditsPill inline onOpenStore={() => setStoreOpen(true)} />
         </div>
 
+        {/* r/grok promo — pinned acquisition card */}
+        <GrokSubredditPromo
+          alreadyClaimedToday={missionsHook.status?.claimedToday?.includes("grok_subreddit")}
+        />
+
         {/* Stories */}
         <StoriesBar currentUserId={auth.user?.id} isAdmin={auth.user?.is_admin} />
 
