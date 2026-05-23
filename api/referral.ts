@@ -60,7 +60,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             COUNT(*)::int AS total_referred,
             COUNT(*) FILTER (WHERE referee_verified)::int AS total_verified,
             COUNT(*) FILTER (WHERE referee_purchased)::int AS total_purchased,
-            COUNT(*) FILTER (WHERE referrer_rewarded)::int AS total_rewarded
+            COUNT(*) FILTER (WHERE referrer_rewarded)::int AS total_rewarded,
+            COUNT(*) FILTER (WHERE referee_subscribed)::int AS total_subscribed
           FROM referrals
           WHERE referrer_id = ${auth.userId}::uuid
         `;
@@ -68,9 +69,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // Calculate total credits earned from referrals
         const creditsEarned = (stats?.total_rewarded || 0) * 10;
 
-        // Get the user's referral code
+        // Get user's referral code + lifetime free months earned
         const [user] = await sql`
-          SELECT referral_code FROM users WHERE id = ${auth.userId}::uuid
+          SELECT referral_code, COALESCE(free_months_earned, 0)::int AS free_months_earned
+          FROM users WHERE id = ${auth.userId}::uuid
         `;
 
         return res.status(200).json({
@@ -79,7 +81,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           totalVerified: stats?.total_verified || 0,
           totalPurchased: stats?.total_purchased || 0,
           totalRewarded: stats?.total_rewarded || 0,
+          totalSubscribed: stats?.total_subscribed || 0,
           creditsEarned,
+          freeMonthsEarned: user?.free_months_earned || 0,
         });
       }
 

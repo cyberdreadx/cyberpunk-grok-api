@@ -228,20 +228,23 @@ export const TIER_DISCOUNT: Record<string, number> = {
   elite: 70, "elite-yearly": 70,
 };
 
+// Repriced to community-validated anchors: $9 / $19 / $39 / $79.
+// Pricing ladder matches the four buyer personas: casual / regular / hobbyist / power.
+// NOTE: Stripe price IDs (STRIPE_PRICE_SUB_*) must be re-created in Stripe to match
+// these amounts — the UI numbers are display-only until those env vars are swapped.
 export const SUBSCRIPTION_TIERS_MONTHLY: SubscriptionTier[] = [
-  { id: "basic",   name: "BASIC",   creditsPerMonth: 0, priceCents: 799,   discountPercent: 15, interval: "month" },
-  { id: "premium", name: "PREMIUM", creditsPerMonth: 0, priceCents: 1999,  discountPercent: 30, popular: true, interval: "month" },
-  { id: "pro",     name: "PRO",     creditsPerMonth: 0, priceCents: 5999,  discountPercent: 50, interval: "month" },
-  { id: "elite",   name: "ELITE",   creditsPerMonth: 0, priceCents: 19999, discountPercent: 70, interval: "month" },
+  { id: "basic",   name: "CASUAL",     creditsPerMonth: 0, priceCents: 900,  discountPercent: 15, interval: "month" },
+  { id: "premium", name: "REGULAR",    creditsPerMonth: 0, priceCents: 1900, discountPercent: 30, popular: true, interval: "month" },
+  { id: "pro",     name: "HOBBYIST",   creditsPerMonth: 0, priceCents: 3900, discountPercent: 50, interval: "month" },
+  { id: "elite",   name: "POWER USER", creditsPerMonth: 0, priceCents: 7900, discountPercent: 70, interval: "month" },
 ];
 
 // Yearly: 12% savings vs monthly × 12.
-// monthly × 12 × 0.88, then round to *.88 charm pricing.
 export const SUBSCRIPTION_TIERS_YEARLY: SubscriptionTier[] = [
-  { id: "basic-yearly",   name: "BASIC",   creditsPerMonth: 0, priceCents: 8438,   discountPercent: 15, interval: "year", monthlyEquivalentCents: 703,   savingsPercent: 12 },
-  { id: "premium-yearly", name: "PREMIUM", creditsPerMonth: 0, priceCents: 21108,  discountPercent: 30, popular: true, interval: "year", monthlyEquivalentCents: 1759,  savingsPercent: 12 },
-  { id: "pro-yearly",     name: "PRO",     creditsPerMonth: 0, priceCents: 63348,  discountPercent: 50, interval: "year", monthlyEquivalentCents: 5279,  savingsPercent: 12 },
-  { id: "elite-yearly",   name: "ELITE",   creditsPerMonth: 0, priceCents: 211188, discountPercent: 70, interval: "year", monthlyEquivalentCents: 17599, savingsPercent: 12 },
+  { id: "basic-yearly",   name: "CASUAL",     creditsPerMonth: 0, priceCents: 9504,  discountPercent: 15, interval: "year", monthlyEquivalentCents: 792,  savingsPercent: 12 },
+  { id: "premium-yearly", name: "REGULAR",    creditsPerMonth: 0, priceCents: 20064, discountPercent: 30, popular: true, interval: "year", monthlyEquivalentCents: 1672, savingsPercent: 12 },
+  { id: "pro-yearly",     name: "HOBBYIST",   creditsPerMonth: 0, priceCents: 41184, discountPercent: 50, interval: "year", monthlyEquivalentCents: 3432, savingsPercent: 12 },
+  { id: "elite-yearly",   name: "POWER USER", creditsPerMonth: 0, priceCents: 83424, discountPercent: 70, interval: "year", monthlyEquivalentCents: 6952, savingsPercent: 12 },
 ];
 
 /** Combined for backward compat */
