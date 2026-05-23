@@ -110,10 +110,11 @@ export default function ReferralPage() {
         ) : (
           <>
             {/* Stats Cards */}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-4 gap-2">
               <StatCard icon={Users} label="Invited" value={stats?.totalReferred ?? 0} color="text-primary" />
-              <StatCard icon={DollarSign} label="Converted" value={stats?.totalPurchased ?? 0} color="text-secondary" />
-              <StatCard icon={Sparkles} label="Earned" value={`+${stats?.creditsEarned ?? 0}`} color="text-accent" />
+              <StatCard icon={DollarSign} label="Bought" value={stats?.totalPurchased ?? 0} color="text-secondary" />
+              <StatCard icon={Sparkles} label="Credits" value={`+${stats?.creditsEarned ?? 0}`} color="text-accent" />
+              <StatCard icon={Trophy} label="Free Mo" value={`${stats?.freeMonthsEarned ?? 0}`} color="text-green-400" />
             </div>
 
             {/* Referral Link */}
@@ -166,11 +167,19 @@ export default function ReferralPage() {
                 <Row label="Total Invited" value={stats?.totalReferred ?? 0} />
                 <Row label="Email Verified" value={stats?.totalVerified ?? 0} />
                 <Row label="Made a Purchase" value={stats?.totalPurchased ?? 0} />
+                <Row label="Subscribed" value={stats?.totalSubscribed ?? 0} />
                 <Row label="Rewards Claimed" value={stats?.totalRewarded ?? 0} />
                 <div className="border-t border-border pt-2 flex justify-between text-sm font-bold">
-                  <span className="text-foreground">Total Credits Earned</span>
+                  <span className="text-foreground">Credits Earned</span>
                   <span className="text-primary">+{stats?.creditsEarned ?? 0}</span>
                 </div>
+                <div className="flex justify-between text-sm font-bold">
+                  <span className="text-foreground">Free Months Earned</span>
+                  <span className="text-green-400">{stats?.freeMonthsEarned ?? 0}</span>
+                </div>
+                <p className="text-[10px] text-muted-foreground/70 pt-1 leading-snug">
+                  Free months are auto-applied as account credit toward your next subscription renewal.
+                </p>
               </div>
             </Card>
           </>
