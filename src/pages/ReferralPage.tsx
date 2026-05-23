@@ -17,7 +17,9 @@ interface ReferralStats {
   totalVerified: number;
   totalPurchased: number;
   totalRewarded: number;
+  totalSubscribed?: number;
   creditsEarned: number;
+  freeMonthsEarned?: number;
 }
 
 export default function ReferralPage() {
@@ -73,6 +75,7 @@ export default function ReferralPage() {
     { label: "Friend signs up", you: "—", friend: "+3 credits", icon: Users },
     { label: "Friend verifies email", you: "—", friend: "—", icon: Check },
     { label: "Friend makes 1st purchase", you: "+10 credits", friend: "+5 bonus", icon: Gift },
+    { label: "Friend subscribes (any plan)", you: "+1 FREE MONTH", friend: "—", icon: Trophy },
   ];
 
   return (
