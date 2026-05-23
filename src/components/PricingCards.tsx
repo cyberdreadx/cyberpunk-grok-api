@@ -170,6 +170,26 @@ const PricingCards: React.FC<PricingCardsProps> = ({
                 <p className="mb-1 font-mono-share text-[9px] uppercase tracking-wider text-amber-400/90">
                   ⚠ No monthly credits — discount only
                 </p>
+                {/* Jobs breakdown — what a $20 credit pack buys at this tier's discount */}
+                {(() => {
+                  const refPackCredits = 240; // PRO pack reference (~$19)
+                  const editCost = Math.max(1, Math.ceil(10 * (1 - tier.discountPercent / 100)));
+                  const videoCost = Math.max(1, Math.ceil(25 * (1 - tier.discountPercent / 100)));
+                  const edits = Math.floor(refPackCredits / editCost);
+                  const videos = Math.floor(refPackCredits / videoCost);
+                  return (
+                    <div className="mb-3 rounded border border-secondary/25 bg-secondary/5 p-2">
+                      <p className="font-orbitron text-[8px] tracking-wider text-secondary/80 mb-1">
+                        WHAT A $19 PACK BUYS YOU
+                      </p>
+                      <p className="font-mono-share text-[10px] text-foreground/90">
+                        ≈ <span className="text-secondary font-bold">{edits}</span> image edits
+                        {" · "}
+                        ≈ <span className="text-secondary font-bold">{videos}</span> videos
+                      </p>
+                    </div>
+                  );
+                })()}
                 <p className="mb-4 flex-1 font-mono-share text-[9px] leading-snug text-muted-foreground/75">
                   {(() => {
                     const example = 10;
@@ -367,9 +387,35 @@ function PackCard({
         )}
       </div>
 
-      <p className="mb-1 flex-1 font-mono-share text-[10px] text-muted-foreground">
+      <p className="mb-1 font-mono-share text-[10px] text-muted-foreground">
         {pkg.perCredit}/credit &mdash; never expires
       </p>
+
+      {/* Jobs breakdown — clarify what credits actually unlock */}
+      {(() => {
+        const editCost = Math.max(1, Math.ceil(10 * (1 - discountPct / 100)));
+        const videoCost = Math.max(1, Math.ceil(25 * (1 - discountPct / 100)));
+        const edits = Math.floor(totalCredits / editCost);
+        const videos = Math.floor(totalCredits / videoCost);
+        return (
+          <div className="mb-3 flex-1 rounded border border-primary/20 bg-primary/5 p-2">
+            <p className="font-orbitron text-[8px] tracking-wider text-primary/80 mb-1">
+              WHAT YOU CAN MAKE
+            </p>
+            <p className="font-mono-share text-[10px] text-foreground/90">
+              ≈ <span className="text-primary font-bold">{edits}</span> image edits
+              {" · "}
+              ≈ <span className="text-primary font-bold">{videos}</span> videos
+            </p>
+            {discountPct > 0 && (
+              <p className="font-mono-share text-[8px] text-green-400/80 mt-0.5">
+                (with your {discountPct}% sub discount)
+              </p>
+            )}
+          </div>
+        );
+      })()}
+
 
       <div className="space-y-2">
         <Button
