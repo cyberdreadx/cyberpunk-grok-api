@@ -564,6 +564,51 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
           }
         }
+
+        // ── Referral FREE MONTH reward (subscription path only) ──
+        // When a referred user pays their first sub invoice, the referrer earns
+        // a free month: applied as a Stripe customer balance credit (negative
+        // amount = credit toward their next invoice) and a counter for the UI.
+        if (buyerUserId && event.type === "invoice.paid") {
+          const inv = event.data.object as Stripe.Invoice;
+          const subId = (inv as any).subscription as string | null;
+          if (subId) {
+            const [refSub] = await sql`
+              UPDATE referrals
+              SET referee_subscribed = true, referrer_free_month_granted = true
+              WHERE referee_id = ${buyerUserId}::uuid
+                AND referee_subscribed = false
+              RETURNING id, referrer_id
+            `;
+            if (refSub) {
+              await sql`
+                UPDATE users SET free_months_earned = COALESCE(free_months_earned, 0) + 1
+                WHERE id = ${refSub.referrer_id}::uuid
+              `;
+              // Apply Stripe balance credit if referrer has a customer record.
+              try {
+                const [referrer] = await sql`
+                  SELECT stripe_customer_id FROM users WHERE id = ${refSub.referrer_id}::uuid
+                `;
+                if (referrer?.stripe_customer_id && inv.amount_paid > 0) {
+                  await stripe.customers.createBalanceTransaction(
+                    referrer.stripe_customer_id,
+                    {
+                      amount: -Math.abs(inv.amount_paid),
+                      currency: inv.currency || "usd",
+                      description: `Referral free month — referee ${buyerUserId}`,
+                    }
+                  );
+                  console.log(`[referral] Free month: credited ${inv.amount_paid} to referrer ${refSub.referrer_id}`);
+                } else {
+                  console.log(`[referral] Free month earned by ${refSub.referrer_id} — no stripe_customer_id yet, counter incremented only`);
+                }
+              } catch (balErr: any) {
+                console.error("[referral] balance credit failed:", balErr.message);
+              }
+            }
+          }
+        }
       } catch (refErr: any) {
         // Non-critical — don't fail the webhook if referral logic errors
         console.error("[referral] purchase reward error:", refErr.message);
