@@ -10,6 +10,7 @@ import type { GrokMode, GenerationSettings } from "@/hooks/useGrokApi";
 import { apiFetch } from "@/lib/api";
 import { upload } from "@vercel/blob/client";
 import { toast } from "sonner";
+import { normalizeToImageBlob, isAcceptableImageLike } from "@/lib/heicConvert";
 
 interface CostBreakdown {
   lines: string[];   // e.g. ["2 cr/image", "× 3 images", "= 6 cr total"]
