@@ -2,6 +2,7 @@ import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Upload, Sparkles, Pencil, Image, Film, X, Loader2, ChevronRight, HelpCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { GrokMode } from "@/hooks/useGrokApi";
+import { normalizeToImageBlob, isAcceptableImageLike } from "@/lib/heicConvert";
 
 interface SimpleModeProps {
   onSubmit: (data: { prompt: string; imageUrl?: string; extraImageUrls?: string[] }) => void;
@@ -124,12 +125,12 @@ const SimpleMode: React.FC<SimpleModeProps> = ({
   }, [onModeChange, onImageUrlChange]);
 
   const handleImageUpload = useCallback(async (file: File) => {
-    let blob: Blob = file;
-    if (file.name.toLowerCase().match(/\.heic|\.heif$/)) {
-      try {
-        const heic2any = (await import("heic2any")).default;
-        blob = (await heic2any({ blob: file, toType: "image/jpeg", quality: 0.9 })) as Blob;
-      } catch { /* use original */ }
+    let blob: Blob;
+    try {
+      blob = await normalizeToImageBlob(file, 0.9);
+    } catch (err) {
+      console.error("[SimpleMode] normalize failed", err);
+      return;
     }
 
     const reader = new FileReader();
@@ -148,18 +149,19 @@ const SimpleMode: React.FC<SimpleModeProps> = ({
     if (file) handleImageUpload(file);
   }, [handleImageUpload]);
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
     const file = e.dataTransfer.files[0];
-    if (file?.type.startsWith("image/")) handleImageUpload(file);
+    if (file && (await isAcceptableImageLike(file))) handleImageUpload(file);
   }, [handleImageUpload]);
 
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
     const items = e.clipboardData?.items;
     if (!items) return;
     for (const item of items) {
-      if (item.type.startsWith("image/")) {
+      // Accept anything image-ish OR HEIC/MOV (which sometimes report empty type)
+      if (item.type.startsWith("image/") || item.type === "" || item.type === "video/quicktime") {
         const file = item.getAsFile();
         if (file) { handleImageUpload(file); break; }
       }
@@ -285,7 +287,7 @@ const SimpleMode: React.FC<SimpleModeProps> = ({
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*,.heic,.heif"
+              accept="image/*,.heic,.heif,.hif,.mov,video/quicktime"
               onChange={handleFileChange}
               className="hidden"
             />

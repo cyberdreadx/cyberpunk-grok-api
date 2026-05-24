@@ -10,6 +10,7 @@ import type { GrokMode, GenerationSettings } from "@/hooks/useGrokApi";
 import { apiFetch } from "@/lib/api";
 import { upload } from "@vercel/blob/client";
 import { toast } from "sonner";
+import { normalizeToImageBlob, isAcceptableImageLike } from "@/lib/heicConvert";
 
 interface CostBreakdown {
   lines: string[];   // e.g. ["2 cr/image", "× 3 images", "= 6 cr total"]
@@ -100,12 +101,6 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
   const needsImage = mode === "edit-image" || mode === "image-to-video";
   const needsVideo = mode === "edit-video";
 
-  const isHeicLike = (file: File): boolean => {
-    const type = (file.type || "").toLowerCase();
-    const name = (file.name || "").toLowerCase();
-    return type === "image/heic" || type === "image/heif" || name.endsWith(".heic") || name.endsWith(".heif");
-  };
-
   const readBlobAsDataUrl = (blob: Blob): Promise<string> =>
     new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -117,9 +112,6 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
   /**
    * Resize an image client-side (cap at 4096px) and upload it to Vercel Blob
    * via the client-upload protocol. Returns the public CDN URL.
-   *
-   * This bypasses Vercel's 4.5 MB serverless function body limit entirely
-   * (browser → Blob storage direct, just like fal.ai's CDN upload pattern).
    */
   const MAX_DIM = 4096;
 
@@ -128,7 +120,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
     let w = bitmap.width, h = bitmap.height;
     if (w <= MAX_DIM && h <= MAX_DIM && blob.size <= 8 * 1024 * 1024) {
       bitmap.close();
-      return blob; // already reasonable
+      return blob;
     }
     if (w > MAX_DIM || h > MAX_DIM) {
       const scale = MAX_DIM / Math.max(w, h);
@@ -166,12 +158,8 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
   };
 
   const fileToUploadedUrl = async (file: File): Promise<string> => {
-    let blob: Blob = file;
-    if (isHeicLike(file)) {
-      const { default: heic2any } = await import("heic2any");
-      const converted = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.9 });
-      blob = Array.isArray(converted) ? converted[0] : converted;
-    }
+    // Handles HEIC (incl. Live Photo bursts) and Live Photo .mov first-frame.
+    let blob: Blob = await normalizeToImageBlob(file, 0.9);
     if (blob.type.startsWith("image/")) {
       blob = await resizeBlobIfNeeded(blob);
     }
@@ -181,7 +169,10 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith("image/") && !isHeicLike(file)) return;
+    if (!(await isAcceptableImageLike(file))) {
+      setUploadError("Unsupported file. Use JPG, PNG, WebP, or HEIC.");
+      return;
+    }
     setUploadError(null);
 
     // Show local preview immediately while upload happens in background
@@ -209,7 +200,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
 
   const handleExtraFileChange = async (e: React.ChangeEvent<HTMLInputElement>, slotIndex: number) => {
     const file = e.target.files?.[0];
-    if (!file || (!file.type.startsWith("image/") && !isHeicLike(file))) return;
+    if (!file || !(await isAcceptableImageLike(file))) return;
     const localPreview = URL.createObjectURL(file);
     setExtraImages(prev => {
       const next = [...prev];
@@ -519,7 +510,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*,.heic,.heif"
+                accept="image/*,.heic,.heif,.hif,.mov,video/quicktime"
                 onChange={handleFileChange}
                 className="hidden"
               />
@@ -573,7 +564,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
           {/* Hidden file inputs for extra images */}
           {[0, 1].map(i => (
             <input key={i} ref={el => { extraFileRefs.current[i] = el; }}
-              type="file" accept="image/*,.heic,.heif"
+              type="file" accept="image/*,.heic,.heif,.hif,.mov,video/quicktime"
               onChange={e => handleExtraFileChange(e, i)}
               className="hidden" />
           ))}
