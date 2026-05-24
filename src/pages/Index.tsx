@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/collapsible";
 
 import { lazyWithRetry } from "@/lib/lazyWithRetry";
+import { normalizeToImageBlob } from "@/lib/heicConvert";
 // Lazy-load the 3D orb — Three.js is ~800 KB and not needed for initial render
 const GrokOrb = lazyWithRetry(() => import("@/components/GrokOrb"), "grok-orb");
 import GlitchText from "@/components/GlitchText";
