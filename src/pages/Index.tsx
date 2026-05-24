@@ -476,14 +476,7 @@ const Index = () => {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      let sourceBlob: Blob = file;
-      const t = (file.type || "").toLowerCase();
-      const n = (file.name || "").toLowerCase();
-      if (t === "image/heic" || t === "image/heif" || n.endsWith(".heic") || n.endsWith(".heif")) {
-        const { default: heic2any } = await import("heic2any");
-        const converted = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.9 });
-        sourceBlob = Array.isArray(converted) ? converted[0] : converted;
-      }
+      const sourceBlob = await normalizeToImageBlob(file, 0.9);
       const bitmap = await createImageBitmap(sourceBlob);
       const maxDim = 1024;
       let w = bitmap.width, h = bitmap.height;
@@ -497,10 +490,11 @@ const Index = () => {
       bitmap.close();
       setGltchImage2(canvas.toDataURL("image/jpeg", 0.9));
       setGltchImage2Name(file.name.replace(/\.[^.]+$/, "") + ".jpg");
-    } catch {
-      toast({ title: t("toast.imageError"), description: t("toast.imageErrorDesc"), variant: "destructive" });
+    } catch (err: any) {
+      console.error("[Index] gltch image2 normalize failed", err);
+      toast({ title: t("toast.imageError"), description: err?.message || t("toast.imageErrorDesc"), variant: "destructive" });
     }
-  }, [toast]);
+  }, [toast, t]);
 
   const clearGltchImage2 = useCallback(() => {
     setGltchImage2(null);
