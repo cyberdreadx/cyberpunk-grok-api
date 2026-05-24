@@ -200,7 +200,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
 
   const handleExtraFileChange = async (e: React.ChangeEvent<HTMLInputElement>, slotIndex: number) => {
     const file = e.target.files?.[0];
-    if (!file || (!file.type.startsWith("image/") && !isHeicLike(file))) return;
+    if (!file || !(await isAcceptableImageLike(file))) return;
     const localPreview = URL.createObjectURL(file);
     setExtraImages(prev => {
       const next = [...prev];
