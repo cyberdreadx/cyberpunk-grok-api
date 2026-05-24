@@ -285,7 +285,7 @@ const SimpleMode: React.FC<SimpleModeProps> = ({
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*,.heic,.heif"
+              accept="image/*,.heic,.heif,.hif,.mov,video/quicktime"
               onChange={handleFileChange}
               className="hidden"
             />

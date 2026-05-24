@@ -1627,7 +1627,7 @@ const Index = () => {
                       <input
                         ref={gltchImage2Ref}
                         type="file"
-                        accept="image/*,.heic,.heif"
+                        accept="image/*,.heic,.heif,.hif,.mov,video/quicktime"
                         onChange={handleGltchImage2}
                         className="hidden"
                       />

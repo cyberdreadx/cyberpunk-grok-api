@@ -956,7 +956,7 @@ export default function Characters() {
                   <span className="font-mono-share text-[8px] text-muted-foreground/40">PORTRAIT</span>
                 </button>
               )}
-              <input ref={portraitRef} type="file" accept="image/*" onChange={handlePortrait} className="hidden" />
+              <input ref={portraitRef} type="file" accept="image/*,.heic,.heif,.hif,.mov,video/quicktime" onChange={handlePortrait} className="hidden" />
             </div>
 
             {/* Name */}
@@ -1218,7 +1218,7 @@ export default function Characters() {
 
             {/* Input */}
             <div className={`flex gap-2 shrink-0 pb-[env(safe-area-inset-bottom,0px)] sm:pb-0 ${pendingImage ? "-mt-px" : ""}`}>
-              <input type="file" ref={chatImageRef} accept="image/*" className="hidden" onChange={handleChatImage} />
+              <input type="file" ref={chatImageRef} accept="image/*,.heic,.heif,.hif,.mov,video/quicktime" className="hidden" onChange={handleChatImage} />
               <button onClick={() => chatImageRef.current?.click()} disabled={chatLoading}
                 className="px-3 py-2.5 bg-card/60 border border-border rounded-lg hover:border-secondary/50 transition-colors disabled:opacity-50"
                 title="Attach reference image">

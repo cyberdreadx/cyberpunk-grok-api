@@ -510,7 +510,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*,.heic,.heif"
+                accept="image/*,.heic,.heif,.hif,.mov,video/quicktime"
                 onChange={handleFileChange}
                 className="hidden"
               />
@@ -564,7 +564,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
           {/* Hidden file inputs for extra images */}
           {[0, 1].map(i => (
             <input key={i} ref={el => { extraFileRefs.current[i] = el; }}
-              type="file" accept="image/*,.heic,.heif"
+              type="file" accept="image/*,.heic,.heif,.hif,.mov,video/quicktime"
               onChange={e => handleExtraFileChange(e, i)}
               className="hidden" />
           ))}
