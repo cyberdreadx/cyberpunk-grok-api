@@ -1042,10 +1042,38 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
     threshold: 40,
   });
 
-  // Reset index when results change
+  // Keep the user near the photo they were viewing when the list changes
+  // (e.g. delete, move-to-folder). Without this, deleting any item snapped
+  // them back to index 0 (the newest photo) on mobile.
+  const prevViewedIdRef = React.useRef<string | null>(null);
+  const prevLengthRef = React.useRef<number>(filteredResults.length);
   React.useEffect(() => {
-    setMobileIndex(0);
-  }, [filteredResults.length]);
+    const len = filteredResults.length;
+    const prevId = prevViewedIdRef.current;
+    const prevLen = prevLengthRef.current;
+
+    if (len === 0) {
+      setMobileIndex(0);
+    } else if (prevId) {
+      const stillThereAt = filteredResults.findIndex((r) => r.id === prevId);
+      if (stillThereAt >= 0) {
+        // Same item still exists — jump to its new index (e.g. shifted by a
+        // newly generated photo at the top).
+        if (stillThereAt !== mobileIndex) setMobileIndex(stillThereAt);
+      } else if (len < prevLen) {
+        // Item was deleted — stay on the same slot so the neighbour fills in.
+        setMobileIndex(Math.min(mobileIndex, len - 1));
+      } else {
+        // Filter/folder switched and our item is gone — start at top.
+        setMobileIndex(0);
+      }
+    }
+
+    prevLengthRef.current = len;
+    prevViewedIdRef.current = filteredResults[mobileIndex]?.id ?? null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredResults, mobileIndex]);
+
 
   const handleCopyPrompt = useCallback(async (id: string, text: string) => {
     try {
