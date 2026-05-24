@@ -303,18 +303,8 @@ export default function Characters() {
     const file = e.target.files?.[0];
     if (!file) return;
     const maxDim = 512;
-    const isHeic = (f: File) => {
-      const t = (f.type || "").toLowerCase();
-      const n = (f.name || "").toLowerCase();
-      return t === "image/heic" || t === "image/heif" || n.endsWith(".heic") || n.endsWith(".heif");
-    };
     try {
-      let sourceBlob: Blob = file;
-      if (isHeic(file)) {
-        const { default: heic2any } = await import("heic2any");
-        const converted = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.85 });
-        sourceBlob = Array.isArray(converted) ? converted[0] : converted;
-      }
+      const sourceBlob = await normalizeToImageBlob(file, 0.85);
       const bitmap = await createImageBitmap(sourceBlob);
       let w = bitmap.width, h = bitmap.height;
       if (w > maxDim || h > maxDim) {
@@ -326,8 +316,8 @@ export default function Characters() {
       canvas.getContext("2d")?.drawImage(bitmap, 0, 0, w, h);
       bitmap.close();
       setPortrait(canvas.toDataURL("image/jpeg", 0.85));
-    } catch {
-      toast({ title: "Unsupported format", description: "Could not process image. Try JPG or PNG." });
+    } catch (err: any) {
+      toast({ title: "Unsupported format", description: err?.message || "Could not process image. Try JPG or PNG." });
     }
   };
 
@@ -335,17 +325,7 @@ export default function Characters() {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      let sourceBlob: Blob = file;
-      const isHeic = (f: File) => {
-        const t = (f.type || "").toLowerCase();
-        const n = (f.name || "").toLowerCase();
-        return t === "image/heic" || t === "image/heif" || n.endsWith(".heic") || n.endsWith(".heif");
-      };
-      if (isHeic(file)) {
-        const { default: heic2any } = await import("heic2any");
-        const converted = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.85 });
-        sourceBlob = Array.isArray(converted) ? converted[0] : converted;
-      }
+      const sourceBlob = await normalizeToImageBlob(file, 0.85);
       const bitmap = await createImageBitmap(sourceBlob);
       const maxDim = 768;
       let w = bitmap.width, h = bitmap.height;
@@ -358,11 +338,12 @@ export default function Characters() {
       canvas.getContext("2d")?.drawImage(bitmap, 0, 0, w, h);
       bitmap.close();
       setPendingImage(canvas.toDataURL("image/jpeg", 0.85));
-    } catch {
-      toast({ title: "Unsupported format", description: "Could not process image. Try JPG or PNG." });
+    } catch (err: any) {
+      toast({ title: "Unsupported format", description: err?.message || "Could not process image. Try JPG or PNG." });
     }
     e.target.value = "";
   };
+
 
   const toggleTrait = (t: string) => {
     setTraits(prev => prev.includes(t) ? prev.filter(x => x !== t) : prev.length < 10 ? [...prev, t] : prev);
