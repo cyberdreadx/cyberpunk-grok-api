@@ -100,12 +100,6 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
   const needsImage = mode === "edit-image" || mode === "image-to-video";
   const needsVideo = mode === "edit-video";
 
-  const isHeicLike = (file: File): boolean => {
-    const type = (file.type || "").toLowerCase();
-    const name = (file.name || "").toLowerCase();
-    return type === "image/heic" || type === "image/heif" || name.endsWith(".heic") || name.endsWith(".heif");
-  };
-
   const readBlobAsDataUrl = (blob: Blob): Promise<string> =>
     new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -117,9 +111,6 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
   /**
    * Resize an image client-side (cap at 4096px) and upload it to Vercel Blob
    * via the client-upload protocol. Returns the public CDN URL.
-   *
-   * This bypasses Vercel's 4.5 MB serverless function body limit entirely
-   * (browser → Blob storage direct, just like fal.ai's CDN upload pattern).
    */
   const MAX_DIM = 4096;
 
@@ -128,7 +119,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
     let w = bitmap.width, h = bitmap.height;
     if (w <= MAX_DIM && h <= MAX_DIM && blob.size <= 8 * 1024 * 1024) {
       bitmap.close();
-      return blob; // already reasonable
+      return blob;
     }
     if (w > MAX_DIM || h > MAX_DIM) {
       const scale = MAX_DIM / Math.max(w, h);
@@ -166,12 +157,8 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
   };
 
   const fileToUploadedUrl = async (file: File): Promise<string> => {
-    let blob: Blob = file;
-    if (isHeicLike(file)) {
-      const { default: heic2any } = await import("heic2any");
-      const converted = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.9 });
-      blob = Array.isArray(converted) ? converted[0] : converted;
-    }
+    // Handles HEIC (incl. Live Photo bursts) and Live Photo .mov first-frame.
+    let blob: Blob = await normalizeToImageBlob(file, 0.9);
     if (blob.type.startsWith("image/")) {
       blob = await resizeBlobIfNeeded(blob);
     }
