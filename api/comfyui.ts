@@ -3168,7 +3168,33 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           const hint = !blobToken
             ? " Vercel Blob token is missing (BLOB_READ_WRITE_TOKEN) — large videos cannot be delivered without it."
             : " Check server logs for Blob upload errors.";
-          return res.status(200).json({ status: "error", error: `Job completed but output could not be delivered.${hint} Try a lower resolution or fewer frames.` });
+
+          // Auto-refund: user paid but received nothing because delivery failed.
+          // Mirrors the FAILED/CANCELLED/TIMED_OUT refund path below.
+          let refunded = 0;
+          if (auth?.userId) {
+            try {
+              const sql = getDb();
+              const rows = await sql`
+                SELECT id, credits_used FROM usage_log
+                WHERE user_id = ${auth.userId}::uuid
+                  AND mode LIKE 'comfy-%'
+                  AND execution_time_ms IS NULL
+                ORDER BY created_at DESC LIMIT 1
+              ` as any[];
+              if (rows.length > 0 && rows[0].credits_used > 0) {
+                refunded = rows[0].credits_used;
+                await sql`SELECT add_pack_credits(${auth.userId}::uuid, ${refunded})`;
+                await sql`UPDATE usage_log SET execution_time_ms = 0, mode = mode || '-refunded-undelivered' WHERE id = ${rows[0].id}`;
+                console.log(`[comfyui-poll] Refunded ${refunded} credits to ${auth.userId} after undelivered output`);
+              }
+            } catch (e: any) {
+              console.error("[comfyui-poll] undelivered refund failed:", e.message);
+            }
+          }
+          const refundNote = refunded > 0 ? ` ${refunded} credit${refunded !== 1 ? "s" : ""} refunded.` : "";
+          cleanupS3Urls();
+          return res.status(200).json({ status: "error", error: `Job completed but output could not be delivered.${hint} Try a lower resolution or fewer frames.${refundNote}`, refunded });
         }
 
         if (data.status === "FAILED" || data.status === "CANCELLED" || data.status === "TIMED_OUT") {
