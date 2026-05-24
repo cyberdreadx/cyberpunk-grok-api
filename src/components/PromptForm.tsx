@@ -169,7 +169,10 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith("image/") && !isHeicLike(file)) return;
+    if (!(await isAcceptableImageLike(file))) {
+      setUploadError("Unsupported file. Use JPG, PNG, WebP, or HEIC.");
+      return;
+    }
     setUploadError(null);
 
     // Show local preview immediately while upload happens in background
