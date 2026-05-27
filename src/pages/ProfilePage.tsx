@@ -153,7 +153,7 @@ const ProfilePage: React.FC = () => {
     setAvatarUploading(true);
     try {
       const ext = file.name.split(".").pop() || "jpg";
-      const blobUrl = await uploadPublicMedia(file, "avatars", `avatar.${ext}`);
+      const { url: blobUrl } = await uploadPublicMedia(file, "avatars", `avatar.${ext}`);
       await apiFetch("/profile", {
         method: "PUT",
         body: { avatarUrl: blobUrl },

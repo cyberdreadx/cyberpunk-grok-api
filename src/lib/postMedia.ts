@@ -6,17 +6,22 @@
 import { apiUrl } from "@/lib/api";
 import { getResultDataUrl } from "@/lib/storage";
 import { isPermanentPublicMediaUrl, uploadPublicMedia } from "@/lib/mediaUpload";
+import { previewUrlForPublicUrl } from "@/lib/previewUrl";
 import type { GrokResult } from "@/hooks/useGrokApi";
 
-async function uploadBlobDirect(blob: Blob, type: "image" | "video"): Promise<string> {
-  const ext = type === "video" ? "mp4" : "png";
-  return uploadPublicMedia(blob, type === "video" ? "feed" : "feed", `post.${ext}`);
+export type LibraryUploadResult = { url: string; previewUrl?: string };
+
+async function uploadBlobDirect(blob: Blob, type: "image" | "video"): Promise<LibraryUploadResult> {
+  const ext = type === "video" ? "mp4" : "jpg";
+  return uploadPublicMedia(blob, "feed", `post.${ext}`);
 }
 
-export async function uploadLibraryItemForPost(result: GrokResult): Promise<string> {
+export async function uploadLibraryItemForPost(result: GrokResult): Promise<LibraryUploadResult> {
   const src = result.url;
 
-  if (isPermanentPublicMediaUrl(src)) return src;
+  if (isPermanentPublicMediaUrl(src)) {
+    return { url: src, previewUrl: previewUrlForPublicUrl(src) };
+  }
 
   let mediaBlob: Blob | null = null;
 
@@ -42,7 +47,8 @@ export async function uploadLibraryItemForPost(result: GrokResult): Promise<stri
 
   if (mediaBlob) {
     try {
-      return await uploadBlobDirect(mediaBlob, result.type);
+      const uploaded = await uploadBlobDirect(mediaBlob, result.type);
+      return uploaded;
     } catch (directErr) {
       try {
         const base64 = await new Promise<string>((resolve, reject) => {
@@ -69,7 +75,8 @@ export async function uploadLibraryItemForPost(result: GrokResult): Promise<stri
         });
         if (resp.ok) {
           const j = await resp.json();
-          if (j?.r2Url || j?.url) return j.r2Url || j.url;
+          const url = j?.r2Url || j?.url;
+          if (url) return { url, previewUrl: previewUrlForPublicUrl(url) };
         }
       } catch {}
       throw directErr;
@@ -81,7 +88,8 @@ export async function uploadLibraryItemForPost(result: GrokResult): Promise<stri
       const resp = await fetch(src, { mode: "cors" });
       if (resp.ok) {
         const blob = await resp.blob();
-        return uploadBlobDirect(blob, result.type);
+        const uploaded = await uploadBlobDirect(blob, result.type);
+        return uploaded;
       }
     } catch {
       /* server proxy */
@@ -114,7 +122,8 @@ export async function uploadLibraryItemForPost(result: GrokResult): Promise<stri
       );
     }
     const dlData = await dlRes.json();
-    return dlData.r2Url || dlData.url;
+    const url = dlData.r2Url || dlData.url;
+    return { url, previewUrl: previewUrlForPublicUrl(url) };
   }
 
   throw new Error("Could not resolve media for upload — file may have been deleted from your device.");

@@ -133,7 +133,7 @@ export default function ApplyPage() {
       const authToken = localStorage.getItem("auth-token") || "";
       if (!authToken) throw new Error("Not authenticated");
       const ext = item.file.type === "image/png" ? "png" : item.file.type === "image/webp" ? "webp" : "jpg";
-      const uploadedUrl = await uploadPublicMedia(item.file, "creator-applications", `sample.${ext}`);
+      const { url: uploadedUrl } = await uploadPublicMedia(item.file, "creator-applications", `sample.${ext}`);
       setPhotos((prev) => prev.map((p) =>
         p.id === item.id ? { ...p, status: "done", progress: 100, uploadedUrl } : p
       ));

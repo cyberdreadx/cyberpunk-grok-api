@@ -78,6 +78,7 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate, active = true, moun
   const [xrgeUnlockOpen, setXrgeUnlockOpen] = useState(false);
 
   const isLocked = !isUnlocked && !post.isOwner && ((post.lockCost || 0) > 0 || (post.lockPriceCents || 0) > 0 || !!(post.lockXrgeAmount && parseFloat(post.lockXrgeAmount) > 0));
+  const isTeaser = !isLocked && !post.imageUrl && !!post.previewImageUrl;
   const isVideo = post.imageUrl ? /\.(mp4|webm|mov)(\?|$)/i.test(post.imageUrl) || post.imageUrl.includes("video") : false;
   const mainMedia = useMediaSrc(post.imageUrl, { kind: isVideo ? "video" : "image", context: "reel-card" });
   const previewMedia = useMediaSrc(post.previewImageUrl, { context: "reel-preview" });
@@ -217,12 +218,12 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate, active = true, moun
 
   return (
     <div className="relative w-full h-[100dvh] snap-start snap-always bg-black flex items-center justify-center overflow-hidden">
-      {/* Blurred preview for locked posts with images */}
-      {mountMedia && isLocked && post.previewImageUrl && (
+      {/* Blurred preview for locked posts or logged-out teasers */}
+      {mountMedia && (isLocked || isTeaser) && post.previewImageUrl && (
         <img src={previewMedia.src} alt="" aria-hidden className="absolute inset-0 w-full h-full object-cover blur-xl brightness-50" loading="lazy" decoding="async" onError={previewMedia.onError} />
       )}
 
-      {mountMedia && !isLocked && post.imageUrl && !mediaFailed ? (
+      {mountMedia && !isLocked && !isTeaser && post.imageUrl && !mediaFailed ? (
         isVideo ? (
           <video
             ref={videoRef}
@@ -238,7 +239,9 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate, active = true, moun
         ) : (
           <img src={mainMedia.src} alt="" className={`relative z-[1] w-full h-full object-contain transition-[filter] duration-300 ${isMatureBlurred ? "blur-2xl scale-110" : ""}`} loading="lazy" decoding="async" onError={mainMedia.onError} />
         )
-      ) : mountMedia && !isLocked && mediaFailed && post.previewImageUrl ? (
+      ) : mountMedia && isTeaser && post.previewImageUrl ? (
+        <img src={previewMedia.src} alt="" className="relative z-[1] w-full h-full object-contain blur-xl brightness-75 scale-105" loading="lazy" decoding="async" onError={previewMedia.onError} />
+      ) : mountMedia && !isLocked && !isTeaser && mediaFailed && post.previewImageUrl ? (
         <img src={previewMedia.src} alt="" className="relative z-[1] w-full h-full object-contain opacity-80" loading="lazy" decoding="async" onError={previewMedia.onError} />
       ) : mountMedia && !isLocked && mediaFailed ? (
         <div className="relative z-10 px-8 max-w-full text-center">

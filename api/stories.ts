@@ -3,6 +3,7 @@ import { getUserFromRequest, ADMIN_EMAIL, checkBan } from "./_lib/auth";
 import { getDb } from "./_lib/db";
 import { canPost, POSTING_GATE_MESSAGE } from "./_lib/purchaseGate";
 import { isVerified, VERIFICATION_REQUIRED_MESSAGE } from "./_lib/verifiedGate";
+import { resolvePreviewUrl } from "./_lib/preview-url";
 
 export const config = { maxDuration: 30 };
 
@@ -33,7 +34,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(403).json({ error: POSTING_GATE_MESSAGE, code: "PURCHASE_REQUIRED" });
       }
 
-      const { mediaUrl, mediaType, caption, prompt, lockCost, lockXrgeAmount, isMature } = req.body || {};
+      const { mediaUrl, previewUrl, mediaType, caption, prompt, lockCost, lockXrgeAmount, isMature } = req.body || {};
       if (!mediaUrl) return res.status(400).json({ error: "mediaUrl required" });
 
       const type = (mediaType || "image").startsWith("video") ? "video" : "image";
@@ -51,10 +52,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Ensure lock_xrge_amount + is_mature columns exist
       await sql`ALTER TABLE stories ADD COLUMN IF NOT EXISTS lock_xrge_amount TEXT DEFAULT NULL`.catch(() => {});
       await sql`ALTER TABLE stories ADD COLUMN IF NOT EXISTS is_mature BOOLEAN NOT NULL DEFAULT false`.catch(() => {});
+      await sql`ALTER TABLE stories ADD COLUMN IF NOT EXISTS preview_url TEXT`.catch(() => {});
 
       const rows = await sql`
-        INSERT INTO stories (user_id, media_url, media_type, caption, prompt, lock_cost, lock_xrge_amount, is_mature)
-        VALUES (${auth.userId}::uuid, ${mediaUrl}, ${type}, ${caption || ""}, ${prompt || ""}, ${cost}, ${xrgeAmount}, ${mature})
+        INSERT INTO stories (user_id, media_url, preview_url, media_type, caption, prompt, lock_cost, lock_xrge_amount, is_mature)
+        VALUES (${auth.userId}::uuid, ${mediaUrl}, ${previewUrl || null}, ${type}, ${caption || ""}, ${prompt || ""}, ${cost}, ${xrgeAmount}, ${mature})
         RETURNING id, created_at, expires_at
       `;
 
@@ -85,10 +87,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Ensure lock_xrge_amount + is_mature columns exist
       await sql`ALTER TABLE stories ADD COLUMN IF NOT EXISTS lock_xrge_amount TEXT DEFAULT NULL`.catch(() => {});
       await sql`ALTER TABLE stories ADD COLUMN IF NOT EXISTS is_mature BOOLEAN NOT NULL DEFAULT false`.catch(() => {});
+      await sql`ALTER TABLE stories ADD COLUMN IF NOT EXISTS preview_url TEXT`.catch(() => {});
 
       const rows = await sql`
         SELECT
-          s.id, s.user_id, s.media_url, s.media_type, s.caption, s.prompt,
+          s.id, s.user_id, s.media_url, s.preview_url, s.media_type, s.caption, s.prompt,
           s.created_at, s.expires_at, s.lock_cost,
           COALESCE(s.is_mature, false) AS is_mature,
           COALESCE(s.lock_xrge_amount, '') AS lock_xrge_amount,
@@ -125,10 +128,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const xrgePrice = parseFloat(r.lock_xrge_amount) || 0;
         const isLocked = (r.lock_cost > 0 || xrgePrice > 0) && !r.unlocked && !isOwner;
 
+        const preview = resolvePreviewUrl(r.preview_url, r.media_url) || undefined;
+
         grouped[r.user_id].stories.push({
           id: r.id,
           mediaUrl: isLocked ? "" : r.media_url,
-          previewUrl: isLocked ? r.media_url : undefined,
+          previewUrl: isLocked ? preview : undefined,
           mediaType: r.media_type,
           caption: isLocked ? "" : r.caption,
           prompt: isLocked ? "" : r.prompt,

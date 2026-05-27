@@ -1275,6 +1275,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
     try {
       const shareBase = (import.meta.env.VITE_API_URL as string) || "/api";
       let mediaUrl = result.url;
+      let previewUrl: string | undefined;
 
       // Upload if not already in permanent storage
       const isPermanent = isPermanentPublicMediaUrl(mediaUrl);
@@ -1310,7 +1311,9 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
         }
 
         if (mediaBlob) {
-          mediaUrl = await uploadPublicMedia(mediaBlob, "feed", result.type === "video" ? "post.mp4" : "post.png");
+          const uploaded = await uploadPublicMedia(mediaBlob, "feed", result.type === "video" ? "post.mp4" : "post.png");
+          mediaUrl = uploaded.url;
+          previewUrl = uploaded.previewUrl;
         }
       }
 
@@ -1325,6 +1328,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
         body: JSON.stringify({
           text: values.caption || result.revised_prompt || "",
           imageUrl: mediaUrl,
+          previewImageUrl: previewUrl,
           isMature: values.isMature,
           lockCost: values.lockCost,
           lockPriceCents: values.lockPriceCents,
@@ -1348,6 +1352,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
   const [storyPostingId, setStoryPostingId] = useState<string | null>(null);
   const [storyLockDialog, setStoryLockDialog] = useState<{
     mediaUrl: string;
+    previewUrl?: string;
     mediaType: string;
     caption: string;
     prompt: string;
@@ -1360,6 +1365,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
     try {
       // Reuse the share upload flow to get a public URL
       let mediaUrl = result.url;
+      let previewUrl: string | undefined;
 
       // Only skip upload if the URL is already in permanent blob storage
       const isPermanent = isPermanentPublicMediaUrl(mediaUrl);
@@ -1400,7 +1406,9 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
         }
 
         if (mediaBlob) {
-          mediaUrl = await uploadPublicMedia(mediaBlob, "stories", result.type === "video" ? "story.mp4" : "story.png");
+          const uploaded = await uploadPublicMedia(mediaBlob, "stories", result.type === "video" ? "story.mp4" : "story.png");
+          mediaUrl = uploaded.url;
+          previewUrl = uploaded.previewUrl;
         }
       }
 
@@ -1409,6 +1417,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
       setStoryLockXrge("");
       setStoryLockDialog({
         mediaUrl,
+        previewUrl,
         mediaType: result.type,
         caption: result.revised_prompt || "",
         prompt: result.revised_prompt || "",
@@ -1434,6 +1443,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
         },
         body: JSON.stringify({
           mediaUrl: storyLockDialog.mediaUrl,
+          previewUrl: storyLockDialog.previewUrl,
           mediaType: storyLockDialog.mediaType,
           caption: storyLockDialog.caption,
           prompt: storyLockDialog.prompt,

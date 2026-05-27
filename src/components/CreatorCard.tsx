@@ -52,7 +52,9 @@ const timeAgo = (iso: string) => {
 const CreatorCard: React.FC<Props> = ({ creator, onOpen, active, forceBlur, currentUserId }) => {
   const cardRef = useRef<HTMLButtonElement>(null);
   const [inView, setInView] = useState(false);
-  const previewImg = creator.latestImage || creator.previewImage;
+  const previewImg = forceBlur
+    ? creator.previewImage
+    : (creator.latestImage || creator.previewImage);
   const initials = (creator.username || "?").slice(0, 2).toUpperCase();
   const { matureFilter } = useMatureFilter();
   const isOwner = !!currentUserId && currentUserId === creator.userId;

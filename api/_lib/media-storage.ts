@@ -3,6 +3,15 @@
  */
 import { put } from "@vercel/blob";
 import { getPresignedUploadUrl, getPublicUrl, isR2MediaConfigured, uploadToR2 } from "./r2";
+import { generateImagePreviewBuffer } from "./image-preview";
+import { previewKeyForKey } from "./preview-url";
+
+export type MediaUploadResult = {
+  url: string;
+  previewUrl?: string;
+  storage: MediaStorageBackend;
+  key: string;
+};
 
 function blobToken(): string {
   return process.env.BLOB_READ_WRITE_TOKEN || process.env.grokrun_READ_WRITE_TOKEN || "";
@@ -42,37 +51,63 @@ function hasR2Credentials(): boolean {
   return !!(process.env.R2_ACCOUNT_ID && process.env.R2_ACCESS_KEY_ID && process.env.R2_SECRET_ACCESS_KEY);
 }
 
-/** Server-side upload — R2 when configured, else Vercel Blob. */
+/** Server-side upload — R2 when configured, else Vercel Blob. Generates WebP preview for images. */
 export async function uploadPublicMedia(
   buffer: Buffer,
   key: string,
   contentType: string,
-): Promise<{ url: string; storage: MediaStorageBackend; key: string }> {
+): Promise<MediaUploadResult> {
   const safeKey = sanitizeMediaKey(key);
+  let url: string;
+  let storage: MediaStorageBackend;
 
   if (hasR2Credentials()) {
     if (!isR2MediaConfigured()) {
       throw new Error(
-        "R2 credentials are set but R2_PUBLIC_BUCKET_URL (or R2_PUBLIC_DOMAIN) is missing. " +
-        "Add the public bucket URL in Vercel — Cloudflare R2 → grokker-media → Settings → Public Development URL.",
+        "R2 credentials are set but R2_PUBLIC_BUCKET_URL is missing. " +
+        "Add the bucket's Public Development URL (https://pub-xxxxx.r2.dev) in Vercel — no custom CDN domain required.",
       );
     }
     await uploadToR2(safeKey, buffer, contentType);
-    const url = getPublicUrl(safeKey);
+    url = getPublicUrl(safeKey);
     if (!url) throw new Error("R2 public URL not configured");
-    return { url, storage: "r2", key: safeKey };
+    storage = "r2";
+  } else {
+    const token = blobToken();
+    if (!token) throw new Error("No media storage configured (R2 or BLOB_READ_WRITE_TOKEN)");
+
+    const blob = await put(safeKey, buffer, {
+      access: "public",
+      contentType,
+      token,
+      cacheControlMaxAge: 31536000,
+    });
+    url = blob.url;
+    storage = "blob";
   }
 
-  const token = blobToken();
-  if (!token) throw new Error("No media storage configured (R2 or BLOB_READ_WRITE_TOKEN)");
+  let previewUrl: string | undefined;
+  const previewBuf = await generateImagePreviewBuffer(buffer, contentType);
+  if (previewBuf) {
+    const previewKey = previewKeyForKey(safeKey);
+    if (hasR2Credentials() && isR2MediaConfigured()) {
+      await uploadToR2(previewKey, previewBuf, "image/webp");
+      previewUrl = getPublicUrl(previewKey) || undefined;
+    } else {
+      const token = blobToken();
+      if (token) {
+        const previewBlob = await put(previewKey, previewBuf, {
+          access: "public",
+          contentType: "image/webp",
+          token,
+          cacheControlMaxAge: 31536000,
+        });
+        previewUrl = previewBlob.url;
+      }
+    }
+  }
 
-  const blob = await put(safeKey, buffer, {
-    access: "public",
-    contentType,
-    token,
-    cacheControlMaxAge: 31536000,
-  });
-  return { url: blob.url, storage: "blob", key: safeKey };
+  return { url, previewUrl, storage, key: safeKey };
 }
 
 /** Client direct-to-R2 presigned upload metadata. */

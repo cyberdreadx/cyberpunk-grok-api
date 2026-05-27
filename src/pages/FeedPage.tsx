@@ -76,7 +76,7 @@ const FeedPage: React.FC = () => {
   const [reelTarget, setReelTarget] = useState<{ postId: string; userId?: string } | null>(null);
   const [reelsOpen, setReelsOpen] = useState(false);
   const [libraryPickerOpen, setLibraryPickerOpen] = useState(false);
-  const [pickedMedia, setPickedMedia] = useState<{ url: string; type: "image" | "video"; prompt?: string } | null>(null);
+  const [pickedMedia, setPickedMedia] = useState<{ url: string; previewUrl?: string; type: "image" | "video"; prompt?: string } | null>(null);
   const [uploadingPick, setUploadingPick] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   // Idempotency key — regenerated for each fresh compose session and after
@@ -179,7 +179,10 @@ const FeedPage: React.FC = () => {
     setPosting(true);
     try {
       const body: any = { text: newText.trim() };
-      if (pickedMedia) body.imageUrl = pickedMedia.url;
+      if (pickedMedia) {
+        body.imageUrl = pickedMedia.url;
+        if (pickedMedia.previewUrl) body.previewImageUrl = pickedMedia.previewUrl;
+      }
       if (matureFlag) body.isMature = true;
       if (lockEnabled) {
         if (lockCredits) body.lockCost = parseInt(lockCredits) || 0;
@@ -226,8 +229,8 @@ const FeedPage: React.FC = () => {
   const handlePickFromLibrary = useCallback(async (result: GrokResult) => {
     setUploadingPick(true);
     try {
-      const url = await uploadLibraryItemForPost(result);
-      setPickedMedia({ url, type: result.type, prompt: result.revised_prompt });
+      const uploaded = await uploadLibraryItemForPost(result);
+      setPickedMedia({ url: uploaded.url, previewUrl: uploaded.previewUrl, type: result.type, prompt: result.revised_prompt });
       // If user hasn't typed anything, prefill with the prompt for context.
       setNewText((cur) => (cur.trim() ? cur : (result.revised_prompt || "")));
       setLibraryPickerOpen(false);

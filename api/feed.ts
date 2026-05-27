@@ -3,9 +3,27 @@ import { getUserFromRequest, checkBan, ADMIN_EMAIL } from "./_lib/auth";
 import { getDb } from "./_lib/db";
 import { hasPurchased, canPost, POSTING_GATE_MESSAGE } from "./_lib/purchaseGate";
 import { isVerified, VERIFICATION_REQUIRED_MESSAGE } from "./_lib/verifiedGate";
+import { resolvePreviewUrl } from "./_lib/preview-url";
 
 const MAX_LOCK_COST = 100;
 const MAX_LOCK_PRICE_CENTS = 10000; // $100 max
+
+/** Strip full-res URLs for locked posts and logged-out teasers. */
+function feedMediaFields(
+  row: { image_url?: string | null; preview_image_url?: string | null },
+  opts: { authUserId: string | null; isLocked: boolean; isOwner: boolean },
+) {
+  const preview = resolvePreviewUrl(row.preview_image_url, row.image_url) || undefined;
+  const full = row.image_url || undefined;
+  const showFull = opts.isOwner || (!opts.isLocked && !!opts.authUserId);
+  if (showFull) {
+    return { imageUrl: full || null, previewImageUrl: preview };
+  }
+  return {
+    imageUrl: null,
+    previewImageUrl: preview || (opts.isLocked ? full : undefined),
+  };
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -39,6 +57,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
         UNIQUE(post_id, user_id)
       )`.catch(() => {});
+      await sql`ALTER TABLE feed_posts ADD COLUMN IF NOT EXISTS preview_image_url TEXT`.catch(() => {});
       await sql`CREATE TABLE IF NOT EXISTS feed_moderators (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE UNIQUE,
@@ -81,7 +100,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const creatorRows = await sql`
           WITH latest AS (
             SELECT DISTINCT ON (p.user_id)
-              p.id, p.user_id, p.text, p.image_url, p.created_at,
+              p.id, p.user_id, p.text, p.image_url, p.preview_image_url, p.created_at,
               p.lock_cost, p.lock_price_cents, p.lock_xrge_amount
             FROM feed_posts p
             WHERE 1=1 ${followingFilter}
@@ -136,6 +155,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             l.user_id,
             l.text AS latest_text,
             l.image_url AS latest_image,
+            l.preview_image_url AS latest_preview,
             l.created_at AS latest_at,
             l.lock_cost, l.lock_price_cents, l.lock_xrge_amount,
             COALESCE((SELECT is_mature FROM feed_posts WHERE id = l.id), false) AS is_mature,
@@ -189,6 +209,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             const xrgePrice = parseFloat(r.lock_xrge_amount || "0") || 0;
             const isOwner = authUserId ? r.user_id === authUserId : false;
             const isLocked = (r.lock_cost > 0 || r.lock_price_cents > 0 || xrgePrice > 0) && !isOwner;
+            const media = feedMediaFields(
+              { image_url: r.latest_image, preview_image_url: r.latest_preview },
+              { authUserId, isLocked, isOwner },
+            );
             return {
               userId: r.user_id,
               username: r.username,
@@ -198,8 +222,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               recentScore: r.recent_score,
               latestPostId: r.latest_post_id,
               latestText: isLocked ? "" : r.latest_text,
-              latestImage: isLocked ? null : r.latest_image,
-              previewImage: isLocked && r.latest_image ? r.latest_image : undefined,
+              latestImage: media.imageUrl,
+              previewImage: media.previewImageUrl,
               latestAt: r.latest_at,
               latestLocked: isLocked,
               isMature: !!r.is_mature,
@@ -296,6 +320,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           const isOwner = authUserId ? r.user_id === authUserId : false;
           const xrgePrice = parseFloat(r.lock_xrge_amount || "0") || 0;
           const isLocked = (r.lock_cost > 0 || r.lock_price_cents > 0 || xrgePrice > 0) && !r.unlocked && !isOwner;
+          const media = feedMediaFields(
+            { image_url: r.image_url, preview_image_url: r.preview_image_url },
+            { authUserId, isLocked, isOwner },
+          );
 
           return {
             id: r.id,
@@ -304,8 +332,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             avatarUrl: r.avatar_url,
             authorVerified: !!r.author_verified,
             text: isLocked ? "" : r.text,
-            imageUrl: isLocked ? null : r.image_url,
-            previewImageUrl: isLocked && r.image_url ? r.image_url : undefined,
+            imageUrl: media.imageUrl,
+            previewImageUrl: media.previewImageUrl,
             previewText: isLocked && r.text ? r.text.slice(0, 60) + "..." : undefined,
             createdAt: r.created_at,
             score: r.score,
@@ -385,7 +413,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       }
 
-      const { text, imageUrl, lockCost, lockPriceCents, lockXrgeAmount, isMature } = req.body || {};
+      const { text, imageUrl, previewImageUrl, lockCost, lockPriceCents, lockXrgeAmount, isMature } = req.body || {};
       if (!text && !imageUrl) return res.status(400).json({ error: "Post must have text or image" });
       if (text && text.length > 2000) return res.status(400).json({ error: "Text too long (max 2000)" });
 
@@ -402,8 +430,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       const rows = await sql`
-        INSERT INTO feed_posts (user_id, text, image_url, lock_cost, lock_price_cents, lock_xrge_amount, is_mature)
-        VALUES (${auth.userId}, ${text || ""}, ${imageUrl || null}, ${cost}, ${priceCents}, ${xrgeAmount}, ${mature})
+        INSERT INTO feed_posts (user_id, text, image_url, preview_image_url, lock_cost, lock_price_cents, lock_xrge_amount, is_mature)
+        VALUES (${auth.userId}, ${text || ""}, ${imageUrl || null}, ${previewImageUrl || null}, ${cost}, ${priceCents}, ${xrgeAmount}, ${mature})
         RETURNING id, created_at
       `;
 

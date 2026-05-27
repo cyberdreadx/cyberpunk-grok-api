@@ -100,6 +100,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
 
   const isLocked = !isUnlocked && !post.isOwner && ((post.lockCost || 0) > 0 || (post.lockPriceCents || 0) > 0 || !!(post.lockXrgeAmount && parseFloat(post.lockXrgeAmount) > 0));
   const isMatureBlurred = !isLocked && matureFilter && matureFlagged && !matureRevealed && !post.isOwner;
+  const isTeaser = !isLocked && !post.imageUrl && !!post.previewImageUrl;
   const mainImageUrl = revealedImage || post.imageUrl;
   const mainMedia = useMediaSrc(mainImageUrl, { context: "post-card" });
   const previewMedia = useMediaSrc(post.previewImageUrl, { context: "post-preview" });
@@ -460,6 +461,21 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
                   </button>
                 </div>
               )}
+            </div>
+          )}
+          {isTeaser && post.previewImageUrl && (
+            <div className="relative w-full h-64 overflow-hidden">
+              <img
+                src={previewMedia.src}
+                alt=""
+                className="w-full h-full object-cover blur-xl scale-110 brightness-75"
+                loading="lazy"
+                decoding="async"
+                onError={previewMedia.onError}
+              />
+              <div className="absolute inset-0 flex items-center justify-center bg-background/20">
+                <p className="font-mono-share text-[10px] text-muted-foreground tracking-widest">SIGN IN TO VIEW</p>
+              </div>
             </div>
           )}
         </>
