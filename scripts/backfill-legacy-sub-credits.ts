@@ -34,10 +34,19 @@
 
 import Stripe from "stripe";
 import { neon } from "@neondatabase/serverless";
+import {
+  getCurrentSubPriceIds,
+  extractSubPriceIds,
+  getInvoiceSubscriptionId,
+  isLegacySubPrice,
+  computeLegacyCreditGrant,
+  parseCreditsPerMonthFromMeta,
+} from "../api/_lib/stripe-sub-prices.js";
 
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
 const DATABASE_URL = process.env.DATABASE_URL;
 const DRY_RUN = process.env.DRY_RUN !== "0" && !process.argv.includes("--apply");
+const RECORD_ONLY = process.argv.includes("--record-only") || process.env.RECORD_ONLY === "1";
 const SINCE = process.env.SINCE ? Math.floor(new Date(process.env.SINCE).getTime() / 1000) : undefined;
 const CREDITS_PER_DOLLAR = Number(process.env.LEGACY_CREDITS_PER_DOLLAR || 13);
 
@@ -47,22 +56,8 @@ if (!DATABASE_URL) throw new Error("DATABASE_URL required");
 const stripe = new Stripe(STRIPE_SECRET_KEY);
 const sql = neon(DATABASE_URL);
 
-// Build current-price set from env (matches webhook getPriceIdTierMap).
-const CURRENT_PRICE_IDS = new Set<string>(
-  [
-    "STRIPE_PRICE_SUB_BASIC", "STRIPE_PRICE_SUB_PREMIUM", "STRIPE_PRICE_SUB_PRO", "STRIPE_PRICE_SUB_ELITE",
-    "STRIPE_PRICE_SUB_BASIC_YEARLY", "STRIPE_PRICE_SUB_PREMIUM_YEARLY", "STRIPE_PRICE_SUB_PRO_YEARLY", "STRIPE_PRICE_SUB_ELITE_YEARLY",
-  ].map(k => process.env[k] || "").filter(Boolean)
-);
-
-let LEGACY_OVERRIDES: Record<string, number> = {};
-try {
-  if (process.env.STRIPE_LEGACY_PRICE_CREDITS) {
-    LEGACY_OVERRIDES = JSON.parse(process.env.STRIPE_LEGACY_PRICE_CREDITS);
-  }
-} catch (e: any) {
-  console.warn("[backfill] STRIPE_LEGACY_PRICE_CREDITS parse failed:", e.message);
-}
+// Build current-price set from env (matches webhook getCurrentSubPriceIds).
+const CURRENT_PRICE_IDS = getCurrentSubPriceIds();
 
 interface Stat {
   scanned: number;
@@ -104,17 +99,9 @@ async function resolveUserId(invoice: Stripe.Invoice): Promise<{ id: string | nu
   return { id: null };
 }
 
-function computeOwedCredits(priceIds: string[], amountPaidCents: number): number {
-  for (const pid of priceIds) {
-    if (LEGACY_OVERRIDES[pid] != null) return LEGACY_OVERRIDES[pid];
-  }
-  if (amountPaidCents <= 0) return 0;
-  return Math.max(1, Math.floor((amountPaidCents / 100) * CREDITS_PER_DOLLAR));
-}
-
 async function processInvoice(invoice: Stripe.Invoice) {
   stats.scanned++;
-  const subscriptionId = (invoice as any).subscription as string | null;
+  const subscriptionId = getInvoiceSubscriptionId(invoice);
   if (!subscriptionId || invoice.status !== "paid") {
     stats.skippedNonSub++;
     return;
@@ -122,22 +109,26 @@ async function processInvoice(invoice: Stripe.Invoice) {
 
   const line = (invoice as any).lines?.data?.[0];
   const priceIds: string[] = [];
-  const linePrice = line?.price?.id || line?.pricing?.price_details?.price;
-  if (linePrice) priceIds.push(linePrice);
-  // Pull subscription for sub-item price as a second candidate
+  let subscription: Stripe.Subscription | null = null;
   try {
-    const sub = await stripe.subscriptions.retrieve(subscriptionId);
-    const subItemPrice = (sub.items?.data?.[0] as any)?.price?.id;
-    if (subItemPrice && !priceIds.includes(subItemPrice)) priceIds.push(subItemPrice);
-  } catch {}
+    subscription = await stripe.subscriptions.retrieve(subscriptionId);
+    priceIds.push(...extractSubPriceIds(invoice, subscription));
+  } catch {
+    priceIds.push(...extractSubPriceIds(invoice, null));
+  }
 
   if (priceIds.length === 0) { stats.skippedNonSub++; return; }
-  if (priceIds.some(pid => CURRENT_PRICE_IDS.has(pid))) {
+  if (!isLegacySubPrice(priceIds)) {
     stats.skippedCurrent++;
     return;
   }
 
-  const owed = computeOwedCredits(priceIds, invoice.amount_paid || 0);
+  const creditsPerMonthMeta = subscription ? parseCreditsPerMonthFromMeta(subscription.metadata) : 0;
+  const owed = computeLegacyCreditGrant({
+    priceIds,
+    amountPaidCents: invoice.amount_paid || 0,
+    creditsPerMonthMeta: creditsPerMonthMeta || undefined,
+  });
   if (owed <= 0) { stats.skippedNonSub++; return; }
 
   const { id: userId, email } = await resolveUserId(invoice);
@@ -163,19 +154,31 @@ async function processInvoice(invoice: Stripe.Invoice) {
 
   if (!DRY_RUN) {
     try {
-      await sql`SELECT add_pack_credits(${userId}::uuid, ${delta})`;
-      // Upsert transaction row so we don't double-grant on re-run.
       if (existing[0]) {
         await sql`UPDATE transactions SET credits = ${owed}, package = 'legacy_backfill' WHERE stripe_session_id = ${invoice.id}`;
+        if (!RECORD_ONLY) {
+          const delta2 = owed - alreadyCredited;
+          if (delta2 > 0) await sql`SELECT add_pack_credits(${userId}::uuid, ${delta2})`;
+        }
       } else {
-        await sql`
+        const inserted = await sql`
           INSERT INTO transactions (user_id, credits, amount_cents, stripe_session_id, package, type, payment_method)
-          VALUES (${userId}::uuid, ${owed}, ${invoice.amount_paid || 0}, ${invoice.id}, 'legacy_backfill', 'subscription', 'unknown')
-          ON CONFLICT (stripe_session_id) DO NOTHING
+          SELECT ${userId}::uuid, ${owed}, ${invoice.amount_paid || 0}, ${invoice.id}, 'legacy_backfill', 'subscription', 'unknown'
+          WHERE NOT EXISTS (
+            SELECT 1 FROM transactions t WHERE t.stripe_session_id = ${invoice.id}
+          )
+          RETURNING id
         `;
+        if (inserted.length === 0) {
+          stats.skippedAlreadyCredited++;
+          return;
+        }
+        if (!RECORD_ONLY) {
+          await sql`SELECT add_pack_credits(${userId}::uuid, ${delta})`;
+        }
       }
       stats.granted++;
-      stats.creditsTotal += delta;
+      stats.creditsTotal += RECORD_ONLY ? 0 : delta;
     } catch (e: any) {
       stats.errors++;
       console.error(`[backfill] grant FAILED for invoice ${invoice.id}:`, e.message);
@@ -188,9 +191,8 @@ async function processInvoice(invoice: Stripe.Invoice) {
 
 async function main() {
   console.log("=== Legacy Subscription Credit Backfill ===");
-  console.log("Mode:", DRY_RUN ? "DRY RUN (no writes)" : "APPLY (writing changes)");
+  console.log("Mode:", RECORD_ONLY ? "RECORD ONLY (ledger rows, no credits)" : DRY_RUN ? "DRY RUN (no writes)" : "APPLY (writing changes)");
   console.log("Current price IDs (skip these):", [...CURRENT_PRICE_IDS]);
-  console.log("Legacy overrides:", LEGACY_OVERRIDES);
   console.log("Credits/$:", CREDITS_PER_DOLLAR);
   console.log("Since:", SINCE ? new Date(SINCE * 1000).toISOString() : "(all)");
   console.log("");

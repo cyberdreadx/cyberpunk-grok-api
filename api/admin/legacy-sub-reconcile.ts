@@ -18,6 +18,14 @@ import Stripe from "stripe";
 import { getDb } from "../_lib/db";
 import { getUserFromRequest, ADMIN_EMAIL } from "../_lib/auth";
 import { applyCors } from "../_lib/cors";
+import {
+  getCurrentSubPriceIds,
+  extractSubPriceIds,
+  isLegacySubPrice,
+  computeLegacyCreditGrant,
+  parseCreditsPerMonthFromMeta,
+  getInvoiceSubscriptionId,
+} from "../_lib/stripe-sub-prices";
 
 const CREDITS_PER_DOLLAR = Number(process.env.LEGACY_CREDITS_PER_DOLLAR || 13);
 
@@ -27,29 +35,28 @@ function isAdmin(req: VercelRequest): boolean {
 }
 
 function currentPriceIds(): Set<string> {
-  return new Set(
-    [
-      "STRIPE_PRICE_SUB_BASIC", "STRIPE_PRICE_SUB_PREMIUM", "STRIPE_PRICE_SUB_PRO", "STRIPE_PRICE_SUB_ELITE",
-      "STRIPE_PRICE_SUB_BASIC_YEARLY", "STRIPE_PRICE_SUB_PREMIUM_YEARLY", "STRIPE_PRICE_SUB_PRO_YEARLY", "STRIPE_PRICE_SUB_ELITE_YEARLY",
-    ].map(k => process.env[k] || "").filter(Boolean)
-  );
+  return getCurrentSubPriceIds();
 }
 
-function legacyOverrides(): Record<string, number> {
-  try {
-    const raw = process.env.STRIPE_LEGACY_PRICE_CREDITS;
-    return raw ? JSON.parse(raw) : {};
-  } catch {
-    return {};
+async function computeOwedForInvoice(
+  stripe: Stripe,
+  invoice: Stripe.Invoice,
+  priceIds: string[]
+): Promise<number> {
+  if (!isLegacySubPrice(priceIds)) return 0;
+  let creditsPerMonthMeta = 0;
+  const subId = getInvoiceSubscriptionId(invoice);
+  if (subId) {
+    try {
+      const sub = await stripe.subscriptions.retrieve(subId);
+      creditsPerMonthMeta = parseCreditsPerMonthFromMeta(sub.metadata);
+    } catch {}
   }
-}
-
-function computeOwed(priceIds: string[], amountPaidCents: number, overrides: Record<string, number>): number {
-  for (const pid of priceIds) {
-    if (overrides[pid] != null) return overrides[pid];
-  }
-  if (amountPaidCents <= 0) return 0;
-  return Math.max(1, Math.floor((amountPaidCents / 100) * CREDITS_PER_DOLLAR));
+  return computeLegacyCreditGrant({
+    priceIds,
+    amountPaidCents: invoice.amount_paid || 0,
+    creditsPerMonthMeta: creditsPerMonthMeta || undefined,
+  });
 }
 
 interface ReconcileRow {
@@ -91,7 +98,6 @@ async function resolveUser(sql: any, stripe: Stripe, invoice: Stripe.Invoice): P
 
 async function buildReport(sql: any, stripe: Stripe, since: number | undefined, limit: number): Promise<ReconcileRow[]> {
   const current = currentPriceIds();
-  const overrides = legacyOverrides();
   const out: ReconcileRow[] = [];
   let cursor: string | undefined;
   let scanned = 0;
@@ -105,23 +111,20 @@ async function buildReport(sql: any, stripe: Stripe, since: number | undefined, 
     const batch = await stripe.invoices.list(params);
     for (const inv of batch.data) {
       scanned++;
-      const subId = (inv as any).subscription as string | null;
+      const subId = getInvoiceSubscriptionId(inv);
       if (!subId) continue;
 
       const line = (inv as any).lines?.data?.[0];
-      const priceIds: string[] = [];
-      const linePid = line?.price?.id || line?.pricing?.price_details?.price;
-      if (linePid) priceIds.push(linePid);
+      let subscription: Stripe.Subscription | null = null;
       try {
-        const sub = await stripe.subscriptions.retrieve(subId);
-        const subPid = (sub.items?.data?.[0] as any)?.price?.id;
-        if (subPid && !priceIds.includes(subPid)) priceIds.push(subPid);
+        subscription = await stripe.subscriptions.retrieve(subId);
       } catch {}
+      const priceIds = extractSubPriceIds(inv, subscription);
       if (priceIds.length === 0) continue;
       // Skip current-price subs (they use discount-only model, no credits owed).
       if (priceIds.some(p => current.has(p))) continue;
 
-      const owed = computeOwed(priceIds, inv.amount_paid || 0, overrides);
+      const owed = await computeOwedForInvoice(stripe, inv, priceIds);
       if (owed <= 0) continue;
 
       const { userId, userEmail } = await resolveUser(sql, stripe, inv);
@@ -160,7 +163,6 @@ async function applyGrants(sql: any, stripe: Stripe, invoiceIds: string[]): Prom
   granted: { invoiceId: string; userId: string; credits: number }[];
   skipped: { invoiceId: string; reason: string }[];
 }> {
-  const overrides = legacyOverrides();
   const current = currentPriceIds();
   const granted: { invoiceId: string; userId: string; credits: number }[] = [];
   const skipped: { invoiceId: string; reason: string }[] = [];
@@ -170,20 +172,17 @@ async function applyGrants(sql: any, stripe: Stripe, invoiceIds: string[]): Prom
       const inv = await stripe.invoices.retrieve(id);
       if (inv.status !== "paid") { skipped.push({ invoiceId: id, reason: `not paid (${inv.status})` }); continue; }
       const line = (inv as any).lines?.data?.[0];
-      const priceIds: string[] = [];
-      const linePid = line?.price?.id || line?.pricing?.price_details?.price;
-      if (linePid) priceIds.push(linePid);
-      const subId = (inv as any).subscription as string | null;
+      let subscription: Stripe.Subscription | null = null;
+      const subId = getInvoiceSubscriptionId(inv);
       if (subId) {
         try {
-          const sub = await stripe.subscriptions.retrieve(subId);
-          const subPid = (sub.items?.data?.[0] as any)?.price?.id;
-          if (subPid && !priceIds.includes(subPid)) priceIds.push(subPid);
+          subscription = await stripe.subscriptions.retrieve(subId);
         } catch {}
       }
+      const priceIds = extractSubPriceIds(inv, subscription);
       if (priceIds.some(p => current.has(p))) { skipped.push({ invoiceId: id, reason: "current price (no credits owed)" }); continue; }
 
-      const owed = computeOwed(priceIds, inv.amount_paid || 0, overrides);
+      const owed = await computeOwedForInvoice(stripe, inv, priceIds);
       if (owed <= 0) { skipped.push({ invoiceId: id, reason: "owed=0" }); continue; }
 
       const { userId } = await resolveUser(sql, stripe, inv);
@@ -194,16 +193,19 @@ async function applyGrants(sql: any, stripe: Stripe, invoiceIds: string[]): Prom
       const delta = owed - already;
       if (delta <= 0) { skipped.push({ invoiceId: id, reason: "already fully credited" }); continue; }
 
-      await sql`SELECT add_pack_credits(${userId}::uuid, ${delta})`;
       if (ex[0]) {
         await sql`UPDATE transactions SET credits = ${owed}, package = 'legacy_backfill' WHERE stripe_session_id = ${inv.id}`;
       } else {
-        await sql`
+        const inserted = await sql`
           INSERT INTO transactions (user_id, credits, amount_cents, stripe_session_id, package, type, payment_method)
-          VALUES (${userId}::uuid, ${owed}, ${inv.amount_paid || 0}, ${inv.id}, 'legacy_backfill', 'subscription', 'unknown')
-          ON CONFLICT (stripe_session_id) DO NOTHING
+          SELECT ${userId}::uuid, ${owed}, ${inv.amount_paid || 0}, ${inv.id}, 'legacy_backfill', 'subscription', 'unknown'
+          WHERE NOT EXISTS (SELECT 1 FROM transactions t WHERE t.stripe_session_id = ${inv.id})
+          RETURNING id
         `;
+        if (inserted.length === 0) { skipped.push({ invoiceId: id, reason: "already recorded" }); continue; }
       }
+
+      await sql`SELECT add_pack_credits(${userId}::uuid, ${delta})`;
       // Persist customer id back if missing.
       if (inv.customer) {
         await sql`UPDATE users SET stripe_customer_id = ${inv.customer as string} WHERE id = ${userId}::uuid AND stripe_customer_id IS NULL`;

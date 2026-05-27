@@ -3,6 +3,10 @@
 # v2 pricing — repriced to absorb 17.5% Stripe loan deduction
 # AND flip subscriptions to per-generation discounts (no monthly credits).
 #
+# DEPRECATED for subscriptions — v3 ladder is $9/$19/$39/$79 (CASUAL→POWER USER).
+# Use setup-stripe-sub-prices-v3.ts or setup-stripe-products-v3.sh for subs only.
+# This script still valid if you need to recreate credit-pack price IDs.
+#
 # Usage:
 #   bash scripts/setup-stripe-products-v2.sh           # test
 #   bash scripts/setup-stripe-products-v2.sh --live    # production

@@ -15,6 +15,15 @@ import {
   sendVerificationPaymentReceiptEmail,
   sendVerificationApprovedEmail,
 } from "./_lib/email";
+import {
+  TIER_DISCOUNT_PCT,
+  getPriceIdTierMap,
+  extractSubPriceIds,
+  isLegacySubPrice,
+  computeLegacyCreditGrant,
+  parseCreditsPerMonthFromMeta,
+  getInvoiceSubscriptionId,
+} from "./_lib/stripe-sub-prices";
 
 // Vercel needs raw body for signature verification
 export const config = { api: { bodyParser: false } };
@@ -64,61 +73,45 @@ async function detectPaymentMethod(stripe: Stripe, session: any): Promise<string
   return "unknown";
 }
 
-// Subscriptions no longer grant monthly credits — they apply a permanent
-// per-generation discount while active. This map is the single source of truth
-// for the discount % per tier on the backend (mirrors src/lib/api.ts).
-const TIER_DISCOUNT_PCT: Record<string, number> = {
-  basic: 15, "basic-yearly": 15,
-  premium: 30, "premium-yearly": 30,
-  pro: 50, "pro-yearly": 50,
-  elite: 70, "elite-yearly": 70,
-};
+async function resolveUserIdFromInvoice(
+  sql: any,
+  stripe: Stripe,
+  invoice: Stripe.Invoice,
+  metaUserId: string
+): Promise<string | null> {
+  if (metaUserId) return metaUserId;
 
-// Map from Stripe price ID → tier id. Built lazily from env vars + an optional
-// STRIPE_LEGACY_PRICE_MAP (JSON like {"price_xxx":"premium","price_yyy":"pro-yearly"}).
-// Used as a fallback when subscription/invoice metadata is missing or out of date
-// (e.g. customers who subscribed BEFORE we started writing tier metadata, or on a
-// previous price ID that has since been replaced).
-let _priceIdTierMap: Record<string, string> | null = null;
-function getPriceIdTierMap(): Record<string, string> {
-  if (_priceIdTierMap) return _priceIdTierMap;
-  const map: Record<string, string> = {};
-  const envKeys: Record<string, string> = {
-    STRIPE_PRICE_SUB_BASIC: "basic",
-    STRIPE_PRICE_SUB_PREMIUM: "premium",
-    STRIPE_PRICE_SUB_PRO: "pro",
-    STRIPE_PRICE_SUB_ELITE: "elite",
-    STRIPE_PRICE_SUB_BASIC_YEARLY: "basic-yearly",
-    STRIPE_PRICE_SUB_PREMIUM_YEARLY: "premium-yearly",
-    STRIPE_PRICE_SUB_PRO_YEARLY: "pro-yearly",
-    STRIPE_PRICE_SUB_ELITE_YEARLY: "elite-yearly",
-  };
-  for (const [envKey, tier] of Object.entries(envKeys)) {
-    const id = process.env[envKey];
-    if (id) map[id] = tier;
-  }
-  // Legacy price IDs (from previous price tables). Format:
-  // STRIPE_LEGACY_PRICE_MAP='{"price_abc":"premium","price_def":"pro-yearly"}'
-  try {
-    const raw = process.env.STRIPE_LEGACY_PRICE_MAP;
-    if (raw) {
-      const legacy = JSON.parse(raw) as Record<string, string>;
-      for (const [pid, tier] of Object.entries(legacy)) {
-        if (TIER_DISCOUNT_PCT[tier] != null) map[pid] = tier;
-      }
+  if (invoice.customer) {
+    const [u] = await sql`
+      SELECT id FROM users WHERE stripe_customer_id = ${invoice.customer as string} LIMIT 1
+    `.catch(() => [null]);
+    if (u?.id) {
+      console.log(`[webhook] invoice.paid: resolved user ${u.id} via stripe_customer_id`);
+      return u.id;
     }
-  } catch (e: any) {
-    console.warn("[webhook] STRIPE_LEGACY_PRICE_MAP parse failed:", e.message);
   }
-  _priceIdTierMap = map;
-  return map;
-}
 
-// Legacy: still used for transaction logging, but no longer added to sub_credits.
-const TIER_CREDITS: Record<string, number> = {
-  basic: 0, premium: 0, pro: 0, elite: 0,
-  "basic-yearly": 0, "premium-yearly": 0, "pro-yearly": 0, "elite-yearly": 0,
-};
+  let email = (invoice as any).customer_email as string | undefined;
+  if (!email && invoice.customer) {
+    try {
+      const c = await stripe.customers.retrieve(invoice.customer as string);
+      if (!(c as any).deleted) email = (c as Stripe.Customer).email || undefined;
+    } catch {
+      // ignore
+    }
+  }
+  if (email) {
+    const [u] = await sql`
+      SELECT id FROM users WHERE LOWER(email) = LOWER(${email}) LIMIT 1
+    `.catch(() => [null]);
+    if (u?.id) {
+      console.log(`[webhook] invoice.paid: resolved user ${u.id} via email ${email}`);
+      return u.id;
+    }
+  }
+
+  return null;
+}
 
 /**
  * Check if an event has already been processed. If not, mark it as processed.
@@ -310,7 +303,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // (No more bonus credits — that's the whole point: stops cancel→resubscribe farming.)
     if (event.type === "invoice.paid") {
       const invoice = event.data.object as Stripe.Invoice;
-      const subscriptionId = (invoice as any).subscription as string | null;
+      const subscriptionId = getInvoiceSubscriptionId(invoice);
       if (!subscriptionId) return res.status(200).json({ received: true });
 
       const subDetails = (invoice as any).parent?.subscription_details?.metadata
@@ -339,12 +332,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // `tier` into metadata, or who are on an old price ID that has since been swapped.
       let resolvedTier = meta.tier;
       const priceMap = getPriceIdTierMap();
-      const candidatePriceIds: string[] = [];
-      const invLine = (invoice as any).lines?.data?.[0];
-      const invPriceId = invLine?.price?.id || invLine?.pricing?.price_details?.price;
-      if (invPriceId) candidatePriceIds.push(invPriceId);
-      const subItem: any = subscription?.items?.data?.[0];
-      if (subItem?.price?.id) candidatePriceIds.push(subItem.price.id);
+      const candidatePriceIds = extractSubPriceIds(invoice, subscription);
       if (!resolvedTier || !TIER_DISCOUNT_PCT[resolvedTier]) {
         for (const pid of candidatePriceIds) {
           if (priceMap[pid]) { resolvedTier = priceMap[pid]; break; }
@@ -354,40 +342,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       }
 
-      // Detect legacy-price subscribers: price ID is NOT in our current STRIPE_PRICE_SUB_* map.
-      // These customers are still being billed at the OLD (often higher) price by Stripe,
-      // but the new model grants 0 monthly credits — so without compensation they pay for
-      // nothing. Grant equivalent credits derived from amount_paid (matches our pack ratio
-      // of ~13 credits/$ on the Pro pack so legacy subscribers aren't shortchanged).
-      const isLegacyPrice = candidatePriceIds.length > 0 && !candidatePriceIds.some(pid => priceMap[pid]);
+      // Legacy = still billed on a pre-v3 Stripe price ID (grandfathered subs).
+      // They must receive credits — v3 subs are discount-only (0 monthly credits).
+      const isLegacyPrice = isLegacySubPrice(candidatePriceIds);
+      const creditsPerMonthMeta = parseCreditsPerMonthFromMeta(
+        subscription?.metadata,
+        subDetails,
+        lineItemMeta,
+        (invoice as any).lines?.data?.[0]?.metadata
+      );
       let legacyCreditGrant = 0;
-      if (isLegacyPrice && (invoice.amount_paid || 0) > 0) {
-        try {
-          const overrideRaw = process.env.STRIPE_LEGACY_PRICE_CREDITS;
-          if (overrideRaw) {
-            const overrides = JSON.parse(overrideRaw) as Record<string, number>;
-            for (const pid of candidatePriceIds) {
-              if (overrides[pid] != null) { legacyCreditGrant = overrides[pid]; break; }
-            }
-          }
-        } catch (e: any) {
-          console.warn("[webhook] STRIPE_LEGACY_PRICE_CREDITS parse failed:", e.message);
-        }
-        if (legacyCreditGrant <= 0) {
-          // ~13 credits per $1 (matches Pro pack: 240 credits / $18.99).
-          legacyCreditGrant = Math.max(1, Math.floor(((invoice.amount_paid || 0) / 100) * 13));
-        }
+      if (isLegacyPrice) {
+        legacyCreditGrant = computeLegacyCreditGrant({
+          priceIds: candidatePriceIds,
+          amountPaidCents: invoice.amount_paid || 0,
+          creditsPerMonthMeta: creditsPerMonthMeta || undefined,
+        });
       }
 
-      // Fallback 2: resolve user_id from stripe_customer_id on file.
-      let userId = meta.user_id;
-      if (!userId && invoice.customer) {
-        const [u] = await sql`SELECT id FROM users WHERE stripe_customer_id = ${invoice.customer as string} LIMIT 1`.catch(() => [null]);
-        if (u?.id) {
-          userId = u.id;
-          console.log(`[webhook] invoice.paid: resolved user ${userId} via stripe_customer_id fallback`);
-        }
-      }
+      const userId = await resolveUserIdFromInvoice(sql, stripe, invoice, meta.user_id);
 
       const tier = resolvedTier;
       const discountPct = parseInt(meta.discount_pct, 10) || TIER_DISCOUNT_PCT[tier] || 0;
@@ -401,9 +374,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           customerId: invoice.customer,
           amountPaidCents: invoice.amount_paid,
           userId, tier, discountPct, legacyCreditGrant, isLegacyPrice,
+          candidatePriceIds,
+          creditsPerMonthMeta,
           subDetails, lineItemMeta,
           subMetadata: subscription?.metadata,
-          linePriceId: (invoice as any).lines?.data?.[0]?.price?.id,
         });
         return res.status(200).json({ received: true, unresolved: true });
       }
@@ -522,7 +496,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           buyerUserId = s.client_reference_id || s.metadata?.user_id || null;
         } else if (event.type === "invoice.paid") {
           const inv = event.data.object as Stripe.Invoice;
-          const subId = (inv as any).subscription as string | null;
+          const subId = getInvoiceSubscriptionId(inv);
           if (subId) {
             const sub = await stripe.subscriptions.retrieve(subId);
             buyerUserId = sub.metadata?.user_id || null;
@@ -571,7 +545,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // amount = credit toward their next invoice) and a counter for the UI.
         if (buyerUserId && event.type === "invoice.paid") {
           const inv = event.data.object as Stripe.Invoice;
-          const subId = (inv as any).subscription as string | null;
+          const subId = getInvoiceSubscriptionId(inv);
           if (subId) {
             const [refSub] = await sql`
               UPDATE referrals
@@ -705,7 +679,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Verification subscription invoice paid → bump renews_at
     if (event.type === "invoice.paid") {
       const inv = event.data.object as any;
-      const subId = inv.subscription as string | null;
+      const subId = getInvoiceSubscriptionId(inv);
       const lineMeta = inv.lines?.data?.[0]?.metadata || {};
       const isVerifySub = lineMeta.type === "creator_verification";
       if (subId && isVerifySub && lineMeta.user_id) {
