@@ -64,7 +64,7 @@ export default defineConfig(({ mode }) => {
         skipWaiting: true,
         clientsClaim: true,
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
-        globIgnores: ["**/heic2any-*.js", "**/vendor-3d-*.js", "**/vendor-charts-*.js"],
+        globIgnores: ["**/heic2any-*.js", "**/heic-to-*.js", "**/vendor-3d-*.js", "**/vendor-charts-*.js"],
         // Never let the SW intercept API calls or share pages
         navigateFallback: "/index.html",
         navigateFallbackDenylist: [/^\/api\//, /^\/s\//],

@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import { Download, Maximize2, X, Trash2, ExternalLink, ChevronLeft, ChevronRight, Pencil, Film, Copy, Check, FolderPlus, FolderOpen, MoreVertical, FolderInput, Lock, LockOpen, ShieldCheck, Eye, EyeOff, ChevronDown, Send, Archive, Loader2, Link2, CheckSquare, Square, ListChecks, RotateCcw, XCircle, Search, CirclePlus } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Download, Maximize2, X, Trash2, ExternalLink, ChevronLeft, ChevronRight, Pencil, Film, Copy, Check, FolderPlus, FolderOpen, MoreVertical, FolderInput, Lock, LockOpen, ShieldCheck, Eye, EyeOff, ChevronDown, Send, Archive, Loader2, Link2, CheckSquare, Square, ListChecks, RotateCcw, XCircle, Search, CirclePlus, Lightbulb } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -28,7 +29,7 @@ import type { FolderFilter } from "@/hooks/useFolders";
 import { useSwipe } from "@/hooks/useSwipe";
 import ShareCTA from "@/components/ShareCTA";
 import PostToFeedDialog, { type PostToFeedValues } from "@/components/PostToFeedDialog";
-import { upload } from "@vercel/blob/client";
+import { isPermanentPublicMediaUrl, uploadPublicMedia } from "@/lib/mediaUpload";
 import { apiUrl } from "@/lib/api";
 
 // ── PIN Utilities ────────────────────────────────────────────────────────
@@ -852,6 +853,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
   onTypeFilterChange,
 }) => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [mobileIndex, setMobileIndex] = useState(0);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -1083,6 +1085,19 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
     } catch { /* clipboard blocked */ }
   }, []);
 
+  const handleSharePrompt = useCallback((result: GrokResult) => {
+    if (!result.revised_prompt) return;
+    sessionStorage.setItem(
+      "prompt-share-draft",
+      JSON.stringify({
+        prompt: result.revised_prompt,
+        exampleImageUrl: result.type === "image" ? result.url : "",
+        mode: result.type === "video" ? "text-to-video" : "text-to-image",
+      })
+    );
+    navigate("/prompts?share=1");
+  }, [navigate]);
+
   const handleMove = useCallback(async (resultId: string, folderId: string | null) => {
     if (onMoveToFolder) {
       await onMoveToFolder(resultId, folderId);
@@ -1262,7 +1277,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
       let mediaUrl = result.url;
 
       // Upload if not already in permanent storage
-      const isPermanent = mediaUrl.includes("blob.vercel-storage.com");
+      const isPermanent = isPermanentPublicMediaUrl(mediaUrl);
       if (!isPermanent) {
         let mediaBlob: Blob | null = null;
         const src = result.url;
@@ -1295,14 +1310,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
         }
 
         if (mediaBlob) {
-          const ext = result.type === "video" ? "mp4" : "png";
-          const authToken = localStorage.getItem("auth-token") || "";
-          const { url: blobUrl } = await upload(`feed/post.${ext}`, mediaBlob, {
-            access: "public",
-            handleUploadUrl: `${shareBase}/blob-upload`,
-            clientPayload: authToken,
-          });
-          mediaUrl = blobUrl;
+          mediaUrl = await uploadPublicMedia(mediaBlob, "feed", result.type === "video" ? "post.mp4" : "post.png");
         }
       }
 
@@ -1354,7 +1362,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
       let mediaUrl = result.url;
 
       // Only skip upload if the URL is already in permanent blob storage
-      const isPermanent = mediaUrl.includes("blob.vercel-storage.com");
+      const isPermanent = isPermanentPublicMediaUrl(mediaUrl);
       if (!isPermanent) {
         let mediaBlob: Blob | null = null;
         const src = result.url;
@@ -1392,14 +1400,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
         }
 
         if (mediaBlob) {
-          const ext = result.type === "video" ? "mp4" : "png";
-          const authToken = localStorage.getItem("auth-token") || "";
-          const { url: blobUrl } = await upload(`stories/story.${ext}`, mediaBlob, {
-            access: "public",
-            handleUploadUrl: apiUrl("/blob-upload"),
-            clientPayload: authToken,
-          });
-          mediaUrl = blobUrl;
+          mediaUrl = await uploadPublicMedia(mediaBlob, "stories", result.type === "video" ? "story.mp4" : "story.png");
         }
       }
 
@@ -1586,6 +1587,13 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
             ) : (
               <Copy className="w-3 h-3 text-muted-foreground/40 hover:text-primary" />
             )}
+          </button>
+          <button
+            onClick={() => handleSharePrompt(result)}
+            className="p-0.5 rounded hover:bg-secondary/10 transition-colors"
+            title="Share to prompt board"
+          >
+            <Lightbulb className="w-3 h-3 text-muted-foreground/40 hover:text-secondary" />
           </button>
         </div>
         <p className="font-rajdhani text-xs text-foreground/70 leading-relaxed line-clamp-3">
@@ -2553,6 +2561,13 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
                     ) : (
                       <Copy className="w-3.5 h-3.5 text-muted-foreground/40 hover:text-primary" />
                     )}
+                  </button>
+                  <button
+                    onClick={() => handleSharePrompt(expandedResult)}
+                    className="p-0.5 rounded hover:bg-secondary/10 transition-colors"
+                    title="Share to prompt board"
+                  >
+                    <Lightbulb className="w-3.5 h-3.5 text-muted-foreground/40 hover:text-secondary" />
                   </button>
                 </div>
                 <p className="font-rajdhani text-sm text-foreground/80 leading-relaxed">

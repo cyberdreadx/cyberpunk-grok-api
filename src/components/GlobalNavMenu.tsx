@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Menu, Rss, Sparkles, Users, Star, ShieldAlert, FolderOpen, MessageCircle } from "lucide-react";
+import { Menu, Rss, Sparkles, Users, Star, ShieldAlert, FolderOpen, MessageCircle, Lightbulb } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -80,6 +80,7 @@ const GlobalNavMenu: React.FC = () => {
                 {navItem("/", Rss, "FEED")}
                 {navItem("/create", Sparkles, "CREATE")}
                 {navItem("/library", FolderOpen, "LIBRARY")}
+                {navItem("/prompts", Lightbulb, "PROMPTS", "secondary")}
                 {navItem("/creators", Users, "MODELS")}
                 {navItem("/characters", MessageCircle, "CHARACTERS")}
                 {navItem("/apply", Star, "APPLY")}
