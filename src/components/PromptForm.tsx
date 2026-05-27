@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { GrokMode, GenerationSettings } from "@/hooks/useGrokApi";
 import { apiFetch } from "@/lib/api";
-import { upload } from "@vercel/blob/client";
+import { uploadPublicMedia } from "@/lib/mediaUpload";
 import { toast } from "sonner";
 import { normalizeToImageBlob, isAcceptableImageLike } from "@/lib/heicConvert";
 
@@ -142,19 +142,12 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
   };
 
   const uploadToBlob = async (blob: Blob, filename: string): Promise<string> => {
-    const token = localStorage.getItem("auth-token") || "";
-    if (!token) throw new Error("Sign in required to upload images.");
     const ext = blob.type === "image/png" ? "png"
       : blob.type === "image/webp" ? "webp"
       : blob.type.startsWith("video/") ? (blob.type.split("/")[1] || "mp4")
       : "jpg";
     const safeName = `${Date.now()}-${filename.replace(/[^\w.-]/g, "_") || "upload"}.${ext}`;
-    const result = await upload(safeName, blob, {
-      access: "public",
-      handleUploadUrl: "/api/blob-upload",
-      clientPayload: token,
-    });
-    return result.url;
+    return uploadPublicMedia(blob, "prompts", safeName);
   };
 
   const fileToUploadedUrl = async (file: File): Promise<string> => {

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Loader2, Sparkles, DollarSign, ShieldCheck, Globe2, ChevronRight, Check, Upload, X, ImagePlus, AlertCircle, Crop as CropIcon, Star } from "lucide-react";
-import { upload } from "@vercel/blob/client";
+import { uploadPublicMedia } from "@/lib/mediaUpload";
 import CropDialog from "@/components/CropDialog";
 import CreatorPreviewCard from "@/components/CreatorPreviewCard";
 import { Button } from "@/components/ui/button";
@@ -133,19 +133,9 @@ export default function ApplyPage() {
       const authToken = localStorage.getItem("auth-token") || "";
       if (!authToken) throw new Error("Not authenticated");
       const ext = item.file.type === "image/png" ? "png" : item.file.type === "image/webp" ? "webp" : "jpg";
-      const path = `creator-applications/sample.${ext}`;
-      const result = await upload(path, item.file, {
-        access: "public",
-        handleUploadUrl: `${apiUrl("")}/blob-upload`,
-        clientPayload: authToken,
-        onUploadProgress: ({ percentage }) => {
-          setPhotos((prev) => prev.map((p) =>
-            p.id === item.id ? { ...p, progress: Math.max(5, Math.min(99, percentage)) } : p
-          ));
-        },
-      });
+      const uploadedUrl = await uploadPublicMedia(item.file, "creator-applications", `sample.${ext}`);
       setPhotos((prev) => prev.map((p) =>
-        p.id === item.id ? { ...p, status: "done", progress: 100, uploadedUrl: result.url } : p
+        p.id === item.id ? { ...p, status: "done", progress: 100, uploadedUrl } : p
       ));
     } catch (e: any) {
       setPhotos((prev) => prev.map((p) =>

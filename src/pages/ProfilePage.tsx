@@ -15,7 +15,7 @@ import VerifiedBadge from "@/components/VerifiedBadge";
 import VerificationDialog from "@/components/VerificationDialog";
 import HolderBadge from "@/components/HolderBadge";
 import { useToast } from "@/hooks/use-toast";
-import { upload } from "@vercel/blob/client";
+import { uploadPublicMedia } from "@/lib/mediaUpload";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import MobileCreditsPill from "@/components/MobileCreditsPill";
 import StoreOverlay from "@/components/StoreOverlay";
@@ -152,13 +152,8 @@ const ProfilePage: React.FC = () => {
     }
     setAvatarUploading(true);
     try {
-      const authToken = localStorage.getItem("auth-token") || "";
-      const apiBase = import.meta.env.VITE_API_URL || "/api";
-      const { url: blobUrl } = await upload(`avatars/avatar.${file.name.split(".").pop()}`, file, {
-        access: "public",
-        handleUploadUrl: `${apiBase}/blob-upload`,
-        clientPayload: authToken,
-      });
+      const ext = file.name.split(".").pop() || "jpg";
+      const blobUrl = await uploadPublicMedia(file, "avatars", `avatar.${ext}`);
       await apiFetch("/profile", {
         method: "PUT",
         body: { avatarUrl: blobUrl },

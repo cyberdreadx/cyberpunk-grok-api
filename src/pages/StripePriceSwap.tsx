@@ -68,7 +68,10 @@ export default function StripePriceSwap() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const token = useMemo(() => localStorage.getItem("gltch:jwt") || localStorage.getItem("jwt") || "", []);
+  const token = useMemo(
+    () => localStorage.getItem("auth-token") || localStorage.getItem("gltch:jwt") || localStorage.getItem("jwt") || "",
+    [],
+  );
 
   useEffect(() => {
     localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));

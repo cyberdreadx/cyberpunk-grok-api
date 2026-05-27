@@ -15,7 +15,6 @@
 
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { S3Client, GetObjectCommand, DeleteObjectCommand, ListObjectsV2Command, DeleteObjectsCommand } from "@aws-sdk/client-s3";
-import { put } from "@vercel/blob";
 import { getUserFromRequest, ADMIN_EMAIL, checkBan } from "./_lib/auth";
 import { getDb } from "./_lib/db";
 import { checkRateLimit } from "./_lib/ratelimit";
@@ -2976,24 +2975,16 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           // Images only go to Blob if larger than MAX_INLINE_SIZE (defined in resolveFileData)
 
           async function uploadToBlob(buffer: Buffer, mime: string, ext: string): Promise<string | null> {
-            const token = process.env.BLOB_READ_WRITE_TOKEN || process.env.grokrun_READ_WRITE_TOKEN || "";
-            if (!token) {
-              console.error("[comfyui-poll] No BLOB_READ_WRITE_TOKEN configured — cannot upload to Vercel Blob");
-              return null;
-            }
             const sizeMB = (buffer.length / 1024 / 1024).toFixed(1);
             const filename = `comfyui-output/${Date.now()}-${Math.random().toString(36).slice(2, 6)}.${ext}`;
             for (let attempt = 1; attempt <= 2; attempt++) {
               try {
-                const blob = await put(filename, buffer, {
-                  access: "public",
-                  contentType: mime,
-                  token,
-                });
-                console.log(`[comfyui-poll] Uploaded ${sizeMB}MB to Blob: ${blob.url}`);
-                return blob.url;
+                const { uploadPublicMedia } = await import("./_lib/media-storage");
+                const { url, storage } = await uploadPublicMedia(buffer, filename, mime);
+                console.log(`[comfyui-poll] Uploaded ${sizeMB}MB to ${storage.toUpperCase()}: ${url}`);
+                return url;
               } catch (err: any) {
-                console.error(`[comfyui-poll] Blob upload attempt ${attempt}/2 failed (${sizeMB}MB): ${err.message}`);
+                console.error(`[comfyui-poll] Media upload attempt ${attempt}/2 failed (${sizeMB}MB): ${err.message}`);
                 if (attempt < 2) await new Promise(r => setTimeout(r, 1000));
               }
             }
@@ -3007,7 +2998,7 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
               const d = typeof file === "string" ? file : (file?.data || file?.url || null);
               if (!d || typeof d !== "string") return null;
 
-              const alwaysBlob = type === "video"; // videos always get uploaded to Blob
+              const alwaysBlob = type === "video"; // videos always get uploaded to durable storage (R2 preferred)
               const ext = type === "video" ? "mp4" : "png";
 
               // Already a data URI

@@ -45,28 +45,49 @@ You can:
 Never claim to perform actions you can't (no banning, no payments). If unsure, say so. No markdown headers, no lists unless tiny.`;
 
 async function callBotAI(userText: string, channel: Channel, recent: { username: string; text: string }[]): Promise<string> {
-  const deepseekKey = process.env.DEEPSEEK_API_KEY;
-  const lovableKey = process.env.LOVABLE_API_KEY;
-  if (!deepseekKey && !lovableKey) return "[gltch offline — AI key not configured]";
   const context = recent.slice(-6).map((m) => `${m.username}: ${m.text}`).join("\n");
-  const useDeepseek = !!deepseekKey;
-  const url = useDeepseek
-    ? "https://api.deepseek.com/v1/chat/completions"
-    : "https://ai.gateway.lovable.dev/v1/chat/completions";
-  const auth = useDeepseek ? deepseekKey! : lovableKey!;
-  const model = useDeepseek ? "deepseek-chat" : "google/gemini-2.5-flash";
+  const userContent = `[#${channel}] Recent chat:\n${context}\n\nMessage to you: ${userText}`;
+  const messages = [
+    { role: "system" as const, content: BOT_SYSTEM },
+    { role: "user" as const, content: userContent },
+  ];
+  const payload = {
+    messages,
+    max_tokens: 280,
+    temperature: 0.6,
+  };
+
+  const deepseekKey = process.env.DEEPSEEK_API_KEY;
+  if (deepseekKey) {
+    const model =
+      process.env.CHAT_LOBBY_DEEPSEEK_MODEL ||
+      process.env.CHARACTER_CHAT_TEXT_MODEL_DS ||
+      "deepseek-chat";
+    try {
+      const r = await fetch("https://api.deepseek.com/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${deepseekKey}` },
+        body: JSON.stringify({ model, ...payload }),
+        signal: AbortSignal.timeout(15000),
+      });
+      if (r.status === 429) return "[gltch is rate-limited, try again in a moment]";
+      if (!r.ok) return "[gltch glitched out, try again]";
+      const data = await r.json();
+      return String(data?.choices?.[0]?.message?.content || "").trim().slice(0, 800) || "[no reply]";
+    } catch {
+      return "[gltch timed out]";
+    }
+  }
+
+  const lovableKey = process.env.LOVABLE_API_KEY;
+  if (!lovableKey) return "[gltch offline — AI key not configured]";
   try {
-    const r = await fetch(url, {
+    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${auth}` },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${lovableKey}` },
       body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: BOT_SYSTEM },
-          { role: "user", content: `[#${channel}] Recent chat:\n${context}\n\nMessage to you: ${userText}` },
-        ],
-        max_tokens: 280,
-        temperature: 0.6,
+        model: "google/gemini-2.5-flash",
+        ...payload,
       }),
       signal: AbortSignal.timeout(15000),
     });
