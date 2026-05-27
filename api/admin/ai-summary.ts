@@ -2,7 +2,7 @@
  * /api/admin/ai-summary — Admin-only AI executive summary.
  *
  * GET            → Returns cached summary + raw stats (if exists).
- * POST { stream } → Aggregates fresh stats, calls Lovable AI Gateway, streams tokens.
+ * POST { stream } → Aggregates fresh stats, calls DeepSeek (preferred) or Lovable AI Gateway, streams tokens.
  *                   Persists final markdown + stats blob to app_config (key='admin_ai_summary')
  *                   so the next GET returns it instantly. Cached 1h server-side.
  *
@@ -15,8 +15,22 @@ import { applyCors } from "../_lib/cors";
 
 const CACHE_KEY = "admin_ai_summary";
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1h
-const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const MODEL = "google/gemini-3-flash-preview";
+const LOVABLE_GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const DEEPSEEK_URL = "https://api.deepseek.com/v1/chat/completions";
+const LOVABLE_MODEL = "google/gemini-3-flash-preview";
+const DEEPSEEK_MODEL = process.env.ADMIN_AI_SUMMARY_MODEL || "deepseek-chat";
+
+function resolveAiConfig(): { url: string; apiKey: string; model: string; provider: "deepseek" | "lovable" } | null {
+  const deepseekKey = process.env.DEEPSEEK_API_KEY;
+  if (deepseekKey) {
+    return { url: DEEPSEEK_URL, apiKey: deepseekKey, model: DEEPSEEK_MODEL, provider: "deepseek" };
+  }
+  const lovableKey = process.env.LOVABLE_API_KEY;
+  if (lovableKey) {
+    return { url: LOVABLE_GATEWAY_URL, apiKey: lovableKey, model: LOVABLE_MODEL, provider: "lovable" };
+  }
+  return null;
+}
 
 function isAdmin(req: VercelRequest): boolean {
   const auth = getUserFromRequest(req);
@@ -351,12 +365,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  const apiKey = process.env.LOVABLE_API_KEY;
-  if (!apiKey) {
+  const ai = resolveAiConfig();
+  if (!ai) {
     return res.status(503).json({
-      code: "LOVABLE_API_KEY_MISSING",
+      code: "AI_KEY_MISSING",
       error:
-        "LOVABLE_API_KEY is not configured on the server. Add it as an environment variable in your Vercel project (Settings → Environment Variables → LOVABLE_API_KEY) and redeploy. The key is provisioned automatically inside the Lovable editor sandbox but must be copied to your deployment environment for production use.",
+        "No AI key configured. Set DEEPSEEK_API_KEY (recommended) or LOVABLE_API_KEY in Vercel → Settings → Environment Variables, then redeploy.",
     });
   }
 
@@ -371,16 +385,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   let aiResp: Response;
   try {
-    aiResp = await fetch(GATEWAY_URL, {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${ai.apiKey}`,
+    };
+    if (ai.provider === "lovable") {
+      headers["Lovable-API-Key"] = ai.apiKey;
+      headers["X-Lovable-AIG-SDK"] = "vercel-ai-sdk";
+    }
+    aiResp = await fetch(ai.url, {
       method: "POST",
-      headers: {
-        "Lovable-API-Key": apiKey,
-        Authorization: `Bearer ${apiKey}`,
-        "X-Lovable-AIG-SDK": "vercel-ai-sdk",
-        "Content-Type": "application/json",
-      },
+      headers,
       body: JSON.stringify({
-        model: MODEL,
+        model: ai.model,
         stream: true,
         messages: [
           { role: "system", content: "You are a precise business analyst. Output clean markdown only." },
@@ -445,5 +462,5 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.end();
 
   // Persist cache (fire-and-forget after end is fine on Vercel — but do it before for safety)
-  await writeCache(sql, { ...stats, summary_markdown: assembled, generated_at: new Date().toISOString(), model: MODEL });
+  await writeCache(sql, { ...stats, summary_markdown: assembled, generated_at: new Date().toISOString(), model: ai.model, provider: ai.provider });
 }

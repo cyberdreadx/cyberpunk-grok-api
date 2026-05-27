@@ -99,9 +99,9 @@ export default function AdminInsightsPanel() {
           msg = parsed.error || msg;
           code = parsed.code || null;
         } catch { if (txt) msg = txt.slice(0, 400); }
-        if (code === "LOVABLE_API_KEY_MISSING" || /LOVABLE_API_KEY/i.test(msg)) {
+        if (code === "AI_KEY_MISSING" || code === "LOVABLE_API_KEY_MISSING" || /DEEPSEEK_API_KEY|LOVABLE_API_KEY|AI key/i.test(msg)) {
           throw new Error(
-            "AI gateway not configured. Add LOVABLE_API_KEY to your Vercel project (Settings → Environment Variables → LOVABLE_API_KEY for Production), then redeploy. The key works automatically inside the Lovable editor sandbox but must be copied into your deployment environment."
+            "AI not configured. Add DEEPSEEK_API_KEY to Vercel (Settings → Environment Variables → Production), then redeploy."
           );
         }
         throw new Error(msg);
