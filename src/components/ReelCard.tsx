@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
 import XrgeUnlockDialog from "@/components/XrgeUnlockDialog";
 import { useMatureFilter } from "@/hooks/useMatureFilter";
+import { useMediaSrc } from "@/hooks/useMediaSrc";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -66,7 +67,6 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate, active = true, moun
   const [flagging, setFlagging] = useState(false);
   const [unlocking, setUnlocking] = useState(false);
   const [isUnlocked, setIsUnlocked] = useState(post.unlocked ?? true);
-  const [mediaFailed, setMediaFailed] = useState(false);
   const [matureRevealed, setMatureRevealed] = useState(false);
   const [matureFlagged, setMatureFlagged] = useState(!!post.isMature);
   const [togglingMature, setTogglingMature] = useState(false);
@@ -75,12 +75,13 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate, active = true, moun
   React.useEffect(() => {
     if (post.unlocked !== undefined) setIsUnlocked(post.unlocked);
   }, [post.unlocked]);
-  React.useEffect(() => {
-    setMediaFailed(false);
-  }, [post.id, post.imageUrl, post.previewImageUrl]);
   const [xrgeUnlockOpen, setXrgeUnlockOpen] = useState(false);
 
   const isLocked = !isUnlocked && !post.isOwner && ((post.lockCost || 0) > 0 || (post.lockPriceCents || 0) > 0 || !!(post.lockXrgeAmount && parseFloat(post.lockXrgeAmount) > 0));
+  const isVideo = post.imageUrl ? /\.(mp4|webm|mov)(\?|$)/i.test(post.imageUrl) || post.imageUrl.includes("video") : false;
+  const mainMedia = useMediaSrc(post.imageUrl, { kind: isVideo ? "video" : "image", context: "reel-card" });
+  const previewMedia = useMediaSrc(post.previewImageUrl, { context: "reel-preview" });
+  const mediaFailed = mainMedia.failed;
   const isMatureBlurred = !isLocked && matureFilter && !!post.isMature && !matureRevealed && !post.isOwner;
   const isAdminOrMod = !!user?.is_admin || !!user?.is_feed_mod;
   const canDelete = user?.id === post.userId || isAdminOrMod;
@@ -204,7 +205,6 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate, active = true, moun
   };
 
   const timeAgo = formatDistanceToNow(new Date(post.createdAt), { addSuffix: true });
-  const isVideo = post.imageUrl ? /\.(mp4|webm|mov)(\?|$)/i.test(post.imageUrl) || post.imageUrl.includes("video") : false;
 
   // Auto play/pause video based on active state.
   const videoRef = React.useRef<HTMLVideoElement | null>(null);
@@ -217,34 +217,29 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate, active = true, moun
 
   return (
     <div className="relative w-full h-[100dvh] snap-start snap-always bg-black flex items-center justify-center overflow-hidden">
-      {/* Lightweight blurred backdrop — image only, never a second <video>. */}
-      {mountMedia && !isLocked && post.imageUrl && !isVideo && (
-        <img src={post.imageUrl} alt="" aria-hidden className="absolute inset-0 w-full h-full object-cover blur-2xl scale-110 opacity-40" loading="lazy" decoding="async" />
-      )}
-
       {/* Blurred preview for locked posts with images */}
       {mountMedia && isLocked && post.previewImageUrl && (
-        <img src={post.previewImageUrl} alt="" aria-hidden className="absolute inset-0 w-full h-full object-cover blur-xl brightness-50" loading="lazy" decoding="async" />
+        <img src={previewMedia.src} alt="" aria-hidden className="absolute inset-0 w-full h-full object-cover blur-xl brightness-50" loading="lazy" decoding="async" onError={previewMedia.onError} />
       )}
 
       {mountMedia && !isLocked && post.imageUrl && !mediaFailed ? (
         isVideo ? (
           <video
             ref={videoRef}
-            src={active ? post.imageUrl : undefined}
+            src={active ? mainMedia.src : undefined}
             poster={post.previewImageUrl}
             className={`relative z-[1] w-full h-full object-contain transition-[filter] duration-300 ${isMatureBlurred ? "blur-2xl scale-110" : ""}`}
             muted
             playsInline
-            preload={active ? "auto" : "none"}
+            preload={active ? "metadata" : "none"}
             loop
-            onError={() => setMediaFailed(true)}
+            onError={mainMedia.onError}
           />
         ) : (
-          <img src={post.imageUrl} alt="" className={`relative z-[1] w-full h-full object-contain transition-[filter] duration-300 ${isMatureBlurred ? "blur-2xl scale-110" : ""}`} loading="lazy" decoding="async" onError={() => setMediaFailed(true)} />
+          <img src={mainMedia.src} alt="" className={`relative z-[1] w-full h-full object-contain transition-[filter] duration-300 ${isMatureBlurred ? "blur-2xl scale-110" : ""}`} loading="lazy" decoding="async" onError={mainMedia.onError} />
         )
       ) : mountMedia && !isLocked && mediaFailed && post.previewImageUrl ? (
-        <img src={post.previewImageUrl} alt="" className="relative z-[1] w-full h-full object-contain opacity-80" loading="lazy" decoding="async" />
+        <img src={previewMedia.src} alt="" className="relative z-[1] w-full h-full object-contain opacity-80" loading="lazy" decoding="async" onError={previewMedia.onError} />
       ) : mountMedia && !isLocked && mediaFailed ? (
         <div className="relative z-10 px-8 max-w-full text-center">
           <p className="font-mono-share text-sm text-white/70">Media failed to load</p>

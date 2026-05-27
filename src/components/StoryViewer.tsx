@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useMatureFilter } from "@/hooks/useMatureFilter";
+import { useMediaSrc } from "@/hooks/useMediaSrc";
 
 interface Story {
   id: string;
@@ -83,6 +84,11 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
   const isOwner = currentUser?.userId === currentUserId;
   const isLocked = currentStory && ((currentStory.lockCost || 0) > 0 || (currentStory.lockXrgeAmount && parseFloat(currentStory.lockXrgeAmount) > 0)) && !currentStory.unlocked && !currentStory.isOwner;
   const isMatureBlurred = !!currentStory && !isLocked && matureFilter && !!currentStory.isMature && !matureRevealed[currentStory.id] && !currentStory.isOwner;
+  const storyMedia = useMediaSrc(currentStory?.mediaUrl, {
+    kind: currentStory?.mediaType === "video" ? "video" : "image",
+    context: "story",
+  });
+  const storyPreview = useMediaSrc(currentStory?.previewUrl, { context: "story-preview" });
 
   // Sync like state when story changes
   useEffect(() => {
@@ -381,9 +387,9 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
           <div className="relative w-full h-full flex items-center justify-center">
             {currentStory.previewUrl && (
               currentStory.mediaType === "video" ? (
-                <video src={currentStory.previewUrl} className="absolute inset-0 w-full h-full object-cover blur-xl scale-110 opacity-60" autoPlay muted loop playsInline />
+                <video src={storyPreview.src} className="absolute inset-0 w-full h-full object-cover blur-xl scale-110 opacity-60" autoPlay muted loop playsInline preload="metadata" onError={storyPreview.onError} />
               ) : (
-                <img src={currentStory.previewUrl} alt="" className="absolute inset-0 w-full h-full object-cover blur-xl scale-110 opacity-60" />
+                <img src={storyPreview.src} alt="" className="absolute inset-0 w-full h-full object-cover blur-xl scale-110 opacity-60" loading="lazy" decoding="async" onError={storyPreview.onError} />
               )
             )}
             <div className="absolute inset-0 bg-black/50" />
@@ -425,10 +431,10 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
           </div>
         ) : currentStory.mediaType === "video" ? (
           <div className="relative w-full h-full">
-            <video ref={videoRef} src={currentStory.mediaUrl}
+            <video ref={videoRef} src={storyMedia.src}
               className={`w-full h-full object-contain transition-[filter] duration-300 ${isMatureBlurred ? "blur-2xl scale-110" : ""}`}
-              autoPlay muted={muted} playsInline
-              onEnded={handleVideoEnd} onTimeUpdate={handleVideoTime} />
+              autoPlay muted={muted} playsInline preload="metadata"
+              onEnded={handleVideoEnd} onTimeUpdate={handleVideoTime} onError={storyMedia.onError} />
             {isMatureBlurred && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/40 backdrop-blur-sm z-10">
                 <div className="bg-black/70 rounded-full p-3 border border-amber-400/50">
@@ -444,8 +450,9 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
           </div>
         ) : (
           <div className="relative w-full h-full">
-            <img src={currentStory.mediaUrl} alt={currentStory.caption || "Story"}
-              className={`w-full h-full object-contain transition-[filter] duration-300 ${isMatureBlurred ? "blur-2xl scale-110" : ""}`} />
+            <img src={storyMedia.src} alt={currentStory.caption || "Story"}
+              className={`w-full h-full object-contain transition-[filter] duration-300 ${isMatureBlurred ? "blur-2xl scale-110" : ""}`}
+              loading="lazy" decoding="async" onError={storyMedia.onError} />
             {isMatureBlurred && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/40 backdrop-blur-sm z-10">
                 <div className="bg-black/70 rounded-full p-3 border border-amber-400/50">

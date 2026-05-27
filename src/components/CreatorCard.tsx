@@ -1,11 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Lock, ImageIcon, MessageSquare, ShieldAlert, Film } from "lucide-react";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import { useMatureFilter } from "@/hooks/useMatureFilter";
 import { extractPoster, getCachedPoster } from "@/lib/videoPoster";
-import { mediaCandidates } from "@/lib/mediaUrl";
-import { reportMediaError } from "@/lib/mediaErrorReporter";
+import { useMediaSrc } from "@/hooks/useMediaSrc";
 
 export interface FeedCreator {
   userId: string;
@@ -51,6 +50,8 @@ const timeAgo = (iso: string) => {
 };
 
 const CreatorCard: React.FC<Props> = ({ creator, onOpen, active, forceBlur, currentUserId }) => {
+  const cardRef = useRef<HTMLButtonElement>(null);
+  const [inView, setInView] = useState(false);
   const previewImg = creator.latestImage || creator.previewImage;
   const initials = (creator.username || "?").slice(0, 2).toUpperCase();
   const { matureFilter } = useMatureFilter();
@@ -59,22 +60,22 @@ const CreatorCard: React.FC<Props> = ({ creator, onOpen, active, forceBlur, curr
   const showLocked = creator.latestLocked || forceBlur;
   const showBlur = showLocked || isMatureBlur;
   const isVideo = !!previewImg && isVideoUrl(previewImg);
-  const [mediaFailed, setMediaFailed] = useState(false);
   const [mediaLoaded, setMediaLoaded] = useState(false);
-  const [srcIdx, setSrcIdx] = useState(0);
-  const candidates = previewImg ? mediaCandidates(previewImg) : [];
-  const activeSrc = candidates[srcIdx] || previewImg || "";
+  const { src: activeSrc, onError: handleMediaError, failed: mediaFailed } = useMediaSrc(previewImg, {
+    kind: isVideo ? "video" : "image",
+    context: "feed-card",
+  });
 
-  const handleMediaError = () => {
-    // Report the URL that just failed (not the whole chain) so the dashboard
-    // can spot the actual broken host/extension.
-    if (activeSrc) reportMediaError(activeSrc, isVideo ? "video" : "image", "feed-card");
-    if (srcIdx < candidates.length - 1) {
-      setSrcIdx((i) => i + 1);
-    } else {
-      setMediaFailed(true);
-    }
-  };
+  useEffect(() => {
+    const el = cardRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) setInView(true); },
+      { rootMargin: "200px" },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
 
   const [poster, setPoster] = useState<string | null>(() =>
     isVideo && previewImg ? (getCachedPoster(previewImg) ?? null) : null
@@ -83,17 +84,18 @@ const CreatorCard: React.FC<Props> = ({ creator, onOpen, active, forceBlur, curr
   // Lazily extract a frame from the video to use as a stable poster image.
   // If extraction fails (CORS, codec) we silently fall back to the inline <video>.
   useEffect(() => {
-    if (!isVideo || !previewImg) return;
+    if (!inView || !isVideo || !previewImg) return;
     if (getCachedPoster(previewImg) !== undefined) return;
     let cancelled = false;
     extractPoster(previewImg).then((p) => { if (!cancelled) setPoster(p); });
     return () => { cancelled = true; };
-  }, [isVideo, previewImg]);
+  }, [inView, isVideo, previewImg]);
 
   const showSkeleton = !!previewImg && !mediaFailed && !mediaLoaded;
 
   return (
     <button
+      ref={cardRef}
       onClick={() => onOpen(creator)}
       className={`group relative w-full text-left overflow-hidden rounded-lg border bg-card/60 transition-all aspect-[3/4] flex flex-col ${
         active

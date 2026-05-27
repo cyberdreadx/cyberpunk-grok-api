@@ -83,9 +83,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
     }
     if (contentLength) res.setHeader("Content-Length", contentLength);
-    res.setHeader("Cache-Control", "public, max-age=3600");
+    const isImmutableCdn = /\.(public\.blob\.vercel-storage\.com|r2\.dev|gltch\.app)/i.test(parsedUrl.hostname);
+    res.setHeader("Cache-Control", isImmutableCdn ? "public, max-age=86400, stale-while-revalidate=604800" : "public, max-age=3600");
 
-    // Stream the response
+    if (upstream.body) {
+      // Stream through — avoid buffering multi-MB images/videos in memory.
+      // @ts-expect-error Node ReadableStream from fetch
+      return res.status(200).send(upstream.body);
+    }
+
     const buffer = Buffer.from(await upstream.arrayBuffer());
     return res.status(200).send(buffer);
   } catch (err: any) {

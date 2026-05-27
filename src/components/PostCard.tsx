@@ -27,6 +27,7 @@ import { formatDistanceToNow } from "date-fns";
 import XrgeUnlockDialog from "@/components/XrgeUnlockDialog";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import { useMatureFilter } from "@/hooks/useMatureFilter";
+import { useMediaSrc } from "@/hooks/useMediaSrc";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -99,6 +100,9 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
 
   const isLocked = !isUnlocked && !post.isOwner && ((post.lockCost || 0) > 0 || (post.lockPriceCents || 0) > 0 || !!(post.lockXrgeAmount && parseFloat(post.lockXrgeAmount) > 0));
   const isMatureBlurred = !isLocked && matureFilter && matureFlagged && !matureRevealed && !post.isOwner;
+  const mainImageUrl = revealedImage || post.imageUrl;
+  const mainMedia = useMediaSrc(mainImageUrl, { context: "post-card" });
+  const previewMedia = useMediaSrc(post.previewImageUrl, { context: "post-preview" });
 
   const isAdminOrMod = !!user?.is_admin || !!user?.is_feed_mod;
   const canDelete = user?.id === post.userId || isAdminOrMod;
@@ -364,10 +368,12 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
           {post.previewImageUrl && (
             <div className="relative w-full h-64 overflow-hidden">
               <img
-                src={post.previewImageUrl}
+                src={previewMedia.src}
                 alt=""
                 className="w-full h-full object-cover blur-xl scale-110 brightness-50"
                 loading="lazy"
+                decoding="async"
+                onError={previewMedia.onError}
               />
               <div className="absolute inset-0 bg-background/30" />
             </div>
@@ -428,15 +434,17 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
           {(revealedText || post.text) && (
             <p className="px-4 pb-2 font-mono-share text-sm text-foreground/90 whitespace-pre-wrap break-words">{revealedText || post.text}</p>
           )}
-          {(revealedImage || post.imageUrl) && (
+          {mainImageUrl && !mainMedia.failed && (
             <div className="relative">
               <img
-                src={revealedImage || post.imageUrl!}
+                src={mainMedia.src}
                 alt=""
                 className={`w-full max-h-[500px] object-cover transition-[filter] duration-300 ${
                   isMatureBlurred ? "blur-2xl scale-105" : ""
                 }`}
                 loading="lazy"
+                decoding="async"
+                onError={mainMedia.onError}
               />
               {isMatureBlurred && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-background/40 backdrop-blur-sm">
