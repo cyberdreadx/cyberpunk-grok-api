@@ -9,7 +9,7 @@
  */
 
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { put } from "@vercel/blob";
+import { uploadPublicMedia, isR2MediaConfigured } from "./_lib/media-storage";
 import jwt from "jsonwebtoken";
 import { getDb } from "./_lib/db";
 import { getUserFromRequest, ADMIN_EMAIL, checkBan } from "./_lib/auth";
@@ -111,8 +111,10 @@ async function dataUrlToPublicBlobUrl(dataUrl: string, userId: string): Promise<
   const match = dataUrl.match(/^data:(image\/(?:png|jpe?g|webp));base64,(.+)$/s);
   if (!match) throw new Error("Invalid SEEDANCE image upload. Use JPEG, PNG, or WebP.");
 
-  const token = process.env.BLOB_READ_WRITE_TOKEN || process.env.grokrun_READ_WRITE_TOKEN || "";
-  if (!token) throw new Error("SEEDANCE image upload storage is not configured.");
+  const blobToken = process.env.BLOB_READ_WRITE_TOKEN || process.env.grokrun_READ_WRITE_TOKEN || "";
+  if (!blobToken && !isR2MediaConfigured()) {
+    throw new Error("SEEDANCE image upload storage is not configured.");
+  }
 
   const mime = match[1];
   let rawBase64 = match[2].replace(/\s/g, "");
@@ -123,12 +125,12 @@ async function dataUrlToPublicBlobUrl(dataUrl: string, userId: string): Promise<
   if (!buffer.length) throw new Error("SEEDANCE image upload is empty.");
   if (buffer.length > 30 * 1024 * 1024) throw new Error("SEEDANCE source image is over 30 MB.");
 
-  const blob = await put(`seedance/${userId}-${Date.now()}.${extFromImageMime(mime)}`, buffer, {
-    access: "public",
-    contentType: mime,
-    token,
-  });
-  return blob.url;
+  const { url } = await uploadPublicMedia(
+    buffer,
+    `seedance/${userId}-${Date.now()}.${extFromImageMime(mime)}`,
+    mime,
+  );
+  return url;
 }
 
 // Map generation action → moderation log mode

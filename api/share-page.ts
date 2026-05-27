@@ -8,6 +8,7 @@
  * Invoked via vercel.json rewrite: /s/:shareId → /api/share-page?id=:shareId
  */
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { fetchShareMetadata } from "./_lib/share-metadata";
 
 export const config = { maxDuration: 10 };
 
@@ -218,47 +219,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const blobToken = process.env.BLOB_READ_WRITE_TOKEN || process.env.grokrun_READ_WRITE_TOKEN || "";
-    const storeId = blobToken.split("_")[3] || "";
-    const metaUrl = storeId
-      ? `https://${storeId}.public.blob.vercel-storage.com/shares/${shareId}.json`
-      : "";
-
-    let meta: any = null;
-
-    if (metaUrl) {
-      const directResp = await fetch(metaUrl);
-      if (directResp.ok) meta = await directResp.json();
-    }
-
-    if (!meta) {
-      const { list } = await import("@vercel/blob");
-      const { blobs } = await list({ prefix: `shares/${shareId}.json`, token: blobToken });
-      if (blobs.length > 0) {
-        const fallbackResp = await fetch(blobs[0].url);
-        if (fallbackResp.ok) meta = await fallbackResp.json();
-      }
-    }
+    const meta = await fetchShareMetadata(shareId);
 
     if (!meta) {
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       return res.status(404).send(notFoundPage(host));
     }
-    const mediaUrl = meta.mediaUrl;
+    const mediaUrl = String(meta.mediaUrl || "");
 
-    const safePrompt = escapeHtml(meta.prompt || "");
-    const truncatedPrompt = truncate(meta.prompt || "AI-generated with Grok Runner", 200);
+    const safePrompt = escapeHtml(String(meta.prompt || ""));
+    const truncatedPrompt = truncate(String(meta.prompt || "AI-generated with Grok Runner"), 200);
     const isVideo = meta.mediaType === "video";
     const typeBadge = isVideo ? "VIDEO" : "IMAGE";
 
     const ogTitle = safePrompt
-      ? `"${escapeHtml(truncate(meta.prompt, 60))}" — Made with Grok Runner`
+      ? `"${escapeHtml(truncate(String(meta.prompt), 60))}" — Made with Grok Runner`
       : "AI Creation — Made with Grok Runner";
     const ogDesc = safePrompt
       ? `${escapeHtml(truncatedPrompt)} — Try this prompt or create your own AI art at Grok Runner.`
       : "Create stunning AI images, edit photos, and generate videos. Powered by xAI.";
 
-    const tryPromptUrl = `${baseUrl}/?prompt=${encodeURIComponent(meta.prompt || "")}${refCode ? `&ref=${refCode}` : ""}`;
+    const tryPromptUrl = `${baseUrl}/?prompt=${encodeURIComponent(String(meta.prompt || ""))}${refCode ? `&ref=${refCode}` : ""}`;
 
     const html = `<!DOCTYPE html>
 <html lang="en">

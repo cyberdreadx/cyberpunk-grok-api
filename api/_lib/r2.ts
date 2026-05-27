@@ -2,7 +2,7 @@
  * Cloudflare R2 (S3-compatible) helpers for media storage.
  * Used by share links and Grokker cross-post.
  */
-import { S3Client, PutObjectCommand, GetObjectCommand, HeadObjectCommand, DeleteObjectCommand, DeleteObjectsCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand, HeadObjectCommand, DeleteObjectsCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 let s3Client: S3Client | null = null;
@@ -26,15 +26,49 @@ function getR2(): S3Client {
 
 const BUCKET = process.env.R2_BUCKET_NAME || "grokker-media";
 
+const DEFAULT_CACHE = "public, max-age=31536000, immutable";
+
+/** True when R2 credentials + a public URL base are configured. */
+export function isR2MediaConfigured(): boolean {
+  return !!(
+    process.env.R2_ACCOUNT_ID &&
+    process.env.R2_ACCESS_KEY_ID &&
+    process.env.R2_SECRET_ACCESS_KEY &&
+    (process.env.R2_PUBLIC_BUCKET_URL || process.env.R2_PUBLIC_DOMAIN)
+  );
+}
+
 /** Upload a buffer directly to R2 */
-export async function uploadToR2(key: string, body: Buffer, contentType: string): Promise<void> {
+export async function uploadToR2(
+  key: string,
+  body: Buffer,
+  contentType: string,
+  opts?: { cacheControl?: string },
+): Promise<void> {
   const client = getR2();
   await client.send(new PutObjectCommand({
     Bucket: BUCKET,
     Key: key,
     Body: body,
     ContentType: contentType,
+    CacheControl: opts?.cacheControl ?? DEFAULT_CACHE,
   }));
+}
+
+/** Presigned PUT URL — client uploads directly to R2 (no Vercel egress). */
+export async function getPresignedUploadUrl(
+  key: string,
+  contentType: string,
+  expiresIn = 3600,
+): Promise<string> {
+  const client = getR2();
+  const command = new PutObjectCommand({
+    Bucket: BUCKET,
+    Key: key,
+    ContentType: contentType,
+    CacheControl: DEFAULT_CACHE,
+  });
+  return getSignedUrl(client, command, { expiresIn });
 }
 
 /** Check if an object exists in R2 */

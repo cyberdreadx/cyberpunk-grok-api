@@ -1,7 +1,12 @@
+/**
+ * /api/blob-upload — Legacy Vercel Blob client upload handler.
+ * Prefer /api/media-upload (direct-to-R2) for new uploads when R2 is configured.
+ */
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import { verifyToken } from "./_lib/auth";
 import { applyCors } from "./_lib/cors";
+import { isR2MediaConfigured } from "./_lib/media-storage";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   applyCors(req, res, "POST, OPTIONS");
@@ -12,6 +17,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     process.env.grokrun_READ_WRITE_TOKEN ||
     "";
   if (!token) return res.status(503).json({ error: "Blob storage not configured" });
+
+  if (isR2MediaConfigured()) {
+    console.warn("[blob-upload] R2 is configured — prefer /api/media-upload to avoid Blob egress charges");
+  }
 
   try {
     const jsonResponse = await handleUpload({

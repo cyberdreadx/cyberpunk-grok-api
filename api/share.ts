@@ -2,6 +2,10 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import crypto from "crypto";
 import { getUserFromRequest, ADMIN_EMAIL } from "./_lib/auth";
 import { applyCors } from "./_lib/cors";
+import { uploadPublicMedia } from "./_lib/media-storage";
+import { fetchShareMetadata } from "./_lib/share-metadata";
+import { deleteBlobs, isVercelBlobUrl } from "./_lib/blob";
+import { deleteR2Objects, isR2Url, r2KeyFromUrl } from "./_lib/r2";
 
 export const config = { maxDuration: 60 };
 
@@ -52,33 +56,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const ext = mediaType.includes("video") ? "mp4" : mediaType.includes("jpeg") ? "jpg" : "png";
       const contentType = mediaType.startsWith("video") ? "video/mp4" : mediaType.startsWith("image/") ? mediaType : "image/png";
 
-      const { put } = await import("@vercel/blob");
-      const token = getBlobToken();
-      if (!token) return res.status(503).json({ error: "Blob storage not configured" });
-
-      const mediaBlob = await put(`shares/${shareId}.${ext}`, buffer, {
-        access: "public",
+      const mediaUpload = await uploadPublicMedia(
+        buffer,
+        `shares/${shareId}.${ext}`,
         contentType,
-        addRandomSuffix: false,
-        token,
-      });
+      );
 
-      // NEW: embed userId so future blob-scan backfills can attribute ownership.
       const metadata = JSON.stringify({
-        mediaUrl: mediaBlob.url,
+        mediaUrl: mediaUpload.url,
         mediaType: mediaType.startsWith("video") ? "video" : "image",
         prompt: prompt || "",
         createdAt: new Date().toISOString(),
         userId: auth.userId,
         ext,
+        storage: mediaUpload.storage,
       });
 
-      await put(`shares/${shareId}.json`, metadata, {
-        access: "public",
-        contentType: "application/json",
-        addRandomSuffix: false,
-        token,
-      });
+      await uploadPublicMedia(
+        Buffer.from(metadata, "utf8"),
+        `shares/${shareId}.json`,
+        "application/json",
+      );
 
       const siteUrl = (process.env.SITE_URL || "https://grokrunner.gltch.app").replace(/\/$/, "");
 
@@ -102,7 +100,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({
         shareId,
         shareUrl: `${siteUrl}/s/${shareId}`,
-        r2Url: mediaBlob.url,
+        r2Url: mediaUpload.url,
+        url: mediaUpload.url,
       });
     } catch (err: any) {
       console.error("[share] POST error:", err.message);
@@ -119,8 +118,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (!SHARE_ID_RE.test(shareId)) return res.status(400).json({ error: "Invalid share ID" });
 
       const token = getBlobToken();
-      if (!token) return res.status(503).json({ error: "Blob storage not configured" });
-
       const { getDb } = await import("./_lib/db");
       const sql = getDb();
       const rows = await sql`SELECT user_id FROM share_owners WHERE share_id = ${shareId} LIMIT 1`;
@@ -128,15 +125,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const owns = rows.length > 0 && rows[0].user_id === auth.userId;
       if (!owns && !isAdmin) return res.status(403).json({ error: "Forbidden" });
 
-      const { list, del } = await import("@vercel/blob");
-      const { blobs } = await list({ prefix: `shares/${shareId}`, token });
-      await Promise.all(
-        blobs.map((b) =>
-          del(b.url, { token }).catch((err) => console.warn("[share] blob del failed:", err?.message)),
-        ),
-      );
+      const meta = await fetchShareMetadata(shareId);
+      const keysToDelete: string[] = [`shares/${shareId}.json`];
+      if (meta?.ext) keysToDelete.push(`shares/${shareId}.${meta.ext}`);
+      if (meta?.mediaUrl && isR2Url(String(meta.mediaUrl))) {
+        const k = r2KeyFromUrl(String(meta.mediaUrl));
+        if (k) keysToDelete.push(k);
+      }
+
+      await deleteR2Objects(keysToDelete).catch(() => {});
+
+      if (token) {
+        const { list, del } = await import("@vercel/blob");
+        const { blobs } = await list({ prefix: `shares/${shareId}`, token });
+        await Promise.all(
+          blobs.map((b) =>
+            del(b.url, { token }).catch((err) => console.warn("[share] blob del failed:", err?.message)),
+          ),
+        );
+      } else if (meta?.mediaUrl && isVercelBlobUrl(String(meta.mediaUrl))) {
+        await deleteBlobs([String(meta.mediaUrl)]);
+      }
       await sql`DELETE FROM share_owners WHERE share_id = ${shareId}`;
-      return res.status(200).json({ deleted: true, blobs: blobs.length });
+      return res.status(200).json({ deleted: true });
     } catch (err: any) {
       console.error("[share] DELETE error:", err.message);
       return res.status(500).json({ error: "Failed to delete share" });
@@ -217,25 +228,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ error: "Invalid share ID" });
       }
 
-      const blobToken = getBlobToken();
-      const storeId = blobToken.split("_")[3] || "";
-      const metaUrl = storeId
-        ? `https://${storeId}.public.blob.vercel-storage.com/shares/${shareId}.json`
-        : "";
-
-      let meta: any = null;
-      if (metaUrl) {
-        const directResp = await fetch(metaUrl);
-        if (directResp.ok) meta = await directResp.json();
-      }
-      if (!meta) {
-        const { list } = await import("@vercel/blob");
-        const { blobs } = await list({ prefix: `shares/${shareId}.json`, token: blobToken });
-        if (blobs.length > 0) {
-          const fallbackResp = await fetch(blobs[0].url);
-          if (fallbackResp.ok) meta = await fallbackResp.json();
-        }
-      }
+      const meta = await fetchShareMetadata(shareId);
       if (!meta) return res.status(404).json({ error: "Share not found" });
 
       return res.status(200).json({

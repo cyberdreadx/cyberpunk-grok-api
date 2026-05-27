@@ -3,73 +3,21 @@
  * publicly-accessible URL suitable for posting to feed/stories.
  */
 
-import { upload } from "@vercel/blob/client";
 import { apiUrl } from "@/lib/api";
 import { getResultDataUrl } from "@/lib/storage";
+import { isPermanentPublicMediaUrl, uploadPublicMedia } from "@/lib/mediaUpload";
 import type { GrokResult } from "@/hooks/useGrokApi";
 
-/** Hosts whose URLs are already permanent + public — safe to reuse as-is. */
-function isPermanentPublicUrl(url: string): boolean {
-  try {
-    const u = new URL(url);
-    const h = u.hostname;
-    if (h.endsWith("blob.vercel-storage.com")) return true;
-    if (h.endsWith(".r2.dev")) return true; // pub-xxxxx.r2.dev
-    if (h.endsWith(".r2.cloudflarestorage.com")) return true;
-    return false;
-  } catch {
-    return false;
-  }
-}
-
-async function blobToBase64(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const dataUrl = reader.result as string;
-      resolve(dataUrl.split(",")[1] || "");
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-}
-
 async function uploadBlobDirect(blob: Blob, type: "image" | "video"): Promise<string> {
-  const apiBase = apiUrl("");
   const ext = type === "video" ? "mp4" : "png";
-  const authToken = localStorage.getItem("auth-token") || "";
-  if (!authToken) {
-    throw new Error("Sign in required to attach media to a post.");
-  }
-  try {
-    const { url: blobUrl } = await upload(`feed/post.${ext}`, blob, {
-      access: "public",
-      handleUploadUrl: `${apiBase}/blob-upload`,
-      clientPayload: authToken,
-    });
-    return blobUrl;
-  } catch (e: any) {
-    const raw = String(e?.message || e || "").toLowerCase();
-    if (raw.includes("unauthorized") || raw.includes("401")) {
-      throw new Error("Your session expired — sign in again to post media.");
-    }
-    if (raw.includes("not configured") || raw.includes("503")) {
-      throw new Error("Media uploads are temporarily unavailable. Try again shortly.");
-    }
-    if (raw.includes("load failed") || raw.includes("failed to fetch") || raw.includes("network")) {
-      throw new Error("Network error uploading media — check your connection and retry.");
-    }
-    throw new Error(`Upload failed: ${e?.message || "unknown error"}`);
-  }
+  return uploadPublicMedia(blob, type === "video" ? "feed" : "feed", `post.${ext}`);
 }
 
 export async function uploadLibraryItemForPost(result: GrokResult): Promise<string> {
   const src = result.url;
 
-  // Already on a permanent public host? Reuse as-is.
-  if (isPermanentPublicUrl(src)) return src;
+  if (isPermanentPublicMediaUrl(src)) return src;
 
-  // 1) Try to resolve the bytes locally (data URL, IndexedDB cache, blob: URL)
   let mediaBlob: Blob | null = null;
 
   if (src.startsWith("data:")) {
@@ -92,14 +40,20 @@ export async function uploadLibraryItemForPost(result: GrokResult): Promise<stri
     } catch {}
   }
 
-  // 2) If we have bytes locally, upload directly to Vercel Blob (best path).
   if (mediaBlob) {
     try {
       return await uploadBlobDirect(mediaBlob, result.type);
     } catch (directErr) {
-      // Fallback: base64 → /api/share (server-side blob upload, avoids browser→blob CORS issues)
       try {
-        const base64 = await blobToBase64(mediaBlob);
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const dataUrl = reader.result as string;
+            resolve(dataUrl.split(",")[1] || "");
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(mediaBlob!);
+        });
         const token = localStorage.getItem("auth-token");
         const resp = await fetch(apiUrl("/share"), {
           method: "POST",
@@ -122,7 +76,6 @@ export async function uploadLibraryItemForPost(result: GrokResult): Promise<stri
     }
   }
 
-  // 3) Remote URL with no local bytes — try to fetch in browser first.
   if (src.startsWith("http://") || src.startsWith("https://")) {
     try {
       const resp = await fetch(src, { mode: "cors" });
@@ -131,28 +84,22 @@ export async function uploadLibraryItemForPost(result: GrokResult): Promise<stri
         return uploadBlobDirect(blob, result.type);
       }
     } catch {
-      // CORS or network — fall through to server proxy.
+      /* server proxy */
     }
 
-    // 4) Last resort: ask the server to download + persist (handles CORS / private CDNs).
     const token = localStorage.getItem("auth-token");
-    let dlRes: Response;
-    try {
-      dlRes = await fetch(apiUrl("/share"), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({
-          mediaUrl: src,
-          mediaType: result.type,
-          prompt: result.revised_prompt || "",
-        }),
-      });
-    } catch (e: any) {
-      throw new Error(`Network error reaching server: ${e?.message || "load failed"}`);
-    }
+    const dlRes = await fetch(apiUrl("/share"), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({
+        mediaUrl: src,
+        mediaType: result.type,
+        prompt: result.revised_prompt || "",
+      }),
+    });
 
     if (!dlRes.ok) {
       let detail = "";
@@ -163,7 +110,7 @@ export async function uploadLibraryItemForPost(result: GrokResult): Promise<stri
       throw new Error(
         detail
           ? `Server upload failed: ${detail}`
-          : `Server upload failed (${dlRes.status}). The original media may have expired — try regenerating it.`
+          : `Server upload failed (${dlRes.status}). The original media may have expired — try regenerating it.`,
       );
     }
     const dlData = await dlRes.json();
