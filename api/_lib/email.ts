@@ -30,7 +30,7 @@ export function generateVerificationCode(): string {
 }
 
 /** Log an email send attempt to the database. */
-async function logEmail(
+export async function logEmail(
   recipient: string,
   emailType: string,
   status: "sent" | "failed",
@@ -406,6 +406,89 @@ export function buildV47AnnouncementHtml(): string {
 
         <p style="font-size: 11px; color: #444; margin: 0; text-align: center;">
           Sent to verified Grok Runner accounts. Your 10 daily credits are waiting.
+        </p>
+      </div>
+    </div>
+  `;
+}
+
+/** v4.9 — subscription credit fix + prompt board announcement. */
+export function buildV49SubscriptionFixHtml(): string {
+  return `
+    <div style="font-family: 'Courier New', monospace; background: #0a0a0f; color: #e0e0e0; padding: 32px; max-width: 540px; margin: 0 auto;">
+      <div style="border: 1px solid #00f0ff33; padding: 28px; border-radius: 4px;">
+
+        <h1 style="color: #00f0ff; font-size: 22px; letter-spacing: 4px; margin: 0 0 6px; text-align: center;">
+          GROK RUNNER
+        </h1>
+        <p style="color: #ff00e599; font-size: 11px; letter-spacing: 5px; text-align: center; margin: 0 0 28px;">
+          v4.9 // BILLING_PATCH + PROMPT_BOARD
+        </p>
+
+        <div style="background: linear-gradient(135deg, #39ff1415, #00f0ff15); border: 1px solid #39ff1466; padding: 18px; border-radius: 4px; margin: 0 0 24px; text-align: center;">
+          <p style="color: #39ff14; font-size: 12px; letter-spacing: 3px; margin: 0 0 8px;">SUBSCRIPTION CREDITS — FIXED</p>
+          <p style="font-size: 13px; color: #c0c0c0; margin: 0; line-height: 1.6;">
+            We found and fixed a billing bug that was blocking monthly renewal credits for some long-time subscribers.
+            If you're on a grandfathered plan, your credits are being restored — check your wallet.
+          </p>
+        </div>
+
+        <p style="font-size: 14px; color: #c0c0c0; line-height: 1.7; margin: 0 0 20px;">
+          Hey Runner — quick honest update. A Stripe API change silently broke our renewal webhook, so some subscribers
+          weren't getting the monthly credits they paid for. That's on us, and we're sorry for the confusion.
+        </p>
+
+        <div style="background: #111; border: 1px solid #39ff1444; padding: 20px; border-radius: 4px; margin: 0 0 16px;">
+          <h2 style="color: #39ff14; font-size: 15px; margin: 0 0 10px; letter-spacing: 1px;">
+            ✅ WHAT WE FIXED
+          </h2>
+          <ul style="font-size: 13px; color: #b0b0b0; margin: 0; padding-left: 18px; line-height: 1.8;">
+            <li>Renewal webhooks now correctly detect subscription invoices again</li>
+            <li>Grandfathered / legacy subscription prices get their monthly credits back</li>
+            <li>Missing credits from recent renewals are being backfilled</li>
+          </ul>
+        </div>
+
+        <div style="background: #111; border: 1px solid #ffaa0044; padding: 20px; border-radius: 4px; margin: 0 0 16px;">
+          <h2 style="color: #ffaa00; font-size: 15px; margin: 0 0 10px; letter-spacing: 1px;">
+            ℹ️ NEW PRICING MODEL
+          </h2>
+          <p style="font-size: 13px; color: #b0b0b0; margin: 0; line-height: 1.6;">
+            New subscription tiers focus on <span style="color: #ffaa00; font-weight: bold;">discount %</span> on credit packs
+            instead of monthly credit drops. If you subscribed before the change, you're grandfathered — you keep your monthly credits.
+          </p>
+        </div>
+
+        <div style="background: #111; border: 1px solid #00f0ff44; padding: 20px; border-radius: 4px; margin: 0 0 16px;">
+          <h2 style="color: #00f0ff; font-size: 15px; margin: 0 0 10px; letter-spacing: 1px;">
+            💡 NEW: PROMPT BOARD
+          </h2>
+          <p style="font-size: 13px; color: #b0b0b0; margin: 0; line-height: 1.6;">
+            Share your best prompts, vote on what works, and copy winning setups straight into the generator.
+            Community knowledge, ranked.
+          </p>
+        </div>
+
+        <div style="background: #0d0d15; border: 1px solid #ff00e544; padding: 16px; border-radius: 4px; margin: 0 0 24px;">
+          <p style="font-size: 12px; color: #909090; margin: 0; line-height: 1.6;">
+            Still missing credits after a recent renewal? Reply to this email or hit support in-app — include the email on your account
+            and we'll look at your Stripe history manually.
+          </p>
+        </div>
+
+        <div style="text-align: center; margin: 0 0 12px;">
+          <a href="https://grokrunner.gltch.app" style="display: inline-block; background: linear-gradient(135deg, #00f0ff22, #ff00e522); border: 1px solid #00f0ff55; color: #00f0ff; text-decoration: none; padding: 14px 36px; border-radius: 4px; font-size: 14px; letter-spacing: 3px; font-weight: bold;">
+            OPEN GROK RUNNER →
+          </a>
+        </div>
+        <div style="text-align: center; margin: 0 0 20px;">
+          <a href="https://grokrunner.gltch.app/prompts" style="font-size: 12px; color: #00f0ff99; text-decoration: underline;">
+            Browse the Prompt Board →
+          </a>
+        </div>
+
+        <p style="font-size: 11px; color: #444; margin: 0; text-align: center;">
+          Sent to verified Grok Runner accounts. Your 10 daily credits are still waiting.
         </p>
       </div>
     </div>

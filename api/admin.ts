@@ -19,7 +19,16 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import Stripe from "stripe";
 import { getDb } from "./_lib/db";
 import { getUserFromRequest, ADMIN_EMAIL } from "./_lib/auth";
-import { sendAnnouncementEmail, buildAnnouncementHtml, buildV47AnnouncementHtml, buildV48AnnouncementHtml } from "./_lib/email";
+import { sendAnnouncementEmail, buildAnnouncementHtml, buildV47AnnouncementHtml, buildV48AnnouncementHtml, buildV49SubscriptionFixHtml } from "./_lib/email";
+import {
+  CAMPAIGN_CONFIG_KEY,
+  getCampaignRemaining,
+  getDefaultSubject,
+  getAnnouncementHtmlForCampaign,
+  saveCampaignJob,
+  readActiveCampaign,
+  type CampaignJob,
+} from "./_lib/email-campaign";
 
 function isAdmin(req: VercelRequest): boolean {
   const auth = getUserFromRequest(req);
@@ -834,12 +843,85 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       case "get-announcement-html": {
         const campaign = (req.body.campaign as string) || "announcement";
-        const html = campaign === "announcement_v48"
-          ? buildV48AnnouncementHtml()
-          : campaign === "announcement_v47"
-            ? buildV47AnnouncementHtml()
-            : buildAnnouncementHtml();
+        const html = getAnnouncementHtmlForCampaign(campaign);
         return res.status(200).json({ html, campaign });
+      }
+
+      case "queue-campaign": {
+        const campaign = (req.body.campaign as string) || "announcement";
+        const customSubject = req.body.subject || null;
+        const customHtml = req.body.html || null;
+        const batchSize = Math.min(Math.max(Number(req.body.batchSize) || 50, 1), 100);
+
+        const existing = await readActiveCampaign(sql);
+        if (existing && existing.campaign !== campaign) {
+          return res.status(409).json({
+            error: `Another campaign is active: "${existing.campaign}". Cancel it first or wait for completion.`,
+            activeCampaign: existing.campaign,
+          });
+        }
+
+        await sql`DELETE FROM announcement_cancels WHERE campaign = ${campaign}`;
+
+        const remaining = await getCampaignRemaining(sql, campaign);
+        const job: CampaignJob = {
+          campaign,
+          subject: customSubject || getDefaultSubject(campaign),
+          html: customHtml,
+          status: "active",
+          startedAt: new Date().toISOString(),
+          batchSize,
+          totalSent: 0,
+          totalFailed: 0,
+        };
+        await saveCampaignJob(sql, job);
+
+        console.log(`[admin] Queued email campaign "${campaign}" — ${remaining} recipients remaining, batch=${batchSize}`);
+
+        return res.status(200).json({
+          queued: true,
+          campaign,
+          remaining,
+          batchSize,
+          subject: job.subject,
+          message: "Campaign queued. Vercel cron processes batches every 2 minutes until complete.",
+        });
+      }
+
+      case "campaign-status": {
+        const campaign = (req.body.campaign as string) || null;
+        const job = await readActiveCampaign(sql);
+        const activeCampaign = job?.campaign ?? null;
+
+        if (campaign && activeCampaign && campaign !== activeCampaign) {
+          const remaining = await getCampaignRemaining(sql, campaign);
+          return res.status(200).json({
+            active: false,
+            campaign,
+            remaining,
+            job: null,
+          });
+        }
+
+        const targetCampaign = campaign || activeCampaign || "announcement";
+        const remaining = await getCampaignRemaining(sql, targetCampaign);
+
+        // Also read completed/cancelled job metadata if no longer active
+        let jobMeta: CampaignJob | null = job;
+        if (!jobMeta) {
+          const rows = await sql`SELECT value FROM app_config WHERE key = ${CAMPAIGN_CONFIG_KEY} LIMIT 1`;
+          if (rows.length) {
+            const raw = (rows[0] as { value: unknown }).value;
+            if (raw && typeof raw === "object") jobMeta = raw as CampaignJob;
+          }
+        }
+
+        return res.status(200).json({
+          active: !!job && job.status === "active",
+          campaign: targetCampaign,
+          remaining,
+          job: jobMeta,
+        });
       }
 
       case "send-announcement": {

@@ -292,8 +292,8 @@ function AnnouncementPanel() {
   const abortRef = useRef(false);
   const [stats, setStats] = useState<{ totalVerified: number; alreadySent: number; remaining: number } | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
-  const [campaign, setCampaign] = useState<"announcement" | "announcement_v47">("announcement_v47");
-  const [subject, setSubject] = useState("⚡ Grok Runner v4.7 // the coolest drop yet");
+  const [campaign, setCampaign] = useState<"announcement" | "announcement_v47" | "announcement_v48" | "announcement_v49">("announcement_v49");
+  const [subject, setSubject] = useState("GrokRunner — Subscription Credits Fixed + Platform Update");
   const [showEditor, setShowEditor] = useState(false);
   const [htmlContent, setHtmlContent] = useState("");
   const [showPreview, setShowPreview] = useState(false);
@@ -315,11 +315,34 @@ function AnnouncementPanel() {
 
   useEffect(() => { fetchStats(); }, [fetchStats]);
 
+  // Resume polling if a cron campaign was already running
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await apiFetch("/admin", { method: "POST", body: { action: "campaign-status", campaign } });
+        if (cancelled) return;
+        if (res.active && res.job?.startedAt) {
+          setBgRunning(true);
+          setBgStartedAt(new Date(res.job.startedAt).getTime());
+          if (typeof res.remaining === "number") setBgInitialRemaining(res.remaining + (res.job.totalSent ?? 0));
+        }
+      } catch { /* ignore */ }
+    })();
+    return () => { cancelled = true; };
+  }, [campaign]);
+
+  const CAMPAIGN_SUBJECTS: Record<string, string> = {
+    announcement_v49: "GrokRunner — Subscription Credits Fixed + Platform Update",
+    announcement_v48: "⚡ Grok Runner v4.8 // Signal Boost",
+    announcement_v47: "⚡ Grok Runner v4.7 // the coolest drop yet",
+    announcement: "🚀 Grok Runner just got a massive upgrade",
+  };
+
   // Reset custom HTML and cancel state when switching campaigns
   useEffect(() => { setHtmlContent(""); setCancelled(false); }, [campaign]);
 
-  // Live poll while a background campaign is running. Stops when remaining
-  // reaches 0 or the user switches campaigns / leaves the panel.
+  // Live poll while a cron campaign is running.
   useEffect(() => {
     if (!bgRunning) return;
     let cancelled = false;
@@ -327,30 +350,37 @@ function AnnouncementPanel() {
     let lastRemaining: number | null = null;
 
     const tick = async () => {
-      const res: any = await fetchStats();
-      if (cancelled || !res) return;
-      if (typeof res.remaining === "number") {
-        if (res.remaining === 0) {
-          setBgRunning(false);
-          return;
-        }
-        // Detect stalled campaign (no progress for 6 polls = ~24s).
-        if (lastRemaining !== null && res.remaining === lastRemaining) {
-          stallCount++;
-          if (stallCount >= 6) {
+      try {
+        const [statsRes, statusRes]: any[] = await Promise.all([
+          fetchStats(),
+          apiFetch("/admin", { method: "POST", body: { action: "campaign-status", campaign } }),
+        ]);
+        if (cancelled) return;
+        const remaining = typeof statusRes?.remaining === "number" ? statusRes.remaining : statsRes?.remaining;
+        if (typeof remaining === "number") {
+          if (remaining === 0 || !statusRes?.active) {
             setBgRunning(false);
             return;
           }
-        } else {
-          stallCount = 0;
+          if (lastRemaining !== null && remaining === lastRemaining) {
+            stallCount++;
+            // Cron runs every 2 min — allow ~3 min without progress before warning stop
+            if (stallCount >= 45) {
+              setBgRunning(false);
+              return;
+            }
+          } else {
+            stallCount = 0;
+          }
+          lastRemaining = remaining;
         }
-        lastRemaining = res.remaining;
-      }
+      } catch { /* ignore transient poll errors */ }
     };
 
+    tick();
     const id = setInterval(tick, 4000);
     return () => { cancelled = true; clearInterval(id); };
-  }, [bgRunning, fetchStats]);
+  }, [bgRunning, fetchStats, campaign]);
 
   const handleDryRun = async () => {
     setDryRunning(true);
@@ -420,22 +450,21 @@ function AnnouncementPanel() {
 
   const handleSendBackground = async () => {
     if (!confirm(
-      "Send in BACKGROUND mode?\n\n" +
-      "The server will keep sending after you close this page. " +
-      "The live dashboard below will update automatically every few seconds."
+      "Queue campaign via CRON?\n\n" +
+      "Vercel cron sends batches every 2 minutes until everyone is done. " +
+      "You can close this page — delivery continues on the server. " +
+      "This is the reliable method (recommended)."
     )) return;
     setSending(true);
     setResult(null);
     setCancelled(false);
-    // Capture the starting "remaining" so the dashboard can compute progress
     const startingRemaining = stats?.remaining ?? null;
     setBgInitialRemaining(startingRemaining);
     setBgStartedAt(Date.now());
     try {
       const body: any = {
-        action: "send-announcement",
-        background: true,
-        batchSize: 25,
+        action: "queue-campaign",
+        batchSize: 50,
         campaign,
       };
       if (subject) body.subject = subject;
@@ -443,14 +472,13 @@ function AnnouncementPanel() {
       const res = await apiFetch("/admin", { method: "POST", body });
       setResult({
         background: true,
-        sent: res.sent,
-        failed: res.failed,
-        total: res.totalUsers,
-        remaining: res.remainingAfter,
+        queued: true,
+        remaining: res.remaining,
+        batchSize: res.batchSize,
+        message: res.message,
       });
-      // Initialise the baseline if stats hadn't loaded yet
-      if (startingRemaining === null && typeof res.totalUsers === "number") {
-        setBgInitialRemaining(res.totalUsers);
+      if (startingRemaining === null && typeof res.remaining === "number") {
+        setBgInitialRemaining(res.remaining);
       }
       setBgRunning(true);
       fetchStats();
@@ -499,7 +527,7 @@ function AnnouncementPanel() {
           <Button variant="outline" size="sm" onClick={handleSendBackground} disabled={sending || dryRunning || bgRunning}
             className="font-mono-share text-xs gap-1.5 border-accent/30 hover:bg-accent/10 text-accent">
             <Send className="w-3 h-3" />
-            SEND_IN_BG
+            {bgRunning ? "CRON_RUNNING..." : "QUEUE_VIA_CRON"}
           </Button>
           {bgRunning && (
             <Button variant="outline" size="sm" onClick={handleCancelBackground} disabled={cancelling}
@@ -540,22 +568,19 @@ function AnnouncementPanel() {
           <select
             value={campaign}
             onChange={(e) => {
-              const next = e.target.value as "announcement" | "announcement_v47";
+              const next = e.target.value as typeof campaign;
               setCampaign(next);
-              setSubject(
-                next === "announcement_v47"
-                  ? "⚡ Grok Runner v4.7 // the coolest drop yet"
-                  : "🚀 Grok Runner just got a massive upgrade"
-              );
+              setSubject(CAMPAIGN_SUBJECTS[next] ?? CAMPAIGN_SUBJECTS.announcement);
             }}
             className="w-full bg-background/50 border border-primary/20 rounded px-2 py-1.5 font-mono-share text-xs text-foreground focus:outline-none focus:border-primary/50"
           >
+            <option value="announcement_v49">v4.9 — Subscription fix + Prompt Board (NEW)</option>
             <option value="announcement_v48">v4.8 — Signal Boost (chat + locks + +10 credits)</option>
             <option value="announcement_v47">v4.7 — Coolest Updates Drop</option>
             <option value="announcement">Original "Massive Upgrade" announcement</option>
           </select>
           <p className="font-mono-share text-[9px] text-muted-foreground/50">
-            Each campaign tracks its own send list — picking a new campaign lets you re-email everyone with fresh content.
+            Each campaign tracks its own send list. Use <span className="text-accent">QUEUE_VIA_CRON</span> for reliable delivery (recommended).
           </p>
         </div>
         <div className="space-y-1">
