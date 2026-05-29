@@ -175,17 +175,20 @@ export async function processCampaignBatch(
         failed++;
       }
     } else {
-      const ids = data ?? [];
+      // Resend's batch.send resolves to { data: { data: [{ id }] }, error } —
+      // the per-item array is nested under `data.data`. The old code read
+      // `data[i]` (indexing the wrapper object), so resendId was always
+      // undefined and every recipient was logged "failed". Since the dedup
+      // query (getCampaignRecipients) only excludes status='sent', the same
+      // oldest-N recipients were re-selected and re-delivered on every 2-min
+      // cron run — the "20 copies" bug. Read the nested array, and because
+      // error===null means Resend accepted the whole batch, log "sent"
+      // regardless of per-item id so the dedup always advances (loop-proof).
+      const ids = (data?.data ?? []) as Array<{ id?: string }>;
       for (let i = 0; i < recipients.length; i++) {
         const email = recipients[i];
-        const resendId = ids[i]?.id ?? null;
-        if (resendId) {
-          await logEmail(email, campaign, "sent", resendId);
-          sent++;
-        } else {
-          await logEmail(email, campaign, "failed", null, "No Resend ID returned for batch item");
-          failed++;
-        }
+        await logEmail(email, campaign, "sent", ids[i]?.id ?? null);
+        sent++;
       }
     }
   } catch (err) {
