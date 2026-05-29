@@ -1101,32 +1101,39 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
   // them back to index 0 (the newest photo) on mobile.
   const prevViewedIdRef = React.useRef<string | null>(null);
   const prevLengthRef = React.useRef<number>(filteredResults.length);
+
+  // Track the currently viewed id whenever the user navigates.
+  React.useEffect(() => {
+    prevViewedIdRef.current = filteredResults[mobileIndex]?.id ?? null;
+  }, [mobileIndex, filteredResults]);
+
+  // Reconcile mobileIndex ONLY when the list itself changes (not when the
+  // user navigates). Otherwise this snaps the user back and blocks swipes.
   React.useEffect(() => {
     const len = filteredResults.length;
     const prevId = prevViewedIdRef.current;
     const prevLen = prevLengthRef.current;
+    prevLengthRef.current = len;
 
     if (len === 0) {
       setMobileIndex(0);
-    } else if (prevId) {
-      const stillThereAt = filteredResults.findIndex((r) => r.id === prevId);
-      if (stillThereAt >= 0) {
-        // Same item still exists — jump to its new index (e.g. shifted by a
-        // newly generated photo at the top).
-        if (stillThereAt !== mobileIndex) setMobileIndex(stillThereAt);
-      } else if (len < prevLen) {
-        // Item was deleted — stay on the same slot so the neighbour fills in.
-        setMobileIndex(Math.min(mobileIndex, len - 1));
-      } else {
-        // Filter/folder switched and our item is gone — start at top.
-        setMobileIndex(0);
-      }
+      return;
     }
+    if (!prevId) return;
 
-    prevLengthRef.current = len;
-    prevViewedIdRef.current = filteredResults[mobileIndex]?.id ?? null;
+    const stillThereAt = filteredResults.findIndex((r) => r.id === prevId);
+    if (stillThereAt >= 0) {
+      setMobileIndex((cur) => (cur === stillThereAt ? cur : stillThereAt));
+    } else if (len < prevLen) {
+      // Item was deleted — stay on the same slot so the neighbour fills in.
+      setMobileIndex((cur) => Math.min(cur, len - 1));
+    } else {
+      // Filter/folder switched and our item is gone — start at top.
+      setMobileIndex(0);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filteredResults, mobileIndex]);
+  }, [filteredResults]);
+
 
 
   const handleCopyPrompt = useCallback(async (id: string, text: string) => {
