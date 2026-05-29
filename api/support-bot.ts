@@ -143,7 +143,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       `;
       const last24h = recent.reduce((s: number, r: any) => s + (Number(r.credits_used) || 0), 0);
       const sys =
-        `You are GrokRunner's in-app support assistant. Be concise (max 6 short lines), friendly, and use markdown bullets. ` +
+        `You are GLTCHRunner's in-app support assistant. Be concise (max 6 short lines), friendly, and use markdown bullets. ` +
         `Never invent features. Always greet the user by their @username. Always end with one concrete next step.`;
       const ctx =
         `User @${username} reports: insufficient balance.\n` +
@@ -250,7 +250,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       } catch { recentErrors = []; }
 
       const sys =
-        `You are GrokRunner's in-app support assistant. The user has flagged "having an issue" but did NOT type details. ` +
+        `You are GLTCHRunner's in-app support assistant. The user has flagged "having an issue" but did NOT type details. ` +
         `Inspect the activity snapshot and proactively diagnose the most likely problem. ` +
         `Be concise (max 7 short lines, markdown bullets). Greet them by @username. ` +
         `Suggest 2-3 concrete next steps. Always close with: "If none of this fits, DM support at support@grokrunner.ai with a screenshot." ` +

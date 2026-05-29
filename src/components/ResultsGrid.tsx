@@ -30,6 +30,7 @@ import { useSwipe } from "@/hooks/useSwipe";
 import ShareCTA from "@/components/ShareCTA";
 import PostToFeedDialog, { type PostToFeedValues } from "@/components/PostToFeedDialog";
 import { isPermanentPublicMediaUrl, uploadPublicMedia } from "@/lib/mediaUpload";
+import { BRAND } from "@/lib/brand";
 import { apiUrl } from "@/lib/api";
 
 // ── PIN Utilities ────────────────────────────────────────────────────────
@@ -1133,7 +1134,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
 
     if (mobile && navigator.share) {
       try {
-        await navigator.share({ title: "Grok Runner", url: shareLink });
+        await navigator.share({ title: BRAND.name, url: shareLink });
         return;
       } catch (e: any) {
         if (e?.name === "AbortError") return;
@@ -1162,7 +1163,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
       toast.success(t("results.copyLink"));
     } else if (navigator.share) {
       try {
-        await navigator.share({ title: "Grok Runner", url: shareLink });
+        await navigator.share({ title: BRAND.name, url: shareLink });
       } catch { /* user cancelled */ }
     } else {
       toast.success("Share link ready — tap to copy:", { description: shareLink });

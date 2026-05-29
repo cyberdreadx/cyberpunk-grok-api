@@ -100,7 +100,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           for (let i = 0; i < users.length; i += BATCH_SIZE) {
             const batch = users.slice(i, i + BATCH_SIZE);
             const emails = batch.map((u: any) => ({
-              from: `Grok Runner <${fromAddress}>`,
+              from: `GLTCHRunner <${fromAddress}>`,
               to: [u.email],
               subject,
               html,

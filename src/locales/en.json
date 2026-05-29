@@ -228,7 +228,7 @@
   "changelog": {
     "title": "SYSTEM_CHANGELOG",
     "subtitle": "// latest patches and upgrades //",
-    "footer": "GROK_RUNNER · all systems nominal",
+    "footer": "GLTCHRUNNER · all systems nominal",
     "tagNew": "NEW",
     "tagFix": "FIX",
     "tagImprove": "IMPROVE"
@@ -239,9 +239,9 @@
     "next": "Next",
     "gotIt": "Got it!",
     "welcome": {
-      "title": "Welcome to Grok Runner",
-      "subtitle": "AI image & video generation powered by xAI",
-      "body1": "Grok Runner lets you generate, edit, and animate images and video using cutting-edge AI models.",
+      "title": "Welcome to GLTCHRunner",
+      "subtitle": "AI image & video — GLTCH PRO, WAN, and FLUX",
+      "body1": "GLTCHRunner lets you generate, edit, and animate images and video using GLTCH engines.",
       "body2": "This quick guide will walk you through the basics. You can revisit it anytime from the help menu."
     },
     "twoWays": {
@@ -403,6 +403,10 @@
     "placeholder": "Message #{{channel}}",
     "send": "send",
     "footer": "{{count}}/500 · ephemeral · last 100 msgs",
-    "failedSend": "Failed to send"
+    "failedSend": "Failed to send",
+    "reply": "reply",
+    "replyTo": "Reply to {{username}}",
+    "replyingTo": "Replying to",
+    "cancelReply": "Cancel reply"
   }
 }

@@ -160,7 +160,7 @@ export async function handleCharacterChatMessage(
   const systemPrompt =
     systemBase +
     (memBits.length ? `\n\n[Internal context — never quote labels verbatim]\n${memBits.join("\n")}` : "") +
-    `\n\nYou are an AI persona inspired by a creator on Grok Runner — fans know replies are generated, not typed live.` +
+    `\n\nYou are an AI persona inspired by a creator on GLTCHRunner — fans know replies are generated, not typed live.` +
     `\n\nOUTPUT RULE — MEDIA: Never write the literal text "[attached image]", "[attached video]", "(sent a photo)", or similar placeholders in dialogue.` +
     ` To send a NEW picture use exactly [MEDIA_IMAGE]short pose prompt[/MEDIA_IMAGE]; for NEW video use [MEDIA_VIDEO]short motion prompt[/MEDIA_VIDEO].` +
     ` History may contain «guillemet» notes about past media — those are system hints only; never copy «…» into your reply.`;

@@ -6,7 +6,7 @@ import React, { useEffect, useMemo, useRef, useState, useCallback } from "react"
 import { apiFetch, hasAuthToken } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { setLastSeen } from "@/hooks/useChatUnread";
-import { Send, Hash, RefreshCw, ArrowLeft } from "lucide-react";
+import { Send, Hash, RefreshCw, ArrowLeft, Reply, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
@@ -36,16 +36,29 @@ const ChatRoom: React.FC = () => {
   });
   const [messages, setMessages] = useState<Msg[]>([]);
   const [text, setText] = useState("");
+  const [replyTo, setReplyTo] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
   const listRef = useRef<HTMLDivElement>(null);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
   const lastTs = useRef(0);
+  const isInitialLoad = useRef(true);
+  const stickToBottom = useRef(true);
+
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = "auto") => {
+    const el = listRef.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior });
+  }, []);
 
   useEffect(() => {
     localStorage.setItem("chat-channel", channel);
     lastTs.current = 0;
     setMessages([]);
     setLoading(true);
+    setReplyTo(null);
+    isInitialLoad.current = true;
+    stickToBottom.current = true;
   }, [channel]);
 
   const poll = useCallback(async () => {
@@ -84,13 +97,30 @@ const ChatRoom: React.FC = () => {
     return () => clearInterval(id);
   }, [poll, authed]);
 
-  // Auto-scroll to bottom on new messages
-  useEffect(() => {
+  const onListScroll = useCallback(() => {
     const el = listRef.current;
     if (!el) return;
-    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
-    if (nearBottom) el.scrollTop = el.scrollHeight;
-  }, [messages]);
+    stickToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+  }, []);
+
+  // Jump to latest on open / channel switch; stick when user is near bottom
+  useEffect(() => {
+    if (messages.length === 0) return;
+    if (isInitialLoad.current) {
+      isInitialLoad.current = false;
+      requestAnimationFrame(() => scrollToBottom("auto"));
+      return;
+    }
+    if (stickToBottom.current) scrollToBottom("auto");
+  }, [messages, scrollToBottom]);
+
+  const startReply = useCallback((username: string) => {
+    if (!username) return;
+    setReplyTo(username);
+    const mention = `@${username} `;
+    setText((prev) => (prev.startsWith(mention) ? prev : prev.trim() ? `${mention}${prev}` : mention));
+    requestAnimationFrame(() => composerRef.current?.focus());
+  }, []);
 
   const send = async () => {
     const v = text.trim();
@@ -103,6 +133,7 @@ const ChatRoom: React.FC = () => {
         body: { text: v },
       });
       if (res?.message) {
+        stickToBottom.current = true;
         setMessages((prev) => {
           const next = [...prev, res.message];
           if (res.botMessage) next.push(res.botMessage);
@@ -111,6 +142,7 @@ const ChatRoom: React.FC = () => {
         lastTs.current = (res.botMessage?.ts || res.message.ts);
       }
       setText("");
+      setReplyTo(null);
     } catch (e: any) {
       toast.error(e?.message || t("chat.failedSend"));
     } finally {
@@ -146,7 +178,13 @@ const ChatRoom: React.FC = () => {
             <span className="text-xs uppercase tracking-[0.2em] text-primary/80">{t("chat.title")}</span>
           </div>
           <button
-            onClick={() => { lastTs.current = 0; setMessages([]); poll(); }}
+            onClick={() => {
+              lastTs.current = 0;
+              setMessages([]);
+              isInitialLoad.current = true;
+              stickToBottom.current = true;
+              poll();
+            }}
             className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1"
             aria-label={t("chat.refresh")}
           >
@@ -171,7 +209,7 @@ const ChatRoom: React.FC = () => {
       </div>
 
       {/* Messages */}
-      <div ref={listRef} className="flex-1 overflow-y-auto px-3 py-2 space-y-2">
+      <div ref={listRef} onScroll={onListScroll} className="flex-1 overflow-y-auto px-3 py-2 space-y-2">
         {!authed && (
           <div className="text-center text-sm text-muted-foreground py-12">
             {t("chat.signInPrompt")}
@@ -193,7 +231,7 @@ const ChatRoom: React.FC = () => {
           const promptMatch = isBot ? m.text.match(/⟦prompt⟧([\s\S]+?)⟦\/prompt⟧/) : null;
           const cleanText = promptMatch ? m.text.replace(promptMatch[0], "").trim() : m.text;
           return (
-            <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
+            <div key={m.id} className={`group flex ${mine ? "justify-end" : "justify-start"}`}>
               <div className={`max-w-[85%] rounded-lg px-3 py-2 text-sm border ${
                 isBot
                   ? "bg-accent/10 border-accent/50 text-foreground shadow-[0_0_12px_hsl(var(--accent)/0.25)]"
@@ -205,20 +243,32 @@ const ChatRoom: React.FC = () => {
                   {isBot ? (
                     <span className="text-accent font-bold">◆ {m.username} <span className="opacity-60">/ai</span></span>
                   ) : (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (m.username) navigate(`/profile/${encodeURIComponent(m.username)}`);
-                      }}
-                      className={`hover:underline focus:underline focus:outline-none ${mine ? "text-primary" : "text-accent-foreground"}`}
-                      aria-label={`Open profile ${m.username}`}
-                    >
-                      {m.username}
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (m.username) navigate(`/profile/${encodeURIComponent(m.username)}`);
+                        }}
+                        className={`hover:underline focus:underline focus:outline-none ${mine ? "text-primary" : "text-accent-foreground"}`}
+                        aria-label={`Open profile ${m.username}`}
+                      >
+                        {m.username}
+                      </button>
+                      {!mine && (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); startReply(m.username); }}
+                          className="opacity-70 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 inline-flex items-center gap-0.5 text-primary/80 hover:text-primary transition-opacity normal-case tracking-normal"
+                          aria-label={t("chat.replyTo", { username: m.username })}
+                        >
+                          <Reply className="w-3 h-3" />
+                          {t("chat.reply")}
+                        </button>
+                      )}
+                    </>
                   )}
-                  <span>·</span>
-                  <span>{fmt(m.ts)}</span>
+                  <span className="ml-auto shrink-0">· {fmt(m.ts)}</span>
                 </div>
                 <div className="whitespace-pre-wrap break-words">{cleanText}</div>
                 {promptMatch && (
@@ -243,8 +293,24 @@ const ChatRoom: React.FC = () => {
       {authed && (
         <div className="border-t border-border/60 bg-background/80 backdrop-blur px-3 py-2"
              style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 8px)" }}>
+          {replyTo && (
+            <div className="flex items-center gap-2 mb-2 px-2 py-1 rounded border border-primary/30 bg-primary/5 text-[11px]">
+              <Reply className="w-3 h-3 text-primary shrink-0" />
+              <span className="text-muted-foreground">{t("chat.replyingTo")}</span>
+              <span className="text-primary font-medium">@{replyTo}</span>
+              <button
+                type="button"
+                onClick={() => setReplyTo(null)}
+                className="ml-auto p-0.5 text-muted-foreground hover:text-foreground"
+                aria-label={t("chat.cancelReply")}
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          )}
           <div className="flex gap-2 items-end">
             <textarea
+              ref={composerRef}
               value={text}
               onChange={(e) => setText(e.target.value.slice(0, 500))}
               onKeyDown={(e) => {

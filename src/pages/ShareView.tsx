@@ -2,9 +2,10 @@ import { useState, useEffect } from "react";
 import { useParams, Link, useSearchParams } from "react-router-dom";
 import { Loader2, Sparkles, ExternalLink, Share2, Zap, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { BRAND } from "@/lib/brand";
 
 const API_BASE = import.meta.env.VITE_API_URL || "/api";
-const SITE_URL = "https://grokrunner.gltch.app";
+const SITE_URL = BRAND.siteUrl;
 
 interface ShareData {
   r2Url: string;
@@ -53,7 +54,7 @@ export default function ShareView() {
   const homeUrl = `/${refCode ? `?ref=${refCode}` : ""}`;
 
   const handleShareTwitter = () => {
-    const text = `Made with Grok Runner — free AI image & video generation\n\n${shareUrl}`;
+    const text = `Made with ${BRAND.name} — free AI image & video generation\n\n${shareUrl}`;
     window.open(
       `https://x.com/intent/tweet?text=${encodeURIComponent(text)}`,
       "_blank",
@@ -63,7 +64,7 @@ export default function ShareView() {
 
   const handleShareReddit = () => {
     window.open(
-      `https://www.reddit.com/submit?url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent("Made this with Grok Runner — free AI image generator")}`,
+      `https://www.reddit.com/submit?url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(`Made this with ${BRAND.name} — free AI image generator`)}`,
       "_blank",
     );
   };
@@ -106,7 +107,7 @@ export default function ShareView() {
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
           <Link to={homeUrl} className="flex items-center gap-2 group">
             <div className="font-orbitron text-sm tracking-wider text-primary group-hover:text-primary/80 transition-colors">
-              GROK_RUNNER
+              {BRAND.nameHeader}
             </div>
           </Link>
           <div className="flex items-center gap-2">

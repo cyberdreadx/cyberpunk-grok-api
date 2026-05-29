@@ -1,5 +1,5 @@
 import React from "react";
-import { Image, Pencil, Video, Film, Scissors, Users, TerminalSquare } from "lucide-react";
+import { Image, Pencil, Video, Film, Users, TerminalSquare } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import type { GrokMode } from "@/hooks/useGrokApi";
@@ -15,7 +15,6 @@ const modes: { id: GrokMode; labelKey: string; icon: React.ElementType; descKey:
   { id: "edit-image", labelKey: "modes.modify", icon: Pencil, descKey: "modes.descModify", shortcut: "02" },
   { id: "text-to-video", labelKey: "modes.render", icon: Video, descKey: "modes.descRender", shortcut: "03" },
   { id: "image-to-video", labelKey: "modes.animate", icon: Film, descKey: "modes.descAnimate", shortcut: "04" },
-  { id: "edit-video", labelKey: "modes.remix", icon: Scissors, descKey: "modes.descRemix", shortcut: "05" },
 ];
 
 const ModeSelector: React.FC<ModeSelectorProps> = ({ activeMode, onModeChange, isAuthenticated }) => {
@@ -124,7 +123,7 @@ const ModeSelector: React.FC<ModeSelectorProps> = ({ activeMode, onModeChange, i
             className="relative group p-3 border rounded transition-all duration-300 text-left overflow-hidden border-border/40 hover:border-secondary/30 bg-card/30 hover:bg-card/60"
           >
             <div className="absolute top-0 left-0 right-0 h-[2px] bg-transparent group-hover:bg-secondary/30 transition-all" />
-            <span className="absolute top-2 right-2 font-mono-share text-[8px] text-muted-foreground/15">06</span>
+            <span className="absolute top-2 right-2 font-mono-share text-[8px] text-muted-foreground/15">05</span>
             <div className="flex items-center gap-2 mb-1.5">
               <span className="font-mono-share text-[10px] text-muted-foreground/20">$</span>
               <Users className="w-4 h-4 transition-colors text-muted-foreground/50 group-hover:text-secondary/70" />
@@ -144,7 +143,7 @@ const ModeSelector: React.FC<ModeSelectorProps> = ({ activeMode, onModeChange, i
           title="Hacker terminal — type commands"
         >
           <div className="absolute top-0 left-0 right-0 h-[2px] bg-primary/60 group-hover:bg-primary transition-all" />
-          <span className="absolute top-2 right-2 font-mono-share text-[8px] text-primary/40">07</span>
+          <span className="absolute top-2 right-2 font-mono-share text-[8px] text-primary/40">06</span>
           <div className="flex items-center gap-2 mb-1.5">
             <span className="font-mono-share text-[10px] text-primary/60">▸</span>
             <TerminalSquare className="w-4 h-4 text-primary transition-colors" />

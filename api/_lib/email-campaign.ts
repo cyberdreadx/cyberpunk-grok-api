@@ -20,10 +20,10 @@ export interface CampaignJob {
 }
 
 export const DEFAULT_CAMPAIGN_SUBJECTS: Record<string, string> = {
-  announcement: "GrokRunner Update — New Features & Improvements",
-  announcement_v47: "GrokRunner Update — v4.7 is Live",
-  announcement_v48: "GrokRunner Update — v4.8 is Live",
-  announcement_v49: "GrokRunner — Subscription Credits Fixed + Platform Update",
+  announcement: "GLTCHRunner Update — New Features & Improvements",
+  announcement_v47: "GLTCHRunner Update — v4.7 is Live",
+  announcement_v48: "GLTCHRunner Update — v4.8 is Live",
+  announcement_v49: "GLTCHRunner — Subscription Credits Fixed + Platform Update",
 };
 
 export function getAnnouncementHtmlForCampaign(campaign: string): string {
@@ -153,7 +153,7 @@ export async function processCampaignBatch(
   const from = getFromAddress();
 
   const payload = recipients.map((to) => ({
-    from: `Grok Runner <${from}>`,
+    from: `GLTCHRunner <${from}>`,
     to: [to],
     subject,
     html,

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { Send, Upload, Loader2, ImagePlus, Link, X, Film, Sparkles, Info } from "lucide-react";
+import { Send, Upload, Loader2, ImagePlus, Link, X, Sparkles, Info } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -28,8 +28,7 @@ function creditCostBreakdown(mode: GrokMode, cost: number, imageCount: number, v
         ? { lines: [`${Math.round(cost / imageCount)} cr / image`, `× ${imageCount} images`, `= ${cost} cr total`], note: "Grok · GLTCH image editing" }
         : { lines: [`${cost} cr / image`], note: "Grok · GLTCH image editing" };
     case "text-to-video":
-    case "image-to-video":
-    case "edit-video": {
+    case "image-to-video": {
       const isFlat = cost === 15;
       return isFlat
         ? { lines: [`${cost} cr flat rate`], note: "GLTCH PRO / ComfyUI WAN 2.2" }
@@ -46,8 +45,7 @@ function creditCostLabel(mode: GrokMode, cost: number): string {
     case "text-to-image": return `${cost} cr — text-to-image generation`;
     case "edit-image":    return `${cost} cr — image editing`;
     case "text-to-video":
-    case "image-to-video":
-    case "edit-video":    return cost === 15 ? `${cost} cr flat — GLTCH/ComfyUI` : `3 cr/s × ${cost/3}s = ${cost} cr`;
+    case "image-to-video":    return cost === 15 ? `${cost} cr flat — GLTCH/ComfyUI` : `3 cr/s × ${cost/3}s = ${cost} cr`;
     default:              return `${cost} cr`;
   }
 }
@@ -75,10 +73,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
   const [imageSource, setImageSource] = useState<"url" | "upload">(initialImageUrl ? "url" : "upload");
   const [uploadPreview, setUploadPreview] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const [videoSource, setVideoSource] = useState<"url" | "upload">("upload");
-  const [videoPreview, setVideoPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const videoFileInputRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const [enhancing, setEnhancing] = useState(false);
 
@@ -91,15 +86,14 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
   }, [initialPrompt]);
 
   useEffect(() => {
-    if (initialImageUrl) {
-      setImageUrl(initialImageUrl);
-      setImageSource("url");
-      setUploadPreview(null);
-    }
+    if (!initialImageUrl) return;
+    setImageUrl(initialImageUrl);
+    setImageSource("url");
+    setUploadPreview(null);
+    setUploadError(null);
   }, [initialImageUrl]);
 
   const needsImage = mode === "edit-image" || mode === "image-to-video";
-  const needsVideo = mode === "edit-video";
 
   const readBlobAsDataUrl = (blob: Blob): Promise<string> =>
     new Promise((resolve, reject) => {
@@ -151,13 +145,11 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
     return url;
   };
 
-  const fileToUploadedUrl = async (file: File): Promise<string> => {
-    // Handles HEIC (incl. Live Photo bursts) and Live Photo .mov first-frame.
-    let blob: Blob = await normalizeToImageBlob(file, 0.9);
-    if (blob.type.startsWith("image/")) {
-      blob = await resizeBlobIfNeeded(blob);
-    }
-    return uploadToBlob(blob, file.name || "upload");
+  const setLocalPreview = async (blob: Blob) => {
+    const dataUrl = await readBlobAsDataUrl(blob);
+    setUploadPreview(dataUrl);
+    setImageSource("upload");
+    return dataUrl;
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -169,18 +161,28 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
     }
     setUploadError(null);
 
-    // Show local preview immediately while upload happens in background
-    const localPreview = URL.createObjectURL(file);
-    setUploadPreview(localPreview);
-    setImageSource("upload");
+    let blob: Blob;
+    try {
+      blob = await normalizeToImageBlob(file, 0.9);
+      if (blob.type.startsWith("image/")) {
+        blob = await resizeBlobIfNeeded(blob);
+      }
+    } catch (err: any) {
+      console.error("[PromptForm] Image normalize failed:", err?.message || err);
+      setUploadError(err?.message || "Could not read this image.");
+      return;
+    }
+
+    const localDataUrl = await setLocalPreview(blob);
 
     try {
-      const url = await fileToUploadedUrl(file);
+      const url = await uploadToBlob(blob, file.name || "upload");
       setImageUrl(url);
+      setUploadPreview(url);
     } catch (err: any) {
       console.error("[PromptForm] Upload failed:", err?.message || err);
-      setUploadError(err?.message || "Upload failed. Try a smaller JPEG/PNG/WebP.");
-      clearUpload();
+      setUploadError(err?.message || "Cloud upload failed — you can still generate using the local preview.");
+      setImageUrl(localDataUrl);
     }
   };
 
@@ -195,22 +197,36 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
   const handleExtraFileChange = async (e: React.ChangeEvent<HTMLInputElement>, slotIndex: number) => {
     const file = e.target.files?.[0];
     if (!file || !(await isAcceptableImageLike(file))) return;
-    const localPreview = URL.createObjectURL(file);
+
+    let blob: Blob;
+    try {
+      blob = await normalizeToImageBlob(file, 0.9);
+      if (blob.type.startsWith("image/")) {
+        blob = await resizeBlobIfNeeded(blob);
+      }
+    } catch {
+      return;
+    }
+
+    const localPreview = await readBlobAsDataUrl(blob);
     setExtraImages(prev => {
       const next = [...prev];
       next[slotIndex] = { url: "", preview: localPreview };
       return next;
     });
     try {
-      const url = await fileToUploadedUrl(file);
+      const url = await uploadToBlob(blob, file.name || "upload");
       setExtraImages(prev => {
         const next = [...prev];
-        next[slotIndex] = { url, preview: localPreview };
+        next[slotIndex] = { url, preview: url };
         return next;
       });
     } catch {
-      // remove failed slot
-      setExtraImages(prev => prev.filter((_, i) => i !== slotIndex));
+      setExtraImages(prev => {
+        const next = [...prev];
+        next[slotIndex] = { url: localPreview, preview: localPreview };
+        return next;
+      });
     }
   };
 
@@ -220,43 +236,10 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
     if (ref) ref.value = "";
   };
 
-  const handleVideoFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith("video/")) {
-      setUploadError("Please select a video file (MP4, WebM, etc.).");
-      return;
-    }
-    if (file.size > 50 * 1024 * 1024) {
-      setUploadError("Video file too large (max 50 MB).");
-      return;
-    }
-    setUploadError(null);
-    const localPreview = URL.createObjectURL(file);
-    setVideoPreview(localPreview);
-    setVideoSource("upload");
-    try {
-      const url = await uploadToBlob(file, file.name || "video");
-      setImageUrl(url);
-    } catch (err: any) {
-      console.error("[PromptForm] Video upload failed:", err?.message || err);
-      setUploadError(err?.message || "Video upload failed.");
-      clearVideoUpload();
-    }
-  };
-
-  const clearVideoUpload = () => {
-    setImageUrl("");
-    setVideoPreview(null);
-    setUploadError(null);
-    if (videoFileInputRef.current) videoFileInputRef.current.value = "";
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!prompt.trim()) return;
     if (needsImage && !imageUrl.trim()) return;
-    if (needsVideo && !imageUrl.trim()) return;
 
     setUploadError(null);
     const extraUrls = extraImages.map(ei => ei.url).filter(Boolean);
@@ -287,17 +270,28 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
         const file = item.getAsFile();
         if (!file) return;
         setUploadError(null);
-        const localPreview = URL.createObjectURL(file);
-        setUploadPreview(localPreview);
-        setImageSource("upload");
-        fileToUploadedUrl(file)
-          .then((url) => {
+        void (async () => {
+          let blob: Blob;
+          try {
+            blob = await normalizeToImageBlob(file, 0.9);
+            if (blob.type.startsWith("image/")) {
+              blob = await resizeBlobIfNeeded(blob);
+            }
+          } catch (err: any) {
+            setUploadError(err?.message || "Could not read pasted image.");
+            return;
+          }
+          const localDataUrl = await setLocalPreview(blob);
+          try {
+            const url = await uploadToBlob(blob, "paste.png");
             setImageUrl(url);
-          })
-          .catch((err: any) => {
+            setUploadPreview(url);
+          } catch (err: any) {
             console.error("[PromptForm] Paste upload failed:", err?.message || err);
-            setUploadError(err?.message || "Clipboard image upload failed.");
-          });
+            setUploadError(err?.message || "Cloud upload failed — you can still generate using the local preview.");
+            setImageUrl(localDataUrl);
+          }
+        })();
         return;
       }
     }
@@ -313,7 +307,6 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
         "edit-image": "edit",
         "text-to-video": "video",
         "image-to-video": "video",
-        "edit-video": "edit",
       };
       const data = await apiFetch<{ enhanced: string }>("/comfyui", {
         method: "POST",
@@ -333,7 +326,6 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
     "edit-image": t("prompt.placeholderEdit"),
     "text-to-video": t("prompt.placeholderVideo"),
     "image-to-video": t("prompt.placeholderAnimate"),
-    "edit-video": t("prompt.placeholderEdit"),
   };
 
   const suggestedPrompts: Record<GrokMode, string[]> = {
@@ -341,103 +333,14 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
     "edit-image": ["remove background", "add dramatic lighting", "make it anime style", "enhance details"],
     "text-to-video": ["cinematic camera pan", "anime fight scene", "slow motion explosion", "looping abstract art"],
     "image-to-video": ["subtle breathing motion", "camera slowly zooms in", "hair blowing in wind", "eyes blink slowly"],
-    "edit-video": ["add motion blur", "color grade cinematic", "slow it down", "loop seamlessly"],
   };
 
-  const hasImage = imageSource === "upload" ? !!uploadPreview : !!imageUrl.trim();
+  const uploadDisplaySrc = uploadPreview || (imageSource === "upload" ? imageUrl.trim() : "");
+  const hasImage = imageSource === "upload" ? !!uploadDisplaySrc : !!imageUrl.trim();
 
   return (
     <>
       <form ref={formRef} onSubmit={handleSubmit} onPaste={handlePaste} className="space-y-4">
-      {needsVideo && (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <label className="font-mono-share text-[10px] tracking-wider text-muted-foreground flex items-center gap-2">
-              <span className="text-primary/50">$</span>
-              <Upload className="w-3 h-3" />
-              source_video
-            </label>
-            <div className="flex gap-1">
-              <button
-                type="button"
-                onClick={() => { setVideoSource("upload"); setImageUrl(""); }}
-                className={`font-mono-share text-[9px] px-2 py-0.5 rounded transition-colors ${videoSource === "upload"
-                  ? "bg-primary/20 text-primary border border-primary/30"
-                  : "text-muted-foreground hover:text-foreground border border-border/30"
-                  }`}
-              >
-                <Film className="w-3 h-3 inline mr-1" />
-                UPLOAD
-                {t("prompt.upload").toUpperCase()}
-              </button>
-              <button
-                type="button"
-                onClick={() => { setVideoSource("url"); clearVideoUpload(); }}
-                className={`font-mono-share text-[9px] px-2 py-0.5 rounded transition-colors ${videoSource === "url"
-                  ? "bg-primary/20 text-primary border border-primary/30"
-                  : "text-muted-foreground hover:text-foreground border border-border/30"
-                  }`}
-              >
-                <Link className="w-3 h-3 inline mr-1" />
-                URL
-              </button>
-            </div>
-          </div>
-
-          {videoSource === "upload" ? (
-            <div className="relative">
-              {videoPreview ? (
-                <div className="relative group">
-                  <video
-                    src={videoPreview}
-                    className="w-full max-h-32 object-contain rounded border border-border bg-input"
-                    controls
-                    muted
-                    playsInline
-                    // @ts-ignore
-                    webkit-playsinline="true"
-                  />
-                  <button
-                    type="button"
-                    onClick={clearVideoUpload}
-                    className="absolute top-1 right-1 p-1 rounded bg-background/80 text-muted-foreground hover:text-destructive transition-colors"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => videoFileInputRef.current?.click()}
-                  className="w-full h-20 border border-dashed border-border rounded flex flex-col items-center justify-center gap-1 bg-input/50 hover:bg-input hover:border-primary/30 transition-colors cursor-pointer"
-                >
-                  <Film className="w-5 h-5 text-muted-foreground" />
-                  <span className="font-mono-share text-[10px] text-muted-foreground">
-                    Click to upload video — MP4, WebM (max 50 MB)
-                  </span>
-                </button>
-              )}
-              <input
-                ref={videoFileInputRef}
-                type="file"
-                accept="video/*"
-                onChange={handleVideoFileChange}
-                className="hidden"
-              />
-              {uploadError && (
-                <p className="mt-1 font-mono-share text-[10px] text-destructive/80">{uploadError}</p>
-              )}
-            </div>
-          ) : (
-            <Input
-              value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
-              placeholder="https://example.com/video.mp4"
-              className="bg-input border-border font-mono-share text-sm text-foreground placeholder:text-muted-foreground focus:neon-border"
-            />
-          )}
-        </div>
-      )}
       {needsImage && (
         <div className="space-y-2">
           <div className="flex items-center justify-between">
@@ -474,10 +377,10 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
 
           {imageSource === "upload" ? (
             <div className="relative">
-              {uploadPreview ? (
+              {uploadDisplaySrc ? (
                 <div className="relative group">
                   <img
-                    src={uploadPreview}
+                    src={uploadDisplaySrc}
                     alt="Upload preview"
                     className="w-full max-h-32 object-contain rounded border border-border bg-input"
                   />
@@ -624,11 +527,6 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
                   {hasImage ? `[IMG_LOADED${extraImages.length > 0 ? ` +${extraImages.length}` : ""}]` : "[IMG_REQUIRED]"}
                 </span>
               )}
-              {needsVideo && (
-                <span className={imageUrl.trim() ? "text-primary/60" : "text-destructive/50"}>
-                  {imageUrl.trim() ? "[VID_LOADED]" : "[VID_REQUIRED]"}
-                </span>
-              )}
               <span className="hidden sm:inline font-mono-share text-[8px] text-muted-foreground/20">Ctrl+Enter</span>
             </div>
 
@@ -653,7 +551,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
                 <TooltipProvider delayDuration={300}>
                   <Button
                     type="submit"
-                    disabled={isLoading || !prompt.trim() || (needsImage && !imageUrl.trim()) || (needsVideo && !imageUrl.trim())}
+                    disabled={isLoading || !prompt.trim() || (needsImage && !imageUrl.trim())}
                     className="h-10 px-5 sm:px-8 font-orbitron text-xs sm:text-sm font-bold bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-30 gap-2 tracking-widest shadow-[0_0_20px_hsl(var(--primary)/0.4)] hover:shadow-[0_0_30px_hsl(var(--primary)/0.6)] transition-all duration-200"
                   >
                     {isLoading ? (
@@ -735,7 +633,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
         <button
           type="button"
           onClick={() => formRef.current?.requestSubmit()}
-          disabled={isLoading || !prompt.trim() || (needsImage && !imageUrl.trim()) || (needsVideo && !imageUrl.trim())}
+          disabled={isLoading || !prompt.trim() || (needsImage && !imageUrl.trim())}
           className="w-full h-13 font-orbitron text-sm font-bold bg-primary text-primary-foreground disabled:opacity-40 flex items-center justify-center gap-3 tracking-widest rounded shadow-[0_0_28px_hsl(var(--primary)/0.55)] active:scale-[0.98] transition-all duration-150"
           title={creditCost != null ? creditCostLabel(mode, creditCost) : undefined}
         >

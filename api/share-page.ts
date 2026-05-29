@@ -31,8 +31,8 @@ function notFoundPage(host: string): string {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Not Found — Grok Runner</title>
-  <meta property="og:title" content="Grok Runner — AI Image & Video Generator" />
+  <title>Not Found — GLTCHRunner</title>
+  <meta property="og:title" content="GLTCHRunner — AI Image & Video Generator" />
   <meta property="og:description" content="Create stunning AI art, edit photos, and generate videos. Powered by xAI." />
   <meta property="og:image" content="https://${host}/og-image.png" />
   <meta name="twitter:card" content="summary_large_image" />
@@ -228,15 +228,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const mediaUrl = String(meta.mediaUrl || "");
 
     const safePrompt = escapeHtml(String(meta.prompt || ""));
-    const truncatedPrompt = truncate(String(meta.prompt || "AI-generated with Grok Runner"), 200);
+    const truncatedPrompt = truncate(String(meta.prompt || "AI-generated with GLTCHRunner"), 200);
     const isVideo = meta.mediaType === "video";
     const typeBadge = isVideo ? "VIDEO" : "IMAGE";
 
     const ogTitle = safePrompt
-      ? `"${escapeHtml(truncate(String(meta.prompt), 60))}" — Made with Grok Runner`
-      : "AI Creation — Made with Grok Runner";
+      ? `"${escapeHtml(truncate(String(meta.prompt), 60))}" — Made with GLTCHRunner`
+      : "AI Creation — Made with GLTCHRunner";
     const ogDesc = safePrompt
-      ? `${escapeHtml(truncatedPrompt)} — Try this prompt or create your own AI art at Grok Runner.`
+      ? `${escapeHtml(truncatedPrompt)} — Try this prompt or create your own AI art at GLTCHRunner.`
       : "Create stunning AI images, edit photos, and generate videos. Powered by xAI.";
 
     const tryPromptUrl = `${baseUrl}/?prompt=${encodeURIComponent(String(meta.prompt || ""))}${refCode ? `&ref=${refCode}` : ""}`;
@@ -262,7 +262,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   <meta property="og:image:width" content="1024" />
   <meta property="og:image:height" content="1024" />`}
   <meta property="og:image:alt" content="${ogDesc}" />
-  <meta property="og:site_name" content="Grok Runner" />
+  <meta property="og:site_name" content="GLTCHRunner" />
 
   <!-- Twitter -->
   <meta name="twitter:card" content="summary_large_image" />
@@ -335,7 +335,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     </div>
 
     <div class="footer">
-      <a href="${baseUrl}/">grokrunner.gltch.app</a> — Powered by xAI Grok & FLUX
+      <a href="${baseUrl}/">grokrunner.gltch.app</a> — Powered by GLTCH & FLUX
     </div>
   </div>
 </body>

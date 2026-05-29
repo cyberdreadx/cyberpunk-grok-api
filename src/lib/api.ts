@@ -137,7 +137,7 @@ export const CREDIT_COSTS = {
 export type CreditMode =
   | "text-to-image" | "edit-image" | "text-to-image-pro" | "edit-image-pro"
   | "text-to-image-2k" | "edit-image-2k" | "text-to-image-pro-2k" | "edit-image-pro-2k"
-  | "text-to-video" | "image-to-video" | "edit-video"
+  | "text-to-video" | "image-to-video"
   | "gltch-edit" | "gltch-edit-hd"
   | "comfy-image" | "comfy-image-hd" | "comfy-edit" | "comfy-edit-hd" | "comfy-video" | "comfy-longlook";
 
@@ -166,7 +166,6 @@ export function calculateCreditCost(
       return CREDIT_COSTS.imageEditPro2k * imageCount;
     case "text-to-video":
     case "image-to-video":
-    case "edit-video":
       return CREDIT_COSTS.videoPerSecond * videoDurationSeconds;
     case "gltch-edit":
       return CREDIT_COSTS.gltchEdit;

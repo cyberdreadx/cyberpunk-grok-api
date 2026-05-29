@@ -66,9 +66,11 @@ async function uploadOne(
     return presign.publicUrl;
   } catch (err: any) {
     const msg = String(err?.message || err || "");
-    if (!msg.includes("R2") && !msg.includes("503") && !msg.includes("not configured")) {
+    // Auth errors should surface immediately — no silent fallback.
+    if (/unauthorized|sign in required/i.test(msg)) {
       throw err;
     }
+    console.warn("[mediaUpload] R2 upload failed, falling back to Vercel Blob:", msg);
   }
 
   const ext =

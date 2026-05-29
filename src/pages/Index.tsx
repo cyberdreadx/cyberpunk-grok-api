@@ -51,7 +51,7 @@ import PwaInstallBanner from "@/components/PwaInstallBanner";
 import SupportBotDialog, { SupportBotLauncher } from "@/components/SupportBotDialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useFlashSale } from "@/hooks/useFlashSale";
-import { useGrokApi, urlToBase64, getImageDimensions, type GrokMode, type GenerationSettings, type VideoSettings, type ApiMode, type VideoLoraEntry, type ComfyJob, DEFAULT_SETTINGS, DEFAULT_VIDEO_SETTINGS } from "@/hooks/useGrokApi";
+import { BRAND } from "@/lib/brand";
 import { useAuth } from "@/hooks/useAuth";
 import { useCredits } from "@/hooks/useCredits";
 import { useFolders } from "@/hooks/useFolders";
@@ -151,7 +151,6 @@ const Index = () => {
     editImage,
     grokEditQueued,
     generateVideo,
-    editVideo,
     comfyGenerate,
     comfyEdit,
     comfyVideo,
@@ -464,7 +463,7 @@ const Index = () => {
       setRedditRewardDismissed(true);
       localStorage.setItem("reddit_reward_dismissed", "1");
       creditsHook.refreshCredits();
-      toast({ title: "10 credits claimed!", description: "Thanks for joining r/GrokRunner." });
+      toast({ title: "10 credits claimed!", description: `Thanks for joining r/${BRAND.reddit}.` });
     } catch (err: any) {
       setRedditClaimError(err.message || "Failed to claim");
     } finally {
@@ -683,7 +682,7 @@ const Index = () => {
       } else {
         const isImageMode = mode === "text-to-image" || mode === "edit-image";
         const imageCount = isImageMode ? settings.count : 1;
-        const videoDuration = (mode === "text-to-video" || mode === "image-to-video" || mode === "edit-video") ? videoSettings.duration : 0;
+        const videoDuration = (mode === "text-to-video" || mode === "image-to-video") ? videoSettings.duration : 0;
         const is2k = (settings.resolution || "1k") === "2k";
         let creditMode: CreditMode;
         if (isImageMode && grokPro && is2k) creditMode = (mode === "text-to-image" ? "text-to-image-pro-2k" : "edit-image-pro-2k") as CreditMode;
@@ -941,16 +940,13 @@ const Index = () => {
         case "image-to-video":
           await generateVideo({ prompt: data.prompt, image_url: data.imageUrl, videoSettings, ...(isSeedanceTier(animateEngine) ? { provider: animateEngine as "seedance" | "seedance-fast" | "seedance-pro" } : {}), ...(adminTestCredits ? { testCredits: true } : {}) });
           break;
-        case "edit-video":
-          await editVideo({ prompt: data.prompt, video_url: data.imageUrl!, ...(adminTestCredits ? { testCredits: true } : {}) });
-          break;
       }
 
       // Optimistically deduct credits on success (admin bypass skips deduction)
       if (effectiveApiMode === "credits" && !adminBypass) {
         const isImageMode = mode === "text-to-image" || mode === "edit-image";
         const imageCount = isImageMode ? settings.count : 1;
-        const videoDuration = (mode === "text-to-video" || mode === "image-to-video" || mode === "edit-video") ? videoSettings.duration : 0;
+        const videoDuration = (mode === "text-to-video" || mode === "image-to-video") ? videoSettings.duration : 0;
         const is2k = (settings.resolution || "1k") === "2k";
         let creditMode: CreditMode;
         if (isImageMode && grokPro && is2k) creditMode = (mode === "text-to-image" ? "text-to-image-pro-2k" : "edit-image-pro-2k") as CreditMode;
@@ -1039,7 +1035,7 @@ const Index = () => {
           </div>
 
           <GlitchText
-            text="GROK_RUNNER"
+            text={BRAND.nameHeader}
             as="h1"
             className="font-orbitron text-2xl sm:text-3xl md:text-5xl font-black tracking-wider neon-text-cyan"
             glitchIntensity="medium"
@@ -1316,9 +1312,9 @@ const Index = () => {
                 <Gift className="w-4 h-4 text-orange-400 flex-shrink-0" />
                 <span className="text-[11px] text-orange-300">
                   Join{" "}
-                  <a href="https://reddit.com/r/GrokRunner" target="_blank" rel="noopener noreferrer"
+                  <a href={`https://reddit.com/r/${BRAND.reddit}`} target="_blank" rel="noopener noreferrer"
                     className="underline underline-offset-2 hover:text-orange-200 transition-colors">
-                    r/GrokRunner
+                    r/{BRAND.reddit}
                   </a>
                   {" "}and claim 10 free credits!
                 </span>

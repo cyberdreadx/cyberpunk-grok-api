@@ -121,7 +121,7 @@ export async function comfyPollUntilDone(
   throw new Error("Generation timed out");
 }
 
-export type GrokMode = "text-to-image" | "edit-image" | "text-to-video" | "image-to-video" | "edit-video";
+export type GrokMode = "text-to-image" | "edit-image" | "text-to-video" | "image-to-video";
 
 export type AspectRatio = "1:1" | "16:9" | "9:16" | "4:3" | "3:4" | "3:2" | "2:3" | "2:1" | "1:2" | "19.5:9" | "9:19.5" | "20:9" | "9:20" | "auto";
 export type VideoAspectRatio = "16:9" | "4:3" | "1:1" | "9:16" | "3:4" | "3:2" | "2:3";
@@ -206,12 +206,6 @@ interface GenerateVideoParams {
   testCredits?: boolean;
   /** Optional provider override. Routes to fal.ai Seedance tiers via /api/generate proxy. */
   provider?: "grok" | "seedance" | "seedance-fast" | "seedance-pro";
-}
-
-interface EditVideoParams {
-  prompt: string;
-  video_url: string;
-  testCredits?: boolean;
 }
 
 /** Generation mode: "byok" = user's own API key, "credits" = server proxy w/ credits */
@@ -606,7 +600,7 @@ export function useGrokApi() {
 
   /** Call our Vercel API proxy instead of xAI directly. */
   const makeProxyRequest = useCallback(async (
-    action: "generate-image" | "edit-image" | "generate-video" | "edit-video",
+    action: "generate-image" | "edit-image" | "generate-video",
     params: Record<string, unknown>,
   ) => {
     const data = await apiFetch("/generate", {
@@ -931,64 +925,6 @@ export function useGrokApi() {
         id: `vid-${Date.now()}`,
         url: videoUrl,
         revised_prompt: data.revised_prompt || data.data?.[0]?.revised_prompt,
-        type: "video" as const,
-        timestamp: Date.now(),
-      }];
-
-      prependResults(newResults);
-      persistNewResults(newResults);
-      return newResults;
-    } catch (err: any) {
-      setError(friendlyError(err.message));
-      throw err;
-    } finally {
-      setIsLoading(false);
-      stopTimer();
-    }
-  }, [apiMode, makeRequest, makeProxyRequest, persistNewResults, prependResults, startTimer, stopTimer]);
-
-  // Edit Video (video-to-video with text prompt)
-  const editVideo = useCallback(async (params: EditVideoParams) => {
-    setIsLoading(true);
-    setError(null);
-    startTimer();
-    try {
-      const body: Record<string, unknown> = {
-        model: "grok-imagine-video",
-        prompt: params.prompt,
-        video: { url: params.video_url },
-        ...(params.testCredits ? { testCredits: true } : {}),
-      };
-
-      if (apiMode === "credits") {
-        const data = await makeProxyRequest("edit-video", body);
-        const videoUrl = data.video?.url || data.video_url || data.url || data.data?.[0]?.url;
-        if (!videoUrl) {
-          throw new Error("No video URL found in proxy result");
-        }
-        const newResults: GrokResult[] = [{
-          id: `vid-edit-${Date.now()}`,
-          url: videoUrl,
-          revised_prompt: data.revised_prompt || data.data?.[0]?.revised_prompt,
-          type: "video" as const,
-          timestamp: Date.now(),
-        }];
-        prependResults(newResults);
-        persistNewResults(newResults);
-        return newResults;
-      }
-
-      // BYOK mode: proxy handles polling server-side
-      const data = await makeRequest("/videos/edits", body);
-      const videoUrl = data.video?.url || data.video_url || data.url || data.data?.[0]?.url;
-      if (!videoUrl) {
-        throw new Error("No video URL found in result.");
-      }
-
-      const newResults: GrokResult[] = [{
-        id: `vid-edit-${Date.now()}`,
-        url: videoUrl,
-        revised_prompt: data.revised_prompt,
         type: "video" as const,
         timestamp: Date.now(),
       }];
@@ -1796,7 +1732,6 @@ export function useGrokApi() {
     editImage,
     grokEditQueued,
     generateVideo,
-    editVideo,
     gltchEdit,
     comfyGenerate,
     comfyEdit,

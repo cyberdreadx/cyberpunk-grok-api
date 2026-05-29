@@ -65,14 +65,14 @@ export async function sendVerificationEmail(
   const fromAddress = getFromAddress();
 
   const { data, error } = await getResend().emails.send({
-    from: `Grok Runner <${fromAddress}>`,
+    from: `GLTCHRunner <${fromAddress}>`,
     to: [to],
     subject: `Your verification code: ${code}`,
     html: `
       <div style="font-family: 'Courier New', monospace; background: #0a0a0f; color: #e0e0e0; padding: 32px; max-width: 480px; margin: 0 auto;">
         <div style="border: 1px solid #00f0ff33; padding: 24px; border-radius: 4px;">
           <h1 style="color: #00f0ff; font-size: 18px; letter-spacing: 3px; margin: 0 0 16px;">
-            GROK RUNNER
+            GLTCHRUNNER
           </h1>
           <p style="font-size: 14px; color: #a0a0a0; margin: 0 0 24px;">
             Enter this verification code to activate your account:
@@ -103,13 +103,13 @@ export async function sendVerificationEmail(
 export async function sendTwoFactorEmail(to: string, code: string): Promise<void> {
   const fromAddress = getFromAddress();
   const { data, error } = await getResend().emails.send({
-    from: `Grok Runner <${fromAddress}>`,
+    from: `GLTCHRunner <${fromAddress}>`,
     to: [to],
     subject: `Your login code: ${code}`,
     html: `
       <div style="font-family: 'Courier New', monospace; background: #0a0a0f; color: #e0e0e0; padding: 32px; max-width: 480px; margin: 0 auto;">
         <div style="border: 1px solid #00f0ff33; padding: 24px; border-radius: 4px;">
-          <h1 style="color: #00f0ff; font-size: 18px; letter-spacing: 3px; margin: 0 0 16px;">GROK RUNNER</h1>
+          <h1 style="color: #00f0ff; font-size: 18px; letter-spacing: 3px; margin: 0 0 16px;">GLTCHRUNNER</h1>
           <p style="font-size: 14px; color: #a0a0a0; margin: 0 0 12px;">Two-factor login code:</p>
           <div style="background: #111; border: 1px solid #00f0ff55; padding: 16px; text-align: center; border-radius: 4px; margin: 0 0 24px;">
             <span style="font-size: 32px; letter-spacing: 8px; color: #00f0ff; font-weight: bold;">${code}</span>
@@ -134,14 +134,14 @@ export async function sendPasswordResetEmail(
   const fromAddress = getFromAddress();
 
   const { data, error } = await getResend().emails.send({
-    from: `Grok Runner <${fromAddress}>`,
+    from: `GLTCHRunner <${fromAddress}>`,
     to: [to],
     subject: `Password reset code: ${code}`,
     html: `
       <div style="font-family: 'Courier New', monospace; background: #0a0a0f; color: #e0e0e0; padding: 32px; max-width: 480px; margin: 0 auto;">
         <div style="border: 1px solid #ff00e533; padding: 24px; border-radius: 4px;">
           <h1 style="color: #ff00e5; font-size: 18px; letter-spacing: 3px; margin: 0 0 16px;">
-            GROK RUNNER
+            GLTCHRUNNER
           </h1>
           <p style="font-size: 14px; color: #a0a0a0; margin: 0 0 8px;">
             You requested a password reset. Enter this code:
@@ -176,7 +176,7 @@ export async function sendDailyCreditsEmail(
   const fromAddress = getFromAddress();
 
   const { data, error } = await getResend().emails.send({
-    from: `Grok Runner <${fromAddress}>`,
+    from: `GLTCHRunner <${fromAddress}>`,
     to: [to],
     subject: `Your daily credits are ready!`,
     html: buildDailyCreditsHtml(amount),
@@ -192,7 +192,7 @@ export async function sendDailyCreditsEmail(
   await logEmail(to, "daily_credits", "sent", data?.id, null, { amount });
 }
 
-/** Send the Grok Runner announcement email. Accepts optional custom subject/html and campaign id. */
+/** Send the GLTCHRunner announcement email. Accepts optional custom subject/html and campaign id. */
 export async function sendAnnouncementEmail(
   to: string,
   customSubject?: string,
@@ -202,9 +202,9 @@ export async function sendAnnouncementEmail(
   const fromAddress = getFromAddress();
 
   const { data, error } = await getResend().emails.send({
-    from: `Grok Runner <${fromAddress}>`,
+    from: `GLTCHRunner <${fromAddress}>`,
     to: [to],
-    subject: customSubject || `🚀 Grok Runner just got a massive upgrade`,
+    subject: customSubject || `🚀 GLTCHRunner just got a massive upgrade`,
     html: customHtml || buildAnnouncementHtml(),
   });
 
@@ -225,7 +225,7 @@ export function buildAnnouncementHtml(): string {
       <div style="border: 1px solid #00f0ff33; padding: 28px; border-radius: 4px;">
 
         <h1 style="color: #00f0ff; font-size: 20px; letter-spacing: 3px; margin: 0 0 8px; text-align: center;">
-          GROK RUNNER
+          GLTCHRUNNER
         </h1>
         <p style="color: #00f0ff99; font-size: 12px; letter-spacing: 4px; text-align: center; margin: 0 0 28px;">
           SYSTEM UPDATE // MAJOR PATCH
@@ -249,7 +249,7 @@ export function buildAnnouncementHtml(): string {
           <p style="font-size: 13px; color: #b0b0b0; margin: 0; line-height: 1.6;">
             Share your best AI generations with the community! Post your edits, renders, and videos
             as <span style="color: #ff00e5; font-weight: bold;">Stories</span> that appear on the main page for 24 hours.
-            See what other Grok Runners are creating, get inspired, and connect with fellow creators.
+            See what other GLTCHRunner creators are creating, get inspired, and connect with fellow creators.
           </p>
         </div>
 
@@ -272,19 +272,19 @@ export function buildAnnouncementHtml(): string {
           </h2>
           <p style="font-size: 13px; color: #b0b0b0; margin: 0; line-height: 1.6;">
             We're working on a <span style="color: #ffaa00; font-weight: bold;">Live Feed</span> — think social network
-            for AI creators. Post statuses, share your work in real-time, react to other Grok Runners' creations,
+            for AI creators. Post statuses, share your work in real-time, react to other GLTCHRunner creators' creations,
             and build your creative community. Stay tuned. 👀
           </p>
         </div>
 
         <div style="text-align: center; margin: 0 0 20px;">
           <a href="https://grokrunner.gltch.app" style="display: inline-block; background: linear-gradient(135deg, #00f0ff22, #ff00e522); border: 1px solid #00f0ff55; color: #00f0ff; text-decoration: none; padding: 14px 36px; border-radius: 4px; font-size: 14px; letter-spacing: 3px; font-weight: bold;">
-            LAUNCH GROK RUNNER →
+            LAUNCH GLTCHRUNNER →
           </a>
         </div>
 
         <p style="font-size: 11px; color: #444; margin: 0; text-align: center;">
-          You're receiving this because you have a verified Grok Runner account.
+          You're receiving this because you have a verified GLTCHRunner account.
         </p>
       </div>
     </div>
@@ -297,7 +297,7 @@ export function buildDailyCreditsHtml(amount: number): string {
     <div style="font-family: 'Courier New', monospace; background: #0a0a0f; color: #e0e0e0; padding: 32px; max-width: 480px; margin: 0 auto;">
       <div style="border: 1px solid #00f0ff33; padding: 24px; border-radius: 4px;">
         <h1 style="color: #00f0ff; font-size: 18px; letter-spacing: 3px; margin: 0 0 16px;">
-          GROK RUNNER
+          GLTCHRUNNER
         </h1>
         <p style="font-size: 14px; color: #a0a0a0; margin: 0 0 12px;">
           Your daily credits have been refilled.
@@ -314,7 +314,7 @@ export function buildDailyCreditsHtml(amount: number): string {
           START CREATING →
         </a>
         <p style="font-size: 11px; color: #444; margin: 16px 0 0;">
-          You're receiving this because you have a verified Grok Runner account.
+          You're receiving this because you have a verified GLTCHRunner account.
         </p>
       </div>
     </div>
@@ -328,7 +328,7 @@ export function buildV47AnnouncementHtml(): string {
       <div style="border: 1px solid #00f0ff33; padding: 28px; border-radius: 4px;">
 
         <h1 style="color: #00f0ff; font-size: 22px; letter-spacing: 4px; margin: 0 0 6px; text-align: center;">
-          GROK RUNNER
+          GLTCHRUNNER
         </h1>
         <p style="color: #ff00e599; font-size: 11px; letter-spacing: 5px; text-align: center; margin: 0 0 28px;">
           v4.7 // SYSTEM_DROP
@@ -405,7 +405,7 @@ export function buildV47AnnouncementHtml(): string {
         </div>
 
         <p style="font-size: 11px; color: #444; margin: 0; text-align: center;">
-          Sent to verified Grok Runner accounts. Your 10 daily credits are waiting.
+          Sent to verified GLTCHRunner accounts. Your 10 daily credits are waiting.
         </p>
       </div>
     </div>
@@ -419,7 +419,7 @@ export function buildV49SubscriptionFixHtml(): string {
       <div style="border: 1px solid #00f0ff33; padding: 28px; border-radius: 4px;">
 
         <h1 style="color: #00f0ff; font-size: 22px; letter-spacing: 4px; margin: 0 0 6px; text-align: center;">
-          GROK RUNNER
+          GLTCHRUNNER
         </h1>
         <p style="color: #ff00e599; font-size: 11px; letter-spacing: 5px; text-align: center; margin: 0 0 28px;">
           v4.9 // BILLING_PATCH + PROMPT_BOARD
@@ -478,7 +478,7 @@ export function buildV49SubscriptionFixHtml(): string {
 
         <div style="text-align: center; margin: 0 0 12px;">
           <a href="https://grokrunner.gltch.app" style="display: inline-block; background: linear-gradient(135deg, #00f0ff22, #ff00e522); border: 1px solid #00f0ff55; color: #00f0ff; text-decoration: none; padding: 14px 36px; border-radius: 4px; font-size: 14px; letter-spacing: 3px; font-weight: bold;">
-            OPEN GROK RUNNER →
+            OPEN GLTCHRUNNER →
           </a>
         </div>
         <div style="text-align: center; margin: 0 0 20px;">
@@ -488,7 +488,7 @@ export function buildV49SubscriptionFixHtml(): string {
         </div>
 
         <p style="font-size: 11px; color: #444; margin: 0; text-align: center;">
-          Sent to verified Grok Runner accounts. Your 10 daily credits are still waiting.
+          Sent to verified GLTCHRunner accounts. Your 10 daily credits are still waiting.
         </p>
       </div>
     </div>
@@ -501,7 +501,7 @@ export function buildV48AnnouncementHtml(): string {
       <div style="border: 1px solid #00f0ff33; padding: 28px; border-radius: 4px;">
 
         <h1 style="color: #00f0ff; font-size: 22px; letter-spacing: 4px; margin: 0 0 6px; text-align: center;">
-          GROK RUNNER
+          GLTCHRUNNER
         </h1>
         <p style="color: #ff00e599; font-size: 11px; letter-spacing: 5px; text-align: center; margin: 0 0 28px;">
           v4.8 // SIGNAL_BOOST
@@ -555,7 +555,7 @@ export function buildV48AnnouncementHtml(): string {
         </div>
 
         <p style="font-size: 11px; color: #444; margin: 0; text-align: center;">
-          Sent to verified Grok Runner accounts. Reply STOP to opt out of update emails.
+          Sent to verified GLTCHRunner accounts. Reply STOP to opt out of update emails.
         </p>
       </div>
     </div>
@@ -573,13 +573,13 @@ export async function sendVerificationPaymentReceiptEmail(
   const fromAddress = getFromAddress();
   const amount = opts.amount || "your verification fee";
   const { data, error } = await getResend().emails.send({
-    from: `Grok Runner <${fromAddress}>`,
+    from: `GLTCHRunner <${fromAddress}>`,
     to: [to],
     subject: `Payment received — finish your creator verification`,
     html: `
       <div style="font-family: 'Courier New', monospace; background: #0a0a0f; color: #e0e0e0; padding: 32px; max-width: 480px; margin: 0 auto;">
         <div style="border: 1px solid #00f0ff33; padding: 24px; border-radius: 4px;">
-          <h1 style="color: #00f0ff; font-size: 18px; letter-spacing: 3px; margin: 0 0 16px;">GROK RUNNER</h1>
+          <h1 style="color: #00f0ff; font-size: 18px; letter-spacing: 3px; margin: 0 0 16px;">GLTCHRUNNER</h1>
           <p style="color: #00f0ff99; font-size: 11px; letter-spacing: 4px; margin: 0 0 20px;">PAYMENT RECEIPT // STEP 1 OF 2</p>
 
           <div style="background: #111; border: 1px solid #00f0ff55; padding: 18px; border-radius: 4px; margin: 0 0 20px;">
@@ -625,13 +625,13 @@ export async function sendVerificationPaymentReceiptEmail(
 export async function sendVerificationApprovedEmail(to: string): Promise<void> {
   const fromAddress = getFromAddress();
   const { data, error } = await getResend().emails.send({
-    from: `Grok Runner <${fromAddress}>`,
+    from: `GLTCHRunner <${fromAddress}>`,
     to: [to],
-    subject: `You're a verified Grok Runner ✓`,
+    subject: `You're a verified GLTCHRunner ✓`,
     html: `
       <div style="font-family: 'Courier New', monospace; background: #0a0a0f; color: #e0e0e0; padding: 32px; max-width: 480px; margin: 0 auto;">
         <div style="border: 1px solid #39ff1444; padding: 24px; border-radius: 4px;">
-          <h1 style="color: #00f0ff; font-size: 18px; letter-spacing: 3px; margin: 0 0 8px;">GROK RUNNER</h1>
+          <h1 style="color: #00f0ff; font-size: 18px; letter-spacing: 3px; margin: 0 0 8px;">GLTCHRUNNER</h1>
           <p style="color: #39ff1499; font-size: 11px; letter-spacing: 4px; margin: 0 0 24px;">IDENTITY CONFIRMED // STEP 2 OF 2</p>
 
           <div style="background: #111; border: 1px solid #39ff1455; padding: 22px; text-align: center; border-radius: 4px; margin: 0 0 20px;">
