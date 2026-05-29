@@ -62,7 +62,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const [postOwner] = await sql`SELECT user_id FROM feed_posts WHERE id = ${postId}`;
       if (postOwner && postOwner.user_id !== auth.userId) {
         await awardKarma(sql, postOwner.user_id, "comment_received", `comment_received:${commentId}`);
-        notify({
+        await notify({
           userId: postOwner.user_id,
           type: "comment",
           title: `${profile?.username || "Someone"} commented on your post`,

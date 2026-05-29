@@ -7,6 +7,7 @@ import { apiFetch, hasAuthToken } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { setLastSeen } from "@/hooks/useChatUnread";
 import { Send, Hash, RefreshCw, ArrowLeft, Reply, X } from "lucide-react";
+import NotificationBell from "@/components/NotificationBell";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
@@ -190,6 +191,7 @@ const ChatRoom: React.FC = () => {
           >
             <RefreshCw className="w-3 h-3" /> {t("chat.refresh")}
           </button>
+          <NotificationBell isAuthenticated={authed} />
         </div>
         <div className="flex gap-1 px-2 pb-2 overflow-x-auto no-scrollbar">
           {CHANNELS.map((c) => (

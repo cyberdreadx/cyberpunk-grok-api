@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bell, Check, MessageCircle, UserPlus, ThumbsUp, Unlock, Coins, Info } from "lucide-react";
 import { apiFetch } from "@/lib/api";
+import { dispatchNotificationsRefresh } from "@/hooks/useNotificationUnread";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatDistanceToNow } from "date-fns";
 
@@ -46,6 +47,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ isAuthenticated }) 
       const data = await apiFetch("/notifications?limit=30");
       setNotifications(data.notifications);
       setUnreadCount(data.unreadCount);
+      dispatchNotificationsRefresh();
     } catch {
       // silently fail
     } finally {
@@ -60,6 +62,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ isAuthenticated }) 
       try {
         const data = await apiFetch("/notifications?limit=1");
         setUnreadCount(data.unreadCount);
+        dispatchNotificationsRefresh();
       } catch {}
     };
     fetchCount();
@@ -91,6 +94,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ isAuthenticated }) 
       await apiFetch("/notifications", { method: "PATCH", body: { all: true } });
       setUnreadCount(0);
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      dispatchNotificationsRefresh();
     } catch {}
   };
 
@@ -100,6 +104,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ isAuthenticated }) 
     if (!n.read) {
       setNotifications(prev => prev.map(x => x.id === n.id ? { ...x, read: true } : x));
       setUnreadCount(c => Math.max(0, c - 1));
+      dispatchNotificationsRefresh();
       apiFetch("/notifications", { method: "PATCH", body: { ids: [n.id] } }).catch(() => {});
     }
     // Route based on type
@@ -148,7 +153,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ isAuthenticated }) 
             className="
               fixed sm:absolute z-50 flex flex-col overflow-hidden
               bg-card border border-border/30 rounded-lg shadow-[0_0_30px_hsl(var(--primary)/0.15)]
-              left-2 right-2 top-[calc(env(safe-area-inset-top,0px)+56px)] max-h-[70vh]
+              left-2 right-2 top-[calc(env(safe-area-inset-top,0px)+32px)] max-h-[70vh]
               sm:left-auto sm:right-0 sm:top-full sm:mt-2 sm:w-[320px] sm:max-h-[400px]
             "
           >

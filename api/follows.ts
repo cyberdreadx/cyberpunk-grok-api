@@ -30,7 +30,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         
         // Notify the followed user
         const [profile] = await sql`SELECT username, avatar_url FROM profiles WHERE user_id = ${auth.userId}`;
-        notify({
+        await notify({
           userId: targetUserId,
           type: "follow",
           title: `${profile?.username || "Someone"} started following you`,

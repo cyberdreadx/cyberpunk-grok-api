@@ -8,10 +8,12 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getDb } from "./_lib/db";
 import { getUserFromRequest } from "./_lib/auth";
+import { applyCors } from "./_lib/cors";
 import { checkRateLimit } from "./_lib/ratelimit";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method === "OPTIONS") return res.status(200).end();
+  applyCors(req, res, "GET, PATCH, OPTIONS");
+  if (req.method === "OPTIONS") return res.status(204).end();
 
   const auth = getUserFromRequest(req);
   if (!auth) return res.status(401).json({ error: "Unauthorized" });

@@ -60,7 +60,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (vote === "👍" && postOwnerId && postOwnerId !== auth.userId) {
           await awardKarma(sql, postOwnerId, "upvote_received", `upvote_received:${reactionId}`);
           const [profile] = await sql`SELECT username, avatar_url FROM profiles WHERE user_id = ${auth.userId}`;
-          notify({
+          await notify({
             userId: postOwnerId,
             type: "upvote",
             title: `${profile?.username || "Someone"} upvoted your post`,

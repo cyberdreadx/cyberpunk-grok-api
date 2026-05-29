@@ -221,7 +221,7 @@ async function claimMission(sql: any, userId: string, mission: string, res: Verc
       const [admin] = await sql`SELECT id FROM users WHERE email = ${ADMIN_EMAIL} LIMIT 1`;
       if (admin?.id && admin.id !== userId) {
         const [actor] = await sql`SELECT email, COALESCE((SELECT username FROM profiles WHERE user_id = users.id), email) AS handle FROM users WHERE id = ${userId}`;
-        notify({
+        await notify({
           userId: admin.id,
           type: "system",
           title: `Social proof: ${platformLabel}`,

@@ -4,6 +4,7 @@ import { getDb } from "./_lib/db";
 import { hasPurchased, canPost, POSTING_GATE_MESSAGE } from "./_lib/purchaseGate";
 import { isVerified, VERIFICATION_REQUIRED_MESSAGE } from "./_lib/verifiedGate";
 import { resolvePreviewUrl } from "./_lib/preview-url";
+import { notify } from "./_lib/notify";
 
 const MAX_LOCK_COST = 100;
 const MAX_LOCK_PRICE_CENTS = 10000; // $100 max
@@ -526,6 +527,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           WHERE id = ${post.user_id}::uuid
         `;
       }
+
+      const [profile] = await sql`SELECT username, avatar_url FROM profiles WHERE user_id = ${auth.userId}::uuid`;
+      await notify({
+        userId: post.user_id,
+        type: "unlock",
+        title: `${profile?.username || "Someone"} unlocked your post`,
+        body: `${post.lock_cost} credits`,
+        actorId: auth.userId,
+        actorUsername: profile?.username,
+        actorAvatarUrl: profile?.avatar_url,
+        refId: postId,
+      });
 
       return res.status(200).json({ ok: true, credited: post.lock_cost });
     } catch (err: any) {

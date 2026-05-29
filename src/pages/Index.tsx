@@ -39,7 +39,6 @@ import AuthDialog from "@/components/AuthDialog";
 import CreditDisplay from "@/components/CreditDisplay";
 import FlashSaleBanner from "@/components/FlashSaleBanner";
 import BuyHoldBanner from "@/components/BuyHoldBanner";
-import NotificationBell from "@/components/NotificationBell";
 import DailyMissionsDialog from "@/components/DailyMissionsDialog";
 import GrokSubredditPromo from "@/components/GrokSubredditPromo";
 import { useDailyMissions } from "@/hooks/useDailyMissions";
@@ -1087,9 +1086,6 @@ const Index = () => {
               onSave={handleSaveApiKey}
               onClear={handleClearApiKey}
             />
-
-            {/* Notifications — primary */}
-            <NotificationBell isAuthenticated={auth.isAuthenticated} />
 
             {/* Auth — primary */}
             {auth.enabled && (

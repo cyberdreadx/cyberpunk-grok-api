@@ -1,5 +1,7 @@
 import React, { useEffect } from "react";
 import HudOverlay from "@/components/HudOverlay";
+import NotificationBell from "@/components/NotificationBell";
+import { useAuth } from "@/hooks/useAuth";
 import { BARE_THEME_ID } from "@/lib/themes";
 import { applyImmersionToRoot, BARE_IMMERSION, DEFAULT_IMMERSION, fetchMasterImmersion } from "@/lib/immersion";
 
@@ -8,6 +10,8 @@ interface CyberLayoutProps {
 }
 
 const CyberLayout: React.FC<CyberLayoutProps> = ({ children }) => {
+  const { isAuthenticated } = useAuth();
+
   useEffect(() => {
     if (document.documentElement.dataset.cyberTheme === BARE_THEME_ID) {
       applyImmersionToRoot(BARE_IMMERSION);
@@ -79,6 +83,9 @@ const CyberLayout: React.FC<CyberLayoutProps> = ({ children }) => {
         </div>
         <div className="font-mono-share text-[10px] text-muted-foreground/50 flex-1 text-center pb-1">
           grok@xai:~/neural-render — bash
+        </div>
+        <div className="pb-0.5 shrink-0">
+          <NotificationBell isAuthenticated={isAuthenticated} />
         </div>
         <div className="font-mono-share text-[10px] text-muted-foreground/30 pb-1 hidden sm:block">
           PID:4F7A
