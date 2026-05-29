@@ -56,6 +56,7 @@ const App = () => (
         <AgeGateDialog />
         <KonamiTerminalUnlock />
         <GlobalNavMenu />
+        <MaintenanceBanner />
         <Routes>
           <Route path="/" element={<PageShell><FeedPage /></PageShell>} />
           <Route path="/create" element={<PageShell><Index /></PageShell>} />
