@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Loader2, Zap, Crown, RefreshCw, Sparkles, ArrowUp, Flame } from "lucide-react";
+import { Loader2, Zap, Crown, Sparkles, ArrowUp, Flame, ChevronDown } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { SUBSCRIPTION_TIERS_MONTHLY, SUBSCRIPTION_TIERS_YEARLY, TIER_RANK } from "@/lib/api";
@@ -13,6 +13,8 @@ interface PricingCardsProps {
   /** Active per-generation discount % (0 if not subscribed). */
   discountPct?: number;
   purchasing: boolean;
+  /** Which part of the store to render. Defaults to everything (back-compat). */
+  section?: "subscriptions" | "packs" | "all";
   onPurchase: (packageId: string) => Promise<void> | void;
   onSubscribe: (tierId: string) => Promise<void> | void;
   onManageSubscription?: () => Promise<void> | void;
@@ -24,6 +26,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
   currentTier,
   discountPct = 0,
   purchasing,
+  section = "all",
   onPurchase,
   onSubscribe,
   onManageSubscription,
@@ -52,18 +55,14 @@ const PricingCards: React.FC<PricingCardsProps> = ({
     return tierRank > currentRank ? "upgrade" : "downgrade";
   };
 
+  const showSubs = section === "subscriptions" || section === "all";
+  const showPacks = section === "packs" || section === "all";
+
   return (
     <div className="space-y-6">
       {/* ── Subscription Plans ── */}
+      {showSubs && (
       <div>
-        <div className="flex items-center gap-2 mb-3">
-          <RefreshCw className="w-3 h-3 text-primary/60" />
-          <h4 className="font-orbitron text-[10px] tracking-widest text-muted-foreground">
-            {t("pricing.subscriptionPlans")}
-          </h4>
-          <div className="h-px flex-1 bg-border/30" />
-        </div>
-
         {/* Always-visible Manage/Cancel button: rescues legacy/grandfathered subs
             whose tier id no longer matches any current card (so no per-card
             "Manage" button shows up). Routes to Stripe Customer Portal. */}
@@ -137,113 +136,84 @@ const PricingCards: React.FC<PricingCardsProps> = ({
                 )}
 
                 <div className="flex flex-1 flex-col p-3 sm:p-4 min-w-0">
-                <div className="flex items-center gap-1.5 mb-2">
-                  <Crown className="w-3 h-3 shrink-0 text-primary" />
-                  <h3 className="font-orbitron text-xs tracking-wider text-foreground truncate">{tier.name}</h3>
-                </div>
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Crown className="w-3 h-3 shrink-0 text-primary" />
+                    <h3 className="font-orbitron text-xs tracking-wider text-foreground truncate">{tier.name}</h3>
+                  </div>
 
-                <div className="mb-2 min-w-0 space-y-1">
-                  <p className="font-orbitron text-lg font-bold tabular-nums leading-none text-foreground sm:text-xl break-words">
-                    ${(tier.priceCents / 100).toFixed(2)}
+                  <div className="mb-2 min-w-0 space-y-1">
+                    <p className="font-orbitron text-lg font-bold tabular-nums leading-none text-foreground sm:text-xl break-words">
+                      ${(tier.priceCents / 100).toFixed(2)}
+                    </p>
+                    <p className="font-mono-share text-[10px] uppercase tracking-wide text-muted-foreground">
+                      {tier.interval === "year" ? t("pricing.perYear") : t("pricing.perMonth")}
+                    </p>
+                  </div>
+
+                  {tier.interval === "year" && tier.monthlyEquivalentCents && (
+                    <p className="font-mono-share text-[10px] text-green-400 mb-2">
+                      ${(tier.monthlyEquivalentCents / 100).toFixed(2)}/mo &mdash; {t("pricing.savePercent", { percent: tier.savingsPercent })}
+                    </p>
+                  )}
+
+                  {/* The one headline value of a sub: a permanent per-generation discount. */}
+                  <div className="mb-2 flex items-center gap-1">
+                    <Zap className="h-3 w-3 shrink-0 text-secondary" />
+                    <span className="font-mono-share text-sm font-bold text-secondary">
+                      {t("pricing.discountEveryGen", { percent: tier.discountPercent })}
+                    </span>
+                  </div>
+
+                  <p className="mb-4 flex-1 font-mono-share text-[10px] leading-snug text-muted-foreground/75">
+                    {t("pricing.discountPerk")}
                   </p>
-                  <p className="font-mono-share text-[10px] uppercase tracking-wide text-muted-foreground">
-                    {tier.interval === "year" ? t("pricing.perYear") : t("pricing.perMonth")}
-                  </p>
-                </div>
 
-                {tier.interval === "year" && tier.monthlyEquivalentCents && (
-                  <p className="font-mono-share text-[10px] text-green-400 mb-1">
-                    ${(tier.monthlyEquivalentCents / 100).toFixed(2)}/mo &mdash; {t("pricing.savePercent", { percent: tier.savingsPercent })}
-                  </p>
-                )}
-
-                <div className="mb-2 flex items-center gap-1">
-                  <Zap className="h-3 w-3 shrink-0 text-secondary" />
-                  <span className="font-mono-share text-sm font-bold text-secondary">
-                    {tier.discountPercent}% OFF every generation
-                  </span>
-                </div>
-
-                <p className="mb-1 font-mono-share text-[10px] text-muted-foreground">
-                  Permanent discount · No expiry · No math
-                </p>
-                <p className="mb-1 font-mono-share text-[9px] uppercase tracking-wider text-amber-400/90">
-                  ⚠ No monthly credits — discount only
-                </p>
-                {/* Jobs breakdown — what a $20 credit pack buys at this tier's discount */}
-                {(() => {
-                  const refPackCredits = 240; // PRO pack reference (~$19)
-                  const editCost = Math.max(1, Math.ceil(10 * (1 - tier.discountPercent / 100)));
-                  const videoCost = Math.max(1, Math.ceil(25 * (1 - tier.discountPercent / 100)));
-                  const edits = Math.floor(refPackCredits / editCost);
-                  const videos = Math.floor(refPackCredits / videoCost);
-                  return (
-                    <div className="mb-3 rounded border border-secondary/25 bg-secondary/5 p-2">
-                      <p className="font-orbitron text-[8px] tracking-wider text-secondary/80 mb-1">
-                        WHAT A $19 PACK BUYS YOU
-                      </p>
-                      <p className="font-mono-share text-[10px] text-foreground/90">
-                        ≈ <span className="text-secondary font-bold">{edits}</span> image edits
-                        {" · "}
-                        ≈ <span className="text-secondary font-bold">{videos}</span> videos
-                      </p>
-                    </div>
-                  );
-                })()}
-                <p className="mb-4 flex-1 font-mono-share text-[9px] leading-snug text-muted-foreground/75">
                   {(() => {
-                    const example = 10;
-                    const discounted = Math.max(1, Math.ceil(example * (1 - tier.discountPercent / 100)));
-                    return `Example: a ${example}-credit edit costs you only ${discounted}. Buy credit packs separately.`;
-                  })()}
-                </p>
-
-                {(() => {
-                  const action = getTierAction(tier);
-                  const safeSubscribe = (id: string) => {
-                    Promise.resolve(onSubscribe(id)).catch(() => {});
-                  };
-                  if (action === "active") {
-                    return (
-                      <Button
-                        onClick={() => { Promise.resolve(onManageSubscription?.()).catch(() => {}); }}
-                        disabled={purchasing}
-                        variant="outline"
-                        className="w-full rounded-md font-orbitron text-[10px] tracking-wider gap-1 border-primary/50 text-primary"
-                      >
-                        {t("pricing.managePlan")}
-                      </Button>
-                    );
-                  }
-                  if (action === "downgrade") {
-                    return (
-                      <Button
-                        disabled
-                        variant="outline"
-                        className="w-full rounded-md font-orbitron text-[10px] tracking-wider gap-1 opacity-40 cursor-not-allowed"
-                      >
-                        {t("pricing.currentPlanHigher")}
-                      </Button>
-                    );
-                  }
-                  if (action === "upgrade") {
-                    return (
-                      <Button
-                        onClick={() => safeSubscribe(tier.id)}
-                        disabled={purchasing}
-                        className="w-full rounded-md font-orbitron text-[10px] tracking-wider gap-1 bg-green-600 text-white hover:bg-green-500"
-                      >
-                        {purchasing ? (
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                        ) : (
-                          <>
-                            <ArrowUp className="w-3 h-3" />
-                            {t("pricing.upgrade")}
-                          </>
-                        )}
-                      </Button>
-                    );
-                  }
+                    const action = getTierAction(tier);
+                    const safeSubscribe = (id: string) => {
+                      Promise.resolve(onSubscribe(id)).catch(() => {});
+                    };
+                    if (action === "active") {
+                      return (
+                        <Button
+                          onClick={() => { Promise.resolve(onManageSubscription?.()).catch(() => {}); }}
+                          disabled={purchasing}
+                          variant="outline"
+                          className="w-full rounded-md font-orbitron text-[10px] tracking-wider gap-1 border-primary/50 text-primary"
+                        >
+                          {t("pricing.managePlan")}
+                        </Button>
+                      );
+                    }
+                    if (action === "downgrade") {
+                      return (
+                        <Button
+                          disabled
+                          variant="outline"
+                          className="w-full rounded-md font-orbitron text-[10px] tracking-wider gap-1 opacity-40 cursor-not-allowed"
+                        >
+                          {t("pricing.currentPlanHigher")}
+                        </Button>
+                      );
+                    }
+                    if (action === "upgrade") {
+                      return (
+                        <Button
+                          onClick={() => safeSubscribe(tier.id)}
+                          disabled={purchasing}
+                          className="w-full rounded-md font-orbitron text-[10px] tracking-wider gap-1 bg-green-600 text-white hover:bg-green-500"
+                        >
+                          {purchasing ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <>
+                              <ArrowUp className="w-3 h-3" />
+                              {t("pricing.upgrade")}
+                            </>
+                          )}
+                        </Button>
+                      );
+                    }
                     return (
                       <Button
                         onClick={() => safeSubscribe(tier.id)}
@@ -254,31 +224,25 @@ const PricingCards: React.FC<PricingCardsProps> = ({
                             : "bg-primary text-primary-foreground hover:bg-primary/80"
                         }`}
                       >
-                      {purchasing ? (
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                      ) : (
-                        t("pricing.subscribe")
-                      )}
-                    </Button>
-                  );
-                })()}
+                        {purchasing ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          t("pricing.subscribe")
+                        )}
+                      </Button>
+                    );
+                  })()}
                 </div>
               </div>
             );
           })}
         </div>
       </div>
+      )}
 
       {/* ── One-Time Credit Packs ── */}
+      {showPacks && (
       <div>
-        <div className="flex items-center gap-2 mb-3">
-          <Zap className="w-3 h-3 text-primary/60" />
-          <h4 className="font-orbitron text-[10px] tracking-widest text-muted-foreground">
-            {t("pricing.topUpPacks")}
-          </h4>
-          <div className="h-px flex-1 bg-border/30" />
-        </div>
-
         {/* Standard packs (3 cols) */}
         <div className="grid w-full min-w-0 max-w-full grid-cols-1 sm:grid-cols-3 gap-3">
           {packages.slice(0, 3).map((pkg) => (
@@ -304,6 +268,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
           </>
         )}
       </div>
+      )}
     </div>
   );
 };
@@ -327,12 +292,19 @@ function PackCard({
   const { t } = useTranslation();
   const { sale: flashSale, appliesTo: flashApplies } = useFlashSale();
   const onFlash = !!flashSale && flashApplies(pkg.id);
+  const [showCrypto, setShowCrypto] = useState(false);
 
   // Subscriber bonus: matches webhook formula. Effectively makes the in-app
   // pack price scale with the user's subscription discount.
   const bonusCredits =
     discountPct > 0 ? Math.floor((pkg.credits * discountPct) / (100 - discountPct)) : 0;
   const totalCredits = pkg.credits + bonusCredits;
+
+  // What the credits roughly buy, after any active sub discount.
+  const editCost = Math.max(1, Math.ceil(10 * (1 - discountPct / 100)));
+  const videoCost = Math.max(1, Math.ceil(25 * (1 - discountPct / 100)));
+  const edits = Math.floor(totalCredits / editCost);
+  const videos = Math.floor(totalCredits / videoCost);
 
   return (
     <div
@@ -366,98 +338,81 @@ function PackCard({
       )}
 
       <div className="flex flex-1 flex-col p-3 sm:p-4 min-w-0">
-      <h3 className="mb-2 font-orbitron text-xs tracking-wider text-foreground truncate">{pkg.name}</h3>
+        <h3 className="mb-2 font-orbitron text-xs tracking-wider text-foreground truncate">{pkg.name}</h3>
 
-      <div className="mb-2 min-w-0 space-y-1">
-        <p className="font-orbitron text-xl font-bold tabular-nums leading-none text-foreground sm:text-2xl break-words">
-          ${(pkg.priceCents / 100).toFixed(2)}
-        </p>
-        <p className="font-mono-share text-[10px] uppercase tracking-wide text-muted-foreground">{t("pricing.oneTime")}</p>
-      </div>
+        <div className="mb-2 min-w-0 space-y-1">
+          <p className="font-orbitron text-xl font-bold tabular-nums leading-none text-foreground sm:text-2xl break-words">
+            ${(pkg.priceCents / 100).toFixed(2)}
+          </p>
+          <p className="font-mono-share text-[10px] uppercase tracking-wide text-muted-foreground">{t("pricing.oneTime")}</p>
+        </div>
 
-      <div className="mb-1 flex items-center gap-1">
-        <Zap className="h-3 w-3 shrink-0 text-secondary" />
-        <span className="font-mono-share text-sm font-bold text-secondary">
-          {totalCredits.toLocaleString()} credits
-        </span>
-        {bonusCredits > 0 && (
-          <span className="font-mono-share text-[8px] text-green-400 bg-green-400/10 px-1 py-0.5 rounded">
-            +{bonusCredits} sub bonus
+        <div className="mb-1 flex flex-wrap items-center gap-1">
+          <Zap className="h-3 w-3 shrink-0 text-secondary" />
+          <span className="font-mono-share text-sm font-bold text-secondary">
+            {totalCredits.toLocaleString()} {t("pricing.creditsLabel")}
           </span>
-        )}
-      </div>
-
-      <p className="mb-1 font-mono-share text-[10px] text-muted-foreground">
-        {pkg.perCredit}/credit &mdash; never expires
-      </p>
-
-      {/* Jobs breakdown — clarify what credits actually unlock */}
-      {(() => {
-        const editCost = Math.max(1, Math.ceil(10 * (1 - discountPct / 100)));
-        const videoCost = Math.max(1, Math.ceil(25 * (1 - discountPct / 100)));
-        const edits = Math.floor(totalCredits / editCost);
-        const videos = Math.floor(totalCredits / videoCost);
-        return (
-          <div className="mb-3 flex-1 rounded border border-primary/20 bg-primary/5 p-2">
-            <p className="font-orbitron text-[8px] tracking-wider text-primary/80 mb-1">
-              WHAT YOU CAN MAKE
-            </p>
-            <p className="font-mono-share text-[10px] text-foreground/90">
-              ≈ <span className="text-primary font-bold">{edits}</span> image edits
-              {" · "}
-              ≈ <span className="text-primary font-bold">{videos}</span> videos
-            </p>
-            {discountPct > 0 && (
-              <p className="font-mono-share text-[8px] text-green-400/80 mt-0.5">
-                (with your {discountPct}% sub discount)
-              </p>
-            )}
-          </div>
-        );
-      })()}
-
-
-      <div className="space-y-2">
-        <Button
-          onClick={() => { Promise.resolve(onPurchase(pkg.id)).catch(() => {}); }}
-          disabled={purchasing}
-          className={`w-full rounded-md font-orbitron text-[10px] tracking-wider gap-1 ${
-            pkg.popular
-              ? "bg-secondary text-secondary-foreground hover:bg-secondary/80"
-              : isBulk
-              ? "bg-primary text-primary-foreground hover:bg-primary/80"
-              : "bg-primary text-primary-foreground hover:bg-primary/80"
-          }`}
-        >
-          {purchasing ? (
-            <Loader2 className="w-3 h-3 animate-spin" />
-          ) : (
-            t("pricing.purchase")
+          {bonusCredits > 0 && (
+            <span className="font-mono-share text-[8px] text-green-400 bg-green-400/10 px-1 py-0.5 rounded">
+              +{bonusCredits} sub bonus
+            </span>
           )}
-        </Button>
-        {onXrgePurchase && (
-          <>
-            <div className="flex items-center gap-2 my-1">
-              <div className="h-px flex-1 bg-border/30" />
-              <span className="font-mono-share text-[8px] text-pink-400/70 tracking-widest">{t("pricing.orCrypto")}</span>
-              <div className="h-px flex-1 bg-border/30" />
-            </div>
+        </div>
+
+        {/* Single value line — what the credits make + the never-expire reassurance. */}
+        <p className="mb-3 flex-1 font-mono-share text-[10px] leading-snug text-muted-foreground/80">
+          {t("pricing.makeEstimate", { edits, videos })} · {t("pricing.neverExpires")}
+          {discountPct > 0 && (
+            <span className="text-green-400/80"> ({t("pricing.withSubDiscount", { percent: discountPct })})</span>
+          )}
+        </p>
+
+        <div className="space-y-2">
+          <Button
+            onClick={() => { Promise.resolve(onPurchase(pkg.id)).catch(() => {}); }}
+            disabled={purchasing}
+            className={`w-full rounded-md font-orbitron text-[10px] tracking-wider gap-1 ${
+              pkg.popular
+                ? "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                : "bg-primary text-primary-foreground hover:bg-primary/80"
+            }`}
+          >
+            {purchasing ? (
+              <Loader2 className="w-3 h-3 animate-spin" />
+            ) : (
+              t("pricing.purchase")
+            )}
+          </Button>
+
+          {/* Crypto is a secondary rail — tucked behind a toggle to keep the card calm. */}
+          {onXrgePurchase && !showCrypto && (
             <button
               type="button"
-              onClick={() => onXrgePurchase(pkg.id)}
-              disabled={purchasing}
-              className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-md border border-[#c44b8b]/50 bg-gradient-to-r from-[#8b2fc0]/10 via-[#c44b8b]/10 to-[#e8445a]/10 hover:from-[#8b2fc0]/20 hover:via-[#c44b8b]/20 hover:to-[#e8445a]/20 hover:border-[#c44b8b]/70 transition-all disabled:opacity-50"
+              onClick={() => setShowCrypto(true)}
+              className="w-full flex items-center justify-center gap-1 py-1 font-mono-share text-[9px] tracking-wider text-muted-foreground/60 hover:text-muted-foreground transition-colors"
             >
-              <img src="/xrge-logo.png" alt="" className="w-5 h-5 rounded-full" />
-              <span className="font-orbitron text-[10px] tracking-wider text-white/90">{t("pricing.payWithXrge")}</span>
-              <span className="text-green-400 font-mono-share text-[8px] font-bold bg-green-400/10 px-1.5 py-0.5 rounded-full leading-none">{t("pricing.bonusPercent", { percent: 30 })}</span>
+              <ChevronDown className="w-3 h-3" />
+              {t("pricing.otherWaysToPay")}
             </button>
-            <p className="font-mono-share text-[8px] text-center text-muted-foreground/55 leading-tight">
-              {t("pricing.baseChain")}
-            </p>
-          </>
-        )}
-      </div>
+          )}
+          {onXrgePurchase && showCrypto && (
+            <div className="space-y-1.5">
+              <button
+                type="button"
+                onClick={() => onXrgePurchase(pkg.id)}
+                disabled={purchasing}
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-md border border-[#c44b8b]/50 bg-gradient-to-r from-[#8b2fc0]/10 via-[#c44b8b]/10 to-[#e8445a]/10 hover:from-[#8b2fc0]/20 hover:via-[#c44b8b]/20 hover:to-[#e8445a]/20 hover:border-[#c44b8b]/70 transition-all disabled:opacity-50"
+              >
+                <img src="/xrge-logo.png" alt="" className="w-5 h-5 rounded-full" />
+                <span className="font-orbitron text-[10px] tracking-wider text-white/90">{t("pricing.payWithXrge")}</span>
+                <span className="text-green-400 font-mono-share text-[8px] font-bold bg-green-400/10 px-1.5 py-0.5 rounded-full leading-none">{t("pricing.bonusPercent", { percent: 30 })}</span>
+              </button>
+              <p className="font-mono-share text-[8px] text-center text-muted-foreground/55 leading-tight">
+                {t("pricing.baseChain")}
+              </p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

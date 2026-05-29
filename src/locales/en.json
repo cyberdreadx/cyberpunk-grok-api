@@ -223,7 +223,16 @@
     "orCrypto": "OR_CRYPTO",
     "payWithXrge": "PAY WITH $XRGE",
     "bonusPercent": "+{{percent}}% bonus",
-    "baseChain": "Base chain · loyalty tiers up to +50% bonus"
+    "baseChain": "Base chain · loyalty tiers up to +50% bonus",
+    "tabSubscribe": "SUBSCRIBE",
+    "tabCredits": "CREDITS",
+    "tabEarn": "EARN FREE",
+    "discountEveryGen": "{{percent}}% OFF every generation",
+    "discountPerk": "Permanent discount on every generation · no monthly credits · never expires",
+    "creditsLabel": "credits",
+    "makeEstimate": "≈ {{edits}} edits or {{videos}} videos",
+    "withSubDiscount": "with your {{percent}}% sub discount",
+    "otherWaysToPay": "other ways to pay"
   },
   "changelog": {
     "title": "SYSTEM_CHANGELOG",

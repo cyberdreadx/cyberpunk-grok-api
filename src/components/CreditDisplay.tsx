@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Coins, ShoppingCart, Loader2, Crown, Settings, XCircle, AlertTriangle, Share2, Copy, Check, Gift, Users, Wallet, Flame } from "lucide-react";
 import { useFlashSale } from "@/hooks/useFlashSale";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { apiFetch } from "@/lib/api";
 import {
   Dialog,
@@ -410,39 +411,81 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
           )}
 
 
-          {/* Spin Wheel Section — hidden during maintenance */}
-          {!freeCreditsDisabled && (
-            <div className="mt-4 border border-primary/20 rounded-lg bg-primary/5 p-4">
-              <h3 className="font-orbitron text-xs tracking-wider neon-text-cyan text-center mb-1">
-                🎰 Free Credits
-              </h3>
-              <p className="font-mono-share text-[10px] text-muted-foreground/60 text-center mb-2">
-                Spin the wheel for a chance to win credits! One free spin every 24 hours.
-              </p>
-              <SpinWheel onCreditsRefresh={onCreditsRefresh} />
-            </div>
-          )}
+          {/* Store tabs — Subscribe leads (recurring revenue), then one-time
+              credits, then the free-credit mechanics. One decision per tab. */}
+          <Tabs defaultValue="subscribe" className="mt-4">
+            <TabsList className="grid w-full grid-cols-3 bg-card/40 border border-border/60 rounded-lg p-1 h-auto">
+              <TabsTrigger
+                value="subscribe"
+                className="font-orbitron text-[9px] sm:text-[10px] tracking-wider py-1.5 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              >
+                {t("pricing.tabSubscribe")}
+              </TabsTrigger>
+              <TabsTrigger
+                value="credits"
+                className="font-orbitron text-[9px] sm:text-[10px] tracking-wider py-1.5 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              >
+                {t("pricing.tabCredits")}
+              </TabsTrigger>
+              <TabsTrigger
+                value="earn"
+                className="font-orbitron text-[9px] sm:text-[10px] tracking-wider py-1.5 rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              >
+                {t("pricing.tabEarn")}
+              </TabsTrigger>
+            </TabsList>
 
-          <div className="mt-4">
-            <PricingCards
-              packages={packages}
-              subscriptionTiers={subscriptionTiers}
-              currentTier={subscriptionTier}
-              discountPct={subscriptionDiscountPct}
-              purchasing={purchasing}
-              onPurchase={async (id) => {
-                await onPurchase(id);
-              }}
-              onSubscribe={async (id) => {
-                await onSubscribe(id);
-              }}
-              onManageSubscription={onManageSubscription}
-              onXrgePurchase={handleXrgePurchase}
-            />
-          </div>
+            <TabsContent value="subscribe" className="mt-4">
+              <PricingCards
+                section="subscriptions"
+                packages={packages}
+                subscriptionTiers={subscriptionTiers}
+                currentTier={subscriptionTier}
+                discountPct={subscriptionDiscountPct}
+                purchasing={purchasing}
+                onPurchase={async (id) => { await onPurchase(id); }}
+                onSubscribe={async (id) => { await onSubscribe(id); }}
+                onManageSubscription={onManageSubscription}
+                onXrgePurchase={handleXrgePurchase}
+              />
+            </TabsContent>
 
-          {/* Referral Section */}
-          <ReferralCard />
+            <TabsContent value="credits" className="mt-4">
+              <PricingCards
+                section="packs"
+                packages={packages}
+                subscriptionTiers={subscriptionTiers}
+                currentTier={subscriptionTier}
+                discountPct={subscriptionDiscountPct}
+                purchasing={purchasing}
+                onPurchase={async (id) => { await onPurchase(id); }}
+                onSubscribe={async (id) => { await onSubscribe(id); }}
+                onManageSubscription={onManageSubscription}
+                onXrgePurchase={handleXrgePurchase}
+              />
+            </TabsContent>
+
+            <TabsContent value="earn" className="mt-4 space-y-4">
+              {!freeCreditsDisabled ? (
+                <div className="border border-primary/20 rounded-lg bg-primary/5 p-4">
+                  <h3 className="font-orbitron text-xs tracking-wider neon-text-cyan text-center mb-1">
+                    🎰 Free Credits
+                  </h3>
+                  <p className="font-mono-share text-[10px] text-muted-foreground/60 text-center mb-2">
+                    Spin the wheel for a chance to win credits! One free spin every 24 hours.
+                  </p>
+                  <SpinWheel onCreditsRefresh={onCreditsRefresh} />
+                </div>
+              ) : (
+                <p className="font-mono-share text-[10px] text-muted-foreground/70 text-center py-3">
+                  Daily free credits and the spin wheel are paused right now. Referrals still earn credits.
+                </p>
+              )}
+
+              {/* Referral Section */}
+              <ReferralCard />
+            </TabsContent>
+          </Tabs>
 
           <div className="border-t border-border pt-3 mt-2">
             <p className="text-[10px] font-mono-share text-muted-foreground/80 leading-relaxed">
