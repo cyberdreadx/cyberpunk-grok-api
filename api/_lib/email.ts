@@ -495,6 +495,67 @@ export function buildV49SubscriptionFixHtml(): string {
   `;
 }
 
+export function buildV52AnnouncementHtml(): string {
+  return `
+    <div style="font-family: 'Courier New', monospace; background: #0a0a0f; color: #e0e0e0; padding: 32px; max-width: 540px; margin: 0 auto;">
+      <div style="border: 1px solid #00f0ff33; padding: 28px; border-radius: 4px;">
+
+        <h1 style="color: #00f0ff; font-size: 22px; letter-spacing: 4px; margin: 0 0 6px; text-align: center;">
+          GLTCHRUNNER
+        </h1>
+        <p style="color: #ff00e599; font-size: 11px; letter-spacing: 5px; text-align: center; margin: 0 0 28px;">
+          v5.2 // INFRASTRUCTURE_UPGRADE
+        </p>
+
+        <div style="background: linear-gradient(135deg, #39ff1415, #00f0ff15); border: 1px solid #39ff1466; padding: 18px; border-radius: 4px; margin: 0 0 24px; text-align: center;">
+          <p style="color: #39ff14; font-size: 12px; letter-spacing: 3px; margin: 0 0 8px;">BACKEND UPGRADED</p>
+          <p style="font-size: 13px; color: #c0c0c0; margin: 0; line-height: 1.6;">
+            GrokRunner is now running on a dedicated self-hosted server. Faster responses, no cold start timeouts, and full infrastructure control.
+          </p>
+        </div>
+
+        <p style="font-size: 14px; color: #c0c0c0; line-height: 1.7; margin: 0 0 20px;">
+          Hey Runner — quick update. We've moved the backend off Vercel onto our own server at <span style="color: #00f0ff;">api.gltch.app</span>.
+          This means no more function timeouts on long generations, faster API responses, and total control over uptime and reliability.
+        </p>
+
+        <div style="background: #111; border: 1px solid #00f0ff44; padding: 20px; border-radius: 4px; margin: 0 0 16px;">
+          <h2 style="color: #00f0ff; font-size: 15px; margin: 0 0 10px; letter-spacing: 1px;">
+            ⚡ WHAT'S IMPROVED
+          </h2>
+          <ul style="font-size: 13px; color: #b0b0b0; margin: 0; padding-left: 18px; line-height: 1.8;">
+            <li>Self-hosted backend — no Vercel function limits or cold starts</li>
+            <li>Faster image &amp; video generation API responses</li>
+            <li>All cron jobs (daily credits, story cleanup, email campaigns) run on-server 24/7</li>
+            <li>Auto-restart on crash or server reboot via systemd</li>
+          </ul>
+        </div>
+
+        <div style="background: #111; border: 1px solid #ff00e544; padding: 20px; border-radius: 4px; margin: 0 0 24px;">
+          <h2 style="color: #ff00e5; font-size: 15px; margin: 0 0 10px; letter-spacing: 1px;">
+            💬 ALSO IN v5.1
+          </h2>
+          <ul style="font-size: 13px; color: #b0b0b0; margin: 0; padding-left: 18px; line-height: 1.8;">
+            <li>Chat room — #general, #help, #showcase, #nsfw channels in the More menu</li>
+            <li>Trash purge now deletes files from storage too, not just the DB</li>
+            <li>Owner-side locked post badges on your profile grid</li>
+          </ul>
+        </div>
+
+        <div style="text-align: center; margin: 0 0 20px;">
+          <a href="https://grokrunner.gltch.app" style="display: inline-block; background: linear-gradient(135deg, #00f0ff22, #ff00e522); border: 1px solid #00f0ff55; color: #00f0ff; text-decoration: none; padding: 14px 36px; border-radius: 4px; font-size: 14px; letter-spacing: 3px; font-weight: bold;">
+            OPEN GLTCHRUNNER →
+          </a>
+        </div>
+
+        <p style="font-size: 11px; color: #444; margin: 0; text-align: center;">
+          Sent to verified GltchRunner accounts. Your daily credits are still waiting.
+        </p>
+      </div>
+    </div>
+  `;
+}
+
 export function buildV48AnnouncementHtml(): string {
   return `
     <div style="font-family: 'Courier New', monospace; background: #0a0a0f; color: #e0e0e0; padding: 32px; max-width: 540px; margin: 0 auto;">

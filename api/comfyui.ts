@@ -2974,15 +2974,15 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           // Videos are ALWAYS uploaded to Vercel Blob (no size threshold)
           // Images only go to Blob if larger than MAX_INLINE_SIZE (defined in resolveFileData)
 
-          async function uploadToBlob(buffer: Buffer, mime: string, ext: string): Promise<string | null> {
+          async function uploadToBlob(buffer: Buffer, mime: string, ext: string): Promise<{ url: string; previewUrl?: string } | null> {
             const sizeMB = (buffer.length / 1024 / 1024).toFixed(1);
             const filename = `comfyui-output/${Date.now()}-${Math.random().toString(36).slice(2, 6)}.${ext}`;
             for (let attempt = 1; attempt <= 2; attempt++) {
               try {
                 const { uploadPublicMedia } = await import("./_lib/media-storage");
-                const { url, storage } = await uploadPublicMedia(buffer, filename, mime);
-                console.log(`[comfyui-poll] Uploaded ${sizeMB}MB to ${storage.toUpperCase()}: ${url}`);
-                return url;
+                const { url, previewUrl, storage } = await uploadPublicMedia(buffer, filename, mime);
+                console.log(`[comfyui-poll] Uploaded ${sizeMB}MB to ${storage.toUpperCase()}: ${url}${previewUrl ? " (preview generated)" : ""}`);
+                return { url, previewUrl };
               } catch (err: any) {
                 console.error(`[comfyui-poll] Media upload attempt ${attempt}/2 failed (${sizeMB}MB): ${err.message}`);
                 if (attempt < 2) await new Promise(r => setTimeout(r, 1000));
@@ -2993,7 +2993,7 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
 
           const MAX_INLINE_SIZE = 3 * 1024 * 1024; // 3MB — anything larger MUST go through Blob
 
-          async function resolveFileData(file: any, type: "video" | "image"): Promise<string | null> {
+          async function resolveFileData(file: any, type: "video" | "image"): Promise<{ uri: string; previewUrl?: string } | null> {
             try {
               const d = typeof file === "string" ? file : (file?.data || file?.url || null);
               if (!d || typeof d !== "string") return null;
@@ -3009,15 +3009,15 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
                   if (match) {
                     const buf = Buffer.from(match[2], "base64");
                     console.log(`[comfyui-poll] ${type} data URI ${(buf.length / 1024 / 1024).toFixed(1)}MB — uploading to Blob`);
-                    const blobUrl = await uploadToBlob(buf, match[1], ext);
-                    if (blobUrl) return blobUrl;
+                    const result = await uploadToBlob(buf, match[1], ext);
+                    if (result) return result;
                     if (isLarge) {
                       console.error(`[comfyui-poll] Blob upload failed for large ${type} (${(buf.length / 1024 / 1024).toFixed(1)}MB) — cannot inline`);
                       return null;
                     }
                   }
                 }
-                return d;
+                return { uri: d };
               }
 
               // S3 URL or any HTTP URL
@@ -3029,19 +3029,19 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
                   const isLarge = s3Data.buffer.length > MAX_INLINE_SIZE;
                   if (alwaysBlob || isLarge) {
                     console.log(`[comfyui-poll] ${type} from S3 ${(s3Data.buffer.length / 1024 / 1024).toFixed(1)}MB — uploading to Blob`);
-                    const blobUrl = await uploadToBlob(s3Data.buffer, s3Data.contentType, ext);
-                    if (blobUrl) return blobUrl;
+                    const result = await uploadToBlob(s3Data.buffer, s3Data.contentType, ext);
+                    if (result) return result;
                     if (isLarge) {
                       console.error(`[comfyui-poll] Blob upload failed for large ${type} from S3 (${(s3Data.buffer.length / 1024 / 1024).toFixed(1)}MB) — cannot inline`);
                       return null;
                     }
                   }
                   const base64 = s3Data.buffer.toString("base64");
-                  return `data:${s3Data.contentType};base64,${base64}`;
+                  return { uri: `data:${s3Data.contentType};base64,${base64}` };
                 }
                 // S3 download failed — return URL directly as fallback (browser may be able to fetch it)
                 console.warn(`[comfyui-poll] S3 download failed for ${type}, returning URL as fallback: ${url.slice(0, 120)}`);
-                return url;
+                return { uri: url };
               }
 
               // Raw base64
@@ -3052,14 +3052,14 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
                 if (alwaysBlob || isLarge) {
                   const buf = Buffer.from(d, "base64");
                   console.log(`[comfyui-poll] Raw base64 ${type} ${(buf.length / 1024 / 1024).toFixed(1)}MB — uploading to Blob`);
-                  const blobUrl = await uploadToBlob(buf, mime, ext);
-                  if (blobUrl) return blobUrl;
+                  const result = await uploadToBlob(buf, mime, ext);
+                  if (result) return result;
                   if (isLarge) {
                     console.error(`[comfyui-poll] Blob upload failed for large raw ${type} (${(buf.length / 1024 / 1024).toFixed(1)}MB) — cannot inline`);
                     return null;
                   }
                 }
-                return `data:${mime};base64,${d}`;
+                return { uri: `data:${mime};base64,${d}` };
               }
               return null;
             } catch (err: any) {
@@ -3069,7 +3069,7 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           }
 
           // Scan all file arrays in output (videos, gifs, images) at top level and nested
-          async function findOutput(obj: any): Promise<{ uri: string; type: "video" | "image" } | null> {
+          async function findOutput(obj: any): Promise<{ uri: string; previewUrl?: string; type: "video" | "image" } | null> {
             if (!obj || typeof obj !== "object") return null;
 
             // Check standard arrays at this level
@@ -3078,14 +3078,14 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
               if (!Array.isArray(arr) || !arr.length) continue;
               const file = arr[arr.length - 1];
               const isVid = arrKey !== "images" || outputType === "video";
-              const uri = await resolveFileData(file, isVid ? "video" : "image");
-              if (uri) return { uri, type: isVid ? "video" : "image" };
+              const result = await resolveFileData(file, isVid ? "video" : "image");
+              if (result) return { ...result, type: isVid ? "video" : "image" };
             }
 
             // Check message field
             if (typeof obj.message === "string" && obj.message.length > 50) {
-              const uri = await resolveFileData(obj.message, outputType === "video" ? "video" : "image");
-              if (uri) return { uri, type: outputType === "video" ? "video" : "image" };
+              const result = await resolveFileData(obj.message, outputType === "video" ? "video" : "image");
+              if (result) return { ...result, type: outputType === "video" ? "video" : "image" };
             }
 
             return null;
@@ -3095,7 +3095,7 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           const topResult = await findOutput(out);
           if (topResult) {
             cleanupS3Urls();
-            return res.status(200).json({ status: "done", [topResult.type]: topResult.uri });
+            return res.status(200).json({ status: "done", [topResult.type]: topResult.uri, previewUrl: topResult.previewUrl });
           }
 
           // Deep scan: check nested node objects
@@ -3117,11 +3117,11 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
                 const arr = node[arrKey];
                 if (!Array.isArray(arr) || !arr.length) continue;
                 const file = arr[arr.length - 1];
-                const uri = await resolveFileData(file, "video");
-                if (uri) {
+                const result = await resolveFileData(file, "video");
+                if (result) {
                   console.log(`[comfyui-poll] Found video in nested key "${key}".${arrKey} (HD preferred: highest node ID first)`);
                   cleanupS3Urls();
-                  return res.status(200).json({ status: "done", video: uri });
+                  return res.status(200).json({ status: "done", video: result.uri, previewUrl: result.previewUrl });
                 }
               }
             }
@@ -3138,8 +3138,8 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
             const node = out[key];
             if (!node || typeof node !== "object") {
               if (typeof node === "string" && node.length > 100) {
-                const uri = await resolveFileData(node, outputType === "video" ? "video" : "image");
-                if (uri) { cleanupS3Urls(); return res.status(200).json({ status: "done", [outputType === "video" ? "video" : "image"]: uri }); }
+                const result = await resolveFileData(node, outputType === "video" ? "video" : "image");
+                if (result) { cleanupS3Urls(); return res.status(200).json({ status: "done", [outputType === "video" ? "video" : "image"]: result.uri, previewUrl: result.previewUrl }); }
               }
               continue;
             }
@@ -3147,7 +3147,7 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
             if (nested) {
               console.log(`[comfyui-poll] Found output in nested key "${key}"`);
               cleanupS3Urls();
-              return res.status(200).json({ status: "done", [nested.type]: nested.uri });
+              return res.status(200).json({ status: "done", [nested.type]: nested.uri, previewUrl: nested.previewUrl });
             }
           }
 

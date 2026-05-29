@@ -156,6 +156,7 @@ export const DEFAULT_VIDEO_SETTINGS: VideoSettings = {
 export interface GrokResult {
   id: string;
   url: string;
+  previewUrl?: string;
   revised_prompt?: string;
   type: "image" | "video";
   timestamp: number;
@@ -994,6 +995,7 @@ export function useGrokApi() {
           const newResults: GrokResult[] = [{
             id: `gltch-${Date.now()}`,
             url: submitData.syncResult.image,
+            previewUrl: submitData.syncResult.previewUrl,
             revised_prompt: `GLTCH Edit: ${params.prompt}`,
             type: "image" as const,
             timestamp: Date.now(),
@@ -1016,6 +1018,8 @@ export function useGrokApi() {
           const pollData = await apiFetch<{
             status: string;
             image?: string;
+            video?: string;
+            previewUrl?: string;
             error?: string;
           }>("/gltch", {
             method: "POST",
@@ -1028,6 +1032,7 @@ export function useGrokApi() {
             const newResults: GrokResult[] = [{
               id: `gltch-${Date.now()}`,
               url: pollData.image,
+              previewUrl: pollData.previewUrl,
               revised_prompt: `GLTCH Edit: ${params.prompt}`,
               type: "image" as const,
               timestamp: Date.now(),
@@ -1180,6 +1185,7 @@ export function useGrokApi() {
         status: string;
         image?: string;
         video?: string;
+        previewUrl?: string;
         error?: string;
       }>("/comfyui", {
         method: "POST",
@@ -1211,7 +1217,7 @@ export function useGrokApi() {
           }
         }
 
-        return { image: pollData.image, video };
+        return { image: pollData.image, video, previewUrl: pollData.previewUrl };
       }
       if (pollData.status === "error") {
         removeActiveJob(promptId);
@@ -1317,6 +1323,7 @@ export function useGrokApi() {
         const newResults: GrokResult[] = [{
           id: `comfy-img-${Date.now()}`,
           url: result.image,
+          previewUrl: result.previewUrl,
           revised_prompt: params.prompt,
           type: "image" as const,
           timestamp: Date.now(),
@@ -1390,6 +1397,7 @@ export function useGrokApi() {
         const newResults: GrokResult[] = [{
           id: `comfy-edit-${Date.now()}`,
           url: result.image,
+          previewUrl: result.previewUrl,
           revised_prompt: params.prompt,
           type: "image" as const,
           timestamp: Date.now(),
@@ -1493,6 +1501,7 @@ export function useGrokApi() {
         const newResults: GrokResult[] = [{
           id: rid,
           url: videoSrc,
+          previewUrl: result.previewUrl,
           revised_prompt: params.prompt,
           type: "video" as const,
           timestamp: Date.now(),
@@ -1603,6 +1612,7 @@ export function useGrokApi() {
         const newResults: GrokResult[] = [{
           id: rid,
           url: videoSrc,
+          previewUrl: vidResult.previewUrl,
           revised_prompt: params.prompt,
           type: "video" as const,
           timestamp: Date.now(),
@@ -1694,6 +1704,7 @@ export function useGrokApi() {
         const newResults: GrokResult[] = [{
           id: rid,
           url: videoSrc,
+          previewUrl: result.previewUrl,
           revised_prompt: params.prompt,
           type: "video" as const,
           timestamp: Date.now(),

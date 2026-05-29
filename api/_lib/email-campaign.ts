@@ -3,7 +3,7 @@
  * Designed for cron-driven processing (no fragile self-fetch chains).
  */
 
-import { getResend, getFromAddress, logEmail, buildAnnouncementHtml, buildV47AnnouncementHtml, buildV48AnnouncementHtml, buildV49SubscriptionFixHtml } from "./email";
+import { getResend, getFromAddress, logEmail, buildAnnouncementHtml, buildV47AnnouncementHtml, buildV48AnnouncementHtml, buildV49SubscriptionFixHtml, buildV52AnnouncementHtml } from "./email";
 
 export const CAMPAIGN_CONFIG_KEY = "active_email_campaign";
 
@@ -24,6 +24,7 @@ export const DEFAULT_CAMPAIGN_SUBJECTS: Record<string, string> = {
   announcement_v47: "GLTCHRunner Update — v4.7 is Live",
   announcement_v48: "GLTCHRunner Update — v4.8 is Live",
   announcement_v49: "GLTCHRunner — Subscription Credits Fixed + Platform Update",
+  announcement_v52: "⚡ GrokRunner v5.2 — Faster & More Reliable Than Ever",
 };
 
 export function getAnnouncementHtmlForCampaign(campaign: string): string {
@@ -34,6 +35,8 @@ export function getAnnouncementHtmlForCampaign(campaign: string): string {
       return buildV48AnnouncementHtml();
     case "announcement_v49":
       return buildV49SubscriptionFixHtml();
+    case "announcement_v52":
+      return buildV52AnnouncementHtml();
     default:
       return buildAnnouncementHtml();
   }

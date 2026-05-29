@@ -11,8 +11,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "start": "tsx server/index.ts",
-    "server:dev": "tsx watch server/index.ts"
+    "start": "node --env-file=.env --import tsx server/index.ts",
+    "server:dev": "node --env-file=.env --import tsx --watch server/index.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.994.0",

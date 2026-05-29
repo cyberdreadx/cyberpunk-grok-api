@@ -20,7 +20,7 @@ export async function uploadLibraryItemForPost(result: GrokResult): Promise<Libr
   const src = result.url;
 
   if (isPermanentPublicMediaUrl(src)) {
-    return { url: src, previewUrl: previewUrlForPublicUrl(src) };
+    return { url: src, previewUrl: result.previewUrl || previewUrlForPublicUrl(src) };
   }
 
   let mediaBlob: Blob | null = null;

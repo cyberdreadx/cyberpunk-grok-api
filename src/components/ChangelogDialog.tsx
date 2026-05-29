@@ -24,6 +24,17 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
     {
+        version: "2026.05.29",
+        date: "May 29, 2026",
+        title: "v5.2 — Self-Hosted Backend & Stability",
+        items: [
+            { icon: <Wrench className="w-3.5 h-3.5" />, text: "Backend migrated from Vercel to a dedicated self-hosted server — faster cold starts, no Vercel function timeouts, and full control over infrastructure", tag: "improve" },
+            { icon: <Shield className="w-3.5 h-3.5" />, text: "API now served from api.gltch.app with full HTTPS, nginx reverse proxy, and systemd auto-restart on crash or reboot", tag: "new" },
+            { icon: <Bug className="w-3.5 h-3.5" />, text: "Fixed console error caused by Vercel Analytics loading on non-Vercel hosting", tag: "fix" },
+            { icon: <Zap className="w-3.5 h-3.5" />, text: "Cron jobs (daily reset, story cleanup, email campaigns, XRGE snapshot) now run on-server via node-cron — no dependency on Vercel Cron", tag: "improve" },
+        ],
+    },
+    {
         version: "2026.05.10",
         date: "May 10, 2026",
         title: "v5.1 — Chat Room, Storage Audit Trail & Checkout Diagnostics",

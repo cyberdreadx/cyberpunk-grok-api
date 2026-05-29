@@ -183,9 +183,13 @@ function req_is_https(req: Request) {
 
 function registerCron(_app: express.Express) {
   const base = `http://127.0.0.1:${PORT}`;
+  const cronSecret = process.env.CRON_SECRET;
   const hit = async (path: string) => {
     try {
-      const res = await fetch(base + path, { method: "GET" });
+      const res = await fetch(base + path, {
+        method: "GET",
+        headers: cronSecret ? { Authorization: `Bearer ${cronSecret}` } : {},
+      });
       console.log(`[cron] ${path} → ${res.status}`);
     } catch (e: any) {
       console.error(`[cron] ${path} failed:`, e?.message);

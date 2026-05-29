@@ -292,8 +292,8 @@ function AnnouncementPanel() {
   const abortRef = useRef(false);
   const [stats, setStats] = useState<{ totalVerified: number; alreadySent: number; remaining: number } | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
-  const [campaign, setCampaign] = useState<"announcement" | "announcement_v47" | "announcement_v48" | "announcement_v49">("announcement_v49");
-  const [subject, setSubject] = useState("GrokRunner — Subscription Credits Fixed + Platform Update");
+  const [campaign, setCampaign] = useState<"announcement" | "announcement_v47" | "announcement_v48" | "announcement_v49" | "announcement_v52">("announcement_v52");
+  const [subject, setSubject] = useState("⚡ GrokRunner v5.2 — Faster & More Reliable Than Ever");
   const [showEditor, setShowEditor] = useState(false);
   const [htmlContent, setHtmlContent] = useState("");
   const [showPreview, setShowPreview] = useState(false);
@@ -333,6 +333,7 @@ function AnnouncementPanel() {
   }, [campaign]);
 
   const CAMPAIGN_SUBJECTS: Record<string, string> = {
+    announcement_v52: "⚡ GrokRunner v5.2 — Faster & More Reliable Than Ever",
     announcement_v49: "GrokRunner — Subscription Credits Fixed + Platform Update",
     announcement_v48: "⚡ Grok Runner v4.8 // Signal Boost",
     announcement_v47: "⚡ Grok Runner v4.7 // the coolest drop yet",
@@ -451,7 +452,7 @@ function AnnouncementPanel() {
   const handleSendBackground = async () => {
     if (!confirm(
       "Queue campaign via CRON?\n\n" +
-      "Vercel cron sends batches every 2 minutes until everyone is done. " +
+      "Server cron sends batches every 2 minutes until everyone is done. " +
       "You can close this page — delivery continues on the server. " +
       "This is the reliable method (recommended)."
     )) return;
@@ -574,7 +575,8 @@ function AnnouncementPanel() {
             }}
             className="w-full bg-background/50 border border-primary/20 rounded px-2 py-1.5 font-mono-share text-xs text-foreground focus:outline-none focus:border-primary/50"
           >
-            <option value="announcement_v49">v4.9 — Subscription fix + Prompt Board (NEW)</option>
+            <option value="announcement_v52">v5.2 — Self-Hosted Backend + Reliability (NEW)</option>
+            <option value="announcement_v49">v4.9 — Subscription fix + Prompt Board</option>
             <option value="announcement_v48">v4.8 — Signal Boost (chat + locks + +10 credits)</option>
             <option value="announcement_v47">v4.7 — Coolest Updates Drop</option>
             <option value="announcement">Original "Massive Upgrade" announcement</option>
@@ -754,7 +756,7 @@ function AnnouncementPanel() {
               <div className="bg-destructive/10 border border-destructive/30 rounded p-2 text-[10px] text-destructive">
                 ⚠️ Background loop NOT queued: {result.bgQueueError}
                 <div className="text-destructive/70 mt-1">
-                  Only the first batch sent. Check that <code>CRON_SECRET</code> is set in Vercel env. Hit SEND_IN_BG again to retry.
+                  Only the first batch sent. Check that <code>CRON_SECRET</code> is set in the server .env. Hit SEND_IN_BG again to retry.
                 </div>
               </div>
             )}
@@ -1886,7 +1888,7 @@ export default function Admin() {
                 <div className="space-y-3">
                   {fcState.envForcedDisabled && (
                     <div className="font-mono-share text-[10px] px-2 py-1.5 rounded bg-destructive/10 border border-destructive/30 text-destructive">
-                      ⚠ FREE_CREDITS_DISABLED env var is set — all sources are forced OFF and UI toggles are ignored. Unset it in Vercel to use these switches.
+                      ⚠ FREE_CREDITS_DISABLED env var is set — all sources are forced OFF and UI toggles are ignored. Unset it in the server .env to use these switches.
                     </div>
                   )}
                   <div className="grid gap-2">
