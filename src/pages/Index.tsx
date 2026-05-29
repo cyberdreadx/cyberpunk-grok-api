@@ -56,6 +56,7 @@ import { useCredits } from "@/hooks/useCredits";
 import { useFolders } from "@/hooks/useFolders";
 import { usePromptHistory } from "@/hooks/usePromptHistory";
 import { useToast } from "@/hooks/use-toast";
+import { useGrokApi, urlToBase64, getImageDimensions, type GrokMode, type GenerationSettings, type VideoSettings, type ApiMode, type VideoLoraEntry, type ComfyJob, DEFAULT_SETTINGS, DEFAULT_VIDEO_SETTINGS } from "@/hooks/useGrokApi";
 import { apiFetch, calculateCreditCost, type CreditMode } from "@/lib/api";
 import { AGE_VERIFIED_EVENT, isAgeVerified } from "@/lib/ageGate";
 import { APP_VERSION } from "@/lib/version";
