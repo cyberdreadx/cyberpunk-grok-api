@@ -6,6 +6,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import CyberLayout from "@/components/CyberLayout";
 import CreatorCard, { type FeedCreator } from "@/components/CreatorCard";
 import CreatorPanel from "@/components/CreatorPanel";
+import FeedTile, { type FeedTilePost } from "@/components/FeedTile";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -56,7 +57,7 @@ const FeedPage: React.FC = () => {
   const [rulesAcked, setRulesAcked] = useState(() => localStorage.getItem("feed-rules-acked") === "1");
   const [showRules, setShowRules] = useState(false);
 
-  const [creators, setCreators] = useState<FeedCreator[]>([]);
+  const [posts, setPosts] = useState<FeedTilePost[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "following" | "trending">("all");
   const [newText, setNewText] = useState("");
@@ -104,29 +105,29 @@ const FeedPage: React.FC = () => {
     return true;
   }, [isAuthenticated, toast, navigate]);
 
-  const fetchCreators = useCallback(async (cursor?: string) => {
+  const fetchPosts = useCallback(async (cursor?: string) => {
     try {
-      const params = new URLSearchParams({ view: "creators" });
+      const params = new URLSearchParams({ view: "posts" });
       if (filter === "following") params.set("filter", "following");
       if (filter === "trending") params.set("sort", "trending");
       if (cursor) params.set("cursor", cursor);
-      const data = await apiFetch<{ creators: FeedCreator[]; nextCursor: string | null }>(
+      const data = await apiFetch<{ posts: FeedTilePost[]; nextCursor: string | null }>(
         `/feed?${params.toString()}`
       );
       if (cursor) {
-        setCreators((prev) => {
-          const seen = new Set(prev.map((c) => c.userId));
+        setPosts((prev) => {
+          const seen = new Set(prev.map((p) => p.id));
           const merged = [...prev];
-          for (const c of data.creators) {
-            if (!seen.has(c.userId)) {
-              seen.add(c.userId);
-              merged.push(c);
+          for (const p of data.posts) {
+            if (!seen.has(p.id)) {
+              seen.add(p.id);
+              merged.push(p);
             }
           }
           return merged;
         });
       } else {
-        setCreators(data.creators);
+        setPosts(data.posts);
       }
       // Guard against the server returning the same cursor (would loop forever).
       setNextCursor((prevCursor) => (data.nextCursor && data.nextCursor !== cursor ? data.nextCursor : null));
@@ -141,8 +142,8 @@ const FeedPage: React.FC = () => {
   useEffect(() => {
     if (authLoading) return;
     setLoading(true);
-    fetchCreators();
-  }, [authLoading, isAuthenticated, fetchCreators]);
+    fetchPosts();
+  }, [authLoading, isAuthenticated, fetchPosts]);
 
   // Open ReelViewer when arriving from a notification click
   useEffect(() => {
@@ -167,12 +168,12 @@ const FeedPage: React.FC = () => {
     const io = new IntersectionObserver((entries) => {
       if (entries[0].isIntersecting) {
         setLoadingMore(true);
-        fetchCreators(nextCursor);
+        fetchPosts(nextCursor);
       }
     }, { rootMargin: "400px" });
     io.observe(el);
     return () => io.disconnect();
-  }, [nextCursor, loadingMore, fetchCreators]);
+  }, [nextCursor, loadingMore, fetchPosts]);
 
   const submitPost = async () => {
     if (!newText.trim() && !pickedMedia) return;
@@ -210,7 +211,7 @@ const FeedPage: React.FC = () => {
       setLockXrge("");
       setPickedMedia(null);
       setLoading(true);
-      fetchCreators();
+      fetchPosts();
     } catch (err: any) {
       toast({ title: err.message, variant: "destructive" });
     } finally {
@@ -255,6 +256,17 @@ const FeedPage: React.FC = () => {
     }
     // Open the immersive reel viewer focused on this creator's latest post.
     setReelTarget({ postId: c.latestPostId, userId: c.userId });
+  };
+
+  const openPost = (p: FeedTilePost) => {
+    // Logged-out users get nudged to sign up instead of viewing locked previews.
+    if (!isAuthenticated) {
+      toast({ title: "Sign up to view posts", description: "Create a free account to unlock the feed." });
+      navigate("/create?signup=1");
+      return;
+    }
+    // Open the immersive reel viewer focused on this post.
+    setReelTarget({ postId: p.id, userId: p.userId });
   };
 
   const openProfile = (c: FeedCreator) => {
@@ -755,25 +767,25 @@ const FeedPage: React.FC = () => {
           <div className="pt-3">
             {loading ? (
               <div className="px-3">{skeletonGrid("grid-cols-2")}</div>
-            ) : creators.length === 0 ? (
+            ) : posts.length === 0 ? (
               <div className="py-16 text-center">
                 <p className="font-mono-share text-xs text-muted-foreground">
-                  {filter === "following" ? "Follow users to see their posts here" : "No creators yet. Be the first to post!"}
+                  {filter === "following" ? "Follow users to see their posts here" : "No posts yet. Be the first to post!"}
                 </p>
               </div>
             ) : (
               <>
                 <div className="grid grid-cols-2 gap-0 -mx-px">
-                  {creators.map((c) => (
-                    <div key={c.userId} className="-ml-px -mt-px">
-                      <CreatorCard creator={c} onOpen={openCreator} forceBlur={!isAuthenticated} currentUserId={user?.id} />
+                  {posts.map((p) => (
+                    <div key={p.id} className="-ml-px -mt-px">
+                      <FeedTile post={p} onOpen={openPost} forceBlur={!isAuthenticated} currentUserId={user?.id} />
                     </div>
                   ))}
                 </div>
                 <div ref={sentinelRef} className="h-12 flex items-center justify-center">
                   {loadingMore && <Loader2 className="w-5 h-5 animate-spin text-primary" />}
                 </div>
-                {!loadingMore && !nextCursor && creators.length > 0 && (
+                {!loadingMore && !nextCursor && posts.length > 0 && (
                   <div className="py-6 text-center">
                     <p className="font-mono-share text-[10px] tracking-widest text-muted-foreground/70">
                       ── YOU'RE ALL CAUGHT UP ──
@@ -929,21 +941,20 @@ const FeedPage: React.FC = () => {
 
         {loading ? (
           skeletonGrid("grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5")
-        ) : creators.length === 0 ? (
+        ) : posts.length === 0 ? (
           <div className="text-center py-12">
             <p className="font-mono-share text-xs text-muted-foreground">
-              {filter === "following" ? "Follow users to see their posts here" : "No creators yet. Be the first to post!"}
+              {filter === "following" ? "Follow users to see their posts here" : "No posts yet. Be the first to post!"}
             </p>
           </div>
         ) : (
           <>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-0">
-              {creators.map((c) => (
-                <div key={c.userId} className="-ml-px -mt-px">
-                  <CreatorCard
-                    creator={c}
-                    onOpen={openCreator}
-                    active={activeCreator?.userId === c.userId}
+              {posts.map((p) => (
+                <div key={p.id} className="-ml-px -mt-px">
+                  <FeedTile
+                    post={p}
+                    onOpen={openPost}
                     forceBlur={!isAuthenticated}
                     currentUserId={user?.id}
                   />
@@ -953,7 +964,7 @@ const FeedPage: React.FC = () => {
             <div ref={sentinelRef} className="h-12 flex items-center justify-center">
               {loadingMore && <Loader2 className="w-5 h-5 animate-spin text-primary" />}
             </div>
-            {!loadingMore && !nextCursor && creators.length > 0 && (
+            {!loadingMore && !nextCursor && posts.length > 0 && (
               <div className="py-8 text-center">
                 <p className="font-mono-share text-[10px] tracking-widest text-muted-foreground/70">
                   ── YOU'RE ALL CAUGHT UP ──
