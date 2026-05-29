@@ -1,4 +1,5 @@
 import React, { Suspense } from "react";
+import MaintenanceBanner from "@/components/MaintenanceBanner";
 import { Analytics } from "@vercel/analytics/react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
