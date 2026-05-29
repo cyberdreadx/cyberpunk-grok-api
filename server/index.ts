@@ -158,7 +158,9 @@ async function main() {
     );
 
     // SPA fallback — but DO NOT swallow /api/*
-    app.get(/^(?!\/api\/).*/, (_req, res) => {
+    app.use((req, res, next) => {
+      if (req.method !== "GET" && req.method !== "HEAD") return next();
+      if (req.path.startsWith("/api/")) return next();
       res.sendFile(path.join(DIST_DIR, "index.html"));
     });
   } else {
