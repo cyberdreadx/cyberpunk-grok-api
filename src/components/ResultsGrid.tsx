@@ -1097,42 +1097,35 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
   });
 
   // Keep the user near the photo they were viewing when the list changes
-  // (e.g. delete, move-to-folder). Without this, deleting any item snapped
-  // them back to index 0 (the newest photo) on mobile.
-  const prevViewedIdRef = React.useRef<string | null>(null);
-  const prevLengthRef = React.useRef<number>(filteredResults.length);
+  // (delete, move-to-folder, filter switch). We snapshot the previous id list
+  // and, when filteredResults changes, look up where the previously viewed
+  // item moved to — or fall back to the same slot if it was removed.
+  const prevIdsRef = React.useRef<string[]>([]);
 
-  // Track the currently viewed id whenever the user navigates.
   React.useEffect(() => {
-    prevViewedIdRef.current = filteredResults[mobileIndex]?.id ?? null;
-  }, [mobileIndex, filteredResults]);
+    const prevIds = prevIdsRef.current;
+    const newIds = filteredResults.map((r) => r.id);
+    prevIdsRef.current = newIds;
 
-  // Reconcile mobileIndex ONLY when the list itself changes (not when the
-  // user navigates). Otherwise this snaps the user back and blocks swipes.
-  React.useEffect(() => {
-    const len = filteredResults.length;
-    const prevId = prevViewedIdRef.current;
-    const prevLen = prevLengthRef.current;
-    prevLengthRef.current = len;
-
-    if (len === 0) {
+    if (newIds.length === 0) {
       setMobileIndex(0);
       return;
     }
-    if (!prevId) return;
+    // First populate — nothing to reconcile against.
+    if (prevIds.length === 0) return;
 
-    const stillThereAt = filteredResults.findIndex((r) => r.id === prevId);
-    if (stillThereAt >= 0) {
-      setMobileIndex((cur) => (cur === stillThereAt ? cur : stillThereAt));
-    } else if (len < prevLen) {
-      // Item was deleted — stay on the same slot so the neighbour fills in.
-      setMobileIndex((cur) => Math.min(cur, len - 1));
-    } else {
-      // Filter/folder switched and our item is gone — start at top.
-      setMobileIndex(0);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setMobileIndex((cur) => {
+      const viewedId = prevIds[cur];
+      if (viewedId) {
+        const newIdx = newIds.indexOf(viewedId);
+        if (newIdx >= 0) return newIdx; // item still exists, follow it
+      }
+      // Item gone (deleted or filtered out) — stay on the same slot so the
+      // neighbour fills in, clamped to the new length.
+      return Math.min(cur, newIds.length - 1);
+    });
   }, [filteredResults]);
+
 
 
 
