@@ -140,6 +140,15 @@
     isolation: isolate;
   }
 
+  /** During generation / heavy gallery updates — cut CRT layers to reduce jank */
+  html[data-gallery-busy="1"] .scanline,
+  html[data-gallery-busy="1"] .immersion-pulse-layer,
+  html[data-gallery-busy="1"] .immersion-vignette,
+  html[data-gallery-busy="1"] .cyber-hud-scanline {
+    opacity: 0 !important;
+    animation: none !important;
+  }
+
   @media (max-width: 1023px) {
     .immersion-flicker {
       animation: none !important;

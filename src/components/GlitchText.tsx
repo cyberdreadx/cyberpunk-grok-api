@@ -17,12 +17,17 @@ const GlitchText: React.FC<GlitchTextProps> = ({
 
   useEffect(() => {
     const intervals = { low: 8000, medium: 4000, high: 2000 };
+    const timeouts: ReturnType<typeof setTimeout>[] = [];
     const interval = setInterval(() => {
       setIsGlitching(true);
-      setTimeout(() => setIsGlitching(false), 200);
+      const t = setTimeout(() => setIsGlitching(false), 200);
+      timeouts.push(t);
     }, intervals[glitchIntensity] + Math.random() * 2000);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      timeouts.forEach(clearTimeout);
+    };
   }, [glitchIntensity]);
 
   return (

@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { createPortal } from "react-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Download, Maximize2, X, Trash2, ExternalLink, ChevronLeft, ChevronRight, Pencil, Film, Copy, Check, FolderPlus, FolderOpen, MoreVertical, FolderInput, Lock, LockOpen, ShieldCheck, Eye, EyeOff, ChevronDown, Send, Archive, Loader2, Link2, CheckSquare, Square, ListChecks, RotateCcw, XCircle, Search, CirclePlus, Lightbulb } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
@@ -737,9 +738,9 @@ function MoveToFolderMenu({
     };
   }, [onClose]);
 
-  // Mobile: fixed bottom sheet overlay — sits above the bottom nav bar
-  const mobileSheet = (
-    <div className="sm:hidden fixed inset-0 z-[200]" onClick={onClose}>
+  // Mobile: portaled full-screen sheet — must not stay mounted under page content (blocks nav)
+  const mobileSheet = typeof document !== "undefined" ? createPortal(
+    <div className="sm:hidden fixed inset-0 z-[200]" onClick={onClose} role="presentation">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div
         className="absolute left-0 right-0 bg-card border-t border-border/60 rounded-t-xl shadow-2xl animate-slide-up"
@@ -778,8 +779,9 @@ function MoveToFolderMenu({
           )}
         </div>
       </div>
-    </div>
-  );
+    </div>,
+    document.body,
+  ) : null;
 
   // Desktop: absolute dropdown anchored to trigger button
   const desktopMenu = (
@@ -818,7 +820,6 @@ function MoveToFolderMenu({
 
   return (
     <>
-      {/* Mobile bottom sheet — rendered at document level via portal feel */}
       {mobileSheet}
       {/* Desktop dropdown */}
       {desktopMenu}
@@ -827,6 +828,22 @@ function MoveToFolderMenu({
 }
 
 // ── Main Component ──────────────────────────────────────────────────────
+
+function dismissBlockingUiState(setters: {
+  setExpandedId: (v: string | null) => void;
+  setMoveMenuId: (v: string | null) => void;
+  setSelectMode: (v: boolean) => void;
+  setSelectedIds: (v: Set<string>) => void;
+  setDeleteConfirmId: (v: string | null) => void;
+  setPinDialog: (v: null) => void;
+}) {
+  setters.setExpandedId(null);
+  setters.setMoveMenuId(null);
+  setters.setSelectMode(false);
+  setters.setSelectedIds(new Set());
+  setters.setDeleteConfirmId(null);
+  setters.setPinDialog(null);
+}
 
 const ResultsGrid: React.FC<ResultsGridProps> = ({
   results,
@@ -855,6 +872,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
 }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [mobileIndex, setMobileIndex] = useState(0);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -920,6 +938,39 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
     folderId: string;
     folderName: string;
   } | null>(null);
+
+  const dismissBlockingUI = useCallback(() => {
+    dismissBlockingUiState({
+      setExpandedId,
+      setMoveMenuId,
+      setSelectMode,
+      setSelectedIds,
+      setDeleteConfirmId,
+      setPinDialog,
+    });
+  }, []);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") dismissBlockingUI();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [dismissBlockingUI]);
+
+  useEffect(() => () => { dismissBlockingUI(); }, [dismissBlockingUI]);
+
+  useEffect(() => {
+    dismissBlockingUI();
+  }, [location.pathname, dismissBlockingUI]);
+
+  const prevResultsLen = useRef(results.length);
+  useEffect(() => {
+    if (results.length > prevResultsLen.current) {
+      dismissBlockingUI();
+    }
+    prevResultsLen.current = results.length;
+  }, [results.length, dismissBlockingUI]);
 
   // Resolve display name for any folder ID (including built-in __unfiled / __all)
   const getFolderName = useCallback((folderId: string): string => {
@@ -1962,6 +2013,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
                 className="w-full object-contain bg-black/40"
                 style={{ maxHeight: "70vh" }}
                 loading="lazy"
+                decoding="async"
               />
             ) : currentResult ? (
               <video
@@ -2154,12 +2206,11 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
         {filteredResults.map((result, idx) => (
           <div
             key={result.id}
-            className={`group relative border rounded overflow-hidden bg-card transition-all animate-slide-up ${
+            className={`group relative border rounded overflow-hidden bg-card transition-colors ${
               selectMode && selectedIds.has(result.id)
                 ? "border-primary ring-1 ring-primary/40"
                 : "border-border hover:border-primary/50"
             }`}
-            style={{ animationDelay: `${idx * 50}ms` }}
             onClick={selectMode ? () => toggleSelect(result.id) : undefined}
           >
             {result.type === "image" ? (
@@ -2169,6 +2220,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
                 className="w-full object-contain bg-black/40"
                 style={{ minHeight: "200px", maxHeight: "400px" }}
                 loading="lazy"
+                decoding="async"
               />
             ) : (
               <video
@@ -2646,4 +2698,4 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
   );
 };
 
-export default ResultsGrid;
+export default React.memo(ResultsGrid);

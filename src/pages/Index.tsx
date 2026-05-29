@@ -170,6 +170,21 @@ const Index = () => {
     clearError,
   } = useGrokApi();
 
+  const galleryBusy = isLoading || comfyJobs.some(
+    (j) => j.status === "submitting" || j.status === "generating",
+  );
+
+  useEffect(() => {
+    if (galleryBusy) {
+      document.documentElement.dataset.galleryBusy = "1";
+    } else {
+      delete document.documentElement.dataset.galleryBusy;
+    }
+    return () => {
+      delete document.documentElement.dataset.galleryBusy;
+    };
+  }, [galleryBusy]);
+
   // Auth & Credits
   const auth = useAuth();
   const creditsHook = useCredits(auth.user);

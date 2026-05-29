@@ -1,4 +1,4 @@
-import React, { useState, Suspense } from "react";
+import React, { useState, Suspense, useEffect } from "react";
 import { lazyWithRetry } from "@/lib/lazyWithRetry";
 import { createPortal } from "react-dom";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -46,6 +46,11 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   const isLibrary = location.pathname === "/library";
   const isChat = location.pathname === "/chat";
   const creditsBadge = !isAuthenticated ? null : creditsLoading ? "…" : totalCredits > 999 ? "999+" : totalCredits.toString();
+
+  useEffect(() => {
+    setMoreOpen(false);
+    setPotOpen(false);
+  }, [location.pathname]);
 
   const tabs: Array<{
     id: string; label: string; icon: any; active: boolean;
