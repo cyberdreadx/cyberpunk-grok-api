@@ -176,56 +176,7 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
             <DialogDescription className="font-rajdhani text-muted-foreground">
               {t("store.description")}
             </DialogDescription>
-            <div className="mt-3 flex items-center gap-2 rounded-lg border border-pink-500/25 bg-gradient-to-r from-pink-500/10 to-violet-500/10 px-3 py-2.5">
-              <img src="/xrge-logo.png" alt="" className="h-8 w-8 shrink-0 rounded-full" />
-              <div className="min-w-0 flex-1 text-left">
-                <p className="font-orbitron text-[10px] tracking-wide text-pink-200">
-                  {t("store.xrgeBankTitle")}
-                </p>
-                <p className="font-mono-share text-[9px] text-muted-foreground/90 leading-snug">
-                  {t("store.xrgeBankDesc")}{" "}
-                  <a href={XRGE_DEXSCREENER_URL} target="_blank" rel="noopener noreferrer" className="text-pink-300 underline underline-offset-2">
-                    {t("store.getXrge")}
-                  </a>
-                </p>
-              </div>
-              <div className="relative shrink-0">
-                {holderTipShow && (
-                  <>
-                    <span className="pointer-events-none absolute -top-1 -right-1 z-10 flex h-2.5 w-2.5">
-                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet-400 opacity-75" />
-                      <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-violet-300 shadow-[0_0_8px_hsl(280_90%_70%)]" />
-                    </span>
-                    <span
-                      role="tooltip"
-                      className="pointer-events-none absolute right-0 top-full mt-1.5 z-20 whitespace-nowrap rounded-md border border-violet-500/40 bg-card/95 px-2 py-1 font-mono-share text-[9px] text-violet-100 shadow-[0_4px_16px_hsl(280_80%_60%/0.3)] animate-slide-up"
-                    >
-                      {t("store.holderTip", "Check your holder tier here →")}
-                    </span>
-                  </>
-                )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setOpen(false);
-                    setBankOpen(true);
-                    if (holderTipShow) {
-                      try { localStorage.removeItem("holder-tip-show"); } catch { /* ignore */ }
-                      setHolderTipShow(false);
-                    }
-                  }}
-                  className="font-orbitron text-[9px] tracking-wider gap-1.5 border-pink-500/30 text-pink-300 hover:bg-pink-500/15 hover:text-pink-200"
-                >
-                  <Wallet className="w-3 h-3" />
-                  {t("store.bank")}
-                </Button>
-              </div>
-            </div>
           </DialogHeader>
-
-          {/* Holder Program promo — current tier hints + bank CTA */}
-          <HolderProgramPromo onOpenBank={() => { setOpen(false); setBankOpen(true); }} />
 
           {/* Flash sale banner — prominent, in-store */}
           {flashSale && (
@@ -376,37 +327,17 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
             </div>
           )}
 
-          {/* Free credits maintenance banner */}
+          {/* Free credits maintenance — slim one-liner (full earn details live in the Earn Free tab) */}
           {freeCreditsDisabled && (
-            <div className="mt-4 border border-yellow-500/30 bg-yellow-500/5 rounded-lg px-3 py-3 space-y-2.5">
-              <div className="text-center">
-                <p className="font-orbitron text-[11px] tracking-widest text-yellow-400 uppercase">
-                  {subscriberOnlyFreeCredits ? "★ Subscribers only" : "⚠ Free credits paused"}
-                </p>
-                <p className="font-mono-share text-[10px] text-muted-foreground mt-1.5 leading-relaxed">
-                  {maintenanceMessage || "Daily free credits, the spin wheel, and daily missions are temporarily off. Paid packs and subscriptions are unaffected."}
-                </p>
-                {subscriberOnlyFreeCredits && (
-                  <p className="font-mono-share text-[10px] text-yellow-300/80 mt-2 leading-relaxed">
-                    Pick any plan below to unlock daily credits, the spin wheel, and daily missions.
-                  </p>
-                )}
-              </div>
-              <div className="border-t border-yellow-500/20 pt-2.5">
-                <p className="font-orbitron text-[10px] tracking-wider text-orange-400 uppercase mb-1.5 text-center">
-                  🎯 You can still earn free credits
-                </p>
-                <ul className="font-mono-share text-[10px] text-muted-foreground/90 leading-relaxed space-y-1">
-                  <li className="flex gap-2">
-                    <span className="text-orange-400 shrink-0">▸</span>
-                    <span>Post a generation to <span className="text-orange-400 font-bold">r/grok</span> or <span className="text-orange-400 font-bold">r/GrokRunner</span> and grab the secret reward code from the pinned post — <span className="text-yellow-400 font-bold">+10 credits</span> (one-time per account).</span>
-                  </li>
-                  <li className="flex gap-2">
-                    <span className="text-orange-400 shrink-0">▸</span>
-                    <span>Use the <span className="text-orange-400 font-bold">"Share on Reddit"</span> action in the share dialog — your post link counts toward future rewards.</span>
-                  </li>
-                </ul>
-              </div>
+            <div className="mt-2 flex items-center gap-2 rounded-md border border-yellow-500/30 bg-yellow-500/5 px-3 py-1.5">
+              <span className="font-orbitron text-[9px] tracking-wider text-yellow-400 uppercase shrink-0">
+                {subscriberOnlyFreeCredits ? "★ Subscribers only" : "⚠ Free credits paused"}
+              </span>
+              <span className="font-mono-share text-[9px] text-muted-foreground/80 leading-snug truncate">
+                {maintenanceMessage || (subscriberOnlyFreeCredits
+                  ? "Subscribe to unlock daily credits, the spin wheel & missions."
+                  : "Daily free credits & the spin wheel are temporarily off — packs & subs unaffected.")}
+              </span>
             </div>
           )}
 
@@ -486,6 +417,58 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
               <ReferralCard />
             </TabsContent>
           </Tabs>
+
+          {/* Secondary promos — moved below the pricing so they don't push prices
+              below the fold when the store opens. */}
+          <div className="mt-4 flex items-center gap-2 rounded-lg border border-pink-500/25 bg-gradient-to-r from-pink-500/10 to-violet-500/10 px-3 py-2.5">
+            <img src="/xrge-logo.png" alt="" className="h-8 w-8 shrink-0 rounded-full" />
+            <div className="min-w-0 flex-1 text-left">
+              <p className="font-orbitron text-[10px] tracking-wide text-pink-200">
+                {t("store.xrgeBankTitle")}
+              </p>
+              <p className="font-mono-share text-[9px] text-muted-foreground/90 leading-snug">
+                {t("store.xrgeBankDesc")}{" "}
+                <a href={XRGE_DEXSCREENER_URL} target="_blank" rel="noopener noreferrer" className="text-pink-300 underline underline-offset-2">
+                  {t("store.getXrge")}
+                </a>
+              </p>
+            </div>
+            <div className="relative shrink-0">
+              {holderTipShow && (
+                <>
+                  <span className="pointer-events-none absolute -top-1 -right-1 z-10 flex h-2.5 w-2.5">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet-400 opacity-75" />
+                    <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-violet-300 shadow-[0_0_8px_hsl(280_90%_70%)]" />
+                  </span>
+                  <span
+                    role="tooltip"
+                    className="pointer-events-none absolute right-0 top-full mt-1.5 z-20 whitespace-nowrap rounded-md border border-violet-500/40 bg-card/95 px-2 py-1 font-mono-share text-[9px] text-violet-100 shadow-[0_4px_16px_hsl(280_80%_60%/0.3)] animate-slide-up"
+                  >
+                    {t("store.holderTip", "Check your holder tier here →")}
+                  </span>
+                </>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setOpen(false);
+                  setBankOpen(true);
+                  if (holderTipShow) {
+                    try { localStorage.removeItem("holder-tip-show"); } catch { /* ignore */ }
+                    setHolderTipShow(false);
+                  }
+                }}
+                className="font-orbitron text-[9px] tracking-wider gap-1.5 border-pink-500/30 text-pink-300 hover:bg-pink-500/15 hover:text-pink-200"
+              >
+                <Wallet className="w-3 h-3" />
+                {t("store.bank")}
+              </Button>
+            </div>
+          </div>
+
+          {/* Holder Program promo — current tier hints + bank CTA */}
+          <HolderProgramPromo onOpenBank={() => { setOpen(false); setBankOpen(true); }} />
 
           <div className="border-t border-border pt-3 mt-2">
             <p className="text-[10px] font-mono-share text-muted-foreground/80 leading-relaxed">
