@@ -2977,7 +2977,12 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           // Videos are ALWAYS uploaded to Vercel Blob (no size threshold)
           // Images only go to Blob if larger than MAX_INLINE_SIZE (defined in resolveFileData)
 
-          async function uploadToBlob(buffer: Buffer, mime: string, ext: string): Promise<{ url: string; previewUrl?: string } | null> {
+          // Returns the resolved file in the same { uri, previewUrl } shape that
+          // resolveFileData (and all its callers) expect. Returning { url } here
+          // instead made topResult.uri undefined, so the poll responded with
+          // { status: "done", video: undefined } and the client surfaced
+          // "No video returned from ComfyUI" on every blob-backed output.
+          async function uploadToBlob(buffer: Buffer, mime: string, ext: string): Promise<{ uri: string; previewUrl?: string } | null> {
             const sizeMB = (buffer.length / 1024 / 1024).toFixed(1);
             const filename = `comfyui-output/${Date.now()}-${Math.random().toString(36).slice(2, 6)}.${ext}`;
             for (let attempt = 1; attempt <= 2; attempt++) {
@@ -2985,7 +2990,7 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
                 const { uploadPublicMedia } = await import("./_lib/media-storage");
                 const { url, previewUrl, storage } = await uploadPublicMedia(buffer, filename, mime);
                 console.log(`[comfyui-poll] Uploaded ${sizeMB}MB to ${storage.toUpperCase()}: ${url}${previewUrl ? " (preview generated)" : ""}`);
-                return { url, previewUrl };
+                return { uri: url, previewUrl };
               } catch (err: any) {
                 console.error(`[comfyui-poll] Media upload attempt ${attempt}/2 failed (${sizeMB}MB): ${err.message}`);
                 if (attempt < 2) await new Promise(r => setTimeout(r, 1000));
