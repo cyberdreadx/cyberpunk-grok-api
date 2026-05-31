@@ -2924,10 +2924,13 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
               const sql = getDb();
               await sql`
                 UPDATE usage_log SET execution_time_ms = ${execMs}, api_cost_cents = ${runpodCostCents}
-                WHERE user_id = ${auth.userId}::uuid
-                  AND mode LIKE 'comfy-%'
-                  AND execution_time_ms IS NULL
-                ORDER BY created_at DESC LIMIT 1
+                WHERE id = (
+                  SELECT id FROM usage_log
+                  WHERE user_id = ${auth.userId}::uuid
+                    AND mode LIKE 'comfy-%'
+                    AND execution_time_ms IS NULL
+                  ORDER BY created_at DESC LIMIT 1
+                )
               `;
             } catch { /* best effort */ }
           }
@@ -3113,7 +3116,9 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
             for (const key of videoKeys) {
               const node = out[key];
               if (!node || typeof node !== "object") continue;
-              for (const arrKey of ["videos", "gifs"]) {
+              // Include "images": some video workflows (and resume polls that lose
+              // outputType) return the rendered video frames under a nested images array.
+              for (const arrKey of ["videos", "gifs", "images"]) {
                 const arr = node[arrKey];
                 if (!Array.isArray(arr) || !arr.length) continue;
                 const file = arr[arr.length - 1];
