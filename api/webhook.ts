@@ -29,6 +29,13 @@ import {
 export const config = { api: { bodyParser: false } };
 
 async function getRawBody(req: VercelRequest): Promise<Buffer> {
+  // Self-hosted (Express): express.raw() has already consumed the stream and
+  // placed the raw bytes on req.body, so the stream below would be empty.
+  // Use that buffer directly. On Vercel (bodyParser:false) req.body is unset,
+  // so we fall through and read the stream as before.
+  const pre = (req as unknown as { body?: unknown }).body;
+  if (Buffer.isBuffer(pre)) return pre;
+  if (typeof pre === "string") return Buffer.from(pre);
   const chunks: Buffer[] = [];
   for await (const chunk of req) {
     chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : chunk);
