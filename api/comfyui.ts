@@ -3071,6 +3071,21 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
             }
           }
 
+          // Detect video from the actual file (filename/format) rather than trusting
+          // the frontend's outputType — some poll paths (e.g. resume) drop it, which
+          // returned the video under the "image" key and surfaced to users as
+          // "No video returned from ComfyUI". Returns null when unknown.
+          function fileIsVideo(file: any): boolean | null {
+            const name: string =
+              (file && typeof file === "object" && (file.filename || file.url || file.name)) ||
+              (typeof file === "string" ? file : "") || "";
+            if (/\.(mp4|webm|mov|m4v)(\?|$)/i.test(name)) return true;
+            if (/\.(png|jpe?g|webp|bmp)(\?|$)/i.test(name)) return false;
+            const fmt: string = (file && typeof file === "object" && (file.format || file.type)) || "";
+            if (/video|mp4|webm|h264/i.test(fmt)) return true;
+            return null;
+          }
+
           // Scan all file arrays in output (videos, gifs, images) at top level and nested
           async function findOutput(obj: any): Promise<{ uri: string; previewUrl?: string; type: "video" | "image" } | null> {
             if (!obj || typeof obj !== "object") return null;
@@ -3080,7 +3095,10 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
               const arr = obj[arrKey];
               if (!Array.isArray(arr) || !arr.length) continue;
               const file = arr[arr.length - 1];
-              const isVid = arrKey !== "images" || outputType === "video";
+              // videos/gifs are always video; for images, trust the file's own type
+              // and only fall back to outputType when the file is ambiguous.
+              const detected = arrKey === "images" ? fileIsVideo(file) : true;
+              const isVid = detected !== null ? detected : (outputType === "video");
               const result = await resolveFileData(file, isVid ? "video" : "image");
               if (result) return { ...result, type: isVid ? "video" : "image" };
             }
@@ -3116,12 +3134,13 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
             for (const key of videoKeys) {
               const node = out[key];
               if (!node || typeof node !== "object") continue;
-              // Include "images": some video workflows (and resume polls that lose
-              // outputType) return the rendered video frames under a nested images array.
+              // Include "images": some video workflows return the rendered video
+              // under a nested images array — but skip entries that are real images.
               for (const arrKey of ["videos", "gifs", "images"]) {
                 const arr = node[arrKey];
                 if (!Array.isArray(arr) || !arr.length) continue;
                 const file = arr[arr.length - 1];
+                if (arrKey === "images" && fileIsVideo(file) === false) continue;
                 const result = await resolveFileData(file, "video");
                 if (result) {
                   console.log(`[comfyui-poll] Found video in nested key "${key}".${arrKey} (HD preferred: highest node ID first)`);
