@@ -6,6 +6,8 @@
  * Decimals: 18
  */
 
+import { getDb } from "./db";
+
 // ── Constants ─────────────────────────────────────────────────────────────
 
 export const XRGE_CONTRACT = "0x147120faec9277ec02d957584cfcd92b56a24317";
@@ -18,49 +20,97 @@ const TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a
 // ── Live price feed ───────────────────────────────────────────────────────
 
 const DEXSCREENER_URL = `https://api.dexscreener.com/tokens/v1/base/${XRGE_CONTRACT}`;
+const DEXSCREENER_FALLBACK_URL = `https://api.dexscreener.com/latest/dex/tokens/${XRGE_CONTRACT}`;
 const PRICE_CACHE_TTL_MS = 60_000; // 60 seconds
+const PERSIST_PRICE_KEY = "xrge_last_price_usd";
+const PERSISTED_PRICE_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000; // 14 days
 
 let cachedPrice: number | null = null;
 let cachedAt = 0;
+
+/** Best-effort: remember the last good price across restarts (app_config). */
+async function persistPrice(price: number): Promise<void> {
+  try {
+    const sql = getDb();
+    await sql`
+      INSERT INTO app_config (key, value, updated_at)
+      VALUES (${PERSIST_PRICE_KEY}, ${JSON.stringify({ price, at: Date.now() })}::jsonb, now())
+      ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`;
+  } catch (e) {
+    console.warn("[xrge] failed to persist price:", (e as Error)?.message);
+  }
+}
+
+/** Read the last good price from app_config, if not too stale. */
+async function readPersistedPrice(): Promise<number | null> {
+  try {
+    const sql = getDb();
+    const rows = await sql`SELECT value FROM app_config WHERE key = ${PERSIST_PRICE_KEY} LIMIT 1`;
+    const v = rows?.[0]?.value as { price?: number; at?: number } | undefined;
+    if (!v || typeof v.price !== "number" || v.price <= 0) return null;
+    if (typeof v.at === "number" && Date.now() - v.at > PERSISTED_PRICE_MAX_AGE_MS) {
+      console.warn("[xrge] persisted price too stale, ignoring");
+      return null;
+    }
+    return v.price;
+  } catch (e) {
+    console.warn("[xrge] failed to read persisted price:", (e as Error)?.message);
+    return null;
+  }
+}
 
 /**
  * Fetch the live XRGE/USD price from DexScreener (Aerodrome pair on Base).
  * Results are cached for 60 seconds to stay well within rate limits.
  */
+/** Pull priceUsd from either DexScreener response shape (array, or {pairs:[]}). */
+async function tryEndpoint(url: string): Promise<number | null> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const pairs = Array.isArray(data) ? data : (data?.pairs ?? []);
+    if (!Array.isArray(pairs) || pairs.length === 0) return null;
+    const price = parseFloat(pairs[0]?.priceUsd);
+    return Number.isFinite(price) && price > 0 ? price : null;
+  } catch {
+    return null;
+  }
+}
+
 async function fetchXrgePrice(): Promise<number> {
   const now = Date.now();
   if (cachedPrice !== null && now - cachedAt < PRICE_CACHE_TTL_MS) {
     return cachedPrice;
   }
 
-  const res = await fetch(DEXSCREENER_URL);
-  if (!res.ok) {
-    if (cachedPrice !== null) {
-      console.warn("[xrge] DexScreener returned HTTP " + res.status + ", using stale cached price");
-      return cachedPrice;
-    }
-    throw new Error("Failed to fetch XRGE price from DexScreener (HTTP " + res.status + ")");
+  // Primary endpoint, then a secondary DexScreener endpoint, before degrading.
+  let price = await tryEndpoint(DEXSCREENER_URL);
+  if (price === null) price = await tryEndpoint(DEXSCREENER_FALLBACK_URL);
+
+  if (price !== null) {
+    cachedPrice = price;
+    cachedAt = now;
+    console.log(`[xrge] Live price: $${price}`);
+    void persistPrice(price);
+    return price;
   }
 
-  const pairs = await res.json();
-  if (!Array.isArray(pairs) || pairs.length === 0 || !pairs[0].priceUsd) {
-    if (cachedPrice !== null) {
-      console.warn("[xrge] DexScreener returned no pairs, using stale cached price");
-      return cachedPrice;
-    }
-    throw new Error("No XRGE trading pair found on DexScreener");
+  // Both endpoints failed. Degrade gracefully so a transient DexScreener
+  // outage can't block ALL deposit verification (the May 2026 incident):
+  // fall back to the in-memory cache, then the persisted last-good price.
+  if (cachedPrice !== null) {
+    console.warn("[xrge] DexScreener unavailable, using in-memory cached price $" + cachedPrice);
+    return cachedPrice;
   }
-
-  const price = parseFloat(pairs[0].priceUsd);
-  if (isNaN(price) || price <= 0) {
-    if (cachedPrice !== null) return cachedPrice;
-    throw new Error("Invalid XRGE price from DexScreener: " + pairs[0].priceUsd);
+  const persisted = await readPersistedPrice();
+  if (persisted !== null) {
+    console.warn("[xrge] DexScreener unavailable + cold cache, using persisted price $" + persisted);
+    cachedPrice = persisted;
+    cachedAt = now;
+    return persisted;
   }
-
-  cachedPrice = price;
-  cachedAt = now;
-  console.log(`[xrge] Live price: $${price}`);
-  return price;
+  throw new Error("No XRGE trading pair found on DexScreener");
 }
 
 // ── Config ────────────────────────────────────────────────────────────────
