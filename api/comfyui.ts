@@ -3099,6 +3099,9 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
               // and only fall back to outputType when the file is ambiguous.
               const detected = arrKey === "images" ? fileIsVideo(file) : true;
               const isVid = detected !== null ? detected : (outputType === "video");
+              if (arrKey === "images" && isVid && outputType !== "video") {
+                console.log(`[comfyui-poll] recovered video from images[] despite outputType=${outputType} — fix working`);
+              }
               const result = await resolveFileData(file, isVid ? "video" : "image");
               if (result) return { ...result, type: isVid ? "video" : "image" };
             }
