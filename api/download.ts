@@ -88,8 +88,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (upstream.body) {
       // Stream through — avoid buffering multi-MB images/videos in memory.
-      // @ts-expect-error Node ReadableStream from fetch
-      return res.status(200).send(upstream.body);
+      // upstream.body is a WHATWG ReadableStream. On the self-hosted Express
+      // server, res.send() can't stream it: Express falls through to res.json()
+      // and serializes the stream object to a near-empty body, which reached
+      // users as 1–2KB "videos" that won't play. Convert to a Node stream and
+      // pipe to the response — works on both Express and Vercel's Node runtime.
+      const { Readable } = await import("node:stream");
+      const nodeStream = Readable.fromWeb(upstream.body as any);
+      res.status(200);
+      nodeStream.on("error", (streamErr: any) => {
+        console.error("[download] stream error:", streamErr?.message);
+        if (!res.headersSent) res.status(502).json({ error: "Download stream failed" });
+        else res.destroy(streamErr);
+      });
+      nodeStream.pipe(res);
+      return;
     }
 
     const buffer = Buffer.from(await upstream.arrayBuffer());
