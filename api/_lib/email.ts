@@ -556,6 +556,60 @@ export function buildV52AnnouncementHtml(): string {
   `;
 }
 
+export function buildLaunchAnnouncementHtml(): string {
+  return `
+    <div style="font-family: 'Courier New', monospace; background: #0a0a0f; color: #e0e0e0; padding: 32px; max-width: 540px; margin: 0 auto;">
+      <div style="border: 1px solid #00f0ff33; padding: 28px; border-radius: 4px;">
+
+        <h1 style="color: #00f0ff; font-size: 22px; letter-spacing: 4px; margin: 0 0 6px; text-align: center;">
+          GLTCH RUNNER
+        </h1>
+        <p style="color: #ff00e599; font-size: 11px; letter-spacing: 5px; text-align: center; margin: 0 0 28px;">
+          NEW ERA // SAME ACCOUNT
+        </p>
+
+        <div style="background: linear-gradient(135deg, #ff00e515, #00f0ff15); border: 1px solid #00f0ff66; padding: 18px; border-radius: 4px; margin: 0 0 24px; text-align: center;">
+          <p style="color: #00f0ff; font-size: 12px; letter-spacing: 3px; margin: 0 0 8px;">WE'RE NOW GLTCH RUNNER</p>
+          <p style="font-size: 13px; color: #c0c0c0; margin: 0; line-height: 1.6;">
+            Same login, same credits — bigger, faster, and fewer limits. Here's what's new.
+          </p>
+        </div>
+
+        <div style="background: #111; border: 1px solid #ff00e544; padding: 20px; border-radius: 4px; margin: 0 0 16px;">
+          <h2 style="color: #ff00e5; font-size: 15px; margin: 0 0 10px; letter-spacing: 1px;">💬 CHAT WITH AI MODELS</h2>
+          <p style="font-size: 13px; color: #b0b0b0; margin: 0; line-height: 1.7;">
+            Our featured models now have AI personas you can message — they reply in character and send photos &amp; videos on request. Find them on the feed and the MODELS tab.
+          </p>
+        </div>
+
+        <div style="background: #111; border: 1px solid #00f0ff44; padding: 20px; border-radius: 4px; margin: 0 0 24px;">
+          <h2 style="color: #00f0ff; font-size: 15px; margin: 0 0 10px; letter-spacing: 1px;">⚡ WHAT'S NEW</h2>
+          <ul style="font-size: 13px; color: #b0b0b0; margin: 0; padding-left: 18px; line-height: 1.8;">
+            <li>AI image generation &amp; editing — GLTCH + GLTCH PRO engines, fewer restrictions</li>
+            <li>Text-to-video &amp; image-to-video (WAN + Seedance)</li>
+            <li>Featured creators you can chat with, unlock, and tip</li>
+            <li>Trending / Following feed sorting</li>
+            <li>Faster self-hosted backend — no timeouts or cold starts</li>
+          </ul>
+        </div>
+
+        <div style="text-align: center; margin: 0 0 20px;">
+          <a href="https://grokrunner.gltch.app" style="display: inline-block; background: linear-gradient(135deg, #00f0ff22, #ff00e522); border: 1px solid #00f0ff55; color: #00f0ff; text-decoration: none; padding: 14px 36px; border-radius: 4px; font-size: 14px; letter-spacing: 3px; font-weight: bold;">
+            OPEN GLTCH RUNNER →
+          </a>
+        </div>
+
+        <p style="font-size: 12px; color: #888; text-align: center; margin: 0 0 6px;">
+          New here? <a href="https://gltchrunner.com" style="color: #00f0ff; text-decoration: underline;">gltchrunner.com</a>
+        </p>
+        <p style="font-size: 11px; color: #444; margin: 0; text-align: center;">
+          Sent to verified GLTCH Runner accounts. Your daily credits are still waiting.
+        </p>
+      </div>
+    </div>
+  `;
+}
+
 export function buildV48AnnouncementHtml(): string {
   return `
     <div style="font-family: 'Courier New', monospace; background: #0a0a0f; color: #e0e0e0; padding: 32px; max-width: 540px; margin: 0 auto;">
