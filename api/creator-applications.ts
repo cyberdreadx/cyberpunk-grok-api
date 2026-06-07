@@ -67,7 +67,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       SET status = ${newStatus}, admin_notes = ${notes},
           reviewed_at = now(), reviewed_by = ${reviewer}::uuid, updated_at = now()
       WHERE id = ${id}::uuid
-      RETURNING id, user_id, status
+      RETURNING id, user_id, status, pitch, sample_urls
     `;
     if (!app) return res.status(404).json({ error: "Not found" });
 
@@ -76,6 +76,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         UPDATE users
         SET is_featured_creator = true, featured_at = COALESCE(featured_at, now())
         WHERE id = ${app.user_id}::uuid
+      `;
+      // Auto-seed the public profile from the application so the creator shows
+      // up with a photo + bio immediately. Only fills blanks — never overwrites
+      // an avatar/bio the creator already set. (No-op if no profile row yet.)
+      const samples = Array.isArray(app.sample_urls) ? app.sample_urls : [];
+      const avatar = samples[0] || null;
+      let bio = String(app.pitch || "").trim();
+      if (bio.length > 300) {
+        bio = bio.slice(0, 297);
+        const sp = bio.lastIndexOf(" ");
+        bio = (sp > 0 ? bio.slice(0, sp) : bio) + "…";
+      }
+      await sql`
+        UPDATE profiles
+        SET avatar_url = COALESCE(NULLIF(avatar_url, ''), ${avatar}),
+            bio = CASE WHEN COALESCE(bio, '') = '' THEN ${bio} ELSE bio END,
+            updated_at = now()
+        WHERE user_id = ${app.user_id}::uuid
       `;
     }
     return res.status(200).json({ ok: true, application: app });
