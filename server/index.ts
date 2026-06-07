@@ -105,7 +105,7 @@ async function main() {
     cors({
       origin: true,
       credentials: true,
-      methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+      methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
       allowedHeaders: ["Content-Type", "Authorization", "X-API-Key"],
       maxAge: 86400,
     }),
