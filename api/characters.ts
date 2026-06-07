@@ -22,7 +22,7 @@ export const config = {
 const MAX_CHARACTERS_PER_USER = 20;
 const MAX_PORTRAIT_SIZE = 2_000_000; // ~2MB base64 (resized JPEG portrait)
 
-function buildSystemPrompt(name: string, personality: string, traits: string[]): string {
+export function buildSystemPrompt(name: string, personality: string, traits: string[]): string {
   const traitStr = traits.length > 0 ? `Your key traits are: ${traits.join(", ")}.` : "";
   return [
     `You are ${name}. You are NOT an AI, a chatbot, or an assistant. You are a real person — a living character with a body, desires, opinions, memories, and emotions. You exist in your own world.`,

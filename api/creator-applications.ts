@@ -10,6 +10,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getDb } from "./_lib/db";
 import { getUserFromRequest, ADMIN_EMAIL } from "./_lib/auth";
 import { applyCors } from "./_lib/cors";
+import { buildSystemPrompt } from "./characters";
 import { checkRateLimit } from "./_lib/ratelimit";
 
 export const config = {
@@ -67,7 +68,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       SET status = ${newStatus}, admin_notes = ${notes},
           reviewed_at = now(), reviewed_by = ${reviewer}::uuid, updated_at = now()
       WHERE id = ${id}::uuid
-      RETURNING id, user_id, status, pitch, sample_urls
+      RETURNING id, user_id, status, pitch, sample_urls, display_name, niche
     `;
     if (!app) return res.status(404).json({ error: "Not found" });
 
@@ -95,6 +96,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             updated_at = now()
         WHERE user_id = ${app.user_id}::uuid
       `;
+
+      // Auto-build the fan-chat persona from the bio so the model never has to
+      // create a Character manually, then enable fan chat. Skip if they already
+      // linked an official character (don't clobber their own).
+      const [u] = await sql`SELECT official_character_id FROM users WHERE id = ${app.user_id}::uuid`;
+      if (u && !u.official_character_id) {
+        const [prof] = await sql`SELECT username, avatar_url, bio FROM profiles WHERE user_id = ${app.user_id}::uuid`;
+        const pname = String(app.display_name || prof?.username || "Creator").slice(0, 100);
+        const personality = (String(prof?.bio || "").trim() || `${pname}, a featured creator on GLTCHRunner.`).slice(0, 2000);
+        const traits = String(app.niche || "").split(/[,/]/).map((s) => s.trim()).filter(Boolean).slice(0, 8);
+        const sysPrompt = buildSystemPrompt(pname, personality, traits);
+        const [ch] = await sql`
+          INSERT INTO characters (user_id, name, portrait_url, personality, traits, system_prompt, llm_backend, is_public, published_at)
+          VALUES (${app.user_id}::uuid, ${pname}, ${prof?.avatar_url || null}, ${personality}, ${JSON.stringify(traits)}, ${sysPrompt}, 'deepseek', true, now())
+          RETURNING id
+        `;
+        await sql`
+          UPDATE users SET official_character_id = ${ch.id}, creator_persona_chat_enabled = true, updated_at = now()
+          WHERE id = ${app.user_id}::uuid
+        `;
+      } else if (u && u.official_character_id) {
+        await sql`UPDATE users SET creator_persona_chat_enabled = true WHERE id = ${app.user_id}::uuid`;
+      }
     }
     return res.status(200).json({ ok: true, application: app });
   }
