@@ -228,7 +228,7 @@
   "changelog": {
     "title": "系统更新日志",
     "subtitle": "// 最新补丁和升级 //",
-    "footer": "GROK_RUNNER · 全系统正常",
+    "footer": "GLTCH_RUNNER · 全系统正常",
     "tagNew": "新功能",
     "tagFix": "修复",
     "tagImprove": "改进"
@@ -239,9 +239,9 @@
     "next": "下一步",
     "gotIt": "明白了！",
     "welcome": {
-      "title": "欢迎使用 Grok Runner",
+      "title": "欢迎使用 GLTCH Runner",
       "subtitle": "由xAI驱动的AI图片与视频生成",
-      "body1": "Grok Runner让您使用尖端AI模型生成、编辑和动画化图片和视频。",
+      "body1": "GLTCH Runner让您使用尖端AI模型生成、编辑和动画化图片和视频。",
       "body2": "本快速指南将介绍基础操作。您可以随时从帮助菜单重新查看。"
     },
     "twoWays": {
@@ -339,7 +339,7 @@
     "apiKeyRequired": "需要API密钥",
     "apiKeyRequiredDesc": "在设置中输入xAI API密钥，或切换到积分模式。",
     "accountRequired": "需要账户",
-    "accountRequiredDesc": "GLTCH & ComfyUI引擎运行在我们的服务器上，需要账户。请登录或切换到GROK引擎的BYOK模式。",
+    "accountRequiredDesc": "GLTCH & ComfyUI引擎运行在我们的服务器上，需要账户。请登录。",
     "accessDenied": "拒绝访问",
     "accessDeniedDesc": "请登录以使用积分。",
     "insufficientCredits": "积分不足",

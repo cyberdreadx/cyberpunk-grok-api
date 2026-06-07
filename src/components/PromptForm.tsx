@@ -21,18 +21,18 @@ function creditCostBreakdown(mode: GrokMode, cost: number, imageCount: number, v
   switch (mode) {
     case "text-to-image":
       return imageCount > 1
-        ? { lines: [`${Math.round(cost / imageCount)} cr / image`, `× ${imageCount} images`, `= ${cost} cr total`], note: "Grok · Z-Image · GLTCH" }
-        : { lines: [`${cost} cr / image`], note: "Grok · Z-Image · GLTCH" };
+        ? { lines: [`${Math.round(cost / imageCount)} cr / image`, `× ${imageCount} images`, `= ${cost} cr total`], note: "Z-Image · GLTCH" }
+        : { lines: [`${cost} cr / image`], note: "Z-Image · GLTCH" };
     case "edit-image":
       return imageCount > 1
-        ? { lines: [`${Math.round(cost / imageCount)} cr / image`, `× ${imageCount} images`, `= ${cost} cr total`], note: "Grok · GLTCH image editing" }
-        : { lines: [`${cost} cr / image`], note: "Grok · GLTCH image editing" };
+        ? { lines: [`${Math.round(cost / imageCount)} cr / image`, `× ${imageCount} images`, `= ${cost} cr total`], note: "GLTCH image editing" }
+        : { lines: [`${cost} cr / image`], note: "GLTCH image editing" };
     case "text-to-video":
     case "image-to-video": {
       const isFlat = cost === 15;
       return isFlat
         ? { lines: [`${cost} cr flat rate`], note: "GLTCH PRO / ComfyUI WAN 2.2" }
-        : { lines: [`3 cr / second`, `× ${videoDuration}s`, `= ${cost} cr total`], note: "Grok video engine" };
+        : { lines: [`3 cr / second`, `× ${videoDuration}s`, `= ${cost} cr total`], note: "GLTCH video engine" };
     }
     default:
       return { lines: [`${cost} cr`] };
@@ -481,7 +481,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
             <div className="w-2 h-2 rounded-full bg-primary/60" />
           </div>
           <span className="font-mono-share text-[9px] text-muted-foreground/40 flex-1 text-center">
-            prompt@grok:~/{mode.replace(/-/g, "_")}
+            prompt@gltch:~/{mode.replace(/-/g, "_")}
           </span>
           <span className="font-mono-share text-[9px] text-muted-foreground/30">{prompt.length} chars</span>
         </div>
@@ -538,7 +538,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
                 size="sm"
                 variant="ghost"
                 className="h-8 px-2 font-mono-share text-[10px] text-primary/60 hover:text-primary hover:bg-primary/10 disabled:opacity-30 gap-1"
-                title="Enhance prompt with Grok AI"
+                title="Enhance prompt with AI"
               >
                 {enhancing ? (
                   <Loader2 className="w-3 h-3 animate-spin" />

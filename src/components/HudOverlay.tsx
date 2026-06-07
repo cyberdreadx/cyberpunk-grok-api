@@ -72,7 +72,7 @@ const HudOverlay: React.FC = () => {
       {/* Bottom-right version */}
       <div className="fixed bottom-4 right-4 z-30 font-mono-share text-[8px] text-muted-foreground/10 hidden md:block text-right">
         <div>BUILD: {APP_VERSION}-CYBER</div>
-        <div>KERNEL: GROK-NN</div>
+        <div>KERNEL: GLTCH-NN</div>
         <div className="text-primary/15 mt-1">{time}</div>
       </div>
     </div>

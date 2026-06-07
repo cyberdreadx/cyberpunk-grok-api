@@ -83,7 +83,7 @@ const CyberLayout: React.FC<CyberLayoutProps> = ({ children }) => {
           <div className="w-2.5 h-2.5 rounded-full bg-primary/70" />
         </div>
         <div className="font-mono-share text-[10px] text-muted-foreground/50 flex-1 text-center pb-1">
-          grok@xai:~/neural-render — bash
+          gltch@gltch:~/neural-render — bash
         </div>
         <div className="pb-1 shrink-0">
           <RunpodStatusDot />

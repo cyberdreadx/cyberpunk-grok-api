@@ -215,7 +215,7 @@ const COMMANDS: CommandSpec[] = [
   {
     name: "gen",
     usage: 'gen "<prompt>" [--n 1-4] [--ratio 1:1|16:9|9:16] [--pro]',
-    desc: "Generate images from a text prompt (Grok engine)",
+    desc: "Generate images from a text prompt (GLTCH engine)",
     needsAuth: true,
     run: async (args, opts, { print, auth }) => {
       const prompt = args.join(" ").trim();
@@ -252,7 +252,7 @@ const COMMANDS: CommandSpec[] = [
   {
     name: "edit",
     usage: 'edit <image_url> "<prompt>"',
-    desc: "Edit an existing image (Grok engine)",
+    desc: "Edit an existing image (GLTCH engine)",
     needsAuth: true,
     run: async (args, _o, { print, auth }) => {
       const [url, ...rest] = args;
@@ -278,7 +278,7 @@ const COMMANDS: CommandSpec[] = [
   {
     name: "animate",
     usage: 'animate <image_url> ["<motion prompt>"] [--seconds 5]',
-    desc: "Image → video (Grok engine)",
+    desc: "Image → video (GLTCH engine)",
     needsAuth: true,
     run: async (args, opts, { print, auth }) => {
       const [url, ...rest] = args;

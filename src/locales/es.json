@@ -228,7 +228,7 @@
   "changelog": {
     "title": "REGISTRO_SISTEMA",
     "subtitle": "// últimas correcciones y mejoras //",
-    "footer": "GROK_RUNNER · todos los sistemas nominales",
+    "footer": "GLTCH_RUNNER · todos los sistemas nominales",
     "tagNew": "NUEVO",
     "tagFix": "CORRECCIÓN",
     "tagImprove": "MEJORA"
@@ -239,9 +239,9 @@
     "next": "Siguiente",
     "gotIt": "¡Entendido!",
     "welcome": {
-      "title": "Bienvenido a Grok Runner",
+      "title": "Bienvenido a GLTCH Runner",
       "subtitle": "Generación de imágenes y vídeo IA con xAI",
-      "body1": "Grok Runner te permite generar, editar y animar imágenes y vídeo con modelos de IA de última generación.",
+      "body1": "GLTCH Runner te permite generar, editar y animar imágenes y vídeo con modelos de IA de última generación.",
       "body2": "Esta guía rápida te muestra lo básico. Puedes volver a ella desde el menú de ayuda."
     },
     "twoWays": {
@@ -339,7 +339,7 @@
     "apiKeyRequired": "CLAVE API REQUERIDA",
     "apiKeyRequiredDesc": "Ingresa tu clave API xAI en Ajustes, o cambia a modo CRÉDITOS.",
     "accountRequired": "CUENTA REQUERIDA",
-    "accountRequiredDesc": "Los motores GLTCH & ComfyUI funcionan en nuestros servidores y requieren cuenta. Inicia sesión o cambia al motor GROK para modo BYOK.",
+    "accountRequiredDesc": "Los motores GLTCH & ComfyUI funcionan en nuestros servidores y requieren cuenta. Inicia sesión.",
     "accessDenied": "ACCESO DENEGADO",
     "accessDeniedDesc": "Inicia sesión para usar créditos.",
     "insufficientCredits": "CRÉDITOS INSUFICIENTES",

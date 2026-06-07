@@ -31,7 +31,7 @@ function RedditIcon({ className }: { className?: string }) {
 const SITE_URL = "https://grokrunner.gltch.app";
 
 function openTwitterShare(url: string) {
-  const text = `Check out what I made with @GrokRunner — free AI image & video generation\n\n${url}`;
+  const text = `Check out what I made with @GLTCHRunner — free AI image & video generation\n\n${url}`;
   window.open(
     `https://x.com/intent/tweet?text=${encodeURIComponent(text)}`,
     "_blank",
@@ -41,7 +41,7 @@ function openTwitterShare(url: string) {
 
 function openRedditShare(url: string) {
   window.open(
-    `https://www.reddit.com/submit?url=${encodeURIComponent(url)}&title=${encodeURIComponent("Made this with Grok Runner — free AI image generator")}`,
+    `https://www.reddit.com/submit?url=${encodeURIComponent(url)}&title=${encodeURIComponent("Made this with GLTCH Runner — free AI image generator")}`,
     "_blank",
   );
 }
@@ -87,7 +87,7 @@ const ShareCTA: React.FC<ShareCTAProps> = ({
             {lastShareUrl ? (
               <>Link ready! <span className="text-secondary">Share it:</span></>
             ) : (
-              <>Love it? <span className="text-secondary">Share and help others discover Grok Runner</span></>
+              <>Love it? <span className="text-secondary">Share and help others discover GLTCH Runner</span></>
             )}
           </p>
         </div>

@@ -269,7 +269,7 @@ function getProxyDownloadUrl(url: string, filename: string): string {
 async function downloadMedia(url: string, type: "image" | "video"): Promise<boolean> {
   const ext = type === "image" ? "png" : "mp4";
   const mime = type === "image" ? "image/png" : "video/mp4";
-  const filename = `grok-${type}-${Date.now()}.${ext}`;
+  const filename = `gltch-${type}-${Date.now()}.${ext}`;
 
   if (isLocalUrl(url)) {
     const blob = await fetchBlob(url);

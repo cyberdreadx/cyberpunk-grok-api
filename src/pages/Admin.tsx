@@ -293,7 +293,7 @@ function AnnouncementPanel() {
   const [stats, setStats] = useState<{ totalVerified: number; alreadySent: number; remaining: number } | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
   const [campaign, setCampaign] = useState<"announcement" | "announcement_v47" | "announcement_v48" | "announcement_v49" | "announcement_v52">("announcement_v52");
-  const [subject, setSubject] = useState("⚡ GrokRunner v5.2 — Faster & More Reliable Than Ever");
+  const [subject, setSubject] = useState("⚡ GLTCHRunner v5.2 — Faster & More Reliable Than Ever");
   const [showEditor, setShowEditor] = useState(false);
   const [htmlContent, setHtmlContent] = useState("");
   const [showPreview, setShowPreview] = useState(false);
@@ -333,11 +333,11 @@ function AnnouncementPanel() {
   }, [campaign]);
 
   const CAMPAIGN_SUBJECTS: Record<string, string> = {
-    announcement_v52: "⚡ GrokRunner v5.2 — Faster & More Reliable Than Ever",
-    announcement_v49: "GrokRunner — Subscription Credits Fixed + Platform Update",
-    announcement_v48: "⚡ Grok Runner v4.8 // Signal Boost",
-    announcement_v47: "⚡ Grok Runner v4.7 // the coolest drop yet",
-    announcement: "🚀 Grok Runner just got a massive upgrade",
+    announcement_v52: "⚡ GLTCHRunner v5.2 — Faster & More Reliable Than Ever",
+    announcement_v49: "GLTCHRunner — Subscription Credits Fixed + Platform Update",
+    announcement_v48: "⚡ GLTCH Runner v4.8 // Signal Boost",
+    announcement_v47: "⚡ GLTCH Runner v4.7 // the coolest drop yet",
+    announcement: "🚀 GLTCH Runner just got a massive upgrade",
   };
 
   // Reset custom HTML and cancel state when switching campaigns

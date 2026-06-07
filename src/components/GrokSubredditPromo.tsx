@@ -10,7 +10,7 @@ interface Props {
 
 /**
  * Pinned promo card encouraging users to post in r/grok or reply to
- * complaint threads with Grok Runner. Highest-converting acquisition
+ * complaint threads with GLTCH Runner. Highest-converting acquisition
  * channel — surfaced on Feed/Index without needing to open Daily Missions.
  *
  * Dismissal is persisted to localStorage; auto-hidden after today's mission
@@ -32,7 +32,7 @@ export default function GrokSubredditPromo({ alreadyClaimedToday }: Props) {
   const submitUrl =
     "https://www.reddit.com/r/grok/submit?" +
     new URLSearchParams({
-      title: "Made with Grok Runner",
+      title: "Made with GLTCH Runner",
       url: "https://grokrunner.gltch.app",
     }).toString();
 
@@ -69,7 +69,7 @@ export default function GrokSubredditPromo({ alreadyClaimedToday }: Props) {
               Earn <span className="text-orange-300 font-bold">+25 ⚡</span> · Post in r/grok
             </h3>
             <p className="text-[11px] sm:text-xs text-muted-foreground leading-snug mt-0.5">
-              Share a creation or reply to a complaint thread with Grok Runner —
+              Share a creation or reply to a complaint thread with GLTCH Runner —
               paste your link in Daily Missions to claim.
             </p>
           </div>
@@ -98,7 +98,7 @@ export default function GrokSubredditPromo({ alreadyClaimedToday }: Props) {
           </div>
 
           <p className="text-[9px] text-muted-foreground/60 leading-snug">
-            Suggested reply: <span className="text-orange-200/80">"Try Grok Runner — same Grok API, no censorship, free daily credits: grokrunner.gltch.app"</span>
+            Suggested reply: <span className="text-orange-200/80">"Try GLTCH Runner — same Grok API, no censorship, free daily credits: grokrunner.gltch.app"</span>
           </p>
         </div>
       </div>

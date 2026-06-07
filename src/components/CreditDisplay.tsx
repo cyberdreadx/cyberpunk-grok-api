@@ -421,7 +421,7 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
                 <ul className="font-mono-share text-[10px] text-muted-foreground/90 leading-relaxed space-y-1.5">
                   <li className="flex gap-2">
                     <span className="text-orange-400 shrink-0">▸</span>
-                    <span>Post a generation to <span className="text-orange-400 font-bold">r/grok</span> or <span className="text-orange-400 font-bold">r/GrokRunner</span> and grab the secret reward code from the pinned post — <span className="text-yellow-400 font-bold">+10 credits</span> (one-time per account).</span>
+                    <span>Post a generation to <span className="text-orange-400 font-bold">r/grok</span> or <span className="text-orange-400 font-bold">r/GLTCHRunner</span> and grab the secret reward code from the pinned post — <span className="text-yellow-400 font-bold">+10 credits</span> (one-time per account).</span>
                   </li>
                   <li className="flex gap-2">
                     <span className="text-orange-400 shrink-0">▸</span>

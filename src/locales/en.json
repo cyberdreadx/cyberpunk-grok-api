@@ -366,7 +366,7 @@
     "apiKeyRequired": "API KEY REQUIRED",
     "apiKeyRequiredDesc": "Enter your xAI API key in Settings, or switch to CREDITS mode.",
     "accountRequired": "ACCOUNT REQUIRED",
-    "accountRequiredDesc": "GLTCH & ComfyUI engines run on our servers and require an account. Sign in or switch to the GROK engine for BYOK mode.",
+    "accountRequiredDesc": "GLTCH & ComfyUI engines run on our servers and require an account. Please sign in to continue.",
     "accessDenied": "ACCESS DENIED",
     "accessDeniedDesc": "Sign in to use credits.",
     "insufficientCredits": "INSUFFICIENT CREDITS",

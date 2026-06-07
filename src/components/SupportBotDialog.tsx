@@ -45,7 +45,7 @@ const PRESETS: Preset[] = [
   {
     code: "grok_edits_not_working",
     icon: AlertTriangle,
-    label: () => "Grok Edits not working",
+    label: () => "GLTCH Edits not working",
     hint: "Why this happens + how to recover",
     tone: "warn",
   },

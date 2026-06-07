@@ -96,7 +96,7 @@ const GrokOrb = forwardRef<HTMLDivElement, GrokOrbProps>(({ isGenerating, classN
             isGenerating ? "neon-text-magenta animate-flicker" : "text-muted-foreground/40"
           }`}
         >
-          {isGenerating ? "◉ NEURAL_PROCESSING" : "◎ GROK_STANDBY"}
+          {isGenerating ? "◉ NEURAL_PROCESSING" : "◎ GLTCH_STANDBY"}
         </span>
       </div>
     </div>

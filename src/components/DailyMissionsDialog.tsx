@@ -46,17 +46,17 @@ function buildShareIntent(
 
   if (platform === "twitter") {
     const text = usingPrefill
-      ? `${caption || "Made this with Grok Runner"} — ${APP_URL}`
-      : `Check out what I made with @GrokRunner — free AI image & video generation ${APP_URL}`;
+      ? `${caption || "Made this with GLTCH Runner"} — ${APP_URL}`
+      : `Check out what I made with @GLTCHRunner — free AI image & video generation ${APP_URL}`;
     // X intent supports `text` + `url`; if we have media we still link to gltch (X doesn't accept remote img upload via intent)
     return { url: `https://x.com/intent/tweet?text=${encodeURIComponent(text)}`, label: "Open X", usingPrefill };
   }
 
-  // Reddit: r/grok for the premium mission, generic GrokRunner otherwise
-  const subreddit = platform === "grok_subreddit" ? "grok" : "GrokRunner";
+  // Reddit: r/grok for the premium mission, generic GLTCHRunner otherwise
+  const subreddit = platform === "grok_subreddit" ? "grok" : "GLTCHRunner";
   const title = usingPrefill
-    ? (caption.slice(0, 280) || "Made with Grok Runner")
-    : "Check out what I made with Grok Runner";
+    ? (caption.slice(0, 280) || "Made with GLTCH Runner")
+    : "Check out what I made with GLTCH Runner";
   const linkUrl = mediaUrl || APP_URL;
   // `url=` makes it a link/image post (qualifies for r/grok mission's media requirement)
   const params = new URLSearchParams({ title, url: linkUrl });
@@ -272,7 +272,7 @@ export default function DailyMissionsDialog({ status, loading, claiming, onClaim
                                 3. Paste your post URL below.
                               </>
                             ) : (
-                              <>1. Post about Grok Runner. 2. Copy your post URL. 3. Paste it below.</>
+                              <>1. Post about GLTCH Runner. 2. Copy your post URL. 3. Paste it below.</>
                             )}
                           </p>
                           <a
@@ -302,7 +302,7 @@ export default function DailyMissionsDialog({ status, loading, claiming, onClaim
                               </a>
                             </div>
                             <p className="text-[9px] text-muted-foreground/80 leading-snug">
-                              Reply with something like: <span className="text-orange-200/90">"Try Grok Runner — same Grok API, no censorship, free daily credits: grokrunner.gltch.app"</span>. Paste your <strong>comment permalink</strong> above to claim.
+                              Reply with something like: <span className="text-orange-200/90">"Try GLTCH Runner — same Grok API, no censorship, free daily credits: grokrunner.gltch.app"</span>. Paste your <strong>comment permalink</strong> above to claim.
                             </p>
                           </div>
                         )}

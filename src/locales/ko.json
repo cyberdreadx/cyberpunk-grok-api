@@ -228,7 +228,7 @@
   "changelog": {
     "title": "시스템_변경로그",
     "subtitle": "// 최신 패치 및 업그레이드 //",
-    "footer": "GROK_RUNNER · 모든 시스템 정상",
+    "footer": "GLTCH_RUNNER · 모든 시스템 정상",
     "tagNew": "신규",
     "tagFix": "수정",
     "tagImprove": "개선"
@@ -239,9 +239,9 @@
     "next": "다음",
     "gotIt": "알겠습니다!",
     "welcome": {
-      "title": "Grok Runner에 오신 것을 환영합니다",
+      "title": "GLTCH Runner에 오신 것을 환영합니다",
       "subtitle": "xAI 기반 AI 이미지 & 비디오 생성",
-      "body1": "Grok Runner로 최첨단 AI 모델을 사용하여 이미지와 비디오를 생성, 편집, 애니메이트할 수 있습니다.",
+      "body1": "GLTCH Runner로 최첨단 AI 모델을 사용하여 이미지와 비디오를 생성, 편집, 애니메이트할 수 있습니다.",
       "body2": "이 빠른 가이드에서 기본 사항을 안내합니다. 도움말 메뉴에서 언제든 다시 볼 수 있습니다."
     },
     "twoWays": {
@@ -339,7 +339,7 @@
     "apiKeyRequired": "API 키 필요",
     "apiKeyRequiredDesc": "설정에서 xAI API 키를 입력하거나 크레딧 모드로 전환하세요.",
     "accountRequired": "계정 필요",
-    "accountRequiredDesc": "GLTCH & ComfyUI 엔진은 서버에서 실행되며 계정이 필요합니다. 로그인하거나 BYOK 모드의 GROK 엔진으로 전환하세요.",
+    "accountRequiredDesc": "GLTCH & ComfyUI 엔진은 서버에서 실행되며 계정이 필요합니다. 로그인하세요.",
     "accessDenied": "접근 거부",
     "accessDeniedDesc": "크레딧을 사용하려면 로그인하세요.",
     "insufficientCredits": "크레딧 부족",

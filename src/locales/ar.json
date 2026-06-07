@@ -228,7 +228,7 @@
   "changelog": {
     "title": "سجل_التغييرات",
     "subtitle": "// أحدث التحديثات والترقيات //",
-    "footer": "GROK_RUNNER · جميع الأنظمة طبيعية",
+    "footer": "GLTCH_RUNNER · جميع الأنظمة طبيعية",
     "tagNew": "جديد",
     "tagFix": "إصلاح",
     "tagImprove": "تحسين"
@@ -239,9 +239,9 @@
     "next": "التالي",
     "gotIt": "فهمت!",
     "welcome": {
-      "title": "مرحباً بك في Grok Runner",
+      "title": "مرحباً بك في GLTCH Runner",
       "subtitle": "توليد صور وفيديو بالذكاء الاصطناعي من xAI",
-      "body1": "Grok Runner يتيح لك توليد وتعديل وتحريك الصور والفيديو باستخدام أحدث نماذج الذكاء الاصطناعي.",
+      "body1": "GLTCH Runner يتيح لك توليد وتعديل وتحريك الصور والفيديو باستخدام أحدث نماذج الذكاء الاصطناعي.",
       "body2": "هذا الدليل السريع يشرح الأساسيات. يمكنك العودة إليه من قائمة المساعدة في أي وقت."
     },
     "twoWays": {
@@ -339,7 +339,7 @@
     "apiKeyRequired": "مفتاح API مطلوب",
     "apiKeyRequiredDesc": "أدخل مفتاح API xAI في الإعدادات، أو بدّل إلى وضع الأرصدة.",
     "accountRequired": "حساب مطلوب",
-    "accountRequiredDesc": "محركات GLTCH & ComfyUI تعمل على خوادمنا وتتطلب حساباً. سجّل الدخول أو بدّل إلى محرك GROK لوضع BYOK.",
+    "accountRequiredDesc": "محركات GLTCH & ComfyUI تعمل على خوادمنا وتتطلب حساباً. سجّل الدخول.",
     "accessDenied": "تم رفض الوصول",
     "accessDeniedDesc": "سجّل الدخول لاستخدام الأرصدة.",
     "insufficientCredits": "أرصدة غير كافية",

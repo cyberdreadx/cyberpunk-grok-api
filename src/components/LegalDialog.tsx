@@ -32,7 +32,7 @@ function TosContent() {
           1. NEURAL_CONTRACT_ACCEPTANCE
         </h3>
         <p>
-          By accessing or using Grok Runner ("the Platform", "the Service"), operated
+          By accessing or using GLTCH Runner ("the Platform", "the Service"), operated
           by CyberDread ("we", "us", "our"), you agree to be legally bound by these
           Terms of Service. If you do not accept these terms, you must immediately
           stop using the Platform. Continued use constitutes full acceptance of all
@@ -46,7 +46,7 @@ function TosContent() {
           2. PLATFORM_AS_INTERMEDIARY
         </h3>
         <p>
-          Grok Runner is an <strong>intermediary platform</strong> that provides a user
+          GLTCH Runner is an <strong>intermediary platform</strong> that provides a user
           interface for third-party AI generation services, specifically the xAI API.
           We do not create, control, or pre-screen AI-generated outputs. All content
           generation is performed by xAI's infrastructure and models. We function solely
@@ -65,7 +65,7 @@ function TosContent() {
         <p>
           You must be at least <strong>18 years of age</strong> (or the age of legal
           majority in your jurisdiction, whichever is greater) to use this Platform.
-          By using Grok Runner, you represent and warrant that you meet this requirement.
+          By using GLTCH Runner, you represent and warrant that you meet this requirement.
           We reserve the right to immediately terminate any account suspected of being
           operated by a minor, without notice or refund.
         </p>
@@ -78,7 +78,7 @@ function TosContent() {
         <p>
           You are <strong>solely and fully responsible</strong> for all prompts you
           submit and all content generated through your use of the Platform. You agree
-          NOT to use Grok Runner to generate, attempt to generate, solicit, store, or
+          NOT to use GLTCH Runner to generate, attempt to generate, solicit, store, or
           distribute any of the following:
         </p>
         <ul className="list-none space-y-1.5 pl-4 mt-2 text-foreground/70">
@@ -575,7 +575,7 @@ function PrivacyContent() {
         <ul className="list-none space-y-1 pl-4 mt-2 text-foreground/70">
           <li>
             <span className="text-secondary/40 mr-2">{arrow}</span>
-            <strong className="text-foreground/90">xAI</strong> — Grok image,
+            <strong className="text-foreground/90">xAI</strong> — image,
             video, and chat generation (your prompts are sent to xAI for processing)
           </li>
           <li>

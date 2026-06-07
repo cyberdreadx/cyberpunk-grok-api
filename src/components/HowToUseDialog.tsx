@@ -51,11 +51,11 @@ export default function HowToUseDialog({ open, onOpenChange }: HowToUseDialogPro
   const steps = [
     {
       icon: <Sparkles className="w-8 h-8 text-primary" />,
-      title: t("howToUse.welcome.title", "Welcome to Grok Runner"),
+      title: t("howToUse.welcome.title", "Welcome to GLTCH Runner"),
       subtitle: t("howToUse.welcome.subtitle", "AI image & video generation powered by xAI"),
       body: (
         <div className="space-y-3">
-          <p>{t("howToUse.welcome.body1", "Grok Runner lets you generate, edit, and animate images and video using cutting-edge AI models.")}</p>
+          <p>{t("howToUse.welcome.body1", "GLTCH Runner lets you generate, edit, and animate images and video using cutting-edge AI models.")}</p>
           <p className="text-muted-foreground text-sm">
             {t("howToUse.welcome.body2", "This quick guide will walk you through the basics. You can revisit it anytime from the help menu.")}
           </p>
@@ -187,12 +187,6 @@ export default function HowToUseDialog({ open, onOpenChange }: HowToUseDialogPro
             <div className="font-semibold text-sm mb-1">{t("howToUse.engines.gltchLabel", "GLTCH (default)")}</div>
             <p className="text-sm text-muted-foreground">
               {t("howToUse.engines.gltchDesc", "Balanced speed and quality. Great for everyday generation, edits, and animation.")}
-            </p>
-          </div>
-          <div className="border border-border/40 rounded-lg p-3 bg-card/40">
-            <div className="font-semibold text-sm mb-1">{t("howToUse.engines.grokLabel", "GROK")}</div>
-            <p className="text-sm text-muted-foreground">
-              {t("howToUse.engines.grokDesc", "xAI's official Grok models. Costs are doubled vs GLTCH; use BYOK to skip credits entirely.")}
             </p>
           </div>
           <p className="text-xs text-muted-foreground/60">

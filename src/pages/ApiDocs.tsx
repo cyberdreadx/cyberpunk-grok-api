@@ -39,7 +39,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function ApiPlayground({ baseUrl }: { baseUrl: string }) {
   const [apiKey, setApiKey] = useState("");
   const [prompt, setPrompt] = useState("a cyberpunk cityscape at sunset, neon lights");
-  const [engine, setEngine] = useState<"grok" | "gltch" | "comfy">("grok");
+  const [engine, setEngine] = useState<"grok" | "gltch" | "comfy">("gltch");
   const [genType, setGenType] = useState<"image" | "video">("image");
   const [model, setModel] = useState("grok-imagine-image");
   const [n, setN] = useState(1);
@@ -150,7 +150,6 @@ function ApiPlayground({ baseUrl }: { baseUrl: string }) {
       {/* Engine toggle */}
       <div className="flex gap-2 flex-wrap">
         {([
-          { id: "grok" as const, icon: Zap, label: "GROK" },
           { id: "gltch" as const, icon: Wand2, label: "GLTCH" },
           { id: "comfy" as const, icon: Cpu, label: "GLTCH PRO" },
         ]).map(({ id, icon: Icon, label }) => (
@@ -363,7 +362,7 @@ export default function ApiDocs() {
             <GlitchText text="API DOCUMENTATION" />
           </h1>
           <p className="text-sm text-muted-foreground font-mono">
-            Generate images and videos programmatically using GROK, GLTCH, and GLTCH PRO engines. Pay with credits from your account.
+            Generate images and videos programmatically using GLTCH and GLTCH PRO engines. Pay with credits from your account.
           </p>
         </div>
 
@@ -1004,18 +1003,6 @@ print(f"Credits used: {data['credits_used']}")`} />
             <a href={baseUrl} className="text-primary underline">{baseUrl}</a>.
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            <div className="border border-primary/20 rounded-lg p-3 text-center">
-              <div className="text-2xl font-mono font-bold text-primary">2 cr</div>
-              <div className="text-xs text-muted-foreground font-mono">Grok image</div>
-            </div>
-            <div className="border border-primary/20 rounded-lg p-3 text-center">
-              <div className="text-2xl font-mono font-bold text-primary">5 cr</div>
-              <div className="text-xs text-muted-foreground font-mono">Grok pro image</div>
-            </div>
-            <div className="border border-primary/20 rounded-lg p-3 text-center">
-              <div className="text-2xl font-mono font-bold text-primary">3 cr/s</div>
-              <div className="text-xs text-muted-foreground font-mono">Grok video</div>
-            </div>
             <div className="border border-primary/20 rounded-lg p-3 text-center">
               <div className="text-2xl font-mono font-bold text-primary">5 cr</div>
               <div className="text-xs text-muted-foreground font-mono">GLTCH edit</div>

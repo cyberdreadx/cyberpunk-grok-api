@@ -857,7 +857,7 @@ export async function exportLibraryAsZip(
     () => onProgress?.(Math.min(completed, total), total),
   );
 
-  const zipFilename = `grok-library-${new Date().toISOString().slice(0, 10)}.zip`;
+  const zipFilename = `gltch-library-${new Date().toISOString().slice(0, 10)}.zip`;
   const isMobileDevice = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.matchMedia("(max-width: 768px)").matches;
 
   // On mobile / PWA: share the ZIP file if the browser supports it
@@ -865,7 +865,7 @@ export async function exportLibraryAsZip(
     try {
       const zipFile = new File([content], zipFilename, { type: "application/zip" });
       if (navigator.canShare?.({ files: [zipFile] })) {
-        await navigator.share({ files: [zipFile], title: "GROK_RUNNER Library Export" });
+        await navigator.share({ files: [zipFile], title: "GLTCH_RUNNER Library Export" });
         return { included, skipped };
       }
     } catch (err: any) {
