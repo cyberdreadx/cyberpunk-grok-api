@@ -107,7 +107,8 @@ const FeedPage: React.FC = () => {
     try {
       const params = new URLSearchParams({ view: "posts" });
       if (filter === "following") params.set("filter", "following");
-      if (filter === "trending") params.set("sort", "trending");
+      else if (filter === "trending") params.set("sort", "trending");
+      else params.set("sort", "new"); // default ("all"/RECENT) = most recent first
       if (cursor) params.set("cursor", cursor);
       const data = await apiFetch<{ posts: FeedTilePost[]; nextCursor: string | null }>(
         `/feed?${params.toString()}`
@@ -437,12 +438,26 @@ const FeedPage: React.FC = () => {
     return (
       <div className="flex gap-1.5 flex-wrap">
         <button
+          onClick={() => {
+            if (!isAuthenticated) {
+              toast({ title: "Sign up to watch reels", description: "Create a free account to watch the video feed." });
+              navigate("/create?signup=1");
+              return;
+            }
+            setReelsOpen(true);
+          }}
+          className={`flex items-center gap-1 px-3 py-1 rounded-full font-mono-share text-[10px] font-bold transition-colors border border-accent/60 bg-accent/15 text-accent shadow-[0_0_10px_hsl(var(--accent)/0.35)] hover:bg-accent/25`}
+          title="Vertical video reels — most recent"
+        >
+          <Film className="w-3 h-3" /> REELS
+        </button>
+        <button
           onClick={() => { setFilter("all"); setLoading(true); }}
           className={`flex items-center gap-1 px-2.5 py-1 rounded-full font-mono-share text-[10px] transition-colors border ${
             filter === "all" ? "border-primary/50 bg-primary/10 text-primary" : baseInactive
           }`}
         >
-          <Globe className="w-3 h-3" /> ALL
+          <Globe className="w-3 h-3" /> RECENT
         </button>
         <button
           onClick={() => { setFilter("trending"); setLoading(true); }}
@@ -461,20 +476,6 @@ const FeedPage: React.FC = () => {
           }`}
         >
           <Users className="w-3 h-3" /> FOLLOWING
-        </button>
-        <button
-          onClick={() => {
-            if (!isAuthenticated) {
-              toast({ title: "Sign up to watch reels", description: "Create a free account to watch the video feed." });
-              navigate("/create?signup=1");
-              return;
-            }
-            setReelsOpen(true);
-          }}
-          className={`flex items-center gap-1 px-2.5 py-1 rounded-full font-mono-share text-[10px] transition-colors border border-accent/50 bg-accent/10 text-accent shadow-[0_0_8px_hsl(var(--accent)/0.25)] hover:bg-accent/20`}
-          title="Vertical video reels"
-        >
-          <Film className="w-3 h-3" /> REELS
         </button>
       </div>
     );
