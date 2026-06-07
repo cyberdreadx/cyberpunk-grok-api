@@ -1190,6 +1190,7 @@ export default function Admin() {
     id: string; email: string; handle: string; display_name: string; country: string | null;
     socials: any; pitch: string; niche: string | null; languages: string | null;
     sample_urls: string[]; payout_pref: string; status: string; created_at: string;
+    age_confirmed?: boolean;
   }
   const [caStatus, setCaStatus] = useState<"pending" | "approved" | "rejected">("pending");
   const [caList, setCaList] = useState<CreatorApp[] | null>(null);
@@ -1983,12 +1984,43 @@ export default function Admin() {
                         </div>
                         <div className="font-mono-share text-[9px] text-muted-foreground/60 shrink-0">{new Date(a.created_at).toLocaleDateString()}</div>
                       </div>
-                      <p className="font-mono-share text-[11px] text-foreground/80 leading-relaxed line-clamp-3">{a.pitch}</p>
+                      {/* Details row */}
+                      <div className="flex flex-wrap gap-x-3 gap-y-1 font-mono-share text-[10px] text-muted-foreground">
+                        {a.niche && <span><span className="text-muted-foreground/50">niche:</span> {a.niche}</span>}
+                        {a.languages && <span><span className="text-muted-foreground/50">lang:</span> {a.languages}</span>}
+                        <span className={a.age_confirmed ? "text-green-400/80" : "text-destructive"}>
+                          {a.age_confirmed ? "✓ 18+ confirmed" : "✗ AGE NOT CONFIRMED"}
+                        </span>
+                      </div>
+                      {/* Full pitch */}
+                      <p className="font-mono-share text-[11px] text-foreground/80 leading-relaxed whitespace-pre-wrap">{a.pitch}</p>
+                      {/* Socials */}
                       {a.socials && Object.values(a.socials).some(Boolean) && (
-                        <div className="font-mono-share text-[10px] text-secondary/80 flex flex-wrap gap-x-2">
+                        <div className="font-mono-share text-[10px] text-secondary/80 flex flex-wrap gap-x-3 gap-y-1">
                           {Object.entries(a.socials).filter(([, v]) => v).map(([k, v]) => (
-                            <a key={k} href={String(v)} target="_blank" rel="noopener noreferrer" className="underline">{k}</a>
+                            <a key={k} href={String(v)} target="_blank" rel="noopener noreferrer" className="underline capitalize">{k}</a>
                           ))}
+                        </div>
+                      )}
+                      {/* Uploaded sample media */}
+                      {Array.isArray(a.sample_urls) && a.sample_urls.length > 0 && (
+                        <div>
+                          <div className="font-mono-share text-[9px] text-muted-foreground/50 mb-1">SAMPLES ({a.sample_urls.length}) — tap to open full size</div>
+                          <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
+                            {a.sample_urls.map((url, i) => {
+                              const isVid = /\.(mp4|webm|mov|m4v)(\?|$)/i.test(url);
+                              return (
+                                <a key={i} href={url} target="_blank" rel="noopener noreferrer"
+                                  className="block aspect-square rounded overflow-hidden border border-border/40 bg-background/60 hover:border-secondary/60 transition-colors">
+                                  {isVid ? (
+                                    <video src={url} className="w-full h-full object-cover" muted playsInline preload="metadata" />
+                                  ) : (
+                                    <img src={url} alt={`sample ${i + 1}`} loading="lazy" className="w-full h-full object-cover" />
+                                  )}
+                                </a>
+                              );
+                            })}
+                          </div>
                         </div>
                       )}
                       {caStatus === "pending" && (
