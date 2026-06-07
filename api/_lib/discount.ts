@@ -77,7 +77,9 @@ export async function getCombinedCreditDiscountPct(userId: string): Promise<numb
 export function applyDiscount(cost: number, pct: number): number {
   if (cost <= 0) return cost;
   if (!pct || pct <= 0) return cost;
-  const reduced = Math.ceil(cost * (1 - pct / 100));
+  // Round (not ceil) so low tiers actually get their advertised %: e.g. a 4-credit
+  // image at 15% → round(3.4)=3, not ceil=4 (which delivered 0 discount).
+  const reduced = Math.round(cost * (1 - pct / 100));
   return Math.max(1, reduced);
 }
 
