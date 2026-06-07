@@ -4,8 +4,7 @@ import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
 import CyberLayout from "@/components/CyberLayout";
-import CreatorCard, { type FeedCreator } from "@/components/CreatorCard";
-import CreatorPanel from "@/components/CreatorPanel";
+import FeaturedModelsStrip from "@/components/FeaturedModelsStrip";
 import FeedTile, { type FeedTilePost } from "@/components/FeedTile";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -22,7 +21,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Send, Users, Globe, Loader2, Plus, X, Lock, Zap, ShieldAlert, Sparkles, Rss, Flame, Film, FolderOpen, ImageIcon, Star, Menu, Lightbulb } from "lucide-react";
+import { Send, Users, Globe, Loader2, Plus, X, Lock, Zap, ShieldAlert, Sparkles, Rss, Flame, Film, FolderOpen, ImageIcon, Star, Menu, Lightbulb, MessageCircle } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
 import MobileBottomNav from "@/components/MobileBottomNav";
@@ -73,7 +72,6 @@ const FeedPage: React.FC = () => {
   const [lockPrice, setLockPrice] = useState("");
   const [matureFlag, setMatureFlag] = useState(false);
   const [lockXrge, setLockXrge] = useState("");
-  const [activeCreator, setActiveCreator] = useState<FeedCreator | null>(null);
   const [reelTarget, setReelTarget] = useState<{ postId: string; userId?: string } | null>(null);
   const [reelsOpen, setReelsOpen] = useState(false);
   const [libraryPickerOpen, setLibraryPickerOpen] = useState(false);
@@ -247,17 +245,6 @@ const FeedPage: React.FC = () => {
     setRulesAcked(true);
   };
 
-  const openCreator = (c: FeedCreator) => {
-    // Logged-out users get nudged to sign up instead of viewing locked previews.
-    if (!isAuthenticated) {
-      toast({ title: "Sign up to view posts", description: "Create a free account to unlock the feed." });
-      navigate("/create?signup=1");
-      return;
-    }
-    // Open the immersive reel viewer focused on this creator's latest post.
-    setReelTarget({ postId: c.latestPostId, userId: c.userId });
-  };
-
   const openPost = (p: FeedTilePost) => {
     // Logged-out users get nudged to sign up instead of viewing locked previews.
     if (!isAuthenticated) {
@@ -267,11 +254,6 @@ const FeedPage: React.FC = () => {
     }
     // Open the immersive reel viewer focused on this post.
     setReelTarget({ postId: p.id, userId: p.userId });
-  };
-
-  const openProfile = (c: FeedCreator) => {
-    if (isMobile) navigate(`/profile/${c.username}`);
-    else setActiveCreator(c);
   };
 
   const rulesBanner = !rulesAcked || showRules ? (
@@ -522,6 +504,15 @@ const FeedPage: React.FC = () => {
         title="Featured models directory"
       >
         <Users className="w-3.5 h-3.5" /> MODELS
+        <span className="font-mono-share text-[7px] px-1 rounded-sm tracking-widest text-emerald-300 border border-emerald-400/40 bg-emerald-400/10 animate-pulse">NEW</span>
+      </button>
+      <button
+        type="button"
+        onClick={() => navigate("/characters")}
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md font-orbitron text-[10px] tracking-widest text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
+        title="Chat with model AI personas"
+      >
+        <MessageCircle className="w-3.5 h-3.5" /> CHAT
       </button>
       <button
         type="button"
@@ -761,6 +752,8 @@ const FeedPage: React.FC = () => {
           {/* Stories */}
           <div className="px-3 pt-3">
             <StoriesBar currentUserId={user?.id} isAdmin={!!user?.is_admin} />
+
+        <FeaturedModelsStrip />
           </div>
 
           {/* Grid — edge-to-edge so cards' borders touch */}
@@ -913,6 +906,8 @@ const FeedPage: React.FC = () => {
         {/* Stories at the very top */}
         <StoriesBar currentUserId={user?.id} isAdmin={!!user?.is_admin} />
 
+        <FeaturedModelsStrip />
+
         {isAuthenticated ? (
           <div className="bg-card/60 border border-border/40 rounded-lg p-4 space-y-3">
             <Textarea
@@ -975,7 +970,6 @@ const FeedPage: React.FC = () => {
         )}
       </div>
 
-      <CreatorPanel creator={activeCreator} onClose={() => setActiveCreator(null)} />
       <MobileCreditsPill onOpenStore={() => setStoreOpen(true)} />
       <MobileBottomNav isAuthenticated={isAuthenticated} onOpenStore={() => setStoreOpen(true)} onOpenSettings={() => setPrefsOpen(true)} />
       <StoreOverlay open={storeOpen} onOpenChange={setStoreOpen} />

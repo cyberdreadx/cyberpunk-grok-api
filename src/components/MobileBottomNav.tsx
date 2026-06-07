@@ -139,6 +139,7 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
             >
               <Users className="w-4 h-4 text-secondary/80" />
               <span className="font-mono-share text-[11px] text-foreground/80">FEATURED MODELS</span>
+              <span className="ml-auto font-mono-share text-[7px] px-1 py-px rounded-sm tracking-widest text-emerald-300 border border-emerald-400/40 bg-emerald-400/10 animate-pulse">NEW</span>
             </button>
             <button
               onClick={() => {
