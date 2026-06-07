@@ -24,7 +24,7 @@ export const DEFAULT_CAMPAIGN_SUBJECTS: Record<string, string> = {
   announcement_v47: "GLTCHRunner Update — v4.7 is Live",
   announcement_v48: "GLTCHRunner Update — v4.8 is Live",
   announcement_v49: "GLTCHRunner — Subscription Credits Fixed + Platform Update",
-  announcement_v52: "⚡ GrokRunner v5.2 — Faster & More Reliable Than Ever",
+  announcement_v52: "⚡ GLTCHRunner v5.2 — Faster & More Reliable Than Ever",
 };
 
 export function getAnnouncementHtmlForCampaign(campaign: string): string {

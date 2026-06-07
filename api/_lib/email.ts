@@ -510,7 +510,7 @@ export function buildV52AnnouncementHtml(): string {
         <div style="background: linear-gradient(135deg, #39ff1415, #00f0ff15); border: 1px solid #39ff1466; padding: 18px; border-radius: 4px; margin: 0 0 24px; text-align: center;">
           <p style="color: #39ff14; font-size: 12px; letter-spacing: 3px; margin: 0 0 8px;">BACKEND UPGRADED</p>
           <p style="font-size: 13px; color: #c0c0c0; margin: 0; line-height: 1.6;">
-            GrokRunner is now running on a dedicated self-hosted server. Faster responses, no cold start timeouts, and full infrastructure control.
+            GLTCH Runner is now running on a dedicated self-hosted server. Faster responses, no cold start timeouts, and full infrastructure control.
           </p>
         </div>
 
