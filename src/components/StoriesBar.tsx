@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { apiFetch } from "@/lib/api";
 import { hasAuthToken } from "@/lib/api";
@@ -244,7 +245,7 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUserId, isAdmin }) => {
         })}
       </div>
 
-      {viewerOpen && users[activeUserIdx] && (
+      {viewerOpen && users[activeUserIdx] && createPortal(
         <StoryViewer
           users={users}
           initialUserIdx={activeUserIdx}
@@ -254,7 +255,8 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUserId, isAdmin }) => {
           onViewed={handleViewed}
           onDelete={handleDelete}
           onUnlocked={fetchStories}
-        />
+        />,
+        document.body,
       )}
 
       <FeatureExplainer
