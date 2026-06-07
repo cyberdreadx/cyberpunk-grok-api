@@ -10,7 +10,8 @@
  */
 import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Globe, EyeOff, Zap, Settings as SettingsIcon } from "lucide-react";
+import { Globe, EyeOff, Zap, Settings as SettingsIcon, User, KeyRound } from "lucide-react";
+import { apiFetch } from "@/lib/api";
 import {
   Dialog,
   DialogContent,
@@ -46,6 +47,64 @@ const PreferencesDialog: React.FC<PreferencesDialogProps> = ({ open, onOpenChang
 
   const [immersion, setImmersion] = useState<ImmersionSettings>(DEFAULT_IMMERSION);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── Account (username + password) ──
+  const [username, setUsername] = useState("");
+  const [usernameSaving, setUsernameSaving] = useState(false);
+  const [curPw, setCurPw] = useState("");
+  const [newPw, setNewPw] = useState("");
+  const [confirmPw, setConfirmPw] = useState("");
+  const [pwSaving, setPwSaving] = useState(false);
+
+  useEffect(() => {
+    if (!open || !user) return;
+    apiFetch<{ username?: string }>("/profile")
+      .then((p) => setUsername(p.username || ""))
+      .catch(() => {});
+  }, [open, user]);
+
+  const saveUsername = async () => {
+    const clean = username.trim().toLowerCase();
+    if (clean.length < 3 || clean.length > 24) {
+      toast({ title: "Invalid username", description: "Must be 3–24 characters.", variant: "destructive" });
+      return;
+    }
+    if (!/^[a-z0-9_]+$/.test(clean)) {
+      toast({ title: "Invalid username", description: "Letters, numbers, and underscores only.", variant: "destructive" });
+      return;
+    }
+    setUsernameSaving(true);
+    try {
+      await apiFetch("/profile", { method: "PUT", body: { username: clean } });
+      setUsername(clean);
+      toast({ title: "Username updated" });
+    } catch (e) {
+      toast({ title: "Couldn't update username", description: (e as Error).message, variant: "destructive" });
+    } finally {
+      setUsernameSaving(false);
+    }
+  };
+
+  const savePassword = async () => {
+    if (newPw.length < 6) {
+      toast({ title: "Password too short", description: "Use at least 6 characters.", variant: "destructive" });
+      return;
+    }
+    if (newPw !== confirmPw) {
+      toast({ title: "Passwords don't match", variant: "destructive" });
+      return;
+    }
+    setPwSaving(true);
+    try {
+      await apiFetch("/auth/change-password", { method: "POST", body: { current_password: curPw, new_password: newPw } });
+      setCurPw(""); setNewPw(""); setConfirmPw("");
+      toast({ title: "Password changed" });
+    } catch (e) {
+      toast({ title: "Couldn't change password", description: (e as Error).message, variant: "destructive" });
+    } finally {
+      setPwSaving(false);
+    }
+  };
 
   useEffect(() => {
     if (!open || !isAdmin) return;
@@ -85,8 +144,85 @@ const PreferencesDialog: React.FC<PreferencesDialogProps> = ({ open, onOpenChang
         </DialogHeader>
 
         <div className="space-y-6 mt-2">
+          {/* Account — username + password (logged in only) */}
+          {user && (
+            <section className="space-y-3">
+              <label className="font-orbitron text-[10px] tracking-wider text-muted-foreground flex items-center gap-1.5">
+                <User className="w-3 h-3" />
+                ACCOUNT
+              </label>
+
+              {/* Email (read-only) */}
+              <div className="flex items-center justify-between gap-2 text-[11px] font-mono-share">
+                <span className="text-muted-foreground/60">EMAIL</span>
+                <span className="text-foreground/80 truncate">{user.email}</span>
+              </div>
+
+              {/* Username */}
+              <div className="space-y-1.5">
+                <span className="font-mono-share text-[9px] text-muted-foreground/60">USERNAME</span>
+                <div className="flex gap-2">
+                  <input
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="username"
+                    autoComplete="username"
+                    className="flex-1 bg-card/60 border border-border rounded px-2 py-1.5 text-[11px] font-mono-share text-foreground"
+                  />
+                  <button
+                    type="button"
+                    onClick={saveUsername}
+                    disabled={usernameSaving}
+                    className="px-3 py-1.5 rounded text-[10px] font-mono-share border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 transition-colors disabled:opacity-50"
+                  >
+                    {usernameSaving ? "…" : "SAVE"}
+                  </button>
+                </div>
+              </div>
+
+              {/* Change password */}
+              <div className="space-y-1.5">
+                <span className="font-mono-share text-[9px] text-muted-foreground/60 flex items-center gap-1">
+                  <KeyRound className="w-3 h-3" /> CHANGE PASSWORD
+                </span>
+                <input
+                  type="password"
+                  autoComplete="current-password"
+                  value={curPw}
+                  onChange={(e) => setCurPw(e.target.value)}
+                  placeholder="Current password"
+                  className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-[11px] font-mono-share text-foreground"
+                />
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  value={newPw}
+                  onChange={(e) => setNewPw(e.target.value)}
+                  placeholder="New password (min 6)"
+                  className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-[11px] font-mono-share text-foreground"
+                />
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  value={confirmPw}
+                  onChange={(e) => setConfirmPw(e.target.value)}
+                  placeholder="Confirm new password"
+                  className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-[11px] font-mono-share text-foreground"
+                />
+                <button
+                  type="button"
+                  onClick={savePassword}
+                  disabled={pwSaving || !curPw || !newPw}
+                  className="w-full px-3 py-1.5 rounded text-[10px] font-mono-share border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 transition-colors disabled:opacity-50"
+                >
+                  {pwSaving ? "SAVING…" : "UPDATE PASSWORD"}
+                </button>
+              </div>
+            </section>
+          )}
+
           {/* Language */}
-          <section className="space-y-2">
+          <section className="space-y-2 pt-4 border-t border-border/30">
             <label className="font-orbitron text-[10px] tracking-wider text-muted-foreground flex items-center gap-1.5">
               <Globe className="w-3 h-3" />
               {t("settings.language").toUpperCase()}
