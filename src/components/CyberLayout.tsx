@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import HudOverlay from "@/components/HudOverlay";
 import NotificationBell from "@/components/NotificationBell";
+import RunpodStatusDot from "@/components/RunpodStatusDot";
 import { useAuth } from "@/hooks/useAuth";
 import { BARE_THEME_ID } from "@/lib/themes";
 import { applyImmersionToRoot, BARE_IMMERSION, DEFAULT_IMMERSION, fetchMasterImmersion } from "@/lib/immersion";
@@ -83,6 +84,9 @@ const CyberLayout: React.FC<CyberLayoutProps> = ({ children }) => {
         </div>
         <div className="font-mono-share text-[10px] text-muted-foreground/50 flex-1 text-center pb-1">
           grok@xai:~/neural-render — bash
+        </div>
+        <div className="pb-1 shrink-0">
+          <RunpodStatusDot />
         </div>
         <div className="pb-0.5 shrink-0">
           <NotificationBell isAuthenticated={isAuthenticated} />
