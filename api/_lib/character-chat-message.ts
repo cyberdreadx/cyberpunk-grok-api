@@ -12,6 +12,15 @@ import { deductCredits, discountedCostForUser } from "../v1/_lib/credits";
 const BASE_COST = 1;
 const FREE_PER_DAY = 3;
 
+// ── Creator monetization (Phase 1) ──
+// Media always costs (creator price in credits) ON TOP of the compute the client
+// pays via /comfyui. Text is free for FREE_PER_DAY/day, then BASE_COST.
+// These defaults become per-creator (programmable menu) in Phase 2.
+const PHOTO_PRICE = 8;
+const VIDEO_PRICE = 25;
+const CREATOR_SHARE = 0.75;          // 75% creator / 20% platform / 5% charity
+const RETAIL_CENTS_PER_CREDIT = 8;   // ~PRO pack ($0.079/credit) → creator cash value
+
 const MEDIA_IMAGE_RE = /\[MEDIA_IMAGE\]([\s\S]*?)\[\/MEDIA_IMAGE\]/i;
 const MEDIA_VIDEO_RE = /\[MEDIA_VIDEO\]([\s\S]*?)\[\/MEDIA_VIDEO\]/i;
 
@@ -268,7 +277,39 @@ export async function handleCharacterChatMessage(
   // ── Billing after successful reply ──
   if (!isOwner && !isAdmin) {
     try {
-      if (isOfficialPersona) {
+      // Credit the creator their 75% cut as withdrawable cash (cents) + log it.
+      // Only official creator personas earn; a user's own public character doesn't.
+      const creditCreator = async (kind: string, credits: number) => {
+        if (!isOfficialPersona || !char.user_id || credits <= 0) return;
+        const cents = Math.round(credits * RETAIL_CENTS_PER_CREDIT * CREATOR_SHARE);
+        if (cents <= 0) return;
+        await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS cash_balance_cents INT NOT NULL DEFAULT 0`.catch(() => {});
+        await sql`
+          CREATE TABLE IF NOT EXISTS creator_chat_earnings (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            creator_id UUID NOT NULL,
+            fan_id UUID NOT NULL,
+            character_id UUID,
+            kind TEXT NOT NULL,
+            credits_charged INT NOT NULL,
+            creator_cents INT NOT NULL,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+          )
+        `.catch(() => {});
+        await sql`UPDATE users SET cash_balance_cents = cash_balance_cents + ${cents}, updated_at = now() WHERE id = ${char.user_id}::uuid`;
+        await sql`
+          INSERT INTO creator_chat_earnings (creator_id, fan_id, character_id, kind, credits_charged, creator_cents)
+          VALUES (${char.user_id}::uuid, ${auth.userId}::uuid, ${char.id}::uuid, ${kind}, ${credits}, ${cents})
+        `.catch(() => {});
+      };
+
+      if (mediaTrigger) {
+        // Media always costs — creator price on top of compute (charged separately
+        // by /comfyui). Text free-allowance does not apply to media.
+        const price = mediaTrigger.type === "video" ? VIDEO_PRICE : PHOTO_PRICE;
+        await deductCredits(sql, auth.userId, price);
+        await creditCreator(mediaTrigger.type, price);
+      } else if (isOfficialPersona) {
         const today = utcToday();
         const upd = await sql`
           UPDATE users SET
@@ -287,6 +328,7 @@ export async function handleCharacterChatMessage(
         if (upd.length === 0) {
           const cost = await discountedCostForUser(auth.userId, BASE_COST);
           await deductCredits(sql, auth.userId, cost);
+          await creditCreator("message", cost);
         }
       } else {
         const cost = await discountedCostForUser(auth.userId, BASE_COST);

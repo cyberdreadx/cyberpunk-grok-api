@@ -105,6 +105,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS cash_balance_cents INT NOT NULL DEFAULT 0`.catch(() => {});
     const [userRow] = await sql`SELECT cash_balance_cents FROM users WHERE id = ${auth.userId}::uuid`;
 
+    // Chat earnings (creator persona chat — already folded into cash_balance_cents)
+    const [chat] = await sql`
+      SELECT COALESCE(SUM(creator_cents), 0)::int AS cents,
+             COUNT(*) FILTER (WHERE kind = 'message')::int AS msgs,
+             COUNT(*) FILTER (WHERE kind IN ('image', 'video'))::int AS media
+      FROM creator_chat_earnings WHERE creator_id = ${auth.userId}::uuid
+    `.catch(() => [{ cents: 0, msgs: 0, media: 0 }]);
+
     const totalCreditsEarned = (feedCredits[0]?.total_credits || 0) + (storyCredits[0]?.total_credits || 0);
     const creatorShareCredits = Math.floor(totalCreditsEarned * 0.75);
     const totalCentsEarned = feedCash[0]?.total_cents || 0;
@@ -125,6 +133,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         charityCredits,
         charityCents,
         cashBalanceCents: userRow?.cash_balance_cents || 0,
+        chatEarningsCents: chat?.cents || 0,
+        chatMessages: chat?.msgs || 0,
+        chatMedia: chat?.media || 0,
         postUnlocks: (feedCredits[0]?.unlock_count || 0) + (feedCash[0]?.unlock_count || 0),
         storyUnlocks: storyCredits[0]?.unlock_count || 0,
         totalXrgeEarned,
