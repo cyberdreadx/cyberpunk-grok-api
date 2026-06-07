@@ -20,6 +20,18 @@ import { getDb } from "./_lib/db";
 import { checkRateLimit } from "./_lib/ratelimit";
 import { applyDiscount, getCombinedCreditDiscountPct } from "./_lib/discount";
 
+// Hosts we'll fetch a reference image from server-side (creator portraits,
+// generated media). Keeps the URL→base64 resolver from being an open SSRF.
+function isTrustedImageHost(u: string): boolean {
+  try {
+    const h = new URL(u).hostname.toLowerCase();
+    return /\.blob\.vercel-storage\.com$/.test(h)
+      || /\.r2\.dev$/.test(h)
+      || /\.r2\.cloudflarestorage\.com$/.test(h)
+      || /(^|\.)gltch\.app$/.test(h);
+  } catch { return false; }
+}
+
 // ── Strip data URI prefix and fix base64 padding ───────────────────────
 function cleanBase64(b64: string): string {
   // Handle both data:image/png;base64,... and data:;base64,... (empty MIME)
@@ -2439,13 +2451,31 @@ Rules:
       let imageFilename: string | undefined;
       let imageFilename2: string | undefined;
 
+      // Reference image may arrive as a trusted URL (e.g. a creator's portrait
+      // on R2/Blob — used for persona selfies/videos). Clients often can't fetch
+      // it (R2 bucket CORS) and the workflows need raw base64, so resolve it
+      // server-side here. Untrusted URLs / fetch failures fall through to the
+      // URL-reject below.
+      let imageB64: any = imageBase64;
+      if (needsImage && typeof imageB64 === "string" && /^https?:\/\//i.test(imageB64) && isTrustedImageHost(imageB64)) {
+        try {
+          const r = await fetch(imageB64);
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          const buf = Buffer.from(await r.arrayBuffer());
+          imageB64 = `data:${r.headers.get("content-type") || "image/jpeg"};base64,${buf.toString("base64")}`;
+          console.log(`[comfyui] resolved reference image URL → base64 (${Math.round(buf.length / 1024)}KB)`);
+        } catch (e: any) {
+          console.error(`[comfyui] failed to fetch reference image URL: ${e?.message}`);
+        }
+      }
+
       if (needsImage) {
-        if (!imageBase64) {
+        if (!imageB64) {
           return res.status(400).json({ error: `Image data (imageBase64) is required for ${workflowType}` });
         }
         // Reject non-base64 inputs (e.g. blob: or http: URLs sent by mistake)
-        if (typeof imageBase64 === "string" && /^(blob:|https?:)/.test(imageBase64)) {
-          console.error(`[comfyui] imageBase64 is a URL, not base64 data: ${imageBase64.slice(0, 80)}`);
+        if (typeof imageB64 === "string" && /^(blob:|https?:)/.test(imageB64)) {
+          console.error(`[comfyui] imageBase64 is a URL, not base64 data: ${imageB64.slice(0, 80)}`);
           return res.status(400).json({ error: "Image data is invalid — received a URL instead of base64. Please re-select the image." });
         }
 
@@ -2455,17 +2485,17 @@ Rules:
             imageFilename2 = clientFilename2 || `input_${workflowType}_2_${Date.now()}.jpg`;
           }
           // Validate cleaned base64 is substantial enough to be a real image (>1KB)
-          const cleanedLen = cleanBase64(imageBase64).length;
+          const cleanedLen = cleanBase64(imageB64).length;
           if (cleanedLen < 1000) {
             console.error(`[comfyui] imageBase64 too small after cleaning: ${cleanedLen} chars`);
             return res.status(400).json({ error: "Image data appears corrupt or empty. Please re-select the image." });
           }
           console.log(`[comfyui] images: primary=${imageFilename} (${Math.round(cleanedLen / 1024)}KB b64), second=${imageFilename2 || 'none'} (${imageBase64_2 ? Math.round(imageBase64_2.length / 1024) + 'KB' : 'none'})`);
         } else {
-          if (imageBase64) {
+          if (imageB64) {
             imageFilename = await uploadImageToLocal(
               backend.comfyUrl!,
-              imageBase64,
+              imageB64,
               clientFilename || `input_${workflowType}_${Date.now()}.jpg`,
             );
           } else {
@@ -2777,11 +2807,11 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
       if (backend.mode === "runpod") {
         const runpodInput: any = { workflow };
 
-        if (needsImage && imageBase64) {
+        if (needsImage && imageB64) {
           runpodInput.images = [
             {
               name: imageFilename!,
-              image: cleanBase64(imageBase64),
+              image: cleanBase64(imageB64),
             },
           ];
           if (imageBase64_2 && imageFilename2) {
