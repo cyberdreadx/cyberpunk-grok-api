@@ -49,12 +49,12 @@ const GlobalNavMenu: React.FC = () => {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="fixed left-3 z-40 flex items-center gap-2 px-3 py-1.5 rounded-md border border-primary/40 bg-card/90 text-primary font-orbitron text-[10px] tracking-widest hover:bg-primary/20 transition-colors shadow-[0_0_8px_hsl(var(--primary)/0.2)] backdrop-blur-sm"
+        className="fixed left-3 z-40 flex items-center justify-center p-2 rounded-md border border-primary/40 bg-card/90 text-primary hover:bg-primary/20 transition-colors shadow-[0_0_8px_hsl(var(--primary)/0.2)] backdrop-blur-sm"
         style={{ top: "calc(env(safe-area-inset-top, 0px) + 36px)" }}
         aria-label="Open navigation menu"
+        title="Menu"
       >
         <Menu className="w-4 h-4" />
-        <span>MENU</span>
       </button>
 
       <Sheet open={open} onOpenChange={setOpen}>

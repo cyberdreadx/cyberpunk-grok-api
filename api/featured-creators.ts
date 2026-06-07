@@ -4,6 +4,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getDb } from "./_lib/db";
 import { applyCors } from "./_lib/cors";
+import { ADMIN_EMAIL } from "./_lib/auth";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   applyCors(req, res, "GET, OPTIONS");
@@ -30,10 +31,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       LEFT JOIN characters pc ON pc.id = u.official_character_id
         AND u.creator_persona_chat_enabled = true
         AND pc.is_public = true
-      WHERE u.is_featured_creator = true
-        AND u.verification_status = 'verified'
+      WHERE u.verification_status = 'verified'
+        AND p.username IS NOT NULL
+        AND u.email <> ${ADMIN_EMAIL}
         AND (u.verification_renews_at IS NULL OR u.verification_renews_at > now())
-      ORDER BY u.featured_at DESC NULLS LAST
+        AND (u.is_featured_creator = true OR p.avatar_url IS NOT NULL)
+      ORDER BY u.is_featured_creator DESC,
+               (p.avatar_url IS NOT NULL) DESC,
+               (CASE WHEN u.creator_persona_chat_enabled THEN 1 ELSE 0 END) DESC,
+               u.featured_at DESC NULLS LAST,
+               u.created_at DESC
       LIMIT 100
     `;
     return res.status(200).json({ creators: rows });

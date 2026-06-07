@@ -28,7 +28,7 @@ export default function CreatorsDirectory() {
 
   return (
     <CyberLayout>
-      <main className="min-h-screen px-4 sm:px-8 py-8 max-w-6xl mx-auto">
+      <main className="min-h-screen px-4 sm:px-8 pt-14 pb-8 max-w-6xl mx-auto">
         <div className="flex items-end justify-between gap-3 mb-6">
           <div>
             <div className="font-mono-share text-[10px] tracking-widest text-secondary">// FEATURED MODELS</div>
