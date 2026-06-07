@@ -740,6 +740,7 @@ const FeedPage: React.FC = () => {
                 <ShieldAlert className="w-4 h-4" />
               </button>
             </div>
+            <div className="mt-2 overflow-x-auto">{filterTabs("mobile")}</div>
           </div>
 
           {/* Signup teaser for logged-out users */}
@@ -933,6 +934,8 @@ const FeedPage: React.FC = () => {
         )}
 
         
+
+        {filterTabs("desktop")}
 
         {loading ? (
           skeletonGrid("grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5")
