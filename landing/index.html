@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GLTCH Runner — Uncensored AI Image & Video Generation</title>
+  <meta name="description" content="GLTCH Runner is an AI image generator, video creator, and photo editor with fewer limits — plus AI model personas you can chat with. Free to try in your browser." />
+  <link rel="canonical" href="https://gltchrunner.com/" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="GLTCH Runner — Uncensored AI Image & Video Generation" />
+  <meta property="og:description" content="Generate AI images and videos, edit photos, and chat with AI model personas. Fewer limits. Free to try." />
+  <meta property="og:url" content="https://gltchrunner.com/" />
+  <meta name="theme-color" content="#06070d" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+  <style>
+    :root{
+      --bg:#06070d; --bg2:#0b0e1a; --fg:#e6f0ff; --muted:#8290b3;
+      --primary:#22d3ee; --secondary:#d946ef; --line:rgba(120,140,200,.16);
+    }
+    *{box-sizing:border-box} html{scroll-behavior:smooth}
+    body{
+      margin:0; background:var(--bg); color:var(--fg);
+      font-family:"Share Tech Mono",ui-monospace,monospace; line-height:1.6;
+      -webkit-font-smoothing:antialiased; overflow-x:hidden;
+    }
+    a{color:inherit}
+    .grid-bg{position:fixed; inset:0; z-index:0; pointer-events:none; opacity:.05;
+      background-image:linear-gradient(var(--primary) 1px,transparent 1px),linear-gradient(90deg,var(--primary) 1px,transparent 1px);
+      background-size:54px 54px;}
+    .glow{position:fixed; z-index:0; filter:blur(90px); opacity:.25; pointer-events:none}
+    .glow.a{top:-160px; left:-120px; width:480px; height:480px; background:var(--primary); border-radius:50%}
+    .glow.b{bottom:-200px; right:-140px; width:520px; height:520px; background:var(--secondary); border-radius:50%}
+    .wrap{position:relative; z-index:1; max-width:1080px; margin:0 auto; padding:0 22px}
+    header{display:flex; align-items:center; justify-content:space-between; padding:22px 0}
+    .brand{font-family:"Orbitron",sans-serif; font-weight:900; letter-spacing:3px; font-size:18px}
+    .brand b{color:var(--primary)}
+    .brand span{color:var(--secondary)}
+    .nav-cta{font-family:"Orbitron",sans-serif; font-size:12px; letter-spacing:2px; text-decoration:none;
+      padding:9px 16px; border:1px solid var(--primary); color:var(--primary); border-radius:8px; white-space:nowrap}
+    .nav-cta:hover{background:rgba(34,211,238,.12)}
+    .hero{text-align:center; padding:64px 0 28px}
+    .tag{font-size:12px; letter-spacing:4px; color:var(--secondary); text-transform:uppercase}
+    h1{font-family:"Orbitron",sans-serif; font-weight:900; font-size:clamp(34px,7vw,68px); line-height:1.05; margin:14px 0 10px}
+    h1 .em{background:linear-gradient(90deg,var(--primary),var(--secondary)); -webkit-background-clip:text; background-clip:text; color:transparent}
+    .sub{max-width:620px; margin:0 auto 30px; color:var(--muted); font-size:clamp(15px,2.4vw,18px)}
+    .cta-row{display:flex; gap:14px; justify-content:center; flex-wrap:wrap}
+    .btn{font-family:"Orbitron",sans-serif; font-size:14px; letter-spacing:2px; text-decoration:none; padding:15px 30px; border-radius:10px; display:inline-flex; align-items:center; gap:10px; transition:.15s}
+    .btn-primary{background:linear-gradient(90deg,var(--primary),#37e0c0); color:#04121a; font-weight:700; box-shadow:0 0 26px rgba(34,211,238,.35)}
+    .btn-primary:hover{transform:translateY(-2px); box-shadow:0 0 40px rgba(34,211,238,.55)}
+    .btn-ghost{border:1px solid var(--line); color:var(--fg)}
+    .btn-ghost:hover{border-color:var(--secondary); color:#fff}
+    .note{margin-top:16px; font-size:12px; color:var(--muted)}
+    .features{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:16px; padding:46px 0}
+    .card{border:1px solid var(--line); background:linear-gradient(180deg,rgba(20,26,46,.55),rgba(11,14,26,.4)); border-radius:14px; padding:22px}
+    .card .ic{font-size:24px}
+    .card h3{font-family:"Orbitron",sans-serif; font-size:14px; letter-spacing:1px; margin:12px 0 8px; color:var(--primary)}
+    .card p{margin:0; color:var(--muted); font-size:14px}
+    .band{border:1px solid var(--line); border-radius:18px; padding:34px; margin:18px 0 56px; text-align:center;
+      background:radial-gradient(120% 140% at 50% 0%,rgba(217,70,239,.12),transparent 60%)}
+    .band h2{font-family:"Orbitron",sans-serif; font-size:clamp(20px,3.4vw,30px); margin:0 0 10px}
+    .band p{color:var(--muted); max-width:560px; margin:0 auto 22px}
+    footer{border-top:1px solid var(--line); padding:26px 0 50px; text-align:center; color:var(--muted); font-size:13px}
+    footer a{color:var(--primary); text-decoration:none}
+  </style>
+</head>
+<body>
+  <div class="grid-bg"></div><div class="glow a"></div><div class="glow b"></div>
+
+  <div class="wrap">
+    <header>
+      <div class="brand"><b>GLTCH</b><span>//</span>RUNNER</div>
+      <a class="nav-cta" href="https://grokrunner.gltch.app">USE APP →</a>
+    </header>
+
+    <section class="hero">
+      <div class="tag">AI image · video · companions</div>
+      <h1>Create anything.<br/><span class="em">Fewer limits.</span></h1>
+      <p class="sub">GLTCH Runner is an uncensored AI image generator, video creator, and photo editor — plus AI model personas you can actually chat with. Run it free in your browser.</p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="https://grokrunner.gltch.app">USE APP</a>
+        <a class="btn btn-ghost" href="https://grokrunner.gltch.app/apply">BECOME A CREATOR</a>
+      </div>
+      <div class="note">No install · free credits to start · works on mobile &amp; desktop</div>
+    </section>
+
+    <section class="features">
+      <div class="card"><div class="ic">🖼️</div><h3>AI Images</h3><p>Generate and edit images with GLTCH &amp; GLTCH PRO engines, LoRAs, and styles — high quality, fast, fewer restrictions.</p></div>
+      <div class="card"><div class="ic">🎬</div><h3>AI Video</h3><p>Turn a prompt or a photo into motion with WAN &amp; Seedance video engines. Image-to-video in a click.</p></div>
+      <div class="card"><div class="ic">💬</div><h3>Model Personas</h3><p>Chat with AI personas of featured creators — they reply in character and can send photos &amp; videos.</p></div>
+      <div class="card"><div class="ic">💸</div><h3>Creator Earnings</h3><p>Models earn from their content and chats, with real cash payouts. Apply to get featured.</p></div>
+    </section>
+
+    <section class="band">
+      <h2>Ready to make something?</h2>
+      <p>Jump into the app, claim your free credits, and start generating in seconds.</p>
+      <a class="btn btn-primary" href="https://grokrunner.gltch.app">USE APP →</a>
+    </section>
+
+    <footer>
+      © <span id="yr"></span> GLTCH Runner ·
+      <a href="https://grokrunner.gltch.app">Launch app</a> ·
+      <a href="https://grokrunner.gltch.app/apply">Become a creator</a>
+      <script>document.getElementById('yr').textContent=new Date().getFullYear()</script>
+    </footer>
+  </div>
+</body>
+</html>
