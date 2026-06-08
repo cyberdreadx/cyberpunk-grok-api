@@ -68,7 +68,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       SET status = ${newStatus}, admin_notes = ${notes},
           reviewed_at = now(), reviewed_by = ${reviewer}::uuid, updated_at = now()
       WHERE id = ${id}::uuid
-      RETURNING id, user_id, status, pitch, sample_urls, display_name, niche
+      RETURNING id, user_id, status, pitch, sample_urls, display_name, niche, socials
     `;
     if (!app) return res.status(404).json({ error: "Not found" });
 
@@ -89,10 +89,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const sp = bio.lastIndexOf(" ");
         bio = (sp > 0 ? bio.slice(0, sp) : bio) + "…";
       }
+      await sql`ALTER TABLE profiles ADD COLUMN IF NOT EXISTS socials jsonb NOT NULL DEFAULT '{}'::jsonb`.catch(() => {});
+      const socialsJson = JSON.stringify(app.socials && typeof app.socials === "object" ? app.socials : {});
       await sql`
         UPDATE profiles
         SET avatar_url = COALESCE(NULLIF(avatar_url, ''), ${avatar}),
             bio = CASE WHEN COALESCE(bio, '') = '' THEN ${bio} ELSE bio END,
+            socials = CASE WHEN COALESCE(socials::text, '{}') IN ('{}', 'null', '') THEN ${socialsJson}::jsonb ELSE socials END,
             updated_at = now()
         WHERE user_id = ${app.user_id}::uuid
       `;

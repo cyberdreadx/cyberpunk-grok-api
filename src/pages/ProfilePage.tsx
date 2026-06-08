@@ -8,7 +8,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { UserPlus, UserMinus, Edit2, Check, X, ArrowLeft, Camera, Loader2, Wallet, Ban, BadgeCheck, MessageSquare } from "lucide-react";
+import { UserPlus, UserMinus, Edit2, Check, X, ArrowLeft, Camera, Loader2, Wallet, Ban, BadgeCheck, MessageSquare, Instagram, Link as LinkIcon } from "lucide-react";
+
+const SOCIAL_KEYS = ["instagram", "x", "tiktok", "onlyfans", "other"] as const;
+const SOCIAL_META: Record<string, { label: string; placeholder: string }> = {
+  instagram: { label: "Instagram", placeholder: "https://instagram.com/you" },
+  x: { label: "X", placeholder: "https://x.com/you" },
+  tiktok: { label: "TikTok", placeholder: "https://tiktok.com/@you" },
+  onlyfans: { label: "OnlyFans", placeholder: "https://onlyfans.com/you" },
+  other: { label: "Link", placeholder: "https://..." },
+};
+const normalizeUrl = (v: string) => (/^https?:\/\//i.test(v) ? v : `https://${v}`);
 import EarningsPanel from "@/components/EarningsPanel";
 import AdminUserPanel from "@/components/AdminUserPanel";
 import VerifiedBadge from "@/components/VerifiedBadge";
@@ -45,6 +55,7 @@ interface Profile {
   personaChatCharacterId?: string | null;
   creatorPersonaChatEnabled?: boolean;
   officialCharacterId?: string | null;
+  socials?: Record<string, string>;
 }
 
 interface FeedPost {
@@ -82,6 +93,7 @@ const ProfilePage: React.FC = () => {
   const [editUsername, setEditUsername] = useState("");
   const [editBio, setEditBio] = useState("");
   const [editWallet, setEditWallet] = useState("");
+  const [editSocials, setEditSocials] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
@@ -96,6 +108,7 @@ const ProfilePage: React.FC = () => {
       setEditUsername(data.username);
       setEditBio(data.bio || "");
       setEditWallet(data.walletAddress || "");
+      setEditSocials(data.socials && typeof data.socials === "object" ? data.socials : {});
 
       // Fetch user posts (non-fatal — profile still renders if this fails)
       try {
@@ -125,9 +138,15 @@ const ProfilePage: React.FC = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
+      // Normalize social URLs; drop blanks.
+      const socialsOut: Record<string, string> = {};
+      for (const k of SOCIAL_KEYS) {
+        const v = (editSocials[k] || "").trim();
+        if (v) socialsOut[k] = normalizeUrl(v);
+      }
       await apiFetch("/profile", {
         method: "PUT",
-        body: { username: editUsername, bio: editBio, walletAddress: editWallet || null },
+        body: { username: editUsername, bio: editBio, walletAddress: editWallet || null, socials: socialsOut },
       });
       toast({ title: "Profile updated" });
       setEditing(false);
@@ -294,6 +313,25 @@ const ProfilePage: React.FC = () => {
                     />
                     <span className="font-mono-share text-[8px] text-muted-foreground/50">Set this to receive instant XRGE payouts from locked content</span>
                   </div>
+                  <div>
+                    <label className="font-mono-share text-[10px] text-muted-foreground flex items-center gap-1">
+                      <LinkIcon className="w-3 h-3" /> SOCIAL LINKS
+                    </label>
+                    <div className="space-y-1.5 mt-1">
+                      {SOCIAL_KEYS.map((k) => (
+                        <div key={k} className="flex items-center gap-2">
+                          <span className="font-mono-share text-[9px] text-muted-foreground w-16 shrink-0">{SOCIAL_META[k].label}</span>
+                          <Input
+                            value={editSocials[k] || ""}
+                            onChange={(e) => setEditSocials((s) => ({ ...s, [k]: e.target.value }))}
+                            placeholder={SOCIAL_META[k].placeholder}
+                            maxLength={300}
+                            className="h-7 font-mono-share text-xs bg-input/50"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                   <div className="flex gap-2">
                     <Button size="sm" onClick={handleSave} disabled={saving} className="font-mono-share text-[10px]">
                       <Check className="w-3 h-3 mr-1" /> {saving ? "SAVING..." : "SAVE"}
@@ -334,6 +372,22 @@ const ProfilePage: React.FC = () => {
                     )}
                   </div>
                   {profile.bio && <p className="font-mono-share text-xs text-muted-foreground mt-1">{profile.bio}</p>}
+                  {profile.socials && Object.keys(profile.socials).some((k) => profile.socials![k]) && (
+                    <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                      {SOCIAL_KEYS.filter((k) => profile.socials?.[k]).map((k) => (
+                        <a
+                          key={k}
+                          href={normalizeUrl(profile.socials![k])}
+                          target="_blank"
+                          rel="noopener noreferrer nofollow"
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded-full border border-border/50 bg-card/40 hover:border-primary/60 hover:text-primary transition-colors font-mono-share text-[10px] text-muted-foreground"
+                        >
+                          {k === "instagram" ? <Instagram className="w-3 h-3" /> : <LinkIcon className="w-3 h-3" />}
+                          {SOCIAL_META[k].label}
+                        </a>
+                      ))}
+                    </div>
+                  )}
                   {!editing && profile.walletTruncated && (
                     <div className="flex items-center gap-1 mt-1.5">
                       <Wallet className="w-3 h-3 text-primary/50" />

@@ -64,6 +64,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           FROM users WHERE id = ${uid}
         `.catch(() => [] as any[]);
         if (extras.length > 0) Object.assign(rows[0], extras[0]);
+        // Socials (optional column — best-effort so a missing migration won't 500)
+        const soc = await sql`SELECT socials FROM profiles WHERE user_id = ${uid}`.catch(() => [] as any[]);
+        if (soc.length > 0) rows[0].socials = soc[0].socials;
       }
       if (rows.length === 0) return res.status(404).json({ error: "Profile not found" });
 
@@ -126,6 +129,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         holderStreakDays,
         // Public total only shown if tier > none
         holderTotalHeld: holderTier === "none" ? null : holderTotalHeld,
+        socials: p.socials && typeof p.socials === "object" ? p.socials : {},
         /** Fan-visible: open Characters chat with this persona */
         personaChatCharacterId: showFanChatCta ? officialId : null,
         /** Own profile: settings panel */
@@ -141,7 +145,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // PUT — update own profile
   if (req.method === "PUT") {
     try {
-      const { username, bio, avatarUrl, walletAddress } = req.body || {};
+      const { username, bio, avatarUrl, walletAddress, socials } = req.body || {};
+
+      // Sanitize socials: only known platforms, string values, trimmed/capped.
+      const SOCIAL_KEYS = ["instagram", "x", "tiktok", "onlyfans", "other"];
+      let cleanSocials: Record<string, string> | undefined;
+      if (socials !== undefined && socials !== null) {
+        if (typeof socials !== "object") {
+          return res.status(400).json({ error: "Invalid socials" });
+        }
+        cleanSocials = {};
+        for (const k of SOCIAL_KEYS) {
+          const v = (socials as any)[k];
+          if (typeof v === "string" && v.trim()) cleanSocials[k] = v.trim().slice(0, 300);
+        }
+      }
 
       // Validate wallet address
       if (walletAddress !== undefined && walletAddress !== null && walletAddress !== "") {
@@ -181,14 +199,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         previousAvatar = prev[0]?.avatar_url || null;
       }
 
+      await sql`ALTER TABLE profiles ADD COLUMN IF NOT EXISTS socials jsonb NOT NULL DEFAULT '{}'::jsonb`.catch(() => {});
+
+      const socialsInsert = cleanSocials ? JSON.stringify(cleanSocials) : "{}";
+      const socialsUpdate = cleanSocials ? JSON.stringify(cleanSocials) : null;
+
       await sql`
-        INSERT INTO profiles (user_id, username, bio, avatar_url, wallet_address, updated_at)
+        INSERT INTO profiles (user_id, username, bio, avatar_url, wallet_address, socials, updated_at)
         VALUES (
           ${auth.userId},
           COALESCE(${cleanUsername ?? null}, 'user_' || substr(${auth.userId}::text, 1, 8)),
           COALESCE(${bio ?? null}, ''),
           ${avatarUrl ?? null},
           ${cleanWallet ?? null},
+          ${socialsInsert}::jsonb,
           NOW()
         )
         ON CONFLICT (user_id) DO UPDATE SET
@@ -196,6 +220,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           bio = COALESCE(${bio ?? null}, profiles.bio),
           avatar_url = COALESCE(${avatarUrl ?? null}, profiles.avatar_url),
           wallet_address = COALESCE(${cleanWallet ?? null}, profiles.wallet_address),
+          socials = COALESCE(${socialsUpdate}::jsonb, profiles.socials),
           updated_at = NOW()
       `;
 
