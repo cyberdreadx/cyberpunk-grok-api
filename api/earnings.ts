@@ -73,13 +73,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         AND su.xrge_paid IS NOT NULL
     `.catch(() => [{ total_xrge: 0, unlock_count: 0 }]);
 
-    // Recent transactions (last 20) — include XRGE
+    // Recent transactions (last 20) — include XRGE + chat persona earnings.
+    // `cents_paid` is GROSS for post/story (creator share computed client-side),
+    // but for chat it is already the creator's net cents (chat_kind set).
     const recent = await sql`
       (
         SELECT 'post' AS type, fu.credits_paid, fu.cents_paid, fu.unlocked_at,
                COALESCE(fu.xrge_paid, '') AS xrge_paid,
                u.email AS buyer_email,
-               COALESCE(p2.username, LEFT(u.email, 3) || '***') AS buyer_name
+               COALESCE(p2.username, LEFT(u.email, 3) || '***') AS buyer_name,
+               NULL::text AS chat_kind
         FROM feed_unlocks fu
         JOIN feed_posts fp ON fp.id = fu.post_id
         JOIN users u ON u.id = fu.user_id
@@ -91,12 +94,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         SELECT 'story' AS type, su.credits_paid, 0 AS cents_paid, su.unlocked_at,
                COALESCE(su.xrge_paid, '') AS xrge_paid,
                u.email AS buyer_email,
-               COALESCE(p2.username, LEFT(u.email, 3) || '***') AS buyer_name
+               COALESCE(p2.username, LEFT(u.email, 3) || '***') AS buyer_name,
+               NULL::text AS chat_kind
         FROM story_unlocks su
         JOIN stories s ON s.id = su.story_id
         JOIN users u ON u.id = su.user_id
         LEFT JOIN profiles p2 ON p2.user_id = su.user_id
         WHERE s.user_id = ${auth.userId}::uuid
+      )
+      UNION ALL
+      (
+        SELECT 'chat' AS type, 0 AS credits_paid, ce.creator_cents AS cents_paid, ce.created_at AS unlocked_at,
+               '' AS xrge_paid,
+               u.email AS buyer_email,
+               COALESCE(p2.username, LEFT(u.email, 3) || '***') AS buyer_name,
+               ce.kind AS chat_kind
+        FROM creator_chat_earnings ce
+        JOIN users u ON u.id = ce.fan_id
+        LEFT JOIN profiles p2 ON p2.user_id = ce.fan_id
+        WHERE ce.creator_id = ${auth.userId}::uuid
       )
       ORDER BY unlocked_at DESC
       LIMIT 20
@@ -149,6 +165,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         xrgePaid: r.xrge_paid || undefined,
         buyerName: r.buyer_name,
         unlockedAt: r.unlocked_at,
+        chatKind: r.chat_kind || undefined,
       })),
     });
   } catch (err: any) {

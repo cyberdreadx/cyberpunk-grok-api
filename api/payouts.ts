@@ -4,6 +4,7 @@ import { getUserFromRequest, ADMIN_EMAIL } from "./_lib/auth";
 import { checkRateLimit } from "./_lib/ratelimit";
 import { fetchXrgePrice } from "./_lib/xrge";
 import { isVerified, VERIFICATION_REQUIRED_MESSAGE } from "./_lib/verifiedGate";
+import { sendPayoutRequestedAdminEmail, sendPayoutPaidEmail, sendPayoutRejectedEmail } from "./_lib/email";
 
 const MIN_PAYOUT_CENTS = 2500; // $25
 const MIN_XRGE_PAYOUT_CENTS = 100; // $1 min for instant XRGE
@@ -177,6 +178,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         RETURNING id, created_at
       `;
 
+      // Alert admin so the manual payout doesn't sit unnoticed (best-effort).
+      try {
+        const [prof] = await sql`
+          SELECT COALESCE(p.username, LEFT(u.email, 3) || '***') AS username
+          FROM users u LEFT JOIN profiles p ON p.user_id = u.id
+          WHERE u.id = ${auth.userId}::uuid
+        `;
+        await sendPayoutRequestedAdminEmail(ADMIN_EMAIL, {
+          username: prof?.username || "creator",
+          amountCents: amount,
+          method,
+          payoutDetails: payoutDetails || "",
+          requestId: row.id,
+        });
+      } catch (e: any) {
+        console.error("[payouts] admin alert failed:", e?.message);
+      }
+
       return res.status(201).json({ id: row.id, createdAt: row.created_at });
     }
 
@@ -194,6 +213,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const [pr] = await sql`SELECT * FROM payout_requests WHERE id = ${requestId}::uuid`;
       if (!pr) return res.status(404).json({ error: "Request not found" });
 
+      const [creator] = await sql`SELECT email FROM users WHERE id = ${pr.user_id}::uuid`;
+
       if (action === "reject") {
         // Refund balance
         await sql`
@@ -204,6 +225,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           UPDATE payout_requests SET status = 'rejected', admin_note = ${adminNote || null}, reviewed_at = now()
           WHERE id = ${requestId}::uuid
         `;
+        if (creator?.email) {
+          sendPayoutRejectedEmail(creator.email, { amountCents: pr.amount_cents, note: adminNote }).catch((e) =>
+            console.error("[payouts] reject email:", e?.message),
+          );
+        }
       } else if (action === "approve") {
         await sql`
           UPDATE payout_requests SET status = 'approved', admin_note = ${adminNote || null}, reviewed_at = now()
@@ -214,6 +240,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           UPDATE payout_requests SET status = 'paid', paid_at = now()
           WHERE id = ${requestId}::uuid
         `;
+        if (creator?.email) {
+          sendPayoutPaidEmail(creator.email, { amountCents: pr.amount_cents, method: pr.method }).catch((e) =>
+            console.error("[payouts] paid email:", e?.message),
+          );
+        }
       }
 
       return res.json({ ok: true });

@@ -788,3 +788,99 @@ export async function sendVerificationApprovedEmail(to: string): Promise<void> {
   }
   await logEmail(to, "verify_approved", "sent", data?.id);
 }
+
+const fmtUsd = (cents: number) => `$${(cents / 100).toFixed(2)}`;
+
+/** Notify the admin that a creator requested a (manual) fiat payout. */
+export async function sendPayoutRequestedAdminEmail(
+  to: string,
+  info: { username: string; amountCents: number; method: string; payoutDetails: string; requestId: string },
+): Promise<void> {
+  const fromAddress = getFromAddress();
+  const { data, error } = await getResend().emails.send({
+    from: `GLTCHRunner <${fromAddress}>`,
+    to: [to],
+    subject: `Payout request: ${fmtUsd(info.amountCents)} (${info.method}) — @${info.username}`,
+    html: `
+      <div style="font-family: 'Courier New', monospace; background: #0a0a0f; color: #e0e0e0; padding: 32px; max-width: 480px; margin: 0 auto;">
+        <div style="border: 1px solid #00f0ff33; padding: 24px; border-radius: 4px;">
+          <h1 style="color: #00f0ff; font-size: 16px; letter-spacing: 3px; margin: 0 0 16px;">PAYOUT REQUEST</h1>
+          <p style="font-size: 14px; color: #e0e0e0; margin: 0 0 8px;">@${info.username} requested a payout.</p>
+          <table style="font-size: 13px; color: #b0b0b0; line-height: 1.9; margin: 0 0 20px;">
+            <tr><td style="color:#666;padding-right:12px;">Amount</td><td style="color:#39ff14;">${fmtUsd(info.amountCents)}</td></tr>
+            <tr><td style="color:#666;padding-right:12px;">Method</td><td>${info.method}</td></tr>
+            <tr><td style="color:#666;padding-right:12px;vertical-align:top;">Details</td><td>${(info.payoutDetails || "—").replace(/</g, "&lt;")}</td></tr>
+          </table>
+          <a href="https://grokrunner.gltch.app/admin" style="display:inline-block; background:#00f0ff22; border:1px solid #00f0ff55; color:#00f0ff; text-decoration:none; padding:12px 28px; border-radius:4px; font-size:12px; letter-spacing:2px;">REVIEW IN ADMIN →</a>
+          <p style="font-size: 11px; color: #555; margin: 18px 0 0;">Request ${info.requestId}</p>
+        </div>
+      </div>
+    `,
+  });
+  if (error) {
+    await logEmail(to, "payout_requested", "failed", null, error.message);
+    console.error("[email] payout requested:", error.message);
+    return;
+  }
+  await logEmail(to, "payout_requested", "sent", data?.id);
+}
+
+/** Notify the creator that their payout was marked paid. */
+export async function sendPayoutPaidEmail(to: string, info: { amountCents: number; method: string }): Promise<void> {
+  const fromAddress = getFromAddress();
+  const { data, error } = await getResend().emails.send({
+    from: `GLTCHRunner <${fromAddress}>`,
+    to: [to],
+    subject: `Payout sent: ${fmtUsd(info.amountCents)} 💸`,
+    html: `
+      <div style="font-family: 'Courier New', monospace; background: #0a0a0f; color: #e0e0e0; padding: 32px; max-width: 480px; margin: 0 auto;">
+        <div style="border: 1px solid #39ff1444; padding: 24px; border-radius: 4px;">
+          <h1 style="color: #00f0ff; font-size: 16px; letter-spacing: 3px; margin: 0 0 8px;">GLTCHRUNNER</h1>
+          <p style="color: #39ff1499; font-size: 11px; letter-spacing: 4px; margin: 0 0 20px;">PAYOUT SENT</p>
+          <div style="background:#111; border:1px solid #39ff1455; padding:20px; text-align:center; border-radius:4px; margin:0 0 18px;">
+            <div style="font-size: 28px; color:#39ff14; font-weight:bold;">${fmtUsd(info.amountCents)}</div>
+            <p style="font-size:12px; color:#888; margin:6px 0 0;">via ${info.method}</p>
+          </div>
+          <p style="font-size: 13px; color: #b0b0b0; line-height:1.7; margin: 0 0 16px;">
+            Your payout has been processed. Depending on your method it may take a little time to land. Keep creating! 🚀
+          </p>
+          <a href="https://grokrunner.gltch.app/profile" style="display:inline-block; background:#39ff1422; border:1px solid #39ff1455; color:#39ff14; text-decoration:none; padding:12px 28px; border-radius:4px; font-size:12px; letter-spacing:2px;">VIEW EARNINGS →</a>
+        </div>
+      </div>
+    `,
+  });
+  if (error) {
+    await logEmail(to, "payout_paid", "failed", null, error.message);
+    console.error("[email] payout paid:", error.message);
+    return;
+  }
+  await logEmail(to, "payout_paid", "sent", data?.id);
+}
+
+/** Notify the creator that their payout was rejected (balance refunded). */
+export async function sendPayoutRejectedEmail(to: string, info: { amountCents: number; note?: string | null }): Promise<void> {
+  const fromAddress = getFromAddress();
+  const { data, error } = await getResend().emails.send({
+    from: `GLTCHRunner <${fromAddress}>`,
+    to: [to],
+    subject: `Payout request needs attention`,
+    html: `
+      <div style="font-family: 'Courier New', monospace; background: #0a0a0f; color: #e0e0e0; padding: 32px; max-width: 480px; margin: 0 auto;">
+        <div style="border: 1px solid #ff444444; padding: 24px; border-radius: 4px;">
+          <h1 style="color: #00f0ff; font-size: 16px; letter-spacing: 3px; margin: 0 0 16px;">PAYOUT NOT PROCESSED</h1>
+          <p style="font-size: 13px; color: #b0b0b0; line-height:1.7; margin: 0 0 12px;">
+            Your payout request for <strong style="color:#e0e0e0;">${fmtUsd(info.amountCents)}</strong> couldn't be processed and your balance has been refunded.
+          </p>
+          ${info.note ? `<p style="font-size:12px; color:#ffae00; background:#1a1205; border:1px solid #ffae0033; padding:12px; border-radius:4px; margin:0 0 16px;">${info.note.replace(/</g, "&lt;")}</p>` : ""}
+          <a href="https://grokrunner.gltch.app/profile" style="display:inline-block; background:#00f0ff22; border:1px solid #00f0ff55; color:#00f0ff; text-decoration:none; padding:12px 28px; border-radius:4px; font-size:12px; letter-spacing:2px;">TRY AGAIN →</a>
+        </div>
+      </div>
+    `,
+  });
+  if (error) {
+    await logEmail(to, "payout_rejected", "failed", null, error.message);
+    console.error("[email] payout rejected:", error.message);
+    return;
+  }
+  await logEmail(to, "payout_rejected", "sent", data?.id);
+}

@@ -26,12 +26,13 @@ interface EarningsSummary {
 }
 
 interface RecentTx {
-  type: "post" | "story";
+  type: "post" | "story" | "chat";
   creditsPaid: number;
   centsPaid: number;
   xrgePaid?: string;
   buyerName: string;
   unlockedAt: string;
+  chatKind?: "message" | "image" | "video";
 }
 
 interface PayoutRequest {
@@ -432,24 +433,38 @@ const EarningsPanel: React.FC = () => {
         <div>
           <h3 className="font-mono-share text-[9px] text-muted-foreground mb-2 tracking-widest">RECENT SALES</h3>
           <div className="space-y-1.5 max-h-48 overflow-y-auto">
-            {data.recent.map((tx, i) => (
-              <div key={i} className="flex items-center justify-between text-[10px] font-mono-share py-1 px-2 bg-background/30 rounded">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold ${tx.type === "post" ? "bg-primary/20 text-primary" : "bg-accent/20 text-accent-foreground"}`}>
-                    {tx.type.toUpperCase()}
-                  </span>
-                  <span className="text-muted-foreground truncate">{tx.buyerName}</span>
+            {data.recent.map((tx, i) => {
+              const chatLabel =
+                tx.chatKind === "image" ? "PHOTO" : tx.chatKind === "video" ? "VIDEO" : "CHAT";
+              const badgeClass =
+                tx.type === "chat"
+                  ? "bg-green-500/20 text-green-400"
+                  : tx.type === "post"
+                  ? "bg-primary/20 text-primary"
+                  : "bg-accent/20 text-accent-foreground";
+              return (
+                <div key={i} className="flex items-center justify-between text-[10px] font-mono-share py-1 px-2 bg-background/30 rounded">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold ${badgeClass}`}>
+                      {tx.type === "chat" ? chatLabel : tx.type.toUpperCase()}
+                    </span>
+                    <span className="text-muted-foreground truncate">{tx.buyerName}</span>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-foreground">
+                      {tx.type === "chat"
+                        ? fmtCents(tx.centsPaid) /* already creator's net share */
+                        : tx.xrgePaid && parseFloat(tx.xrgePaid) > 0
+                        ? `${(parseFloat(tx.xrgePaid) * 0.8).toFixed(2)} XRGE`
+                        : tx.creditsPaid > 0
+                        ? `${Math.floor(tx.creditsPaid * 0.75)} cr`
+                        : fmtCents(Math.floor(tx.centsPaid * 0.75))}
+                    </span>
+                    <span className="text-muted-foreground">{timeAgo(tx.unlockedAt)}</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-foreground">
-                    {tx.xrgePaid && parseFloat(tx.xrgePaid) > 0
-                      ? `${(parseFloat(tx.xrgePaid) * 0.8).toFixed(2)} XRGE`
-                      : tx.creditsPaid > 0 ? `${Math.floor(tx.creditsPaid * 0.75)} cr` : fmtCents(Math.floor(tx.centsPaid * 0.75))}
-                  </span>
-                  <span className="text-muted-foreground">{timeAgo(tx.unlockedAt)}</span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
