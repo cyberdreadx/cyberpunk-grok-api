@@ -10,7 +10,7 @@
  */
 
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { getUserFromRequest } from "./_lib/auth";
+import { getUserFromRequest, ADMIN_EMAIL } from "./_lib/auth";
 import { getDb } from "./_lib/db";
 import { checkRateLimit } from "./_lib/ratelimit";
 
@@ -191,6 +191,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         WHERE id = ${characterId} AND user_id = ${auth.userId}
         RETURNING id, name, portrait_url, personality, traits, system_prompt, llm_backend, is_public, updated_at
       `;
+      return res.status(200).json({ character: rows[0] });
+    }
+
+    // Admin: replace a character's portrait regardless of owner (e.g. a featured
+    // creator's persona photo). Portrait stored as base64 data URL like create/update.
+    if (action === "admin-set-portrait") {
+      if (auth.email !== ADMIN_EMAIL) return res.status(403).json({ error: "Admin only" });
+      const { characterId, portrait, alsoAvatar } = req.body;
+      if (!characterId) return res.status(400).json({ error: "characterId required" });
+      if (!portrait || typeof portrait !== "string" || portrait.length > MAX_PORTRAIT_SIZE) {
+        return res.status(400).json({ error: "Valid portrait required (max ~2MB)" });
+      }
+      const rows = await sql`
+        UPDATE characters SET portrait_url = ${portrait}, updated_at = now()
+        WHERE id = ${characterId}
+        RETURNING id, user_id, name, portrait_url
+      `;
+      if (rows.length === 0) return res.status(404).json({ error: "Character not found" });
+      // Optional convenience: also set the owner's profile avatar to match.
+      if (alsoAvatar && rows[0].user_id) {
+        await sql`UPDATE profiles SET avatar_url = ${portrait}, updated_at = now() WHERE user_id = ${rows[0].user_id}::uuid`.catch(() => {});
+      }
       return res.status(200).json({ character: rows[0] });
     }
 

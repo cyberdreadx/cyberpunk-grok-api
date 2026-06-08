@@ -134,7 +134,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         personaChatCharacterId: showFanChatCta ? officialId : null,
         /** Own profile: settings panel */
         creatorPersonaChatEnabled: p.user_id === auth.userId ? personaEnabled : undefined,
-        officialCharacterId: p.user_id === auth.userId ? officialId : undefined,
+        // Exposed to the owner and to admins (admins can replace the persona photo).
+        officialCharacterId: p.user_id === auth.userId || auth.email === ADMIN_EMAIL ? officialId : undefined,
       });
     } catch (err: any) {
       console.error("[profile GET]", err?.message, err?.stack);

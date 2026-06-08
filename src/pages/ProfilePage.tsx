@@ -26,6 +26,7 @@ import VerificationDialog from "@/components/VerificationDialog";
 import HolderBadge from "@/components/HolderBadge";
 import { useToast } from "@/hooks/use-toast";
 import { uploadPublicMedia } from "@/lib/mediaUpload";
+import { normalizeToImageBlob } from "@/lib/heicConvert";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import MobileCreditsPill from "@/components/MobileCreditsPill";
 import StoreOverlay from "@/components/StoreOverlay";
@@ -100,6 +101,8 @@ const ProfilePage: React.FC = () => {
   const [banLoading, setBanLoading] = useState(false);
   const [verifyOpen, setVerifyOpen] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
+  const personaPhotoInputRef = useRef<HTMLInputElement>(null);
+  const [personaPhotoUploading, setPersonaPhotoUploading] = useState(false);
   const fetchProfile = useCallback(async () => {
     try {
       const query = username ? `?username=${encodeURIComponent(username)}` : "";
@@ -186,6 +189,39 @@ const ProfilePage: React.FC = () => {
       if (avatarInputRef.current) avatarInputRef.current.value = "";
     }
   }, [toast, fetchProfile]);
+
+  // Admin: replace a featured creator's persona character photo.
+  const handlePersonaPhoto = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !profile?.officialCharacterId) return;
+    setPersonaPhotoUploading(true);
+    try {
+      const maxDim = 512;
+      const sourceBlob = await normalizeToImageBlob(file, 0.85);
+      const bitmap = await createImageBitmap(sourceBlob);
+      let w = bitmap.width, h = bitmap.height;
+      if (w > maxDim || h > maxDim) {
+        const s = maxDim / Math.max(w, h);
+        w = Math.round(w * s); h = Math.round(h * s);
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      canvas.getContext("2d")?.drawImage(bitmap, 0, 0, w, h);
+      bitmap.close();
+      const portrait = canvas.toDataURL("image/jpeg", 0.85);
+      await apiFetch("/characters", {
+        method: "POST",
+        body: { action: "admin-set-portrait", characterId: profile.officialCharacterId, portrait, alsoAvatar: true },
+      });
+      toast({ title: "Persona photo updated" });
+      fetchProfile();
+    } catch (err: any) {
+      toast({ title: err?.message || "Could not update photo", variant: "destructive" });
+    } finally {
+      setPersonaPhotoUploading(false);
+      if (personaPhotoInputRef.current) personaPhotoInputRef.current.value = "";
+    }
+  }, [profile?.officialCharacterId, toast, fetchProfile]);
 
   const handleFollow = async () => {
     if (!profile) return;
@@ -490,6 +526,36 @@ const ProfilePage: React.FC = () => {
         {profile.isOwn && <EarningsPanel />}
 
         {profile.isOwn && <CreatorPersonaChatPanel />}
+
+        {/* Admin: replace this creator's persona character photo */}
+        {!profile.isOwn && user?.is_admin && profile.officialCharacterId && (
+          <div className="bg-card/60 border border-border/40 rounded-lg p-3 flex items-center gap-3">
+            <div className="w-10 h-10 rounded overflow-hidden bg-muted/30 shrink-0 border border-border/40">
+              {profile.avatarUrl && <img src={profile.avatarUrl} alt="persona" className="w-full h-full object-cover" />}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-orbitron text-[11px] text-foreground tracking-wider">PERSONA PHOTO</div>
+              <div className="font-mono-share text-[9px] text-muted-foreground">Admin: replace this creator's chat character photo</div>
+            </div>
+            <input
+              ref={personaPhotoInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handlePersonaPhoto}
+            />
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => personaPhotoInputRef.current?.click()}
+              disabled={personaPhotoUploading}
+              className="font-mono-share text-[10px] gap-1.5 h-8 shrink-0"
+            >
+              {personaPhotoUploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Camera className="w-3 h-3" />}
+              {personaPhotoUploading ? "UPLOADING…" : "CHANGE PHOTO"}
+            </Button>
+          </div>
+        )}
 
         {/* Admin inspector (admins viewing other users) */}
         {!profile.isOwn && user?.is_admin && <AdminUserPanel userId={profile.userId} />}
