@@ -15,6 +15,9 @@ interface EarningsSummary {
   charityCredits: number;
   charityCents: number;
   cashBalanceCents: number;
+  chatEarningsCents: number;
+  chatMessages: number;
+  chatMedia: number;
   postUnlocks: number;
   storyUnlocks: number;
   totalXrgeEarned: number;
@@ -128,7 +131,7 @@ const EarningsPanel: React.FC = () => {
 
   // Show verification CTA even with no earnings yet — but only if user is unverified.
   // Hide entirely only when both no earnings AND already verified (nothing useful to show).
-  const noEarnings = !data || (data.summary.postUnlocks === 0 && data.summary.storyUnlocks === 0 && data.summary.xrgeUnlocks === 0);
+  const noEarnings = !data || (data.summary.postUnlocks === 0 && data.summary.storyUnlocks === 0 && data.summary.xrgeUnlocks === 0 && (data.summary.chatEarningsCents || 0) === 0);
   if (noEarnings && isVerified) {
     return null;
   }
@@ -283,6 +286,23 @@ const EarningsPanel: React.FC = () => {
           </div>
           <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5">
             {s.xrgeUnlocks} unlock{s.xrgeUnlocks !== 1 ? "s" : ""} · instant to your bank
+          </div>
+        </div>
+      )}
+
+      {/* Chat persona earnings card */}
+      {(s.chatEarningsCents > 0 || s.chatMessages > 0 || s.chatMedia > 0) && (
+        <div className="bg-background/50 rounded-md p-3 border border-border/30">
+          <div className="flex items-center gap-1.5 mb-1">
+            <DollarSign className="w-3 h-3 text-green-400" />
+            <span className="font-mono-share text-[9px] text-muted-foreground tracking-widest">CHAT EARNINGS</span>
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className="font-orbitron text-lg text-green-400">{fmtCents(s.chatEarningsCents)}</span>
+            <span className="font-mono-share text-[10px] text-muted-foreground">75% of fan spend</span>
+          </div>
+          <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5">
+            {s.chatMessages} paid message{s.chatMessages !== 1 ? "s" : ""} · {s.chatMedia} photo/video{s.chatMedia !== 1 ? "s" : ""} sent
           </div>
         </div>
       )}
