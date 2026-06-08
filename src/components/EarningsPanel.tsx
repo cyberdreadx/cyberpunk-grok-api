@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { apiFetch } from "@/lib/api";
-import { DollarSign, Coins, Heart, TrendingUp, Loader2, Wallet, ArrowDownToLine, Zap, BadgeCheck, ShieldAlert } from "lucide-react";
+import { DollarSign, Coins, Heart, TrendingUp, Loader2, Wallet, ArrowDownToLine, Zap, BadgeCheck, ShieldAlert, Landmark } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -56,6 +56,14 @@ interface PayoutData {
   requests: PayoutRequest[];
 }
 
+interface ConnectStatus {
+  enabled: boolean;
+  accountId: string | null;
+  payoutsEnabled: boolean;
+  detailsSubmitted: boolean;
+  chargesEnabled: boolean;
+}
+
 const EarningsPanel: React.FC = () => {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -64,21 +72,25 @@ const EarningsPanel: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showWithdraw, setShowWithdraw] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState("");
-  const [withdrawMethod, setWithdrawMethod] = useState<"xrge" | "paypal" | "bank" | "crypto">("xrge");
+  const [withdrawMethod, setWithdrawMethod] = useState<"xrge" | "stripe" | "paypal" | "bank" | "crypto">("xrge");
   const [withdrawDetails, setWithdrawDetails] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [connect, setConnect] = useState<ConnectStatus | null>(null);
+  const [connecting, setConnecting] = useState(false);
   const [verifyOpen, setVerifyOpen] = useState(false);
   const isVerified = !!user?.is_verified;
   const verificationStatus = user?.verification_status || "unverified";
 
   const fetchData = useCallback(async () => {
     try {
-      const [earnings, payouts] = await Promise.all([
+      const [earnings, payouts, connectStatus] = await Promise.all([
         apiFetch<EarningsData>("/earnings"),
         apiFetch<PayoutData>("/payouts").catch(() => null),
+        apiFetch<ConnectStatus>("/connect").catch(() => null),
       ]);
       setData(earnings);
       setPayoutData(payouts);
+      setConnect(connectStatus);
     } catch {
       // silently fail
     } finally {
@@ -88,15 +100,16 @@ const EarningsPanel: React.FC = () => {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  const needsDetails = !["xrge", "stripe"].includes(withdrawMethod);
+
   const handleWithdraw = async () => {
-    const isXrge = withdrawMethod === "xrge";
-    const minCents = isXrge ? 100 : (payoutData?.minPayoutCents || 2500);
+    const minCents = withdrawMethod === "xrge" ? 100 : withdrawMethod === "stripe" ? 500 : (payoutData?.minPayoutCents || 2500);
     const cents = Math.round(parseFloat(withdrawAmount) * 100);
     if (!cents || cents < minCents) {
       toast({ title: `Minimum withdrawal is $${(minCents / 100).toFixed(2)}`, variant: "destructive" });
       return;
     }
-    if (!isXrge && !withdrawDetails.trim()) {
+    if (needsDetails && !withdrawDetails.trim()) {
       toast({ title: "Enter your payout details", variant: "destructive" });
       return;
     }
@@ -104,10 +117,12 @@ const EarningsPanel: React.FC = () => {
     try {
       const result = await apiFetch<any>("/payouts", {
         method: "POST",
-        body: { amountCents: cents, method: withdrawMethod, payoutDetails: isXrge ? "" : withdrawDetails.trim() },
+        body: { amountCents: cents, method: withdrawMethod, payoutDetails: needsDetails ? withdrawDetails.trim() : "" },
       });
-      if (result.instant) {
+      if (result.instant && withdrawMethod === "xrge") {
         toast({ title: `Instant payout! ${result.xrgeAmount} XRGE added to your bank` });
+      } else if (result.instant) {
+        toast({ title: `Payout sent! $${((result.amountCents || cents) / 100).toFixed(2)} on its way to your bank.` });
       } else {
         toast({ title: "Withdrawal request submitted!" });
       }
@@ -119,6 +134,19 @@ const EarningsPanel: React.FC = () => {
       toast({ title: err.message, variant: "destructive" });
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleConnectOnboard = async () => {
+    setConnecting(true);
+    try {
+      const result = await apiFetch<{ url: string }>("/connect", { method: "POST", body: { action: "onboard" } });
+      if (result?.url) window.location.href = result.url;
+      else toast({ title: "Could not start Stripe setup", variant: "destructive" });
+    } catch (err: any) {
+      toast({ title: err.message || "Stripe setup unavailable", variant: "destructive" });
+    } finally {
+      setConnecting(false);
     }
   };
 
@@ -339,7 +367,7 @@ const EarningsPanel: React.FC = () => {
           <div>
             <label className="font-mono-share text-[9px] text-muted-foreground">PAYOUT METHOD</label>
             <div className="flex flex-wrap gap-2 mt-1">
-              {(["xrge", "paypal", "bank", "crypto"] as const).map((m) => (
+              {(["xrge", "stripe", "paypal", "bank", "crypto"] as const).map((m) => (
                 <button
                   key={m}
                   onClick={() => setWithdrawMethod(m)}
@@ -350,7 +378,8 @@ const EarningsPanel: React.FC = () => {
                   }`}
                 >
                   {m === "xrge" && <Zap className="w-3 h-3" />}
-                  {m === "xrge" ? "$XRGE INSTANT" : m.toUpperCase()}
+                  {m === "stripe" && <Landmark className="w-3 h-3" />}
+                  {m === "xrge" ? "$XRGE INSTANT" : m === "stripe" ? "BANK (AUTO)" : m.toUpperCase()}
                 </button>
               ))}
             </div>
@@ -359,51 +388,72 @@ const EarningsPanel: React.FC = () => {
                 ⚡ Instant — converts cash to XRGE at live rate, credited to your XRGE bank. Min $1.00
               </p>
             )}
-            {withdrawMethod !== "xrge" && (
+            {withdrawMethod === "stripe" && (
+              <p className="font-mono-share text-[8px] text-primary/70 mt-1">
+                ⚡ Instant payout to your bank via Stripe. Min $5.00
+              </p>
+            )}
+            {!["xrge", "stripe"].includes(withdrawMethod) && (
               <p className="font-mono-share text-[8px] text-muted-foreground mt-1">
                 Manual review — processed within 48h. Min $25.00
               </p>
             )}
           </div>
 
-          <div>
-            <label className="font-mono-share text-[9px] text-muted-foreground">AMOUNT (USD)</label>
-            <Input
-              type="number"
-              min={0.01}
-              step={0.01}
-              max={(s.cashBalanceCents / 100)}
-              value={withdrawAmount}
-              onChange={(e) => setWithdrawAmount(e.target.value)}
-              placeholder={withdrawMethod === "xrge" ? "Min $1.00" : `Min $${((payoutData?.minPayoutCents || 2500) / 100).toFixed(2)}`}
-              className="h-8 font-mono-share text-sm bg-input/50"
-            />
-          </div>
-
-          {withdrawMethod !== "xrge" && (
-            <div>
-              <label className="font-mono-share text-[9px] text-muted-foreground">
-                {withdrawMethod === "paypal" ? "PAYPAL EMAIL" : withdrawMethod === "bank" ? "BANK DETAILS" : "WALLET ADDRESS"}
-              </label>
-              <Input
-                value={withdrawDetails}
-                onChange={(e) => setWithdrawDetails(e.target.value)}
-                placeholder={
-                  withdrawMethod === "paypal" ? "your@email.com" : withdrawMethod === "bank" ? "Routing + Account number" : "0x... or wallet address"
-                }
-                className="h-8 font-mono-share text-sm bg-input/50"
-              />
+          {withdrawMethod === "stripe" && !connect?.payoutsEnabled ? (
+            <div className="bg-primary/5 border border-primary/30 rounded-md p-3 space-y-2">
+              <p className="font-mono-share text-[10px] text-muted-foreground">
+                {connect?.enabled
+                  ? "Finish your Stripe onboarding to enable instant bank payouts."
+                  : "Connect your bank with Stripe to enable instant payouts straight to your account."}
+              </p>
+              <Button size="sm" onClick={handleConnectOnboard} disabled={connecting} className="w-full font-mono-share text-[10px]">
+                <Landmark className="w-3.5 h-3.5 mr-2" />
+                {connecting ? "OPENING STRIPE..." : connect?.enabled ? "FINISH STRIPE SETUP" : "SET UP BANK PAYOUTS"}
+              </Button>
             </div>
-          )}
+          ) : (
+            <>
+              <div>
+                <label className="font-mono-share text-[9px] text-muted-foreground">AMOUNT (USD)</label>
+                <Input
+                  type="number"
+                  min={0.01}
+                  step={0.01}
+                  max={(s.cashBalanceCents / 100)}
+                  value={withdrawAmount}
+                  onChange={(e) => setWithdrawAmount(e.target.value)}
+                  placeholder={withdrawMethod === "xrge" ? "Min $1.00" : withdrawMethod === "stripe" ? "Min $5.00" : `Min $${((payoutData?.minPayoutCents || 2500) / 100).toFixed(2)}`}
+                  className="h-8 font-mono-share text-sm bg-input/50"
+                />
+              </div>
 
-          <div className="flex gap-2">
-            <Button size="sm" onClick={handleWithdraw} disabled={submitting} className="font-mono-share text-[10px]">
-              {submitting ? "PROCESSING..." : withdrawMethod === "xrge" ? "⚡ INSTANT PAYOUT" : "SUBMIT REQUEST"}
-            </Button>
-            <Button size="sm" variant="ghost" onClick={() => setShowWithdraw(false)} className="font-mono-share text-[10px]">
-              CANCEL
-            </Button>
-          </div>
+              {needsDetails && (
+                <div>
+                  <label className="font-mono-share text-[9px] text-muted-foreground">
+                    {withdrawMethod === "paypal" ? "PAYPAL EMAIL" : withdrawMethod === "bank" ? "BANK DETAILS" : "WALLET ADDRESS"}
+                  </label>
+                  <Input
+                    value={withdrawDetails}
+                    onChange={(e) => setWithdrawDetails(e.target.value)}
+                    placeholder={
+                      withdrawMethod === "paypal" ? "your@email.com" : withdrawMethod === "bank" ? "Routing + Account number" : "0x... or wallet address"
+                    }
+                    className="h-8 font-mono-share text-sm bg-input/50"
+                  />
+                </div>
+              )}
+
+              <div className="flex gap-2">
+                <Button size="sm" onClick={handleWithdraw} disabled={submitting} className="font-mono-share text-[10px]">
+                  {submitting ? "PROCESSING..." : withdrawMethod === "xrge" ? "⚡ INSTANT PAYOUT" : withdrawMethod === "stripe" ? "⚡ SEND TO BANK" : "SUBMIT REQUEST"}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setShowWithdraw(false)} className="font-mono-share text-[10px]">
+                  CANCEL
+                </Button>
+              </div>
+            </>
+          )}
         </div>
       )}
 

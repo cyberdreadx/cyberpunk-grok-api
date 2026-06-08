@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import Stripe from "stripe";
 import { getDb } from "./_lib/db";
 import { getUserFromRequest, ADMIN_EMAIL } from "./_lib/auth";
 import { checkRateLimit } from "./_lib/ratelimit";
@@ -8,6 +9,7 @@ import { sendPayoutRequestedAdminEmail, sendPayoutPaidEmail, sendPayoutRejectedE
 
 const MIN_PAYOUT_CENTS = 2500; // $25
 const MIN_XRGE_PAYOUT_CENTS = 100; // $1 min for instant XRGE
+const MIN_STRIPE_PAYOUT_CENTS = 500; // $5 min for instant Stripe Connect transfer
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -87,7 +89,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const { amountCents, method, payoutDetails } = req.body || {};
       const amount = parseInt(amountCents) || 0;
       const isXrge = method === "xrge";
-      const minAmount = isXrge ? MIN_XRGE_PAYOUT_CENTS : MIN_PAYOUT_CENTS;
+      const isStripe = method === "stripe";
+      const minAmount = isXrge ? MIN_XRGE_PAYOUT_CENTS : isStripe ? MIN_STRIPE_PAYOUT_CENTS : MIN_PAYOUT_CENTS;
 
       if (amount < minAmount) {
         return res.status(400).json({ error: `Minimum payout is $${(minAmount / 100).toFixed(2)}` });
@@ -95,17 +98,68 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (!method) {
         return res.status(400).json({ error: "Payment method is required" });
       }
-      if (!["paypal", "bank", "crypto", "xrge"].includes(method)) {
+      if (!["paypal", "bank", "crypto", "xrge", "stripe"].includes(method)) {
         return res.status(400).json({ error: "Invalid payout method" });
       }
-      if (!isXrge && !payoutDetails?.trim()) {
+      // paypal/bank/crypto need free-text details; xrge & stripe are automated.
+      if (!isXrge && !isStripe && !payoutDetails?.trim()) {
         return res.status(400).json({ error: "Payment details are required" });
       }
 
       // Check balance
-      const [user] = await sql`SELECT cash_balance_cents, xrge_bank_balance FROM users WHERE id = ${auth.userId}::uuid`;
+      const [user] = await sql`SELECT cash_balance_cents, xrge_bank_balance, stripe_connect_account_id FROM users WHERE id = ${auth.userId}::uuid`;
       if (!user || (user.cash_balance_cents || 0) < amount) {
         return res.status(402).json({ error: "Insufficient cash balance" });
+      }
+
+      // Stripe Connect instant payout — transfer from platform balance to the
+      // creator's connected (Express) account; Stripe then pays to their bank.
+      if (isStripe) {
+        const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
+        if (!STRIPE_SECRET_KEY) return res.status(500).json({ error: "Stripe not configured" });
+        const acctId = user.stripe_connect_account_id;
+        if (!acctId) {
+          return res.status(400).json({ error: "Set up Stripe payouts first.", code: "CONNECT_REQUIRED" });
+        }
+        const stripe = new Stripe(STRIPE_SECRET_KEY);
+
+        // Confirm the connected account can actually receive payouts.
+        try {
+          const acct = await stripe.accounts.retrieve(acctId);
+          if (!acct.payouts_enabled) {
+            return res.status(400).json({ error: "Finish your Stripe onboarding before withdrawing.", code: "CONNECT_INCOMPLETE" });
+          }
+        } catch (e: any) {
+          return res.status(502).json({ error: e?.message || "Could not verify Stripe account" });
+        }
+
+        // Deduct first (atomic, race-safe), then transfer; refund on failure.
+        const [deducted] = await sql`
+          UPDATE users SET cash_balance_cents = cash_balance_cents - ${amount}, updated_at = now()
+          WHERE id = ${auth.userId}::uuid AND cash_balance_cents >= ${amount}
+          RETURNING id
+        `;
+        if (!deducted) return res.status(402).json({ error: "Insufficient cash balance" });
+
+        try {
+          const transfer = await stripe.transfers.create({
+            amount,
+            currency: "usd",
+            destination: acctId,
+            metadata: { userId: auth.userId, kind: "creator_payout" },
+          });
+          const [row] = await sql`
+            INSERT INTO payout_requests (user_id, amount_cents, method, payout_details, status, reviewed_at, paid_at)
+            VALUES (${auth.userId}::uuid, ${amount}, 'stripe', ${"Stripe transfer " + transfer.id}, 'paid', now(), now())
+            RETURNING id
+          `;
+          return res.status(200).json({ id: row.id, instant: true, method: "stripe", transferId: transfer.id, amountCents: amount });
+        } catch (e: any) {
+          // Refund the deduction — transfer never went through.
+          await sql`UPDATE users SET cash_balance_cents = cash_balance_cents + ${amount}, updated_at = now() WHERE id = ${auth.userId}::uuid`;
+          console.error("[payouts] stripe transfer failed:", e?.message);
+          return res.status(502).json({ error: e?.message || "Stripe transfer failed — balance refunded." });
+        }
       }
 
       // XRGE instant payout — convert cash to XRGE bank balance immediately
