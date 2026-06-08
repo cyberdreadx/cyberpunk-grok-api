@@ -275,6 +275,13 @@ export async function handleCharacterChatMessage(
   }
 
   // ── Billing after successful reply ──
+  // `billing` is returned to the client so the chat UI can show the cost and
+  // refresh the visible balance (otherwise the charge is invisible to the fan).
+  let billing: { amount: number; kind: "message" | "image" | "video"; free: boolean } = {
+    amount: 0,
+    kind: mediaTrigger ? mediaTrigger.type : "message",
+    free: true,
+  };
   if (!isOwner && !isAdmin) {
     try {
       // Credit the creator their 75% cut as withdrawable cash (cents) + log it.
@@ -309,6 +316,7 @@ export async function handleCharacterChatMessage(
         const price = mediaTrigger.type === "video" ? VIDEO_PRICE : PHOTO_PRICE;
         await deductCredits(sql, auth.userId, price);
         await creditCreator(mediaTrigger.type, price);
+        billing = { amount: price, kind: mediaTrigger.type, free: false };
       } else if (isOfficialPersona) {
         const today = utcToday();
         const upd = await sql`
@@ -326,13 +334,18 @@ export async function handleCharacterChatMessage(
           RETURNING id
         `;
         if (upd.length === 0) {
+          // Free allowance exhausted for today → charge BASE_COST.
           const cost = await discountedCostForUser(auth.userId, BASE_COST);
           await deductCredits(sql, auth.userId, cost);
           await creditCreator("message", cost);
+          billing = { amount: cost, kind: "message", free: false };
+        } else {
+          billing = { amount: 0, kind: "message", free: true };
         }
       } else {
         const cost = await discountedCostForUser(auth.userId, BASE_COST);
         await deductCredits(sql, auth.userId, cost);
+        billing = { amount: cost, kind: "message", free: false };
       }
     } catch (billErr: any) {
       console.error("[character-chat] billing failed after reply", billErr?.message);
@@ -345,5 +358,5 @@ export async function handleCharacterChatMessage(
     }
   }
 
-  res.status(200).json({ reply, mediaTrigger });
+  res.status(200).json({ reply, mediaTrigger, billing });
 }

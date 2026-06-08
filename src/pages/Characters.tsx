@@ -683,10 +683,25 @@ export default function Characters() {
       };
       if (attachedImage) apiBody.imageBase64 = attachedImage;
 
-      const data = await apiFetch<{ reply: string; mediaTrigger?: { type: "image" | "video"; prompt: string; videoLora?: string; videoLoraStrength?: number; cameraAngle?: string } }>("/character-chat", {
+      const data = await apiFetch<{
+        reply: string;
+        mediaTrigger?: { type: "image" | "video"; prompt: string; videoLora?: string; videoLoraStrength?: number; cameraAngle?: string };
+        billing?: { amount: number; kind: "message" | "image" | "video"; free: boolean };
+      }>("/character-chat", {
         method: "POST",
         body: apiBody,
       });
+
+      // Reflect the charge: refresh the visible balance and (when charged) show the cost.
+      if (data.billing && data.billing.amount > 0) {
+        window.dispatchEvent(new Event("credits-changed"));
+        const label =
+          data.billing.kind === "video" ? "video" : data.billing.kind === "image" ? "photo" : "message";
+        toast({
+          title: `−${data.billing.amount} credit${data.billing.amount === 1 ? "" : "s"}`,
+          description: `Charged for ${label}.`,
+        });
+      }
 
       const cleaned = sanitizeAssistantReply(data.reply);
       const typingDelayMs = Math.min(
