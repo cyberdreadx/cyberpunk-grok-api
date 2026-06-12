@@ -30,6 +30,7 @@ import FeatureExplainer from "@/components/FeatureExplainer";
 import ReelViewer from "@/components/ReelViewer";
 import StoriesBar from "@/components/StoriesBar";
 import SignupTeaser from "@/components/SignupTeaser";
+import CommandCenterLanding from "@/components/landing/CommandCenterLanding";
 import StoreOverlay from "@/components/StoreOverlay";
 import PreferencesDialog from "@/components/PreferencesDialog";
 import LibraryPicker from "@/components/LibraryPicker";
@@ -712,6 +713,11 @@ const FeedPage: React.FC = () => {
       ))}
     </div>
   );
+
+  /* ───── LOGGED-OUT LANDING — cyberpunk command center ───── */
+  if (!authLoading && !isAuthenticated) {
+    return <CommandCenterLanding />;
+  }
 
   /* ───── MOBILE GRID VIEW ───── */
   if (isMobile) {
