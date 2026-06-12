@@ -5,41 +5,45 @@
 @tailwind utilities;
 
 @layer base {
+  /* Mission-control palette: near-black surfaces, neutral steel chrome,
+     strategic red as THE accent (ember as the warm secondary).
+     Legacy var names (--neon-cyan etc.) are kept so existing class names
+     keep working — only the colors they resolve to changed. */
   :root {
-    --background: 240 15% 5%;
-    --foreground: 180 100% 85%;
+    --background: 240 7% 3%;
+    --foreground: 220 14% 93%;
 
-    --card: 240 12% 8%;
-    --card-foreground: 180 100% 85%;
+    --card: 240 6% 6%;
+    --card-foreground: 220 14% 93%;
 
-    --popover: 240 15% 7%;
-    --popover-foreground: 180 100% 85%;
+    --popover: 240 7% 5%;
+    --popover-foreground: 220 14% 93%;
 
-    --primary: 180 100% 50%;
-    --primary-foreground: 240 15% 5%;
+    --primary: 0 88% 56%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 300 100% 60%;
-    --secondary-foreground: 240 15% 5%;
+    --secondary: 14 100% 60%;
+    --secondary-foreground: 240 7% 3%;
 
-    --muted: 240 10% 15%;
-    --muted-foreground: 180 30% 55%;
+    --muted: 240 6% 13%;
+    --muted-foreground: 220 8% 62%;
 
-    --accent: 270 100% 65%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 0 50% 24%;
+    --accent-foreground: 0 0% 98%;
 
     --destructive: 0 80% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 180 60% 20%;
-    --input: 240 12% 12%;
-    --ring: 180 100% 50%;
+    --border: 220 8% 20%;
+    --input: 240 6% 11%;
+    --ring: 0 88% 56%;
 
     --radius: 0.25rem;
 
-    --neon-cyan: 180 100% 50%;
-    --neon-magenta: 300 100% 60%;
-    --neon-purple: 270 100% 65%;
-    --neon-yellow: 55 100% 55%;
+    --neon-cyan: 0 88% 56%;     /* legacy name — now signal red */
+    --neon-magenta: 14 100% 60%; /* legacy name — now ember */
+    --neon-purple: 220 12% 75%;  /* legacy name — now steel */
+    --neon-yellow: 38 100% 55%;
     --neon-red: 0 100% 55%;
 
     /* ── IMMERSION CONTROL (MKULTRA Research Inspired) ── */
@@ -50,18 +54,18 @@
     --immersion-scanline: 0.16;
     --immersion-vignette: 0.4;
 
-    --glow-cyan: 0 0 10px hsl(180 100% 50% / 0.5), 0 0 30px hsl(180 100% 50% / 0.2);
-    --glow-magenta: 0 0 10px hsl(300 100% 60% / 0.5), 0 0 30px hsl(300 100% 60% / 0.2);
-    --glow-purple: 0 0 10px hsl(270 100% 65% / 0.5), 0 0 30px hsl(270 100% 65% / 0.2);
+    --glow-cyan: 0 0 10px hsl(0 88% 56% / 0.5), 0 0 30px hsl(0 88% 56% / 0.2);
+    --glow-magenta: 0 0 10px hsl(14 100% 60% / 0.5), 0 0 30px hsl(14 100% 60% / 0.2);
+    --glow-purple: 0 0 10px hsl(220 12% 75% / 0.4), 0 0 30px hsl(220 12% 75% / 0.15);
 
-    --sidebar-background: 240 15% 7%;
-    --sidebar-foreground: 180 100% 85%;
-    --sidebar-primary: 180 100% 50%;
-    --sidebar-primary-foreground: 240 15% 5%;
-    --sidebar-accent: 270 100% 65%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 180 60% 20%;
-    --sidebar-ring: 180 100% 50%;
+    --sidebar-background: 240 7% 4%;
+    --sidebar-foreground: 220 14% 93%;
+    --sidebar-primary: 0 88% 56%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 50% 24%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 220 8% 18%;
+    --sidebar-ring: 0 88% 56%;
   }
 }
 

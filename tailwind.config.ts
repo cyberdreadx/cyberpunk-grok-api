@@ -20,6 +20,36 @@ export default {
         jetbrains: ["JetBrains Mono", "monospace"],
       },
       colors: {
+        /* Mission-control re-skin: components written against the old neon
+           palette (text-cyan-400, border-pink-500, bg-purple-900/40, ...)
+           pick up the new identity without touching every call site.
+           cyan → signal red · pink/fuchsia → ember · purple/violet → steel.
+           green/amber/red/yellow stay stock (semantic success/warn/error). */
+        cyan: {
+          50: "#fef1f2", 100: "#fee5e7", 200: "#fccfd3", 300: "#faa7ae",
+          400: "#f56d79", 500: "#ef3b4b", 600: "#db1f33", 700: "#b9152a",
+          800: "#9b1428", 900: "#851727", 950: "#4a0710",
+        },
+        pink: {
+          50: "#fff4ed", 100: "#ffe6d8", 200: "#ffc9ad", 300: "#ffa177",
+          400: "#ff6f3d", 500: "#fa5b27", 600: "#eb3f12", 700: "#c32f0e",
+          800: "#9b2813", 900: "#7d2413", 950: "#440f07",
+        },
+        fuchsia: {
+          50: "#fff4ed", 100: "#ffe6d8", 200: "#ffc9ad", 300: "#ffa177",
+          400: "#ff6f3d", 500: "#fa5b27", 600: "#eb3f12", 700: "#c32f0e",
+          800: "#9b2813", 900: "#7d2413", 950: "#440f07",
+        },
+        purple: {
+          50: "#f7f8fa", 100: "#eef0f4", 200: "#d9dde5", 300: "#b9c0cd",
+          400: "#939db0", 500: "#758096", 600: "#5d677c", 700: "#4c5465",
+          800: "#414855", 900: "#393e49", 950: "#262931",
+        },
+        violet: {
+          50: "#f7f8fa", 100: "#eef0f4", 200: "#d9dde5", 300: "#b9c0cd",
+          400: "#939db0", 500: "#758096", 600: "#5d677c", 700: "#4c5465",
+          800: "#414855", 900: "#393e49", 950: "#262931",
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

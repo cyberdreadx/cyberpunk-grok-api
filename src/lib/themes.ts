@@ -29,6 +29,39 @@ export function isBareThemeId(id: string): boolean {
 
 export const THEMES: CyberTheme[] = [
   {
+    id: "command",
+    name: "COMMAND_CENTER",
+    label: "Black + signal red mission control",
+    swatch: "#ef3b4b",
+    vars: {
+      "--background": "240 7% 3%",
+      "--foreground": "220 14% 93%",
+      "--card": "240 6% 6%",
+      "--card-foreground": "220 14% 93%",
+      "--popover": "240 7% 5%",
+      "--popover-foreground": "220 14% 93%",
+      "--primary": "0 88% 56%",
+      "--primary-foreground": "0 0% 100%",
+      "--secondary": "14 100% 60%",
+      "--secondary-foreground": "240 7% 3%",
+      "--muted": "240 6% 13%",
+      "--muted-foreground": "220 8% 62%",
+      "--accent": "0 50% 24%",
+      "--accent-foreground": "0 0% 98%",
+      "--border": "220 8% 20%",
+      "--input": "240 6% 11%",
+      "--ring": "0 88% 56%",
+      "--neon-cyan": "0 88% 56%",
+      "--neon-magenta": "14 100% 60%",
+      "--neon-purple": "220 12% 75%",
+      "--neon-yellow": "38 100% 55%",
+      "--neon-red": "0 100% 55%",
+      "--glow-cyan": "0 0 10px hsl(0 88% 56% / 0.5), 0 0 30px hsl(0 88% 56% / 0.2)",
+      "--glow-magenta": "0 0 10px hsl(14 100% 60% / 0.5), 0 0 30px hsl(14 100% 60% / 0.2)",
+      "--glow-purple": "0 0 10px hsl(220 12% 75% / 0.4), 0 0 30px hsl(220 12% 75% / 0.15)",
+    },
+  },
+  {
     id: "neon",
     name: "NEON_CIRCUIT",
     label: "Original cyan/magenta neon",
@@ -229,6 +262,7 @@ export const THEMES: CyberTheme[] = [
 ];
 
 const THEME_KEY = "cyber-theme";
+const THEME_MIGRATED_KEY = "cyber-theme-migrated-command";
 
 /** Apply palette + `data-cyber-theme` only (use before React paint; no network). */
 export function applyThemeVisuals(theme: CyberTheme): void {
@@ -241,9 +275,20 @@ export function applyThemeVisuals(theme: CyberTheme): void {
 
 export function getStoredThemeId(): string {
   try {
-    return localStorage.getItem(THEME_KEY) || "neon";
+    const stored = localStorage.getItem(THEME_KEY);
+    if (!stored) return "command";
+    // One-time rebrand migration: "neon" was the old default and was
+    // auto-persisted by the picker, so a stored "neon" usually wasn't a
+    // deliberate choice. Move it to the new default once; re-selecting
+    // NEON_CIRCUIT afterwards sticks because the flag is set.
+    if (stored === "neon" && !localStorage.getItem(THEME_MIGRATED_KEY)) {
+      localStorage.setItem(THEME_MIGRATED_KEY, "1");
+      localStorage.setItem(THEME_KEY, "command");
+      return "command";
+    }
+    return stored;
   } catch {
-    return "neon";
+    return "command";
   }
 }
 
@@ -255,6 +300,8 @@ export function applyTheme(theme: CyberTheme): void {
   applyThemeVisuals(theme);
   try {
     localStorage.setItem(THEME_KEY, theme.id);
+    // Explicit choice — never auto-migrate it afterwards.
+    localStorage.setItem(THEME_MIGRATED_KEY, "1");
   } catch { /* quota exceeded */ }
   if (isBareThemeId(theme.id)) {
     applyImmersionToRoot(BARE_IMMERSION);

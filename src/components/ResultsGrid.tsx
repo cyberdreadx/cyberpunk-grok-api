@@ -1948,21 +1948,21 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
             <div className="relative flex items-center justify-center w-20 h-20">
               {/* Outer ring */}
               <svg className="absolute inset-0 w-full h-full loader-ring-spin" viewBox="0 0 80 80" fill="none">
-                <circle cx="40" cy="40" r="36" stroke={loadingPhase ? "hsl(270 100% 65% / 0.15)" : "hsl(180 100% 50% / 0.15)"} strokeWidth="2" />
+                <circle cx="40" cy="40" r="36" stroke={loadingPhase ? "hsl(var(--neon-purple) / 0.15)" : "hsl(var(--primary) / 0.15)"} strokeWidth="2" />
                 <circle
                   cx="40" cy="40" r="36"
-                  stroke={loadingPhase ? "hsl(270 100% 65%)" : "hsl(180 100% 50%)"}
+                  stroke={loadingPhase ? "hsl(var(--neon-purple))" : "hsl(var(--primary))"}
                   strokeWidth="2"
                   strokeLinecap="round"
                   strokeDasharray="60 166"
-                  style={{ filter: `drop-shadow(0 0 4px ${loadingPhase ? "hsl(270 100% 65% / 0.8)" : "hsl(180 100% 50% / 0.8)"})` }}
+                  style={{ filter: `drop-shadow(0 0 4px ${loadingPhase ? "hsl(var(--neon-purple) / 0.8)" : "hsl(var(--primary) / 0.8)"})` }}
                 />
               </svg>
               {/* Inner counter-ring */}
               <svg className="absolute inset-2 w-[calc(100%-16px)] h-[calc(100%-16px)] loader-ring-counter" viewBox="0 0 48 48" fill="none">
                 <circle
                   cx="24" cy="24" r="20"
-                  stroke={loadingPhase ? "hsl(300 100% 60% / 0.5)" : "hsl(180 100% 50% / 0.35)"}
+                  stroke={loadingPhase ? "hsl(var(--secondary) / 0.5)" : "hsl(var(--primary) / 0.35)"}
                   strokeWidth="1"
                   strokeLinecap="round"
                   strokeDasharray="20 106"

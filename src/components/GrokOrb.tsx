@@ -17,8 +17,8 @@ const CSSOrb: React.FC<{ isGenerating: boolean }> = ({ isGenerating }) => (
         width: "80%",
         height: "80%",
         background: isGenerating
-          ? "radial-gradient(circle, hsl(300 100% 60% / 0.35), hsl(180 100% 50% / 0.15), transparent 70%)"
-          : "radial-gradient(circle, hsl(180 100% 50% / 0.25), transparent 70%)",
+          ? "radial-gradient(circle, hsl(var(--secondary) / 0.35), hsl(var(--primary) / 0.15), transparent 70%)"
+          : "radial-gradient(circle, hsl(var(--primary) / 0.25), transparent 70%)",
         filter: "blur(20px)",
         animation: isGenerating ? "cssorb-pulse 2s ease-in-out infinite" : undefined,
       }}
@@ -29,11 +29,11 @@ const CSSOrb: React.FC<{ isGenerating: boolean }> = ({ isGenerating }) => (
         width: "55%",
         height: "55%",
         background: isGenerating
-          ? "radial-gradient(circle at 35% 35%, hsl(180 100% 70%), hsl(270 80% 55%) 60%, hsl(300 100% 40%) 100%)"
+          ? "radial-gradient(circle at 35% 35%, hsl(var(--primary)), hsl(270 80% 55%) 60%, hsl(300 100% 40%) 100%)"
           : "radial-gradient(circle at 35% 35%, hsl(180 100% 65%), hsl(200 80% 40%) 70%, hsl(220 60% 25%) 100%)",
         boxShadow: isGenerating
-          ? "0 0 30px hsl(300 100% 60% / 0.5), 0 0 60px hsl(180 100% 50% / 0.25), inset 0 0 20px hsl(180 100% 70% / 0.3)"
-          : "0 0 20px hsl(180 100% 50% / 0.3), inset 0 0 15px hsl(180 100% 70% / 0.2)",
+          ? "0 0 30px hsl(var(--secondary) / 0.5), 0 0 60px hsl(var(--primary) / 0.25), inset 0 0 20px hsl(var(--primary) / 0.3)"
+          : "0 0 20px hsl(var(--primary) / 0.3), inset 0 0 15px hsl(var(--primary) / 0.2)",
         animation: isGenerating ? "cssorb-spin 4s linear infinite" : "cssorb-spin 12s linear infinite",
       }}
     >
@@ -54,7 +54,7 @@ const CSSOrb: React.FC<{ isGenerating: boolean }> = ({ isGenerating }) => (
       style={{
         width: "72%",
         height: "72%",
-        borderColor: isGenerating ? "hsl(180 100% 50% / 0.6)" : "hsl(180 100% 50% / 0.25)",
+        borderColor: isGenerating ? "hsl(var(--primary) / 0.6)" : "hsl(var(--primary) / 0.25)",
         animation: isGenerating ? "cssorb-ring 3s linear infinite" : "cssorb-ring 8s linear infinite",
         transform: "rotateX(65deg)",
       }}
