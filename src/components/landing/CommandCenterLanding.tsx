@@ -2,14 +2,15 @@ import React, { lazy, Suspense, useEffect, useMemo, useRef, useState } from "rea
 import { useNavigate } from "react-router-dom";
 import {
   Activity, ArrowRight, Bot, Boxes, ChevronDown, CircuitBoard, Cpu, Eye,
-  Film, Gauge, Globe, Image as ImageIcon, Layers, Lock, Network, Play,
-  Radar, Radio, ShieldCheck, Sparkles, Users, Wand2, Zap,
+  Film, Gauge, Globe, Layers, Lock, Play, Radio, ShieldCheck, Siren,
+  Sparkles, Users, Wand2, Zap,
 } from "lucide-react";
 import "./commandCenter.css";
 
 const GridCity = lazy(() => import("./GridCity"));
 
 const SIGNUP = "/create?signup=1";
+const RED = "hsl(0 88% 56%)";
 
 /* ──────────────────────────────────────────────────────────────────────────
    Small utilities
@@ -29,15 +30,6 @@ function hasWebGL(): boolean {
 
 function prefersReducedMotion(): boolean {
   return typeof matchMedia !== "undefined" && matchMedia("(prefers-reduced-motion: reduce)").matches;
-}
-
-function themeColor(varName: string, fallback: string): string {
-  try {
-    const v = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
-    return v ? `hsl(${v})` : fallback;
-  } catch {
-    return fallback;
-  }
 }
 
 /** Catches a WebGL/runtime failure in the canvas subtree → static fallback. */
@@ -121,8 +113,8 @@ function CountUp({ to, suffix = "", prefix = "", decimals = 0 }: { to: number; s
   return <span ref={ref}>{prefix}{val.toFixed(decimals)}{suffix}</span>;
 }
 
-/** Animated random-walk sparkline on a canvas, themed via CSS vars. */
-function Sparkline({ varName = "--primary" }: { varName?: string }) {
+/** Animated random-walk sparkline on a canvas. */
+function Sparkline({ stroke = RED }: { stroke?: string }) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const cv = ref.current;
@@ -135,7 +127,6 @@ function Sparkline({ varName = "--primary" }: { varName?: string }) {
       cv.height = Math.max(1, cv.clientHeight * dpr);
     };
     resize();
-    const stroke = themeColor(varName, "hsl(180 100% 50%)");
     const N = 64;
     const data = new Array(N).fill(0.5);
     const reduced = prefersReducedMotion();
@@ -181,7 +172,7 @@ function Sparkline({ varName = "--primary" }: { varName?: string }) {
     raf = requestAnimationFrame(draw);
     window.addEventListener("resize", resize);
     return () => { cancelAnimationFrame(raf); window.removeEventListener("resize", resize); };
-  }, [varName]);
+  }, [stroke]);
   return <canvas ref={ref} className="cc-spark" />;
 }
 
@@ -190,10 +181,10 @@ function Sparkline({ varName = "--primary" }: { varName?: string }) {
    ────────────────────────────────────────────────────────────────────────── */
 
 const AGENTS = [
-  { name: "PRISM", role: "Image Synthesis", icon: ImageIcon, desc: "Turns a prompt into cinematic, uncensored stills in seconds — no gatekeeping, no watered-down models." },
-  { name: "REEL", role: "Video Render", icon: Film, desc: "Dispatches motion jobs across the GPU swarm and upscales the result to crisp, shareable clips." },
-  { name: "ATLAS", role: "Grid Orchestration", icon: Network, desc: "Watches queue depth and latency, then auto-scales render nodes so your jobs never wait in line." },
-  { name: "AEGIS", role: "Safety Layer", icon: ShieldCheck, desc: "Runs every output through guardrails — adult-but-consensual, with the hard lines enforced automatically." },
+  { name: "PRISM", role: "Image Synthesis", img: "/landing/agent-prism.webp", stat: "412 ops/min // uptime 99.99%", desc: "Turns a prompt into cinematic, uncensored stills in seconds — no gatekeeping, no watered-down models." },
+  { name: "REEL", role: "Video Render", img: "/landing/agent-reel.webp", stat: "38 clips queued // 4K upscale armed", desc: "Dispatches motion jobs across the GPU swarm and upscales the result to crisp, shareable clips." },
+  { name: "ATLAS", role: "Grid Orchestration", img: "/landing/agent-atlas.webp", stat: "monitoring 7 districts // 24/7", desc: "Watches queue depth and latency, then auto-scales render nodes so your jobs never wait in line." },
+  { name: "AEGIS", role: "Safety Layer", img: "/landing/agent-aegis.webp", stat: "0 breaches // guardrails active", desc: "Runs every output through guardrails — adult-but-consensual, with the hard lines enforced automatically." },
 ];
 
 const FEATURES = [
@@ -239,10 +230,132 @@ const TICKER = [
   { b: "CREDITS", t: "daily drop armed" },
 ];
 
+/** Camera choreography phases — mirrors the spline in GridCity.tsx. */
+const PHASES = [
+  { at: 0.0, n: "01", label: "OVERWATCH" },
+  { at: 0.18, n: "02", label: "DESCENT" },
+  { at: 0.42, n: "03", label: "STREET LEVEL" },
+  { at: 0.62, n: "04", label: "PERIMETER SWEEP" },
+  { at: 0.85, n: "05", label: "GRID OVERVIEW" },
+];
+
+/** One simulated autonomous incident: detection → triage → action → resolution. */
+const INCIDENT_LINES = [
+  { ts: "00:00.000", op: "SCAN", k: "", t: "sweep 4471 complete — 0 anomalies, 7 districts nominal" },
+  { ts: "00:02.882", op: "DETECT", k: "detect", t: "district-07 latency p99 ↑ 412ms — threshold breached" },
+  { ts: "00:02.901", op: "TRIAGE", k: "", t: "ATLAS correlates 3 signals → GPU node 22 thermal drift" },
+  { ts: "00:03.130", op: "ACT", k: "act", t: "traffic rerouted // node 22 drained // spare node spun up" },
+  { ts: "00:04.092", op: "RESOLVE", k: "resolve", t: "p99 back to 38ms — incident closed in 1.21s" },
+];
+
 const STATUS_LABEL: Record<string, string> = { ok: "ONLINE", warn: "DEGRADED", crit: "ALERT" };
 
 function fmtClock(d: Date) {
   return d.toISOString().slice(11, 19);
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   HUD widgets
+   ────────────────────────────────────────────────────────────────────────── */
+
+/** Bottom-left mission-phase readout, synced to the 3D camera's scroll path. */
+function MissionPhase() {
+  const [p, setP] = useState(0);
+  useEffect(() => {
+    let raf = 0;
+    const onScroll = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const max = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+        setP(Math.min(1, Math.max(0, window.scrollY / max)));
+      });
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => { window.removeEventListener("scroll", onScroll); cancelAnimationFrame(raf); };
+  }, []);
+  const phase = [...PHASES].reverse().find((ph) => p >= ph.at) ?? PHASES[0];
+  return (
+    <div className="cc-phase" aria-hidden>
+      <div className="ph">CAMERA // FLIGHT PATH</div>
+      <div className="nm"><b>PHASE {phase.n}</b> {phase.label}</div>
+      <div className="trackbar"><i style={{ width: `${Math.round(p * 100)}%` }} /></div>
+    </div>
+  );
+}
+
+/** Periodic autonomous-incident toast: anomaly detected → auto-resolved. */
+function AlertToast() {
+  const [stage, setStage] = useState<"idle" | "detect" | "resolved">("idle");
+  useEffect(() => {
+    if (prefersReducedMotion()) return;
+    let t1: number, t2: number, t3: number;
+    const cycle = () => {
+      setStage("detect");
+      t1 = window.setTimeout(() => setStage("resolved"), 3600);
+      t2 = window.setTimeout(() => setStage("idle"), 7200);
+    };
+    t3 = window.setTimeout(cycle, 9000);
+    const i = setInterval(cycle, 26000);
+    return () => { clearInterval(i); clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+  }, []);
+  if (stage === "idle") return null;
+  return stage === "detect" ? (
+    <div className="cc-alert" role="status">
+      <span className="led" />
+      <span><span className="sig">ANOMALY</span> // district-07 latency spike — ATLAS dispatched</span>
+    </div>
+  ) : (
+    <div className="cc-alert resolved" role="status">
+      <span className="led" />
+      <span><span className="sig">RESOLVED</span> // auto-mitigated in 1.21s — no human intervention</span>
+    </div>
+  );
+}
+
+/** Looping incident-playback terminal: the observability story, told live. */
+function IncidentTerminal() {
+  const [step, setStep] = useState(0);
+  const ref = useRef<HTMLDivElement>(null);
+  const [armed, setArmed] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      (entries) => entries.forEach((e) => e.isIntersecting && (setArmed(true), io.disconnect())),
+      { threshold: 0.3 }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  useEffect(() => {
+    if (!armed) return;
+    if (prefersReducedMotion()) { setStep(INCIDENT_LINES.length + 1); return; }
+    const i = setInterval(() => {
+      setStep((s) => (s >= INCIDENT_LINES.length + 3 ? 0 : s + 1));
+    }, 1100);
+    return () => clearInterval(i);
+  }, [armed]);
+  return (
+    <div className="cc-term" ref={ref}>
+      <div className="cc-term-bar">
+        <span className="led" />
+        <span>INCIDENT PLAYBACK // DISTRICT-07 // AUTONOMOUS RESPONSE LOG</span>
+      </div>
+      <div className="cc-term-body">
+        {INCIDENT_LINES.slice(0, step).map((l) => (
+          <div className={`cc-term-line ${l.k}`} key={l.op + l.ts}>
+            <span className="ts">{l.ts}</span>
+            <span className="op">{l.op}</span>
+            <span>{l.t}</span>
+          </div>
+        ))}
+        {step > INCIDENT_LINES.length && (
+          <div className="cc-term-stamp">NO HUMAN INTERVENTION REQUIRED</div>
+        )}
+      </div>
+    </div>
+  );
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -323,7 +436,7 @@ export default function CommandCenterLanding() {
         <div className="cc-brand">
           <span className="dot" />
           <span><span className="accent">GLTCH</span>RUNNER</span>
-          <span style={{ fontFamily: '"Share Tech Mono", monospace', fontSize: 9, letterSpacing: "0.2em", color: "hsl(var(--foreground) / 0.4)", marginLeft: 4 }}>// COMMAND</span>
+          <span className="sub">// MISSION CONTROL</span>
         </div>
         <div className="cc-statuschips">
           <span className="cc-chip"><span className="led" />SYSTEMS NOMINAL</span>
@@ -333,6 +446,9 @@ export default function CommandCenterLanding() {
           </button>
         </div>
       </header>
+
+      {/* Autonomous incident toast */}
+      <AlertToast />
 
       {/* Floating HUD rails (desktop) */}
       <aside className="cc-rail left cc-content" aria-hidden>
@@ -344,7 +460,7 @@ export default function CommandCenterLanding() {
             <div className="cc-metric"><span className="label">Avg Latency</span><span className="value">{tele.latency}ms</span></div>
             <div className="cc-metric"><span className="label">GPU Nodes</span><span className="value">{tele.nodes}</span></div>
             <div style={{ marginTop: 10 }}>
-              <div style={{ fontFamily: '"Share Tech Mono", monospace', fontSize: 9, letterSpacing: "0.12em", color: "hsl(var(--foreground) / 0.45)", marginBottom: 4 }}>THROUGHPUT // renders/s</div>
+              <div style={{ fontFamily: '"Share Tech Mono", monospace', fontSize: 9, letterSpacing: "0.12em", color: "hsl(220 8% 62% / 0.8)", marginBottom: 4 }}>THROUGHPUT // renders/s</div>
               <Sparkline />
             </div>
           </div>
@@ -375,24 +491,27 @@ export default function CommandCenterLanding() {
                 </div>
               ))}
             </div>
-            <div style={{ display: "flex", alignItems: "center", marginTop: 8, fontFamily: '"Share Tech Mono", monospace', fontSize: 10, color: "hsl(var(--primary) / 0.7)" }}>
+            <div style={{ display: "flex", alignItems: "center", marginTop: 8, fontFamily: '"Share Tech Mono", monospace', fontSize: 10, color: "hsl(0 88% 56% / 0.8)" }}>
               <span>autonomous agents</span><span className="cc-caret">&nbsp;</span>
             </div>
           </div>
         </div>
       </aside>
 
+      {/* Mission phase readout (tracks the scroll-driven camera) */}
+      <MissionPhase />
+
       {/* HERO */}
       <section className="cc-hero cc-content">
-        <span className="cc-eyebrow">Autonomous Creation Network</span>
+        <span className="cc-eyebrow">Autonomous Monitoring Network</span>
         <h1 className="cc-title">
-          ENTER THE{" "}
+          <span className="hollow">COMMAND</span> THE{" "}
           <span className="cc-glitch g" data-text="GRID">GRID</span>
         </h1>
         <p className="cc-subtitle">
-          GLTCHRunner is mission control for uncensored AI. Generate cinematic images and video,
-          command a swarm of render nodes, and follow the creators building on the grid —
-          all from one command center.
+          GLTCHRunner is mission control for uncensored AI. A living city of render nodes,
+          patrolled by autonomous agents that detect, triage and resolve before you ever feel it.
+          You create — the grid takes care of the rest.
         </p>
         <div className="cc-cta-row">
           <button className="cc-btn cc-btn-primary" onClick={go}>
@@ -402,7 +521,7 @@ export default function CommandCenterLanding() {
             className="cc-btn cc-btn-ghost"
             onClick={() => document.getElementById("cc-grid-sec")?.scrollIntoView({ behavior: "smooth" })}
           >
-            <Play size={15} /> See It Live
+            <Play size={15} /> Begin Descent
           </button>
         </div>
         <div className="cc-hero-meta">
@@ -411,7 +530,7 @@ export default function CommandCenterLanding() {
           <span><b>◇</b> Instant creator payouts</span>
         </div>
         <div className="cc-scroll-hint">
-          <span>SCROLL TO EXPLORE</span>
+          <span>SCROLL TO DESCEND</span>
           <ChevronDown size={16} />
         </div>
       </section>
@@ -419,7 +538,7 @@ export default function CommandCenterLanding() {
       {/* SECTION — the living grid */}
       <section className="cc-section cc-section-bg" id="cc-grid-sec">
         <Reveal>
-          <div className="cc-kicker">The Grid</div>
+          <div className="cc-kicker">Live Observability</div>
           <h2 className="cc-h2">A living map of <span className="g">everything you make</span></h2>
           <p className="cc-lead">
             Every tower in the city is a node on the network. Streams of light are real jobs moving
@@ -430,7 +549,7 @@ export default function CommandCenterLanding() {
         <div className="cc-grid c3">
           {[
             { ic: Boxes, h: "Towers = nodes", p: "Creators, models and render pools, laid out as a skyline you can actually watch work." },
-            { ic: Radar, h: "Packets = live jobs", p: "Each glow is a render in motion — image synthesis, video, persona media — flowing in real time." },
+            { ic: Activity, h: "Packets = live jobs", p: "Each glow is a render in motion — image synthesis, video, persona media — flowing in real time." },
             { ic: Eye, h: "Red = the swarm acting", p: "Autonomous agents resolve latency and load before it reaches you. Mission control, automated." },
           ].map((c, i) => (
             <Reveal key={i} style={{ transitionDelay: `${i * 90}ms` }}>
@@ -444,10 +563,24 @@ export default function CommandCenterLanding() {
         </div>
       </section>
 
+      {/* SECTION — autonomous incident response */}
+      <section className="cc-section cc-section-bg">
+        <Reveal>
+          <div className="cc-kicker"><Siren size={13} /> Autonomous Response</div>
+          <h2 className="cc-h2">Incidents that <span className="g">resolve themselves</span></h2>
+          <p className="cc-lead">
+            The grid doesn't page a human at 3am. It detects the anomaly, isolates the cause,
+            reroutes the load and closes the incident — in about the time it took you to read
+            this sentence. Watch a real playback:
+          </p>
+        </Reveal>
+        <Reveal><IncidentTerminal /></Reveal>
+      </section>
+
       {/* SECTION — autonomous render swarm */}
       <section className="cc-section cc-section-bg">
         <Reveal>
-          <div className="cc-kicker">Autonomous Swarm</div>
+          <div className="cc-kicker">The Sentinels</div>
           <h2 className="cc-h2">Agents that <span className="g">never sleep</span></h2>
           <p className="cc-lead">
             Four autonomous systems run the grid around the clock so creation feels instant.
@@ -458,14 +591,15 @@ export default function CommandCenterLanding() {
           {AGENTS.map((a, i) => (
             <Reveal key={a.name} style={{ transitionDelay: `${i * 80}ms` }}>
               <div className="cc-card cc-agent">
-                <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                  <div className="cc-card-ic" style={{ marginBottom: 0 }}><a.icon size={22} /></div>
+                <div className="head">
+                  <img className="core" src={a.img} alt="" loading="lazy" width={64} height={64} />
                   <div>
                     <div className="role">{a.role}</div>
                     <div className="name">{a.name}</div>
+                    <div className="stat"><b>▣</b> {a.stat}</div>
                   </div>
                 </div>
-                <p style={{ marginTop: 12 }}>{a.desc}</p>
+                <p style={{ marginTop: 14 }}>{a.desc}</p>
                 <div className="barwrap"><div className="bar" style={{ animationDelay: `${i * 0.4}s` }} /></div>
               </div>
             </Reveal>
@@ -507,8 +641,8 @@ export default function CommandCenterLanding() {
           <div className="cc-stats">
             <div className="cc-stat"><div className="n"><CountUp to={6} prefix="<" suffix="s" /></div><div className="l">Avg render</div></div>
             <div className="cc-stat"><div className="n"><CountUp to={100} suffix="%" /></div><div className="l">Uncensored</div></div>
-            <div className="cc-stat"><div className="n"><CountUp to={24} /><span className="u">/7</span></div><div className="l">Always-on grid</div></div>
-            <div className="cc-stat"><div className="n"><CountUp to={0} suffix="%" /></div><div className="l">Gatekeeping</div></div>
+            <div className="cc-stat"><div className="n"><CountUp to={24} /><span className="u">/7</span></div><div className="l">Autonomous watch</div></div>
+            <div className="cc-stat"><div className="n"><CountUp to={1.21} suffix="s" decimals={2} /></div><div className="l">Auto-mitigation</div></div>
           </div>
         </Reveal>
       </section>
