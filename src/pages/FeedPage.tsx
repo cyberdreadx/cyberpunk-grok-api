@@ -259,7 +259,7 @@ const FeedPage: React.FC = () => {
   };
 
   const rulesBanner = !rulesAcked || showRules ? (
-    <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4 space-y-3">
+    <div className="bg-card/70 border border-destructive/30 rounded-lg p-4 space-y-3">
       <div className="flex items-center gap-2">
         <ShieldAlert className="w-5 h-5 text-destructive shrink-0" />
         <h2 className="font-orbitron text-xs tracking-wider text-destructive">COMMUNITY GUIDELINES</h2>

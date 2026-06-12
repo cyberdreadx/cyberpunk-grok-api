@@ -5,8 +5,9 @@
 @tailwind utilities;
 
 @layer base {
-  /* Mission-control palette: near-black surfaces, neutral steel chrome,
-     strategic red as THE accent (ember as the warm secondary).
+  /* Mission-control palette, matched to the 3D city: near-black surfaces,
+     dim steel-white "tower glow" as the everyday accent, and red kept
+     scarce and calm — CTAs, alerts and the brand dot, nothing else.
      Legacy var names (--neon-cyan etc.) are kept so existing class names
      keep working — only the colors they resolve to changed. */
   :root {
@@ -19,30 +20,30 @@
     --popover: 240 7% 5%;
     --popover-foreground: 220 14% 93%;
 
-    --primary: 0 88% 56%;
+    --primary: 0 72% 52%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 14 100% 60%;
+    --secondary: 14 80% 55%;
     --secondary-foreground: 240 7% 3%;
 
-    --muted: 240 6% 13%;
-    --muted-foreground: 220 8% 62%;
+    --muted: 240 5% 12%;
+    --muted-foreground: 220 10% 64%;
 
-    --accent: 0 50% 24%;
-    --accent-foreground: 0 0% 98%;
+    --accent: 240 5% 16%;
+    --accent-foreground: 220 14% 93%;
 
     --destructive: 0 80% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 8% 20%;
-    --input: 240 6% 11%;
-    --ring: 0 88% 56%;
+    --border: 220 8% 18%;
+    --input: 240 5% 10%;
+    --ring: 0 72% 52%;
 
     --radius: 0.25rem;
 
-    --neon-cyan: 0 88% 56%;     /* legacy name — now signal red */
-    --neon-magenta: 14 100% 60%; /* legacy name — now ember */
-    --neon-purple: 220 12% 75%;  /* legacy name — now steel */
+    --neon-cyan: 210 18% 84%;   /* legacy name — now steel-white tower glow */
+    --neon-magenta: 14 80% 60%; /* legacy name — now ember */
+    --neon-purple: 220 12% 70%; /* legacy name — now steel */
     --neon-yellow: 38 100% 55%;
     --neon-red: 0 100% 55%;
 
@@ -54,18 +55,18 @@
     --immersion-scanline: 0.16;
     --immersion-vignette: 0.4;
 
-    --glow-cyan: 0 0 10px hsl(0 88% 56% / 0.5), 0 0 30px hsl(0 88% 56% / 0.2);
-    --glow-magenta: 0 0 10px hsl(14 100% 60% / 0.5), 0 0 30px hsl(14 100% 60% / 0.2);
-    --glow-purple: 0 0 10px hsl(220 12% 75% / 0.4), 0 0 30px hsl(220 12% 75% / 0.15);
+    --glow-cyan: 0 0 10px hsl(210 18% 84% / 0.35), 0 0 30px hsl(210 18% 84% / 0.12);
+    --glow-magenta: 0 0 10px hsl(14 80% 60% / 0.4), 0 0 30px hsl(14 80% 60% / 0.15);
+    --glow-purple: 0 0 10px hsl(220 12% 70% / 0.35), 0 0 30px hsl(220 12% 70% / 0.12);
 
     --sidebar-background: 240 7% 4%;
     --sidebar-foreground: 220 14% 93%;
-    --sidebar-primary: 0 88% 56%;
+    --sidebar-primary: 0 72% 52%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 50% 24%;
-    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-accent: 240 5% 16%;
+    --sidebar-accent-foreground: 220 14% 93%;
     --sidebar-border: 220 8% 18%;
-    --sidebar-ring: 0 88% 56%;
+    --sidebar-ring: 0 72% 52%;
   }
 }
 

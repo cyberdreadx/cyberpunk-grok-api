@@ -20,25 +20,27 @@ export default {
         jetbrains: ["JetBrains Mono", "monospace"],
       },
       colors: {
-        /* Mission-control re-skin: components written against the old neon
-           palette (text-cyan-400, border-pink-500, bg-purple-900/40, ...)
-           pick up the new identity without touching every call site.
-           cyan → signal red · pink/fuchsia → ember · purple/violet → steel.
+        /* Mission-control re-skin, matched to the 3D city: components written
+           against the old neon palette (text-cyan-400, border-pink-500,
+           bg-purple-900/40, ...) pick up the new identity without touching
+           every call site. cyan → steel-white tower glow · pink/fuchsia →
+           muted ember · purple/violet → steel. Red stays scarce: it only
+           enters through --primary, --destructive and stock red-*.
            green/amber/red/yellow stay stock (semantic success/warn/error). */
         cyan: {
-          50: "#fef1f2", 100: "#fee5e7", 200: "#fccfd3", 300: "#faa7ae",
-          400: "#f56d79", 500: "#ef3b4b", 600: "#db1f33", 700: "#b9152a",
-          800: "#9b1428", 900: "#851727", 950: "#4a0710",
+          50: "#fcfdfe", 100: "#f5f7fa", 200: "#e8ebf0", 300: "#d2d8e0",
+          400: "#aeb7c4", 500: "#8d97a7", 600: "#707a8b", 700: "#5b6373",
+          800: "#4c535f", 900: "#404550", 950: "#2a2d35",
         },
         pink: {
-          50: "#fff4ed", 100: "#ffe6d8", 200: "#ffc9ad", 300: "#ffa177",
-          400: "#ff6f3d", 500: "#fa5b27", 600: "#eb3f12", 700: "#c32f0e",
-          800: "#9b2813", 900: "#7d2413", 950: "#440f07",
+          50: "#fdf5f0", 100: "#fbe7dc", 200: "#f7cab4", 300: "#f1a584",
+          400: "#e87d52", 500: "#d96130", 600: "#bf4c20", 700: "#9e3d1c",
+          800: "#80341d", 900: "#682c1b", 950: "#39140a",
         },
         fuchsia: {
-          50: "#fff4ed", 100: "#ffe6d8", 200: "#ffc9ad", 300: "#ffa177",
-          400: "#ff6f3d", 500: "#fa5b27", 600: "#eb3f12", 700: "#c32f0e",
-          800: "#9b2813", 900: "#7d2413", 950: "#440f07",
+          50: "#fdf5f0", 100: "#fbe7dc", 200: "#f7cab4", 300: "#f1a584",
+          400: "#e87d52", 500: "#d96130", 600: "#bf4c20", 700: "#9e3d1c",
+          800: "#80341d", 900: "#682c1b", 950: "#39140a",
         },
         purple: {
           50: "#f7f8fa", 100: "#eef0f4", 200: "#d9dde5", 300: "#b9c0cd",

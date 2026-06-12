@@ -13,9 +13,9 @@ const GrokOrbMesh: React.FC<GrokOrbMeshProps> = ({ isGenerating }) => {
   const ringRef = useRef<THREE.Mesh>(null);
   const ring2Ref = useRef<THREE.Mesh>(null);
 
-  const cyanColor = useMemo(() => new THREE.Color(0xef3b4b), []);
-  const magentaColor = useMemo(() => new THREE.Color(0xff5a3c), []);
-  const purpleColor = useMemo(() => new THREE.Color(0x939db0), []);
+  const cyanColor = useMemo(() => new THREE.Color(0xc3cbd8), []);
+  const magentaColor = useMemo(() => new THREE.Color(0xe8703f), []);
+  const purpleColor = useMemo(() => new THREE.Color(0x6d7787), []);
 
   useFrame((state) => {
     const t = state.clock.getElapsedTime();
@@ -92,7 +92,7 @@ const GrokOrbMesh: React.FC<GrokOrbMeshProps> = ({ isGenerating }) => {
         </mesh>
 
         <pointLight
-          color={isGenerating ? 0xff5a3c : 0xef3b4b}
+          color={isGenerating ? 0xe8703f : 0xc3cbd8}
           intensity={isGenerating ? 2 : 0.8}
           distance={6}
           decay={2}
@@ -114,8 +114,8 @@ const GrokOrbWebGL: React.FC<Props> = ({ isGenerating }) => (
       }`}
       style={{
         background: isGenerating
-          ? "radial-gradient(circle, hsl(14 100% 60% / 0.6), hsl(0 88% 56% / 0.3), transparent)"
-          : "radial-gradient(circle, hsl(0 88% 56% / 0.4), transparent)",
+          ? "radial-gradient(circle, hsl(var(--secondary) / 0.5), hsl(var(--primary) / 0.25), transparent)"
+          : "radial-gradient(circle, hsl(var(--neon-cyan) / 0.25), transparent)",
       }}
     />
     <Canvas
@@ -124,8 +124,8 @@ const GrokOrbWebGL: React.FC<Props> = ({ isGenerating }) => (
       gl={{ alpha: true, antialias: true }}
     >
       <ambientLight intensity={0.2} />
-      <directionalLight position={[5, 5, 5]} intensity={0.5} color={0xef3b4b} />
-      <directionalLight position={[-5, -3, 3]} intensity={0.3} color={0xff5a3c} />
+      <directionalLight position={[5, 5, 5]} intensity={0.5} color={0xc3cbd8} />
+      <directionalLight position={[-5, -3, 3]} intensity={0.3} color={0xe8703f} />
       <Stars
         radius={50}
         depth={30}
