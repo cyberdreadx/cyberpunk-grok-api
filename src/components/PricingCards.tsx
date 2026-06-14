@@ -156,16 +156,16 @@ const PricingCards: React.FC<PricingCardsProps> = ({
                     </p>
                   )}
 
-                  {/* The one headline value of a sub: a permanent per-generation discount. */}
+                  {/* The headline value of a sub: monthly bonus credits. */}
                   <div className="mb-2 flex items-center gap-1">
                     <Zap className="h-3 w-3 shrink-0 text-secondary" />
                     <span className="font-mono-share text-sm font-bold text-secondary">
-                      {t("pricing.discountEveryGen", { percent: tier.discountPercent })}
+                      {t("pricing.creditsEveryMonth", { credits: tier.creditsPerMonth, defaultValue: "+{{credits}} credits / month" })}
                     </span>
                   </div>
 
                   <p className="mb-4 flex-1 font-mono-share text-[10px] leading-snug text-muted-foreground/75">
-                    {t("pricing.discountPerk")}
+                    {t("pricing.creditsPerk", { defaultValue: "Bonus credits added every month · better value per dollar than any pack · never expire" })}
                   </p>
 
                   {(() => {

@@ -232,18 +232,19 @@ export const TIER_DISCOUNT: Record<string, number> = {
 // NOTE: Stripe price IDs (STRIPE_PRICE_SUB_*) must be re-created in Stripe to match
 // these amounts — the UI numbers are display-only until those env vars are swapped.
 export const SUBSCRIPTION_TIERS_MONTHLY: SubscriptionTier[] = [
-  { id: "basic",   name: "CASUAL",     creditsPerMonth: 0, priceCents: 900,  discountPercent: 15, interval: "month" },
-  { id: "premium", name: "REGULAR",    creditsPerMonth: 0, priceCents: 1900, discountPercent: 30, popular: true, interval: "month" },
-  { id: "pro",     name: "HOBBYIST",   creditsPerMonth: 0, priceCents: 3900, discountPercent: 50, interval: "month" },
-  { id: "elite",   name: "POWER USER", creditsPerMonth: 0, priceCents: 7900, discountPercent: 70, interval: "month" },
+  { id: "basic",   name: "CASUAL",     creditsPerMonth: 150,  priceCents: 900,  discountPercent: 0, interval: "month" },
+  { id: "premium", name: "REGULAR",    creditsPerMonth: 325,  priceCents: 1900, discountPercent: 0, popular: true, interval: "month" },
+  { id: "pro",     name: "HOBBYIST",   creditsPerMonth: 675,  priceCents: 3900, discountPercent: 0, interval: "month" },
+  { id: "elite",   name: "POWER USER", creditsPerMonth: 1400, priceCents: 7900, discountPercent: 0, interval: "month" },
 ];
 
-// Yearly: 12% savings vs monthly × 12.
+// Yearly: 12% savings vs monthly × 12. creditsPerMonth shown is the monthly figure;
+// yearly invoices grant 12× up front (see api/_lib/stripe-sub-prices computeSubCreditGrant).
 export const SUBSCRIPTION_TIERS_YEARLY: SubscriptionTier[] = [
-  { id: "basic-yearly",   name: "CASUAL",     creditsPerMonth: 0, priceCents: 9504,  discountPercent: 15, interval: "year", monthlyEquivalentCents: 792,  savingsPercent: 12 },
-  { id: "premium-yearly", name: "REGULAR",    creditsPerMonth: 0, priceCents: 20064, discountPercent: 30, popular: true, interval: "year", monthlyEquivalentCents: 1672, savingsPercent: 12 },
-  { id: "pro-yearly",     name: "HOBBYIST",   creditsPerMonth: 0, priceCents: 41184, discountPercent: 50, interval: "year", monthlyEquivalentCents: 3432, savingsPercent: 12 },
-  { id: "elite-yearly",   name: "POWER USER", creditsPerMonth: 0, priceCents: 83424, discountPercent: 70, interval: "year", monthlyEquivalentCents: 6952, savingsPercent: 12 },
+  { id: "basic-yearly",   name: "CASUAL",     creditsPerMonth: 150,  priceCents: 9504,  discountPercent: 0, interval: "year", monthlyEquivalentCents: 792,  savingsPercent: 12 },
+  { id: "premium-yearly", name: "REGULAR",    creditsPerMonth: 325,  priceCents: 20064, discountPercent: 0, popular: true, interval: "year", monthlyEquivalentCents: 1672, savingsPercent: 12 },
+  { id: "pro-yearly",     name: "HOBBYIST",   creditsPerMonth: 675,  priceCents: 41184, discountPercent: 0, interval: "year", monthlyEquivalentCents: 3432, savingsPercent: 12 },
+  { id: "elite-yearly",   name: "POWER USER", creditsPerMonth: 1400, priceCents: 83424, discountPercent: 0, interval: "year", monthlyEquivalentCents: 6952, savingsPercent: 12 },
 ];
 
 /** Combined for backward compat */

@@ -229,6 +229,8 @@
     "tabEarn": "EARN FREE",
     "discountEveryGen": "{{percent}}% OFF every generation",
     "discountPerk": "Permanent discount on every generation · no monthly credits · never expires",
+    "creditsEveryMonth": "+{{credits}} credits / month",
+    "creditsPerk": "Bonus credits added every month · better value per dollar than any pack · never expire",
     "creditsLabel": "credits",
     "makeEstimate": "≈ {{edits}} edits or {{videos}} videos",
     "withSubDiscount": "with your {{percent}}% sub discount",

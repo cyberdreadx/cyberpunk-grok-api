@@ -1,10 +1,15 @@
 /**
  * Stripe subscription price helpers — shared by webhook + admin reconcile.
  *
- * v3 subs (STRIPE_PRICE_SUB_* env) = discount-only, 0 monthly credits.
+ * v3 subs (STRIPE_PRICE_SUB_* env) = monthly BONUS CREDITS, no per-gen discount.
  * Any other active sub price ID = legacy; grant credits on invoice.paid.
  */
 
+/**
+ * Tier-validity map (keys are the known v3 tiers). Values are the legacy per-gen
+ * discount %; subscriptions no longer apply this (kept for tier-resolution lookups
+ * and grandfathered subs whose discount lingers until their next renewal).
+ */
 export const TIER_DISCOUNT_PCT: Record<string, number> = {
   basic: 15,
   "basic-yearly": 15,
@@ -15,6 +20,34 @@ export const TIER_DISCOUNT_PCT: Record<string, number> = {
   elite: 70,
   "elite-yearly": 70,
 };
+
+/**
+ * v3 subscription monthly BONUS CREDITS by tier (the new value model — replaces
+ * the per-generation discount). Yearly plans bill once for the year, so the grant
+ * is 12× this amount (see computeSubCreditGrant).
+ */
+export const TIER_MONTHLY_CREDITS: Record<string, number> = {
+  basic: 150,
+  "basic-yearly": 150,
+  premium: 325,
+  "premium-yearly": 325,
+  pro: 675,
+  "pro-yearly": 675,
+  elite: 1400,
+  "elite-yearly": 1400,
+};
+
+/**
+ * Credits to grant on a paid invoice for a CURRENT (v3) subscription.
+ * Monthly plans grant the tier's monthly amount; yearly plans bill once per year
+ * so they grant 12× the monthly amount. Returns 0 for unknown/legacy tiers.
+ */
+export function computeSubCreditGrant(tier: string): number {
+  const monthly = TIER_MONTHLY_CREDITS[tier] || 0;
+  if (monthly <= 0) return 0;
+  const months = tier.endsWith("-yearly") ? 12 : 1;
+  return monthly * months;
+}
 
 const SUB_PRICE_ENV_KEYS = [
   "STRIPE_PRICE_SUB_BASIC",

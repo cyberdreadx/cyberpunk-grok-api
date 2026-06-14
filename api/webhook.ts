@@ -21,6 +21,7 @@ import {
   extractSubPriceIds,
   isLegacySubPrice,
   computeLegacyCreditGrant,
+  computeSubCreditGrant,
   parseCreditsPerMonthFromMeta,
   getInvoiceSubscriptionId,
 } from "./_lib/stripe-sub-prices";
@@ -349,8 +350,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       }
 
-      // Legacy = still billed on a pre-v3 Stripe price ID (grandfathered subs).
-      // They must receive credits — v3 subs are discount-only (0 monthly credits).
+      // Current (v3) subs grant monthly BONUS CREDITS instead of a per-gen discount.
+      // Legacy (pre-v3 price IDs) keep their credit grant via computeLegacyCreditGrant.
       const isLegacyPrice = isLegacySubPrice(candidatePriceIds);
       const creditsPerMonthMeta = parseCreditsPerMonthFromMeta(
         subscription?.metadata,
@@ -358,29 +359,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         lineItemMeta,
         (invoice as any).lines?.data?.[0]?.metadata
       );
-      let legacyCreditGrant = 0;
-      if (isLegacyPrice) {
-        legacyCreditGrant = computeLegacyCreditGrant({
+
+      const userId = await resolveUserIdFromInvoice(sql, stripe, invoice, meta.user_id);
+      const tier = resolvedTier;
+      const amountPaidCents = invoice.amount_paid || 0;
+
+      // Credits to grant on this invoice. v3 plans use the tier→credits table
+      // (yearly = 12× monthly); legacy grandfathered plans use the old per-$ grant.
+      let creditGrant = 0;
+      if (!isLegacyPrice && amountPaidCents > 0) {
+        creditGrant = computeSubCreditGrant(tier);
+      } else if (isLegacyPrice) {
+        creditGrant = computeLegacyCreditGrant({
           priceIds: candidatePriceIds,
-          amountPaidCents: invoice.amount_paid || 0,
+          amountPaidCents,
           creditsPerMonthMeta: creditsPerMonthMeta || undefined,
         });
       }
 
-      const userId = await resolveUserIdFromInvoice(sql, stripe, invoice, meta.user_id);
-
-      const tier = resolvedTier;
-      const discountPct = parseInt(meta.discount_pct, 10) || TIER_DISCOUNT_PCT[tier] || 0;
-
-      // Allow legacy-price grants even when tier/discount can't be resolved — those
-      // customers are still being charged real money and must get value back.
-      if (!userId || (discountPct <= 0 && legacyCreditGrant <= 0)) {
+      // A paid subscription invoice must result in a credit grant. If we can't
+      // resolve the user or compute credits, log for manual reconciliation.
+      if (!userId || creditGrant <= 0) {
         console.error("[webhook] invoice.paid UNRESOLVED — manual reconciliation needed", {
           invoiceId: invoice.id,
           subscriptionId,
           customerId: invoice.customer,
-          amountPaidCents: invoice.amount_paid,
-          userId, tier, discountPct, legacyCreditGrant, isLegacyPrice,
+          amountPaidCents,
+          userId, tier, creditGrant, isLegacyPrice,
           candidatePriceIds,
           creditsPerMonthMeta,
           subDetails, lineItemMeta,
@@ -394,49 +399,53 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         ? new Date(periodEnd * 1000).toISOString()
         : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
-      // Activate the discount + record the active tier (when known).
-      if (tier && discountPct > 0) {
+      // Record the active tier + renewal, and CLEAR any per-gen discount — existing
+      // subscribers flip from the old discount model to credits on this renewal.
+      if (tier) {
         await sql`
           UPDATE users SET
             subscription_tier = ${tier},
             subscription_renews_at = ${renewsAt}::timestamptz,
             subscription_cancel_at = NULL,
-            subscription_discount_pct = ${discountPct},
+            subscription_discount_pct = 0,
             updated_at = now()
           WHERE id = ${userId}::uuid
         `;
       } else {
-        // Legacy with no resolvable tier — still record renewal so portal/UI works.
+        // Legacy with no resolvable tier — still record renewal + clear discount.
         await sql`
           UPDATE users SET
             subscription_renews_at = ${renewsAt}::timestamptz,
             subscription_cancel_at = NULL,
+            subscription_discount_pct = 0,
             updated_at = now()
           WHERE id = ${userId}::uuid
         `;
-      }
-
-      // Grant equivalent credits for legacy-price subscribers (BYOC migration safety net).
-      if (legacyCreditGrant > 0) {
-        try {
-          await sql`SELECT add_pack_credits(${userId}::uuid, ${legacyCreditGrant})`;
-          console.log(`[webhook] LEGACY sub: granted ${legacyCreditGrant} credits to ${userId} (price=${candidatePriceIds.join(",")}, paid=${invoice.amount_paid}c)`);
-        } catch (e: any) {
-          console.error("[webhook] legacy credit grant failed:", e.message);
-        }
       }
 
       if (invoice.customer) {
         await sql`UPDATE users SET stripe_customer_id = ${invoice.customer as string} WHERE id = ${userId}::uuid`;
       }
 
+      // Atomic + idempotent: insert this invoice's transaction first; grant credits
+      // only when it's a NEW row, so Stripe retries / redeliveries can't double-grant.
       const invoicePayMethod = await detectPaymentMethod(stripe, invoice);
-      await sql`
+      const insRows = await sql`
         INSERT INTO transactions (user_id, credits, amount_cents, stripe_session_id, package, type, payment_method)
-        VALUES (${userId}::uuid, ${legacyCreditGrant}, ${invoice.amount_paid || 0}, ${invoice.id}, ${tier || 'legacy'}, 'subscription', ${invoicePayMethod})
+        VALUES (${userId}::uuid, ${creditGrant}, ${amountPaidCents}, ${invoice.id}, ${tier || 'legacy'}, 'subscription', ${invoicePayMethod})
         ON CONFLICT (stripe_session_id) DO NOTHING
+        RETURNING id
       `;
-      console.log(`[webhook] invoice.paid done: user=${userId} tier=${tier || 'legacy'} discount=${discountPct}% credits=${legacyCreditGrant} via ${invoicePayMethod}`);
+      if (insRows.length > 0) {
+        try {
+          await sql`SELECT add_pack_credits(${userId}::uuid, ${creditGrant})`;
+          console.log(`[webhook] invoice.paid: granted ${creditGrant} credits to ${userId} (tier=${tier || 'legacy'}, paid=${amountPaidCents}c) via ${invoicePayMethod}`);
+        } catch (e: any) {
+          console.error("[webhook] sub credit grant failed:", e.message);
+        }
+      } else {
+        console.log(`[webhook] invoice.paid: duplicate invoice ${invoice.id} skipped (no double-grant)`);
+      }
     }
 
     // ── customer.subscription.updated ──
