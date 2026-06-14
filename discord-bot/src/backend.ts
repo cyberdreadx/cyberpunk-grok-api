@@ -56,8 +56,15 @@ export async function comfySubmitAndPoll(
 }
 
 /** GLTCH text-to-image (Z-Image). Returns the image URL. Charges the user's credits. */
-export async function generateImage(prompt: string, token: string): Promise<string> {
-  const r = await comfySubmitAndPoll({ workflow: "zimage", prompt }, token, { pollMs: 2500, maxAttempts: 120 });
+export async function generateImage(
+  prompt: string,
+  token: string,
+  opts: { width?: number; height?: number } = {},
+): Promise<string> {
+  const body: Record<string, unknown> = { workflow: "zimage", prompt };
+  if (opts.width) body.width = opts.width;
+  if (opts.height) body.height = opts.height;
+  const r = await comfySubmitAndPoll(body, token, { pollMs: 2500, maxAttempts: 120 });
   const url = r.image || r.video;
   if (!url) throw new Error("No image returned");
   return url;
@@ -80,10 +87,16 @@ async function urlToBase64(url: string): Promise<string> {
 export async function generateVideo(
   prompt: string,
   token: string,
-  opts: { startImageUrl?: string; width?: number; height?: number } = {},
+  opts: {
+    startImageUrl?: string; width?: number; height?: number;
+    frameCount?: number; audioMode?: "none" | "ambient"; useUpscale?: boolean;
+  } = {},
 ): Promise<string> {
   const width = opts.width ?? 832;
   const height = opts.height ?? 480;
+  const frameCount = opts.frameCount ?? 81;
+  const audioMode = opts.audioMode ?? "none";
+  const useUpscale = opts.useUpscale ?? false;
 
   let imageBase64: string;
   if (opts.startImageUrl) {
@@ -107,11 +120,13 @@ export async function generateVideo(
       imageFilename: "input.jpg",
       width,
       height,
-      frameCount: 81,
+      frameCount,
       steps: 8,
       cfg: 1,
       useRife: true,
-      useUpscale: false,
+      useUpscale,
+      audioMode,
+      ...(audioMode === "ambient" ? { audioPrompt: prompt } : {}),
     },
     token,
     { pollMs: 5000, maxAttempts: 120 },

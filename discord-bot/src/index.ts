@@ -3,6 +3,7 @@ import { config } from "./config.js";
 import { createLinkCode, getCredits, getLinkedWebUser } from "./db.js";
 import { mintUserToken } from "./auth.js";
 import { generateImage, generateVideo } from "./backend.js";
+import { getSettings, saveSettings, buildPanel, applyChange, ASPECT_DIMS } from "./settings.js";
 
 // DM_MESSAGES intents + Channel partial let the bot operate in direct messages.
 const client = new Client({
@@ -62,8 +63,9 @@ async function onGenerate(i: ChatInputCommandInteraction) {
   const prompt = i.options.getString("prompt", true);
   await i.deferReply(); // generation can take 30–120s; defer keeps the interaction alive
   try {
+    const s = await getSettings(i.user.id);
     const token = mintUserToken(linked.userId, linked.email);
-    const url = await generateImage(prompt, token);
+    const url = await generateImage(prompt, token, ASPECT_DIMS[s.aspect]);
     await i.editReply(mediaPayload("image", prompt, url));
   } catch (e: any) {
     await i.editReply({ content: `Generation failed: ${e?.message || "unknown error"}` });
@@ -78,19 +80,28 @@ async function onAnimate(i: ChatInputCommandInteraction) {
   }
   const prompt = i.options.getString("prompt", true);
   const image = i.options.getAttachment("image");
-  const aspect = i.options.getString("aspect") || "landscape";
-  const dims =
-    aspect === "portrait" ? { width: 480, height: 832 } :
-    aspect === "square"   ? { width: 640, height: 640 } :
-                            { width: 832, height: 480 };
+  const s = await getSettings(i.user.id);
+  // Inline aspect option overrides the saved default for this one render.
+  const aspect = (i.options.getString("aspect") as keyof typeof ASPECT_DIMS) || s.aspect;
   await i.deferReply(); // video can take 1–2 min; defer keeps the interaction alive
   try {
     const token = mintUserToken(linked.userId, linked.email);
-    const url = await generateVideo(prompt, token, { startImageUrl: image?.url, ...dims });
+    const url = await generateVideo(prompt, token, {
+      startImageUrl: image?.url,
+      ...ASPECT_DIMS[aspect],
+      frameCount: s.length,
+      audioMode: s.sound ? "ambient" : "none",
+      useUpscale: s.quality === "hd",
+    });
     await i.editReply(mediaPayload("video", prompt, url));
   } catch (e: any) {
     await i.editReply({ content: `Animation failed: ${e?.message || "unknown error"}` });
   }
+}
+
+async function onSettings(i: ChatInputCommandInteraction) {
+  const s = await getSettings(i.user.id);
+  await i.reply({ ...buildPanel(s), flags: MessageFlags.Ephemeral });
 }
 
 async function onHelp(i: ChatInputCommandInteraction) {
@@ -100,6 +111,7 @@ async function onHelp(i: ChatInputCommandInteraction) {
       `**GltchRunner bot**\n` +
       `\`/link\` — connect your web account (use your existing credits)\n` +
       `\`/balance\` — check credits\n` +
+      `\`/settings\` — set your default aspect, length, sound & quality\n` +
       `\`/generate prompt:<text>\` — make an image\n` +
       `\`/animate prompt:<text> [image]\` — make a video (attach an image to animate it)\n` +
       `Buy credits at ${config.siteUrl}.`,
@@ -107,10 +119,24 @@ async function onHelp(i: ChatInputCommandInteraction) {
 }
 
 const handlers: Record<string, (i: ChatInputCommandInteraction) => Promise<void>> = {
-  link: onLink, balance: onBalance, generate: onGenerate, animate: onAnimate, help: onHelp,
+  link: onLink, balance: onBalance, settings: onSettings, generate: onGenerate, animate: onAnimate, help: onHelp,
 };
 
 client.on("interactionCreate", async (interaction) => {
+  // Settings panel buttons / dropdown → update the saved prefs and re-render in place.
+  if ((interaction.isButton() || interaction.isStringSelectMenu()) && interaction.customId.startsWith("set:")) {
+    try {
+      const cur = await getSettings(interaction.user.id);
+      const selectValue = interaction.isStringSelectMenu() ? interaction.values[0] : undefined;
+      const next = applyChange(cur, interaction.customId, selectValue);
+      await saveSettings(interaction.user.id, next);
+      await interaction.update(buildPanel(next));
+    } catch (e: any) {
+      console.error("[settings]", e?.message);
+    }
+    return;
+  }
+
   if (!interaction.isChatInputCommand()) return;
   const handler = handlers[interaction.commandName];
   if (!handler) return;

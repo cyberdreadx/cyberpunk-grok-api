@@ -23,6 +23,12 @@ const commands = [
     contexts: [0, 1, 2],
   },
   {
+    name: "settings",
+    description: "Set your default aspect, length, sound, and quality",
+    integration_types: [0, 1],
+    contexts: [0, 1, 2],
+  },
+  {
     name: "generate",
     description: "Generate an image from a prompt",
     integration_types: [0, 1],

@@ -19,3 +19,6 @@ CREATE TABLE IF NOT EXISTS discord_link_codes (
   created_at        timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_discord_link_codes_user ON discord_link_codes(discord_user_id);
+
+-- per-user Midjourney-style defaults (aspect/length/sound/quality)
+ALTER TABLE discord_users ADD COLUMN IF NOT EXISTS settings jsonb;
