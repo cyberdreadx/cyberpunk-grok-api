@@ -54,9 +54,13 @@ await sql`UPDATE discord_link_codes SET used = true WHERE code = ${code}`;
 ## Commands (all DM-capable)
 - `/link` — connect your web account
 - `/balance` — show credits
-- `/generate prompt:<text>` — image generation (the one integration point — see
-  `src/backend.ts`; extend with `/animate` for video the same way)
+- `/generate prompt:<text>` — image (GLTCH / Z-Image)
+- `/animate prompt:<text> [image]` — video (WAN 2.2). Attach an image → image-to-video;
+  no image → a free start frame is generated from the prompt, then animated.
 - `/help`
+
+The generation contract lives in `src/backend.ts` (mirrors the web app's
+`comfySubmitAndPoll`). Run `npm run register` after adding/changing commands.
 
 ## Deploy
 Run like `grokrunner.service` — a systemd unit running `npm run start` (tsx), with
@@ -68,7 +72,8 @@ adult-AI bots**; age-restricted gating and DM content have specific rules. Resol
 compliance (age verification, content gating, takedown risk) **before** promoting
 this — it's the single biggest risk to running GltchRunner on Discord.
 
-## Extending to video
-Add an `/animate` command and a `generateVideo()` in `backend.ts` that posts the
-WAN/Seedance request (mirror `src/hooks/useGrokApi.ts`), with `i.deferReply()` +
-`editReply()` when the (slower) job finishes.
+## Notes
+- Video (`/animate`) uses `i.deferReply()` + `editReply()` since WAN takes ~1–2 min.
+- For text-to-video the start frame is generated with `skipCredits: true` (same as the
+  web "render" flow), so only the wan-video step is charged.
+- To add Seedance or LongLook, post a different `workflow` in `backend.ts`.

@@ -2,7 +2,7 @@ import { Client, GatewayIntentBits, Partials, MessageFlags, ChatInputCommandInte
 import { config } from "./config.js";
 import { createLinkCode, getCredits, getLinkedWebUser } from "./db.js";
 import { mintUserToken } from "./auth.js";
-import { generateImage } from "./backend.js";
+import { generateImage, generateVideo } from "./backend.js";
 
 // DM_MESSAGES intents + Channel partial let the bot operate in direct messages.
 const client = new Client({
@@ -50,6 +50,24 @@ async function onGenerate(i: ChatInputCommandInteraction) {
   }
 }
 
+async function onAnimate(i: ChatInputCommandInteraction) {
+  const linked = await getLinkedWebUser(i.user.id);
+  if (!linked) {
+    await i.reply({ flags: MessageFlags.Ephemeral, content: "Not linked yet — run `/link` first." });
+    return;
+  }
+  const prompt = i.options.getString("prompt", true);
+  const image = i.options.getAttachment("image");
+  await i.deferReply(); // video can take 1–2 min; defer keeps the interaction alive
+  try {
+    const token = mintUserToken(linked.userId, linked.email);
+    const url = await generateVideo(prompt, token, image?.url);
+    await i.editReply({ content: `**video** · "${prompt}"\n${url}` });
+  } catch (e: any) {
+    await i.editReply({ content: `Animation failed: ${e?.message || "unknown error"}` });
+  }
+}
+
 async function onHelp(i: ChatInputCommandInteraction) {
   await i.reply({
     flags: MessageFlags.Ephemeral,
@@ -58,12 +76,13 @@ async function onHelp(i: ChatInputCommandInteraction) {
       `\`/link\` — connect your web account (use your existing credits)\n` +
       `\`/balance\` — check credits\n` +
       `\`/generate prompt:<text>\` — make an image\n` +
+      `\`/animate prompt:<text> [image]\` — make a video (attach an image to animate it)\n` +
       `Buy credits at ${config.siteUrl}.`,
   });
 }
 
 const handlers: Record<string, (i: ChatInputCommandInteraction) => Promise<void>> = {
-  link: onLink, balance: onBalance, generate: onGenerate, help: onHelp,
+  link: onLink, balance: onBalance, generate: onGenerate, animate: onAnimate, help: onHelp,
 };
 
 client.on("interactionCreate", async (interaction) => {

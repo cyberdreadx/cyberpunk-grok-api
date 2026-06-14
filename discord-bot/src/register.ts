@@ -32,6 +32,16 @@ const commands = [
     ],
   },
   {
+    name: "animate",
+    description: "Generate a video. Attach an image to animate it, or just give a prompt.",
+    integration_types: [0, 1],
+    contexts: [0, 1, 2],
+    options: [
+      { name: "prompt", description: "Scene / motion to render", type: 3 /* STRING */, required: true },
+      { name: "image", description: "Optional start frame to animate", type: 11 /* ATTACHMENT */, required: false },
+    ],
+  },
+  {
     name: "help",
     description: "How to use the GltchRunner bot",
     integration_types: [0, 1],
