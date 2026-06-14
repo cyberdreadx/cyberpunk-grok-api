@@ -1,0 +1,18 @@
+# Install: sudo cp discord-bot/discord-bot.service /etc/systemd/system/ && sudo systemctl daemon-reload
+[Unit]
+Description=GltchRunner Discord Bot
+After=network.target
+
+[Service]
+Type=simple
+User=neon
+WorkingDirectory=/home/neon/cyberpunk-grok-api/discord-bot
+EnvironmentFile=/home/neon/cyberpunk-grok-api/discord-bot/.env
+ExecStart=/usr/bin/node --env-file=.env --import tsx src/index.ts
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
