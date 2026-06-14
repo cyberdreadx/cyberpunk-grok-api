@@ -10,7 +10,7 @@
  */
 import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Globe, EyeOff, Zap, Settings as SettingsIcon, User, KeyRound } from "lucide-react";
+import { Globe, EyeOff, Zap, Settings as SettingsIcon, User, KeyRound, MessageSquare } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import {
   Dialog,
@@ -55,6 +55,12 @@ const PreferencesDialog: React.FC<PreferencesDialogProps> = ({ open, onOpenChang
   const [newPw, setNewPw] = useState("");
   const [confirmPw, setConfirmPw] = useState("");
   const [pwSaving, setPwSaving] = useState(false);
+
+  // ── Discord link ──
+  const [discordLinked, setDiscordLinked] = useState(false);
+  const [discordId, setDiscordId] = useState<string | null>(null);
+  const [discordCode, setDiscordCode] = useState("");
+  const [discordLinking, setDiscordLinking] = useState(false);
 
   useEffect(() => {
     if (!open || !user) return;
@@ -103,6 +109,31 @@ const PreferencesDialog: React.FC<PreferencesDialogProps> = ({ open, onOpenChang
       toast({ title: "Couldn't change password", description: (e as Error).message, variant: "destructive" });
     } finally {
       setPwSaving(false);
+    }
+  };
+
+  // Load Discord link status when the dialog opens.
+  useEffect(() => {
+    if (!open || !user) return;
+    apiFetch<{ linked: boolean; discordId: string | null }>("/discord-link")
+      .then((d) => { setDiscordLinked(!!d.linked); setDiscordId(d.discordId); })
+      .catch(() => {});
+  }, [open, user]);
+
+  const linkDiscord = async () => {
+    const code = discordCode.trim().toUpperCase();
+    if (!code) return;
+    setDiscordLinking(true);
+    try {
+      const r = await apiFetch<{ linked: boolean; discordId: string }>("/discord-link", { method: "POST", body: { code } });
+      setDiscordLinked(true);
+      setDiscordId(r.discordId);
+      setDiscordCode("");
+      toast({ title: "Discord linked", description: "You can now generate from the bot's DMs." });
+    } catch (e) {
+      toast({ title: "Couldn't link Discord", description: (e as Error).message, variant: "destructive" });
+    } finally {
+      setDiscordLinking(false);
     }
   };
 
@@ -218,6 +249,45 @@ const PreferencesDialog: React.FC<PreferencesDialogProps> = ({ open, onOpenChang
                   {pwSaving ? "SAVING…" : "UPDATE PASSWORD"}
                 </button>
               </div>
+            </section>
+          )}
+
+          {/* Discord link */}
+          {user && (
+            <section className="space-y-2 pt-4 border-t border-border/30">
+              <label className="font-orbitron text-[10px] tracking-wider text-muted-foreground flex items-center gap-1.5">
+                <MessageSquare className="w-3 h-3" />
+                LINK DISCORD
+              </label>
+              {discordLinked ? (
+                <div className="flex items-center justify-between gap-2 text-[11px] font-mono-share">
+                  <span className="text-green-400/80">Linked{discordId ? ` · ${discordId}` : ""}</span>
+                  <span className="text-muted-foreground/50 text-[9px]">Use /generate in the bot's DMs</span>
+                </div>
+              ) : (
+                <>
+                  <p className="font-mono-share text-[9px] text-muted-foreground/60">
+                    Run <span className="text-primary/80">/link</span> in the GltchRunner Discord bot, then paste the code here to use your credits from Discord DMs.
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={discordCode}
+                      onChange={(e) => setDiscordCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12))}
+                      placeholder="LINK CODE"
+                      className="flex-1 bg-card/60 border border-border rounded px-2 py-1.5 text-[11px] font-mono-share tracking-widest text-foreground placeholder-muted-foreground/40"
+                    />
+                    <button
+                      type="button"
+                      onClick={linkDiscord}
+                      disabled={discordLinking || !discordCode.trim()}
+                      className="px-3 py-1.5 rounded text-[10px] font-mono-share border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 transition-colors disabled:opacity-50 whitespace-nowrap"
+                    >
+                      {discordLinking ? "LINKING…" : "LINK"}
+                    </button>
+                  </div>
+                </>
+              )}
             </section>
           )}
 
