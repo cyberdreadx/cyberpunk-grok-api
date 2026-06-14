@@ -43,8 +43,8 @@ async function onGenerate(i: ChatInputCommandInteraction) {
   await i.deferReply(); // generation can take 30–120s; defer keeps the interaction alive
   try {
     const token = mintUserToken(linked.userId, linked.email);
-    const { url, type } = await generateImage(prompt, token);
-    await i.editReply({ content: `**${type}** · "${prompt}"\n${url}` });
+    const url = await generateImage(prompt, token);
+    await i.editReply({ content: `**image** · "${prompt}"\n${url}` });
   } catch (e: any) {
     await i.editReply({ content: `Generation failed: ${e?.message || "unknown error"}` });
   }
