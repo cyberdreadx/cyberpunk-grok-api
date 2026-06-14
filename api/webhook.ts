@@ -490,9 +490,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (event.type === "customer.subscription.deleted") {
       const subscription = event.data.object as Stripe.Subscription;
       const userId = subscription.metadata?.user_id;
-      if (userId) {
-        await sql`SELECT clear_subscription(${userId}::uuid)`;
-        console.log(`Subscription cancelled for ${userId}`);
+      // Verification subs are handled separately below — never let them clear a plan.
+      // And only clear the user's plan if they have NO OTHER active subscription, so
+      // canceling an old/superseded sub doesn't wipe a still-active one (the bug that
+      // un-subbed users who churned between tiers).
+      if (userId && subscription.metadata?.type !== "creator_verification") {
+        let otherActive: Stripe.Subscription | null = null;
+        try {
+          const customerId = typeof subscription.customer === "string"
+            ? subscription.customer
+            : subscription.customer?.id;
+          if (customerId) {
+            const subs = await stripe.subscriptions.list({ customer: customerId, status: "active", limit: 10 });
+            otherActive = subs.data.find((s) => s.id !== subscription.id) || null;
+          }
+        } catch (e: any) {
+          console.warn("[webhook] sub.deleted active-check failed:", e?.message);
+        }
+        if (otherActive) {
+          console.log(`[webhook] sub ${subscription.id} deleted but user ${userId} still has active sub ${otherActive.id} — NOT clearing plan`);
+        } else {
+          await sql`SELECT clear_subscription(${userId}::uuid)`;
+          console.log(`Subscription cancelled for ${userId}`);
+        }
       }
     }
 
