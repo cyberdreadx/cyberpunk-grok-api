@@ -77,13 +77,21 @@ async function urlToBase64(url: string): Promise<string> {
  * generate a free Z-Image start frame from the prompt (skipCredits, like the web
  * "render" flow where the wan-video step pays), then animate it. Returns video URL.
  */
-export async function generateVideo(prompt: string, token: string, startImageUrl?: string): Promise<string> {
+export async function generateVideo(
+  prompt: string,
+  token: string,
+  opts: { startImageUrl?: string; width?: number; height?: number } = {},
+): Promise<string> {
+  const width = opts.width ?? 832;
+  const height = opts.height ?? 480;
+
   let imageBase64: string;
-  if (startImageUrl) {
-    imageBase64 = await urlToBase64(startImageUrl);
+  if (opts.startImageUrl) {
+    imageBase64 = await urlToBase64(opts.startImageUrl);
   } else {
+    // Start frame at the SAME dimensions as the video so it isn't cropped/resized.
     const frame = await comfySubmitAndPoll(
-      { workflow: "zimage", prompt, skipCredits: true },
+      { workflow: "zimage", prompt, width, height, skipCredits: true },
       token,
       { pollMs: 2500, maxAttempts: 120 },
     );
@@ -97,8 +105,8 @@ export async function generateVideo(prompt: string, token: string, startImageUrl
       prompt,
       imageBase64,
       imageFilename: "input.jpg",
-      width: 832,
-      height: 480,
+      width,
+      height,
       frameCount: 81,
       steps: 8,
       cfg: 1,

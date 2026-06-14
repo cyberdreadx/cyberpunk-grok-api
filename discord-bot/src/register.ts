@@ -39,6 +39,17 @@ const commands = [
     options: [
       { name: "prompt", description: "Scene / motion to render", type: 3 /* STRING */, required: true },
       { name: "image", description: "Optional start frame to animate", type: 11 /* ATTACHMENT */, required: false },
+      {
+        name: "aspect",
+        description: "Video shape (default landscape)",
+        type: 3 /* STRING */,
+        required: false,
+        choices: [
+          { name: "Landscape 16:9", value: "landscape" },
+          { name: "Portrait 9:16", value: "portrait" },
+          { name: "Square 1:1", value: "square" },
+        ],
+      },
     ],
   },
   {

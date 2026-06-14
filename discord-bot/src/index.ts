@@ -78,10 +78,15 @@ async function onAnimate(i: ChatInputCommandInteraction) {
   }
   const prompt = i.options.getString("prompt", true);
   const image = i.options.getAttachment("image");
+  const aspect = i.options.getString("aspect") || "landscape";
+  const dims =
+    aspect === "portrait" ? { width: 480, height: 832 } :
+    aspect === "square"   ? { width: 640, height: 640 } :
+                            { width: 832, height: 480 };
   await i.deferReply(); // video can take 1–2 min; defer keeps the interaction alive
   try {
     const token = mintUserToken(linked.userId, linked.email);
-    const url = await generateVideo(prompt, token, image?.url);
+    const url = await generateVideo(prompt, token, { startImageUrl: image?.url, ...dims });
     await i.editReply(mediaPayload("video", prompt, url));
   } catch (e: any) {
     await i.editReply({ content: `Animation failed: ${e?.message || "unknown error"}` });
