@@ -198,10 +198,10 @@ const AGENTS = [
 
 const FEATURES = [
   { icon: Wand2, title: "UNCENSORED MODELS", desc: "Generation without the corporate lobotomy. Real creative range for adult work." },
-  { icon: Film, title: "IMAGE + VIDEO", desc: "Stills and motion from one console. Prompt, render, upscale, publish." },
-  { icon: Users, title: "CREATOR ECONOMY", desc: "Follow models, unlock exclusive drops, and get paid out instantly when you build a following." },
+  { icon: Film, title: "IMAGE + VIDEO", desc: "GLTCH, GLTCH PRO, Seedance and LongLook engines — prompt, render, upscale, and publish stills or clips." },
+  { icon: Users, title: "CREATOR ECONOMY", desc: "Follow models, unlock locked drops, and cash out — creators keep 75% via instant Stripe or XRGE payouts." },
   { icon: Bot, title: "PERSONA CHAT", desc: "Talk to AI personas that generate selfies and clips mid-conversation, on demand." },
-  { icon: Zap, title: "DAILY CREDITS", desc: "Free credits every day plus referral boosts — start rendering without a card." },
+  { icon: Zap, title: "MEMBERSHIP CREDITS", desc: "Subscribe for a monthly credit drop that out-values every pack, plus daily bonuses, missions and the spin wheel." },
   { icon: Lock, title: "PRIVATE BY DEFAULT", desc: "Your library is yours. Share what you want, lock the rest behind the grid." },
 ];
 
@@ -505,10 +505,10 @@ export default function CommandCenterLanding() {
       <section className="cc-section cc-section-bg">
         <Reveal>
           <div className="cc-stats">
-            <div className="cc-stat"><div className="n"><CountUp to={6} prefix="<" suffix="s" /></div><div className="l">Avg render</div></div>
+            <div className="cc-stat"><div className="n"><CountUp to={350} suffix="K+" /></div><div className="l">Renders generated</div></div>
+            <div className="cc-stat"><div className="n"><CountUp to={24} suffix="K+" /></div><div className="l">Operators on the grid</div></div>
             <div className="cc-stat"><div className="n"><CountUp to={100} suffix="%" /></div><div className="l">Uncensored</div></div>
-            <div className="cc-stat"><div className="n"><CountUp to={24} /><span className="u">/7</span></div><div className="l">Always-on grid</div></div>
-            <div className="cc-stat"><div className="n"><CountUp to={0} suffix="%" /></div><div className="l">Gatekeeping</div></div>
+            <div className="cc-stat"><div className="n"><CountUp to={24} /><span className="u">/7</span></div><div className="l">Always-on swarm</div></div>
           </div>
         </Reveal>
       </section>

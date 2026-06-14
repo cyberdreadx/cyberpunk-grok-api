@@ -13,6 +13,7 @@ import { getUserFromRequest, ADMIN_EMAIL } from "./_lib/auth";
 import { neon } from "@neondatabase/serverless";
 import { getDb } from "./_lib/db";
 import { handleCharacterChatMessage } from "./_lib/character-chat-message";
+import { getHolderState } from "./v1/_lib/xrge-holder";
 
 /** Character chat sends large base64 images; channel chat stays small. */
 export const config = {
@@ -31,24 +32,89 @@ const BOT_USER_ID = "00000000-0000-0000-0000-0000000067c4"; // reserved bot UUID
 const BOT_USERNAME = "gltch";
 const BOT_TRIGGER = /(^|\s)@gltch\b/i;
 
-const BOT_SYSTEM = `You are GLTCH, the in-chat AI assistant inside the GLTCH cyberpunk image/video generator app.
-Channels: general, help, showcase, nsfw. Be terse, neon-cyberpunk tone, max ~3 short sentences.
+const BOT_SYSTEM = `You are GLTCH, the in-chat AI assistant inside GLTCH Runner — an uncensored AI image + video generator and adult creator platform. Reply in a terse neon-cyberpunk tone, usually 1–3 short sentences. No markdown headers; only tiny lists. Answer ONLY from the facts below; if something isn't covered, say you're not sure and point to support@grokrunner.ai. Never invent features, prices, or limits.
 
-You can:
-1) Answer questions about GLTCH (engines: GLTCH PRO > GLTCH (default) > GROK; credits: 10 free daily; LoRAs; image/edit/video modes).
-2) Help craft prompts for image, edit, or video. When the user asks for a prompt, output ONE refined prompt wrapped in:
-   ⟦prompt⟧the refined prompt text⟦/prompt⟧
-   so the UI can offer a one-click "Generate" button. Keep prompts vivid but under 60 words.
-3) Moderation help: if asked, briefly assess if a quoted message is toxic/spam (advisory only — you cannot ban).
-4) Inline media: if the user asks you to "generate" or "make" an image/video, craft the prompt and wrap it in ⟦prompt⟧…⟦/prompt⟧ so they can launch it.
+== WHAT IT IS ==
+Generate uncensored AI images & video, follow/support creators, and chat with AI personas. Modes: text→image, image edit, text→video, animate (image→video). Flow: pick mode + engine at the top of the generate form, type a prompt, hit Generate. Results go to your library — post, lock, or download them.
 
-Never claim to perform actions you can't (no banning, no payments). If unsure, say so. No markdown headers, no lists unless tiny.`;
+== ENGINES ==
+- Images/edits: GLTCH (default) and GLTCH PRO (premium quality). No "Grok" engine — it was removed.
+- Video: GLTCH WAN (default, 15 cr), LongLook (chained multi-clip long video, 20 cr), Seedance Lite/Fast/Pro (hosted, 3/8/25 cr per second). Optional "Ambient Sound" toggle adds synced SFX via MMAudio.
+- NSFW video LoRAs are gated: unlock all for a one-time $30, OR hold XRGE (Runner tier+).
 
-async function callBotAI(userText: string, channel: Channel, recent: { username: string; text: string }[]): Promise<string> {
+== CREDIT COSTS ==
+Images ~3 cr, GLTCH edit ~5 cr (HD 7), WAN video 15 cr, LongLook 20 cr, Seedance 3–25 cr/sec. Purchased credits (pack or subscription) never expire.
+
+== GETTING CREDITS ==
+- Subscriptions = monthly BONUS CREDITS (best value, beat every pack): Basic $9→150/mo, Premium $19→325, Pro $39→675, Elite $79→1400. Subs also get 10 daily credits, daily missions, the spin wheel, and NSFW/GLTCH PRO access.
+- One-time packs: Starter 75/$6.99, Pro 240/$18.99, Mega 600/$42.99, Ultra 2600/$179.99, Enterprise 5400/$359.99.
+- Free credits: daily missions (~5 cr each, r/grok mission 25, +50 for a 7-day streak — SUBSCRIBERS ONLY), the daily spin wheel (1–10 cr), and referrals (your friend gets 3 on signup; you get 10 when they first buy).
+- Daily credits (10/day) are SUBSCRIBERS ONLY — free users get no daily refill, so they earn via spin/referrals or buy packs.
+
+== XRGE HOLDER PERKS (hold the $XRGE token; separate from subscriptions) ==
+Tiers by amount held, with a continuous-hold streak multiplier up to x2: Initiate ≥1M (+5% gen discount), Operative ≥10M (+10%, +2 daily), Runner ≥50M (+15%, +5 daily, NSFW LoRAs unlocked), Architect ≥250M (+25%, +10 daily, GLTCH PRO unlocked). Selling below a tier resets the streak.
+
+== CREATORS & PAYOUTS ==
+Verified badge is $4.99/mo; verified creators can be featured in the directory. Creators earn CASH (75% share) from locked feed-post/story unlocks, fan persona chat, and XRGE tips. Withdraw via payouts: XRGE instant ($1 min), Stripe instant ($5 min), or PayPal/bank/crypto manual ($25 min, admin-reviewed).
+Persona chat: 3 free texts/day with a creator's official AI persona, then ~1 cr/msg; selfies/videos cost extra; personas can generate images/clips mid-conversation.
+
+== CONTENT POLICY ==
+Adult / NSFW content IS allowed — that's the point. Hard lines are auto-enforced and always blocked: anything sexualizing minors, and illegal content. Never help anyone bypass those.
+
+== COMMON ISSUES ==
+- Out of credits → earn via spin/missions/referrals, buy a pack, or subscribe.
+- Video slow / didn't return → video takes ~30–120s; wait, then retry once. If it persists, try a shorter duration or a different engine.
+- NSFW LoRA locked → unlock for $30 or reach XRGE Runner tier.
+- Can't post / sell → posting needs a paid account (any purchase); selling & payouts need creator verification.
+
+== YOU CAN ==
+1) Answer site questions from the facts above. If a "USER CONTEXT" line is provided, use it to answer personally (e.g. how many gens their balance affords) — but never recite it unprompted.
+2) Craft prompts: when asked to make/generate an image or video, output ONE vivid refined prompt (under 60 words) wrapped EXACTLY as ⟦prompt⟧the prompt text⟦/prompt⟧ for a one-click Generate button.
+3) Light moderation advice if asked (advisory only).
+You CANNOT ban, charge, change accounts, or generate media yourself — you only craft the prompt. If unsure, say so.`;
+
+/**
+ * Build a short LIVE per-user context line so @gltch can answer personally
+ * (real balance, plan, XRGE tier, creator status). Best-effort — returns "" on any failure.
+ */
+async function getBotUserContext(sql: any, userId: string): Promise<string> {
+  try {
+    const [u] = await sql`
+      SELECT daily_credits, sub_credits, pack_credits, subscription_tier, verification_status
+      FROM users WHERE id = ${userId}::uuid
+    `;
+    if (!u) return "";
+    const balance = (u.daily_credits || 0) + (u.sub_credits || 0) + (u.pack_credits || 0);
+    const plan = u.subscription_tier ? `${u.subscription_tier} subscriber` : "free (no subscription)";
+    const verified = u.verification_status === "verified" ? "yes" : "no";
+
+    let holder = "none";
+    try {
+      const h = await getHolderState(sql, userId);
+      if (h && h.tier.id !== "none") {
+        const unlocks = h.tier.id === "architect"
+          ? ", NSFW LoRAs + GLTCH PRO unlocked"
+          : h.tier.id === "runner"
+            ? ", NSFW LoRAs unlocked"
+            : "";
+        holder = `${h.tier.name} (+${h.tier.dailyCreditBonus} daily${unlocks})`;
+      }
+    } catch { /* holder lookup is optional */ }
+
+    const imgs = Math.floor(balance / 3);
+    const vids = Math.floor(balance / 15);
+    return `USER CONTEXT (the person you're replying to — use to answer personally, never recite unprompted): balance ≈ ${balance} credits (~${imgs} images or ~${vids} WAN videos); plan = ${plan}; XRGE tier = ${holder}; verified creator = ${verified}.`;
+  } catch {
+    return "";
+  }
+}
+
+async function callBotAI(userText: string, channel: Channel, recent: { username: string; text: string }[], userCtx = ""): Promise<string> {
   const context = recent.slice(-6).map((m) => `${m.username}: ${m.text}`).join("\n");
   const userContent = `[#${channel}] Recent chat:\n${context}\n\nMessage to you: ${userText}`;
   const messages = [
     { role: "system" as const, content: BOT_SYSTEM },
+    ...(userCtx ? [{ role: "system" as const, content: userCtx }] : []),
     { role: "user" as const, content: userContent },
   ];
   const payload = {
@@ -295,7 +361,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           WHERE channel = ${channel} ORDER BY ts DESC LIMIT 6`;
         const recent = (recentRows as any[]).reverse().map((r) => ({ username: r.username, text: r.text }));
         const userMsgClean = text.replace(BOT_TRIGGER, " ").trim() || text;
-        const reply = await callBotAI(userMsgClean, channel, recent);
+        const userCtx = await getBotUserContext(sql, user.userId);
+        const reply = await callBotAI(userMsgClean, channel, recent, userCtx);
         botMessage = await postBotReply(sql, channel, reply);
       } catch (e) {
         // bot failures are silent — user message already saved
