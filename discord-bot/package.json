@@ -1,0 +1,24 @@
+{
+  "name": "gltchrunner-discord-bot",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "GltchRunner Discord bot — image/video generation usable in DMs via user-install slash commands.",
+  "scripts": {
+    "register": "tsx src/register.ts",
+    "start": "tsx src/index.ts",
+    "dev": "tsx watch src/index.ts"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^0.9.0",
+    "discord.js": "^14.16.0",
+    "dotenv": "^16.4.5",
+    "jsonwebtoken": "^9.0.2"
+  },
+  "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.6",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}
