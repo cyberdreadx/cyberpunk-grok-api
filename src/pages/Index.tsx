@@ -2013,6 +2013,44 @@ const Index = () => {
                 </div>
               )}
 
+            {/* Ambient sound (MMAudio) — shared across comfy/gltch video engines only */}
+            {auth.isAuthenticated && (
+              (mode === "text-to-video" && renderEngine === "comfy") ||
+              (mode === "image-to-video" && (animateEngine === "gltch" || animateEngine === "comfy"))
+            ) && (
+                <div className="mt-2 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <label className="font-mono-share text-[9px] text-muted-foreground/70 flex items-center gap-1.5">
+                      <Film className="w-3 h-3 opacity-70" />
+                      AMBIENT_SOUND
+                      <span className="text-muted-foreground/40">MMAudio</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setComfyAudioMode(comfyAudioMode === "ambient" ? "none" : "ambient")}
+                      className={`flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono-share transition-all border ${comfyAudioMode === "ambient" ? "bg-purple-500/20 border-purple-500/50 text-purple-300" : "bg-card/30 border-border text-muted-foreground hover:border-purple-500/30"}`}
+                    >
+                      {comfyAudioMode === "ambient" ? <ToggleRight className="w-3.5 h-3.5" /> : <ToggleLeft className="w-3.5 h-3.5" />}
+                      {comfyAudioMode === "ambient" ? "ON" : "OFF"}
+                    </button>
+                  </div>
+                  {comfyAudioMode === "ambient" && (
+                    <>
+                      <input
+                        type="text"
+                        value={comfyAudioPrompt}
+                        onChange={(e) => setComfyAudioPrompt(e.target.value)}
+                        placeholder="Sound description (defaults to your prompt)"
+                        className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-[10px] font-mono-share text-foreground placeholder-muted-foreground/40"
+                      />
+                      <p className="font-mono-share text-[8px] text-muted-foreground/50">
+                        Synced ambient sound / SFX generated from the video — not spoken dialogue. Adds a little render time.
+                      </p>
+                    </>
+                  )}
+                </div>
+              )}
+
             {/* Negative prompt — shared across all comfy workflows */}
             {(editEngine === "gltch"
               || genEngine === "comfy" || genEngine === "gltch"
