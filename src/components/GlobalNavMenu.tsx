@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Menu, Rss, Sparkles, Users, Star, ShieldAlert, FolderOpen, MessageCircle, Lightbulb } from "lucide-react";
+import { Menu, Rss, Sparkles, Users, Star, ShieldAlert, FolderOpen, MessageCircle, Lightbulb, Settings as SettingsIcon } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
+import PreferencesDialog from "@/components/PreferencesDialog";
 
 /**
  * Global hamburger nav drawer mounted on every page (except FeedPage which
@@ -16,6 +17,7 @@ const GlobalNavMenu: React.FC = () => {
   const location = useLocation();
   const { isAuthenticated } = useAuth();
   const [open, setOpen] = useState(false);
+  const [prefsOpen, setPrefsOpen] = useState(false);
 
   // Skip on routes that have their own header/nav to avoid overlap.
   const HIDE_ON = ["/", "/feed", "/chat", "/terminal"];
@@ -88,7 +90,16 @@ const GlobalNavMenu: React.FC = () => {
               </div>
             </div>
 
-            <div>
+            <div className="flex flex-col gap-1">
+              {isAuthenticated && (
+                <button
+                  type="button"
+                  onClick={() => { setOpen(false); setPrefsOpen(true); }}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-md font-orbitron text-xs tracking-widest text-muted-foreground hover:text-primary hover:bg-primary/5 border border-transparent transition-colors w-full"
+                >
+                  <SettingsIcon className="w-4 h-4" /> SETTINGS
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => { setOpen(false); navigate("/docs"); }}
@@ -100,6 +111,8 @@ const GlobalNavMenu: React.FC = () => {
           </div>
         </SheetContent>
       </Sheet>
+
+      <PreferencesDialog open={prefsOpen} onOpenChange={setPrefsOpen} />
     </>
   );
 };
