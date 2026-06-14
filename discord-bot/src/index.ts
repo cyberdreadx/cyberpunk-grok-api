@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits, Partials, MessageFlags, ChatInputCommandInteraction } from "discord.js";
+import { Client, GatewayIntentBits, Partials, MessageFlags, AttachmentBuilder, ChatInputCommandInteraction } from "discord.js";
 import { config } from "./config.js";
 import { createLinkCode, getCredits, getLinkedWebUser } from "./db.js";
 import { mintUserToken } from "./auth.js";
@@ -11,6 +11,26 @@ const client = new Client({
 });
 
 client.once("clientReady", (c) => console.log(`@${c.user.tag} online`));
+
+/** editReply payload: data-URI/base64 media → file attachment; http URL → message text. */
+function mediaPayload(label: string, prompt: string, media: string) {
+  const caption = `**${label}** · "${prompt}"`.slice(0, 1900);
+  const dataUri = media.match(/^data:([\w/+.-]+);base64,(.+)$/s);
+  if (dataUri) {
+    const ext = (dataUri[1].split("/")[1] || "bin").split("+")[0];
+    const buf = Buffer.from(dataUri[2], "base64");
+    return { content: caption, files: [new AttachmentBuilder(buf, { name: `gltch-${label}.${ext}` })] };
+  }
+  if (/^https?:\/\//.test(media)) {
+    return { content: `${caption}\n${media}`.slice(0, 2000) };
+  }
+  // Fallback: treat as raw base64 of an image.
+  try {
+    const buf = Buffer.from(media, "base64");
+    if (buf.length > 64) return { content: caption, files: [new AttachmentBuilder(buf, { name: `gltch-${label}.png` })] };
+  } catch { /* not base64 */ }
+  return { content: caption };
+}
 
 async function onLink(i: ChatInputCommandInteraction) {
   const code = await createLinkCode(i.user.id, i.user.username);
@@ -44,7 +64,7 @@ async function onGenerate(i: ChatInputCommandInteraction) {
   try {
     const token = mintUserToken(linked.userId, linked.email);
     const url = await generateImage(prompt, token);
-    await i.editReply({ content: `**image** · "${prompt}"\n${url}` });
+    await i.editReply(mediaPayload("image", prompt, url));
   } catch (e: any) {
     await i.editReply({ content: `Generation failed: ${e?.message || "unknown error"}` });
   }
@@ -62,7 +82,7 @@ async function onAnimate(i: ChatInputCommandInteraction) {
   try {
     const token = mintUserToken(linked.userId, linked.email);
     const url = await generateVideo(prompt, token, image?.url);
-    await i.editReply({ content: `**video** · "${prompt}"\n${url}` });
+    await i.editReply(mediaPayload("video", prompt, url));
   } catch (e: any) {
     await i.editReply({ content: `Animation failed: ${e?.message || "unknown error"}` });
   }

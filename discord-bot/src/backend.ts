@@ -63,8 +63,10 @@ export async function generateImage(prompt: string, token: string): Promise<stri
   return url;
 }
 
-/** Fetch a remote image and return raw base64 (no data: prefix). */
+/** Return raw base64 (no data: prefix) from a data URI or a fetchable URL. */
 async function urlToBase64(url: string): Promise<string> {
+  const m = url.match(/^data:[\w/+.-]+;base64,(.+)$/s);
+  if (m) return m[1];
   const r = await fetch(url);
   if (!r.ok) throw new Error(`Couldn't fetch start frame (HTTP ${r.status})`);
   return Buffer.from(await r.arrayBuffer()).toString("base64");
