@@ -422,20 +422,22 @@ const Index = () => {
       setApiMode("credits");
     }
   }, [canUseCredits, apiMode, setApiMode, simpleMode]);
-  // BYOK (own xAI key) was only for the Grok engine, which has been removed —
-  // everyone is on credits now.
-  const effectiveApiMode: "byok" | "credits" = "credits";
+  // Grok is BYOK-only (the user's own xAI key — billed by xAI, $0 to us). Selecting a
+  // Grok engine forces BYOK mode; everything else stays on credits.
+  const grokEngineSelected =
+    editEngine === "grok" || genEngine === "grok" ||
+    renderEngine === "grok" || animateEngine === "grok";
+  const effectiveApiMode = apiMode;
 
-  // When the user clicks the BYOK pill with no key set, `<ApiKeyDialog />` only
-  // mounts on this render (after `effectiveApiMode` flips to "byok"). We dispatch
-  // the open event from a post-render effect so the dialog's event listener is
-  // guaranteed to be attached before the event fires.
+  // When Grok is selected without a key, open `<ApiKeyDialog />` (mounted while a Grok
+  // engine is active). Dispatch from a post-render effect so the dialog's listener is
+  // attached before the event fires.
   useEffect(() => {
     if (!pendingOpenApiKey) return;
-    if (simpleMode || effectiveApiMode !== "byok") return;
+    if (simpleMode || !grokEngineSelected) return;
     window.dispatchEvent(new Event("open-api-key-dialog"));
     setPendingOpenApiKey(false);
-  }, [pendingOpenApiKey, simpleMode, effectiveApiMode]);
+  }, [pendingOpenApiKey, simpleMode, grokEngineSelected]);
 
   const handleSaveApiKey = useCallback((key: string) => {
     setApiKeyRaw(key);
@@ -644,6 +646,23 @@ const Index = () => {
     // Grok edit in BYOK mode uses the user's own API key directly — no credits needed
     const isGrokEditByok = isGrokEdit && effectiveApiMode === "byok" && apiKeySet;
     const isQueued = isGrokEdit || isGltchEdit || isComfy;
+
+    // Grok is BYOK-only: block any Grok generation unless the user has set their xAI key.
+    const activeGrok =
+      (mode === "edit-image" && editEngine === "grok") ||
+      (mode === "text-to-image" && genEngine === "grok") ||
+      (mode === "text-to-video" && renderEngine === "grok") ||
+      (mode === "image-to-video" && animateEngine === "grok");
+    if (activeGrok && !apiKeySet) {
+      setApiMode("byok");
+      setPendingOpenApiKey(true);
+      toast({
+        title: "Grok needs your xAI key",
+        description: "Grok runs on your own xAI API key (BYOK) — billed by xAI, not GltchRunner. Add your key to continue.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     // Check access: need either API key (BYOK) or credits
     if (!isQueued && effectiveApiMode === "byok" && !apiKeySet) {
@@ -1467,7 +1486,7 @@ const Index = () => {
                   <Zap className="w-3 h-3" />
                   ENGINE
                 </label>
-                <div className="grid grid-cols-1 gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={() => { setEditEngine("gltch"); fetchComfyModels(); }}
@@ -1488,6 +1507,17 @@ const Index = () => {
                       <span className={editEngine === "gltch" ? "text-secondary/70" : "text-muted-foreground/50"}>
                         3 cr
                       </span>
+                    </div>
+                  </button>
+                  <button type="button" onClick={() => { setEditEngine("grok"); setApiMode("byok"); }}
+                    className={`p-2.5 border rounded text-left transition-all duration-200 ${editEngine === "grok" ? "border-primary neon-border bg-primary/5" : "border-border bg-card/30 hover:border-primary/40"}`}>
+                    <div className={`font-orbitron text-[11px] flex items-center gap-1.5 ${editEngine === "grok" ? "text-primary" : "text-foreground"}`}>
+                      GROK
+                      <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-primary/80 border-primary/30 bg-primary/10">BYOK</span>
+                    </div>
+                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
+                      <span>xAI · your key</span>
+                      <span className={editEngine === "grok" ? "text-primary/70" : "text-muted-foreground/50"}>free</span>
                     </div>
                   </button>
                 </div>
@@ -1620,7 +1650,7 @@ const Index = () => {
                   <Zap className="w-3 h-3" />
                   ENGINE
                 </label>
-                <div className={`grid ${isAdmin ? "grid-cols-2" : "grid-cols-1"} gap-2`}>
+                <div className="grid grid-cols-2 gap-2">
                   <button type="button" onClick={() => setGenEngine("gltch")}
                     className={`p-2.5 border rounded text-left transition-all duration-200 ${genEngine === "gltch" ? "border-secondary neon-border bg-secondary/5" : "border-border bg-card/30 hover:border-secondary/40"}`}>
                     <div className={`font-orbitron text-[11px] flex items-center gap-1.5 ${genEngine === "gltch" ? "text-secondary" : "text-foreground"}`}>
@@ -1630,6 +1660,17 @@ const Index = () => {
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>Z-Image Turbo</span>
                       <span className={genEngine === "gltch" ? "text-secondary/70" : "text-muted-foreground/50"}>3 cr</span>
+                    </div>
+                  </button>
+                  <button type="button" onClick={() => { setGenEngine("grok"); setApiMode("byok"); }}
+                    className={`p-2.5 border rounded text-left transition-all duration-200 ${genEngine === "grok" ? "border-primary neon-border bg-primary/5" : "border-border bg-card/30 hover:border-primary/40"}`}>
+                    <div className={`font-orbitron text-[11px] flex items-center gap-1.5 ${genEngine === "grok" ? "text-primary" : "text-foreground"}`}>
+                      GROK
+                      <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-primary/80 border-primary/30 bg-primary/10">BYOK</span>
+                    </div>
+                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
+                      <span>xAI · your key</span>
+                      <span className={genEngine === "grok" ? "text-primary/70" : "text-muted-foreground/50"}>free</span>
                     </div>
                   </button>
                   {isAdmin && (
@@ -1657,6 +1698,17 @@ const Index = () => {
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>WAN Video</span>
                       <span className={renderEngine === "comfy" ? "text-purple-400/70" : "text-muted-foreground/50"}>15 cr</span>
+                    </div>
+                  </button>
+                  <button type="button" onClick={() => { setRenderEngine("grok"); setApiMode("byok"); }}
+                    className={`p-2.5 border rounded text-left transition-all duration-200 ${renderEngine === "grok" ? "border-primary neon-border bg-primary/5" : "border-border bg-card/30 hover:border-primary/40"}`}>
+                    <div className={`font-orbitron text-[11px] flex items-center gap-1.5 ${renderEngine === "grok" ? "text-primary" : "text-foreground"}`}>
+                      GROK
+                      <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-primary/80 border-primary/30 bg-primary/10">BYOK</span>
+                    </div>
+                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
+                      <span>xAI · your key</span>
+                      <span className={renderEngine === "grok" ? "text-primary/70" : "text-muted-foreground/50"}>free</span>
                     </div>
                   </button>
                   <button type="button" onClick={() => setRenderEngine("seedance-pro")}
@@ -1803,6 +1855,17 @@ const Index = () => {
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>WAN 2.2 I2V / T2V</span>
                       <span className={animateEngine === "gltch" ? "text-secondary/70" : "text-muted-foreground/50"}>15 cr</span>
+                    </div>
+                  </button>
+                  <button type="button" onClick={() => { setAnimateEngine("grok"); setLongLookEnabled(false); setApiMode("byok"); }}
+                    className={`p-2.5 border rounded text-left transition-all duration-200 ${animateEngine === "grok" ? "border-primary neon-border bg-primary/5" : "border-border bg-card/30 hover:border-primary/40"}`}>
+                    <div className={`font-orbitron text-[11px] flex items-center gap-1.5 ${animateEngine === "grok" ? "text-primary" : "text-foreground"}`}>
+                      GROK
+                      <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-primary/80 border-primary/30 bg-primary/10">BYOK</span>
+                    </div>
+                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
+                      <span>xAI · your key</span>
+                      <span className={animateEngine === "grok" ? "text-primary/70" : "text-muted-foreground/50"}>free</span>
                     </div>
                   </button>
                   <button type="button" onClick={() => { setAnimateEngine("seedance-pro"); setLongLookEnabled(false); }}
@@ -2050,6 +2113,19 @@ const Index = () => {
                   )}
                 </div>
               )}
+
+            {/* Grok BYOK — set/manage your xAI key (Grok is BYOK-only) */}
+            {grokEngineSelected && (
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/5 border border-primary/20 rounded">
+                  <Key className="w-3 h-3 text-primary/70" />
+                  <span className="font-mono-share text-[9px] text-primary/70">
+                    Grok runs on your own xAI key — billed by xAI, 0 credits.
+                  </span>
+                </div>
+                <ApiKeyDialog hasKey={apiKeySet} onSave={handleSaveApiKey} onClear={handleClearApiKey} />
+              </div>
+            )}
 
             {/* Negative prompt — shared across all comfy workflows */}
             {(editEngine === "gltch"
