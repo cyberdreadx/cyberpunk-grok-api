@@ -1,0 +1,108 @@
+{
+  "input": {
+    "workflow": {
+      "1": {
+        "class_type": "UnetLoaderGGUF",
+        "inputs": { "unet_name": "ltx-2-3-22b-dev-Q4_K_M.gguf" }
+      },
+      "2": {
+        "class_type": "DualCLIPLoader",
+        "inputs": {
+          "clip_name1": "gemma_3_12B_it_fp4_mixed.safetensors",
+          "clip_name2": "ltx-2.3_text_projection_bf16.safetensors",
+          "type": "ltxv",
+          "device": "default"
+        }
+      },
+      "3": {
+        "class_type": "VAELoaderKJ",
+        "inputs": {
+          "vae_name": "LTX23_video_vae_bf16.safetensors",
+          "device": "main_device",
+          "weight_dtype": "bf16"
+        }
+      },
+      "4": {
+        "class_type": "CLIPTextEncode",
+        "inputs": {
+          "clip": ["2", 0],
+          "text": "cinematic close-up of a neon-lit cyberpunk street at night, rain on the pavement, slow camera push-in, volumetric light, highly detailed"
+        }
+      },
+      "5": {
+        "class_type": "CLIPTextEncode",
+        "inputs": {
+          "clip": ["2", 0],
+          "text": "animation, cartoon, low quality, blurry, distorted"
+        }
+      },
+      "6": {
+        "class_type": "EmptyLTXVLatentVideo",
+        "inputs": { "width": 768, "height": 512, "length": 97, "batch_size": 1 }
+      },
+      "7": {
+        "class_type": "LTXVConditioning",
+        "inputs": {
+          "positive": ["4", 0],
+          "negative": ["5", 0],
+          "frame_rate": 24
+        }
+      },
+      "8": {
+        "class_type": "CFGGuider",
+        "inputs": {
+          "model": ["1", 0],
+          "positive": ["7", 0],
+          "negative": ["7", 1],
+          "cfg": 1
+        }
+      },
+      "9": {
+        "class_type": "KSamplerSelect",
+        "inputs": { "sampler_name": "euler_ancestral" }
+      },
+      "10": {
+        "class_type": "ManualSigmas",
+        "inputs": {
+          "sigmas": "1., 0.99375, 0.9875, 0.98125, 0.975, 0.909375, 0.725, 0.421875, 0.0"
+        }
+      },
+      "11": {
+        "class_type": "RandomNoise",
+        "inputs": { "noise_seed": 42 }
+      },
+      "12": {
+        "class_type": "SamplerCustomAdvanced",
+        "inputs": {
+          "noise": ["11", 0],
+          "guider": ["8", 0],
+          "sampler": ["9", 0],
+          "sigmas": ["10", 0],
+          "latent_image": ["6", 0]
+        }
+      },
+      "13": {
+        "class_type": "VAEDecodeTiled",
+        "inputs": {
+          "samples": ["12", 0],
+          "vae": ["3", 0],
+          "tile_size": 512,
+          "overlap": 64,
+          "temporal_size": 2048,
+          "temporal_overlap": 8
+        }
+      },
+      "14": {
+        "class_type": "SaveAnimatedWEBP",
+        "inputs": {
+          "images": ["13", 0],
+          "filename_prefix": "LTXtest",
+          "fps": 24,
+          "lossless": false,
+          "quality": 90,
+          "method": "default"
+        }
+      }
+    }
+  }
+}

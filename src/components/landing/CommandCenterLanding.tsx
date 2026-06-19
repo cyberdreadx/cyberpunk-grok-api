@@ -198,7 +198,7 @@ const AGENTS = [
 
 const FEATURES = [
   { icon: Wand2, title: "UNCENSORED MODELS", desc: "Generation without the corporate lobotomy. Real creative range for adult work." },
-  { icon: Film, title: "IMAGE + VIDEO", desc: "GLTCH, GLTCH PRO, Seedance and LongLook engines — prompt, render, upscale, and publish stills or clips." },
+  { icon: Film, title: "IMAGE + VIDEO", desc: "GLTCH, GLTCH PRO, LTX (video with sound) and LongLook engines — prompt, render, upscale, and publish stills or clips." },
   { icon: Users, title: "CREATOR ECONOMY", desc: "Follow models, unlock locked drops, and cash out — creators keep 75% via instant Stripe or XRGE payouts." },
   { icon: Bot, title: "PERSONA CHAT", desc: "Talk to AI personas that generate selfies and clips mid-conversation, on demand." },
   { icon: Zap, title: "MEMBERSHIP CREDITS", desc: "Subscribe for a monthly credit drop that out-values every pack, plus daily bonuses, missions and the spin wheel." },
