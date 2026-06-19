@@ -2234,6 +2234,12 @@ const Index = () => {
               videoDuration={videoSettings.duration}
               hasSubscription={creditsHook.hasSubscription}
               onOpenStore={effectiveApiMode === "credits" ? () => setStoreOpen(true) : undefined}
+              enhanceMode={
+                (mode === "text-to-video" && renderEngine === "ltx") ||
+                (mode === "image-to-video" && animateEngine === "ltx")
+                  ? "ltx"
+                  : undefined
+              }
             />
 
             {/* Target folder selector */}

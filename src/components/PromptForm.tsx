@@ -63,9 +63,11 @@ interface PromptFormProps {
   videoDuration?: number;
   hasSubscription?: boolean;
   onOpenStore?: () => void;
+  /** Overrides the prompt-enhancer mode (e.g. "ltx" for the LTX-2.3 engine). */
+  enhanceMode?: string;
 }
 
-const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, settings, initialPrompt, initialImageUrl, hideExtraImages, creditCost, totalCredits, videoDuration, hasSubscription, onOpenStore }) => {
+const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, settings, initialPrompt, initialImageUrl, hideExtraImages, creditCost, totalCredits, videoDuration, hasSubscription, onOpenStore, enhanceMode }) => {
   const { t } = useTranslation();
   const isLowCredits = creditCost != null && totalCredits != null && totalCredits < creditCost;
   const [prompt, setPrompt] = useState(initialPrompt || "");
@@ -310,7 +312,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
       };
       const data = await apiFetch<{ enhanced: string }>("/comfyui", {
         method: "POST",
-        body: { action: "enhance-prompt", prompt: prompt.trim(), mode: modeMap[mode] || "image" },
+        body: { action: "enhance-prompt", prompt: prompt.trim(), mode: enhanceMode || modeMap[mode] || "image" },
       });
       if (data.enhanced) setPrompt(data.enhanced);
     } catch (err: any) {
@@ -319,7 +321,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
     } finally {
       setEnhancing(false);
     }
-  }, [prompt, mode, enhancing]);
+  }, [prompt, mode, enhancing, enhanceMode]);
 
   const placeholders: Record<GrokMode, string> = {
     "text-to-image": t("prompt.placeholder"),
