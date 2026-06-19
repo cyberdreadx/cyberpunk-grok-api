@@ -39,6 +39,7 @@ import AuthDialog from "@/components/AuthDialog";
 import CreditDisplay from "@/components/CreditDisplay";
 import FlashSaleBanner from "@/components/FlashSaleBanner";
 import BuyHoldBanner from "@/components/BuyHoldBanner";
+import LtxLaunchBanner from "@/components/LtxLaunchBanner";
 import DailyMissionsDialog from "@/components/DailyMissionsDialog";
 import { useDailyMissions } from "@/hooks/useDailyMissions";
 import LegalDialog from "@/components/LegalDialog";
@@ -620,7 +621,7 @@ const Index = () => {
     if (seedTier === "seedance") return 3 * videoSettings.duration;        // SEEDANCE Lite: 3 cr/s
     if (seedTier === "seedance-fast") return 8 * videoSettings.duration;   // SEEDANCE 2.0 Fast: 8 cr/s
     if (seedTier === "seedance-pro") return 25 * videoSettings.duration;   // SEEDANCE 2.0 Pro: 25 cr/s
-    if (seedTier === "ltx") return calculateCreditCost("comfy-ltx");       // LTX-2.3 (video + sound) — H200-only, 20 cr
+    if (seedTier === "ltx") return calculateCreditCost("comfy-ltx", 1, Math.max(1, Math.round(comfyFrameCount / 24))); // LTX-2.3 — 7 cr/s of output (24fps)
     if (isComfyRender || isComfyAnimate || isGltchWan) return calculateCreditCost("comfy-video");
     if (isGrokRender || isGrokAnimate) return calculateCreditCost("text-to-video", 1, videoSettings.duration);
     if (isComfyLongLook) return calculateCreditCost("comfy-longlook", longLookSeqCount);
@@ -628,7 +629,7 @@ const Index = () => {
     const is2k = (settings.resolution || "1k") === "2k";
     const cm: CreditMode = grokPro && is2k ? "text-to-image-pro-2k" : grokPro ? "text-to-image-pro" : is2k ? "text-to-image-2k" : "text-to-image";
     return calculateCreditCost(cm, settings.count);
-  }, [mode, editEngine, genEngine, renderEngine, animateEngine, longLookEnabled, settings, grokPro, longLookSeqCount, videoSettings.duration, effectiveApiMode]);
+  }, [mode, editEngine, genEngine, renderEngine, animateEngine, longLookEnabled, settings, grokPro, longLookSeqCount, comfyFrameCount, videoSettings.duration, effectiveApiMode]);
   const previewCreditCost = React.useMemo(
     () => rawPreviewCreditCost == null ? undefined : applyCreditDiscount(rawPreviewCreditCost),
     [rawPreviewCreditCost, applyCreditDiscount],
@@ -1066,6 +1067,9 @@ const Index = () => {
           <BuyHoldBanner />
         )}
 
+        {/* LTX-2.3 launch — video with native sound. Click jumps to the LTX engine. */}
+        <LtxLaunchBanner onClick={() => { setMode("text-to-video"); setRenderEngine("ltx"); }} />
+
         {/* Verify email — compact inline pill (no longer a full-width banner) */}
         {auth.isAuthenticated && auth.user && !auth.user.email_verified && (
           <div className="flex justify-center animate-slide-up">
@@ -1471,7 +1475,12 @@ const Index = () => {
               onVideoChange={handleVideoSettingsChange}
               onImmersionChange={isAdmin ? handleImmersionChange : undefined}
               isAdmin={isAdmin}
-              mode={mode} 
+              mode={mode}
+              showDuration={mode === "text-to-video"
+                ? (renderEngine === "grok" || isSeedanceTier(renderEngine))
+                : mode === "image-to-video"
+                  ? (animateEngine === "grok" || isSeedanceTier(animateEngine))
+                  : false}
             />
 
             {/* 3-step flow guide */}
@@ -1756,7 +1765,7 @@ const Index = () => {
                     </div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>LTX-2.3 • with sound</span>
-                      <span className={renderEngine === "ltx" ? "text-amber-300/70" : "text-muted-foreground/50"}>20 cr</span>
+                      <span className={renderEngine === "ltx" ? "text-amber-300/70" : "text-muted-foreground/50"}>7 cr/s</span>
                     </div>
                   </button>
                 </div>
@@ -1854,6 +1863,29 @@ const Index = () => {
                     </div>
                   </div>
                 )}
+
+                {/* LTX RENDER settings — duration (priced per second) */}
+                {renderEngine === "ltx" && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-400/5 border border-amber-400/20 rounded">
+                      <div className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                      <span className="font-mono-share text-[9px] text-amber-300/70">
+                        LTX-2.3 — native sound · {Math.max(1, Math.round(comfyFrameCount / 24))}s · 7 cr/s
+                      </span>
+                    </div>
+                    <div>
+                      <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Duration</label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {[{ label: "~2s", value: 49 }, { label: "~3s", value: 73 }, { label: "~5s", value: 121 }, { label: "~7s", value: 169 }].map((p) => (
+                          <button key={p.value} type="button" onClick={() => setComfyFrameCount(p.value)}
+                            className={`px-2 py-1 rounded text-[9px] font-mono-share transition-all ${comfyFrameCount === p.value ? "bg-amber-400/20 border-amber-400/50 text-amber-300 border" : "bg-card/30 border border-border text-muted-foreground hover:border-amber-400/30"}`}>
+                            {p.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -1900,7 +1932,7 @@ const Index = () => {
                     </div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>LTX-2.3 • with sound</span>
-                      <span className={animateEngine === "ltx" ? "text-amber-300/70" : "text-muted-foreground/50"}>20 cr</span>
+                      <span className={animateEngine === "ltx" ? "text-amber-300/70" : "text-muted-foreground/50"}>7 cr/s</span>
                     </div>
                   </button>
                 </div>
@@ -1986,6 +2018,29 @@ const Index = () => {
                         })()}
                       </div>
                     )}
+                  </div>
+                )}
+
+                {/* LTX ANIMATE settings — duration (priced per second) */}
+                {animateEngine === "ltx" && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-400/5 border border-amber-400/20 rounded">
+                      <div className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                      <span className="font-mono-share text-[9px] text-amber-300/70">
+                        LTX-2.3 — native sound · {Math.max(1, Math.round(comfyFrameCount / 24))}s · 7 cr/s
+                      </span>
+                    </div>
+                    <div>
+                      <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Duration</label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {[{ label: "~2s", value: 49 }, { label: "~3s", value: 73 }, { label: "~5s", value: 121 }, { label: "~7s", value: 169 }].map((p) => (
+                          <button key={p.value} type="button" onClick={() => setComfyFrameCount(p.value)}
+                            className={`px-2 py-1 rounded text-[9px] font-mono-share transition-all ${comfyFrameCount === p.value ? "bg-amber-400/20 border-amber-400/50 text-amber-300 border" : "bg-card/30 border border-border text-muted-foreground hover:border-amber-400/30"}`}>
+                            {p.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 )}
 

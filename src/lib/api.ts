@@ -131,7 +131,7 @@ export const CREDIT_COSTS = {
   comfyEdit: 3,
   comfyEditHd: 4,
   comfyVideo: 15,
-  comfyLtx: 20,
+  comfyLtxPerSec: 7, // LTX-2.3 priced per second of output (native audio included)
   comfyLongLook: 20,
 } as const;
 
@@ -183,7 +183,7 @@ export function calculateCreditCost(
     case "comfy-video":
       return CREDIT_COSTS.comfyVideo;
     case "comfy-ltx":
-      return CREDIT_COSTS.comfyLtx;
+      return CREDIT_COSTS.comfyLtxPerSec * videoDurationSeconds;
     case "comfy-longlook":
       return CREDIT_COSTS.comfyLongLook * imageCount;
     default:

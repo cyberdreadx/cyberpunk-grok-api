@@ -24,6 +24,17 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
     {
+        version: "2026.06.19",
+        date: "June 19, 2026",
+        title: "v5.3 — LTX-2.3 Video with Native Sound",
+        items: [
+            { icon: <Film className="w-3.5 h-3.5" />, text: "New LTX engine — LTX-2.3 generates video with native synced audio in a single pass (text-to-video and image-to-video), no separate sound step", tag: "new" },
+            { icon: <Clock className="w-3.5 h-3.5" />, text: "Pick your LTX clip length right in the engine panel (~2s to ~7s) — priced per second of output (7 cr/s)", tag: "new" },
+            { icon: <Sparkles className="w-3.5 h-3.5" />, text: "Sharper LTX renders — added the distilled model LoRA and start-frame alignment so animate output is crisp instead of soft", tag: "improve" },
+            { icon: <Wrench className="w-3.5 h-3.5" />, text: "Cleaner video settings — the seconds duration slider now only shows for engines that use it (Grok), so controls match the selected engine", tag: "improve" },
+        ],
+    },
+    {
         version: "2026.05.29",
         date: "May 29, 2026",
         title: "v5.2 — Self-Hosted Backend & Stability",

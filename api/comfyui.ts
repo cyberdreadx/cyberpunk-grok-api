@@ -182,9 +182,17 @@ const COMFY_COSTS: Record<string, number> = {
   "gltch-wan": 15,
   "gltch-wan-hd": 18,
   "longlook": 20, // flat cost regardless of sequence count
-  "ltx-video": 20,  // LTX-2.3 text-to-video (native audio) — H200-only worker, priced above WAN
-  "ltx-animate": 20, // LTX-2.3 image-to-video (native audio) — H200-only worker, priced above WAN
+  // LTX (ltx-video / ltx-animate) is NOT flat — priced per second of output below
+  // (H200-only worker; longer clips burn more GPU). See ltxCostForFrames().
 };
+
+// LTX-2.3 per-second pricing. ~3s ≈ 21 cr, ~5s ≈ 35, ~7s ≈ 49. Native audio included.
+const LTX_CR_PER_SEC = Number(process.env.LTX_CR_PER_SEC || 7);
+const LTX_FPS = 24;
+function ltxCostForFrames(frameCount: number): number {
+  const secs = Math.max(1, Math.round((Number(frameCount) || 81) / LTX_FPS));
+  return secs * LTX_CR_PER_SEC;
+}
 
 /**
  * Workflows that may legitimately be invoked with `skipCredits: true`
@@ -2532,8 +2540,10 @@ Rules:
         : isKleinEditWorkflow(workflowType) ? "klein"
           : workflowType === "gltch-wan" && useVidUpscale ? "gltch-wan-hd"
             : workflowType;
-      const baseCost = COMFY_COSTS[costKey] ?? 1;
-      const audioCost = audioMode === "ambient" ? 1 : 0;
+      const isLtxWorkflow = workflowType === "ltx-video" || workflowType === "ltx-animate";
+      const baseCost = isLtxWorkflow ? ltxCostForFrames(frameCount) : (COMFY_COSTS[costKey] ?? 1);
+      // LTX bundles native audio into its per-second price; the +1 ambient surcharge is WAN-only.
+      const audioCost = !isLtxWorkflow && audioMode === "ambient" ? 1 : 0;
       const rawCost = skipCredits ? 0 : (baseCost + audioCost);
       const discountPct = rawCost > 0 ? await getCombinedCreditDiscountPct(auth.userId) : 0;
       const cost = applyDiscount(rawCost, discountPct);

@@ -33,6 +33,9 @@ interface SettingsPanelProps {
   onImmersionChange?: (settings: ImmersionSettings) => void;
   isAdmin?: boolean;
   mode: GrokMode;
+  /** Show the seconds DURATION slider. Only Grok/Seedance use it; other engines
+      set length via their own panel presets, so it's hidden for them. Defaults true. */
+  showDuration?: boolean;
 }
 
 const aspectRatios: { value: AspectRatio; label: string; tag: string }[] = [
@@ -79,7 +82,8 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
   onVideoChange, 
   onImmersionChange,
   isAdmin = false,
-  mode 
+  mode,
+  showDuration = true,
 }) => {
   const { t } = useTranslation();
   const isVideoMode = mode === "text-to-video" || mode === "image-to-video";
@@ -167,7 +171,8 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
               </div>
             </div>
 
-            {/* Video Duration */}
+            {/* Video Duration — only shown for engines that use a per-second length (Grok/Seedance) */}
+            {showDuration && (
             <div className="space-y-2">
               <label className="font-orbitron text-[10px] tracking-wider text-muted-foreground flex items-center gap-1.5">
                 <Clock className="w-3 h-3" />
@@ -190,6 +195,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 <span className="font-mono-share text-[9px] text-muted-foreground">15s</span>
               </div>
             </div>
+            )}
           </>
         ) : (
           <>
