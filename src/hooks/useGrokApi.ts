@@ -290,8 +290,10 @@ export function getImageDimensions(src: string): Promise<{ width: number; height
 }
 
 /** Make raw API error messages more user-friendly. */
-function friendlyError(msg: string): string {
-  const lower = msg.toLowerCase();
+function friendlyError(msg: unknown): string {
+  const text = typeof msg === "string" ? msg : (msg == null ? "" : String(msg));
+  if (!text) return "Something went wrong. Please try again.";
+  const lower = text.toLowerCase();
   if (lower.includes("content moderation") || lower.includes("rejected by content"))
     return "Your prompt was flagged by content moderation. Please try rephrasing it.";
   if (lower.includes("monthly") && lower.includes("limit"))
@@ -306,7 +308,7 @@ function friendlyError(msg: string): string {
     return "Request timed out. The servers may be busy — please try again.";
   if (lower.includes("network") || lower.includes("failed to fetch"))
     return "Network error. Please check your connection and try again.";
-  return msg;
+  return text;
 }
 
 export function useGrokApi() {
