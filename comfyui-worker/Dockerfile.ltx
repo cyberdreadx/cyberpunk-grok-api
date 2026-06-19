@@ -111,3 +111,8 @@ RUN python /bucket_patch.py && rm /bucket_patch.py
 # ── Patch handler.py to clean up after each job ─────────────────
 COPY comfyui-worker/cleanup_patch.py /cleanup_patch.py
 RUN python /cleanup_patch.py && rm /cleanup_patch.py
+
+# ── Patch VideoHelperSuite: move LTX native-audio waveform to CPU before muxing
+#    (fixes "can't convert cuda:0 tensor to numpy" in VHS_VideoCombine) ──
+COPY comfyui-worker/audio_cpu_patch.py /audio_cpu_patch.py
+RUN python /audio_cpu_patch.py && rm /audio_cpu_patch.py
