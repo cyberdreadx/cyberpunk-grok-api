@@ -154,6 +154,7 @@ const Index = () => {
     comfyEdit,
     comfyVideo,
     comfyTextToVideo,
+    ltxVideo,
     comfyLongLook,
     comfyPhase,
     comfyJobs,
@@ -640,10 +641,12 @@ const Index = () => {
     const isZimage = mode === "text-to-image" && genEngine === "gltch";
     const isComfyGen = mode === "text-to-image" && genEngine === "comfy";
     const isComfyRender = mode === "text-to-video" && renderEngine === "comfy";
+    const isLtxRender = mode === "text-to-video" && renderEngine === "ltx";
+    const isLtxAnimate = mode === "image-to-video" && animateEngine === "ltx";
     const isGltchWan = mode === "image-to-video" && animateEngine === "gltch";
     const isComfyAnimate = mode === "image-to-video" && animateEngine === "comfy" && !longLookEnabled;
     const isComfyLongLook = mode === "image-to-video" && animateEngine === "comfy" && longLookEnabled;
-    const isComfy = isZimage || isComfyGen || isGltchEdit || isGltchWan || isComfyRender || isComfyAnimate || isComfyLongLook;
+    const isComfy = isZimage || isComfyGen || isGltchEdit || isGltchWan || isComfyRender || isComfyAnimate || isComfyLongLook || isLtxRender || isLtxAnimate;
     // Grok edit in BYOK mode uses the user's own API key directly — no credits needed
     const isGrokEditByok = isGrokEdit && effectiveApiMode === "byok" && apiKeySet;
     const isQueued = isGrokEdit || isGltchEdit || isComfy;
@@ -714,7 +717,7 @@ const Index = () => {
         cost = calculateCreditCost("comfy-longlook", longLookSeqCount);
       } else if (isGltchWan) {
         cost = calculateCreditCost("comfy-video");
-      } else if (isComfyRender || isComfyAnimate) {
+      } else if (isComfyRender || isComfyAnimate || isLtxRender || isLtxAnimate) {
         cost = calculateCreditCost("comfy-video");
       } else {
         const isImageMode = mode === "text-to-image" || mode === "edit-image";
@@ -847,6 +850,39 @@ const Index = () => {
             videoLoraPass: comfyVideoLoraPass,
             audioMode: comfyAudioMode,
             audioPrompt: comfyAudioPrompt || undefined,
+            ...(adminTestCredits ? { testCredits: true } : {}),
+          });
+        } else if (isLtxRender) {
+          ltxVideo({
+            prompt: data.prompt,
+            negativePrompt: negPrompt || undefined,
+            width: 768, height: 512,
+            frameCount: comfyFrameCount,
+            frameRate: 24,
+            seed: globalSeed ? Number(globalSeed) : undefined,
+            audio: true,
+            ...(adminTestCredits ? { testCredits: true } : {}),
+          });
+        } else if (isLtxAnimate) {
+          const imageBase64 = data.imageUrl?.startsWith("data:")
+            ? data.imageUrl
+            : data.imageUrl ? await urlToBase64(data.imageUrl) : "";
+          if (!imageBase64) throw new Error("Image is required for LTX animate");
+          const dim = await getImageDimensions(imageBase64);
+          const round32 = (v: number) => Math.round(v / 32) * 32;
+          const maxDim = 1024;
+          let w = dim.width, h = dim.height;
+          if (w > maxDim || h > maxDim) { const s = maxDim / Math.max(w, h); w = Math.round(w * s); h = Math.round(h * s); }
+          ltxVideo({
+            prompt: data.prompt,
+            negativePrompt: negPrompt || undefined,
+            imageBase64,
+            imageFilename: "ltx_input.png",
+            width: round32(Math.max(64, w)), height: round32(Math.max(64, h)),
+            frameCount: comfyFrameCount,
+            frameRate: 24,
+            seed: globalSeed ? Number(globalSeed) : undefined,
+            audio: true,
             ...(adminTestCredits ? { testCredits: true } : {}),
           });
         } else if (isComfyLongLook) {

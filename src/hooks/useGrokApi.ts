@@ -1174,7 +1174,8 @@ export function useGrokApi() {
 
     const { promptId, outputType, runpodEndpointId } = submitData;
     onPromptId?.(promptId);
-    const outType = outputType || (body.workflow === "wan-video" || body.workflow === "longlook" ? "video" : "image");
+    const VIDEO_WORKFLOWS = new Set(["wan-video", "longlook", "gltch-wan", "ltx-video", "ltx-animate"]);
+    const outType = outputType || (VIDEO_WORKFLOWS.has(body.workflow as string) ? "video" : "image");
 
     saveActiveJob({ promptId, outputType: outType, submittedAt: Date.now(), ...(runpodEndpointId && { runpodEndpointId }), prompt: body.prompt as string || "" });
 
@@ -1520,6 +1521,79 @@ export function useGrokApi() {
     })();
   }, [comfySubmitAndPoll, persistNewResults, prependResults]);
 
+  // LTX-2.3 video + native audio (text-to-video or image-to-video) — fire-and-forget
+  const ltxVideo = useCallback((params: {
+    prompt: string;
+    negativePrompt?: string;
+    imageBase64?: string;     // present → image-to-video (ltx-animate)
+    imageFilename?: string;
+    width?: number;
+    height?: number;
+    frameCount?: number;
+    frameRate?: number;
+    seed?: number;
+    audio?: boolean;
+    testCredits?: boolean;
+  }) => {
+    const isI2v = !!params.imageBase64;
+    const wfType = isI2v ? "ltx-animate" : "ltx-video";
+    const jobId = `cj-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const label = params.prompt.length > 80 ? params.prompt.slice(0, 80) + "…" : params.prompt;
+
+    const newJob: ComfyJob = {
+      id: jobId, status: "submitting", workflowType: wfType,
+      prompt: label, phase: "Rendering LTX video + audio...", elapsed: 0, seed: null, error: null,
+    };
+    setComfyJobs(prev => [newJob, ...prev]);
+
+    const startTime = Date.now();
+    comfyJobStarts.current.set(jobId, startTime);
+
+    (async () => {
+      try {
+        setComfyJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "generating" } : j));
+        const result = await comfySubmitAndPoll({
+          workflow: wfType,
+          prompt: params.prompt,
+          negativePrompt: params.negativePrompt,
+          ...(isI2v ? { imageBase64: params.imageBase64, imageFilename: params.imageFilename || "ltx_input.jpg" } : {}),
+          width: params.width || 768,
+          height: params.height || 512,
+          frameCount: params.frameCount || 97,
+          frameRate: params.frameRate || 24,
+          seed: params.seed,
+          ltxAudio: params.audio ?? true,
+          ...(params.testCredits ? { testCredits: true } : {}),
+        }, { pollInterval: 5000, maxAttempts: 180, onPromptId: (pid) => comfyPromptIds.current.set(jobId, pid) });
+
+        comfyJobStarts.current.delete(jobId);
+
+        const videoSrc = result.video || result.image;
+        if (!videoSrc) throw new Error("No video returned from LTX");
+
+        const rid = `ltx-vid-${Date.now()}`;
+        if (videoSrc.startsWith("blob:")) videoBlobUrls.current.set(rid, videoSrc);
+        const newResults: GrokResult[] = [{
+          id: rid,
+          url: videoSrc,
+          previewUrl: result.previewUrl,
+          revised_prompt: params.prompt,
+          type: "video" as const,
+          timestamp: Date.now(),
+        }];
+        prependResults(newResults);
+        persistNewResults(newResults);
+        setComfyJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "done", phase: null } : j));
+      } catch (err: any) {
+        comfyJobStarts.current.delete(jobId);
+        setComfyJobs(prev => prev.map(j => j.id === jobId
+          ? { ...j, status: "error", error: err.message || "LTX render failed", phase: null }
+          : j
+        ));
+      }
+    })();
+  }, [comfySubmitAndPoll, persistNewResults, prependResults]);
+
   // ComfyUI Chained Text-to-Video (zimage → gltch-wan) — fire-and-forget
   const comfyTextToVideo = useCallback((params: {
     prompt: string;
@@ -1748,6 +1822,7 @@ export function useGrokApi() {
     comfyEdit,
     comfyVideo,
     comfyTextToVideo,
+    ltxVideo,
     comfyLongLook,
     comfyPhase,
     comfyJobs,

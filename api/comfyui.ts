@@ -182,6 +182,8 @@ const COMFY_COSTS: Record<string, number> = {
   "gltch-wan": 15,
   "gltch-wan-hd": 18,
   "longlook": 20, // flat cost regardless of sequence count
+  "ltx-video": 15,  // LTX-2.3 text-to-video (native audio)
+  "ltx-animate": 15, // LTX-2.3 image-to-video (native audio)
 };
 
 /**
@@ -400,9 +402,11 @@ function getRunPodEndpointForWorkflow(
   const longlook = process.env.RUNPOD_LONGLOOK_ENDPOINT_ID || wan;
   const qwen = process.env.RUNPOD_QWEN_EDIT_ENDPOINT_ID || fallback;
   const zimage = process.env.RUNPOD_ZIMAGE_ENDPOINT_ID || qwen; // dedicated Z-Image worker; falls back to qwen endpoint
+  const ltx = process.env.RUNPOD_LTX_ENDPOINT_ID || fallback; // dedicated LTX-2.3 audio/video worker
 
   if (workflowType === "longlook") return longlook;
   if (workflowType === "wan-video" || workflowType === "gltch-wan") return wan;
+  if (workflowType === "ltx-video" || workflowType === "ltx-animate") return ltx;
   if (workflowType === "zimage") return zimage;
   if (isKleinEditWorkflow(workflowType)) return qwen;
   return fallback;
@@ -412,6 +416,120 @@ function getRunPodEndpointForWorkflow(
 
 const WAN_DEFAULT_NEGATIVE =
   "色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走, twerking, dancing, gyrating, bouncing, jiggling, shaking hips, grinding, repetitive motion, exaggerated body movement, sexual movement, rhythmic swaying";
+
+const LTX_DEFAULT_NEGATIVE =
+  "worst quality, low quality, blurry, distorted, deformed, jpeg artifacts, watermark, text, static, motionless";
+
+/**
+ * LTX-2.3 All-In-One worker (dedicated endpoint).
+ *
+ * Single-pass text/image → video with native audio. Mirrors the node graph
+ * from the community "All-In-One" workflow, reduced to the essential chain:
+ *   UnetLoaderGGUF + DualCLIPLoader(ltxv) + VAELoaderKJ
+ *   → LTXVConditioning → EmptyLTXVLatentVideo (+ LTXVImgToVideoInplace for i2v)
+ *   → [audio: LTXVEmptyLatentAudio → LTXVConcatAVLatent]
+ *   → SamplerCustomAdvanced (ManualSigmas / KSamplerSelect / CFGGuider)
+ *   → [audio: LTXVSeparateAVLatent → LTXVAudioVAEDecode]
+ *   → VAEDecodeTiled → VHS_VideoCombine (muxes audio when present).
+ *
+ * Model filenames + sigma schedule are env-overridable so they can be tuned
+ * without a redeploy. Some i2v/audio widget names are best-effort and may need
+ * adjustment against the live endpoint.
+ */
+function buildLtxWorkflow(p: {
+  prompt: string;
+  negativePrompt: string;
+  width: number;
+  height: number;
+  length: number; // frame count (normalised to 8n+1)
+  frameRate: number;
+  seed: number;
+  imageFilename?: string; // present → image-to-video
+  withAudio: boolean;
+}): Record<string, any> {
+  const fps = p.frameRate || 24;
+  // LTX requires spatial dims divisible by 32 and frame count = 8n+1.
+  const round32 = (v: number) => Math.max(64, Math.round(v / 32) * 32);
+  const width = round32(p.width);
+  const height = round32(p.height);
+  const length = Math.max(9, Math.round((p.length - 1) / 8) * 8 + 1);
+
+  const UNET = process.env.LTX_UNET || "ltx-2-3-22b-dev-Q4_K_M.gguf";
+  const CLIP1 = process.env.LTX_CLIP1 || "gemma_3_12B_it_fp4_mixed.safetensors";
+  const CLIP2 = process.env.LTX_CLIP2 || "ltx-2.3_text_projection_bf16.safetensors";
+  const VIDEO_VAE = process.env.LTX_VIDEO_VAE || "LTX23_video_vae_bf16.safetensors";
+  const AUDIO_VAE = process.env.LTX_AUDIO_VAE || "LTX23_audio_vae_bf16.safetensors";
+  const SIGMAS = process.env.LTX_SIGMAS
+    || "1., 0.99375, 0.9875, 0.98125, 0.975, 0.909375, 0.725, 0.421875, 0.0";
+
+  const wf: Record<string, any> = {
+    "1": { class_type: "UnetLoaderGGUF", inputs: { unet_name: UNET } },
+    "2": { class_type: "DualCLIPLoader", inputs: { clip_name1: CLIP1, clip_name2: CLIP2, type: "ltxv", device: "default" } },
+    "3": { class_type: "VAELoaderKJ", inputs: { vae_name: VIDEO_VAE, device: "main_device", weight_dtype: "bf16" } },
+    "5": { class_type: "CLIPTextEncode", inputs: { clip: ["2", 0], text: p.prompt } },
+    "6": { class_type: "CLIPTextEncode", inputs: { clip: ["2", 0], text: p.negativePrompt } },
+    "7": { class_type: "LTXVConditioning", inputs: { positive: ["5", 0], negative: ["6", 0], frame_rate: fps } },
+    "8": { class_type: "EmptyLTXVLatentVideo", inputs: { width, height, length, batch_size: 1 } },
+    "13": { class_type: "CFGGuider", inputs: { model: ["1", 0], positive: ["7", 0], negative: ["7", 1], cfg: 1 } },
+    "14": { class_type: "KSamplerSelect", inputs: { sampler_name: "euler_ancestral" } },
+    "15": { class_type: "ManualSigmas", inputs: { sigmas: SIGMAS } },
+    "16": { class_type: "RandomNoise", inputs: { noise_seed: p.seed } },
+  };
+
+  // Image-to-video: overwrite the first frame of the empty latent.
+  let videoLatentRef: [string, number] = ["8", 0];
+  if (p.imageFilename) {
+    wf["9"] = { class_type: "LoadImage", inputs: { image: p.imageFilename } };
+    wf["10"] = { class_type: "LTXVImgToVideoInplace", inputs: { strength: 0.8, bypass: false, vae: ["3", 0], image: ["9", 0], latent: ["8", 0] } };
+    videoLatentRef = ["10", 0];
+  }
+
+  // Audio: build a paired A/V latent, sample jointly, then split.
+  let samplerLatentRef: [string, number] = videoLatentRef;
+  if (p.withAudio) {
+    wf["4"] = { class_type: "VAELoaderKJ", inputs: { vae_name: AUDIO_VAE, device: "main_device", weight_dtype: "bf16" } };
+    wf["11"] = { class_type: "LTXVEmptyLatentAudio", inputs: { frames_number: length, frame_rate: fps, batch_size: 1, audio_vae: ["4", 0] } };
+    wf["12"] = { class_type: "LTXVConcatAVLatent", inputs: { video_latent: videoLatentRef, audio_latent: ["11", 0] } };
+    samplerLatentRef = ["12", 0];
+  }
+
+  wf["17"] = {
+    class_type: "SamplerCustomAdvanced",
+    inputs: { noise: ["16", 0], guider: ["13", 0], sampler: ["14", 0], sigmas: ["15", 0], latent_image: samplerLatentRef },
+  };
+
+  let videoDecodeRef: [string, number] = ["17", 0];
+  if (p.withAudio) {
+    wf["18"] = { class_type: "LTXVSeparateAVLatent", inputs: { av_latent: ["17", 0] } };
+    videoDecodeRef = ["18", 0];
+    wf["20"] = { class_type: "LTXVAudioVAEDecode", inputs: { samples: ["18", 1], audio_vae: ["4", 0] } };
+  }
+
+  wf["19"] = {
+    class_type: "VAEDecodeTiled",
+    inputs: { samples: videoDecodeRef, vae: ["3", 0], tile_size: 512, overlap: 64, temporal_size: 2048, temporal_overlap: 8 },
+  };
+
+  wf["21"] = {
+    class_type: "VHS_VideoCombine",
+    inputs: {
+      images: ["19", 0],
+      frame_rate: fps,
+      loop_count: 0,
+      filename_prefix: "GltchLTX",
+      format: "video/h264-mp4",
+      pix_fmt: "yuv420p",
+      crf: 19,
+      save_metadata: false,
+      trim_to_audio: false,
+      pingpong: false,
+      save_output: true,
+      ...(p.withAudio ? { audio: ["20", 0] } : {}),
+    },
+  };
+
+  return wf;
+}
 
 /**
  * WAN 2.2 Remix NSFW Image-to-Video workflow — clean rebuild.
@@ -2445,7 +2563,7 @@ Rules:
       const clampCfg = Math.min(30, Math.max(0.1, Number(cfg) || 1));
 
       // Workflows that need a start image
-      const needsImage = isKleinEditWorkflow(workflowType) || workflowType === "wan-video" || workflowType === "gltch-wan" || workflowType === "longlook";
+      const needsImage = isKleinEditWorkflow(workflowType) || workflowType === "wan-video" || workflowType === "gltch-wan" || workflowType === "longlook" || workflowType === "ltx-animate";
 
       // Determine image filename for workflow
       let imageFilename: string | undefined;
@@ -2770,6 +2888,18 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           sampler: sampler || undefined,
           loras: kleinLoraList,
         });
+      } else if (workflowType === "ltx-video" || workflowType === "ltx-animate") {
+        workflow = buildLtxWorkflow({
+          prompt: prompt.trim(),
+          negativePrompt: (negativePrompt || "").trim() || LTX_DEFAULT_NEGATIVE,
+          width: clampW,
+          height: clampH,
+          length: Math.min(257, Math.max(9, Number(frameCount) || 97)),
+          frameRate: Math.min(60, Math.max(8, Number(req.body.frameRate) || 24)),
+          seed: actualSeed,
+          imageFilename: workflowType === "ltx-animate" ? imageFilename! : undefined,
+          withAudio: req.body.ltxAudio !== false,
+        });
       } else if (workflowType === "zimage") {
         workflow = buildZimageTurboWorkflow({
           prompt: prompt.trim(),
@@ -2797,7 +2927,7 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
       }
 
       // Resolve which RunPod endpoint to use (split by workflow type for better scaling)
-      const isVideoWorkflow = workflowType === "wan-video" || workflowType === "gltch-wan" || workflowType === "longlook";
+      const isVideoWorkflow = workflowType === "wan-video" || workflowType === "gltch-wan" || workflowType === "longlook" || workflowType === "ltx-video" || workflowType === "ltx-animate";
       const runpodEndpoint = getRunPodEndpointForWorkflow(workflowType, {
         upscale: !!upscale,
         useVidUpscale: !!useVidUpscale,
