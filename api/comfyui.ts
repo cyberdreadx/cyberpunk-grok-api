@@ -470,23 +470,28 @@ function buildLtxWorkflow(p: {
   const SIGMAS = process.env.LTX_SIGMAS
     || "1., 0.99375, 0.9875, 0.98125, 0.975, 0.909375, 0.725, 0.421875, 0.0";
   // Distilled LoRA — REQUIRED for the few-step distilled sigma schedule above to
-  // produce sharp output. Without it the schedule undercooks → blurry video.
+  // produce sharp output on the stock base. Without it the schedule undercooks → blurry.
   // (On the network volume at models/loras/; matches the reference workflow.)
+  // Set LTX_DISTILL_LORA="none" to disable — useful when LTX_UNET points at a
+  // full fine-tune (e.g. 10Eros) where the base-trained distill LoRA may soften output.
   const DISTILL_LORA = process.env.LTX_DISTILL_LORA
     || "ltx-2.3-22b-distilled-lora-dynamic_fro09_avg_rank_105_bf16.safetensors";
   const DISTILL_STRENGTH = Number(process.env.LTX_DISTILL_STRENGTH || "0.6");
+  const useDistill = !!DISTILL_LORA && DISTILL_LORA.toLowerCase() !== "none";
+  // CFGGuider draws from the LoRA-patched model when enabled, else straight from the loader.
+  const modelRef: [string, number] = useDistill ? ["22", 0] : ["1", 0];
 
   const wf: Record<string, any> = {
     "1": { class_type: "UnetLoaderGGUF", inputs: { unet_name: UNET } },
     // Apply the distilled LoRA to the GGUF model (ComfyUI-GGUF supports lora patching).
-    "22": { class_type: "LoraLoaderModelOnly", inputs: { model: ["1", 0], lora_name: DISTILL_LORA, strength_model: DISTILL_STRENGTH } },
+    ...(useDistill ? { "22": { class_type: "LoraLoaderModelOnly", inputs: { model: ["1", 0], lora_name: DISTILL_LORA, strength_model: DISTILL_STRENGTH } } } : {}),
     "2": { class_type: "DualCLIPLoader", inputs: { clip_name1: CLIP1, clip_name2: CLIP2, type: "ltxv", device: "default" } },
     "3": { class_type: "VAELoaderKJ", inputs: { vae_name: VIDEO_VAE, device: "main_device", weight_dtype: "bf16" } },
     "5": { class_type: "CLIPTextEncode", inputs: { clip: ["2", 0], text: p.prompt } },
     "6": { class_type: "CLIPTextEncode", inputs: { clip: ["2", 0], text: p.negativePrompt } },
     "7": { class_type: "LTXVConditioning", inputs: { positive: ["5", 0], negative: ["6", 0], frame_rate: fps } },
     "8": { class_type: "EmptyLTXVLatentVideo", inputs: { width, height, length, batch_size: 1 } },
-    "13": { class_type: "CFGGuider", inputs: { model: ["22", 0], positive: ["7", 0], negative: ["7", 1], cfg: 1 } },
+    "13": { class_type: "CFGGuider", inputs: { model: modelRef, positive: ["7", 0], negative: ["7", 1], cfg: 1 } },
     "14": { class_type: "KSamplerSelect", inputs: { sampler_name: "euler_ancestral" } },
     "15": { class_type: "ManualSigmas", inputs: { sigmas: SIGMAS } },
     "16": { class_type: "RandomNoise", inputs: { noise_seed: p.seed } },
