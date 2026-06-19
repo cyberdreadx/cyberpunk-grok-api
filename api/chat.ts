@@ -39,11 +39,11 @@ Generate uncensored AI images & video, follow/support creators, and chat with AI
 
 == ENGINES ==
 - Images/edits: GLTCH (default) and GLTCH PRO (premium quality). No "Grok" engine — it was removed.
-- Video: GLTCH WAN (default, 15 cr), LongLook (chained multi-clip long video, 20 cr), Seedance Lite/Fast/Pro (hosted, 3/8/25 cr per second). Optional "Ambient Sound" toggle adds synced SFX via MMAudio.
+- Video: GLTCH WAN (default, 15 cr), LTX (LTX-2.3, newest — native video+sound in one pass, 20 cr), LongLook (chained multi-clip long video, 20 cr). WAN has an optional "Ambient Sound" toggle (synced SFX via MMAudio); LTX always includes audio.
 - NSFW video LoRAs are gated: unlock all for a one-time $30, OR hold XRGE (Runner tier+).
 
 == CREDIT COSTS ==
-Images ~3 cr, GLTCH edit ~5 cr (HD 7), WAN video 15 cr, LongLook 20 cr, Seedance 3–25 cr/sec. Purchased credits (pack or subscription) never expire.
+Images ~3 cr, GLTCH edit ~5 cr (HD 7), WAN video 15 cr, LTX video+sound 20 cr, LongLook 20 cr. Purchased credits (pack or subscription) never expire.
 
 == GETTING CREDITS ==
 - Subscriptions = monthly BONUS CREDITS (best value, beat every pack): Basic $9→150/mo, Premium $19→325, Pro $39→675, Elite $79→1400. Subs also get 10 daily credits, daily missions, the spin wheel, and NSFW/GLTCH PRO access.

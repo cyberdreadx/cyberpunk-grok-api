@@ -620,7 +620,7 @@ const Index = () => {
     if (seedTier === "seedance") return 3 * videoSettings.duration;        // SEEDANCE Lite: 3 cr/s
     if (seedTier === "seedance-fast") return 8 * videoSettings.duration;   // SEEDANCE 2.0 Fast: 8 cr/s
     if (seedTier === "seedance-pro") return 25 * videoSettings.duration;   // SEEDANCE 2.0 Pro: 25 cr/s
-    if (seedTier === "ltx") return calculateCreditCost("comfy-video");     // LTX-2.3 (video + sound)
+    if (seedTier === "ltx") return calculateCreditCost("comfy-ltx");       // LTX-2.3 (video + sound) — H200-only, 20 cr
     if (isComfyRender || isComfyAnimate || isGltchWan) return calculateCreditCost("comfy-video");
     if (isGrokRender || isGrokAnimate) return calculateCreditCost("text-to-video", 1, videoSettings.duration);
     if (isComfyLongLook) return calculateCreditCost("comfy-longlook", longLookSeqCount);
@@ -1756,7 +1756,7 @@ const Index = () => {
                     </div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>LTX-2.3 • with sound</span>
-                      <span className={renderEngine === "ltx" ? "text-amber-300/70" : "text-muted-foreground/50"}>15 cr</span>
+                      <span className={renderEngine === "ltx" ? "text-amber-300/70" : "text-muted-foreground/50"}>20 cr</span>
                     </div>
                   </button>
                 </div>
@@ -1900,7 +1900,7 @@ const Index = () => {
                     </div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>LTX-2.3 • with sound</span>
-                      <span className={animateEngine === "ltx" ? "text-amber-300/70" : "text-muted-foreground/50"}>15 cr</span>
+                      <span className={animateEngine === "ltx" ? "text-amber-300/70" : "text-muted-foreground/50"}>20 cr</span>
                     </div>
                   </button>
                 </div>

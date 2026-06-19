@@ -182,8 +182,8 @@ const COMFY_COSTS: Record<string, number> = {
   "gltch-wan": 15,
   "gltch-wan-hd": 18,
   "longlook": 20, // flat cost regardless of sequence count
-  "ltx-video": 15,  // LTX-2.3 text-to-video (native audio)
-  "ltx-animate": 15, // LTX-2.3 image-to-video (native audio)
+  "ltx-video": 20,  // LTX-2.3 text-to-video (native audio) — H200-only worker, priced above WAN
+  "ltx-animate": 20, // LTX-2.3 image-to-video (native audio) — H200-only worker, priced above WAN
 };
 
 /**

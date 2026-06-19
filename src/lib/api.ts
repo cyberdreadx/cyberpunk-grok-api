@@ -131,6 +131,7 @@ export const CREDIT_COSTS = {
   comfyEdit: 3,
   comfyEditHd: 4,
   comfyVideo: 15,
+  comfyLtx: 20,
   comfyLongLook: 20,
 } as const;
 
@@ -139,7 +140,7 @@ export type CreditMode =
   | "text-to-image-2k" | "edit-image-2k" | "text-to-image-pro-2k" | "edit-image-pro-2k"
   | "text-to-video" | "image-to-video"
   | "gltch-edit" | "gltch-edit-hd"
-  | "comfy-image" | "comfy-image-hd" | "comfy-edit" | "comfy-edit-hd" | "comfy-video" | "comfy-longlook";
+  | "comfy-image" | "comfy-image-hd" | "comfy-edit" | "comfy-edit-hd" | "comfy-video" | "comfy-ltx" | "comfy-longlook";
 
 /** Calculate credit cost for a given action. */
 export function calculateCreditCost(
@@ -181,6 +182,8 @@ export function calculateCreditCost(
       return CREDIT_COSTS.comfyEditHd;
     case "comfy-video":
       return CREDIT_COSTS.comfyVideo;
+    case "comfy-ltx":
+      return CREDIT_COSTS.comfyLtx;
     case "comfy-longlook":
       return CREDIT_COSTS.comfyLongLook * imageCount;
     default:
