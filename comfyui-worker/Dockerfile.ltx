@@ -3,8 +3,10 @@
 #   Text / Image / First-Last-Frame / Video / Audio → Video (with native audio + lip-sync).
 # Kept SEPARATE from the WAN 2.2 worker so a ComfyUI core update can't break production.
 #
-# Build:   docker build -f Dockerfile.ltx -t your-dockerhub-user/comfyui-ltx:latest .
-# Push:    docker push your-dockerhub-user/comfyui-ltx:latest
+# Build context is the REPO ROOT (RunPod GitHub deploy uses repo root), so COPY
+# paths are prefixed with comfyui-worker/. Build from the repo root:
+#   docker build -f comfyui-worker/Dockerfile.ltx -t your-dockerhub-user/comfyui-ltx:latest .
+#   docker push your-dockerhub-user/comfyui-ltx:latest
 #
 # Models live on the shared RunPod network volume at:
 #   /runpod-volume/runpod-slim/ComfyUI/models/{diffusion_models,text_encoders,vae,loras,latent_upscale_models}
@@ -89,7 +91,7 @@ RUN python -c "import os; \
 # ── Entrypoint ───────────────────────────────────────────────────
 # entrypoint.sh symlinks model dirs + custom nodes from the network volume,
 # and patches handler.py to merge gifs/videos into the images output list.
-COPY entrypoint.sh /entrypoint.sh
+COPY comfyui-worker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["/start.sh"]
@@ -99,13 +101,13 @@ CMD ["/start.sh"]
 RUN printf "\nrunpod_volume:\n    base_path: /runpod-volume/runpod-slim/ComfyUI/models\n    checkpoints: checkpoints\n    upscale_models: upscale_models\n    latent_upscale_models: latent_upscale_models\n    vae: vae\n    clip: text_encoders\n    text_encoders: text_encoders\n    clip_vision: clip_vision\n    loras: loras\n    unet: unet\n    diffusion_models: diffusion_models\n\nrunpod_volume_unet_compat:\n    base_path: /runpod-volume/runpod-slim/ComfyUI/models\n    diffusion_models: unet\n" >> /comfyui/extra_model_paths.yaml
 
 # ── Patch handler.py to support image output ─────────────────────
-COPY handler_patch.py /handler_patch.py
+COPY comfyui-worker/handler_patch.py /handler_patch.py
 RUN python /handler_patch.py && rm /handler_patch.py
 
 # ── Patch rp_upload.py to read BUCKET_NAME from env ─────────────
-COPY bucket_patch.py /bucket_patch.py
+COPY comfyui-worker/bucket_patch.py /bucket_patch.py
 RUN python /bucket_patch.py && rm /bucket_patch.py
 
 # ── Patch handler.py to clean up after each job ─────────────────
-COPY cleanup_patch.py /cleanup_patch.py
+COPY comfyui-worker/cleanup_patch.py /cleanup_patch.py
 RUN python /cleanup_patch.py && rm /cleanup_patch.py
