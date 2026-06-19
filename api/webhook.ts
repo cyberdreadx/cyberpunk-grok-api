@@ -433,7 +433,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const insRows = await sql`
         INSERT INTO transactions (user_id, credits, amount_cents, stripe_session_id, package, type, payment_method)
         VALUES (${userId}::uuid, ${creditGrant}, ${amountPaidCents}, ${invoice.id}, ${tier || 'legacy'}, 'subscription', ${invoicePayMethod})
-        ON CONFLICT (stripe_session_id) DO NOTHING
+        ON CONFLICT (stripe_session_id) WHERE stripe_session_id IS NOT NULL DO NOTHING
         RETURNING id
       `;
       if (insRows.length > 0) {
