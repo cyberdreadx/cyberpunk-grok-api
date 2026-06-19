@@ -461,16 +461,24 @@ function buildLtxWorkflow(p: {
   const AUDIO_VAE = process.env.LTX_AUDIO_VAE || "LTX23_audio_vae_bf16.safetensors";
   const SIGMAS = process.env.LTX_SIGMAS
     || "1., 0.99375, 0.9875, 0.98125, 0.975, 0.909375, 0.725, 0.421875, 0.0";
+  // Distilled LoRA — REQUIRED for the few-step distilled sigma schedule above to
+  // produce sharp output. Without it the schedule undercooks → blurry video.
+  // (On the network volume at models/loras/; matches the reference workflow.)
+  const DISTILL_LORA = process.env.LTX_DISTILL_LORA
+    || "ltx-2.3-22b-distilled-lora-dynamic_fro09_avg_rank_105_bf16.safetensors";
+  const DISTILL_STRENGTH = Number(process.env.LTX_DISTILL_STRENGTH || "0.6");
 
   const wf: Record<string, any> = {
     "1": { class_type: "UnetLoaderGGUF", inputs: { unet_name: UNET } },
+    // Apply the distilled LoRA to the GGUF model (ComfyUI-GGUF supports lora patching).
+    "22": { class_type: "LoraLoaderModelOnly", inputs: { model: ["1", 0], lora_name: DISTILL_LORA, strength_model: DISTILL_STRENGTH } },
     "2": { class_type: "DualCLIPLoader", inputs: { clip_name1: CLIP1, clip_name2: CLIP2, type: "ltxv", device: "default" } },
     "3": { class_type: "VAELoaderKJ", inputs: { vae_name: VIDEO_VAE, device: "main_device", weight_dtype: "bf16" } },
     "5": { class_type: "CLIPTextEncode", inputs: { clip: ["2", 0], text: p.prompt } },
     "6": { class_type: "CLIPTextEncode", inputs: { clip: ["2", 0], text: p.negativePrompt } },
     "7": { class_type: "LTXVConditioning", inputs: { positive: ["5", 0], negative: ["6", 0], frame_rate: fps } },
     "8": { class_type: "EmptyLTXVLatentVideo", inputs: { width, height, length, batch_size: 1 } },
-    "13": { class_type: "CFGGuider", inputs: { model: ["1", 0], positive: ["7", 0], negative: ["7", 1], cfg: 1 } },
+    "13": { class_type: "CFGGuider", inputs: { model: ["22", 0], positive: ["7", 0], negative: ["7", 1], cfg: 1 } },
     "14": { class_type: "KSamplerSelect", inputs: { sampler_name: "euler_ancestral" } },
     "15": { class_type: "ManualSigmas", inputs: { sigmas: SIGMAS } },
     "16": { class_type: "RandomNoise", inputs: { noise_seed: p.seed } },
@@ -480,7 +488,10 @@ function buildLtxWorkflow(p: {
   let videoLatentRef: [string, number] = ["8", 0];
   if (p.imageFilename) {
     wf["9"] = { class_type: "LoadImage", inputs: { image: p.imageFilename } };
-    wf["10"] = { class_type: "LTXVImgToVideoInplace", inputs: { strength: 0.8, bypass: false, vae: ["3", 0], image: ["9", 0], latent: ["8", 0] } };
+    // Resize the start frame to the exact latent dimensions (center-crop) BEFORE
+    // encoding, or the i2v conditioning misaligns and the video comes out distorted/blurry.
+    wf["23"] = { class_type: "ImageScale", inputs: { image: ["9", 0], upscale_method: "lanczos", width, height, crop: "center" } };
+    wf["10"] = { class_type: "LTXVImgToVideoInplace", inputs: { strength: 0.8, bypass: false, vae: ["3", 0], image: ["23", 0], latent: ["8", 0] } };
     videoLatentRef = ["10", 0];
   }
 
