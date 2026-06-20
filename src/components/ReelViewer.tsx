@@ -68,6 +68,8 @@ const ReelViewer: React.FC<Props> = ({ open, onClose, initialPostId, userId, fil
   const [loadingMore, setLoadingMore] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [activeIdx, setActiveIdx] = useState(0);
+  // Shared mute state across all reels — starts muted (autoplay), tap any reel's button to hear sound.
+  const [muted, setMuted] = useState(true);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
   const scrollSettleTimerRef = useRef<number | null>(null);
@@ -245,7 +247,7 @@ const ReelViewer: React.FC<Props> = ({ open, onClose, initialPostId, userId, fil
                 className="h-[100dvh] snap-start snap-always"
               >
                 {shouldMount ? (
-                  <ReelCard post={p} active={isActive} mountMedia />
+                  <ReelCard post={p} active={isActive} mountMedia muted={muted} onToggleMuted={() => setMuted((m) => !m)} />
                 ) : (
                   // Lightweight placeholder — keeps scroll height correct without
                   // mounting media / spawning DOM trees for off-screen slides.

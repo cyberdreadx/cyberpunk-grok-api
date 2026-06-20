@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowBigUp, ArrowBigDown, MessageCircle, Trash2, Flag, Lock, Coins, CreditCard, Zap, Eye, EyeOff, MoreHorizontal, Link2, ShieldOff } from "lucide-react";
+import { ArrowBigUp, ArrowBigDown, MessageCircle, Trash2, Flag, Lock, Coins, CreditCard, Zap, Eye, EyeOff, MoreHorizontal, Link2, ShieldOff, Volume2, VolumeX } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import CommentThread from "@/components/CommentThread";
 import { Button } from "@/components/ui/button";
@@ -50,9 +50,13 @@ interface ReelCardProps {
   active?: boolean;
   /** Whether to mount media at all (for virtualization). Defaults to true. */
   mountMedia?: boolean;
+  /** Global mute state for the reels feed (shared across cards). */
+  muted?: boolean;
+  /** Toggle the global mute state. */
+  onToggleMuted?: () => void;
 }
 
-const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate, active = true, mountMedia = true }) => {
+const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate, active = true, mountMedia = true, muted = true, onToggleMuted }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -212,9 +216,10 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate, active = true, moun
   React.useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
+    v.muted = muted;
     if (active) v.play().catch(() => {});
     else { v.pause(); }
-  }, [active]);
+  }, [active, muted]);
 
   return (
     <div className="relative w-full h-[100dvh] snap-start snap-always bg-black flex items-center justify-center overflow-hidden">
@@ -230,7 +235,7 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate, active = true, moun
             src={active ? mainMedia.src : undefined}
             poster={post.previewImageUrl}
             className={`relative z-[1] w-full h-full object-contain transition-[filter] duration-300 ${isMatureBlurred ? "blur-2xl scale-110" : ""}`}
-            muted
+            muted={muted}
             playsInline
             preload={active ? "metadata" : "none"}
             loop
@@ -269,6 +274,19 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate, active = true, moun
       )}
 
       <div className="absolute inset-0 z-[2] bg-gradient-to-b from-black/40 via-transparent to-black/70 pointer-events-none" />
+
+      {/* Sound toggle (videos) — global mute across reels; tap to hear audio */}
+      {isVideo && mountMedia && !isLocked && !isTeaser && onToggleMuted && (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onToggleMuted(); }}
+          className="absolute top-4 right-4 z-30 rounded-full bg-black/50 p-2.5 text-white/90 backdrop-blur-sm transition-colors hover:bg-black/70"
+          title={muted ? "Unmute" : "Mute"}
+          aria-label={muted ? "Unmute" : "Mute"}
+        >
+          {muted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+        </button>
+      )}
 
       {/* Owner-only LOCKED · price badge — creator always sees own post unblurred,
           so this confirms at a glance that the post IS locked for other viewers. */}
