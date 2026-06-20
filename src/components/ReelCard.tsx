@@ -280,7 +280,8 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate, active = true, moun
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); onToggleMuted(); }}
-          className="absolute top-4 right-4 z-30 rounded-full bg-black/50 p-2.5 text-white/90 backdrop-blur-sm transition-colors hover:bg-black/70"
+          className="absolute z-30 rounded-full bg-black/50 p-2.5 text-white/90 backdrop-blur-sm transition-colors hover:bg-black/70"
+          style={{ top: "calc(env(safe-area-inset-top, 0px) + 60px)", right: 12 }}
           title={muted ? "Unmute" : "Mute"}
           aria-label={muted ? "Unmute" : "Mute"}
         >
