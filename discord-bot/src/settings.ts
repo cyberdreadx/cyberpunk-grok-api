@@ -5,13 +5,13 @@ import { getDb } from "./db.js";
 
 export interface UserSettings {
   aspect: "landscape" | "portrait" | "square";
-  length: 49 | 81 | 113; // frame counts ≈ 3s / 5s / 7s
-  sound: boolean; // MMAudio ambient
+  length: 49 | 81 | 113; // 8n+1 frame counts ≈ 2s / 3s / 5s at LTX 24fps
+  sound: boolean; // LTX native audio (on by default)
   quality: "standard" | "hd";
 }
 
 export const DEFAULT_SETTINGS: UserSettings = {
-  aspect: "landscape", length: 81, sound: false, quality: "standard",
+  aspect: "landscape", length: 81, sound: true, quality: "standard",
 };
 
 export const ASPECT_DIMS: Record<UserSettings["aspect"], { width: number; height: number }> = {
@@ -21,7 +21,7 @@ export const ASPECT_DIMS: Record<UserSettings["aspect"], { width: number; height
 };
 
 const LENGTHS: { label: string; value: UserSettings["length"] }[] = [
-  { label: "3s", value: 49 }, { label: "5s", value: 81 }, { label: "7s", value: 113 },
+  { label: "2s", value: 49 }, { label: "3s", value: 81 }, { label: "5s", value: 113 },
 ];
 
 export async function getSettings(discordId: string): Promise<UserSettings> {
@@ -41,7 +41,7 @@ export async function saveSettings(discordId: string, s: UserSettings): Promise<
 
 /** The interactive panel (content + components) reflecting the current settings. */
 export function buildPanel(s: UserSettings) {
-  const lenLabel = LENGTHS.find((l) => l.value === s.length)?.label ?? "5s";
+  const lenLabel = LENGTHS.find((l) => l.value === s.length)?.label ?? "3s";
   const content =
     `⚙️ **Your GLTCH settings** _(saved automatically, applied to /generate + /animate)_\n` +
     `Aspect **${s.aspect}** · Length **${lenLabel}** · Sound **${s.sound ? "On" : "Off"}** · Quality **${s.quality}**\n` +

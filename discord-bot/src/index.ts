@@ -113,7 +113,7 @@ async function onHelp(i: ChatInputCommandInteraction) {
       `\`/balance\` — check credits\n` +
       `\`/settings\` — set your default aspect, length, sound & quality\n` +
       `\`/generate prompt:<text>\` — make an image\n` +
-      `\`/animate prompt:<text> [image]\` — make a video (attach an image to animate it)\n` +
+      `\`/animate prompt:<text> [image]\` — make an LTX video with sound (attach an image to animate it)\n` +
       `Buy credits at ${config.siteUrl}.`,
   });
 }

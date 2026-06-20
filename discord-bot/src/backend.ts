@@ -38,8 +38,9 @@ export async function comfySubmitAndPoll(
     if (direct) return submit.video ? { video: direct } : { image: direct };
     throw new Error("No promptId returned from generate");
   }
+  const videoWorkflows = new Set(["wan-video", "longlook", "ltx-video", "ltx-animate"]);
   const outputType: string =
-    submit.outputType || (body.workflow === "wan-video" || body.workflow === "longlook" ? "video" : "image");
+    submit.outputType || (videoWorkflows.has(body.workflow as string) ? "video" : "image");
   const runpodEndpointId: string | undefined = submit.runpodEndpointId;
 
   for (let i = 0; i < maxAttempts; i++) {
@@ -80,9 +81,11 @@ async function urlToBase64(url: string): Promise<string> {
 }
 
 /**
- * Animate (WAN 2.2 video). With a start image → image-to-video. Without one →
- * generate a free Z-Image start frame from the prompt (skipCredits, like the web
- * "render" flow where the wan-video step pays), then animate it. Returns video URL.
+ * Animate with LTX-2.3 (native sound, included in the per-second price).
+ *  - With a start image → `ltx-animate` (image-to-video).
+ *  - Without one → `ltx-video` (LTX does native text-to-video, so no separate
+ *    Z-Image start frame is needed like the old WAN flow).
+ * Returns the video URL. Charges the user's credits.
  */
 export async function generateVideo(
   prompt: string,
@@ -92,45 +95,30 @@ export async function generateVideo(
     frameCount?: number; audioMode?: "none" | "ambient"; useUpscale?: boolean;
   } = {},
 ): Promise<string> {
-  const width = opts.width ?? 832;
-  const height = opts.height ?? 480;
+  // LTX needs spatial dims divisible by 32 (the backend re-clamps too).
+  const round32 = (n: number) => Math.max(64, Math.round(n / 32) * 32);
+  const width = round32(opts.width ?? 832);
+  const height = round32(opts.height ?? 480);
   const frameCount = opts.frameCount ?? 81;
-  const audioMode = opts.audioMode ?? "none";
-  const useUpscale = opts.useUpscale ?? false;
+  // LTX bundles native audio; only disable it when the user turned sound off.
+  const withAudio = opts.audioMode !== "none";
 
-  let imageBase64: string;
+  const body: Record<string, unknown> = {
+    workflow: opts.startImageUrl ? "ltx-animate" : "ltx-video",
+    prompt,
+    width,
+    height,
+    frameCount,
+    frameRate: 24,
+    ltxAudio: withAudio,
+  };
+
   if (opts.startImageUrl) {
-    imageBase64 = await urlToBase64(opts.startImageUrl);
-  } else {
-    // Start frame at the SAME dimensions as the video so it isn't cropped/resized.
-    const frame = await comfySubmitAndPoll(
-      { workflow: "zimage", prompt, width, height, skipCredits: true },
-      token,
-      { pollMs: 2500, maxAttempts: 120 },
-    );
-    if (!frame.image) throw new Error("Couldn't generate a start frame");
-    imageBase64 = await urlToBase64(frame.image);
+    body.imageBase64 = await urlToBase64(opts.startImageUrl);
+    body.imageFilename = "ltx_input.png";
   }
 
-  const r = await comfySubmitAndPoll(
-    {
-      workflow: "wan-video",
-      prompt,
-      imageBase64,
-      imageFilename: "input.jpg",
-      width,
-      height,
-      frameCount,
-      steps: 8,
-      cfg: 1,
-      useRife: true,
-      useUpscale,
-      audioMode,
-      ...(audioMode === "ambient" ? { audioPrompt: prompt } : {}),
-    },
-    token,
-    { pollMs: 5000, maxAttempts: 120 },
-  );
+  const r = await comfySubmitAndPoll(body, token, { pollMs: 5000, maxAttempts: 150 });
   const url = r.video || r.image;
   if (!url) throw new Error("No video returned");
   return url;

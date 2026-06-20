@@ -39,7 +39,7 @@ const commands = [
   },
   {
     name: "animate",
-    description: "Generate a video. Attach an image to animate it, or just give a prompt.",
+    description: "Generate an LTX video with sound. Attach an image to animate it, or just give a prompt.",
     integration_types: [0, 1],
     contexts: [0, 1, 2],
     options: [
