@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Download, Maximize2, X, Trash2, ExternalLink, ChevronLeft, ChevronRight, Pencil, Film, Copy, Check, FolderPlus, FolderOpen, MoreVertical, FolderInput, Lock, LockOpen, ShieldCheck, Eye, EyeOff, ChevronDown, Send, Archive, Loader2, Link2, CheckSquare, Square, ListChecks, RotateCcw, XCircle, Search, CirclePlus, Lightbulb } from "lucide-react";
+import { Download, Maximize2, X, Trash2, ExternalLink, ChevronLeft, ChevronRight, Pencil, Film, Copy, Check, FolderPlus, FolderOpen, MoreVertical, FolderInput, Lock, LockOpen, ShieldCheck, Eye, EyeOff, ChevronDown, Send, Archive, Loader2, Link2, CheckSquare, Square, ListChecks, RotateCcw, XCircle, Search, CirclePlus, Lightbulb, Volume2, VolumeX } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -874,6 +874,8 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
   const navigate = useNavigate();
   const location = useLocation();
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  // Sound toggle for the expanded video viewer — starts muted (autoplay), tap to unmute.
+  const [expandedMuted, setExpandedMuted] = useState(true);
   const [mobileIndex, setMobileIndex] = useState(0);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [moveMenuId, setMoveMenuId] = useState<string | null>(null);
@@ -2595,17 +2597,29 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
                 className="w-full h-auto max-h-[60vh] sm:max-h-[75vh] object-contain rounded border border-border"
               />
             ) : (
-              <video
-                src={expandedResult.url}
-                className="w-full max-h-[60vh] sm:max-h-[75vh] rounded border border-border"
-                controls
-                autoPlay
-                muted
-                playsInline
-                // @ts-ignore
-                webkit-playsinline="true"
-                preload="metadata"
-              />
+              <div className="relative">
+                <video
+                  src={expandedResult.url}
+                  className="w-full max-h-[60vh] sm:max-h-[75vh] rounded border border-border"
+                  controls
+                  autoPlay
+                  muted={expandedMuted}
+                  playsInline
+                  // @ts-ignore
+                  webkit-playsinline="true"
+                  preload="metadata"
+                />
+                {/* Stories-style sound toggle — videos start muted; tap to hear audio (LTX/WAN). */}
+                <button
+                  type="button"
+                  onClick={() => setExpandedMuted((m) => !m)}
+                  className="absolute top-2 right-2 z-10 rounded-full bg-black/60 p-2 text-white/90 backdrop-blur-sm transition-colors hover:bg-black/80"
+                  title={expandedMuted ? "Unmute" : "Mute"}
+                  aria-label={expandedMuted ? "Unmute" : "Mute"}
+                >
+                  {expandedMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                </button>
+              </div>
             )}
 
             {expandedResult.revised_prompt && (
