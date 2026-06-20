@@ -2383,8 +2383,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const { allowed } = await checkRateLimit(auth.userId, "enhance-prompt", { max: 10, windowSeconds: 60 });
       if (!allowed) return res.status(429).json({ error: "Too many enhance requests. Wait a moment." });
 
-      const xaiKey = process.env.XAI_API_KEY;
-      if (!xaiKey) return res.status(500).json({ error: "XAI_API_KEY not configured" });
+      const deepseekKey = process.env.DEEPSEEK_API_KEY;
+      if (!deepseekKey) return res.status(500).json({ error: "DEEPSEEK_API_KEY not configured" });
+
+      // Charge 1 credit per enhance (admin is free). Refunded below if the LLM call fails.
+      const ENHANCE_COST = 1;
+      const enhanceSql = getDb();
+      let enhanceCharged = false;
+      if (!isAdminUser) {
+        const credRows = await enhanceSql`SELECT daily_credits, sub_credits, pack_credits FROM users WHERE id = ${auth.userId}`;
+        if (credRows.length === 0) return res.status(404).json({ error: "User not found." });
+        const totalCredits = (credRows[0].daily_credits || 0) + (credRows[0].sub_credits || 0) + (credRows[0].pack_credits || 0);
+        if (totalCredits < ENHANCE_COST) {
+          return res.status(402).json({ error: "Not enough credits. Enhancing a prompt costs 1 credit." });
+        }
+        try {
+          await enhanceSql`SELECT deduct_credits(${auth.userId}::uuid, ${ENHANCE_COST})`;
+          enhanceCharged = true;
+        } catch {
+          return res.status(402).json({ error: "Failed to deduct credits" });
+        }
+      }
 
       const isLtx = mode === "ltx" || mode === "ltx-video" || mode === "ltx-animate";
 
@@ -2421,14 +2440,15 @@ Rules:
 - Do not add negative prompt or quality tags — just the visual description`;
 
       try {
-        const llmResp = await fetch("https://api.x.ai/v1/chat/completions", {
+        // DeepSeek is OpenAI-compatible; use the chat-completions endpoint.
+        const llmResp = await fetch("https://api.deepseek.com/chat/completions", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${xaiKey}`,
+            "Authorization": `Bearer ${deepseekKey}`,
           },
           body: JSON.stringify({
-            model: "grok-3-mini",
+            model: "deepseek-chat",
             messages: [
               { role: "system", content: systemPrompt },
               { role: "user", content: prompt.trim() },
@@ -2440,16 +2460,21 @@ Rules:
 
         if (!llmResp.ok) {
           const errText = await llmResp.text().catch(() => "");
-          throw new Error(`Grok API returned ${llmResp.status}: ${errText.slice(0, 200)}`);
+          throw new Error(`DeepSeek API returned ${llmResp.status}: ${errText.slice(0, 200)}`);
         }
 
         const llmData = await llmResp.json() as any;
         const enhanced = llmData.choices?.[0]?.message?.content?.trim();
-        if (!enhanced) throw new Error("Empty response from Grok");
+        if (!enhanced) throw new Error("Empty response from DeepSeek");
 
         return res.status(200).json({ enhanced });
       } catch (err: any) {
         console.error("[enhance-prompt]", err.message);
+        // Refund the credit so a failed enhance is never charged.
+        if (enhanceCharged) {
+          await enhanceSql`SELECT add_pack_credits(${auth.userId}::uuid, ${ENHANCE_COST})`
+            .catch((e: any) => console.error("[enhance-prompt] refund failed:", auth.userId, e.message));
+        }
         return res.status(502).json({ error: "Prompt enhancement failed" });
       }
     }

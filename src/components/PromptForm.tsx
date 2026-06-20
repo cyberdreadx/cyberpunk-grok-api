@@ -299,7 +299,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
     }
   }, [needsImage]);
 
-  // ── Enhance prompt via Grok LLM ──
+  // ── Enhance prompt via DeepSeek LLM (costs 1 credit) ──
   const enhancePrompt = useCallback(async () => {
     if (!prompt.trim() || enhancing) return;
     setEnhancing(true);
@@ -540,7 +540,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
                 size="sm"
                 variant="ghost"
                 className="h-8 px-2 font-mono-share text-[10px] text-primary/60 hover:text-primary hover:bg-primary/10 disabled:opacity-30 gap-1"
-                title="Enhance prompt with AI"
+                title="Enhance prompt with AI · costs 1 credit"
               >
                 {enhancing ? (
                   <Loader2 className="w-3 h-3 animate-spin" />
@@ -548,6 +548,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
                   <Sparkles className="w-3 h-3" />
                 )}
                 <span className="hidden sm:inline">{t("prompt.enhance").toUpperCase()}</span>
+                <span className="text-primary/40">1cr</span>
               </Button>
               <div className="flex flex-col items-end gap-1">
                 <TooltipProvider delayDuration={300}>
