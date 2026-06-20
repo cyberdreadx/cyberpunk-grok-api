@@ -3,7 +3,7 @@
  * Designed for cron-driven processing (no fragile self-fetch chains).
  */
 
-import { getResend, getFromAddress, logEmail, buildAnnouncementHtml, buildV47AnnouncementHtml, buildV48AnnouncementHtml, buildV49SubscriptionFixHtml, buildV52AnnouncementHtml, buildLaunchAnnouncementHtml } from "./email";
+import { getResend, getFromAddress, logEmail, buildAnnouncementHtml, buildV47AnnouncementHtml, buildV48AnnouncementHtml, buildV49SubscriptionFixHtml, buildV52AnnouncementHtml, buildV53AnnouncementHtml, buildLaunchAnnouncementHtml } from "./email";
 
 export const CAMPAIGN_CONFIG_KEY = "active_email_campaign";
 
@@ -25,6 +25,7 @@ export const DEFAULT_CAMPAIGN_SUBJECTS: Record<string, string> = {
   announcement_v48: "GLTCHRunner Update — v4.8 is Live",
   announcement_v49: "GLTCHRunner — Subscription Credits Fixed + Platform Update",
   announcement_v52: "⚡ GLTCHRunner v5.2 — Faster & More Reliable Than Ever",
+  announcement_v53: "🔊 GLTCHRunner v5.3 — LTX video with SOUND is live",
   announcement_launch: "🚀 GLTCH Runner is here — chat with AI models + video gen",
 };
 
@@ -38,6 +39,8 @@ export function getAnnouncementHtmlForCampaign(campaign: string): string {
       return buildV49SubscriptionFixHtml();
     case "announcement_v52":
       return buildV52AnnouncementHtml();
+    case "announcement_v53":
+      return buildV53AnnouncementHtml();
     case "announcement_launch":
       return buildLaunchAnnouncementHtml();
     default:

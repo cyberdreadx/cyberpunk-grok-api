@@ -556,6 +556,55 @@ export function buildV52AnnouncementHtml(): string {
   `;
 }
 
+export function buildV53AnnouncementHtml(): string {
+  return `
+    <div style="font-family: 'Courier New', monospace; background: #0a0a0f; color: #e0e0e0; padding: 32px; max-width: 540px; margin: 0 auto;">
+      <div style="border: 1px solid #00f0ff33; padding: 28px; border-radius: 4px;">
+
+        <h1 style="color: #00f0ff; font-size: 22px; letter-spacing: 4px; margin: 0 0 6px; text-align: center;">
+          GLTCHRUNNER
+        </h1>
+        <p style="color: #ff00e599; font-size: 11px; letter-spacing: 5px; text-align: center; margin: 0 0 28px;">
+          v5.3 // SOUND_ON
+        </p>
+
+        <div style="background: linear-gradient(135deg, #fbbf2415, #00f0ff15); border: 1px solid #fbbf2466; padding: 18px; border-radius: 4px; margin: 0 0 24px; text-align: center;">
+          <p style="color: #fbbf24; font-size: 12px; letter-spacing: 3px; margin: 0 0 8px;">🎬 NEW ENGINE — LTX-2.3 WITH SOUND</p>
+          <p style="font-size: 13px; color: #c0c0c0; margin: 0; line-height: 1.6;">
+            Generate video <strong style="color:#fff;">with native synced audio</strong> in a single pass — text-to-video and image-to-video. No separate sound step.
+          </p>
+        </div>
+
+        <p style="font-size: 14px; color: #c0c0c0; line-height: 1.7; margin: 0 0 20px;">
+          Hey Runner — our new <span style="color: #fbbf24;">LTX-2.3</span> engine makes video with sound baked in. Pick your clip length, hit generate, and the audio comes with it.
+        </p>
+
+        <div style="background: #111; border: 1px solid #00f0ff44; padding: 20px; border-radius: 4px; margin: 0 0 24px;">
+          <h2 style="color: #00f0ff; font-size: 15px; margin: 0 0 10px; letter-spacing: 1px;">
+            ⚡ WHAT'S NEW
+          </h2>
+          <ul style="font-size: 13px; color: #b0b0b0; margin: 0; padding-left: 18px; line-height: 1.8;">
+            <li><strong style="color:#fbbf24;">LTX-2.3</strong> — video + native sound in one pass, sharper renders</li>
+            <li><strong style="color:#fff;">Pick your length</strong> — 2–7 second clips, priced per second (7 cr/s)</li>
+            <li><strong style="color:#fff;">🔊 Sound everywhere</strong> — unmute videos in the feed reels, your library, and stories</li>
+            <li>Optional ambient sound still available on WAN video</li>
+          </ul>
+        </div>
+
+        <div style="text-align: center; margin: 0 0 20px;">
+          <a href="https://grokrunner.gltch.app" style="display: inline-block; background: linear-gradient(135deg, #00f0ff22, #ff00e522); border: 1px solid #00f0ff55; color: #00f0ff; text-decoration: none; padding: 14px 36px; border-radius: 4px; font-size: 14px; letter-spacing: 3px; font-weight: bold;">
+            OPEN GLTCHRUNNER →
+          </a>
+        </div>
+
+        <p style="font-size: 11px; color: #444; margin: 0; text-align: center;">
+          Sent to verified GltchRunner accounts. Your daily credits are still waiting.
+        </p>
+      </div>
+    </div>
+  `;
+}
+
 export function buildLaunchAnnouncementHtml(): string {
   return `
     <div style="font-family: 'Courier New', monospace; background: #0a0a0f; color: #e0e0e0; padding: 32px; max-width: 540px; margin: 0 auto;">
