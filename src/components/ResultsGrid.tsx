@@ -2023,7 +2023,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
                 className="w-full object-contain bg-black/40"
                 style={{ maxHeight: "70vh" }}
                 controls
-                muted
+                muted={expandedMuted}
                 playsInline
                 // @ts-ignore
                 webkit-playsinline="true"
@@ -2056,9 +2056,22 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
               {(currentResult?.type ?? "unknown").toUpperCase()}
             </div>
 
-            {/* Counter badge */}
+            {/* Sound toggle (videos only) — Stories-style; starts muted, tap to hear audio */}
+            {currentResult?.type !== "image" && (
+              <button
+                type="button"
+                onClick={() => setExpandedMuted((m) => !m)}
+                className="absolute top-2 right-2 z-10 rounded-full bg-black/60 p-1.5 text-white/90 backdrop-blur-sm transition-colors hover:bg-black/80"
+                title={expandedMuted ? "Unmute" : "Mute"}
+                aria-label={expandedMuted ? "Unmute" : "Mute"}
+              >
+                {expandedMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+              </button>
+            )}
+
+            {/* Counter badge — drops below the sound toggle for videos so they don't overlap */}
             {filteredResults.length > 1 && (
-              <div className="absolute top-2 right-2 font-mono-share text-[9px] bg-background/80 text-muted-foreground px-1.5 py-0.5 rounded">
+              <div className={`absolute right-2 font-mono-share text-[9px] bg-background/80 text-muted-foreground px-1.5 py-0.5 rounded ${currentResult?.type !== "image" ? "top-11" : "top-2"}`}>
                 {clampedIndex + 1}/{filteredResults.length}
               </div>
             )}
