@@ -5,5 +5,5 @@ export const BRAND = {
   nameHeader: "GLTCHRUNNER",
   tagline: "AI image & video — GLTCH engines, fewer limits",
   siteUrl: "https://grokrunner.gltch.app",
-  reddit: "gltchrunner",
+  reddit: "grokrunner",
 } as const;

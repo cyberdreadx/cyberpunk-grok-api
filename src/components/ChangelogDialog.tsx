@@ -91,7 +91,7 @@ const CHANGELOG: ChangelogEntry[] = [
         date: "April 23, 2026",
         title: "v4.8 — Social Proof Missions & Pack Buyer Fix",
         items: [
-            { icon: <Share2 className="w-3.5 h-3.5" />, text: "Reddit daily mission now requires a real post URL — paste your r/GLTCHRunner share link to claim", tag: "improve" },
+            { icon: <Share2 className="w-3.5 h-3.5" />, text: "Reddit daily mission now requires a real post URL — paste your r/grokrunner share link to claim", tag: "improve" },
             { icon: <Share2 className="w-3.5 h-3.5" />, text: "New X (Twitter) daily mission — share a post on X and submit the link for +10 credits/day", tag: "new" },
             { icon: <Shield className="w-3.5 h-3.5" />, text: "URL deduplication — every submitted share link is unique platform-wide, no recycling old posts", tag: "new" },
             { icon: <Bug className="w-3.5 h-3.5" />, text: "Credit-pack buyers unblocked — 'Failed to post story' fix for users whose Stripe customer ID never persisted on one-time purchases", tag: "fix" },

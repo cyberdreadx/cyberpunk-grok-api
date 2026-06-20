@@ -52,8 +52,8 @@ function buildShareIntent(
     return { url: `https://x.com/intent/tweet?text=${encodeURIComponent(text)}`, label: "Open X", usingPrefill };
   }
 
-  // Reddit: r/grok for the premium mission, generic GLTCHRunner otherwise
-  const subreddit = platform === "grok_subreddit" ? "grok" : "GLTCHRunner";
+  // Reddit: r/grok for the premium mission, the platform's r/grokrunner otherwise
+  const subreddit = platform === "grok_subreddit" ? "grok" : "grokrunner";
   const title = usingPrefill
     ? (caption.slice(0, 280) || "Made with GLTCH Runner")
     : "Check out what I made with GLTCH Runner";

@@ -1,6 +1,6 @@
 /**
  * POST /api/reddit-reward — Claim 10 free pack credits by entering a secret
- * code posted in the r/gltchrunner subreddit.
+ * code posted in the r/grokrunner subreddit.
  *
  * Body: { code: string }
  * Returns: { success: true, credits: 10 } on success
@@ -53,7 +53,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // Validate code (case-insensitive, trimmed)
   if (code.trim().toLowerCase() !== rewardCode.trim().toLowerCase()) {
-    return res.status(403).json({ error: "Invalid code. Check the r/gltchrunner subreddit for the correct code." });
+    return res.status(403).json({ error: "Invalid code. Check the r/grokrunner subreddit for the correct code." });
   }
 
   // Atomic: only grant if not already claimed
