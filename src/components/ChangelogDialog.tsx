@@ -24,6 +24,18 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
     {
+        version: "2026.07.15",
+        date: "July 15, 2026",
+        title: "v5.4 — Discord Bot, Monthly Sub Credits & Big Fixes",
+        items: [
+            { icon: <Gem className="w-3.5 h-3.5" />, text: "Subscriptions now grant monthly bonus credits — Basic 150, Premium 325, Pro 675, Elite 1,400 every month (yearly plans receive 12× up front), replacing the old per-generation discount", tag: "new" },
+            { icon: <Users className="w-3.5 h-3.5" />, text: "GLTCH Discord bot — link your account in Preferences, then /generate, /animate, and /balance straight from Discord", tag: "new" },
+            { icon: <Share2 className="w-3.5 h-3.5" />, text: "Share links work again — /s/ pages had stopped loading after the backend migration; all links (including old ones) now resolve correctly", tag: "fix" },
+            { icon: <Bug className="w-3.5 h-3.5" />, text: "Fixed subscription checkout failing with 'No such customer' for longtime credit-pack buyers — affected accounts can subscribe normally now", tag: "fix" },
+            { icon: <Film className="w-3.5 h-3.5" />, text: "Video generation reliability — resolved a storage outage that made WAN/LongLook jobs fail after rendering (failed jobs were auto-refunded)", tag: "fix" },
+        ],
+    },
+    {
         version: "2026.06.19",
         date: "June 19, 2026",
         title: "v5.3 — LTX-2.3 Video with Native Sound",
