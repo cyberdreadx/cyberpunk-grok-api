@@ -60,6 +60,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     );
     if (!allowed) return res.status(429).json({ error: "Rate limit exceeded. Try again shortly." });
 
+    // GROK RETIRED FROM THE PUBLIC API (2026-07-15): this endpoint runs xAI
+    // Grok on the PLATFORM's XAI_API_KEY — but the site retired credits-mode
+    // Grok (BYOK-only since 2026-06-14), so a third party here could rack up
+    // xAI bills on our key. Disabled unless explicitly re-enabled via env.
+    if (process.env.V1_GROK_ENABLED !== "1") {
+      return res.status(410).json({
+        error: "Grok models have been retired from the public API. Use POST /api/v1/comfy (GLTCH PRO workflows) instead — see /api/v1/models.",
+      });
+    }
+
     // ── Parse body ──
     const body = req.body || {};
     const prompt = (body.prompt as string || "").trim();

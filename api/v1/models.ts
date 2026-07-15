@@ -18,7 +18,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(401).json({ error: "Invalid or missing API key." });
   }
 
-  // Grok models
+  // Grok models — retired from the public API (BYOK-only on the site since
+  // 2026-06-14; /v1/generate would bill xAI on the platform key). Only listed
+  // if explicitly re-enabled.
+  const grokEnabled = process.env.V1_GROK_ENABLED === "1";
   const grokModels = [
     { id: "grok-imagine-image", type: "image", credits_per_unit: 4, description: "Standard quality image generation" },
     { id: "grok-imagine-image-pro", type: "image", credits_per_unit: 10, description: "Higher quality image generation" },
@@ -45,7 +48,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   return res.status(200).json({
     engines: [
-      { id: "grok", name: "GROK", description: "xAI Grok image & video generation", models: grokModels },
+      ...(grokEnabled ? [{ id: "grok", name: "GROK", description: "xAI Grok image & video generation", models: grokModels }] : []),
       { id: "gltch", name: "GLTCH", description: "AI-powered image editing", models: gltchModels },
       ...(comfyAvailable ? [{ id: "gltch-pro", name: "GLTCH PRO", description: "Advanced ComfyUI pipelines", models: comfyModels, checkpoints }] : []),
     ],
