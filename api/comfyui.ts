@@ -3144,13 +3144,19 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           const out = data.output || {};
           console.log("[comfyui-poll] COMPLETED output keys:", Object.keys(out));
 
-          // Store execution time and actual API cost for RunPod cost tracking
+          // Store execution time and actual API cost for RunPod cost tracking.
+          // Capture WHICH row we stamped: if output delivery fails below, the
+          // undelivered-refund must hit this exact row — searching for
+          // "execution_time_ms IS NULL" again would miss it (we just filled it)
+          // and grab an unrelated stale row (real incident 2026-07-15: refunded
+          // 3 cr from a week-old klein row instead of the failed 13 cr WAN job).
+          let costTrackedRow: { id: string; credits_used: number } | null = null;
           if (data.executionTime && auth?.userId) {
             const execMs = Math.round(data.executionTime);
             const runpodCostCents = Number(((execMs / 1000) * 0.155).toFixed(2));
             try {
               const sql = getDb();
-              await sql`
+              const updated = await sql`
                 UPDATE usage_log SET execution_time_ms = ${execMs}, api_cost_cents = ${runpodCostCents}
                 WHERE id = (
                   SELECT id FROM usage_log
@@ -3159,7 +3165,9 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
                     AND execution_time_ms IS NULL
                   ORDER BY created_at DESC LIMIT 1
                 )
-              `;
+                RETURNING id, credits_used
+              ` as any[];
+              if (updated.length > 0) costTrackedRow = updated[0];
             } catch { /* best effort */ }
           }
 
@@ -3421,22 +3429,30 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
             : " Check server logs for Blob upload errors.";
 
           // Auto-refund: user paid but received nothing because delivery failed.
-          // Mirrors the FAILED/CANCELLED/TIMED_OUT refund path below.
+          // Prefer the exact row the cost tracker stamped above (this job);
+          // only fall back to the NULL-exec search when cost tracking didn't
+          // run, and never touch rows older than 2h (stale-row guard).
           let refunded = 0;
           if (auth?.userId) {
             try {
               const sql = getDb();
-              const rows = await sql`
-                SELECT id, credits_used FROM usage_log
-                WHERE user_id = ${auth.userId}::uuid
-                  AND mode LIKE 'comfy-%'
-                  AND execution_time_ms IS NULL
-                ORDER BY created_at DESC LIMIT 1
-              ` as any[];
-              if (rows.length > 0 && rows[0].credits_used > 0) {
-                refunded = rows[0].credits_used;
+              let target: { id: string; credits_used: number } | null = costTrackedRow;
+              if (!target) {
+                const rows = await sql`
+                  SELECT id, credits_used FROM usage_log
+                  WHERE user_id = ${auth.userId}::uuid
+                    AND mode LIKE 'comfy-%'
+                    AND mode NOT LIKE '%-refunded%'
+                    AND execution_time_ms IS NULL
+                    AND created_at > now() - interval '2 hours'
+                  ORDER BY created_at DESC LIMIT 1
+                ` as any[];
+                target = rows[0] || null;
+              }
+              if (target && target.credits_used > 0) {
+                refunded = target.credits_used;
                 await sql`SELECT add_pack_credits(${auth.userId}::uuid, ${refunded})`;
-                await sql`UPDATE usage_log SET execution_time_ms = 0, mode = mode || '-refunded-undelivered' WHERE id = ${rows[0].id}`;
+                await sql`UPDATE usage_log SET execution_time_ms = COALESCE(execution_time_ms, 0), mode = mode || '-refunded-undelivered' WHERE id = ${target.id} AND mode NOT LIKE '%-refunded%'`;
                 console.log(`[comfyui-poll] Refunded ${refunded} credits to ${auth.userId} after undelivered output`);
               }
             } catch (e: any) {
@@ -3464,7 +3480,9 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
                 SELECT id, credits_used FROM usage_log
                 WHERE user_id = ${auth.userId}::uuid
                   AND mode LIKE 'comfy-%'
+                  AND mode NOT LIKE '%-refunded%'
                   AND execution_time_ms IS NULL
+                  AND created_at > now() - interval '2 hours'
                 ORDER BY created_at DESC LIMIT 1
               ` as any[];
               if (rows.length > 0 && rows[0].credits_used > 0) {
