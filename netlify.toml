@@ -13,17 +13,18 @@
   [headers.values]
     Cache-Control = "no-cache"
 
-# Proxy API requests to Vercel backend (must come BEFORE the SPA catch-all)
+# Proxy API requests to the self-hosted backend (must come BEFORE the SPA
+# catch-all). The old Vercel app is DISABLED (402) — do not point back at it.
 [[redirects]]
   from = "/api/*"
-  to = "https://cyberpunk-grok-api.vercel.app/api/:splat"
+  to = "https://api.gltch.app/api/:splat"
   status = 200
   force = true
 
-# Share pages → Vercel server-rendered HTML (OG meta tags for social previews)
+# Share pages → server-rendered HTML (OG meta tags for social previews)
 [[redirects]]
   from = "/s/:id"
-  to = "https://cyberpunk-grok-api.vercel.app/api/share-page?id=:id"
+  to = "https://api.gltch.app/api/share-page?id=:id"
   status = 200
   force = true
 
