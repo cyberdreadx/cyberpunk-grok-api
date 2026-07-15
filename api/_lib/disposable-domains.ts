@@ -5365,16 +5365,54 @@ export const DISPOSABLE_DOMAINS = new Set<string>([
 /**
  * Returns true if the email's domain is a known disposable/throwaway provider.
  */
+/**
+ * Curated additions observed in GLTCH Runner farming waves (survives regeneration
+ * of the auto-generated list above). Sourced from account-deletion logs 2026-07:
+ * throwaway domains cycling signup → free credits → delete.
+ * NOTE: shieldedpost.net intentionally excluded (has a real paying customer —
+ * privacy alias service).
+ */
+const LOCAL_DISPOSABLE_ADDITIONS = new Set<string>([
+  "web-library.net",
+  "kuromee.com",
+  "zipmail.one",
+  "voidpop.win",
+  "starlight.store",
+  "icodetensor.com",
+  "dysonc.com",
+  "airfryersbg.com",
+  "orgmail.pro",
+  "nullbox.asia",
+  "gpxmail.win",
+  "gardianwaves.org",
+  "bigmail.lol",
+  "mailrun.one",
+  "fastinbox.one",
+  "dmail.one",
+  "zapmail.one",
+  "epaynine.com",
+  "bevriz.com",
+  "voidmail.one",
+  "suahi.com",
+  "duvips.com",
+  "bunmail.one",
+  "brightgeta.com",
+]);
+
+function isBlockedDomain(domain: string): boolean {
+  return DISPOSABLE_DOMAINS.has(domain) || LOCAL_DISPOSABLE_ADDITIONS.has(domain);
+}
+
 export function isDisposableEmail(email: string): boolean {
   const parts = email.toLowerCase().trim().split("@");
   if (parts.length !== 2) return false;
   const domain = parts[1];
-  if (DISPOSABLE_DOMAINS.has(domain)) return true;
+  if (isBlockedDomain(domain)) return true;
   // Catch subdomain tricks e.g. user@mail.mailinator.com
   const domainParts = domain.split(".");
   if (domainParts.length > 2) {
     const rootDomain = domainParts.slice(-2).join(".");
-    if (DISPOSABLE_DOMAINS.has(rootDomain)) return true;
+    if (isBlockedDomain(rootDomain)) return true;
   }
   return false;
 }

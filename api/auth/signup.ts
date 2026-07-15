@@ -40,27 +40,43 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(429).json({ error: "Account creation limit reached for this IP. Try again in 24 hours." });
     }
 
-    // Device fingerprint limit: max 3 verified accounts per device fingerprint
+    // Device fingerprint limit: max 5 accounts per device fingerprint.
+    // The fingerprint is REQUIRED — the web client always sends one (fingerprint.ts
+    // never throws), so a missing fingerprint means a scripted signup. Counting
+    // includes tombstoned (deleted) accounts so delete→recreate cycles don't
+    // reset the cap (farming wave of 2026-07: 44 accounts on one fingerprint).
     const fp = typeof device_fingerprint === "string" && device_fingerprint.trim()
       ? device_fingerprint.trim().slice(0, 64) // sanitise length
       : null;
+    if (!fp) {
+      return res.status(400).json({ error: "Signup failed. Please use the web app to create an account." });
+    }
 
     const sql = getDb();
-
-    if (fp) {
-      const fpRows = await sql`
-        SELECT COUNT(*) AS cnt FROM users
-        WHERE device_fingerprint = ${fp}
-          AND email_verified = true
-      `;
-      const fpCount = Number(fpRows[0]?.cnt ?? 0);
-      if (fpCount >= 5) {
-        return res.status(429).json({
-          error: "Account limit reached for this device. Max 5 accounts per device.",
-        });
-      }
-    }
     const normalizedEmail = email.toLowerCase().trim();
+
+    const [fpCounts] = await sql`
+      SELECT
+        (SELECT COUNT(*) FROM users
+          WHERE device_fingerprint = ${fp}) AS live,
+        (SELECT COUNT(*) FROM deleted_accounts
+          WHERE device_fingerprint = ${fp}) AS tombstoned,
+        (SELECT COUNT(*) FROM deleted_accounts
+          WHERE email = ${normalizedEmail}
+            AND deleted_at > now() - interval '30 days') AS email_tombstoned
+    `;
+    if (Number(fpCounts?.live ?? 0) + Number(fpCounts?.tombstoned ?? 0) >= 5) {
+      return res.status(429).json({
+        error: "Account limit reached for this device. Max 5 accounts per device.",
+      });
+    }
+    // Deleted accounts can't re-register the same email for 30 days
+    // (stops delete→recreate credit-farming cycles).
+    if (Number(fpCounts?.email_tombstoned ?? 0) > 0) {
+      return res.status(429).json({
+        error: "This email was recently used on a deleted account. Contact support if you need it restored.",
+      });
+    }
     const passwordHash = await bcrypt.hash(password, 10);
 
     // Generate a 6-digit verification code (expires in 30 minutes)

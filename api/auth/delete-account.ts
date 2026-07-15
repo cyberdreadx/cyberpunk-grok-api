@@ -29,7 +29,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Verify password
     const [user] = await sql`
-      SELECT id, email, password_hash, stripe_customer_id, subscription_tier
+      SELECT id, email, password_hash, stripe_customer_id, subscription_tier, device_fingerprint
       FROM users WHERE id = ${auth.userId}
     `;
     if (!user) return res.status(404).json({ error: "User not found" });
@@ -155,6 +155,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       notes: { sharePrefixes: sharePrefixes.length },
     });
 
+
+    // Tombstone BEFORE deleting: signup.ts counts these so delete→recreate
+    // cycles can't reset the per-device account cap or free up the email.
+    try {
+      await sql`
+        INSERT INTO deleted_accounts (email, device_fingerprint, user_id)
+        VALUES (${user.email}, ${user.device_fingerprint || null}, ${user.id}::uuid)
+      `;
+    } catch (e: any) {
+      console.warn("[delete-account] tombstone insert failed:", e?.message);
+    }
 
     // Delete user (cascades to referrals, transactions, share_owners, feed_posts,
     // stories, profiles, etc. via ON DELETE CASCADE)

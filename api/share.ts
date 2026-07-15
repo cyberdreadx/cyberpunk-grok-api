@@ -81,6 +81,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const siteUrl = (process.env.SITE_URL || "https://grokrunner.gltch.app").replace(/\/$/, "");
 
       // Persist ownership + log share for daily missions.
+      // Anti-farming: hash the media so re-sharing identical content logs as
+      // 'share-repeat', which does NOT satisfy the daily share mission
+      // (daily-missions.ts only counts mode='share'). Top farmers were claiming
+      // 10 cr/day for months by re-sharing the same story.
       try {
         const { getDb } = await import("./_lib/db");
         const sql = getDb();
@@ -89,9 +93,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           VALUES (${shareId}, ${auth.userId}::uuid, ${ext})
           ON CONFLICT (share_id) DO NOTHING
         `;
+        const mediaHash = crypto.createHash("sha256").update(buffer).digest("hex").slice(0, 24);
+        const [prior] = await sql`
+          SELECT id FROM usage_log
+          WHERE user_id = ${auth.userId}::uuid
+            AND mode IN ('share', 'share-repeat')
+            AND prompt LIKE ${"%#" + mediaHash}
+          LIMIT 1
+        `;
+        const logMode = prior ? "share-repeat" : "share";
         await sql`
           INSERT INTO usage_log (user_id, mode, credits_used, prompt)
-          VALUES (${auth.userId}::uuid, 'share', 0, ${`shared:${shareId}`})
+          VALUES (${auth.userId}::uuid, ${logMode}, 0, ${`shared:${shareId}#${mediaHash}`})
         `;
       } catch (e) {
         console.warn("[share] ownership/log insert failed:", (e as any)?.message);
