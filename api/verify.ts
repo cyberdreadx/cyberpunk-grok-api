@@ -178,8 +178,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(500).json({ error: "Verification prices not configured" });
       }
 
-      // Reuse or create Stripe customer
+      // Reuse or create Stripe customer. Sentinel values from migration 031
+      // ("pack_<session_id>") aren't real customer ids — treat as absent.
       let customerId: string = userRow.stripe_customer_id;
+      if (customerId && !customerId.startsWith("cus_")) customerId = "";
       if (!customerId) {
         const customer = await stripe.customers.create({
           email: auth.email,

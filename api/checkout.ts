@@ -126,6 +126,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         SELECT stripe_customer_id, email FROM users WHERE id = ${auth.userId}
       `;
       let customerId: string | null = rows[0]?.stripe_customer_id || null;
+      // Sentinel values from migration 031 ("pack_<session_id>") aren't real
+      // customer ids — fall through to the email lookup below.
+      if (customerId && !customerId.startsWith("cus_")) customerId = null;
 
       // Legacy fallback: many grandfathered subscribers never had stripe_customer_id
       // persisted. Look them up by email so they can still reach the portal to cancel.
@@ -169,11 +172,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const priceId = process.env[tier.priceEnvKey];
       if (!priceId) return res.status(500).json({ error: `Price not configured for ${tierId}` });
 
-      // Find or create Stripe customer
+      // Find or create Stripe customer. Migration 031 backfilled sentinel
+      // values ("pack_<session_id>") into stripe_customer_id for old pack
+      // buyers — those are NOT real customer ids and Stripe rejects them
+      // (resource_missing), so treat anything that isn't cus_* as absent.
       const rows = await sql`
         SELECT stripe_customer_id FROM users WHERE id = ${auth.userId}
       `;
       let customerId = rows[0]?.stripe_customer_id;
+      if (customerId && !customerId.startsWith("cus_")) customerId = null;
       if (!customerId) {
         const customer = await stripe.customers.create({
           email: auth.email,
