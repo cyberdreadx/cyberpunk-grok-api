@@ -87,8 +87,39 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
 
+      case "list": {
+        // Per-referee detail for the referrer's own dashboard. Identity is
+        // username when set, else a masked email — never the full address.
+        const rows = await sql`
+          SELECT r.created_at, r.referee_verified, r.referee_purchased,
+                 r.referee_subscribed, r.referrer_rewarded,
+                 p.username, u.email
+          FROM referrals r
+          JOIN users u ON u.id = r.referee_id
+          LEFT JOIN profiles p ON p.user_id = r.referee_id
+          WHERE r.referrer_id = ${auth.userId}::uuid
+          ORDER BY r.created_at DESC
+          LIMIT 200
+        `;
+        const maskEmail = (email: string) => {
+          const [local, domain] = String(email || "").split("@");
+          if (!domain) return "anonymous";
+          return `${(local || "?").slice(0, 2)}***@${domain}`;
+        };
+        return res.status(200).json({
+          referees: rows.map((r: any) => ({
+            name: r.username || maskEmail(r.email),
+            joinedAt: r.created_at,
+            verified: !!r.referee_verified,
+            purchased: !!r.referee_purchased,
+            subscribed: !!r.referee_subscribed,
+            rewarded: !!r.referrer_rewarded,
+          })),
+        });
+      }
+
       default:
-        return res.status(400).json({ error: "Unknown action. Expected: get-code, stats" });
+        return res.status(400).json({ error: "Unknown action. Expected: get-code, stats, list" });
     }
   } catch (err: any) {
     console.error("[referral]", err.message);

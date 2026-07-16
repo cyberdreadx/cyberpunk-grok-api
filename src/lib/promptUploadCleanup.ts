@@ -19,17 +19,25 @@ function flush() {
   if (!token) return;
   const urls = [...tracked];
   tracked.clear();
+  const endpoint = apiUrl("/library-purge");
+  const payload = JSON.stringify({ urls, clientPayload: token });
+
+  // sendBeacon with a default (text/plain) body is a CORS "simple request" —
+  // no preflight, and the browser guarantees delivery outlives the page.
+  // A keepalive fetch needs an OPTIONS preflight that can be dropped during
+  // unload, so it's only the fallback. Token travels in the body because
+  // neither transport can set an Authorization header reliably here.
   try {
-    // keepalive lets the request outlive the unloading page (and, unlike
-    // sendBeacon, carries the Authorization header the endpoint needs).
-    void fetch(apiUrl("/library-purge"), {
+    if (navigator.sendBeacon && navigator.sendBeacon(endpoint, payload)) return;
+  } catch {
+    // fall through
+  }
+  try {
+    void fetch(endpoint, {
       method: "POST",
       keepalive: true,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ urls }),
+      headers: { "Content-Type": "application/json" },
+      body: payload,
     });
   } catch {
     // Page is going away — the daily sweep is the fallback.

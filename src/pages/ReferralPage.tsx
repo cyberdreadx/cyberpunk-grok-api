@@ -8,8 +8,7 @@ import { Card } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
 import { apiFetch } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
-
-const SITE_URL = "https://grok.gallery";
+import { BRAND } from "@/lib/brand";
 
 interface ReferralStats {
   code: string | null;
@@ -22,6 +21,15 @@ interface ReferralStats {
   freeMonthsEarned?: number;
 }
 
+interface Referee {
+  name: string;
+  joinedAt: string;
+  verified: boolean;
+  purchased: boolean;
+  subscribed: boolean;
+  rewarded: boolean;
+}
+
 export default function ReferralPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -30,6 +38,7 @@ export default function ReferralPage() {
 
   const [stats, setStats] = useState<ReferralStats | null>(null);
   const [code, setCode] = useState<string | null>(null);
+  const [referees, setReferees] = useState<Referee[]>([]);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
 
@@ -43,6 +52,9 @@ export default function ReferralPage() {
       // Get stats
       const statsRes = await apiFetch<ReferralStats>("/referral", { method: "POST", body: { action: "stats" } });
       setStats(statsRes);
+
+      const listRes = await apiFetch<{ referees: Referee[] }>("/referral", { method: "POST", body: { action: "list" } });
+      setReferees(listRes.referees || []);
     } catch {
       // silent
     } finally {
@@ -52,7 +64,7 @@ export default function ReferralPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const referralLink = code ? `${SITE_URL}/?ref=${code}` : "";
+  const referralLink = code ? `${BRAND.siteUrl}/?ref=${code}` : "";
 
   const handleCopy = useCallback(() => {
     if (!referralLink) return;
@@ -65,7 +77,7 @@ export default function ReferralPage() {
   const handleShare = useCallback(() => {
     if (!referralLink) return;
     if (navigator.share) {
-      navigator.share({ title: "Join Grok Gallery", text: "Sign up with my link and get 3 free credits!", url: referralLink });
+      navigator.share({ title: `Join ${BRAND.name}`, text: "Sign up with my link and get 3 free credits!", url: referralLink });
     } else {
       handleCopy();
     }
@@ -182,6 +194,39 @@ export default function ReferralPage() {
                 </p>
               </div>
             </Card>
+
+            {/* Who signed up with your link */}
+            {referees.length > 0 && (
+              <Card className="p-4 border-border bg-card space-y-3">
+                <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                  <Users className="w-4 h-4 text-primary" />
+                  Your Referrals
+                </h2>
+                <div className="space-y-0 max-h-72 overflow-y-auto">
+                  {referees.map((r, i) => (
+                    <div key={i} className="flex items-center gap-2 py-2 border-b border-border last:border-0">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-foreground truncate">{r.name}</p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {new Date(r.joinedAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <div className="flex gap-1 shrink-0">
+                        {r.subscribed ? (
+                          <Badgelet className="text-green-400 border-green-400/40">SUBSCRIBED</Badgelet>
+                        ) : r.purchased ? (
+                          <Badgelet className="text-secondary border-secondary/40">PURCHASED</Badgelet>
+                        ) : r.verified ? (
+                          <Badgelet className="text-primary border-primary/40">VERIFIED</Badgelet>
+                        ) : (
+                          <Badgelet className="text-muted-foreground border-border">SIGNED UP</Badgelet>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
           </>
         )}
       </div>
@@ -196,6 +241,14 @@ function StatCard({ icon: Icon, label, value, color }: { icon: any; label: strin
       <div className="text-lg font-bold text-foreground font-[Orbitron]">{value}</div>
       <div className="text-[10px] text-muted-foreground uppercase tracking-wider">{label}</div>
     </Card>
+  );
+}
+
+function Badgelet({ children, className }: { children: React.ReactNode; className?: string }) {
+  return (
+    <span className={`text-[9px] font-mono tracking-wider border rounded px-1.5 py-0.5 ${className || ""}`}>
+      {children}
+    </span>
   );
 }
 

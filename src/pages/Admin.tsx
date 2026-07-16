@@ -2638,17 +2638,18 @@ export default function Admin() {
               </span>
             </div>
             <div className="p-3 sm:p-4 space-y-3">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-2 sm:gap-3">
                 <KpiCard icon={<Share2 className="w-4 h-4" />} label="TOTAL_REFERRALS" value={referralStats.total_referrals} sub={`${referralStats.verified} verified`} accent="secondary" />
                 <KpiCard icon={<TrendingUp className="w-4 h-4" />} label="CONVERTED" value={referralStats.converted} sub={`${referralStats.conversionRate}% of referrals purchased`} accent="secondary" />
+                <KpiCard icon={<DollarSign className="w-4 h-4" />} label="REVENUE" value={`$${((referralStats.attributedRevenueCents || 0) / 100).toFixed(0)}`} sub={`${referralStats.payingReferees || 0} paying referees, lifetime`} accent="secondary" />
                 <KpiCard icon={<Gift className="w-4 h-4" />} label="CREDITS_GRANTED" value={referralStats.creditsGranted} sub="total referral credits given" accent="secondary" />
                 <KpiCard icon={<Crown className="w-4 h-4" />} label="REWARDS_PAID" value={referralStats.rewarded} sub="referrers who earned 10 cr" accent="secondary" />
               </div>
               {referralStats.topReferrers && referralStats.topReferrers.length > 0 && (
                 <div className="overflow-x-auto overscroll-x-contain">
-                  <table className="w-full min-w-[400px]">
+                  <table className="w-full min-w-[460px]">
                     <thead><tr className="border-b border-green-500/20">
-                      {["REFERRER", "REFERRED", "CONVERTED", "REWARDS"].map((h) => (
+                      {["REFERRER", "REFERRED", "CONVERTED", "REVENUE", "REWARDS"].map((h) => (
                         <th key={h} className="px-2.5 py-2 text-left font-mono-share text-[9px] text-green-400/50 tracking-wider">{h}</th>
                       ))}
                     </tr></thead>
@@ -2658,11 +2659,41 @@ export default function Admin() {
                           <td className="px-2.5 py-2 font-mono-share text-xs text-foreground/80">{r.email}</td>
                           <td className="px-2.5 py-2 font-mono-share text-xs text-green-400 font-bold">{r.referral_count}</td>
                           <td className="px-2.5 py-2 font-mono-share text-xs text-green-400">{r.conversions}</td>
+                          <td className="px-2.5 py-2 font-mono-share text-xs text-secondary font-bold">${((r.revenue_cents || 0) / 100).toFixed(2)}</td>
                           <td className="px-2.5 py-2 font-mono-share text-xs text-secondary">{r.rewards}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
+                </div>
+              )}
+              {referralStats.recentSignups && referralStats.recentSignups.length > 0 && (
+                <div>
+                  <h3 className="font-mono-share text-[10px] text-green-400/60 tracking-wider mb-1.5 mt-2">RECENT_REFERRED_SIGNUPS</h3>
+                  <div className="overflow-x-auto overscroll-x-contain">
+                    <table className="w-full min-w-[560px]">
+                      <thead><tr className="border-b border-green-500/20">
+                        {["SIGNED UP", "REFERRED BY", "DATE", "STATUS", "SPENT"].map((h) => (
+                          <th key={h} className="px-2.5 py-2 text-left font-mono-share text-[9px] text-green-400/50 tracking-wider">{h}</th>
+                        ))}
+                      </tr></thead>
+                      <tbody>
+                        {referralStats.recentSignups.map((r: any, i: number) => (
+                          <tr key={i} className="border-b border-green-500/10 hover:bg-green-500/5 transition-colors">
+                            <td className="px-2.5 py-2 font-mono-share text-xs text-foreground/80">{r.referee_email}</td>
+                            <td className="px-2.5 py-2 font-mono-share text-xs text-foreground/60">{r.referrer_email}</td>
+                            <td className="px-2.5 py-2 font-mono-share text-xs text-green-400/70">{new Date(r.created_at).toLocaleDateString()}</td>
+                            <td className="px-2.5 py-2 font-mono-share text-[10px]">
+                              {r.referee_purchased ? <span className="text-secondary">PURCHASED</span>
+                                : r.referee_verified ? <span className="text-green-400">VERIFIED</span>
+                                : <span className="text-foreground/40">UNVERIFIED</span>}
+                            </td>
+                            <td className="px-2.5 py-2 font-mono-share text-xs text-secondary font-bold">{r.spend_cents > 0 ? `$${(r.spend_cents / 100).toFixed(2)}` : "—"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
             </div>

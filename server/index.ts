@@ -29,7 +29,8 @@ const HOST = process.env.HOST || "0.0.0.0";
 
 // Routes whose handlers expect the *raw* request body (signature verification).
 const RAW_BODY_ROUTES = new Set<string>(["/api/webhook"]);
-const TEXT_BODY_ROUTES = new Set<string>(["/api/resend-webhook"]);
+// library-purge accepts text/plain: pagehide beacons must avoid CORS preflight.
+const TEXT_BODY_ROUTES = new Set<string>(["/api/resend-webhook", "/api/library-purge"]);
 
 /** Walk /api and return { route, file } for each handler. */
 function discoverRoutes(): { route: string; file: string }[] {

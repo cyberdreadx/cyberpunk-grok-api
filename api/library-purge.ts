@@ -9,7 +9,7 @@
  * supplied URLs.
  */
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { getUserFromRequest } from "./_lib/auth";
+import { getUserFromRequest, verifyToken } from "./_lib/auth";
 import { deleteBlobs, isVercelBlobUrl } from "./_lib/blob";
 import { deleteR2Objects, isR2Url, r2KeyFromUrl } from "./_lib/r2";
 import { previewKeyForKey } from "./_lib/preview-url";
@@ -94,10 +94,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  const auth = getUserFromRequest(req);
+  // pagehide beacons arrive as text/plain (no preflight) with the JWT in the
+  // body — parse the string form and accept clientPayload like media-upload.
+  let body: any = req.body || {};
+  if (typeof body === "string") {
+    try { body = JSON.parse(body); } catch { body = {}; }
+  }
+
+  const auth =
+    getUserFromRequest(req) ||
+    (typeof body.clientPayload === "string" ? verifyToken(body.clientPayload) : null);
   if (!auth) return res.status(401).json({ error: "Unauthorized" });
 
-  const { urls } = (req.body || {}) as { urls?: unknown };
+  const { urls } = body as { urls?: unknown };
   if (!Array.isArray(urls)) return res.status(400).json({ error: "urls[] required" });
 
   // Cap to avoid abuse / oversized requests

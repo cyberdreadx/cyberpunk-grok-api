@@ -402,18 +402,47 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // Credits granted: 3 per verified signup + 10 per rewarded referrer + 5 per purchase bonus
         const creditsGranted = (stats.verified * 3) + (stats.rewarded * 10) + (stats.purchases * 5);
 
-        // Top referrers
+        // Real dollars from referred users (all their purchases, lifetime).
+        const [attributed] = await sql`
+          SELECT COALESCE(SUM(t.amount_cents), 0)::int AS revenue_cents,
+                 COUNT(DISTINCT t.user_id)::int AS paying_referees
+          FROM transactions t
+          JOIN referrals r ON r.referee_id = t.user_id
+          WHERE t.amount_cents > 0
+        `;
+
+        // Top referrers, ranked by the revenue their referees brought in.
         const topReferrers = await sql`
           SELECT
             u.email,
             COUNT(*)::int AS referral_count,
             COUNT(*) FILTER (WHERE r.referee_purchased)::int AS conversions,
-            COUNT(*) FILTER (WHERE r.referrer_rewarded)::int AS rewards
+            COUNT(*) FILTER (WHERE r.referrer_rewarded)::int AS rewards,
+            COALESCE((
+              SELECT SUM(t.amount_cents) FROM transactions t
+              WHERE t.amount_cents > 0
+                AND t.user_id IN (SELECT referee_id FROM referrals r2 WHERE r2.referrer_id = r.referrer_id)
+            ), 0)::int AS revenue_cents
           FROM referrals r
           JOIN users u ON u.id = r.referrer_id
-          GROUP BY u.email
-          ORDER BY referral_count DESC
+          GROUP BY r.referrer_id, u.email
+          ORDER BY revenue_cents DESC, referral_count DESC
           LIMIT 10
+        `;
+
+        // Latest referred signups with what each has spent so far.
+        const recentSignups = await sql`
+          SELECT r.created_at, r.referee_verified, r.referee_purchased,
+                 ru.email AS referee_email, rr.email AS referrer_email,
+                 COALESCE((
+                   SELECT SUM(t.amount_cents) FROM transactions t
+                   WHERE t.user_id = r.referee_id AND t.amount_cents > 0
+                 ), 0)::int AS spend_cents
+          FROM referrals r
+          JOIN users ru ON ru.id = r.referee_id
+          JOIN users rr ON rr.id = r.referrer_id
+          ORDER BY r.created_at DESC
+          LIMIT 25
         `;
 
         return res.status(200).json({
@@ -421,7 +450,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             ...stats,
             conversionRate,
             creditsGranted,
+            attributedRevenueCents: attributed.revenue_cents,
+            payingReferees: attributed.paying_referees,
             topReferrers,
+            recentSignups,
           },
         });
       }
