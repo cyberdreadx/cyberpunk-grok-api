@@ -12,6 +12,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getUserFromRequest } from "./_lib/auth";
 import { deleteBlobs, isVercelBlobUrl } from "./_lib/blob";
 import { deleteR2Objects, isR2Url, r2KeyFromUrl } from "./_lib/r2";
+import { previewKeyForKey } from "./_lib/preview-url";
 import { recordPurge } from "./_lib/purgeLog";
 
 function blobKeyFromUrl(url: string): string | null {
@@ -29,6 +30,7 @@ function blobKeyFromUrl(url: string): string | null {
  *   gltch/<userId>-<ts>.<ext>
  *   seedance/<userId>-<ts>.<ext>
  *   <userId>/...                  (per-user R2 prefix, future-proof)
+ *   <folder>/<userId>/...         (presigned client uploads, media-upload.ts)
  */
 function keyBelongsToUser(key: string, userId: string): boolean {
   if (!key || !userId) return false;
@@ -37,6 +39,8 @@ function keyBelongsToUser(key: string, userId: string): boolean {
   if (lower.startsWith(`gltch/${uid}-`)) return true;
   if (lower.startsWith(`seedance/${uid}-`)) return true;
   if (lower.startsWith(`${uid}/`)) return true;
+  const segs = lower.split("/");
+  if (segs.length >= 3 && segs[1] === uid) return true;
   return false;
 }
 
@@ -69,8 +73,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       else skipped++;
     } else if (isR2Url(url)) {
       const key = r2KeyFromUrl(url);
-      if (key && keyBelongsToUser(key, auth.userId)) r2Keys.push(key);
-      else skipped++;
+      if (key && keyBelongsToUser(key, auth.userId)) {
+        r2Keys.push(key);
+        // Companion preview object shares the owner prefix — purge it too.
+        if (!key.endsWith("-preview.webp")) r2Keys.push(previewKeyForKey(key));
+      } else skipped++;
     } else {
       skipped++;
     }

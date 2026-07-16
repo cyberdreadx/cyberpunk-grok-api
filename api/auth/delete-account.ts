@@ -10,6 +10,7 @@ import { getDb } from "../_lib/db";
 import { getUserFromRequest } from "../_lib/auth";
 import { deleteBlobs, isVercelBlobUrl } from "../_lib/blob";
 import { isR2Url, r2KeyFromUrl, deleteR2Objects, deleteR2Prefix } from "../_lib/r2";
+import { previewKeyForKey } from "../_lib/preview-url";
 import { recordPurge } from "../_lib/purgeLog";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -73,7 +74,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (isVercelBlobUrl(url)) blobUrls.push(url);
       else if (isR2Url(url)) {
         const key = r2KeyFromUrl(url);
-        if (key) r2Keys.push(key);
+        if (key) {
+          r2Keys.push(key);
+          // Companion preview object (-preview.webp convention).
+          if (!key.endsWith("-preview.webp")) r2Keys.push(previewKeyForKey(key));
+        }
       }
     };
 
@@ -88,13 +93,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     } catch (e: any) { console.warn("[delete-account] share_owners scan:", e?.message); }
 
     try {
-      const posts = await sql`SELECT image_url FROM feed_posts WHERE user_id = ${user.id}`;
-      for (const row of posts) collect(row.image_url);
+      const posts = await sql`SELECT image_url, preview_image_url FROM feed_posts WHERE user_id = ${user.id}`;
+      for (const row of posts) { collect(row.image_url); collect(row.preview_image_url); }
     } catch (e: any) { console.warn("[delete-account] feed_posts scan:", e?.message); }
 
     try {
-      const storiesRows = await sql`SELECT media_url FROM stories WHERE user_id = ${user.id}`;
-      for (const row of storiesRows) collect(row.media_url);
+      const storiesRows = await sql`SELECT media_url, preview_url FROM stories WHERE user_id = ${user.id}`;
+      for (const row of storiesRows) { collect(row.media_url); collect(row.preview_url); }
     } catch (e: any) { console.warn("[delete-account] stories scan:", e?.message); }
 
     try {
@@ -108,9 +113,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     let sharePrefixDeleted = 0;
     let sharePrefixErrors = 0;
     try {
+      // Presigned client uploads are keyed <folder>/<userId>/… — sweep those
+      // prefixes so uploads whose DB rows are already gone still get purged.
+      const uploadFolders = ["feed", "stories", "avatars", "prompts", "creator-applications", "uploads"];
       const [b, r, ...prefixCounts] = await Promise.all([
         deleteBlobs(blobUrls),
         deleteR2Objects(r2Keys),
+        ...uploadFolders.map((f) => deleteR2Prefix(`${f}/${user.id}/`)),
         ...sharePrefixes.map(async (p) => {
           let n = 0;
           // Shares may live in either Vercel Blob (legacy) or R2 (current).

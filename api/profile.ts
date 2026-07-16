@@ -225,10 +225,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           updated_at = NOW()
       `;
 
-      // Best-effort: delete the old avatar blob if it was replaced.
+      // Best-effort: delete the old avatar file (Blob or R2) if it was replaced.
       if (previousAvatar && previousAvatar !== avatarUrl) {
-        const { deleteBlobs } = await import("./_lib/blob");
-        await deleteBlobs([previousAvatar]);
+        const { deleteMediaUrls } = await import("./_lib/media-delete");
+        await deleteMediaUrls([previousAvatar]);
       }
 
       return res.json({ success: true });

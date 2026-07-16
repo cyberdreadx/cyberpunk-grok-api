@@ -50,7 +50,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const result = await createPresignedMediaUpload(folder, filename, contentType);
+    // Scope the object key under the uploader's user id so ownership is
+    // provable from the key alone (library-purge / delete-account rely on it).
+    const result = await createPresignedMediaUpload(`${folder}/${jwt.userId}`, filename, contentType);
     return res.status(200).json(result);
   } catch (err: any) {
     console.error("[media-upload]", err?.message);

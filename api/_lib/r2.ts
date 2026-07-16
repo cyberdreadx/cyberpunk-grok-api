@@ -161,6 +161,25 @@ export async function deleteR2Objects(
   return { found, deleted: Math.max(0, found - failed), failed };
 }
 
+/** List every object key (+ last-modified) under a prefix. Throws on failure. */
+export async function listR2Objects(
+  prefix: string,
+): Promise<Array<{ key: string; lastModified?: Date }>> {
+  const client = getR2();
+  const out: Array<{ key: string; lastModified?: Date }> = [];
+  let token: string | undefined = undefined;
+  do {
+    const resp: any = await client.send(new ListObjectsV2Command({
+      Bucket: BUCKET, Prefix: prefix, ContinuationToken: token,
+    }));
+    for (const o of resp.Contents || []) {
+      if (o.Key) out.push({ key: o.Key, lastModified: o.LastModified });
+    }
+    token = resp.IsTruncated ? resp.NextContinuationToken : undefined;
+  } while (token);
+  return out;
+}
+
 /** Best-effort list + delete all R2 objects under a key prefix. */
 export async function deleteR2Prefix(prefix: string): Promise<number> {
   if (!prefix) return 0;
