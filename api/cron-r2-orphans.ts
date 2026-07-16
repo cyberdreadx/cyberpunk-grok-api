@@ -68,21 +68,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (!key.endsWith("-preview.webp")) set.add(previewKeyForKey(key));
     };
 
-    const feedRefs = new Set<string>();
+    // Union of every table that can hold a media URL (mirrors the blob-orphan
+    // cron's reference list) — an object is only an orphan if NOTHING points
+    // at it, in case a feed/story URL was reused as an avatar/portrait/etc.
+    const refs = new Set<string>();
+    let feedRefCount = 0;
     for (const r of await sql`SELECT image_url, preview_image_url FROM feed_posts`) {
-      addRef(feedRefs, r.image_url);
-      addRef(feedRefs, r.preview_image_url);
+      if (r.image_url) feedRefCount++;
+      addRef(refs, r.image_url);
+      addRef(refs, r.preview_image_url);
     }
-
-    const storyRefs = new Set<string>();
     for (const r of await sql`SELECT media_url, preview_url FROM stories`) {
-      addRef(storyRefs, r.media_url);
-      addRef(storyRefs, r.preview_url);
+      addRef(refs, r.media_url);
+      addRef(refs, r.preview_url);
     }
+    for (const r of await sql`SELECT avatar_url FROM profiles WHERE avatar_url IS NOT NULL`) addRef(refs, r.avatar_url);
+    for (const r of await sql`SELECT portrait_url FROM characters WHERE portrait_url IS NOT NULL`) addRef(refs, r.portrait_url);
+    for (const r of await sql`SELECT DISTINCT actor_avatar_url FROM notifications WHERE actor_avatar_url IS NOT NULL`) addRef(refs, r.actor_avatar_url);
 
     const plans: Array<{ prefix: string; refs: Set<string>; ratioGuard: boolean }> = [
-      { prefix: "feed/", refs: feedRefs, ratioGuard: true },
-      { prefix: "stories/", refs: storyRefs, ratioGuard: false },
+      { prefix: "feed/", refs, ratioGuard: true },
+      { prefix: "stories/", refs, ratioGuard: false },
     ];
 
     const now = Date.now();
@@ -112,8 +118,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       let effectiveConfirm = confirm;
       if (plan.ratioGuard && orphanKeys.length > 0) {
-        if (plan.refs.size === 0) {
-          report.aborted = "no DB references found — reference query looks broken";
+        if (feedRefCount === 0) {
+          report.aborted = "no feed_posts references found — reference query looks broken";
           effectiveConfirm = false;
         } else if (objects.length > 0 && orphanKeys.length / objects.length > FEED_ABORT_RATIO) {
           report.aborted = `orphan ratio ${(orphanKeys.length / objects.length).toFixed(2)} exceeds ${FEED_ABORT_RATIO}`;
