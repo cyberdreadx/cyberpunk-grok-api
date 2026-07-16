@@ -5,6 +5,7 @@ import {
   Film, Gauge, Globe, Image as ImageIcon, Layers, Lock, Network, Play,
   Radar, Radio, ShieldCheck, Sparkles, Users, Wand2, Zap,
 } from "lucide-react";
+import { apiFetch } from "@/lib/api";
 import "./commandCenter.css";
 
 const GridCity = lazy(() => import("./GridCity"));
@@ -241,6 +242,116 @@ const TICKER = [
 
 const STATUS_LABEL: Record<string, string> = { ok: "ONLINE", warn: "DEGRADED", crit: "ALERT" };
 
+/* ──────────────────────────────────────────────────────────────────────────
+   Live showcase — real top-rated posts pulled from the public feed API.
+   Logged-out responses only carry preview thumbnails (full-res is stripped
+   server-side); we additionally show only SFW, non-locked posts here.
+   ────────────────────────────────────────────────────────────────────────── */
+
+type ShowcasePost = { id: string; username: string; preview?: string; full?: string; score: number };
+
+const isVideoUrl = (u?: string | null) => !!u && /\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(u);
+
+/** One showcase tile. Tries the preview thumb, falls back to the full image
+ *  (old posts have no preview in storage), and reports itself dead if neither
+ *  loads so the grid can swap in the next candidate. */
+function ShowcaseTile({ post, onJoin, onDead }: {
+  post: ShowcasePost; onJoin: () => void; onDead: (id: string) => void;
+}) {
+  const [src, setSrc] = useState(post.preview || post.full!);
+  const triedFull = useRef(!post.preview || post.preview === post.full);
+  return (
+    <div
+      className="cc-shot"
+      onClick={onJoin}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => e.key === "Enter" && onJoin()}
+    >
+      <img
+        src={src}
+        alt={`Render by @${post.username}`}
+        loading="lazy"
+        onError={() => {
+          if (!triedFull.current && post.full) {
+            triedFull.current = true;
+            setSrc(post.full);
+          } else {
+            onDead(post.id);
+          }
+        }}
+      />
+      <div className="who">
+        <span>@{post.username}</span>
+        {post.score > 0 && <span className="score">▲ {post.score}</span>}
+      </div>
+    </div>
+  );
+}
+
+function LiveShowcase({ onJoin }: { onJoin: () => void }) {
+  const [posts, setPosts] = useState<ShowcasePost[]>([]);
+  const [dead, setDead] = useState<Set<string>>(() => new Set());
+
+  useEffect(() => {
+    let alive = true;
+    apiFetch<{ posts: any[] }>("/feed?sort=top&sfw=1", { auth: false })
+      .then((d) => {
+        if (!alive || !Array.isArray(d?.posts)) return;
+        const candidates = d.posts
+          .filter(
+            (p) =>
+              !p.isMature &&
+              !(p.lockCost > 0 || p.lockPriceCents > 0 || p.lockXrgeAmount) &&
+              (p.previewImageUrl || (p.imageUrl && !isVideoUrl(p.imageUrl))),
+          )
+          .map((p) => ({
+            id: p.id,
+            username: p.username || "operator",
+            preview: p.previewImageUrl || undefined,
+            full: p.imageUrl && !isVideoUrl(p.imageUrl) ? (p.imageUrl as string) : undefined,
+            score: p.score || 0,
+          }));
+        setPosts(candidates);
+      })
+      .catch(() => {}); // fetch failure → section simply doesn't render
+    return () => { alive = false; };
+  }, []);
+
+  const visible = posts.filter((p) => !dead.has(p.id)).slice(0, 7);
+  if (visible.length < 3) return null;
+
+  return (
+    <section className="cc-section cc-section-bg" id="cc-showcase-sec">
+      <Reveal>
+        <div className="cc-kicker">Live From The Grid</div>
+        <h2 className="cc-h2">Real renders, <span className="g">straight off the feed</span></h2>
+        <p className="cc-lead">
+          Top-rated drops from operators on the grid — not a curated demo reel.
+          This is the safe-for-work slice; sign up to see the uncut feed.
+        </p>
+      </Reveal>
+      <Reveal>
+        <div className="cc-showcase">
+          {visible.map((p) => (
+            <ShowcaseTile
+              key={p.id}
+              post={p}
+              onJoin={onJoin}
+              onDead={(id) => setDead((prev) => new Set(prev).add(id))}
+            />
+          ))}
+          <button className="cc-shot cta" onClick={onJoin}>
+            <Sparkles size={20} />
+            <span>SEE THE FULL FEED</span>
+            <ArrowRight size={14} />
+          </button>
+        </div>
+      </Reveal>
+    </section>
+  );
+}
+
 function fmtClock(d: Date) {
   return d.toISOString().slice(11, 19);
 }
@@ -400,7 +511,10 @@ export default function CommandCenterLanding() {
           </button>
           <button
             className="cc-btn cc-btn-ghost"
-            onClick={() => document.getElementById("cc-grid-sec")?.scrollIntoView({ behavior: "smooth" })}
+            onClick={() =>
+              (document.getElementById("cc-showcase-sec") ?? document.getElementById("cc-grid-sec"))
+                ?.scrollIntoView({ behavior: "smooth" })
+            }
           >
             <Play size={15} /> See It Live
           </button>
@@ -443,6 +557,9 @@ export default function CommandCenterLanding() {
           ))}
         </div>
       </section>
+
+      {/* SECTION — live showcase (real feed content, SFW only) */}
+      <LiveShowcase onJoin={go} />
 
       {/* SECTION — autonomous render swarm */}
       <section className="cc-section cc-section-bg">
