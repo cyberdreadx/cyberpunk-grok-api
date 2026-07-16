@@ -1,8 +1,10 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getDb } from "./_lib/db";
 import { deleteMediaUrls } from "./_lib/media-delete";
+import { requireCronAuth } from "./_lib/cron-auth";
 
-export default async function handler(_req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (!requireCronAuth(req, res)) return;
   try {
     const sql = getDb();
     // Capture media URLs of expiring stories so we can purge their files.

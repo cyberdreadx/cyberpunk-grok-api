@@ -23,9 +23,12 @@ function feedMediaFields(
   if (showFull) {
     return { imageUrl: full || null, previewImageUrl: preview };
   }
+  // NEVER fall back to the full-res URL here — for locked posts that would
+  // hand non-payers the paywalled media (feed POST generates a real preview
+  // server-side when the client didn't supply one).
   return {
     imageUrl: null,
-    previewImageUrl: preview || (opts.isLocked ? full : undefined),
+    previewImageUrl: preview,
   };
 }
 
@@ -435,9 +438,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(403).json({ error: VERIFICATION_REQUIRED_MESSAGE, code: "VERIFICATION_REQUIRED" });
       }
 
+      // Locked posts MUST have a real preview — the API never serves the
+      // full-res URL to non-payers, so without one the post shows nothing.
+      let finalPreviewUrl = previewImageUrl || null;
+      if (wantsMoney && imageUrl && !finalPreviewUrl) {
+        try {
+          const { ensurePreviewForUrl } = await import("./_lib/ensure-preview");
+          finalPreviewUrl = await ensurePreviewForUrl(imageUrl);
+        } catch (err: any) {
+          console.warn("[feed POST] preview generation failed:", err?.message);
+        }
+      }
+
       const rows = await sql`
         INSERT INTO feed_posts (user_id, text, image_url, preview_image_url, lock_cost, lock_price_cents, lock_xrge_amount, is_mature)
-        VALUES (${auth.userId}, ${text || ""}, ${imageUrl || null}, ${previewImageUrl || null}, ${cost}, ${priceCents}, ${xrgeAmount}, ${mature})
+        VALUES (${auth.userId}, ${text || ""}, ${imageUrl || null}, ${finalPreviewUrl}, ${cost}, ${priceCents}, ${xrgeAmount}, ${mature})
         RETURNING id, created_at
       `;
 

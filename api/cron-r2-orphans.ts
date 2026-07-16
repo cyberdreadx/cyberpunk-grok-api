@@ -16,7 +16,7 @@
  *   - Objects modified in the last SAFETY_WINDOW_MS are skipped (upload→DB
  *     write races; also keeps live 24h stories clear of any edge case).
  *   - Defaults to DRY-RUN; deletion requires `?confirm=1`.
- *   - confirm=1 additionally requires the CRON_SECRET bearer token when set.
+ *   - The whole endpoint requires the CRON_SECRET bearer token (cron-auth).
  *   - feed/ deletion aborts (falls back to dry-run) if the DB scan finds no
  *     references or if >FEED_ABORT_RATIO of listed objects look orphaned —
  *     both are signals the reference query is broken, not the bucket.
@@ -27,6 +27,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getDb } from "./_lib/db";
 import { deleteR2Objects, isR2Url, listR2Objects, r2KeyFromUrl } from "./_lib/r2";
 import { previewKeyForKey } from "./_lib/preview-url";
+import { requireCronAuth } from "./_lib/cron-auth";
 
 const SAFETY_WINDOW_MS = 48 * 60 * 60 * 1000;
 const MAX_DELETIONS_PER_RUN = 5000;
@@ -44,16 +45,9 @@ type PrefixReport = {
 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (!requireCronAuth(req, res)) return;
   const confirm = req.query.confirm === "1" || req.query.confirm === "true";
   const verbose = req.query.verbose === "1";
-
-  const cronSecret = process.env.CRON_SECRET;
-  if (confirm && cronSecret) {
-    const bearer = (req.headers.authorization || "").replace(/^Bearer\s+/i, "");
-    if (bearer !== cronSecret) {
-      return res.status(401).json({ error: "confirm=1 requires the cron bearer token" });
-    }
-  }
 
   try {
     const sql = getDb();

@@ -21,6 +21,7 @@
  */
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getDb } from "./_lib/db";
+import { requireCronAuth } from "./_lib/cron-auth";
 
 const SAFETY_WINDOW_MS = 24 * 60 * 60 * 1000; // 24h grace period
 const MAX_DELETIONS_PER_RUN = 5000;           // hard ceiling
@@ -47,6 +48,7 @@ function urlToPathname(url: string | null | undefined): string | null {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (!requireCronAuth(req, res)) return;
   const token = getBlobToken();
   if (!token) {
     return res.status(503).json({ error: "Blob storage not configured" });

@@ -54,9 +54,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       await sql`ALTER TABLE stories ADD COLUMN IF NOT EXISTS is_mature BOOLEAN NOT NULL DEFAULT false`.catch(() => {});
       await sql`ALTER TABLE stories ADD COLUMN IF NOT EXISTS preview_url TEXT`.catch(() => {});
 
+      // Locked stories need a real preview — the API only serves the preview
+      // (never media_url) to non-payers.
+      let finalPreviewUrl = previewUrl || null;
+      if (wantsMoney && !finalPreviewUrl) {
+        try {
+          const { ensurePreviewForUrl } = await import("./_lib/ensure-preview");
+          finalPreviewUrl = await ensurePreviewForUrl(mediaUrl);
+        } catch (err: any) {
+          console.warn("[stories POST] preview generation failed:", err?.message);
+        }
+      }
+
       const rows = await sql`
         INSERT INTO stories (user_id, media_url, preview_url, media_type, caption, prompt, lock_cost, lock_xrge_amount, is_mature)
-        VALUES (${auth.userId}::uuid, ${mediaUrl}, ${previewUrl || null}, ${type}, ${caption || ""}, ${prompt || ""}, ${cost}, ${xrgeAmount}, ${mature})
+        VALUES (${auth.userId}::uuid, ${mediaUrl}, ${finalPreviewUrl}, ${type}, ${caption || ""}, ${prompt || ""}, ${cost}, ${xrgeAmount}, ${mature})
         RETURNING id, created_at, expires_at
       `;
 
