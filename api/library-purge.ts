@@ -14,6 +14,49 @@ import { deleteBlobs, isVercelBlobUrl } from "./_lib/blob";
 import { deleteR2Objects, isR2Url, r2KeyFromUrl } from "./_lib/r2";
 import { previewKeyForKey } from "./_lib/preview-url";
 import { recordPurge } from "./_lib/purgeLog";
+import { getDb } from "./_lib/db";
+
+/**
+ * Keys minted before uploads were user-scoped (comfyui-output/<ts>-<rand>,
+ * prompts/<ts>-<name>, …) carry no owner. For those we fall back to: delete
+ * on request from any authenticated user UNLESS the object is referenced by
+ * a server-side table (feed/stories/avatars/…). Worst case someone who knows
+ * a URL deletes library media early — never exposes anything.
+ */
+const LEGACY_UNOWNED_PREFIXES = ["comfyui-output/", "prompts/", "uploads/"];
+
+function isLegacyUnownedKey(key: string): boolean {
+  const lower = key.toLowerCase();
+  return (
+    lower.split("/").length === 2 &&
+    LEGACY_UNOWNED_PREFIXES.some((p) => lower.startsWith(p))
+  );
+}
+
+/** Every R2 key referenced by a DB table (mirrors cron-r2-orphans). */
+async function loadReferencedKeys(): Promise<Set<string>> {
+  const sql = getDb();
+  const refs = new Set<string>();
+  const addRef = (url: unknown) => {
+    if (typeof url !== "string" || !url || !isR2Url(url)) return;
+    const key = r2KeyFromUrl(url);
+    if (!key) return;
+    refs.add(key);
+    if (!key.endsWith("-preview.webp")) refs.add(previewKeyForKey(key));
+  };
+  for (const r of await sql`SELECT image_url, preview_image_url FROM feed_posts`) {
+    addRef(r.image_url);
+    addRef(r.preview_image_url);
+  }
+  for (const r of await sql`SELECT media_url, preview_url FROM stories`) {
+    addRef(r.media_url);
+    addRef(r.preview_url);
+  }
+  for (const r of await sql`SELECT avatar_url FROM profiles WHERE avatar_url IS NOT NULL`) addRef(r.avatar_url);
+  for (const r of await sql`SELECT portrait_url FROM characters WHERE portrait_url IS NOT NULL`) addRef(r.portrait_url);
+  for (const r of await sql`SELECT DISTINCT actor_avatar_url FROM notifications WHERE actor_avatar_url IS NOT NULL`) addRef(r.actor_avatar_url);
+  return refs;
+}
 
 function blobKeyFromUrl(url: string): string | null {
   try {
@@ -64,6 +107,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const blobUrls: string[] = [];
   const r2Keys: string[] = [];
+  const legacyKeys: string[] = [];
   let skipped = 0;
 
   for (const url of candidates) {
@@ -77,9 +121,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         r2Keys.push(key);
         // Companion preview object shares the owner prefix — purge it too.
         if (!key.endsWith("-preview.webp")) r2Keys.push(previewKeyForKey(key));
+      } else if (key && isLegacyUnownedKey(key)) {
+        legacyKeys.push(key);
       } else skipped++;
     } else {
       skipped++;
+    }
+  }
+
+  // Legacy un-scoped keys: deletable only when nothing server-side references
+  // them. DB failure here must not block the ownership-proven deletions.
+  if (legacyKeys.length > 0) {
+    try {
+      const refs = await loadReferencedKeys();
+      for (const key of legacyKeys) {
+        if (refs.has(key)) { skipped++; continue; }
+        r2Keys.push(key);
+        const preview = previewKeyForKey(key);
+        if (!key.endsWith("-preview.webp") && !refs.has(preview)) r2Keys.push(preview);
+      }
+    } catch (err: any) {
+      console.warn("[library-purge] legacy ref check failed:", err?.message || err);
+      skipped += legacyKeys.length;
     }
   }
 

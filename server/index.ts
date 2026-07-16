@@ -200,7 +200,7 @@ function registerCron(_app: express.Express) {
     ["0 0 * * *", "/api/cron-reset-daily"],
     ["0 */6 * * *", "/api/cron-cleanup-stories"],
     ["0 4 * * 0", "/api/cron-blob-orphans?confirm=1"],
-    ["30 4 * * 0", "/api/cron-r2-orphans?confirm=1"],
+    ["30 4 * * *", "/api/cron-r2-orphans?confirm=1"],
     ["*/2 * * * *", "/api/cron-email-campaign"],
     ["10 3 * * *", "/api/cron-xrge-snapshot"],
   ];

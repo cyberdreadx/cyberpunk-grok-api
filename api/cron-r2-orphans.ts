@@ -5,12 +5,16 @@
  * by the table that owns that prefix:
  *   feed/     → feed_posts.image_url / preview_image_url
  *   stories/  → stories.media_url / preview_url
+ *   prompts/  → generation INPUT images (PromptForm uploads). Transient: the
+ *   uploads/  → worker downloads them during the job; nothing references them
+ *               afterwards (prompt history stores text only), so unreferenced
+ *               objects past the transient window are wiped.
  *
- * ⚠️ SCOPE IS DELIBERATELY LIMITED to those two prefixes. gltch/, seedance/
- * and other generation-output prefixes hold library media referenced ONLY
- * from users' local IndexedDB — the DB knows nothing about them, so a
- * reference-based sweep there would wipe user libraries. Never widen the
- * scope to a prefix whose references don't live in Postgres.
+ * ⚠️ Never widen the scope to gltch/, seedance/ or comfyui-output/ — those
+ * generation-OUTPUT prefixes hold library media referenced ONLY from users'
+ * local IndexedDB. The DB knows nothing about them, so a reference-based
+ * sweep there would wipe user libraries. Never sweep a prefix whose
+ * references don't live in Postgres.
  *
  * Safety:
  *   - Objects modified in the last SAFETY_WINDOW_MS are skipped (upload→DB
@@ -30,6 +34,8 @@ import { previewKeyForKey } from "./_lib/preview-url";
 import { requireCronAuth } from "./_lib/cron-auth";
 
 const SAFETY_WINDOW_MS = 48 * 60 * 60 * 1000;
+// Generation inputs only need to survive the job itself; 24h is generous.
+const TRANSIENT_WINDOW_MS = 24 * 60 * 60 * 1000;
 const MAX_DELETIONS_PER_RUN = 5000;
 const FEED_ABORT_RATIO = 0.9;
 
@@ -80,9 +86,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     for (const r of await sql`SELECT portrait_url FROM characters WHERE portrait_url IS NOT NULL`) addRef(refs, r.portrait_url);
     for (const r of await sql`SELECT DISTINCT actor_avatar_url FROM notifications WHERE actor_avatar_url IS NOT NULL`) addRef(refs, r.actor_avatar_url);
 
-    const plans: Array<{ prefix: string; refs: Set<string>; ratioGuard: boolean }> = [
+    const plans: Array<{ prefix: string; refs: Set<string>; ratioGuard: boolean; windowMs?: number }> = [
       { prefix: "feed/", refs, ratioGuard: true },
       { prefix: "stories/", refs, ratioGuard: false },
+      { prefix: "prompts/", refs, ratioGuard: false, windowMs: TRANSIENT_WINDOW_MS },
+      { prefix: "uploads/", refs, ratioGuard: false, windowMs: TRANSIENT_WINDOW_MS },
     ];
 
     const now = Date.now();
@@ -104,7 +112,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       for (const obj of objects) {
         if (plan.refs.has(obj.key)) { report.referenced++; continue; }
         const age = obj.lastModified ? now - obj.lastModified.getTime() : 0;
-        if (!obj.lastModified || age < SAFETY_WINDOW_MS) { report.fresh++; continue; }
+        if (!obj.lastModified || age < (plan.windowMs ?? SAFETY_WINDOW_MS)) { report.fresh++; continue; }
         orphanKeys.push(obj.key);
       }
       report.orphans = orphanKeys.length;
