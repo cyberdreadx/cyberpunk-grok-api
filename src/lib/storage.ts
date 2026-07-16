@@ -309,6 +309,56 @@ export async function loadResults(): Promise<{
 }
 
 /**
+ * One-time-per-item migration: pull URL-only library entries (media whose
+ * bytes live only in cloud storage) down into local IndexedDB blobs, so the
+ * cloud copy can eventually be deleted without breaking anyone's library.
+ * R2's public dev domain doesn't send CORS headers, so bytes come via the
+ * /api/download proxy. Runs in the background; items that fail (offline,
+ * object already gone) are retried next session.
+ */
+export async function repersistRemoteResults(maxPerRun = 30): Promise<number> {
+  const { isPermanentPublicMediaUrl } = await import("./mediaUpload");
+  const { apiUrl } = await import("./api");
+
+  const db = await openDB();
+  const records: StoredResult[] = await new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readonly");
+    const rq = tx.objectStore(STORE_NAME).getAll();
+    rq.onsuccess = () => { db.close(); resolve(rq.result || []); };
+    rq.onerror = () => { db.close(); reject(rq.error); };
+  });
+
+  const candidates = records
+    .filter((r) => !(r.blob instanceof Blob && r.blob.size > 0))
+    .filter((r) => r.url && /^https?:/i.test(r.url) && isPermanentPublicMediaUrl(r.url))
+    .slice(0, maxPerRun);
+
+  let migrated = 0;
+  for (const rec of candidates) {
+    try {
+      const resp = await fetch(apiUrl(`/download?url=${encodeURIComponent(rec.url)}`));
+      if (!resp.ok) continue;
+      const blob = await resp.blob();
+      if (blob.size === 0 || blob.size > 200 * 1024 * 1024) continue;
+      rec.blob = blob; // url kept as fallback until the cloud copy goes away
+      const db2 = await openDB();
+      await new Promise<void>((resolve, reject) => {
+        const tx = db2.transaction(STORE_NAME, "readwrite");
+        tx.objectStore(STORE_NAME).put(rec);
+        tx.oncomplete = () => { db2.close(); resolve(); };
+        tx.onerror = () => { db2.close(); reject(tx.error); };
+      });
+      migrated++;
+      await new Promise((r) => setTimeout(r, 300));
+    } catch {
+      // offline / transient — retry next session
+    }
+  }
+  if (migrated > 0) console.log(`[storage] re-persisted ${migrated} remote media item(s) locally`);
+  return migrated;
+}
+
+/**
  * Delete a single result by ID.
  */
 export async function deleteStoredResult(id: string): Promise<void> {

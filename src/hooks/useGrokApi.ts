@@ -427,6 +427,12 @@ export function useGrokApi() {
         revokeAllRef.current = revokeAll;
         setResults(loaded);
         setStorageReady(true);
+        // Background: localize URL-only library media so cloud copies can be
+        // retired without breaking libraries. Delayed to stay off the
+        // critical path; self-limiting (migrated items stop qualifying).
+        setTimeout(() => {
+          import("@/lib/storage").then((m) => m.repersistRemoteResults()).catch(() => {});
+        }, 8000);
       } else {
         revokeAll();
       }
