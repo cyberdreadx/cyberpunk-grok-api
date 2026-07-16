@@ -22,7 +22,7 @@
     --secondary-foreground: 240 15% 5%;
 
     --muted: 240 10% 15%;
-    --muted-foreground: 180 30% 55%;
+    --muted-foreground: 180 25% 65%;
 
     --accent: 270 100% 65%;
     --accent-foreground: 0 0% 100%;
@@ -34,7 +34,20 @@
     --input: 240 12% 12%;
     --ring: 180 100% 50%;
 
-    --radius: 0.25rem;
+    --radius: 0.5rem;
+
+    /* ── 2027 polish layer ── */
+    --ease-glide: cubic-bezier(0.22, 1, 0.36, 1);
+    --surface-1: 240 13% 7%;
+    --surface-2: 240 12% 9.5%;
+    --surface-3: 240 11% 12%;
+    --holo: conic-gradient(
+      from var(--glow-angle, 200deg),
+      hsl(180 100% 50% / 0.55),
+      hsl(270 100% 65% / 0.35),
+      hsl(300 100% 60% / 0.5),
+      hsl(180 100% 50% / 0.55)
+    );
 
     --neon-cyan: 180 100% 50%;
     --neon-magenta: 300 100% 60%;
@@ -77,6 +90,18 @@
   ::selection {
     background: hsl(var(--primary) / 0.3);
     color: hsl(var(--foreground));
+  }
+
+  /* Visible, on-brand keyboard focus everywhere (2027 polish layer) */
+  :focus-visible {
+    outline: 2px solid hsl(var(--primary) / 0.7);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* Numbers line up in tables and stat cards */
+  table, [data-numeric] {
+    font-variant-numeric: tabular-nums;
   }
 }
 
@@ -333,6 +358,110 @@
   }
 
   /* Noise grain — disabled: SVG feTurbulence full-screen is very GPU-expensive. */
+
+  /* ══════════════════════════════════════════════════════════════
+   * 2027 POLISH LAYER — signature holo hairline, glass, motion.
+   * One bold element (the holo ring); everything around it quiet.
+   * ══════════════════════════════════════════════════════════════ */
+
+  /* Signature: 1px conic gradient ring. Double-background trick — no mask,
+     works everywhere, zero layout cost. Rotates gently on hover. */
+  .holo-card {
+    position: relative;
+    border: 1px solid transparent;
+    border-radius: calc(var(--radius) + 2px);
+    background:
+      linear-gradient(hsl(var(--surface-2) / 0.92), hsl(var(--surface-1) / 0.92)) padding-box,
+      var(--holo) border-box;
+    transition: transform 0.25s var(--ease-glide), box-shadow 0.25s var(--ease-glide);
+  }
+  .holo-card:hover {
+    transform: translateY(-1px);
+    box-shadow:
+      0 4px 24px hsl(240 15% 2% / 0.5),
+      0 0 20px hsl(var(--primary) / 0.07);
+    animation: border-rotate 6s linear infinite;
+  }
+
+  /* Quiet glass panel — for sections that shouldn't compete with holo cards */
+  .glass-panel {
+    background: linear-gradient(hsl(var(--surface-2) / 0.72), hsl(var(--surface-1) / 0.72));
+    border: 1px solid hsl(var(--border) / 0.45);
+    border-radius: calc(var(--radius) + 2px);
+    transition: border-color 0.25s var(--ease-glide);
+  }
+  .glass-panel:hover {
+    border-color: hsl(var(--primary) / 0.3);
+  }
+
+  .hover-lift {
+    transition: transform 0.2s var(--ease-glide), box-shadow 0.2s var(--ease-glide);
+  }
+  .hover-lift:hover {
+    transform: translateY(-1px);
+  }
+  .hover-lift:active {
+    transform: translateY(0) scale(0.99);
+  }
+
+  /* Staggered entrance for dashboards/grids — cheap, compositor-only */
+  .stagger-in > * {
+    animation: rise-in 0.45s var(--ease-glide) both;
+  }
+  .stagger-in > *:nth-child(1) { animation-delay: 0.02s; }
+  .stagger-in > *:nth-child(2) { animation-delay: 0.06s; }
+  .stagger-in > *:nth-child(3) { animation-delay: 0.1s; }
+  .stagger-in > *:nth-child(4) { animation-delay: 0.14s; }
+  .stagger-in > *:nth-child(5) { animation-delay: 0.18s; }
+  .stagger-in > *:nth-child(6) { animation-delay: 0.22s; }
+  .stagger-in > *:nth-child(n+7) { animation-delay: 0.26s; }
+
+  /* Horizontal-scroll affordance: fade both edges of overflowing tab bars */
+  .fade-edge-x {
+    -webkit-mask-image: linear-gradient(90deg, transparent, black 18px, black calc(100% - 18px), transparent);
+    mask-image: linear-gradient(90deg, transparent, black 18px, black calc(100% - 18px), transparent);
+  }
+}
+
+/* ── Admin shell: one scoped rule-set upgrades EVERY admin table/section ──
+   (outside @layer so it reliably beats utility classes on specificity) */
+.admin-shell table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.admin-shell thead th {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: hsl(var(--muted-foreground) / 0.75);
+  background: hsl(var(--surface-2) / 0.9);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  backdrop-filter: blur(4px);
+}
+.admin-shell tbody td {
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+.admin-shell tbody tr {
+  transition: background-color 0.15s var(--ease-glide);
+}
+.admin-shell tbody tr:nth-child(even) {
+  background: hsl(var(--surface-2) / 0.4);
+}
+.admin-shell tbody tr:hover {
+  background: hsl(var(--primary) / 0.06);
+}
+.admin-shell section {
+  transition: border-color 0.25s var(--ease-glide);
+}
+.admin-shell section:hover {
+  border-color: hsl(var(--primary) / 0.28);
+}
+
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* ── Keyframes ── */

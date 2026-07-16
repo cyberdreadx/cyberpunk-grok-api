@@ -102,16 +102,19 @@ interface TopUser {
 function KpiCard({ icon, label, value, sub, accent = "primary" }: {
   icon: React.ReactNode; label: string; value: string | number; sub?: string; accent?: "primary" | "secondary" | "destructive";
 }) {
-  const borderMap = { primary: "border-primary/30", secondary: "border-secondary/30", destructive: "border-destructive/30" };
-  const glowMap = { primary: "shadow-primary/5", secondary: "shadow-secondary/5", destructive: "shadow-destructive/5" };
+  const chipMap = {
+    primary: "bg-primary/10 text-primary",
+    secondary: "bg-secondary/10 text-secondary",
+    destructive: "bg-destructive/10 text-destructive",
+  };
   return (
-    <div className={`border ${borderMap[accent]} rounded-lg bg-card/60 backdrop-blur-sm p-3 sm:p-4 shadow-lg ${glowMap[accent]} space-y-1 min-w-0 overflow-hidden`}>
-      <div className="flex items-center gap-1.5 text-muted-foreground/60">
-        {icon}
-        <span className="font-mono-share text-[9px] sm:text-[10px] tracking-wider uppercase truncate">{label}</span>
+    <div className="holo-card p-3 sm:p-4 space-y-1.5 min-w-0 overflow-hidden" data-numeric>
+      <div className="flex items-center gap-2 text-muted-foreground/70">
+        <span className={`inline-flex items-center justify-center w-6 h-6 rounded-md shrink-0 ${chipMap[accent]}`}>{icon}</span>
+        <span className="font-mono-share text-[10px] tracking-wider uppercase truncate">{label}</span>
       </div>
-      <div className="font-orbitron text-lg sm:text-xl font-bold tracking-wide truncate">{value}</div>
-      {sub && <div className="font-mono-share text-[9px] sm:text-[10px] text-muted-foreground/50 truncate">{sub}</div>}
+      <div className="font-orbitron text-xl sm:text-2xl font-bold tracking-wide truncate">{value}</div>
+      {sub && <div className="font-mono-share text-[10px] text-muted-foreground/60 truncate">{sub}</div>}
     </div>
   );
 }
@@ -151,6 +154,19 @@ const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
   { id: "media-errors", label: "MEDIA ERR", icon: <ImageOff className="w-3.5 h-3.5" /> },
   { id: "purges", label: "PURGES", icon: <Trash2 className="w-3.5 h-3.5" /> },
 ];
+
+// Two-tier navigation: 15 flat tabs grouped into 5 clusters so the bar
+// doesn't require horizontal scrolling to find anything.
+const TAB_GROUPS: { id: string; label: string; tabs: TabId[] }[] = [
+  { id: "pulse", label: "PULSE", tabs: ["overview", "insights"] },
+  { id: "money", label: "MONEY", tabs: ["revenue", "payouts", "flash-sales", "legacy-subs"] },
+  { id: "people", label: "PEOPLE", tabs: ["users", "referrals", "emails"] },
+  { id: "ops", label: "OPS", tabs: ["usage", "system", "media-errors", "purges"] },
+  { id: "defense", label: "DEFENSE", tabs: ["moderation", "api"] },
+];
+
+const tabById = (id: TabId) => TABS.find((t) => t.id === id)!;
+const groupOfTab = (id: TabId) => TAB_GROUPS.find((g) => g.tabs.includes(id))!;
 
 // ── RunPod Worker Status Panel ──
 
@@ -1535,27 +1551,48 @@ export default function Admin() {
         </div>
       </header>
 
-      {/* Tab Bar */}
-      <nav className="border-b border-border/20 bg-card/20 backdrop-blur-sm sticky top-[53px] z-10 overflow-x-auto">
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 flex gap-0.5">
-          {TABS.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-1.5 px-3 py-2.5 font-orbitron text-[9px] sm:text-[10px] tracking-wider border-b-2 transition-all whitespace-nowrap ${
-                activeTab === tab.id
-                  ? "border-primary text-primary bg-primary/5"
-                  : "border-transparent text-muted-foreground/50 hover:text-muted-foreground hover:bg-card/40"
-              }`}
-            >
-              {tab.icon}
-              {tab.label}
-            </button>
-          ))}
+      {/* Two-tier tab bar: group clusters, then that group's tabs */}
+      <nav className="border-b border-border/20 bg-card/20 backdrop-blur-sm sticky top-[53px] z-10">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 pt-2 flex gap-1.5 overflow-x-auto scrollbar-hide fade-edge-x">
+          {TAB_GROUPS.map((group) => {
+            const active = group.tabs.includes(activeTab);
+            return (
+              <button
+                key={group.id}
+                onClick={() => { if (!active) setActiveTab(group.tabs[0]); }}
+                className={`px-3.5 py-1.5 rounded-full font-orbitron text-[10px] tracking-widest whitespace-nowrap transition-all duration-200 hover-lift ${
+                  active
+                    ? "bg-primary/15 text-primary shadow-[0_0_14px_hsl(var(--primary)/0.2),inset_0_0_0_1px_hsl(var(--primary)/0.45)]"
+                    : "text-muted-foreground/60 hover:text-muted-foreground shadow-[inset_0_0_0_1px_hsl(var(--border)/0.4)] hover:shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.3)]"
+                }`}
+              >
+                {group.label}
+              </button>
+            );
+          })}
+        </div>
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 flex gap-0.5 overflow-x-auto scrollbar-hide fade-edge-x">
+          {groupOfTab(activeTab).tabs.map((id) => {
+            const tab = tabById(id);
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-1.5 px-3 py-2.5 font-orbitron text-[9px] sm:text-[10px] tracking-wider border-b-2 transition-all duration-200 whitespace-nowrap ${
+                  activeTab === tab.id
+                    ? "border-primary text-primary bg-primary/5"
+                    : "border-transparent text-muted-foreground/50 hover:text-muted-foreground hover:bg-card/40"
+                }`}
+              >
+                {tab.icon}
+                {tab.label}
+              </button>
+            );
+          })}
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
+      <main className="admin-shell max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
 
         {/* ═══ OVERVIEW TAB ═══ */}
         {activeTab === "overview" && (
