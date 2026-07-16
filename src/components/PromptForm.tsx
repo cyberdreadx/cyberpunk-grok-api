@@ -9,6 +9,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import type { GrokMode, GenerationSettings } from "@/hooks/useGrokApi";
 import { apiFetch } from "@/lib/api";
 import { uploadPublicMedia } from "@/lib/mediaUpload";
+import { trackPromptUpload } from "@/lib/promptUploadCleanup";
 import { toast } from "sonner";
 import { normalizeToImageBlob, isAcceptableImageLike } from "@/lib/heicConvert";
 
@@ -144,6 +145,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
       : "jpg";
     const safeName = `${Date.now()}-${filename.replace(/[^\w.-]/g, "_") || "upload"}.${ext}`;
     const { url } = await uploadPublicMedia(blob, "prompts", safeName);
+    trackPromptUpload(url);
     return url;
   };
 
