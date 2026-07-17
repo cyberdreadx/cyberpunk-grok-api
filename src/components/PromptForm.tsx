@@ -8,8 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { GrokMode, GenerationSettings } from "@/hooks/useGrokApi";
 import { apiFetch } from "@/lib/api";
-import { uploadPublicMedia } from "@/lib/mediaUpload";
-import { trackPromptUpload } from "@/lib/promptUploadCleanup";
 import { toast } from "sonner";
 import { normalizeToImageBlob, isAcceptableImageLike } from "@/lib/heicConvert";
 
@@ -138,18 +136,10 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
     });
   };
 
-  const uploadToBlob = async (blob: Blob, filename: string): Promise<string> => {
-    const ext = blob.type === "image/png" ? "png"
-      : blob.type === "image/webp" ? "webp"
-      : blob.type.startsWith("video/") ? (blob.type.split("/")[1] || "mp4")
-      : "jpg";
-    const safeName = `${Date.now()}-${filename.replace(/[^\w.-]/g, "_") || "upload"}.${ext}`;
-    const { url, previewUrl } = await uploadPublicMedia(blob, "prompts", safeName);
-    trackPromptUpload(url);
-    if (previewUrl) trackPromptUpload(previewUrl);
-    return url;
-  };
-
+  // Generation inputs stay ON-DEVICE as data URLs — every engine path either
+  // sends base64 itself or (Seedance) re-hosts server-side for the job only.
+  // Uploading originals to cloud storage here was a privacy leak with no
+  // consumer; do not reintroduce it.
   const setLocalPreview = async (blob: Blob) => {
     const dataUrl = await readBlobAsDataUrl(blob);
     setUploadPreview(dataUrl);
@@ -179,16 +169,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
     }
 
     const localDataUrl = await setLocalPreview(blob);
-
-    try {
-      const url = await uploadToBlob(blob, file.name || "upload");
-      setImageUrl(url);
-      setUploadPreview(url);
-    } catch (err: any) {
-      console.error("[PromptForm] Upload failed:", err?.message || err);
-      setUploadError(err?.message || "Cloud upload failed — you can still generate using the local preview.");
-      setImageUrl(localDataUrl);
-    }
+    setImageUrl(localDataUrl);
   };
 
   const clearUpload = () => {
@@ -216,23 +197,9 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
     const localPreview = await readBlobAsDataUrl(blob);
     setExtraImages(prev => {
       const next = [...prev];
-      next[slotIndex] = { url: "", preview: localPreview };
+      next[slotIndex] = { url: localPreview, preview: localPreview };
       return next;
     });
-    try {
-      const url = await uploadToBlob(blob, file.name || "upload");
-      setExtraImages(prev => {
-        const next = [...prev];
-        next[slotIndex] = { url, preview: url };
-        return next;
-      });
-    } catch {
-      setExtraImages(prev => {
-        const next = [...prev];
-        next[slotIndex] = { url: localPreview, preview: localPreview };
-        return next;
-      });
-    }
   };
 
   const removeExtraImage = (index: number) => {
@@ -287,15 +254,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
             return;
           }
           const localDataUrl = await setLocalPreview(blob);
-          try {
-            const url = await uploadToBlob(blob, "paste.png");
-            setImageUrl(url);
-            setUploadPreview(url);
-          } catch (err: any) {
-            console.error("[PromptForm] Paste upload failed:", err?.message || err);
-            setUploadError(err?.message || "Cloud upload failed — you can still generate using the local preview.");
-            setImageUrl(localDataUrl);
-          }
+          setImageUrl(localDataUrl);
         })();
         return;
       }

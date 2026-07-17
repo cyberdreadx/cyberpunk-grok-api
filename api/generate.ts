@@ -125,9 +125,12 @@ async function dataUrlToPublicBlobUrl(dataUrl: string, userId: string): Promise<
   if (!buffer.length) throw new Error("SEEDANCE image upload is empty.");
   if (buffer.length > 30 * 1024 * 1024) throw new Error("SEEDANCE source image is over 30 MB.");
 
+  // uploads/ (not seedance/): transient job input, swept by the daily
+  // 24h-window orphan crons once fal has fetched it. seedance/ holds
+  // OUTPUTS referenced from user libraries and is never swept.
   const { url } = await uploadPublicMedia(
     buffer,
-    `seedance/${userId}-${Date.now()}.${extFromImageMime(mime)}`,
+    `uploads/${userId}/seedance-${Date.now()}.${extFromImageMime(mime)}`,
     mime,
   );
   return url;
