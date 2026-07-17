@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { BRAND } from "@/lib/brand";
 
 const API_BASE = import.meta.env.VITE_API_URL || "/api";
-const SITE_URL = BRAND.siteUrl;
+const SITE_URL = BRAND.publicUrl; // posted share links must avoid gltch.app (blocked on Reddit/X)
 
 interface ShareData {
   r2Url: string;

@@ -64,7 +64,7 @@ export default function ReferralPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const referralLink = code ? `${BRAND.siteUrl}/?ref=${code}` : "";
+  const referralLink = code ? `${BRAND.publicUrl}/r/${code}` : "";
 
   const handleCopy = useCallback(() => {
     if (!referralLink) return;

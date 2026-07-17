@@ -25,7 +25,7 @@ function truncate(s: string, max: number): string {
   return s.length > max ? s.slice(0, max - 1) + "…" : s;
 }
 
-function notFoundPage(host: string): string {
+function notFoundPage(host: string, appUrl: string): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -42,7 +42,7 @@ function notFoundPage(host: string): string {
   <div class="container center-col">
     <h1 class="glitch-title" style="color:#ff4444">LINK_NOT_FOUND</h1>
     <p class="mono" style="color:#888;margin:16px 0">This share link doesn't exist or has expired.</p>
-    <a href="https://${host}/" class="cta-primary">
+    <a href="${appUrl}/" class="cta-primary">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.5 5.5H19l-4.5 3.5 1.5 5.5-4.5-3.5L7 17l1.5-5.5L4 8h5.5z"/></svg>
       CREATE YOUR OWN
     </a>
@@ -205,8 +205,12 @@ function baseCSS(): string {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // SITE_URL = the public domain share links are posted under (gltch.app is
+  // blocked on Reddit/X, so this is gltchrunner.com). APP_URL = where humans
+  // actually run the app — CTAs go there directly so the ref code survives.
   const siteUrl = process.env.SITE_URL || "https://grokrunner.gltch.app";
   const baseUrl = siteUrl.replace(/\/$/, "");
+  const appUrl = (process.env.APP_URL || "https://grokrunner.gltch.app").replace(/\/$/, "");
   const host = baseUrl.replace(/^https?:\/\//, "");
 
   const refCode = typeof req.query.ref === "string" ? req.query.ref.replace(/[^a-zA-Z0-9]/g, "").slice(0, 20) : "";
@@ -215,7 +219,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const shareId = (req.query.id as string) || "";
   if (!shareId || !/^[a-zA-Z0-9_-]{4,16}$/.test(shareId)) {
     res.setHeader("Content-Type", "text/html; charset=utf-8");
-    return res.status(404).send(notFoundPage(host));
+    return res.status(404).send(notFoundPage(host, appUrl));
   }
 
   try {
@@ -223,7 +227,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (!meta) {
       res.setHeader("Content-Type", "text/html; charset=utf-8");
-      return res.status(404).send(notFoundPage(host));
+      return res.status(404).send(notFoundPage(host, appUrl));
     }
     const mediaUrl = String(meta.mediaUrl || "");
 
@@ -239,7 +243,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ? `${escapeHtml(truncatedPrompt)} — Try this prompt or create your own AI art at GLTCHRunner.`
       : "Create stunning AI images, edit photos, and generate videos. Powered by xAI.";
 
-    const tryPromptUrl = `${baseUrl}/?prompt=${encodeURIComponent(String(meta.prompt || ""))}${refCode ? `&ref=${refCode}` : ""}`;
+    const tryPromptUrl = `${appUrl}/?prompt=${encodeURIComponent(String(meta.prompt || ""))}${refCode ? `&ref=${refCode}` : ""}`;
 
     const html = `<!DOCTYPE html>
 <html lang="en">
@@ -281,8 +285,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   <!-- Header -->
   <div class="header">
     <div class="header-inner">
-      <a href="${baseUrl}/${refSuffix}" class="brand">GROK_RUNNER</a>
-      <a href="${baseUrl}/${refSuffix}" class="header-cta">
+      <a href="${appUrl}/${refSuffix}" class="brand">GLTCH_RUNNER</a>
+      <a href="${appUrl}/${refSuffix}" class="header-cta">
         ✦ CREATE YOUR OWN
       </a>
     </div>
@@ -316,7 +320,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           TRY THIS PROMPT
         </a>
         ` : ""}
-        <a href="${baseUrl}/${refSuffix}" class="cta-secondary">
+        <a href="${appUrl}/${refSuffix}" class="cta-secondary">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.5 5.5H19l-4.5 3.5 1.5 5.5-4.5-3.5L7 17l1.5-5.5L4 8h5.5z"/></svg>
           CREATE YOUR OWN
         </a>
@@ -335,7 +339,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     </div>
 
     <div class="footer">
-      <a href="${baseUrl}/">grokrunner.gltch.app</a> — Powered by GLTCH & FLUX
+      <a href="${appUrl}/">${appUrl.replace(/^https?:\/\//, "")}</a> — Powered by GLTCH & FLUX
     </div>
   </div>
 </body>
@@ -347,6 +351,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   } catch (err: any) {
     console.error("[share-page] Error:", err.message);
     res.setHeader("Content-Type", "text/html; charset=utf-8");
-    return res.status(500).send(notFoundPage(host));
+    return res.status(500).send(notFoundPage(host, appUrl));
   }
 }

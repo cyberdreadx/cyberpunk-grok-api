@@ -20,6 +20,7 @@ import HolderProgramPromo from "@/components/HolderProgramPromo";
 import SpinWheel from "@/components/SpinWheel";
 import type { CreditPackage, SubscriptionTier } from "@/lib/api";
 import { XRGE_DEXSCREENER_URL, XRGE_CHAIN_NAME } from "@/lib/xrgePublic";
+import { BRAND } from "@/lib/brand";
 
 interface CreditDisplayProps {
   totalCredits: number;
@@ -538,7 +539,7 @@ function ReferralCard() {
 
   useEffect(() => { fetchReferral(); }, [fetchReferral]);
 
-  const referralLink = code ? `https://grokrunner.gltch.app?ref=${code}` : "";
+  const referralLink = code ? `${BRAND.publicUrl}/r/${code}` : "";
 
   const handleCopy = () => {
     if (!referralLink) return;
