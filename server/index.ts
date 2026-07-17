@@ -133,6 +133,10 @@ async function main() {
     req.url = `/api/share-page?id=${encodeURIComponent(req.params.id)}`;
     next();
   });
+  app.get("/s/:id/og.png", (req, res, next) => {
+    req.url = `/api/share-image?id=${encodeURIComponent(req.params.id)}`;
+    next();
+  });
 
   // --- Auto-mount /api routes ----------------------------------------------
   const routes = discoverRoutes();

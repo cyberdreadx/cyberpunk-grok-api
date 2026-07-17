@@ -236,8 +236,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const isVideo = meta.mediaType === "video";
     const typeBadge = isVideo ? "VIDEO" : "IMAGE";
 
+    // Typographic quotes on purpose: a raw " here terminates the content=""
+    // attribute in every og:title/twitter:title tag → crawlers saw an empty
+    // title and dropped the preview card entirely.
     const ogTitle = safePrompt
-      ? `"${escapeHtml(truncate(String(meta.prompt), 60))}" — Made with GLTCHRunner`
+      ? `“${escapeHtml(truncate(String(meta.prompt), 60))}” — Made with GLTCHRunner`
       : "AI Creation — Made with GLTCHRunner";
     const ogDesc = safePrompt
       ? `${escapeHtml(truncatedPrompt)} — Try this prompt or create your own AI art at GLTCHRunner.`
@@ -262,7 +265,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     ? `<meta property="og:video" content="${escapeHtml(mediaUrl)}" />
   <meta property="og:video:type" content="video/mp4" />
   <meta property="og:image" content="${baseUrl}/og-image.png" />`
-    : `<meta property="og:image" content="${escapeHtml(mediaUrl)}" />
+    : `<meta property="og:image" content="${baseUrl}/s/${escapeHtml(shareId)}/og.png" />
   <meta property="og:image:width" content="1024" />
   <meta property="og:image:height" content="1024" />`}
   <meta property="og:image:alt" content="${ogDesc}" />
@@ -275,7 +278,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   ${isVideo
     ? `<meta name="twitter:player" content="${escapeHtml(mediaUrl)}" />
   <meta name="twitter:image" content="${baseUrl}/og-image.png" />`
-    : `<meta name="twitter:image" content="${escapeHtml(mediaUrl)}" />`}
+    : `<meta name="twitter:image" content="${baseUrl}/s/${escapeHtml(shareId)}/og.png" />`}
 
   <link rel="canonical" href="${baseUrl}/s/${escapeHtml(shareId)}" />
   <link rel="icon" type="image/png" href="/pwa-192.png" />
