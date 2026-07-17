@@ -29,6 +29,21 @@ export function isPermanentPublicMediaUrl(url: string): boolean {
   }
 }
 
+/**
+ * Best-effort userId from the auth JWT so fallback Blob paths are
+ * user-scoped (<folder>/<userId>/…) — that's what lets library-purge
+ * prove ownership and delete them on session close.
+ */
+function userIdFromToken(token: string): string | null {
+  try {
+    const seg = token.split(".")[1] || "";
+    const payload = JSON.parse(atob(seg.replace(/-/g, "+").replace(/_/g, "/")));
+    return typeof payload.userId === "string" && payload.userId ? payload.userId : null;
+  } catch {
+    return null;
+  }
+}
+
 function previewFilename(filename: string): string {
   const dot = filename.lastIndexOf(".");
   const base = dot > 0 ? filename.slice(0, dot) : filename;
@@ -78,7 +93,8 @@ async function uploadOne(
     : contentType === "image/webp" ? "webp"
     : contentType.startsWith("video/") ? (contentType.split("/")[1] || "mp4")
     : "jpg";
-  const safeName = `${folder}/${Date.now()}-${filename.replace(/[^\w.-]/g, "_") || "upload"}.${ext}`;
+  const uid = userIdFromToken(authToken);
+  const safeName = `${folder}/${uid ? `${uid}/` : ""}${Date.now()}-${filename.replace(/[^\w.-]/g, "_") || "upload"}.${ext}`;
   const { url } = await upload(safeName, blob, {
     access: "public",
     handleUploadUrl: apiUrl("/blob-upload"),

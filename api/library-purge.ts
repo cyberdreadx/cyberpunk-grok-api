@@ -25,6 +25,11 @@ import { getDb } from "./_lib/db";
  */
 const LEGACY_UNOWNED_PREFIXES = ["comfyui-output/", "prompts/", "uploads/"];
 
+// Blob-side legacy transient uploads (prompts/<ts>-<name>-<suffix>): generation
+// INPUTS only — never widen to output/library paths (root-level legacy blobs
+// are users' library media, referenced only from their local IndexedDB).
+const LEGACY_BLOB_TRANSIENT_PREFIXES = ["prompts/", "uploads/"];
+
 function isLegacyUnownedKey(key: string): boolean {
   const lower = key.toLowerCase();
   return (
@@ -33,16 +38,30 @@ function isLegacyUnownedKey(key: string): boolean {
   );
 }
 
-/** Every R2 key referenced by a DB table (mirrors cron-r2-orphans). */
-async function loadReferencedKeys(): Promise<Set<string>> {
+function isLegacyTransientBlobKey(key: string): boolean {
+  const lower = key.toLowerCase();
+  return (
+    lower.split("/").length === 2 &&
+    LEGACY_BLOB_TRANSIENT_PREFIXES.some((p) => lower.startsWith(p))
+  );
+}
+
+/** Every R2 key + Blob pathname referenced by a DB table (mirrors the orphan crons). */
+async function loadReferencedKeys(): Promise<{ r2: Set<string>; blob: Set<string> }> {
   const sql = getDb();
-  const refs = new Set<string>();
+  const r2 = new Set<string>();
+  const blob = new Set<string>();
   const addRef = (url: unknown) => {
-    if (typeof url !== "string" || !url || !isR2Url(url)) return;
-    const key = r2KeyFromUrl(url);
-    if (!key) return;
-    refs.add(key);
-    if (!key.endsWith("-preview.webp")) refs.add(previewKeyForKey(key));
+    if (typeof url !== "string" || !url) return;
+    if (isR2Url(url)) {
+      const key = r2KeyFromUrl(url);
+      if (!key) return;
+      r2.add(key);
+      if (!key.endsWith("-preview.webp")) r2.add(previewKeyForKey(key));
+    } else if (isVercelBlobUrl(url)) {
+      const key = blobKeyFromUrl(url);
+      if (key) blob.add(key);
+    }
   };
   for (const r of await sql`SELECT image_url, preview_image_url FROM feed_posts`) {
     addRef(r.image_url);
@@ -55,7 +74,8 @@ async function loadReferencedKeys(): Promise<Set<string>> {
   for (const r of await sql`SELECT avatar_url FROM profiles WHERE avatar_url IS NOT NULL`) addRef(r.avatar_url);
   for (const r of await sql`SELECT portrait_url FROM characters WHERE portrait_url IS NOT NULL`) addRef(r.portrait_url);
   for (const r of await sql`SELECT DISTINCT actor_avatar_url FROM notifications WHERE actor_avatar_url IS NOT NULL`) addRef(r.actor_avatar_url);
-  return refs;
+  for (const r of await sql`SELECT DISTINCT media_url FROM chat_messages WHERE media_url IS NOT NULL`.catch(() => [] as any[])) addRef(r.media_url);
+  return { r2, blob };
 }
 
 function blobKeyFromUrl(url: string): string | null {
@@ -117,12 +137,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const blobUrls: string[] = [];
   const r2Keys: string[] = [];
   const legacyKeys: string[] = [];
+  const legacyBlobUrls: Array<{ url: string; key: string }> = [];
   let skipped = 0;
 
   for (const url of candidates) {
     if (isVercelBlobUrl(url)) {
       const key = blobKeyFromUrl(url);
       if (key && keyBelongsToUser(key, auth.userId)) blobUrls.push(url);
+      else if (key && isLegacyTransientBlobKey(key)) legacyBlobUrls.push({ url, key });
       else skipped++;
     } else if (isR2Url(url)) {
       const key = r2KeyFromUrl(url);
@@ -140,18 +162,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // Legacy un-scoped keys: deletable only when nothing server-side references
   // them. DB failure here must not block the ownership-proven deletions.
-  if (legacyKeys.length > 0) {
+  if (legacyKeys.length > 0 || legacyBlobUrls.length > 0) {
     try {
       const refs = await loadReferencedKeys();
       for (const key of legacyKeys) {
-        if (refs.has(key)) { skipped++; continue; }
+        if (refs.r2.has(key)) { skipped++; continue; }
         r2Keys.push(key);
         const preview = previewKeyForKey(key);
-        if (!key.endsWith("-preview.webp") && !refs.has(preview)) r2Keys.push(preview);
+        if (!key.endsWith("-preview.webp") && !refs.r2.has(preview)) r2Keys.push(preview);
+      }
+      for (const { url, key } of legacyBlobUrls) {
+        if (refs.blob.has(key)) { skipped++; continue; }
+        blobUrls.push(url);
       }
     } catch (err: any) {
       console.warn("[library-purge] legacy ref check failed:", err?.message || err);
-      skipped += legacyKeys.length;
+      skipped += legacyKeys.length + legacyBlobUrls.length;
     }
   }
 

@@ -144,8 +144,9 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
       : blob.type.startsWith("video/") ? (blob.type.split("/")[1] || "mp4")
       : "jpg";
     const safeName = `${Date.now()}-${filename.replace(/[^\w.-]/g, "_") || "upload"}.${ext}`;
-    const { url } = await uploadPublicMedia(blob, "prompts", safeName);
+    const { url, previewUrl } = await uploadPublicMedia(blob, "prompts", safeName);
     trackPromptUpload(url);
+    if (previewUrl) trackPromptUpload(previewUrl);
     return url;
   };
 

@@ -1,5 +1,8 @@
 /**
- * Weekly cron — purge orphaned files in Vercel Blob storage.
+ * Cron — purge orphaned files in Vercel Blob storage.
+ * Weekly full sweep ("0 4 * * 0") + daily `?transient=1` sweep of the
+ * generation-input prefixes only (prompts/, uploads/ — privacy-sensitive
+ * session uploads that nothing references after the job runs).
  *
  * An "orphan" is any blob no longer referenced by ANY of:
  *   - feed_posts.image_url
@@ -56,6 +59,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const confirm = req.query.confirm === "1" || req.query.confirm === "true";
   const verbose = req.query.verbose === "1";
+  // transient=1 → sweep ONLY the generation-input prefixes (prompts/, uploads/).
+  // Those are session-scoped originals (privacy-sensitive), never share targets,
+  // and ~all of them are expected orphans — so this mode skips the share-index
+  // resolution and the abort ratio guard. Runs daily; the full sweep stays weekly.
+  const transient = req.query.transient === "1" || req.query.transient === "true";
+  const TRANSIENT_PREFIXES = ["prompts/", "uploads/"];
 
   try {
     const sql = getDb();
@@ -83,18 +92,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     for (const r of notifAvatars as any[]) addRef(r.actor_avatar_url);
     for (const r of chatMedia as any[]) addRef(r.media_url);
 
-    // ── 2. List ALL blobs (paginate) ────────────────────────────────────
+    // ── 2. List blobs (paginate) — whole store, or just transient prefixes ─
     type Blob = { url: string; pathname: string; uploadedAt: Date | string; size: number };
     const allBlobs: Blob[] = [];
-    let cursor: string | undefined;
-    do {
-      const page = await list({ token, cursor, limit: 1000 });
-      allBlobs.push(...(page.blobs as any));
-      cursor = page.cursor;
-    } while (cursor);
+    for (const prefix of transient ? TRANSIENT_PREFIXES : [undefined]) {
+      let cursor: string | undefined;
+      do {
+        const page = await list({ token, cursor, limit: 1000, ...(prefix ? { prefix } : {}) });
+        allBlobs.push(...(page.blobs as any));
+        cursor = page.cursor;
+      } while (cursor);
+    }
 
     // ── 3. Resolve share indexes — keep .json + the media each .json points to
-    const shareIndexes = allBlobs.filter(
+    // (skipped in transient mode: generation inputs are never share targets)
+    const shareIndexes = transient ? [] : allBlobs.filter(
       (b) => b.pathname.startsWith("shares/") && b.pathname.endsWith(".json"),
     );
     await Promise.all(
@@ -123,34 +135,56 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (orphans.length >= MAX_DELETIONS_PER_RUN) break;
     }
 
-    // ── 5. Delete (only if confirmed) ───────────────────────────────────
-    // ── 5. Safety abort: if we'd delete >50% of the bucket, refuse and force a dry-run report.
+    // ── 5. Safety abort: if we'd delete >50% of the bucket, refuse and force a
+    // dry-run report. Not applied in transient mode — transient uploads are
+    // SUPPOSED to be ~all orphans once past the safety window.
     const wouldDeleteRatio = allBlobs.length > 0 ? orphans.length / allBlobs.length : 0;
-    const aborted = wouldDeleteRatio > ABORT_RATIO;
+    const aborted = !transient && wouldDeleteRatio > ABORT_RATIO;
 
     let deleted = 0;
     let failed = 0;
     if (confirm && !aborted && orphans.length > 0) {
-      // Batch deletes to avoid hammering the API
-      const BATCH = 50;
+      // Throttled batches — 50-wide concurrent deletes tripped Vercel's rate
+      // limit (Jul 12 run: 1238 failures). On a 429, wait out the window once.
+      const BATCH = 20;
+      const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       for (let i = 0; i < orphans.length; i += BATCH) {
         const batch = orphans.slice(i, i + BATCH);
+        const failedOnce: Blob[] = [];
         await Promise.all(
           batch.map((b) =>
             del(b.url, { token })
               .then(() => { deleted++; })
               .catch((e) => {
-                failed++;
-                console.warn("[cron-blob] delete failed:", b.pathname, e?.message);
+                if (/too many requests|rate/i.test(String(e?.message))) failedOnce.push(b);
+                else {
+                  failed++;
+                  console.warn("[cron-blob] delete failed:", b.pathname, e?.message);
+                }
               }),
           ),
         );
+        if (failedOnce.length > 0) {
+          await sleep(61_000);
+          await Promise.all(
+            failedOnce.map((b) =>
+              del(b.url, { token })
+                .then(() => { deleted++; })
+                .catch((e) => {
+                  failed++;
+                  console.warn("[cron-blob] delete failed (retry):", b.pathname, e?.message);
+                }),
+            ),
+          );
+        }
+        await sleep(250);
       }
     }
 
     const totalSize = orphans.reduce((s, b) => s + (b.size || 0), 0);
     const report = {
       ok: true,
+      mode: transient ? "transient" : "full",
       dryRun: !confirm || aborted,
       aborted,
       abortReason: aborted
