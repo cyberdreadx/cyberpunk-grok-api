@@ -446,6 +446,156 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json({ suspects: rows, minExcess });
       }
 
+      // -- Per-suspect farming evidence drilldown --
+      // Breaks a user's credit history into attributable sources (missions,
+      // one-time claims, referrals, unlock income) and surfaces the multi-account
+      // signals: fingerprint cluster, referees/unlockers sharing the device
+      // fingerprint (self-referral / alt-funded unlock laundering).
+      case "farmer-detail": {
+        const targetUserId = req.body?.userId;
+        if (!targetUserId) return res.status(400).json({ error: "userId required" });
+
+        const [user] = await sql`
+          SELECT u.id, u.email, u.created_at, u.email_verified, u.subscription_tier,
+                 u.device_fingerprint, u.daily_credits, u.sub_credits, u.pack_credits,
+                 COALESCE(u.cash_balance_cents, 0)::int AS cash_balance_cents,
+                 u.last_free_spin, COALESCE(u.spin_streak, 0)::int AS spin_streak,
+                 COALESCE(u.karma, 0)::int AS karma, u.referred_by,
+                 pr.username
+          FROM users u
+          LEFT JOIN profiles pr ON pr.user_id = u.id
+          WHERE u.id = ${targetUserId}::uuid
+        `;
+        if (!user) return res.status(404).json({ error: "User not found" });
+
+        const purchases = await sql`
+          SELECT credits, amount_cents, package, type, payment_method, created_at
+          FROM transactions
+          WHERE user_id = ${targetUserId}::uuid
+          ORDER BY created_at DESC
+          LIMIT 15
+        `.catch(() => []);
+
+        const [missions] = await sql`
+          SELECT COALESCE(SUM(credits), 0)::int AS credits,
+                 COUNT(*)::int AS claims,
+                 COUNT(DISTINCT claim_date)::int AS days,
+                 MIN(claim_date) AS first_day,
+                 MAX(claim_date) AS last_day
+          FROM daily_mission_claims
+          WHERE user_id = ${targetUserId}::uuid
+        `.catch(() => [{ credits: 0, claims: 0, days: 0, first_day: null, last_day: null }]);
+
+        const oneTimeClaims = await sql`
+          SELECT claim_key, credits, created_at
+          FROM one_time_claims
+          WHERE user_id = ${targetUserId}::uuid
+          ORDER BY created_at DESC
+        `.catch(() => []);
+
+        // Who they referred — and whether any referee shares their fingerprint.
+        const referees = await sql`
+          SELECT r.created_at, r.referee_verified, r.referee_purchased, r.referrer_rewarded,
+                 u.email, pr.username,
+                 (u.device_fingerprint IS NOT NULL AND u.device_fingerprint = (
+                   SELECT device_fingerprint FROM users WHERE id = ${targetUserId}::uuid
+                 )) AS same_fp
+          FROM referrals r
+          JOIN users u ON u.id = r.referee_id
+          LEFT JOIN profiles pr ON pr.user_id = r.referee_id
+          WHERE r.referrer_id = ${targetUserId}::uuid
+          ORDER BY r.created_at DESC
+          LIMIT 50
+        `.catch(() => []);
+
+        // Unlock income on their posts/stories, with the paying accounts —
+        // alt accounts funneling free credits to a main show up here.
+        const feedUnlockers = await sql`
+          SELECT fu.user_id, u.email, pr.username,
+                 COUNT(*)::int AS unlocks,
+                 COALESCE(SUM(fu.credits_paid), 0)::int AS credits_paid,
+                 (u.device_fingerprint IS NOT NULL AND u.device_fingerprint = (
+                   SELECT device_fingerprint FROM users WHERE id = ${targetUserId}::uuid
+                 )) AS same_fp
+          FROM feed_unlocks fu
+          JOIN feed_posts p ON p.id = fu.post_id
+          JOIN users u ON u.id = fu.user_id
+          LEFT JOIN profiles pr ON pr.user_id = fu.user_id
+          WHERE p.user_id = ${targetUserId}::uuid AND fu.unlock_method = 'credits'
+          GROUP BY fu.user_id, u.email, pr.username, u.device_fingerprint
+          ORDER BY credits_paid DESC
+          LIMIT 20
+        `.catch(() => []);
+
+        const storyUnlockers = await sql`
+          SELECT su.user_id, u.email, pr.username,
+                 COUNT(*)::int AS unlocks,
+                 COALESCE(SUM(su.credits_paid), 0)::int AS credits_paid,
+                 (u.device_fingerprint IS NOT NULL AND u.device_fingerprint = (
+                   SELECT device_fingerprint FROM users WHERE id = ${targetUserId}::uuid
+                 )) AS same_fp
+          FROM story_unlocks su
+          JOIN stories s ON s.id = su.story_id
+          JOIN users u ON u.id = su.user_id
+          LEFT JOIN profiles pr ON pr.user_id = su.user_id
+          WHERE s.user_id = ${targetUserId}::uuid
+          GROUP BY su.user_id, u.email, pr.username, u.device_fingerprint
+          ORDER BY credits_paid DESC
+          LIMIT 20
+        `.catch(() => []);
+
+        const [activity] = await sql`
+          SELECT COUNT(*)::int AS generations,
+                 COALESCE(SUM(credits_used), 0)::int AS spent,
+                 COUNT(*) FILTER (WHERE created_at > now() - interval '7 days')::int AS generations_7d,
+                 COALESCE(SUM(credits_used) FILTER (WHERE created_at > now() - interval '7 days'), 0)::int AS spent_7d,
+                 COALESCE(SUM(credits_used) FILTER (WHERE mode LIKE '%-refunded'), 0)::int AS refunded,
+                 MIN(created_at) AS first_gen,
+                 MAX(created_at) AS last_gen
+          FROM usage_log
+          WHERE user_id = ${targetUserId}::uuid
+        `.catch(() => [{ generations: 0, spent: 0, generations_7d: 0, spent_7d: 0, refunded: 0, first_gen: null, last_gen: null }]);
+
+        // Every account on the same device fingerprint.
+        const fpCluster = user.device_fingerprint
+          ? await sql`
+              SELECT u.id, u.email, pr.username, u.created_at,
+                     (COALESCE(u.daily_credits,0) + COALESCE(u.sub_credits,0) + COALESCE(u.pack_credits,0))::int AS balance,
+                     (ub.user_id IS NOT NULL) AS banned
+              FROM users u
+              LEFT JOIN profiles pr ON pr.user_id = u.id
+              LEFT JOIN user_bans ub ON ub.user_id = u.id
+              WHERE u.device_fingerprint = ${user.device_fingerprint} AND u.id <> ${targetUserId}::uuid
+              ORDER BY u.created_at ASC
+              LIMIT 20
+            `.catch(() => [])
+          : [];
+
+        // Who referred THEM (self-referral rings run both directions).
+        const [referrer] = user.referred_by
+          ? await sql`
+              SELECT u.email, pr.username,
+                     (u.device_fingerprint IS NOT NULL AND u.device_fingerprint = ${user.device_fingerprint || null}) AS same_fp
+              FROM users u
+              LEFT JOIN profiles pr ON pr.user_id = u.id
+              WHERE u.id = ${user.referred_by}::uuid
+            `.catch(() => [null])
+          : [null];
+
+        return res.status(200).json({
+          user,
+          purchases,
+          missions,
+          oneTimeClaims,
+          referees,
+          feedUnlockers,
+          storyUnlockers,
+          activity,
+          fpCluster,
+          referrer: referrer || null,
+        });
+      }
+
       // -- Referral stats --
       case "referrals": {
         const [stats] = await sql`
