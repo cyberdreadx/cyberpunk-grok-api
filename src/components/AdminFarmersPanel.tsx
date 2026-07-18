@@ -11,7 +11,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { apiFetch } from "@/lib/api";
-import { Loader2, RefreshCw, Tractor, Ban, ShieldCheck, Star } from "lucide-react";
+import { Loader2, RefreshCw, Tractor, Ban, ShieldCheck, Star, ExternalLink } from "lucide-react";
 
 interface Suspect {
   id: string;
@@ -179,7 +179,19 @@ const AdminFarmersPanel: React.FC = () => {
                 <td className="px-3 py-2 max-w-[220px]">
                   <div className="flex items-center gap-1.5 truncate">
                     {s.is_creator && <Star className="w-3 h-3 text-amber-400 shrink-0" />}
-                    <span className="text-foreground truncate">{s.username || "—"}</span>
+                    {s.username ? (
+                      <a
+                        href={`/profile/${s.username}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-foreground truncate hover:text-primary underline decoration-border/50 underline-offset-2 inline-flex items-center gap-1"
+                      >
+                        {s.username}
+                        <ExternalLink className="w-2.5 h-2.5 shrink-0 opacity-50" />
+                      </a>
+                    ) : (
+                      <span className="text-muted-foreground truncate">no profile</span>
+                    )}
                     {s.subscription_tier && (
                       <span className="text-[9px] px-1 py-0.5 rounded border border-primary/30 text-primary/70 shrink-0">
                         {s.subscription_tier.toUpperCase()}
