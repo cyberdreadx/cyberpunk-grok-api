@@ -33,12 +33,14 @@ import {
   Shield,
   Sparkles,
   ImageOff,
+  Tractor,
 } from "lucide-react";
 import AdminInsightsPanel from "@/components/AdminInsightsPanel";
 import AdminChatModerationPanel from "@/components/AdminChatModerationPanel";
 import PurgeLogPanel from "@/components/PurgeLogPanel";
 import MediaErrorsPanel from "@/components/MediaErrorsPanel";
 import LegacySubReconcilePanel from "@/components/LegacySubReconcilePanel";
+import AdminFarmersPanel from "@/components/AdminFarmersPanel";
 import {
   AreaChart,
   Area,
@@ -135,7 +137,7 @@ function CyberTooltip({ active, payload, label }: any) {
 
 // ── Tab Definitions ──
 
-type TabId = "overview" | "insights" | "revenue" | "users" | "usage" | "moderation" | "referrals" | "payouts" | "emails" | "api" | "system" | "flash-sales" | "media-errors" | "purges" | "legacy-subs";
+type TabId = "overview" | "insights" | "revenue" | "users" | "usage" | "moderation" | "farmers" | "referrals" | "payouts" | "emails" | "api" | "system" | "flash-sales" | "media-errors" | "purges" | "legacy-subs";
 
 const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
   { id: "overview", label: "OVERVIEW", icon: <Eye className="w-3.5 h-3.5" /> },
@@ -144,6 +146,7 @@ const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
   { id: "users", label: "USERS", icon: <Users className="w-3.5 h-3.5" /> },
   { id: "usage", label: "USAGE", icon: <BarChart3 className="w-3.5 h-3.5" /> },
   { id: "moderation", label: "DEFENSE", icon: <ShieldX className="w-3.5 h-3.5" /> },
+  { id: "farmers", label: "FARMERS", icon: <Tractor className="w-3.5 h-3.5" /> },
   { id: "referrals", label: "REFERRALS", icon: <Share2 className="w-3.5 h-3.5" /> },
   { id: "payouts", label: "PAYOUTS", icon: <CreditCard className="w-3.5 h-3.5" /> },
   { id: "legacy-subs", label: "LEGACY SUBS", icon: <AlertTriangle className="w-3.5 h-3.5" /> },
@@ -162,7 +165,7 @@ const TAB_GROUPS: { id: string; label: string; tabs: TabId[] }[] = [
   { id: "money", label: "MONEY", tabs: ["revenue", "payouts", "flash-sales", "legacy-subs"] },
   { id: "people", label: "PEOPLE", tabs: ["users", "referrals", "emails"] },
   { id: "ops", label: "OPS", tabs: ["usage", "system", "media-errors", "purges"] },
-  { id: "defense", label: "DEFENSE", tabs: ["moderation", "api"] },
+  { id: "defense", label: "DEFENSE", tabs: ["moderation", "farmers", "api"] },
 ];
 
 const tabById = (id: TabId) => TABS.find((t) => t.id === id)!;
@@ -2624,6 +2627,9 @@ export default function Admin() {
 
         {/* ═══ CHAT MODERATION ═══ */}
         {activeTab === "moderation" && <AdminChatModerationPanel />}
+
+        {/* ═══ CREDIT FARMERS ═══ */}
+        {activeTab === "farmers" && <AdminFarmersPanel />}
 
         {/* ═══ REFERRALS TAB ═══ */}
         {activeTab === "referrals" && referralStats && (

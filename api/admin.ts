@@ -385,6 +385,67 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json({ topUsers: rows });
       }
 
+      // -- Credit farmers: users whose balance far exceeds what they ever paid for --
+      // Real purchases (Stripe packs/subs, XRGE) always write a transactions row with
+      // amount_cents > 0; free rewards (spins, missions, daily, referral, follow/weekly
+      // bonuses) bump pack_credits with no such row. So balance − purchased − admin-granted
+      // = credits obtained for free. A large excess is the farming signature.
+      case "credit-farmers": {
+        const minExcess = Math.max(1, parseInt(req.body?.minExcess, 10) || 100);
+        const farmLimit = Math.min(500, Math.max(1, parseInt(req.body?.limit, 10) || 100));
+        const rows = await sql`
+          WITH paid AS (
+            SELECT user_id,
+              COALESCE(SUM(credits) FILTER (WHERE amount_cents > 0), 0)::int AS purchased,
+              COALESCE(SUM(credits) FILTER (WHERE COALESCE(amount_cents, 0) = 0 AND payment_method = 'admin'), 0)::int AS admin_granted,
+              COALESCE(SUM(amount_cents), 0)::int AS paid_cents
+            FROM transactions
+            GROUP BY user_id
+          ),
+          spend AS (
+            SELECT user_id, COALESCE(SUM(credits_used), 0)::int AS spent
+            FROM usage_log
+            GROUP BY user_id
+          ),
+          fp AS (
+            SELECT device_fingerprint, COUNT(*)::int AS cnt
+            FROM users
+            WHERE device_fingerprint IS NOT NULL AND device_fingerprint <> ''
+            GROUP BY device_fingerprint
+          ),
+          refs AS (
+            SELECT referred_by AS user_id, COUNT(*)::int AS cnt
+            FROM users WHERE referred_by IS NOT NULL
+            GROUP BY referred_by
+          )
+          SELECT
+            u.id, u.email, pr.username, u.created_at, u.subscription_tier,
+            COALESCE(u.is_featured_creator, false) AS is_creator,
+            (COALESCE(u.daily_credits,0) + COALESCE(u.sub_credits,0) + COALESCE(u.pack_credits,0))::int AS balance,
+            COALESCE(p.purchased, 0) AS purchased,
+            COALESCE(p.admin_granted, 0) AS admin_granted,
+            COALESCE(p.paid_cents, 0) AS paid_cents,
+            COALESCE(s.spent, 0) AS lifetime_spent,
+            COALESCE(f.cnt, 1) AS fp_accounts,
+            COALESCE(r.cnt, 0) AS referrals,
+            (ub.user_id IS NOT NULL) AS banned,
+            ((COALESCE(u.daily_credits,0) + COALESCE(u.sub_credits,0) + COALESCE(u.pack_credits,0))
+              - COALESCE(p.purchased, 0) - COALESCE(p.admin_granted, 0))::int AS excess
+          FROM users u
+          LEFT JOIN paid p ON p.user_id = u.id
+          LEFT JOIN spend s ON s.user_id = u.id
+          LEFT JOIN fp f ON f.device_fingerprint = u.device_fingerprint
+          LEFT JOIN refs r ON r.user_id = u.id
+          LEFT JOIN profiles pr ON pr.user_id = u.id
+          LEFT JOIN user_bans ub ON ub.user_id = u.id
+          WHERE (COALESCE(u.daily_credits,0) + COALESCE(u.sub_credits,0) + COALESCE(u.pack_credits,0))
+                - COALESCE(p.purchased, 0) - COALESCE(p.admin_granted, 0) >= ${minExcess}
+          ORDER BY excess DESC
+          LIMIT ${farmLimit}
+        `;
+        return res.status(200).json({ suspects: rows, minExcess });
+      }
+
       // -- Referral stats --
       case "referrals": {
         const [stats] = await sql`
