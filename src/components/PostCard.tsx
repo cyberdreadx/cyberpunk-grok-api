@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiFetch } from "@/lib/api";
+import { BRAND } from "@/lib/brand";
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -167,7 +168,9 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
 
   const handleCopyLink = async () => {
     try {
-      const url = `${window.location.origin}/feed?post=${post.id}`;
+      // publicUrl (gltchrunner.com), NOT the app origin — *.gltch.app is
+      // domain-blocked on Reddit/X; nginx 302s /feed back to the app.
+      const url = `${BRAND.publicUrl}/feed?post=${post.id}`;
       await navigator.clipboard.writeText(url);
       toast({ title: "Link copied" });
     } catch {

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiFetch } from "@/lib/api";
+import { BRAND } from "@/lib/brand";
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ArrowBigUp, ArrowBigDown, MessageCircle, Trash2, Flag, Lock, Coins, CreditCard, Zap, Eye, EyeOff, MoreHorizontal, Link2, ShieldOff, Volume2, VolumeX } from "lucide-react";
@@ -111,7 +112,8 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate, active = true, moun
 
   const handleCopyLink = async () => {
     try {
-      await navigator.clipboard.writeText(`${window.location.origin}/feed?post=${post.id}`);
+      // publicUrl (gltchrunner.com) — *.gltch.app is blocked on Reddit/X.
+      await navigator.clipboard.writeText(`${BRAND.publicUrl}/feed?post=${post.id}`);
       toast({ title: "Link copied" });
     } catch {
       toast({ title: "Failed to copy", variant: "destructive" });
