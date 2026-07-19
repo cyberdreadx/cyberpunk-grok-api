@@ -556,6 +556,62 @@ export function buildV52AnnouncementHtml(): string {
   `;
 }
 
+export function buildCrackdownAnnouncementHtml(): string {
+  return `
+    <div style="font-family: 'Courier New', monospace; background: #0a0a0f; color: #e0e0e0; padding: 32px; max-width: 540px; margin: 0 auto;">
+      <div style="border: 1px solid #00f0ff33; padding: 28px; border-radius: 4px;">
+
+        <h1 style="color: #00f0ff; font-size: 22px; letter-spacing: 4px; margin: 0 0 6px; text-align: center;">
+          GLTCHRUNNER
+        </h1>
+        <p style="color: #ff00e599; font-size: 11px; letter-spacing: 5px; text-align: center; margin: 0 0 28px;">
+          SYSTEM_PURGE // COMPLETE
+        </p>
+
+        <div style="background: linear-gradient(135deg, #ff3b3b15, #00f0ff15); border: 1px solid #ff3b3b66; padding: 18px; border-radius: 4px; margin: 0 0 24px; text-align: center;">
+          <p style="color: #ff5b5b; font-size: 12px; letter-spacing: 3px; margin: 0 0 8px;">🧹 CREDIT FARMERS — BANNED</p>
+          <p style="font-size: 13px; color: #c0c0c0; margin: 0; line-height: 1.6;">
+            We've purged the fake-account rings that were draining GPU time from real Runners. Banned, blocked, and locked out.
+          </p>
+        </div>
+
+        <p style="font-size: 14px; color: #c0c0c0; line-height: 1.7; margin: 0 0 20px;">
+          Hey Runner — real talk. For the past few months, credit-farming rings were mass-creating fake accounts with throwaway emails to drain free credits and burn GPU time. That's why queues felt slower and generations sometimes lagged. It wasn't you — it was them.
+        </p>
+
+        <div style="background: #111; border: 1px solid #00f0ff44; padding: 20px; border-radius: 4px; margin: 0 0 24px;">
+          <h2 style="color: #00f0ff; font-size: 15px; margin: 0 0 10px; letter-spacing: 1px;">
+            ⚡ WHAT WE DID
+          </h2>
+          <ul style="font-size: 13px; color: #b0b0b0; margin: 0; padding-left: 18px; line-height: 1.8;">
+            <li><strong style="color:#ff5b5b;">Banned the farm accounts</strong> — and anyone still farming will get the same</li>
+            <li><strong style="color:#fff;">New signup defenses</strong> — throwaway/burner email domains are auto-blocked at the door</li>
+            <li><strong style="color:#fff;">Smarter abuse detection</strong> — delete-and-recreate credit cycling no longer works</li>
+            <li><strong style="color:#fff;">GPU freed up</strong> — that compute goes back to real Runners</li>
+          </ul>
+        </div>
+
+        <div style="background: #111; border: 1px solid #ff00e544; padding: 20px; border-radius: 4px; margin: 0 0 24px;">
+          <h2 style="color: #ff00e5; font-size: 15px; margin: 0 0 10px; letter-spacing: 1px;">🚀 WHAT IT MEANS FOR YOU</h2>
+          <p style="font-size: 13px; color: #b0b0b0; margin: 0; line-height: 1.7;">
+            Faster queues, snappier generations, and free credits that actually go to the community they were meant for. Smooth sailing from here — thanks for riding it out with us.
+          </p>
+        </div>
+
+        <div style="text-align: center; margin: 0 0 20px;">
+          <a href="https://grokrunner.gltch.app" style="display: inline-block; background: linear-gradient(135deg, #00f0ff22, #ff00e522); border: 1px solid #00f0ff55; color: #00f0ff; text-decoration: none; padding: 14px 36px; border-radius: 4px; font-size: 14px; letter-spacing: 3px; font-weight: bold;">
+            OPEN GLTCHRUNNER →
+          </a>
+        </div>
+
+        <p style="font-size: 11px; color: #444; margin: 0; text-align: center;">
+          Sent to verified GltchRunner accounts. Your daily credits are still waiting.
+        </p>
+      </div>
+    </div>
+  `;
+}
+
 export function buildV53AnnouncementHtml(): string {
   return `
     <div style="font-family: 'Courier New', monospace; background: #0a0a0f; color: #e0e0e0; padding: 32px; max-width: 540px; margin: 0 auto;">

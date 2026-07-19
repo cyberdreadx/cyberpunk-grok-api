@@ -3,7 +3,7 @@
  * Designed for cron-driven processing (no fragile self-fetch chains).
  */
 
-import { getResend, getFromAddress, logEmail, buildAnnouncementHtml, buildV47AnnouncementHtml, buildV48AnnouncementHtml, buildV49SubscriptionFixHtml, buildV52AnnouncementHtml, buildV53AnnouncementHtml, buildLaunchAnnouncementHtml } from "./email";
+import { getResend, getFromAddress, logEmail, buildAnnouncementHtml, buildV47AnnouncementHtml, buildV48AnnouncementHtml, buildV49SubscriptionFixHtml, buildV52AnnouncementHtml, buildV53AnnouncementHtml, buildLaunchAnnouncementHtml, buildCrackdownAnnouncementHtml } from "./email";
 
 export const CAMPAIGN_CONFIG_KEY = "active_email_campaign";
 
@@ -27,6 +27,7 @@ export const DEFAULT_CAMPAIGN_SUBJECTS: Record<string, string> = {
   announcement_v52: "⚡ GLTCHRunner v5.2 — Faster & More Reliable Than Ever",
   announcement_v53: "🔊 GLTCHRunner v5.3 — LTX video with SOUND is live",
   announcement_launch: "🚀 GLTCH Runner is here — chat with AI models + video gen",
+  announcement_crackdown: "🧹 GLTCHRunner — Credit farmers banned, full speed restored",
 };
 
 export function getAnnouncementHtmlForCampaign(campaign: string): string {
@@ -43,6 +44,8 @@ export function getAnnouncementHtmlForCampaign(campaign: string): string {
       return buildV53AnnouncementHtml();
     case "announcement_launch":
       return buildLaunchAnnouncementHtml();
+    case "announcement_crackdown":
+      return buildCrackdownAnnouncementHtml();
     default:
       return buildAnnouncementHtml();
   }

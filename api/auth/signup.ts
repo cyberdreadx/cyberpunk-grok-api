@@ -5,6 +5,7 @@ import { signToken } from "../_lib/auth";
 import { generateVerificationCode, sendVerificationEmail } from "../_lib/email";
 import { checkRateLimit, getClientIp } from "../_lib/ratelimit";
 import { isDisposableEmail } from "../_lib/disposable-domains";
+import { isDomainVelocityExceeded } from "../_lib/domain-velocity";
 import { verifyCaptcha } from "../_lib/captcha";
 /** Basic email format validation. */
 function isValidEmail(email: string): boolean {
@@ -54,6 +55,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const sql = getDb();
     const normalizedEmail = email.toLowerCase().trim();
+
+    // Domain velocity cap: catch-all farm domains rotate faster than the
+    // blocklist — block any non-mainstream domain with too many recent signups.
+    if (await isDomainVelocityExceeded(sql, normalizedEmail.split("@")[1])) {
+      return res.status(429).json({
+        error: "Signups from this email domain are temporarily limited. Please use a different email provider.",
+      });
+    }
 
     const [fpCounts] = await sql`
       SELECT

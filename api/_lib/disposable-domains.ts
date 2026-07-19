@@ -5397,6 +5397,21 @@ const LOCAL_DISPOSABLE_ADDITIONS = new Set<string>([
   "duvips.com",
   "bunmail.one",
   "brightgeta.com",
+  // 2026-07 farming wave, catch-all custom domains (247 accts on gebrauchtwarencenter
+  // alone, each with a unique fingerprint — fingerprint cap + IP limit both evaded).
+  // atomicmail.io deliberately NOT listed: real paying customer (like shieldedpost.net).
+  "gebrauchtwarencenter.com",
+  "tempmailpro.io",
+  "emailtemporario.org",
+  "hidepost.net",
+  "dropoffs.org",
+  "buloan.com",
+  "gicont.com",
+  "ezimb.com",
+  "acoxs.com",
+  "lasttea.com",
+  "fisedo.com",
+  "sealjump.com",
 ]);
 
 function isBlockedDomain(domain: string): boolean {
