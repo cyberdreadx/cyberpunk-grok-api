@@ -95,16 +95,6 @@ const Index = () => {
   }, []);
   const visibleAnnouncements = ANNOUNCEMENTS.filter(a => !dismissedAnnouncements.includes(a.id));
 
-  // Reddit reward banner
-  const [redditRewardDismissed, setRedditRewardDismissed] = useState(() =>
-    localStorage.getItem("reddit_reward_dismissed") === "1"
-  );
-  const [redditRewardClaimed, setRedditRewardClaimed] = useState(false);
-  const [redditCodeOpen, setRedditCodeOpen] = useState(false);
-  const [redditCode, setRedditCode] = useState("");
-  const [redditClaimLoading, setRedditClaimLoading] = useState(false);
-  const [redditClaimError, setRedditClaimError] = useState("");
-
   const [settings, setSettings] = useState<GenerationSettings>(() => {
     try {
       const saved = localStorage.getItem("grok-settings");
@@ -473,24 +463,6 @@ const Index = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
     toast({ title: t("toast.animateMode"), description: t("toast.animateModeDesc") });
   }, [toast]);
-
-  const handleRedditClaim = useCallback(async () => {
-    if (!redditCode.trim()) return;
-    setRedditClaimLoading(true);
-    setRedditClaimError("");
-    try {
-      await apiFetch("/reddit-reward", { method: "POST", body: { code: redditCode.trim() } });
-      setRedditRewardClaimed(true);
-      setRedditRewardDismissed(true);
-      localStorage.setItem("reddit_reward_dismissed", "1");
-      creditsHook.refreshCredits();
-      toast({ title: "10 credits claimed!", description: `Thanks for joining r/${BRAND.reddit}.` });
-    } catch (err: any) {
-      setRedditClaimError(err.message || "Failed to claim");
-    } finally {
-      setRedditClaimLoading(false);
-    }
-  }, [redditCode, creditsHook, toast]);
 
   const handleGltchImage2 = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1324,68 +1296,6 @@ const Index = () => {
                 </button>
               </div>
             ))}
-          </div>
-        )}
-
-        {/* Reddit reward banner */}
-        {auth.isAuthenticated && !redditRewardDismissed && !redditRewardClaimed && (
-          <div className="mb-4 animate-slide-up rounded border border-orange-500/30 bg-orange-500/5 px-4 py-3 font-mono-share">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <Gift className="w-4 h-4 text-orange-400 flex-shrink-0" />
-                <span className="text-[11px] text-orange-300">
-                  Join{" "}
-                  <a href={`https://reddit.com/r/${BRAND.reddit}`} target="_blank" rel="noopener noreferrer"
-                    className="underline underline-offset-2 hover:text-orange-200 transition-colors">
-                    r/{BRAND.reddit}
-                  </a>
-                  {" "}and claim 10 free credits!
-                </span>
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                {!redditCodeOpen ? (
-                  <button
-                    onClick={() => setRedditCodeOpen(true)}
-                    className="px-2.5 py-1 text-[10px] rounded border border-orange-500/40 bg-orange-500/10 text-orange-300 hover:bg-orange-500/20 transition-colors"
-                  >
-                    CLAIM
-                  </button>
-                ) : null}
-                <button
-                  onClick={() => {
-                    setRedditRewardDismissed(true);
-                    localStorage.setItem("reddit_reward_dismissed", "1");
-                  }}
-                  className="text-orange-400/50 hover:text-orange-300 transition-colors"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-            {redditCodeOpen && (
-              <div className="mt-2.5 flex items-center gap-2">
-                <input
-                  type="text"
-                  value={redditCode}
-                  onChange={e => { setRedditCode(e.target.value); setRedditClaimError(""); }}
-                  onKeyDown={e => e.key === "Enter" && handleRedditClaim()}
-                  placeholder="Enter code from subreddit..."
-                  className="flex-1 px-2.5 py-1.5 rounded border border-orange-500/30 bg-background/50 text-[11px] text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-orange-400/60"
-                  disabled={redditClaimLoading}
-                  autoFocus
-                />
-                <button
-                  onClick={handleRedditClaim}
-                  disabled={redditClaimLoading || !redditCode.trim()}
-                  className="px-3 py-1.5 text-[10px] rounded border border-orange-500/40 bg-orange-500/15 text-orange-300 hover:bg-orange-500/25 transition-colors disabled:opacity-40"
-                >
-                  {redditClaimLoading ? "..." : "SUBMIT"}
-                </button>
-              </div>
-            )}
-            {redditClaimError && (
-              <p className="mt-1.5 text-[10px] text-red-400">{redditClaimError}</p>
-            )}
           </div>
         )}
 

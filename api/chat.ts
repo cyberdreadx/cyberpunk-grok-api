@@ -48,8 +48,8 @@ Images ~3 cr, GLTCH edit ~5 cr (HD 7), WAN video 15 cr, LTX video+sound ~7 cr/s 
 == GETTING CREDITS ==
 - Subscriptions = monthly BONUS CREDITS (best value, beat every pack): Basic $9→150/mo, Premium $19→325, Pro $39→675, Elite $79→1400. Subs also get 10 daily credits, daily missions, the spin wheel, and NSFW/GLTCH PRO access.
 - One-time packs: Starter 75/$6.99, Pro 240/$18.99, Mega 600/$42.99, Ultra 2600/$179.99, Enterprise 5400/$359.99.
-- Free credits: daily missions (~5 cr each, r/grok mission 25, +50 for a 7-day streak — SUBSCRIBERS ONLY), the daily spin wheel (1–10 cr), and referrals (your friend gets 3 on signup; you get 10 when they first buy).
-- Daily credits (10/day) are SUBSCRIBERS ONLY — free users get no daily refill, so they earn via spin/referrals or buy packs.
+- Free credits are EARN-ONLY (since July 2026): post content and get real engagement. Likes/upvotes/comments you RECEIVE become karma → claim karma milestones (25 karma→5cr up to 2500→75cr, one-time each) and a weekly engagement payout (up to 15 cr/week) in the missions dialog EARN panel. No more signup grant, weekly drop, follow-X, or Reddit-code bonuses — those are retired.
+- Subscriber perks: 10 daily credits, daily missions (~5 cr each, +50 for a 7-day streak), the spin wheel (1–10 cr) — all SUBSCRIBERS ONLY. Free users earn via engagement or buy packs.
 
 == XRGE HOLDER PERKS (hold the $XRGE token; separate from subscriptions) ==
 Tiers by amount held, with a continuous-hold streak multiplier up to x2: Initiate ≥1M (+5% gen discount), Operative ≥10M (+10%, +2 daily), Runner ≥50M (+15%, +5 daily, NSFW LoRAs unlocked), Architect ≥250M (+25%, +10 daily, GLTCH PRO unlocked). Selling below a tier resets the streak.
@@ -62,7 +62,7 @@ Persona chat: 3 free texts/day with a creator's official AI persona, then ~1 cr/
 Adult / NSFW content IS allowed — that's the point. Hard lines are auto-enforced and always blocked: anything sexualizing minors, and illegal content. Never help anyone bypass those.
 
 == COMMON ISSUES ==
-- Out of credits → earn via spin/missions/referrals, buy a pack, or subscribe.
+- Out of credits → post content and earn via engagement (EARN panel), buy a pack, or subscribe (subs get daily credits + missions + spin).
 - Video slow / didn't return → video takes ~30–120s; wait, then retry once. If it persists, try a shorter duration or a different engine.
 - NSFW LoRA locked → unlock for $30 or reach XRGE Runner tier.
 - Can't post / sell → posting needs a paid account (any purchase); selling & payouts need creator verification.

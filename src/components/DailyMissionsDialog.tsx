@@ -4,8 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CalendarCheck, Gift, Star, CheckCircle2, Circle, Trophy, Flame, Share2, MessageCircle, Loader2, ExternalLink, X } from "lucide-react";
 import type { MissionStatus } from "@/hooks/useDailyMissions";
-import FollowBonusCard from "@/components/FollowBonusCard";
-import WeeklyBonusCard from "@/components/WeeklyBonusCard";
+import EarnCreditsCard from "@/components/EarnCreditsCard";
 import type { AuthUser } from "@/hooks/useAuth";
 
 interface Props {
@@ -129,11 +128,8 @@ export default function DailyMissionsDialog({ status, loading, claiming, onClaim
           </div>
         ) : (
           <div className="space-y-4">
-            {/* Weekly bonus — open to everyone */}
-            <WeeklyBonusCard user={user ?? null} onCreditsRefresh={onCreditsRefresh} />
-
-            {/* One-time follow-on-X bonus */}
-            <FollowBonusCard user={user ?? null} onCreditsRefresh={onCreditsRefresh} />
+            {/* Engagement-based free credits (replaced weekly/follow bonuses) */}
+            <EarnCreditsCard user={user ?? null} onCreditsRefresh={onCreditsRefresh} />
 
             {/* Streak tracker */}
             <div className="space-y-2">

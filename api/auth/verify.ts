@@ -88,8 +88,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     await sql`
       UPDATE users
       SET email_verified = true,
-          daily_credits = 10,
-          daily_credits_reset_at = now(),
           verification_code = NULL,
           verification_code_expires_at = NULL,
           verification_attempts = 0,
@@ -97,24 +95,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       WHERE id = ${user.id}
     `;
 
-    // Referral signup reward: grant 3 free credits if this user was referred
+    // Earn-only credit model (2026-07): no signup grant, no referral welcome
+    // credits — free credits come exclusively from /api/earn engagement rewards.
+    // Still mark the referral as verified so referrer stats stay accurate.
     try {
-      const [ref] = await sql`
-        SELECT id, referrer_id FROM referrals
-        WHERE referee_id = ${user.id}::uuid AND referee_signup_reward = false
+      await sql`
+        UPDATE referrals SET referee_verified = true
+        WHERE referee_id = ${user.id}::uuid AND referee_verified = false
       `;
-      if (ref) {
-        await sql`SELECT add_pack_credits(${user.id}::uuid, 3)`;
-        await sql`
-          UPDATE referrals
-          SET referee_verified = true, referee_signup_reward = true
-          WHERE id = ${ref.id}::uuid
-        `;
-        console.log(`[referral] Granted 3 welcome credits to ${user.email} (referred by ${ref.referrer_id})`);
-      }
     } catch (refErr: any) {
-      // Non-critical — don't block verification if referral reward fails
-      console.error("[referral] signup reward failed:", refErr.message);
+      console.error("[referral] verify flag failed:", refErr.message);
     }
 
     const token = signToken({ userId: user.id, email: user.email });
