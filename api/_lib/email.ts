@@ -587,7 +587,20 @@ export function buildCrackdownAnnouncementHtml(): string {
             <li><strong style="color:#ff5b5b;">Banned the farm accounts</strong> — and anyone still farming will get the same</li>
             <li><strong style="color:#fff;">New signup defenses</strong> — throwaway/burner email domains are auto-blocked at the door</li>
             <li><strong style="color:#fff;">Smarter abuse detection</strong> — delete-and-recreate credit cycling no longer works</li>
+            <li><strong style="color:#fff;">Retired the farmable freebies</strong> — the old weekly drop &amp; one-time bonuses are gone, replaced by the new EARN system below</li>
             <li><strong style="color:#fff;">GPU freed up</strong> — that compute goes back to real Runners</li>
+          </ul>
+        </div>
+
+        <div style="background: linear-gradient(135deg, #00f0ff15, #fbbf2415); border: 1px solid #fbbf2466; padding: 20px; border-radius: 4px; margin: 0 0 24px;">
+          <h2 style="color: #fbbf24; font-size: 15px; margin: 0 0 10px; letter-spacing: 1px;">⚡ NEW — EARN FREE CREDITS</h2>
+          <p style="font-size: 13px; color: #b0b0b0; margin: 0 0 10px; line-height: 1.7;">
+            Free credits work differently now: they're <strong style="color:#fff;">earned, not handed out</strong>. Post your creations — the likes, upvotes &amp; comments you <strong style="color:#fbbf24;">receive</strong> turn into credits. Bots can't fake real engagement; creators cash in on it.
+          </p>
+          <ul style="font-size: 13px; color: #b0b0b0; margin: 0; padding-left: 18px; line-height: 1.8;">
+            <li><strong style="color:#fff;">Karma milestones</strong> — one-time rewards from 25 karma (+5 ⚡) up to 2,500 karma (+75 ⚡)</li>
+            <li><strong style="color:#fff;">Weekly payout</strong> — up to 15 ⚡ every week from that week's engagement</li>
+            <li><strong style="color:#fbbf24;">Already active?</strong> Your past engagement counts — open the EARN panel, your milestones may be waiting</li>
           </ul>
         </div>
 
