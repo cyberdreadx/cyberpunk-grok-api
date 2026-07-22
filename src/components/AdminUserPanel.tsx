@@ -3,7 +3,7 @@
  * Lets admins inspect credits + purchase history and grant credits inline.
  */
 import { useCallback, useEffect, useState } from "react";
-import { Loader2, RefreshCw, Plus, ShieldAlert, Coins, Receipt, Ban } from "lucide-react";
+import { Loader2, RefreshCw, Plus, ShieldAlert, ShieldCheck, Coins, Receipt, Ban } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
@@ -52,6 +52,7 @@ export default function AdminUserPanel({ userId }: { userId: string }) {
   const [grantType, setGrantType] = useState<"pack" | "sub">("pack");
   const [granting, setGranting] = useState(false);
   const [zeroing, setZeroing] = useState(false);
+  const [unbanning, setUnbanning] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -90,6 +91,24 @@ export default function AdminUserPanel({ userId }: { userId: string }) {
       toast({ title: err.message, variant: "destructive" });
     } finally {
       setGranting(false);
+    }
+  };
+
+  const handleUnban = async () => {
+    if (!data?.user.email) return;
+    if (!window.confirm(`Unban ${data.user.email}?`)) return;
+    setUnbanning(true);
+    try {
+      await apiFetch("/admin", {
+        method: "POST",
+        body: { action: "unban-user", userId },
+      });
+      toast({ title: `Unbanned ${data.user.email}` });
+      load();
+    } catch (err: any) {
+      toast({ title: err.message, variant: "destructive" });
+    } finally {
+      setUnbanning(false);
     }
   };
 
@@ -139,7 +158,19 @@ export default function AdminUserPanel({ userId }: { userId: string }) {
               )}
             </div>
             {data.ban && (
-              <div className="text-destructive">BANNED: {data.ban.reason} {data.ban.expires_at ? `(until ${fmtDate(data.ban.expires_at)})` : "(permanent)"}</div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-destructive">BANNED: {data.ban.reason} {data.ban.expires_at ? `(until ${fmtDate(data.ban.expires_at)})` : "(permanent)"}</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleUnban}
+                  disabled={unbanning}
+                  className="font-mono-share text-[9px] h-6 px-2 gap-1 border-green-500/40 text-green-400 hover:bg-green-500/10"
+                >
+                  {unbanning ? <Loader2 className="w-3 h-3 animate-spin" /> : <ShieldCheck className="w-3 h-3" />}
+                  UNBAN
+                </Button>
+              </div>
             )}
           </div>
 
