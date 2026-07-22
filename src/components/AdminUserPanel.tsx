@@ -3,7 +3,7 @@
  * Lets admins inspect credits + purchase history and grant credits inline.
  */
 import { useCallback, useEffect, useState } from "react";
-import { Loader2, RefreshCw, Plus, ShieldAlert, Coins, Receipt } from "lucide-react";
+import { Loader2, RefreshCw, Plus, ShieldAlert, Coins, Receipt, Ban } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
@@ -51,6 +51,7 @@ export default function AdminUserPanel({ userId }: { userId: string }) {
   const [grantAmount, setGrantAmount] = useState("");
   const [grantType, setGrantType] = useState<"pack" | "sub">("pack");
   const [granting, setGranting] = useState(false);
+  const [zeroing, setZeroing] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -89,6 +90,25 @@ export default function AdminUserPanel({ userId }: { userId: string }) {
       toast({ title: err.message, variant: "destructive" });
     } finally {
       setGranting(false);
+    }
+  };
+
+  const handleZero = async () => {
+    if (!data?.user.email) return;
+    const total = (data.user.pack_credits || 0) + (data.user.sub_credits || 0) + (data.user.daily_credits || 0);
+    if (!window.confirm(`Zero ALL credits for ${data.user.email}? (${total} credits will be wiped)`)) return;
+    setZeroing(true);
+    try {
+      const resp = await apiFetch<{ wiped: number }>("/admin", {
+        method: "POST",
+        body: { action: "zero-credits", email: data.user.email },
+      });
+      toast({ title: `Wiped ${resp.wiped} credits` });
+      load();
+    } catch (err: any) {
+      toast({ title: err.message, variant: "destructive" });
+    } finally {
+      setZeroing(false);
     }
   };
 
@@ -172,6 +192,16 @@ export default function AdminUserPanel({ userId }: { userId: string }) {
                 GRANT
               </Button>
             </div>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleZero}
+              disabled={zeroing}
+              className="font-mono-share text-[10px] h-8 gap-1 w-full"
+            >
+              {zeroing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Ban className="w-3 h-3" />}
+              ZERO_ALL_CREDITS
+            </Button>
           </div>
 
           {/* Purchase history */}

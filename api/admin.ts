@@ -19,6 +19,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import Stripe from "stripe";
 import { getDb } from "./_lib/db";
 import { getUserFromRequest, ADMIN_EMAIL } from "./_lib/auth";
+import { logCreditGrant } from "./_lib/credit-ledger";
 import { sendAnnouncementEmail, buildAnnouncementHtml, buildV47AnnouncementHtml, buildV48AnnouncementHtml, buildV49SubscriptionFixHtml } from "./_lib/email";
 import {
   CAMPAIGN_CONFIG_KEY,
@@ -886,6 +887,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           email: user.email,
           sub_credits: updated.sub_credits,
           pack_credits: updated.pack_credits,
+        });
+      }
+
+      case "zero-credits": {
+        const { email, userId: targetUserId } = req.body;
+        if (!email && !targetUserId)
+          return res.status(400).json({ error: "email or userId is required" });
+
+        const [user] = email
+          ? await sql`SELECT id, email, sub_credits, pack_credits, daily_credits FROM users WHERE email = ${String(email).trim().toLowerCase()}`
+          : await sql`SELECT id, email, sub_credits, pack_credits, daily_credits FROM users WHERE id = ${targetUserId}::uuid`;
+        if (!user)
+          return res.status(404).json({ error: "User not found" });
+
+        await sql`
+          UPDATE users
+          SET sub_credits = 0, pack_credits = 0, daily_credits = 0, updated_at = now()
+          WHERE id = ${user.id}
+        `;
+
+        const wiped = (user.sub_credits || 0) + (user.pack_credits || 0) + (user.daily_credits || 0);
+        await logCreditGrant(sql, user.id, -wiped, "admin_zero", `by:${ADMIN_EMAIL}`);
+        console.log(`[admin] Zeroed credits for ${user.email} (was sub=${user.sub_credits}, pack=${user.pack_credits}, daily=${user.daily_credits})`);
+
+        return res.status(200).json({
+          email: user.email,
+          wiped,
+          previous: {
+            sub_credits: user.sub_credits,
+            pack_credits: user.pack_credits,
+            daily_credits: user.daily_credits,
+          },
         });
       }
 

@@ -34,6 +34,7 @@ import {
   Sparkles,
   ImageOff,
   Tractor,
+  Ban,
 } from "lucide-react";
 import AdminInsightsPanel from "@/components/AdminInsightsPanel";
 import AdminChatModerationPanel from "@/components/AdminChatModerationPanel";
@@ -1869,6 +1870,23 @@ export default function Admin() {
                   }}>
                   {granting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
                   GRANT
+                </Button>
+                <Button variant="outline" size="sm" disabled={granting || !grantEmail.trim()}
+                  className="font-mono-share text-xs gap-1.5 border-destructive/40 hover:bg-destructive/10 text-destructive"
+                  onClick={async () => {
+                    if (!window.confirm(`Zero ALL credits (pack + sub + daily) for ${grantEmail.trim()}?`)) return;
+                    setGranting(true); setGrantResult(null);
+                    try {
+                      const res = await apiFetch("/admin", { method: "POST", body: { action: "zero-credits", email: grantEmail.trim() } });
+                      setGrantResult({ ok: true, msg: `Wiped ${res.wiped} credits from ${res.email} (was sub=${res.previous.sub_credits}, pack=${res.previous.pack_credits}, daily=${res.previous.daily_credits})` });
+                      setGrantEmail("");
+                      fetchAll();
+                    } catch (err: any) {
+                      setGrantResult({ ok: false, msg: err.message || "Failed" });
+                    } finally { setGranting(false); }
+                  }}>
+                  <Ban className="w-3 h-3" />
+                  ZERO
                 </Button>
               </div>
               {grantResult && (
