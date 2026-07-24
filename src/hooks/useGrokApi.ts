@@ -1073,6 +1073,10 @@ export function useGrokApi() {
     results.forEach(r => { if (r.url?.startsWith("blob:")) try { URL.revokeObjectURL(r.url); } catch {} });
     videoBlobUrls.current.forEach(u => { try { URL.revokeObjectURL(u); } catch {} });
     videoBlobUrls.current.clear();
+    const clearedIds = results.map(r => r.id);
+    if (clearedIds.length > 0) {
+      import("@/lib/shareLinks").then(({ revokeSharesForResults }) => revokeSharesForResults(clearedIds)).catch(() => {});
+    }
     setResults([]);
     revokeAllRef.current?.();
     revokeAllRef.current = null;
@@ -1086,6 +1090,7 @@ export function useGrokApi() {
       const tracked = videoBlobUrls.current.get(id);
       if (tracked) { try { URL.revokeObjectURL(tracked); } catch {} videoBlobUrls.current.delete(id); }
       setResults(prev => prev.filter(r => r.id !== id));
+      import("@/lib/shareLinks").then(({ revokeSharesForResults }) => revokeSharesForResults([id])).catch(() => {});
       try { await deleteStoredResult(id); } catch { /* best-effort */ }
     } else {
       setResults(prev => prev.map(r => r.id === id ? { ...r, folderId: "__trash" } : r));

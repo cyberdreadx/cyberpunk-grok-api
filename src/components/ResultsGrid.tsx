@@ -33,6 +33,7 @@ import PostToFeedDialog, { type PostToFeedValues } from "@/components/PostToFeed
 import { isPermanentPublicMediaUrl, uploadPublicMedia } from "@/lib/mediaUpload";
 import { BRAND } from "@/lib/brand";
 import { apiUrl } from "@/lib/api";
+import { recordShareLink } from "@/lib/shareLinks";
 
 // ── PIN Utilities ────────────────────────────────────────────────────────
 
@@ -1261,6 +1262,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
         }
         const data = await res.json();
         shareCacheRef.current.set(result.id, data.shareUrl);
+        recordShareLink(result.id, data.shareUrl);
         await copyOrShareLink(data, result);
         return;
       }

@@ -15,6 +15,33 @@ function getBlobToken(): string {
   return process.env.BLOB_READ_WRITE_TOKEN || process.env.grokrun_READ_WRITE_TOKEN || "";
 }
 
+/** Remove a share's storage objects (R2 + Blob) and its ownership row. */
+async function destroyShare(sql: any, shareId: string): Promise<void> {
+  const token = getBlobToken();
+  const meta = await fetchShareMetadata(shareId);
+  const keysToDelete: string[] = [`shares/${shareId}.json`];
+  if (meta?.ext) keysToDelete.push(`shares/${shareId}.${meta.ext}`);
+  if (meta?.mediaUrl && isR2Url(String(meta.mediaUrl))) {
+    const k = r2KeyFromUrl(String(meta.mediaUrl));
+    if (k) keysToDelete.push(k);
+  }
+
+  await deleteR2Objects(keysToDelete).catch(() => {});
+
+  if (token) {
+    const { list, del } = await import("@vercel/blob");
+    const { blobs } = await list({ prefix: `shares/${shareId}`, token });
+    await Promise.all(
+      blobs.map((b) =>
+        del(b.url, { token }).catch((err) => console.warn("[share] blob del failed:", err?.message)),
+      ),
+    );
+  } else if (meta?.mediaUrl && isVercelBlobUrl(String(meta.mediaUrl))) {
+    await deleteBlobs([String(meta.mediaUrl)]);
+  }
+  await sql`DELETE FROM share_owners WHERE share_id = ${shareId}`;
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   applyCors(req, res, "GET, POST, DELETE, OPTIONS");
   if (req.method === "OPTIONS") return res.status(200).end();
@@ -128,38 +155,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const auth = getUserFromRequest(req);
       if (!auth) return res.status(401).json({ error: "Unauthorized" });
       const shareId = (req.query.id as string) || "";
-      if (!SHARE_ID_RE.test(shareId)) return res.status(400).json({ error: "Invalid share ID" });
-
-      const token = getBlobToken();
       const { getDb } = await import("./_lib/db");
       const sql = getDb();
+
+      // Bulk revoke: DELETE /api/share?id=all wipes every share the caller owns.
+      if (shareId === "all") {
+        const rows = await sql`SELECT share_id FROM share_owners WHERE user_id = ${auth.userId}::uuid`;
+        let deleted = 0;
+        for (const row of rows as any[]) {
+          try {
+            await destroyShare(sql, row.share_id);
+            deleted++;
+          } catch (e: any) {
+            console.warn("[share] bulk revoke failed for", row.share_id, e?.message);
+          }
+        }
+        return res.status(200).json({ deleted });
+      }
+
+      if (!SHARE_ID_RE.test(shareId)) return res.status(400).json({ error: "Invalid share ID" });
+
       const rows = await sql`SELECT user_id FROM share_owners WHERE share_id = ${shareId} LIMIT 1`;
       const isAdmin = auth.email === ADMIN_EMAIL;
       const owns = rows.length > 0 && rows[0].user_id === auth.userId;
       if (!owns && !isAdmin) return res.status(403).json({ error: "Forbidden" });
 
-      const meta = await fetchShareMetadata(shareId);
-      const keysToDelete: string[] = [`shares/${shareId}.json`];
-      if (meta?.ext) keysToDelete.push(`shares/${shareId}.${meta.ext}`);
-      if (meta?.mediaUrl && isR2Url(String(meta.mediaUrl))) {
-        const k = r2KeyFromUrl(String(meta.mediaUrl));
-        if (k) keysToDelete.push(k);
-      }
-
-      await deleteR2Objects(keysToDelete).catch(() => {});
-
-      if (token) {
-        const { list, del } = await import("@vercel/blob");
-        const { blobs } = await list({ prefix: `shares/${shareId}`, token });
-        await Promise.all(
-          blobs.map((b) =>
-            del(b.url, { token }).catch((err) => console.warn("[share] blob del failed:", err?.message)),
-          ),
-        );
-      } else if (meta?.mediaUrl && isVercelBlobUrl(String(meta.mediaUrl))) {
-        await deleteBlobs([String(meta.mediaUrl)]);
-      }
-      await sql`DELETE FROM share_owners WHERE share_id = ${shareId}`;
+      await destroyShare(sql, shareId);
       return res.status(200).json({ deleted: true });
     } catch (err: any) {
       console.error("[share] DELETE error:", err.message);
@@ -169,6 +190,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // ---------------------------------------------------------------- GET
   if (req.method === "GET") {
+    // List the caller's own active share links (server-side truth — works
+    // across browsers/devices, unlike the local share-link map).
+    if ((req.query.action as string) === "mine") {
+      try {
+        const auth = getUserFromRequest(req);
+        if (!auth) return res.status(401).json({ error: "Unauthorized" });
+        const { getDb } = await import("./_lib/db");
+        const sql = getDb();
+        const rows = await sql`
+          SELECT share_id, ext, created_at
+          FROM share_owners
+          WHERE user_id = ${auth.userId}::uuid
+          ORDER BY created_at DESC NULLS LAST
+          LIMIT 500
+        `;
+        const siteUrl = (process.env.SITE_URL || "https://grokrunner.gltch.app").replace(/\/$/, "");
+        return res.status(200).json({
+          shares: (rows as any[]).map((r) => ({
+            shareId: r.share_id,
+            shareUrl: `${siteUrl}/s/${r.share_id}`,
+            mediaType: r.ext === "mp4" ? "video" : "image",
+            createdAt: r.created_at,
+          })),
+        });
+      } catch (err: any) {
+        console.error("[share] mine error:", err.message);
+        return res.status(500).json({ error: "Failed to list shares" });
+      }
+    }
+
     // Admin-triggered backfill action: scans shares/*.json for embedded userId
     // and inserts missing share_owners rows. Safe to re-run.
     if ((req.query.action as string) === "backfill-owners") {

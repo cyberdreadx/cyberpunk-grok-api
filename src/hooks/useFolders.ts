@@ -89,6 +89,13 @@ export function useFolders() {
 
   const emptyTrashFolder = useCallback(async (): Promise<string[]> => {
     const { deletedIds, urls } = await emptyTrashStorage();
+    // Tear down any public /s/:id shares behind the deleted results (privacy
+    // promise: deleting a result also kills its share link). Best-effort.
+    if (deletedIds.length > 0) {
+      import("@/lib/shareLinks")
+        .then(({ revokeSharesForResults }) => revokeSharesForResults(deletedIds))
+        .catch(() => {});
+    }
     // Best-effort: ask the backend to purge any owned blob/R2 objects behind those URLs.
     // Failures here must never block the local trash deletion.
     if (urls.length > 0) {

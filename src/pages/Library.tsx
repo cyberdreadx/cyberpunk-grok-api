@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Image, Film, ArrowLeft } from "lucide-react";
+import { Image, Film, ArrowLeft, Link2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import CyberLayout from "@/components/CyberLayout";
 import MobileBottomNav from "@/components/MobileBottomNav";
@@ -12,6 +12,7 @@ import ResultsGrid from "@/components/ResultsGrid";
 import HowToUseDialog from "@/components/HowToUseDialog";
 import ChangelogDialog from "@/components/ChangelogDialog";
 import LegalDialog from "@/components/LegalDialog";
+import ShareLinksManager from "@/components/ShareLinksManager";
 import { useAuth } from "@/hooks/useAuth";
 import { useFolders } from "@/hooks/useFolders";
 import { useToast } from "@/hooks/use-toast";
@@ -44,6 +45,7 @@ const Library: React.FC = () => {
   const [changelogOpen, setChangelogOpen] = useState(false);
   const [tosOpen, setTosOpen] = useState(false);
   const [privacyOpen, setPrivacyOpen] = useState(false);
+  const [shareLinksOpen, setShareLinksOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -65,11 +67,18 @@ const Library: React.FC = () => {
 
   const deleteResult = useCallback(async (id: string) => {
     setResults(prev => prev.filter(r => r.id !== id));
+    import("@/lib/shareLinks").then(({ revokeSharesForResults }) => revokeSharesForResults([id])).catch(() => {});
     try { await deleteStoredResult(id); } catch (e) { console.error("[library] delete failed:", e); }
   }, []);
 
   const clearResults = useCallback(async () => {
-    setResults([]);
+    setResults(prev => {
+      const ids = prev.map(r => r.id);
+      if (ids.length > 0) {
+        import("@/lib/shareLinks").then(({ revokeSharesForResults }) => revokeSharesForResults(ids)).catch(() => {});
+      }
+      return [];
+    });
     revokeAllRef.current?.();
     revokeAllRef.current = null;
     try { await clearStoredResults(); } catch (e) { console.error("[library] clear failed:", e); }
@@ -185,6 +194,15 @@ const Library: React.FC = () => {
               <span className="font-mono-share text-[11px] text-foreground/70">{totalFolders}</span>
               <span className="font-mono-share text-[9px] text-muted-foreground/40">{t("library.folders").toUpperCase()}</span>
             </div>
+            {auth.isAuthenticated && (
+              <button
+                onClick={() => setShareLinksOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-border/40 bg-card/40 hover:border-primary/40 hover:bg-primary/5 transition-all"
+              >
+                <Link2 className="w-3.5 h-3.5 text-primary/60" />
+                <span className="font-mono-share text-[9px] text-muted-foreground/60">SHARE_LINKS</span>
+              </button>
+            )}
           </div>
 
         </div>
@@ -263,6 +281,7 @@ const Library: React.FC = () => {
       <ChangelogDialog open={changelogOpen} onOpenChange={setChangelogOpen} />
       <LegalDialog type="tos" open={tosOpen} onOpenChange={setTosOpen} />
       <LegalDialog type="privacy" open={privacyOpen} onOpenChange={setPrivacyOpen} />
+      <ShareLinksManager open={shareLinksOpen} onOpenChange={setShareLinksOpen} />
 
     </CyberLayout>
   );
