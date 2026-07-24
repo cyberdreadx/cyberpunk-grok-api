@@ -890,6 +890,82 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
 
+      // -- Purge ALL of a user's cloud-stored media (privacy request) --
+      // Sweeps every user-scoped storage prefix on R2 + Vercel Blob. Their
+      // library items that referenced remote copies will stop loading on
+      // other devices — intended: this is the "make my uploads gone" tool.
+      // Does NOT touch share links (user-revocable via SHARE_LINKS) or feed/
+      // story posts (deletable in-app); pass includeShares=true to add shares.
+      case "purge-user-storage": {
+        const { email, includeShares = false } = req.body;
+        if (!email || typeof email !== "string")
+          return res.status(400).json({ error: "email is required" });
+        const [user] = await sql`SELECT id, email FROM users WHERE email = ${email.trim().toLowerCase()}`;
+        if (!user) return res.status(404).json({ error: `User not found: ${email}` });
+
+        const { deleteR2Prefix } = await import("./_lib/r2");
+        const folders = ["comfyui-output", "feed", "stories", "avatars", "prompts", "creator-applications", "uploads"];
+        const r2Prefixes = [
+          ...folders.map((f) => `${f}/${user.id}/`),
+          `gltch/${user.id}-`,
+          `seedance/${user.id}-`,
+        ];
+        if (includeShares) {
+          const shares = await sql`SELECT share_id FROM share_owners WHERE user_id = ${user.id}`;
+          for (const row of shares as any[]) {
+            if (/^[a-zA-Z0-9_-]{4,16}$/.test(row.share_id)) r2Prefixes.push(`shares/${row.share_id}`);
+          }
+        }
+
+        const breakdown: Record<string, number> = {};
+        for (const p of r2Prefixes) {
+          breakdown[p] = await deleteR2Prefix(p).catch(() => 0);
+        }
+
+        // Vercel Blob side (same user-scoped key conventions)
+        let blobDeleted = 0;
+        const blobToken = process.env.BLOB_READ_WRITE_TOKEN || process.env.grokrun_READ_WRITE_TOKEN || "";
+        if (blobToken) {
+          try {
+            const { list, del } = await import("@vercel/blob");
+            for (const p of r2Prefixes) {
+              const { blobs } = await list({ prefix: p, token: blobToken });
+              await Promise.all(blobs.map((b) =>
+                del(b.url, { token: blobToken }).then(() => { blobDeleted++; }).catch(() => {})
+              ));
+            }
+          } catch (e: any) {
+            console.warn("[admin] purge-user-storage blob sweep:", e?.message);
+          }
+        }
+
+        if (includeShares) {
+          await sql`DELETE FROM share_owners WHERE user_id = ${user.id}`;
+        }
+
+        const r2Deleted = Object.values(breakdown).reduce((a, b) => a + b, 0);
+        console.log(`[admin] purge-user-storage ${user.email}: r2=${r2Deleted} blob=${blobDeleted}`, JSON.stringify(breakdown));
+        try {
+          const { recordPurge } = await import("./_lib/purgeLog");
+          const actor = getUserFromRequest(req);
+          await recordPurge({
+            kind: "admin-user-storage",
+            actorUserId: actor?.userId,
+            actorEmail: actor?.email,
+            targetUserId: user.id,
+            targetEmail: user.email,
+            blobsFound: blobDeleted,
+            blobsDeleted: blobDeleted,
+            r2Found: r2Deleted,
+            r2Deleted,
+            errors: 0,
+            notes: { includeShares, breakdown },
+          });
+        } catch { /* audit is best-effort */ }
+
+        return res.status(200).json({ email: user.email, r2Deleted, blobDeleted, breakdown });
+      }
+
       case "zero-credits": {
         const { email, userId: targetUserId } = req.body;
         if (!email && !targetUserId)

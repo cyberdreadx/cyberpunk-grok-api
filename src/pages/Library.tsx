@@ -68,7 +68,10 @@ const Library: React.FC = () => {
   const deleteResult = useCallback(async (id: string) => {
     setResults(prev => prev.filter(r => r.id !== id));
     import("@/lib/shareLinks").then(({ revokeSharesForResults }) => revokeSharesForResults([id])).catch(() => {});
-    try { await deleteStoredResult(id); } catch (e) { console.error("[library] delete failed:", e); }
+    try {
+      const { urls } = await deleteStoredResult(id);
+      import("@/lib/remotePurge").then(({ purgeRemoteUrls }) => purgeRemoteUrls(urls)).catch(() => {});
+    } catch (e) { console.error("[library] delete failed:", e); }
   }, []);
 
   const clearResults = useCallback(async () => {
@@ -81,7 +84,10 @@ const Library: React.FC = () => {
     });
     revokeAllRef.current?.();
     revokeAllRef.current = null;
-    try { await clearStoredResults(); } catch (e) { console.error("[library] clear failed:", e); }
+    try {
+      const { urls } = await clearStoredResults();
+      import("@/lib/remotePurge").then(({ purgeRemoteUrls }) => purgeRemoteUrls(urls)).catch(() => {});
+    } catch (e) { console.error("[library] clear failed:", e); }
   }, []);
 
   const updateResultFolder = useCallback((resultId: string, folderId: string | null) => {

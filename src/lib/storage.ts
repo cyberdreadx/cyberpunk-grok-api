@@ -360,26 +360,44 @@ export async function repersistRemoteResults(maxPerRun = 30): Promise<number> {
 
 /**
  * Delete a single result by ID.
+ * Returns any external URLs the record held so callers can ask the backend
+ * to purge the blob/R2 objects behind them (same contract as emptyTrash).
  */
-export async function deleteStoredResult(id: string): Promise<void> {
+export async function deleteStoredResult(id: string): Promise<{ urls: string[] }> {
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, "readwrite");
-    tx.objectStore(STORE_NAME).delete(id);
-    tx.oncomplete = () => { db.close(); resolve(); };
+    const store = tx.objectStore(STORE_NAME);
+    const urls: string[] = [];
+    const getReq = store.get(id);
+    getReq.onsuccess = () => {
+      const rec: StoredResult | undefined = getReq.result;
+      if (rec?.url && /^https?:\/\//i.test(rec.url)) urls.push(rec.url);
+      store.delete(id);
+    };
+    tx.oncomplete = () => { db.close(); resolve({ urls }); };
     tx.onerror = () => { db.close(); reject(tx.error); };
   });
 }
 
 /**
  * Clear all stored results.
+ * Returns the external URLs that were stored (see deleteStoredResult).
  */
-export async function clearStoredResults(): Promise<void> {
+export async function clearStoredResults(): Promise<{ urls: string[] }> {
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, "readwrite");
-    tx.objectStore(STORE_NAME).clear();
-    tx.oncomplete = () => { db.close(); resolve(); };
+    const store = tx.objectStore(STORE_NAME);
+    const urls: string[] = [];
+    const getReq = store.getAll();
+    getReq.onsuccess = () => {
+      for (const rec of (getReq.result || []) as StoredResult[]) {
+        if (rec.url && /^https?:\/\//i.test(rec.url)) urls.push(rec.url);
+      }
+      store.clear();
+    };
+    tx.oncomplete = () => { db.close(); resolve({ urls }); };
     tx.onerror = () => { db.close(); reject(tx.error); };
   });
 }
@@ -458,15 +476,24 @@ export async function moveResultsToFolder(ids: string[], folderId: string | null
 
 /**
  * Permanently delete multiple results in a single transaction.
+ * Returns the external URLs that were stored (see deleteStoredResult).
  */
-export async function deleteStoredResults(ids: string[]): Promise<void> {
-  if (ids.length === 0) return;
+export async function deleteStoredResults(ids: string[]): Promise<{ urls: string[] }> {
+  if (ids.length === 0) return { urls: [] };
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, "readwrite");
     const store = tx.objectStore(STORE_NAME);
-    for (const id of ids) store.delete(id);
-    tx.oncomplete = () => { db.close(); resolve(); };
+    const urls: string[] = [];
+    for (const id of ids) {
+      const getReq = store.get(id);
+      getReq.onsuccess = () => {
+        const rec: StoredResult | undefined = getReq.result;
+        if (rec?.url && /^https?:\/\//i.test(rec.url)) urls.push(rec.url);
+        store.delete(id);
+      };
+    }
+    tx.oncomplete = () => { db.close(); resolve({ urls }); };
     tx.onerror = () => { db.close(); reject(tx.error); };
   });
 }

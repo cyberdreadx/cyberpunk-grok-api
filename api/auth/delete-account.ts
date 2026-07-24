@@ -115,11 +115,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
       // Presigned client uploads are keyed <folder>/<userId>/… — sweep those
       // prefixes so uploads whose DB rows are already gone still get purged.
-      const uploadFolders = ["feed", "stories", "avatars", "prompts", "creator-applications", "uploads"];
+      // comfyui-output/<uid>/ holds generation outputs (referenced only from
+      // the user's local library) and gltch/seedance use <prefix>/<uid>-…
+      const uploadFolders = ["feed", "stories", "avatars", "prompts", "creator-applications", "uploads", "comfyui-output"];
+      const userPrefixes = [
+        ...uploadFolders.map((f) => `${f}/${user.id}/`),
+        `gltch/${user.id}-`,
+        `seedance/${user.id}-`,
+      ];
       const [b, r, ...prefixCounts] = await Promise.all([
         deleteBlobs(blobUrls),
         deleteR2Objects(r2Keys),
-        ...uploadFolders.map((f) => deleteR2Prefix(`${f}/${user.id}/`)),
+        ...userPrefixes.map((p) => deleteR2Prefix(p)),
         ...sharePrefixes.map(async (p) => {
           let n = 0;
           // Shares may live in either Vercel Blob (legacy) or R2 (current).

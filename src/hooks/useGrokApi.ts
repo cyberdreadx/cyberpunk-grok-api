@@ -1080,7 +1080,10 @@ export function useGrokApi() {
     setResults([]);
     revokeAllRef.current?.();
     revokeAllRef.current = null;
-    try { await clearStoredResults(); } catch { /* best-effort */ }
+    try {
+      const { urls } = await clearStoredResults();
+      import("@/lib/remotePurge").then(({ purgeRemoteUrls }) => purgeRemoteUrls(urls)).catch(() => {});
+    } catch { /* best-effort */ }
   }, [results]);
 
   const deleteResult = useCallback(async (id: string) => {
@@ -1091,7 +1094,10 @@ export function useGrokApi() {
       if (tracked) { try { URL.revokeObjectURL(tracked); } catch {} videoBlobUrls.current.delete(id); }
       setResults(prev => prev.filter(r => r.id !== id));
       import("@/lib/shareLinks").then(({ revokeSharesForResults }) => revokeSharesForResults([id])).catch(() => {});
-      try { await deleteStoredResult(id); } catch { /* best-effort */ }
+      try {
+        const { urls } = await deleteStoredResult(id);
+        import("@/lib/remotePurge").then(({ purgeRemoteUrls }) => purgeRemoteUrls(urls)).catch(() => {});
+      } catch { /* best-effort */ }
     } else {
       setResults(prev => prev.map(r => r.id === id ? { ...r, folderId: "__trash" } : r));
       try { await moveResultToFolder(id, "__trash"); } catch { /* best-effort */ }

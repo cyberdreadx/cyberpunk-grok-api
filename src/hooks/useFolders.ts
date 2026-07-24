@@ -84,7 +84,9 @@ export function useFolders() {
   }, []);
 
   const bulkDelete = useCallback(async (ids: string[]) => {
-    await deleteResultsBulkStorage(ids);
+    const { urls } = await deleteResultsBulkStorage(ids);
+    import("@/lib/shareLinks").then(({ revokeSharesForResults }) => revokeSharesForResults(ids)).catch(() => {});
+    import("@/lib/remotePurge").then(({ purgeRemoteUrls }) => purgeRemoteUrls(urls)).catch(() => {});
   }, []);
 
   const emptyTrashFolder = useCallback(async (): Promise<string[]> => {

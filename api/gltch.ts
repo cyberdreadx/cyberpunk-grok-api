@@ -186,18 +186,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       };
 
       // Use runsync — public endpoint typically finishes in ~5-15s
-      const resp = await fetch(`${RUNPOD_API_BASE}/${endpointId}/runsync`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify(runpodInput),
-        signal: AbortSignal.timeout(55000),
-      });
-
-      // Clean up blob regardless of outcome
-      del(blobUrl, { token: blobToken }).catch(() => {});
+      let resp: Response;
+      try {
+        resp = await fetch(`${RUNPOD_API_BASE}/${endpointId}/runsync`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify(runpodInput),
+          signal: AbortSignal.timeout(55000),
+        });
+      } finally {
+        // Clean up the uploaded input blob regardless of outcome — a thrown
+        // timeout must not strand the user's photo in public storage.
+        del(blobUrl, { token: blobToken }).catch(() => {});
+      }
 
       if (!resp.ok) {
         await refundCredits();

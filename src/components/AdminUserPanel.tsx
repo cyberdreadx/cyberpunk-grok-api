@@ -3,7 +3,7 @@
  * Lets admins inspect credits + purchase history and grant credits inline.
  */
 import { useCallback, useEffect, useState } from "react";
-import { Loader2, RefreshCw, Plus, ShieldAlert, ShieldCheck, Coins, Receipt, Ban } from "lucide-react";
+import { Loader2, RefreshCw, Plus, ShieldAlert, ShieldCheck, Coins, Receipt, Ban, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
@@ -53,6 +53,7 @@ export default function AdminUserPanel({ userId }: { userId: string }) {
   const [granting, setGranting] = useState(false);
   const [zeroing, setZeroing] = useState(false);
   const [unbanning, setUnbanning] = useState(false);
+  const [purging, setPurging] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -109,6 +110,25 @@ export default function AdminUserPanel({ userId }: { userId: string }) {
       toast({ title: err.message, variant: "destructive" });
     } finally {
       setUnbanning(false);
+    }
+  };
+
+  const handlePurgeStorage = async () => {
+    if (!data?.user.email) return;
+    if (!window.confirm(
+      `Purge ALL cloud media for ${data.user.email}?\n\nDeletes every generation output, upload, avatar etc. from R2 + Blob storage. Their library items that reference remote copies will stop loading. Cannot be undone.`,
+    )) return;
+    setPurging(true);
+    try {
+      const resp = await apiFetch<{ r2Deleted: number; blobDeleted: number }>("/admin", {
+        method: "POST",
+        body: { action: "purge-user-storage", email: data.user.email },
+      });
+      toast({ title: `Purged ${resp.r2Deleted + resp.blobDeleted} stored objects` });
+    } catch (err: any) {
+      toast({ title: err.message, variant: "destructive" });
+    } finally {
+      setPurging(false);
     }
   };
 
@@ -232,6 +252,16 @@ export default function AdminUserPanel({ userId }: { userId: string }) {
             >
               {zeroing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Ban className="w-3 h-3" />}
               ZERO_ALL_CREDITS
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handlePurgeStorage}
+              disabled={purging}
+              className="font-mono-share text-[10px] h-8 gap-1 w-full border-destructive/40 text-destructive hover:bg-destructive/10"
+            >
+              {purging ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+              PURGE_CLOUD_MEDIA
             </Button>
           </div>
 
