@@ -18,7 +18,7 @@ const CACHE_TTL_MS = 60 * 60 * 1000; // 1h
 const LOVABLE_GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const DEEPSEEK_URL = "https://api.deepseek.com/v1/chat/completions";
 const LOVABLE_MODEL = "google/gemini-3-flash-preview";
-const DEEPSEEK_MODEL = process.env.ADMIN_AI_SUMMARY_MODEL || "deepseek-chat";
+const DEEPSEEK_MODEL = process.env.ADMIN_AI_SUMMARY_MODEL || "deepseek-v4-flash";
 
 function resolveAiConfig(): { url: string; apiKey: string; model: string; provider: "deepseek" | "lovable" } | null {
   const deepseekKey = process.env.DEEPSEEK_API_KEY;
@@ -403,6 +403,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           { role: "system", content: "You are a precise business analyst. Output clean markdown only." },
           { role: "user", content: prompt },
         ],
+        ...(ai.provider === "deepseek" ? { thinking: { type: "disabled" } } : {}),
       }),
     });
   } catch (e: any) {

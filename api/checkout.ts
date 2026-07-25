@@ -154,7 +154,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       if (!customerId) {
-        return res.status(404).json({ error: "No Stripe customer on file. Email support@ to cancel." });
+        return res.status(404).json({ error: "No Stripe customer on file. Open a support ticket in our Discord (https://discord.gg/CNpWqkFA65) to cancel." });
       }
       const portalSession = await stripe.billingPortal.sessions.create({
         customer: customerId,

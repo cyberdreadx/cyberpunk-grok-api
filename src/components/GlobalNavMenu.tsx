@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Menu, Rss, Sparkles, Users, Star, ShieldAlert, FolderOpen, MessageCircle, Lightbulb, Settings as SettingsIcon } from "lucide-react";
+import { Menu, Rss, Sparkles, Users, Star, ShieldAlert, FolderOpen, MessageCircle, MessagesSquare, Lightbulb, Settings as SettingsIcon } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
 import PreferencesDialog from "@/components/PreferencesDialog";
@@ -85,6 +85,7 @@ const GlobalNavMenu: React.FC = () => {
                 {navItem("/prompts", Lightbulb, "PROMPTS", "secondary")}
                 {navItem("/creators", Users, "MODELS")}
                 {navItem("/characters", MessageCircle, "CHARACTERS")}
+                {isAuthenticated && navItem("/chat", MessagesSquare, "CHAT")}
                 {navItem("/apply", Star, "APPLY")}
                 {isAuthenticated && navItem("/profile", Star, "MY PROFILE")}
               </div>

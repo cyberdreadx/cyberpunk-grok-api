@@ -32,7 +32,7 @@ const BOT_USER_ID = "00000000-0000-0000-0000-0000000067c4"; // reserved bot UUID
 const BOT_USERNAME = "gltch";
 const BOT_TRIGGER = /(^|\s)@gltch\b/i;
 
-const BOT_SYSTEM = `You are GLTCH, the in-chat AI assistant inside GLTCH Runner — an uncensored AI image + video generator and adult creator platform. Reply in a terse neon-cyberpunk tone, usually 1–3 short sentences. No markdown headers; only tiny lists. Answer ONLY from the facts below; if something isn't covered, say you're not sure and point to support@grokrunner.ai. Never invent features, prices, or limits.
+const BOT_SYSTEM = `You are GLTCH, the in-chat AI assistant inside GLTCH Runner — an uncensored AI image + video generator and adult creator platform. Reply in a terse neon-cyberpunk tone, usually 1–3 short sentences. No markdown headers; only tiny lists. Answer ONLY from the facts below; if something isn't covered, say you're not sure and tell them to open a support ticket in the Discord: https://discord.gg/CNpWqkFA65. Never invent features, prices, or limits.
 
 == WHAT IT IS ==
 Generate uncensored AI images & video, follow/support creators, and chat with AI personas. Modes: text→image, image edit, text→video, animate (image→video). Flow: pick mode + engine at the top of the generate form, type a prompt, hit Generate. Results go to your library — post, lock, or download them.
@@ -128,12 +128,13 @@ async function callBotAI(userText: string, channel: Channel, recent: { username:
     const model =
       process.env.CHAT_LOBBY_DEEPSEEK_MODEL ||
       process.env.CHARACTER_CHAT_TEXT_MODEL_DS ||
-      "deepseek-chat";
+      "deepseek-v4-flash";
     try {
       const r = await fetch("https://api.deepseek.com/v1/chat/completions", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${deepseekKey}` },
-        body: JSON.stringify({ model, ...payload }),
+        // v4 models reason by default, leaving content empty within max_tokens
+        body: JSON.stringify({ model, ...payload, thinking: { type: "disabled" } }),
         signal: AbortSignal.timeout(15000),
       });
       if (r.status === 429) return "[gltch is rate-limited, try again in a moment]";

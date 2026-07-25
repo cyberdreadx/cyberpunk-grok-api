@@ -2448,13 +2448,14 @@ Rules:
             "Authorization": `Bearer ${deepseekKey}`,
           },
           body: JSON.stringify({
-            model: "deepseek-chat",
+            model: "deepseek-v4-flash",
             messages: [
               { role: "system", content: systemPrompt },
               { role: "user", content: prompt.trim() },
             ],
             max_tokens: isLtx ? 700 : 400,
             temperature: 0.8,
+            thinking: { type: "disabled" },
           }),
         });
 
@@ -2844,7 +2845,7 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
         const llmEndpoint = useDeepseek
           ? "https://api.deepseek.com/v1/chat/completions"
           : "https://api.x.ai/v1/chat/completions";
-        const llmModel = useDeepseek ? "deepseek-chat" : "grok-3-mini";
+        const llmModel = useDeepseek ? "deepseek-v4-flash" : "grok-3-mini";
         const llmAuth = useDeepseek ? deepseekKey! : xaiKey!;
 
         const llmResp = await fetch(llmEndpoint, {
@@ -2860,6 +2861,7 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
               { role: "user", content: prompt.trim() },
             ],
             temperature: 0.8,
+            ...(useDeepseek ? { thinking: { type: "disabled" } } : {}),
           }),
           signal: AbortSignal.timeout(30000),
         });

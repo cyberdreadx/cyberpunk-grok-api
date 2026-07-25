@@ -21,7 +21,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Send, Users, Globe, Loader2, Plus, X, Lock, Zap, ShieldAlert, Sparkles, Rss, Flame, Film, FolderOpen, ImageIcon, Star, Menu, Lightbulb, MessageCircle } from "lucide-react";
+import { Send, Users, Globe, Loader2, Plus, X, Lock, Zap, ShieldAlert, Sparkles, Rss, Flame, Film, FolderOpen, ImageIcon, Star, Menu, Lightbulb, MessageCircle, MessagesSquare } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
 import MobileBottomNav from "@/components/MobileBottomNav";
@@ -514,8 +514,18 @@ const FeedPage: React.FC = () => {
         className="flex items-center gap-1.5 px-3 py-1.5 rounded-md font-orbitron text-[10px] tracking-widest text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
         title="Chat with model AI personas"
       >
-        <MessageCircle className="w-3.5 h-3.5" /> CHAT
+        <MessageCircle className="w-3.5 h-3.5" /> PERSONAS
       </button>
+      {isAuthenticated && (
+        <button
+          type="button"
+          onClick={() => navigate("/chat")}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md font-orbitron text-[10px] tracking-widest text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
+          title="Community chatroom"
+        >
+          <MessagesSquare className="w-3.5 h-3.5" /> CHAT
+        </button>
+      )}
       <button
         type="button"
         onClick={() => navigate("/apply")}
@@ -605,6 +615,15 @@ const FeedPage: React.FC = () => {
               >
                 <Users className="w-4 h-4" /> MODELS
               </button>
+              {isAuthenticated && (
+                <button
+                  type="button"
+                  onClick={() => { setNavOpen(false); navigate("/chat"); }}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-md font-orbitron text-xs tracking-widest text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
+                >
+                  <MessagesSquare className="w-4 h-4" /> CHAT
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => { setNavOpen(false); navigate("/apply"); }}

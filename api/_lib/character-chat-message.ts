@@ -210,7 +210,7 @@ export async function handleCharacterChatMessage(
   }
 
   const visionModel = process.env.CHARACTER_CHAT_VISION_MODEL || "grok-2-vision-1212";
-  const textModelDs = process.env.CHARACTER_CHAT_TEXT_MODEL_DS || "deepseek-chat";
+  const textModelDs = process.env.CHARACTER_CHAT_TEXT_MODEL_DS || "deepseek-v4-flash";
   const textModelXai = process.env.CHARACTER_CHAT_TEXT_MODEL_XAI || "grok-3-mini";
 
   let llmUrl: string;
@@ -243,6 +243,7 @@ export async function handleCharacterChatMessage(
         messages: [{ role: "system", content: systemPrompt.slice(0, 12000) }, ...apiMessages],
         max_tokens: 900,
         temperature: 0.85,
+        ...(llmUrl.includes("deepseek") ? { thinking: { type: "disabled" } } : {}),
       }),
       signal: AbortSignal.timeout(55000),
     });

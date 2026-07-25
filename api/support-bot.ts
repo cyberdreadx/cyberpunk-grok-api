@@ -36,13 +36,13 @@ async function callLovableAI(system: string, user: string): Promise<string> {
   const deepseekKey = process.env.DEEPSEEK_API_KEY;
   const lovableKey = process.env.LOVABLE_API_KEY;
   if (!deepseekKey && !lovableKey) {
-    return "Support bot is offline: AI key not configured. Please contact support@grokrunner.ai.";
+    return "Support bot is offline: AI key not configured. Please open a support ticket in our Discord: https://discord.gg/CNpWqkFA65";
   }
   const useDeepseek = !!deepseekKey;
   const url = useDeepseek
     ? "https://api.deepseek.com/v1/chat/completions"
     : "https://ai.gateway.lovable.dev/v1/chat/completions";
-  const model = useDeepseek ? "deepseek-chat" : "google/gemini-2.5-flash";
+  const model = useDeepseek ? "deepseek-v4-flash" : "google/gemini-2.5-flash";
   const apiKey = useDeepseek ? deepseekKey : lovableKey;
   try {
     const r = await fetch(url, {
@@ -56,6 +56,7 @@ async function callLovableAI(system: string, user: string): Promise<string> {
         ],
         max_tokens: 400,
         temperature: 0.4,
+        ...(useDeepseek ? { thinking: { type: "disabled" } } : {}),
       }),
       signal: AbortSignal.timeout(20000),
     });
@@ -253,7 +254,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         `You are GLTCHRunner's in-app support assistant. The user has flagged "having an issue" but did NOT type details. ` +
         `Inspect the activity snapshot and proactively diagnose the most likely problem. ` +
         `Be concise (max 7 short lines, markdown bullets). Greet them by @username. ` +
-        `Suggest 2-3 concrete next steps. Always close with: "If none of this fits, DM support at support@grokrunner.ai with a screenshot." ` +
+        `Suggest 2-3 concrete next steps. Always close with: "If none of this fits, open a support ticket in our Discord (https://discord.gg/CNpWqkFA65) with a screenshot." ` +
         `Never promise refunds — direct them to the "failed jobs" button for that.`;
       const ctx =
         `User: @${username}\n` +
