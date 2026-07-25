@@ -34,7 +34,6 @@ import {
   Sparkles,
   ImageOff,
   Tractor,
-  Ban,
 } from "lucide-react";
 import AdminInsightsPanel from "@/components/AdminInsightsPanel";
 import AdminChatModerationPanel from "@/components/AdminChatModerationPanel";
@@ -765,7 +764,7 @@ function AnnouncementPanel() {
 
             <div className="text-muted-foreground/70 text-[10px]">
               {cancelled
-                ? `Cancel signal sent. The remaining ${currentRemaining} users will NOT be emailed. Hit SEND_IN_BG again to resume — already-sent users will be skipped automatically.`
+                ? `Cancel signal sent. The remaining ${currentRemaining} users will NOT be emailed. Hit RESUME to continue — already-sent users will be skipped automatically.`
                 : isComplete
                   ? `Campaign finished. ${result.failed > 0 ? `${result.failed} failures in the first batch — check email logs.` : ""}`
                   : "Server keeps sending in the background — safe to close this page. Dashboard auto-refreshes from the database."}
@@ -837,7 +836,7 @@ function FlashSalesPanel() {
     try {
       const data = await apiFetch("/admin", { method: "POST", body: { action: "flash-sales-list" } });
       setSales(data.sales || []);
-    } catch { /* ignore */ }
+    } catch (e: any) { alert(e?.message || "Failed to load flash sales"); }
     finally { setLoading(false); }
   }, []);
 
@@ -869,11 +868,12 @@ function FlashSalesPanel() {
   };
 
   const handleEnd = async (saleId: string) => {
+    if (!confirm("End this flash sale now? Buyers lose the discount immediately.")) return;
     setEnding(saleId);
     try {
       await apiFetch("/admin", { method: "POST", body: { action: "flash-sales-end", saleId } });
       fetchSales();
-    } catch { /* ignore */ }
+    } catch (e: any) { alert(e?.message || "Failed to end sale"); }
     finally { setEnding(null); }
   };
 
@@ -1031,8 +1031,8 @@ function PayoutsPanel() {
     try {
       const data = await apiFetch<{ requests: any[] }>("/payouts?admin=1");
       setRequests(data.requests || []);
-    } catch {
-      // ignore
+    } catch (e: any) {
+      alert(e?.message || "Failed to load payout requests");
     } finally {
       setLoading(false);
     }
@@ -1045,8 +1045,8 @@ function PayoutsPanel() {
     try {
       await apiFetch("/payouts", { method: "PATCH", body: { requestId, action, adminNote } });
       fetchPayouts();
-    } catch {
-      // ignore
+    } catch (e: any) {
+      alert(e?.message || `Payout ${action} failed`);
     } finally {
       setActing(null);
     }
@@ -1158,6 +1158,7 @@ export default function Admin() {
   const [emailLoading, setEmailLoading] = useState(false);
   const [apiAnalytics, setApiAnalytics] = useState<any>(null);
   const [apiAnalyticsLoading, setApiAnalyticsLoading] = useState(false);
+  const [apiAnalyticsError, setApiAnalyticsError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<any>(null);
@@ -1298,6 +1299,7 @@ export default function Admin() {
 
   const handleBan = async () => {
     if (!banEmail.trim()) return;
+    if (!confirm(`Ban ${banEmail.trim()} (${banDuration})? This also zeroes their karma.`)) return;
     setBanning(true);
     try {
       await apiFetch("/admin", { method: "POST", body: { action: "ban-user", email: banEmail.trim(), reason: banReason.trim() || undefined, duration: banDuration === "permanent" ? undefined : banDuration } });
@@ -1439,21 +1441,24 @@ export default function Admin() {
 
   const fetchApiAnalytics = useCallback(async () => {
     setApiAnalyticsLoading(true);
+    setApiAnalyticsError(null);
     try {
       const res = await apiFetch("/admin", { method: "POST", body: { action: "api-analytics" } });
       setApiAnalytics(res);
     } catch (err: any) {
       console.error("[admin] api-analytics failed:", err.message);
+      // must set an error: with analytics still null the load effect would refire forever
+      setApiAnalyticsError(err?.message || "Failed to load API analytics");
     } finally {
       setApiAnalyticsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    if (activeTab === "api" && !apiAnalytics && !apiAnalyticsLoading && authorized) {
+    if (activeTab === "api" && !apiAnalytics && !apiAnalyticsLoading && !apiAnalyticsError && authorized) {
       fetchApiAnalytics();
     }
-  }, [activeTab, apiAnalytics, apiAnalyticsLoading, authorized, fetchApiAnalytics]);
+  }, [activeTab, apiAnalytics, apiAnalyticsLoading, apiAnalyticsError, authorized, fetchApiAnalytics]);
 
   const usagePivot = React.useMemo(() => {
     const map = new Map<string, { day: string } & Record<string, number>>();
@@ -1491,7 +1496,7 @@ export default function Admin() {
     );
   }
 
-  if (error || !overview) {
+  if (!overview) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-4 p-8">
@@ -1525,6 +1530,14 @@ export default function Admin() {
 
   return (
     <div className="min-h-screen bg-background w-full overflow-x-hidden">
+      {/* Partial-load warning: overview loaded but a secondary query failed */}
+      {error && (
+        <div className="bg-amber-500/10 border-b border-amber-500/40 px-4 py-2 flex items-center gap-2 font-mono-share text-[11px] text-amber-300">
+          <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+          <span className="truncate">PARTIAL_LOAD — some sections failed: {error}</span>
+          <button onClick={fetchAll} className="ml-auto shrink-0 underline hover:text-amber-200">RETRY</button>
+        </div>
+      )}
       {/* Header */}
       <header className="border-b border-border/30 bg-card/40 backdrop-blur-sm sticky top-0 z-20" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
         <div className="max-w-7xl mx-auto px-3 sm:px-4 py-3 flex items-center justify-between gap-2">
@@ -1943,8 +1956,15 @@ export default function Admin() {
               <p className="font-mono-share text-[10px] text-muted-foreground/70 leading-relaxed">
                 Toggle each free-credit source independently. Reddit posting reward is <span className="text-secondary">always on</span> and cannot be disabled here.
               </p>
-              {fcLoading || !fcState ? (
+              {fcLoading ? (
                 <div className="font-mono-share text-[10px] text-muted-foreground/60">Loading…</div>
+              ) : !fcState ? (
+                <div className="space-y-2">
+                  <div className="font-mono-share text-[10px] text-destructive">{fcResult?.msg || "Failed to load free-credit state."}</div>
+                  <Button variant="outline" size="sm" onClick={fetchFreeCredits} className="font-mono-share text-[10px] h-7 px-2 gap-1">
+                    <RefreshCw className="w-3 h-3" /> RETRY
+                  </Button>
+                </div>
               ) : (
                 <div className="space-y-3">
                   {fcState.envForcedDisabled && (
@@ -2195,9 +2215,9 @@ export default function Admin() {
                           )}
                         </td>
                         <td className="px-2.5 py-2 font-mono-share text-xs text-secondary">{fmt$(u.total_spent_cents)}</td>
-                        <td className="px-2.5 py-2 font-mono-share text-xs">{u.total_generations}</td>
-                        <td className="px-2.5 py-2 font-mono-share text-xs">{u.total_credits_used}</td>
-                        <td className="px-2.5 py-2 font-mono-share text-xs text-primary">{u.sub_credits + u.pack_credits}</td>
+                        <td className="px-2.5 py-2 font-mono-share text-xs">{Number(u.total_generations || 0).toLocaleString()}</td>
+                        <td className="px-2.5 py-2 font-mono-share text-xs">{Number(u.total_credits_used || 0).toLocaleString()}</td>
+                        <td className="px-2.5 py-2 font-mono-share text-xs text-primary">{(u.sub_credits + u.pack_credits).toLocaleString()}</td>
                         <td className="px-2.5 py-2 font-mono-share text-[10px] text-muted-foreground/50">
                           {u.last_generation ? new Date(u.last_generation).toLocaleDateString() : "never"}
                         </td>
@@ -2312,9 +2332,13 @@ export default function Admin() {
                           <button
                             className="px-3 py-1 bg-green-600/80 text-white font-mono-share text-[10px] rounded hover:bg-green-500"
                             onClick={async () => {
-                              await apiFetch("/admin", { method: "POST", body: { action: "unban-user", userId: inspectData.user.id } });
-                              handleInspect();
-                              fetchBans();
+                              try {
+                                await apiFetch("/admin", { method: "POST", body: { action: "unban-user", userId: inspectData.user.id } });
+                                handleInspect();
+                                fetchBans();
+                              } catch (e: any) {
+                                alert(e?.message || "Unban failed");
+                              }
                             }}
                           >
                             UNBAN
@@ -2874,6 +2898,15 @@ export default function Admin() {
             {apiAnalyticsLoading && !apiAnalytics && (
               <div className="flex justify-center py-12">
                 <Loader2 className="w-6 h-6 text-primary animate-spin" />
+              </div>
+            )}
+
+            {apiAnalyticsError && !apiAnalytics && (
+              <div className="text-center py-12 space-y-3">
+                <p className="font-mono-share text-xs text-destructive">{apiAnalyticsError}</p>
+                <Button variant="outline" size="sm" onClick={fetchApiAnalytics} className="font-mono-share text-xs gap-1.5">
+                  <RefreshCw className="w-3.5 h-3.5" /> RETRY
+                </Button>
               </div>
             )}
 

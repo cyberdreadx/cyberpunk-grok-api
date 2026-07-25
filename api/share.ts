@@ -30,7 +30,8 @@ async function destroyShare(sql: any, shareId: string): Promise<void> {
 
   if (token) {
     const { list, del } = await import("@vercel/blob");
-    const { blobs } = await list({ prefix: `shares/${shareId}`, token });
+    // dot-terminated so a share id that prefixes a longer id can't over-match
+    const { blobs } = await list({ prefix: `shares/${shareId}.`, token });
     await Promise.all(
       blobs.map((b) =>
         del(b.url, { token }).catch((err) => console.warn("[share] blob del failed:", err?.message)),

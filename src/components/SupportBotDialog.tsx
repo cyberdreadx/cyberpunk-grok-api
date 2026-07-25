@@ -155,7 +155,8 @@ const SupportBotDialog: React.FC<Props> = ({ open, onOpenChange, username, onRef
             })}
             <p className="font-mono-share text-[10px] text-muted-foreground/40 text-center pt-2">
               Custom messages disabled to prevent abuse. For anything outside these options, open a ticket in our{" "}
-              <a href="https://discord.gg/CNpWqkFA65" target="_blank" rel="noopener noreferrer" className="text-primary/70 underline">Discord</a>.
+              <a href="https://discord.gg/CNpWqkFA65" target="_blank" rel="noopener noreferrer" className="text-primary/70 underline">Discord</a>
+              {" "}or email <a href="mailto:ai-integrations@pm.me" className="text-primary/70 underline">ai-integrations@pm.me</a>.
             </p>
           </div>
         )}

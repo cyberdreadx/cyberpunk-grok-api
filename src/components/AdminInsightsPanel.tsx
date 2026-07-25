@@ -99,9 +99,9 @@ export default function AdminInsightsPanel() {
           msg = parsed.error || msg;
           code = parsed.code || null;
         } catch { if (txt) msg = txt.slice(0, 400); }
-        if (code === "AI_KEY_MISSING" || code === "LOVABLE_API_KEY_MISSING" || /DEEPSEEK_API_KEY|LOVABLE_API_KEY|AI key/i.test(msg)) {
+        if (code === "AI_KEY_MISSING" || /DEEPSEEK_API_KEY|LOVABLE_API_KEY|AI key/i.test(msg)) {
           throw new Error(
-            "AI not configured. Add DEEPSEEK_API_KEY to Vercel (Settings → Environment Variables → Production), then redeploy."
+            "AI not configured. Set DEEPSEEK_API_KEY (or LOVABLE_API_KEY) in the server environment, then restart."
           );
         }
         throw new Error(msg);

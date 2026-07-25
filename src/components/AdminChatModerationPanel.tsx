@@ -18,6 +18,7 @@ const AdminChatModerationPanel: React.FC = () => {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [bans, setBans] = useState<BanRow[]>([]);
   const [loading, setLoading] = useState(false);
+  const [busy, setBusy] = useState(false); // any mutation in flight — blocks double-submits
   const [banForm, setBanForm] = useState({ userId: "", channel: "*", hours: "24", reason: "" });
 
   const loadMessages = useCallback(async () => {
@@ -43,26 +44,32 @@ const AdminChatModerationPanel: React.FC = () => {
   useEffect(() => { loadBans(); }, [loadBans]);
 
   const deleteMessage = async (id: string) => {
-    if (!confirm("Delete this message?")) return;
+    if (busy || !confirm("Delete this message?")) return;
+    setBusy(true);
     try {
       await apiFetch(`/chat?id=${encodeURIComponent(id)}`, { method: "DELETE" });
       setMessages((m) => m.filter((x) => x.id !== id));
       toast.success("Deleted");
     } catch (e: any) { toast.error(e?.message || "Delete failed"); }
+    finally { setBusy(false); }
   };
 
   const clearChannel = async () => {
-    if (!confirm(`Clear ALL messages in #${channel}?`)) return;
+    if (busy || !confirm(`Clear ALL messages in #${channel}?`)) return;
+    setBusy(true);
     try {
       await apiFetch(`/chat?channel=${channel}`, { method: "DELETE" });
       setMessages([]);
       toast.success(`Cleared #${channel}`);
     } catch (e: any) { toast.error(e?.message || "Clear failed"); }
+    finally { setBusy(false); }
   };
 
   const banUser = async (e?: React.FormEvent) => {
     e?.preventDefault();
+    if (busy) return;
     if (!banForm.userId.trim()) return toast.error("User ID required");
+    setBusy(true);
     try {
       await apiFetch(`/chat?action=ban`, {
         method: "POST",
@@ -77,6 +84,7 @@ const AdminChatModerationPanel: React.FC = () => {
       setBanForm({ userId: "", channel: "*", hours: "24", reason: "" });
       loadBans();
     } catch (err: any) { toast.error(err?.message || "Ban failed"); }
+    finally { setBusy(false); }
   };
 
   const quickBan = (userId: string) => {
@@ -85,12 +93,14 @@ const AdminChatModerationPanel: React.FC = () => {
   };
 
   const unban = async (userId: string, ch: string) => {
-    if (!confirm(`Unmute user from ${ch === "*" ? "all channels" : "#" + ch}?`)) return;
+    if (busy || !confirm(`Unmute user from ${ch === "*" ? "all channels" : "#" + ch}?`)) return;
+    setBusy(true);
     try {
       await apiFetch(`/chat?action=unban`, { method: "POST", body: { userId, channel: ch } });
       toast.success("Unmuted");
       loadBans();
     } catch (e: any) { toast.error(e?.message || "Unban failed"); }
+    finally { setBusy(false); }
   };
 
   const fmtTime = (ts: number) => new Date(ts).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
@@ -127,7 +137,8 @@ const AdminChatModerationPanel: React.FC = () => {
           <div className="ml-auto">
             <button
               onClick={clearChannel}
-              className="px-2 py-1 text-[10px] font-mono-share rounded bg-red-600/80 text-white hover:bg-red-500 flex items-center gap-1"
+              disabled={busy}
+              className="px-2 py-1 text-[10px] font-mono-share rounded bg-red-600/80 text-white hover:bg-red-500 disabled:opacity-50 flex items-center gap-1"
             >
               <Trash2 className="w-3 h-3" /> CLEAR_CHANNEL
             </button>
@@ -154,7 +165,8 @@ const AdminChatModerationPanel: React.FC = () => {
               <div className="flex flex-col gap-1">
                 <button
                   onClick={() => deleteMessage(m.id)}
-                  className="px-2 py-0.5 bg-red-600/80 text-white font-mono-share text-[9px] rounded hover:bg-red-500 flex items-center gap-1"
+                  disabled={busy}
+                  className="px-2 py-0.5 bg-red-600/80 text-white font-mono-share text-[9px] rounded hover:bg-red-500 disabled:opacity-50 flex items-center gap-1"
                 >
                   <Trash2 className="w-2.5 h-2.5" /> DEL
                 </button>
@@ -162,7 +174,7 @@ const AdminChatModerationPanel: React.FC = () => {
                   onClick={() => quickBan(m.userId)}
                   className="px-2 py-0.5 bg-orange-600/80 text-white font-mono-share text-[9px] rounded hover:bg-orange-500 flex items-center gap-1"
                 >
-                  <Ban className="w-2.5 h-2.5" /> BAN
+                  <Ban className="w-2.5 h-2.5" /> MUTE
                 </button>
               </div>
             </div>
@@ -207,7 +219,7 @@ const AdminChatModerationPanel: React.FC = () => {
               className="px-2 py-1.5 bg-background border border-border/50 rounded text-xs font-mono-share"
             />
           </div>
-          <button type="submit" className="px-3 py-1.5 bg-orange-600 text-white font-mono-share text-[10px] rounded hover:bg-orange-500 flex items-center gap-1">
+          <button type="submit" disabled={busy} className="px-3 py-1.5 bg-orange-600 text-white font-mono-share text-[10px] rounded hover:bg-orange-500 disabled:opacity-50 flex items-center gap-1">
             <Ban className="w-3 h-3" /> APPLY_MUTE
           </button>
         </form>
@@ -243,7 +255,8 @@ const AdminChatModerationPanel: React.FC = () => {
                       <td className="px-2 py-1.5">
                         <button
                           onClick={() => unban(b.user_id, b.channel)}
-                          className="px-2 py-0.5 bg-green-600/80 text-white font-mono-share text-[10px] rounded hover:bg-green-500 flex items-center gap-1"
+                          disabled={busy}
+                          className="px-2 py-0.5 bg-green-600/80 text-white font-mono-share text-[10px] rounded hover:bg-green-500 disabled:opacity-50 flex items-center gap-1"
                         >
                           <ShieldOff className="w-2.5 h-2.5" /> UNMUTE
                         </button>

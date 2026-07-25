@@ -15,8 +15,9 @@
  * unlock laundering). Rows can be banned in place.
  */
 
-import { Fragment, useEffect, useState, useCallback } from "react";
+import { Fragment, useEffect, useState, useCallback, useRef } from "react";
 import { apiFetch } from "@/lib/api";
+import { toast } from "sonner";
 import {
   Loader2, RefreshCw, Tractor, Ban, ShieldCheck, Star, ExternalLink,
   ChevronDown, ChevronRight, AlertTriangle,
@@ -268,8 +269,18 @@ const AdminFarmersPanel: React.FC = () => {
     }
   }, [minExcess]);
 
+  // Debounced: the credit-farmers query is expensive, don't refire per keystroke
+  const loadRef = useRef(load);
+  loadRef.current = load;
+  const firstLoad = useRef(true);
   useEffect(() => {
-    load();
+    if (firstLoad.current) {
+      firstLoad.current = false;
+      load();
+      return;
+    }
+    const t = setTimeout(() => loadRef.current(), 600);
+    return () => clearTimeout(t);
   }, [load]);
 
   const toggleDetail = async (s: Suspect) => {
@@ -287,7 +298,7 @@ const AdminFarmersPanel: React.FC = () => {
         });
         setDetails((prev) => ({ ...prev, [s.id]: res }));
       } catch (e: any) {
-        alert(e?.message || "Failed to load detail");
+        toast.error(e?.message || "Failed to load detail");
         setExpandedId(null);
       } finally {
         setDetailLoading(null);
@@ -305,7 +316,7 @@ const AdminFarmersPanel: React.FC = () => {
       });
       setSuspects((prev) => prev.map((x) => (x.id === s.id ? { ...x, banned: true } : x)));
     } catch (e: any) {
-      alert(e?.message || "Ban failed");
+      toast.error(e?.message || "Ban failed");
     } finally {
       setBanningId(null);
     }
@@ -317,7 +328,7 @@ const AdminFarmersPanel: React.FC = () => {
       await apiFetch("/admin", { method: "POST", body: { action: "unban-user", userId: s.id } });
       setSuspects((prev) => prev.map((x) => (x.id === s.id ? { ...x, banned: false } : x)));
     } catch (e: any) {
-      alert(e?.message || "Unban failed");
+      toast.error(e?.message || "Unban failed");
     } finally {
       setBanningId(null);
     }

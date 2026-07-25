@@ -877,6 +877,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           INSERT INTO transactions (user_id, credits, amount_cents, stripe_session_id, package, type, payment_method)
           VALUES (${user.id}::uuid, ${amount}, 0, ${'admin-grant-' + Date.now()}, 'admin-grant', ${type === "sub" ? "subscription" : "pack"}, 'admin')
         `.catch(() => {});
+        await logCreditGrant(sql, user.id, amount, "admin_grant", `by:${ADMIN_EMAIL} type:${type}`);
 
         const [updated] = await sql`SELECT sub_credits, pack_credits FROM users WHERE id = ${user.id}`;
         console.log(`[admin] Granted ${amount} ${type} credits to ${email} (sub=${updated.sub_credits}, pack=${updated.pack_credits})`);
@@ -913,7 +914,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (includeShares) {
           const shares = await sql`SELECT share_id FROM share_owners WHERE user_id = ${user.id}`;
           for (const row of shares as any[]) {
-            if (/^[a-zA-Z0-9_-]{4,16}$/.test(row.share_id)) r2Prefixes.push(`shares/${row.share_id}`);
+            // dot-terminated: "shares/<id>." matches <id>.json/<id>.png but can
+            // never match a longer share id that starts with this one
+            if (/^[a-zA-Z0-9_-]{4,16}$/.test(row.share_id)) r2Prefixes.push(`shares/${row.share_id}.`);
           }
         }
 
@@ -1022,6 +1025,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               INSERT INTO transactions (user_id, credits, amount_cents, stripe_session_id, package, type, payment_method)
               VALUES (${u.id}::uuid, ${amount}, 0, ${tag + '-' + u.id}, 'admin-bulk-grant', ${type === "sub" ? "subscription" : "pack"}, 'admin')
             `.catch(() => {});
+            await logCreditGrant(sql, u.id, amount, "admin_bulk_grant", tag).catch(() => {});
             granted++;
           } catch (e) {
             console.warn(`[admin] bulk grant failed for ${u.email}:`, e);
@@ -1514,7 +1518,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       case "add-mod": {
         const { email: modEmail } = req.body;
         if (!modEmail) return res.status(400).json({ error: "email required" });
-        const userRows = await sql`SELECT id FROM users WHERE email = ${modEmail}`;
+        const userRows = await sql`SELECT id FROM users WHERE email = ${String(modEmail).trim().toLowerCase()}`;
         if (userRows.length === 0) return res.status(404).json({ error: "User not found" });
         await sql`INSERT INTO feed_moderators (user_id, granted_by) VALUES (${userRows[0].id}, ${ADMIN_EMAIL}) ON CONFLICT DO NOTHING`;
         return res.json({ success: true, userId: userRows[0].id });

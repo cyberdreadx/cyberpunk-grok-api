@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { apiUrl } from "@/lib/api";
 
 const KNOWN_ENV_KEYS = [
   "STRIPE_PRICE_STARTER",
@@ -80,7 +81,8 @@ export default function StripePriceSwap() {
   useEffect(() => {
     (async () => {
       try {
-        const r = await fetch("/api/auth/me", { headers: { Authorization: `Bearer ${token}` } });
+        const r = await fetch(apiUrl("/auth/me"), { headers: { Authorization: `Bearer ${token}` } });
+        if (!r.ok) throw new Error(`auth/me ${r.status}`);
         const j = await r.json();
         setMe(j);
       } catch {
@@ -95,7 +97,7 @@ export default function StripePriceSwap() {
     setBusy(true);
     setError(null);
     try {
-      const r = await fetch("/api/stripe-price-inspect", {
+      const r = await fetch(apiUrl("/stripe-price-inspect"), {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ action: "current" }),
@@ -124,7 +126,7 @@ export default function StripePriceSwap() {
     setBusy(true);
     setError(null);
     try {
-      const r = await fetch("/api/stripe-price-inspect", {
+      const r = await fetch(apiUrl("/stripe-price-inspect"), {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ action: "inspect", priceIds: ids }),
@@ -145,7 +147,7 @@ export default function StripePriceSwap() {
     setBusy(true);
     setError(null);
     try {
-      const r = await fetch("/api/stripe-price-inspect", {
+      const r = await fetch(apiUrl("/stripe-price-inspect"), {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
