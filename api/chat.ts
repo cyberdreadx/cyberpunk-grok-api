@@ -101,16 +101,39 @@ async function getBotUserContext(sql: any, userId: string): Promise<string> {
       }
     } catch { /* holder lookup is optional */ }
 
+    // Engagement stats — mirrors api/earn.ts (lifetime karma drives milestones,
+    // last-7d karma drives the weekly payout: floor(last7d/4), cap 15).
+    let earn = "";
+    try {
+      const [k] = await sql`
+        SELECT
+          COALESCE(SUM(delta), 0)::int AS lifetime,
+          COALESCE(SUM(delta) FILTER (WHERE created_at > now() - interval '7 days'), 0)::int AS last7d
+        FROM karma_events WHERE user_id = ${userId}::uuid`;
+      const lifetime = k?.lifetime || 0;
+      const last7d = k?.last7d || 0;
+      const ladder = [25, 50, 100, 250, 500, 1000, 2500];
+      const next = ladder.find((t) => t > lifetime);
+      const weekly = Math.min(Math.floor(last7d / 4), 15);
+      const [p] = await sql`SELECT COUNT(*)::int AS n FROM feed_posts WHERE user_id = ${userId}::uuid`;
+      let streak = 0;
+      try {
+        const [s] = await sql`SELECT streak_day FROM daily_mission_progress WHERE user_id = ${userId}::uuid`;
+        streak = s?.streak_day || 0;
+      } catch { /* optional */ }
+      earn = ` Karma = ${lifetime} lifetime (${next ? `next milestone at ${next}` : "all milestones reached"}), ${last7d} in last 7d (≈${weekly} cr claimable this week); feed posts = ${p?.n || 0}; mission streak day = ${streak}.`;
+    } catch { /* engagement stats are optional */ }
+
     const imgs = Math.floor(balance / 3);
     const vids = Math.floor(balance / 15);
-    return `USER CONTEXT (the person you're replying to — use to answer personally, never recite unprompted): balance ≈ ${balance} credits (~${imgs} images or ~${vids} WAN videos); plan = ${plan}; XRGE tier = ${holder}; verified creator = ${verified}.`;
+    return `USER CONTEXT (the person you're replying to — use to answer personally, never recite unprompted): balance ≈ ${balance} credits (~${imgs} images or ~${vids} WAN videos); plan = ${plan}; XRGE tier = ${holder}; verified creator = ${verified}.${earn}`;
   } catch {
     return "";
   }
 }
 
 async function callBotAI(userText: string, channel: Channel, recent: { username: string; text: string }[], userCtx = ""): Promise<string> {
-  const context = recent.slice(-6).map((m) => `${m.username}: ${m.text}`).join("\n");
+  const context = recent.slice(-12).map((m) => `${m.username}: ${m.text}`).join("\n");
   const userContent = `[#${channel}] Recent chat:\n${context}\n\nMessage to you: ${userText}`;
   const messages = [
     { role: "system" as const, content: BOT_SYSTEM },
@@ -119,16 +142,14 @@ async function callBotAI(userText: string, channel: Channel, recent: { username:
   ];
   const payload = {
     messages,
-    max_tokens: 280,
+    max_tokens: 360,
     temperature: 0.6,
   };
 
   const deepseekKey = process.env.DEEPSEEK_API_KEY;
   if (deepseekKey) {
-    const model =
-      process.env.CHAT_LOBBY_DEEPSEEK_MODEL ||
-      process.env.CHARACTER_CHAT_TEXT_MODEL_DS ||
-      "deepseek-v4-flash";
+    // v4-pro: noticeably sharper than flash, only ~0.5s slower for short replies
+    const model = process.env.CHAT_LOBBY_DEEPSEEK_MODEL || "deepseek-v4-pro";
     try {
       const r = await fetch("https://api.deepseek.com/v1/chat/completions", {
         method: "POST",
@@ -359,7 +380,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       try {
         const recentRows = await sql`
           SELECT username, text FROM chat_messages
-          WHERE channel = ${channel} ORDER BY ts DESC LIMIT 6`;
+          WHERE channel = ${channel} ORDER BY ts DESC LIMIT 12`;
         const recent = (recentRows as any[]).reverse().map((r) => ({ username: r.username, text: r.text }));
         const userMsgClean = text.replace(BOT_TRIGGER, " ").trim() || text;
         const userCtx = await getBotUserContext(sql, user.userId);

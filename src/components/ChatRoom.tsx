@@ -26,6 +26,34 @@ interface Msg {
 
 const POLL_MS = 3500;
 
+const URL_RE = /(https?:\/\/[^\s<>"')\]]+)/g;
+
+/** Render message text with http(s) URLs as clickable links. */
+function renderWithLinks(text: string): React.ReactNode {
+  const parts = text.split(URL_RE);
+  if (parts.length === 1) return text;
+  return parts.map((part, i) => {
+    if (!/^https?:\/\//.test(part)) return part;
+    // keep trailing sentence punctuation out of the link
+    const url = part.replace(/[.,!?;:]+$/, "");
+    const rest = part.slice(url.length);
+    return (
+      <React.Fragment key={i}>
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline text-primary hover:text-primary/80 break-all"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {url}
+        </a>
+        {rest}
+      </React.Fragment>
+    );
+  });
+}
+
 const ChatRoom: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -272,7 +300,7 @@ const ChatRoom: React.FC = () => {
                   )}
                   <span className="ml-auto shrink-0">· {fmt(m.ts)}</span>
                 </div>
-                <div className="whitespace-pre-wrap break-words">{cleanText}</div>
+                <div className="whitespace-pre-wrap break-words">{renderWithLinks(cleanText)}</div>
                 {promptMatch && (
                   <div className="mt-2 rounded-md border border-primary/40 bg-primary/5 p-2">
                     <div className="text-[10px] uppercase tracking-wider text-primary/80 mb-1">prompt</div>
