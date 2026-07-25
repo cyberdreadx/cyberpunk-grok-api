@@ -1526,6 +1526,12 @@ export default function Admin() {
   const hasActualCosts = (o.actualCost?.tracked30d || 0) > 0;
   const totalCost30d = hasActualCosts ? actualCost30d + modCost30d : xaiCost30d + runpodCost30d + modCost30d;
   const trueMargin30d = o.revenue.revenue_30d_cents - totalCost30d;
+  // Blended realized ¢/credit: 30d revenue over 30d credits consumed.
+  // Falls back to 7.5¢ (≈ pack pricing) when either side is empty.
+  const profitCredits30d = profitBreakdown.reduce((a: number, r: any) => a + Number(r.credits_used || 0), 0);
+  const centsPerCredit = profitCredits30d > 0 && o.revenue.revenue_30d_cents > 0
+    ? o.revenue.revenue_30d_cents / profitCredits30d
+    : 7.5;
   const costCoverage = o.actualCost ? `${o.actualCost.tracked30d}/${o.actualCost.total30d} tracked` : "estimated";
 
   return (
@@ -2464,12 +2470,15 @@ export default function Admin() {
                   <h2 className="font-orbitron text-xs tracking-wider text-primary/80 flex items-center gap-2">
                     <BarChart3 className="w-3.5 h-3.5" />
                     PROFIT_PER_ACTION (30d)
+                    <span className="font-mono-share text-[9px] text-muted-foreground/50 tracking-normal normal-case">
+                      revenue @ {centsPerCredit.toFixed(1)}¢/credit (30d revenue ÷ 30d credits)
+                    </span>
                   </h2>
                 </div>
                 <div className="overflow-x-auto overscroll-x-contain">
-                  <table className="w-full min-w-[600px]">
+                  <table className="w-full min-w-[640px]">
                     <thead><tr className="border-b border-border/20">
-                      {["MODE", "GENS", "CREDITS", "AVG CR", "ACTUAL COST", "EST. COST", "AVG TIME", "MARGIN"].map((h) => (
+                      {["MODE", "GENS", "CREDITS", "AVG CR", "ACTUAL COST", "EST. COST", "AVG TIME", "EST. REV", "MARGIN"].map((h) => (
                         <th key={h} className="px-2.5 py-2 text-left font-mono-share text-[9px] text-muted-foreground/50 tracking-wider">{h}</th>
                       ))}
                     </tr></thead>
@@ -2482,10 +2491,11 @@ export default function Admin() {
                         const actualCostCents = Number(row.actual_cost_cents || 0);
                         const costTracked = row.cost_tracked_count || 0;
                         const displayCost = actualCostCents > 0 ? fmt$(Math.round(actualCostCents)) : "—";
-                        // Estimate revenue per credit at ~$0.01 (100 credits ≈ $1 avg across tiers)
-                        const estRevenueCents = row.credits_used * 1;
+                        const estRevenueCents = row.credits_used * centsPerCredit;
                         const bestCost = actualCostCents > 0 ? actualCostCents : (estRunpodCents > 0 ? estRunpodCents : 0);
-                        const marginPct = bestCost > 0 ? Math.round(((estRevenueCents - bestCost) / estRevenueCents) * 100) : null;
+                        const marginPct = bestCost > 0 && estRevenueCents > 0
+                          ? Math.round(((estRevenueCents - bestCost) / estRevenueCents) * 100)
+                          : null;
                         return (
                           <tr key={i} className="border-b border-border/10 hover:bg-primary/5 transition-colors">
                             <td className="px-2.5 py-2 font-orbitron text-[10px] tracking-wider text-foreground/80">{row.mode?.toUpperCase()}</td>
@@ -2498,6 +2508,7 @@ export default function Admin() {
                             </td>
                             <td className="px-2.5 py-2 font-mono-share text-xs text-muted-foreground/50">{estRunpodCents > 0 ? fmt$(estRunpodCents) : "—"}</td>
                             <td className="px-2.5 py-2 font-mono-share text-xs">{avgTimeS}</td>
+                            <td className="px-2.5 py-2 font-mono-share text-xs text-secondary">{fmt$(Math.round(estRevenueCents))}</td>
                             <td className={`px-2.5 py-2 font-mono-share text-xs font-bold ${marginPct !== null && marginPct >= 0 ? "text-green-400" : "text-destructive"}`}>
                               {marginPct !== null ? `${marginPct}%` : "—"}
                             </td>
@@ -2918,7 +2929,7 @@ export default function Admin() {
                   <KpiCard icon={<Zap className="w-3.5 h-3.5" />} label="TOTAL REQUESTS" value={(apiAnalytics.kpis?.total_requests || 0).toLocaleString()} />
                   <KpiCard icon={<CreditCard className="w-3.5 h-3.5" />} label="CREDITS VIA API" value={(apiAnalytics.kpis?.total_credits_used || 0).toLocaleString()} />
                   <KpiCard icon={<TrendingUp className="w-3.5 h-3.5" />} label="30D CREDITS" value={(apiAnalytics.apiRevenue?.credits_30d || 0).toLocaleString()} sub={`7d: ${apiAnalytics.apiRevenue?.credits_7d || 0}`} />
-                  <KpiCard icon={<DollarSign className="w-3.5 h-3.5" />} label="EST. API REV (30D)" value={fmt$(Math.round((apiAnalytics.apiRevenue?.credits_30d || 0) * 7.5))} sub="@ ~$0.075/credit" accent="secondary" />
+                  <KpiCard icon={<DollarSign className="w-3.5 h-3.5" />} label="EST. API REV (30D)" value={fmt$(Math.round((apiAnalytics.apiRevenue?.credits_30d || 0) * centsPerCredit))} sub={`@ ${(centsPerCredit / 100).toFixed(3)}$/credit`} accent="secondary" />
                 </div>
 
                 {/* Daily Volume Chart */}
