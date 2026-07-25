@@ -56,10 +56,17 @@ export async function uploadPublicMedia(
   buffer: Buffer,
   key: string,
   contentType: string,
+  opts?: { cacheSeconds?: number },
 ): Promise<MediaUploadResult> {
   const safeKey = sanitizeMediaKey(key);
   let url: string;
   let storage: MediaStorageBackend;
+  // Deletable user media must not be cached as year-long immutable: the owner's
+  // browser would keep rendering the URL long after the object is purged.
+  const cacheSeconds = opts?.cacheSeconds ?? 31536000;
+  const cacheControl = opts?.cacheSeconds != null
+    ? `public, max-age=${cacheSeconds}`
+    : undefined; // undefined -> uploadToR2 default (1y immutable)
 
   if (hasR2Credentials()) {
     if (!isR2MediaConfigured()) {
@@ -68,7 +75,7 @@ export async function uploadPublicMedia(
         "Add the bucket's Public Development URL (https://pub-xxxxx.r2.dev) in Vercel — no custom CDN domain required.",
       );
     }
-    await uploadToR2(safeKey, buffer, contentType);
+    await uploadToR2(safeKey, buffer, contentType, { cacheControl });
     url = getPublicUrl(safeKey);
     if (!url) throw new Error("R2 public URL not configured");
     storage = "r2";
@@ -80,7 +87,7 @@ export async function uploadPublicMedia(
       access: "public",
       contentType,
       token,
-      cacheControlMaxAge: 31536000,
+      cacheControlMaxAge: cacheSeconds,
     });
     url = blob.url;
     storage = "blob";
@@ -91,7 +98,7 @@ export async function uploadPublicMedia(
   if (previewBuf) {
     const previewKey = previewKeyForKey(safeKey);
     if (hasR2Credentials() && isR2MediaConfigured()) {
-      await uploadToR2(previewKey, previewBuf, "image/webp");
+      await uploadToR2(previewKey, previewBuf, "image/webp", { cacheControl });
       previewUrl = getPublicUrl(previewKey) || undefined;
     } else {
       const token = blobToken();
@@ -100,7 +107,7 @@ export async function uploadPublicMedia(
           access: "public",
           contentType: "image/webp",
           token,
-          cacheControlMaxAge: 31536000,
+          cacheControlMaxAge: cacheSeconds,
         });
         previewUrl = previewBlob.url;
       }

@@ -3226,7 +3226,9 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
             for (let attempt = 1; attempt <= 2; attempt++) {
               try {
                 const { uploadPublicMedia } = await import("./_lib/media-storage");
-                const { url, previewUrl, storage } = await uploadPublicMedia(buffer, filename, mime);
+                // 1h cache (not 1y immutable): otherwise the owner's browser keeps
+                // serving a deleted output from disk cache long after the purge.
+                const { url, previewUrl, storage } = await uploadPublicMedia(buffer, filename, mime, { cacheSeconds: 3600 });
                 console.log(`[comfyui-poll] Uploaded ${sizeMB}MB to ${storage.toUpperCase()}: ${url}${previewUrl ? " (preview generated)" : ""}`);
                 return { uri: url, previewUrl };
               } catch (err: any) {
