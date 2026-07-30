@@ -7,7 +7,7 @@
  */
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { applyCors } from "./_lib/cors";
-import { getUserFromRequest } from "./_lib/auth";
+import { getUserFromRequest, checkBan } from "./_lib/auth";
 import { getDb } from "./_lib/db";
 import { checkRateLimit } from "./_lib/ratelimit";
 
@@ -103,6 +103,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+
+    const ban = await checkBan(sql, auth.userId);
+    if (ban.banned) return res.status(403).json({ error: "Account suspended" });
 
     const action = String((req.body || {}).action || "");
 

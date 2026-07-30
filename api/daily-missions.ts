@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getDb } from "./_lib/db";
-import { getUserFromRequest, ADMIN_EMAIL } from "./_lib/auth";
+import { getUserFromRequest, ADMIN_EMAIL, checkBan } from "./_lib/auth";
 import { checkRateLimit } from "./_lib/ratelimit";
 import { awardKarma } from "./_lib/karma";
 import { notify } from "./_lib/notify";
@@ -41,6 +41,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return await getStatus(sql, auth.userId, res);
     }
     if (req.method === "POST") {
+      const ban = await checkBan(sql, auth.userId);
+      if (ban.banned) return res.status(403).json({ error: "Account suspended" });
       if (!(await isSubscriber(auth.userId))) {
         return res.status(403).json({ error: FREE_CREDITS_SUBSCRIBER_ONLY_MESSAGE, subscriberOnly: true });
       }
