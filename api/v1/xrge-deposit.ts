@@ -42,19 +42,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: "Zero-value transfer" });
     }
 
-    // The sender must be THIS user's bound wallet. verifyXrgeTransfer only
-    // checks the recipient, so without this anyone watching the chain could
-    // claim someone else's confirmed deposit by racing them to this endpoint
-    // and then withdrawing the tokens to their own address.
+    // verifyXrgeTransfer only validates the RECIPIENT, so without a sender
+    // check anyone watching Base could claim someone else's confirmed deposit
+    // by racing them to this endpoint, then withdraw the tokens to their own
+    // address. Tie the transfer to the depositing account's wallet:
+    //   - wallet already bound  → the sender must match it.
+    //   - no wallet bound yet   → bind the sender now (trust on first use),
+    //     unless that address already belongs to another account.
     const [owner] = await sql`SELECT wallet_address FROM users WHERE id = ${userId}`;
     const boundWallet = String(owner?.wallet_address || "").trim().toLowerCase();
     const sender = String(transfer.from || "").trim().toLowerCase();
-    if (!boundWallet) {
-      return res.status(400).json({ error: "Bind your wallet to your account before depositing." });
-    }
-    if (sender !== boundWallet) {
-      console.warn(`[xrge-deposit] sender mismatch: tx from ${sender}, user ${userId} bound ${boundWallet}`);
-      return res.status(403).json({ error: "This transfer was not sent from your linked wallet." });
+
+    if (boundWallet) {
+      if (sender !== boundWallet) {
+        console.warn(`[xrge-deposit] sender mismatch: tx from ${sender}, user ${userId} bound ${boundWallet}`);
+        return res.status(403).json({ error: "This transfer was not sent from your linked wallet." });
+      }
+    } else {
+      const [claimedBy] = await sql`
+        SELECT id FROM users WHERE lower(wallet_address) = ${sender} AND id <> ${userId} LIMIT 1
+      `.catch(() => [undefined]);
+      if (claimedBy) {
+        console.warn(`[xrge-deposit] sender ${sender} already bound to another account; refusing for ${userId}`);
+        return res.status(403).json({ error: "This wallet is linked to a different account." });
+      }
+      await sql`UPDATE users SET wallet_address = ${sender}, updated_at = now() WHERE id = ${userId}`;
+      console.log(`[xrge-deposit] bound wallet ${sender} to user ${userId} on first deposit`);
     }
 
     // A single on-chain tx must not be redeemable through both the order flow
