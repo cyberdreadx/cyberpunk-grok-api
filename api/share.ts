@@ -11,6 +11,29 @@ export const config = { maxDuration: 60 };
 
 const SHARE_ID_RE = /^[a-zA-Z0-9_-]{4,16}$/;
 
+/**
+ * Hosts we will fetch media from when a share is created by URL. Mirrors the
+ * allowlist in api/download.ts: our own storage plus the generation providers.
+ * Anything else is refused rather than proxied into the public bucket.
+ */
+const SHARE_FETCH_DOMAINS = [
+  "vidgen.x.ai", "api.x.ai", "cdn.x.ai",
+  "r2.cloudflarestorage.com",
+  "vercel-storage.com",
+  "runpod.io",
+  "gltch.app",
+  "fal.media", "fal.ai",
+];
+
+function isAllowedMediaHost(hostname: string): boolean {
+  const h = hostname.toLowerCase();
+  if (/^(127\.|10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|0\.|169\.254\.|::1|fc|fd|fe80|localhost)/i.test(h)) {
+    return false;
+  }
+  if (/^pub-[a-z0-9]+\.r2\.dev$/.test(h)) return true;
+  return SHARE_FETCH_DOMAINS.some((d) => h === d || h.endsWith(`.${d}`));
+}
+
 function getBlobToken(): string {
   return process.env.BLOB_READ_WRITE_TOKEN || process.env.grokrun_READ_WRITE_TOKEN || "";
 }
@@ -65,9 +88,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (!["https:"].includes(urlObj.protocol)) {
           return res.status(400).json({ error: "Only HTTPS URLs allowed" });
         }
-        const dlResp = await fetch(mediaUrl, { signal: AbortSignal.timeout(25000) });
-        if (!dlResp.ok) {
-          return res.status(502).json({ error: `Failed to download media (${dlResp.status})` });
+        // SSRF guard: without a host allowlist this fetched ANY url the caller
+        // named and published the response body to a public URL — including
+        // internal services (the API itself listens on 127.0.0.1:3000) and
+        // cloud metadata. redirect:"error" stops an allowlisted host from
+        // bouncing us somewhere private.
+        if (!isAllowedMediaHost(urlObj.hostname)) {
+          return res.status(400).json({ error: "Media URL host not allowed" });
+        }
+        const dlResp = await fetch(mediaUrl, { signal: AbortSignal.timeout(25000), redirect: "error" }).catch(() => null);
+        if (!dlResp || !dlResp.ok) {
+          return res.status(502).json({ error: `Failed to download media (${dlResp?.status ?? "fetch failed"})` });
+        }
+        const declaredLength = Number(dlResp.headers.get("content-length") || 0);
+        if (declaredLength > 50 * 1024 * 1024) {
+          return res.status(413).json({ error: "File too large (max 50MB)" });
         }
         const arrayBuf = await dlResp.arrayBuffer();
         buffer = Buffer.from(arrayBuf);
@@ -82,7 +117,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       const shareId = crypto.randomBytes(6).toString("base64url").slice(0, 8);
       const ext = mediaType.includes("video") ? "mp4" : mediaType.includes("jpeg") ? "jpg" : "png";
-      const contentType = mediaType.startsWith("video") ? "video/mp4" : mediaType.startsWith("image/") ? mediaType : "image/png";
+      // Allowlist the stored Content-Type. Passing any "image/*" through meant
+      // image/svg+xml could be stored in the PUBLIC bucket and later served
+      // back (via /api/share-image and /api/download) as executable markup —
+      // stored XSS under our own domain. Unknown types degrade to PNG.
+      const SAFE_SHARE_TYPES = new Set([
+        "image/png", "image/jpeg", "image/jpg", "image/gif", "image/webp", "image/avif",
+      ]);
+      const requestedType = String(mediaType).split(";")[0].trim().toLowerCase();
+      const contentType = requestedType.startsWith("video")
+        ? "video/mp4"
+        : SAFE_SHARE_TYPES.has(requestedType) ? requestedType : "image/png";
 
       const mediaUpload = await uploadPublicMedia(
         buffer,

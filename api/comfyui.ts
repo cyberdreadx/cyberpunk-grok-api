@@ -169,6 +169,14 @@ export const config = {
   api: { bodyParser: { sizeLimit: "50mb" } },
 };
 
+/**
+ * RunPod job ids and endpoint ids are interpolated into request paths that carry
+ * our RunPod API key. Anything outside this charset (notably "/" and "..") could
+ * redirect that credentialed request to another RunPod route — e.g.
+ * promptId="../../../graphql" or jobId="../purge-queue".
+ */
+const SAFE_ID_RE = /^[A-Za-z0-9_-]{1,128}$/;
+
 const COMFY_COSTS: Record<string, number> = {
   "txt2img": 3,
   "zimage": 3,
@@ -2589,7 +2597,13 @@ Rules:
           : workflowType === "gltch-wan" && useVidUpscale ? "gltch-wan-hd"
             : workflowType;
       const isLtxWorkflow = workflowType === "ltx-video" || workflowType === "ltx-animate";
-      const baseCost = isLtxWorkflow ? ltxCostForFrames(frameCount) : (COMFY_COSTS[costKey] ?? 1);
+      // An unpriced workflowType used to fall back to 1 credit while still
+      // running a full generation (the builder defaults to txt2img), so any
+      // made-up type bought a 3-credit image for 1. Refuse unknown types.
+      if (!isLtxWorkflow && COMFY_COSTS[costKey] === undefined) {
+        return res.status(400).json({ error: `Unknown workflow type: ${String(workflowType)}` });
+      }
+      const baseCost = isLtxWorkflow ? ltxCostForFrames(frameCount) : COMFY_COSTS[costKey];
       // LTX bundles native audio into its per-second price; the +1 ambient surcharge is WAN-only.
       const audioCost = !isLtxWorkflow && audioMode === "ambient" ? 1 : 0;
       const rawCost = skipCredits ? 0 : (baseCost + audioCost);
@@ -3042,13 +3056,16 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
 
         const result = (await resp.json()) as any;
 
-        // Log usage
+        // Log usage. job_id binds this row to the RunPod job so the refund paths
+        // below can target the EXACT job that failed — matching on "most recent
+        // unfinalized row" let a caller poll a cancelled job repeatedly and
+        // refund unrelated successful jobs (unlimited credit minting).
         if (!isAdminUser || adminTestCredits) {
           const sql = getDb();
           const logMode = `comfy-${workflowType}`;
           await sql`
-            INSERT INTO usage_log (user_id, mode, credits_used, prompt)
-            VALUES (${auth.userId}::uuid, ${logMode}, ${cost}, ${(prompt || "").slice(0, 500)})
+            INSERT INTO usage_log (user_id, mode, credits_used, prompt, job_id)
+            VALUES (${auth.userId}::uuid, ${logMode}, ${cost}, ${(prompt || "").slice(0, 500)}, ${String(result.id || "")})
           `.catch(() => { });
         }
 
@@ -3102,6 +3119,12 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
       const { promptId, outputType, runpodEndpointId } = req.body;
       if (!promptId)
         return res.status(400).json({ error: "promptId is required" });
+      // Both values are interpolated into the RunPod URL path alongside our API
+      // key — reject anything that could traverse to another RunPod route.
+      if (!SAFE_ID_RE.test(String(promptId)))
+        return res.status(400).json({ error: "Invalid promptId" });
+      if (runpodEndpointId && !SAFE_ID_RE.test(String(runpodEndpointId)))
+        return res.status(400).json({ error: "Invalid runpodEndpointId" });
 
       // Use the endpoint from generate if provided (required for split endpoints).
       const pollEndpoint = runpodEndpointId
@@ -3160,13 +3183,9 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
               const sql = getDb();
               const updated = await sql`
                 UPDATE usage_log SET execution_time_ms = ${execMs}, api_cost_cents = ${runpodCostCents}
-                WHERE id = (
-                  SELECT id FROM usage_log
-                  WHERE user_id = ${auth.userId}::uuid
-                    AND mode LIKE 'comfy-%'
-                    AND execution_time_ms IS NULL
-                  ORDER BY created_at DESC LIMIT 1
-                )
+                WHERE job_id = ${String(promptId)}
+                  AND user_id = ${auth.userId}::uuid
+                  AND execution_time_ms IS NULL
                 RETURNING id, credits_used
               ` as any[];
               if (updated.length > 0) costTrackedRow = updated[0];
@@ -3435,31 +3454,29 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
             : " Check server logs for Blob upload errors.";
 
           // Auto-refund: user paid but received nothing because delivery failed.
-          // Prefer the exact row the cost tracker stamped above (this job);
-          // only fall back to the NULL-exec search when cost tracking didn't
-          // run, and never touch rows older than 2h (stale-row guard).
+          // Bound to THIS job via job_id, and claimed with a single atomic UPDATE
+          // so concurrent polls of the same job can only refund once.
           let refunded = 0;
           if (auth?.userId) {
             try {
               const sql = getDb();
-              let target: { id: string; credits_used: number } | null = costTrackedRow;
-              if (!target) {
-                const rows = await sql`
-                  SELECT id, credits_used FROM usage_log
-                  WHERE user_id = ${auth.userId}::uuid
-                    AND mode LIKE 'comfy-%'
-                    AND mode NOT LIKE '%-refunded%'
-                    AND execution_time_ms IS NULL
-                    AND created_at > now() - interval '2 hours'
-                  ORDER BY created_at DESC LIMIT 1
-                ` as any[];
-                target = rows[0] || null;
-              }
-              if (target && target.credits_used > 0) {
-                refunded = target.credits_used;
+              const claimed = await sql`
+                UPDATE usage_log
+                SET execution_time_ms = COALESCE(execution_time_ms, 0),
+                    mode = mode || '-refunded-undelivered'
+                WHERE job_id = ${String(promptId)}
+                  AND user_id = ${auth.userId}::uuid
+                  AND mode LIKE 'comfy-%'
+                  AND mode NOT LIKE '%-refunded%'
+                  AND credits_used > 0
+                RETURNING id, credits_used
+              ` as any[];
+              if (claimed.length > 0) {
+                refunded = claimed[0].credits_used;
                 await sql`SELECT add_pack_credits(${auth.userId}::uuid, ${refunded})`;
-                await sql`UPDATE usage_log SET execution_time_ms = COALESCE(execution_time_ms, 0), mode = mode || '-refunded-undelivered' WHERE id = ${target.id} AND mode NOT LIKE '%-refunded%'`;
-                console.log(`[comfyui-poll] Refunded ${refunded} credits to ${auth.userId} after undelivered output`);
+                console.log(`[comfyui-poll] Refunded ${refunded} credits to ${auth.userId} after undelivered output (job ${promptId})`);
+              } else {
+                console.log(`[comfyui-poll] No refundable row for job ${promptId} (user ${auth.userId}) — undelivered`);
               }
             } catch (e: any) {
               console.error("[comfyui-poll] undelivered refund failed:", e.message);
@@ -3474,29 +3491,32 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           const errMsg = data.error || data.output?.error || `Job ${data.status.toLowerCase()}`;
 
           // Refund credits — RunPod-side failures (insufficient balance, worker
-          // crash, OOM, timeout, etc.) are not the user's fault. We refund based
-          // on the most recent comfy-* usage_log row for this user that hasn't
-          // been finalized (no execution_time_ms set). Same row the COMPLETED
-          // branch updates with execution time, so the matching is consistent.
+          // crash, OOM, timeout, etc.) are not the user's fault. The refund is
+          // bound to THIS job via job_id and claimed with one atomic UPDATE, so
+          // a job can be refunded at most once and only to the user who ran it.
+          // (Previously this matched "newest unfinalized row for this user",
+          // which let anyone repeatedly poll one cancelled job to refund their
+          // other successful jobs — unlimited credit minting.)
           let refunded = 0;
           if (auth?.userId) {
             try {
               const sql = getDb();
-              const rows = await sql`
-                SELECT id, credits_used FROM usage_log
-                WHERE user_id = ${auth.userId}::uuid
+              const claimed = await sql`
+                UPDATE usage_log
+                SET execution_time_ms = 0, mode = mode || '-refunded'
+                WHERE job_id = ${String(promptId)}
+                  AND user_id = ${auth.userId}::uuid
                   AND mode LIKE 'comfy-%'
                   AND mode NOT LIKE '%-refunded%'
-                  AND execution_time_ms IS NULL
-                  AND created_at > now() - interval '2 hours'
-                ORDER BY created_at DESC LIMIT 1
+                  AND credits_used > 0
+                RETURNING id, credits_used
               ` as any[];
-              if (rows.length > 0 && rows[0].credits_used > 0) {
-                refunded = rows[0].credits_used;
+              if (claimed.length > 0) {
+                refunded = claimed[0].credits_used;
                 await sql`SELECT add_pack_credits(${auth.userId}::uuid, ${refunded})`;
-                // Mark this row as refunded so it isn't matched again.
-                await sql`UPDATE usage_log SET execution_time_ms = 0, mode = mode || '-refunded' WHERE id = ${rows[0].id}`;
-                console.log(`[comfyui-poll] Refunded ${refunded} credits to ${auth.userId} after RunPod ${data.status}`);
+                console.log(`[comfyui-poll] Refunded ${refunded} credits to ${auth.userId} after RunPod ${data.status} (job ${promptId})`);
+              } else {
+                console.log(`[comfyui-poll] No refundable row for job ${promptId} (user ${auth.userId}) — ${data.status}`);
               }
             } catch (e: any) {
               console.error("[comfyui-poll] refund failed:", e.message);
@@ -3605,6 +3625,19 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
       if (!jobId || typeof jobId !== "string") {
         return res.status(400).json({ error: "jobId is required" });
       }
+      // jobId lands in the RunPod URL path next to our API key — "../purge-queue"
+      // would otherwise reach the admin-only purge route.
+      if (!SAFE_ID_RE.test(jobId)) {
+        return res.status(400).json({ error: "Invalid jobId" });
+      }
+      // Only the user who submitted the job may cancel it (admins may cancel any).
+      if (!isAdminUser && auth?.userId) {
+        const sql = getDb();
+        const [owned] = await sql`
+          SELECT 1 FROM usage_log WHERE job_id = ${jobId} AND user_id = ${auth.userId}::uuid LIMIT 1
+        `.catch(() => [undefined]);
+        if (!owned) return res.status(403).json({ error: "Not your job" });
+      }
       if (backend.mode === "runpod") {
         const resp = await runpodRequest(
           backend.runpodEndpoint!, backend.runpodKey!,
@@ -3699,8 +3732,9 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
       return res.status(200).json({ filename: fname, subfolder: "", type: "input" });
     }
 
-    // ========== S3-TEST (diagnostic to verify S3 connectivity) ==========
+    // ========== S3-TEST (diagnostic to verify S3 connectivity) — admin only ==========
     if (action === "s3-test") {
+      if (!isAdminUser) return res.status(403).json({ error: "Admin only" });
       const endpoint = process.env.RUNPOD_S3_ENDPOINT;
       const accessKey = process.env.RUNPOD_S3_ACCESS_KEY;
       const secretKey = process.env.RUNPOD_S3_SECRET_KEY;
@@ -3748,6 +3782,17 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
       const { url } = req.body;
       if (!url || typeof url !== "string" || !url.startsWith("https://")) {
         return res.status(400).json({ error: "Valid HTTPS url is required" });
+      }
+      // This proxy reads AND deletes using our RunPod S3 credentials, and
+      // parseS3Url takes bucket/key from the path while ignoring the host — so
+      // an arbitrary host would let a caller reach objects outside our storage.
+      // Pin it to the configured RunPod S3 endpoint.
+      const s3EndpointHost = (() => {
+        try { return new URL(process.env.RUNPOD_S3_ENDPOINT || "").host; } catch { return ""; }
+      })();
+      const reqHost = (() => { try { return new URL(url).host; } catch { return ""; } })();
+      if (!s3EndpointHost || reqHost !== s3EndpointHost) {
+        return res.status(400).json({ error: "URL host not allowed" });
       }
 
       try {

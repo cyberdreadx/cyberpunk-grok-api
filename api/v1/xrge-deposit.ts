@@ -42,6 +42,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: "Zero-value transfer" });
     }
 
+    // The sender must be THIS user's bound wallet. verifyXrgeTransfer only
+    // checks the recipient, so without this anyone watching the chain could
+    // claim someone else's confirmed deposit by racing them to this endpoint
+    // and then withdrawing the tokens to their own address.
+    const [owner] = await sql`SELECT wallet_address FROM users WHERE id = ${userId}`;
+    const boundWallet = String(owner?.wallet_address || "").trim().toLowerCase();
+    const sender = String(transfer.from || "").trim().toLowerCase();
+    if (!boundWallet) {
+      return res.status(400).json({ error: "Bind your wallet to your account before depositing." });
+    }
+    if (sender !== boundWallet) {
+      console.warn(`[xrge-deposit] sender mismatch: tx from ${sender}, user ${userId} bound ${boundWallet}`);
+      return res.status(403).json({ error: "This transfer was not sent from your linked wallet." });
+    }
+
+    // A single on-chain tx must not be redeemable through both the order flow
+    // (xrge_orders, /api/xrge-verify) and the bank flow (xrge_bank_txns).
+    const [alreadyOrder] = await sql`
+      SELECT id FROM xrge_orders WHERE lower(tx_hash) = ${normalizedHash} AND status = 'verified' LIMIT 1
+    `.catch(() => [undefined]);
+    if (alreadyOrder) {
+      return res.status(400).json({ error: "This transaction has already been credited" });
+    }
+
     // Atomically: insert txn record (unique tx_hash prevents double-credit),
     // then credit balance — all in one CTE so concurrent requests can't both succeed
     const result = await sql`

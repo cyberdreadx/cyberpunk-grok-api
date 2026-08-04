@@ -52,10 +52,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const sql = getDb();
+  /**
+   * Refund at most once per job. The job token is a bearer credential valid for
+   * 30 minutes and fully replayable, so without an idempotency key a caller
+   * could force one failure and then loop this endpoint to mint credits
+   * indefinitely. one_time_claims has UNIQUE(user_id, claim_key); the INSERT
+   * only returns a row the first time, and that gates the grant.
+   */
   const refund = async () => {
     if (job.isAdmin) return;
     try {
+      const claim = await sql`
+        INSERT INTO one_time_claims (user_id, claim_key, credits)
+        VALUES (${job.userId}::uuid, ${`seedance_refund_${job.requestId}`}, ${job.seedCost})
+        ON CONFLICT (user_id, claim_key) DO NOTHING
+        RETURNING id
+      ` as any[];
+      if (claim.length === 0) {
+        console.warn(`[seedance-status] duplicate refund blocked for job ${job.requestId} (user ${job.userId})`);
+        return;
+      }
       await sql`SELECT add_pack_credits(${job.userId}::uuid, ${job.seedCost})`;
+      console.log(`[seedance-status] refunded ${job.seedCost} credits for job ${job.requestId}`);
     } catch (e: any) {
       console.error("[seedance-status] refund failed:", e.message);
     }

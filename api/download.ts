@@ -72,12 +72,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(upstream.status).json({ error: `Upstream returned ${upstream.status}` });
     }
 
-    const contentType = upstream.headers.get("content-type") || "application/octet-stream";
+    const upstreamType = (upstream.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
     const contentLength = upstream.headers.get("content-length");
     const inline = req.query.inline === "1" || req.query.inline === "true";
 
+    // Never let this proxy serve active content from our own origin. The host
+    // allowlist accepts ANY pub-*.r2.dev bucket (anyone can create one), and
+    // Netlify rewrites /api/* to this server, so echoing an upstream
+    // "text/html" or "image/svg+xml" with inline disposition would execute
+    // attacker script same-origin with the SPA and expose the stored JWT.
+    const SAFE_MEDIA_TYPES = new Set([
+      "image/png", "image/jpeg", "image/jpg", "image/gif", "image/webp", "image/avif",
+      "video/mp4", "video/webm", "video/quicktime",
+      "audio/mpeg", "audio/mp3", "audio/wav", "audio/ogg",
+      "application/pdf",
+    ]);
+    const isSafeMedia = SAFE_MEDIA_TYPES.has(upstreamType);
+    const contentType = isSafeMedia ? upstreamType : "application/octet-stream";
+
     res.setHeader("Content-Type", contentType);
-    if (inline) {
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    // Anything not on the media allowlist is force-downloaded, never rendered.
+    if (inline && isSafeMedia) {
       res.setHeader("Content-Disposition", `inline; filename="${filename}"`);
     } else {
       res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);

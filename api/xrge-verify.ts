@@ -71,6 +71,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: "This transaction has already been used for another order" });
     }
 
+    // ...and must not already have been redeemed through the bank/deposit flow,
+    // which dedupes in a different table (xrge_bank_txns). Without this check a
+    // single payment can be claimed once here and once via /api/v1/xrge-deposit.
+    const bankDupes = await sql`
+      SELECT id FROM xrge_bank_txns
+      WHERE lower(tx_hash) = ${txHash.trim().toLowerCase()} AND type = 'deposit'
+      LIMIT 1
+    `.catch(() => []);
+    if (bankDupes.length > 0) {
+      return res.status(400).json({ error: "This transaction has already been credited" });
+    }
+
     // Verify on-chain
     const config = await getXrgeConfig();
     const transfer = await verifyXrgeTransfer(

@@ -221,11 +221,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(409).json({ error: "You already have a pending payout request" });
       }
 
-      // Deduct balance and create request
-      await sql`
+      // Deduct balance and create request. The guard makes the deduction atomic:
+      // the Neon HTTP driver autocommits each statement, so without it N
+      // concurrent requests all pass the read-only checks above and each book a
+      // full-balance payout, driving cash_balance_cents negative.
+      const deducted = await sql`
         UPDATE users SET cash_balance_cents = cash_balance_cents - ${amount}, updated_at = now()
-        WHERE id = ${auth.userId}::uuid
-      `;
+        WHERE id = ${auth.userId}::uuid AND cash_balance_cents >= ${amount}
+        RETURNING id
+      ` as any[];
+      if (deducted.length === 0) {
+        return res.status(402).json({ error: "Insufficient balance" });
+      }
       const [row] = await sql`
         INSERT INTO payout_requests (user_id, amount_cents, method, payout_details)
         VALUES (${auth.userId}::uuid, ${amount}, ${method}, ${payoutDetails})

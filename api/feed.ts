@@ -524,14 +524,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       remaining -= deductSub;
       let deductPack = remaining;
 
-      await sql`
+      // Guarded deduction: each statement autocommits on the Neon HTTP driver,
+      // so without the balance predicate N concurrent unlocks of N different
+      // posts all pass the check above and each deduct in full, taking the
+      // balance negative while every unlock (and creator payout) still lands.
+      const debited = await sql`
         UPDATE users SET
           daily_credits = daily_credits - ${deductDaily},
           sub_credits = sub_credits - ${deductSub},
           pack_credits = pack_credits - ${deductPack},
           updated_at = now()
         WHERE id = ${auth.userId}::uuid
-      `;
+          AND daily_credits >= ${deductDaily}
+          AND sub_credits >= ${deductSub}
+          AND pack_credits >= ${deductPack}
+        RETURNING id
+      ` as any[];
+      if (debited.length === 0) {
+        return res.status(402).json({ error: "Not enough credits", needed: post.lock_cost });
+      }
 
       await sql`
         INSERT INTO feed_unlocks (post_id, user_id, credits_paid, unlock_method)
