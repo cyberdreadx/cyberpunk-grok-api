@@ -13,11 +13,26 @@ interface RateLimitConfig {
   windowSeconds: number;
 }
 
-/** Extract the client IP from a Vercel request. */
+/**
+ * Extract the client IP.
+ *
+ * The FIRST X-Forwarded-For entry is attacker-controlled: a client can send its
+ * own X-Forwarded-For and nginx ($proxy_add_x_forwarded_for) appends the real
+ * peer rather than replacing it. Taking [0] therefore let anyone land in a fresh
+ * rate-limit bucket per request, which removed the ceiling on login/signup/
+ * password-reset attempts. Prefer X-Real-IP (our nginx overwrites it with
+ * $remote_addr), then the LAST XFF hop, then the socket.
+ */
 export function getClientIp(req: VercelRequest): string {
+  const realIp = req.headers["x-real-ip"];
+  if (typeof realIp === "string" && realIp.trim()) return realIp.trim();
+
   const forwarded = req.headers["x-forwarded-for"];
-  if (typeof forwarded === "string") return forwarded.split(",")[0].trim();
-  if (Array.isArray(forwarded)) return forwarded[0];
+  const chain = Array.isArray(forwarded) ? forwarded.join(",") : forwarded;
+  if (typeof chain === "string" && chain.trim()) {
+    const hops = chain.split(",").map((s) => s.trim()).filter(Boolean);
+    if (hops.length > 0) return hops[hops.length - 1];
+  }
   return req.socket?.remoteAddress || "unknown";
 }
 
@@ -31,53 +46,29 @@ export async function checkRateLimit(
   config: RateLimitConfig,
 ): Promise<{ allowed: boolean; remaining: number }> {
   const sql = getDb();
-  const windowStart = new Date(Date.now() - config.windowSeconds * 1000).toISOString();
 
-  // Try to get existing entry within the current window
+  /*
+   * Single-statement upsert: read-then-write let a concurrent burst all observe
+   * the same count and all pass, so no limit in the app actually bounded a
+   * parallel attacker. The window reset and the increment now happen inside one
+   * atomic UPDATE, and the resulting count decides the verdict.
+   */
   const rows = await sql`
-    SELECT count, window_start FROM rate_limits
-    WHERE key = ${key} AND endpoint = ${endpoint}
-  `;
+    INSERT INTO rate_limits (key, endpoint, window_start, count)
+    VALUES (${key}, ${endpoint}, now(), 1)
+    ON CONFLICT (key, endpoint) DO UPDATE
+    SET count = CASE
+          WHEN rate_limits.window_start < now() - make_interval(secs => ${config.windowSeconds}) THEN 1
+          ELSE rate_limits.count + 1
+        END,
+        window_start = CASE
+          WHEN rate_limits.window_start < now() - make_interval(secs => ${config.windowSeconds}) THEN now()
+          ELSE rate_limits.window_start
+        END
+    RETURNING count
+  ` as any[];
 
-  if (rows.length === 0) {
-    // No entry — create one
-    try {
-      await sql`
-        INSERT INTO rate_limits (key, endpoint, window_start, count)
-        VALUES (${key}, ${endpoint}, now(), 1)
-      `;
-    } catch {
-      // Race condition: another request already inserted
-      await sql`
-        UPDATE rate_limits SET count = count + 1
-        WHERE key = ${key} AND endpoint = ${endpoint}
-      `;
-    }
-    return { allowed: true, remaining: config.max - 1 };
-  }
-
-  const entry = rows[0];
-
-  // If the window has expired, reset it
-  if (new Date(entry.window_start) < new Date(windowStart)) {
-    await sql`
-      UPDATE rate_limits
-      SET count = 1, window_start = now()
-      WHERE key = ${key} AND endpoint = ${endpoint}
-    `;
-    return { allowed: true, remaining: config.max - 1 };
-  }
-
-  // Window is still active — check the count
-  if (entry.count >= config.max) {
-    return { allowed: false, remaining: 0 };
-  }
-
-  // Increment
-  await sql`
-    UPDATE rate_limits SET count = count + 1
-    WHERE key = ${key} AND endpoint = ${endpoint}
-  `;
-
-  return { allowed: true, remaining: config.max - entry.count - 1 };
+  const count = Number(rows[0]?.count ?? 1);
+  if (count > config.max) return { allowed: false, remaining: 0 };
+  return { allowed: true, remaining: Math.max(0, config.max - count) };
 }

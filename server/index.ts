@@ -18,6 +18,7 @@ import cron from "node-cron";
 import path from "node:path";
 import fs from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { isAllowedOrigin } from "../api/_lib/cors";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -102,9 +103,16 @@ async function main() {
     next();
   });
 
+  // Credentialed CORS is limited to our own origins. `origin: true` reflected
+  // whatever the caller sent while also allowing credentials, so any site could
+  // make cookie-bearing calls to this API. Unknown origins still get anonymous
+  // access (callback false ⇒ no CORS headers ⇒ no credentialed reads).
   app.use(
     cors({
-      origin: true,
+      origin(origin, callback) {
+        if (!origin) return callback(null, true); // curl / server-to-server
+        return callback(null, isAllowedOrigin(origin));
+      },
       credentials: true,
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
       allowedHeaders: ["Content-Type", "Authorization", "X-API-Key"],

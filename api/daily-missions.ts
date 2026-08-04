@@ -312,17 +312,25 @@ async function claimStreakBonus(sql: any, userId: string, res: VercelResponse) {
     return res.status(409).json({ error: "Streak bonus already claimed this cycle" });
   }
 
-  await sql`
-    UPDATE users SET pack_credits = pack_credits + ${STREAK_BONUS}, updated_at = now()
-    WHERE id = ${userId}
-  `;
-
+  // Claim the flag FIRST, conditionally — the read above and the write below
+  // are separate autocommitted statements, so concurrent calls all saw
+  // streak_bonus_claimed = false and each granted the bonus. Whoever flips the
+  // flag wins; everyone else gets the 409.
   const today = new Date().toISOString().split("T")[0];
-  await sql`
+  const claimed = await sql`
     UPDATE daily_mission_progress
     SET streak_bonus_claimed = true, last_claim_date = ${today},
         total_earned = total_earned + ${STREAK_BONUS}, updated_at = now()
-    WHERE user_id = ${userId}
+    WHERE user_id = ${userId} AND streak_bonus_claimed = false
+    RETURNING user_id
+  ` as any[];
+  if (claimed.length === 0) {
+    return res.status(409).json({ error: "Streak bonus already claimed this cycle" });
+  }
+
+  await sql`
+    UPDATE users SET pack_credits = pack_credits + ${STREAK_BONUS}, updated_at = now()
+    WHERE id = ${userId}
   `;
 
   // Karma — completing a 7-day streak is a strong engagement signal

@@ -18,9 +18,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: "Email and password required" });
     }
 
+    const normalizedEmail = email.toLowerCase().trim();
+
     const ip = getClientIp(req);
     const { allowed } = await checkRateLimit(ip, "login", { max: 10, windowSeconds: 900 });
     if (!allowed) {
+      return res.status(429).json({ error: "Too many login attempts. Please try again later." });
+    }
+    // Per-account ceiling as well: the IP limit alone does nothing against an
+    // attacker spreading guesses for one account across many addresses.
+    const perAccount = await checkRateLimit(`acct:${normalizedEmail}`, "login", { max: 20, windowSeconds: 900 });
+    if (!perAccount.allowed) {
       return res.status(429).json({ error: "Too many login attempts. Please try again later." });
     }
 
@@ -29,7 +37,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const rows = await sql`
       SELECT id, email, password_hash, email_verified, two_factor_enabled
       FROM users
-      WHERE email = ${email.toLowerCase().trim()}
+      WHERE email = ${normalizedEmail}
     `;
 
     if (rows.length === 0) {

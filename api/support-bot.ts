@@ -155,13 +155,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       reply = await callLovableAI(sys, ctx);
       resolution = "explained";
     } else if (issue_code === "failed_jobs_refund") {
-      // Pull recent paid jobs
+      // Pull recent paid jobs that the SERVER never finalized.
+      //
+      // media_errors rows are self-reported (POST /api/media-errors accepts any
+      // URL with no proof), so correlating on them alone let anyone claim a
+      // refund for a job that actually delivered. execution_time_ms is stamped
+      // by the poll path when a job completes, so "still NULL" is server-side
+      // evidence that nothing was delivered; '-refunded' modes are already
+      // settled and must not be paid twice.
       const jobs = await sql`
         SELECT id, mode, credits_used, prompt, created_at
         FROM usage_log
         WHERE user_id = ${auth.userId}::uuid
           AND credits_used > 0
           AND created_at > now() - interval '24 hours'
+          AND execution_time_ms IS NULL
+          AND mode NOT LIKE '%-refunded%'
         ORDER BY created_at DESC
         LIMIT 50
       `;
@@ -211,6 +220,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       if (toRefund > 0) {
+        // Settle the rows first so a repeat call (or a concurrent one) cannot
+        // claim the same jobs again; the 7-day details_json check alone left a
+        // window and expired after a week.
+        await sql`
+          UPDATE usage_log
+          SET execution_time_ms = 0, mode = mode || '-refunded-support'
+          WHERE id = ANY(${refundIds}::uuid[]) AND mode NOT LIKE '%-refunded%'
+        `.catch(() => {});
         await sql`UPDATE users SET sub_credits = sub_credits + ${toRefund}, updated_at = now() WHERE id = ${auth.userId}::uuid`;
         refunded = toRefund;
         resolution = "refunded";

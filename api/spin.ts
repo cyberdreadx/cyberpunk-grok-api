@@ -197,13 +197,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       streak = 1;
     }
 
-    await sql`
-      UPDATE users SET 
-        last_free_spin = now(), 
+    // Re-assert the cooldown in the UPDATE itself: the read above happens in a
+    // separate autocommitted statement, so a concurrent burst all passed the
+    // check and each collected a free spin. Only the first writer wins.
+    const spinClaimed = await sql`
+      UPDATE users SET
+        last_free_spin = now(),
         spin_streak = ${streak},
         updated_at = now()
       WHERE id = ${auth.userId}
-    `;
+        AND (last_free_spin IS NULL OR last_free_spin <= now() - make_interval(secs => ${FREE_SPIN_COOLDOWN_MS / 1000}))
+      RETURNING id
+    ` as any[];
+    if (spinClaimed.length === 0) {
+      return res.status(400).json({
+        error: "Free spin not available yet",
+        nextFreeAt: new Date(lastSpin + FREE_SPIN_COOLDOWN_MS).toISOString(),
+      });
+    }
   }
 
   const minCredits = getStreakMinimum(streak);

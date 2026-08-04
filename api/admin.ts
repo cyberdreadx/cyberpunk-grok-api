@@ -1605,6 +1605,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           if (!target) return res.status(404).json({ error: "User not found" });
           targetId = target.id;
         }
+        // The owner account is not bannable. ban-user is in MOD_ALLOWED_ACTIONS,
+        // so without this a feed moderator could ban the admin (and wipe their
+        // karma), locking them out of feed/chat/generation.
+        const [targetRow] = await sql`SELECT email FROM users WHERE id = ${targetId}::uuid`;
+        if (targetRow?.email === ADMIN_EMAIL) {
+          return res.status(403).json({ error: "Cannot ban the owner account" });
+        }
         // Calculate expires_at from duration (hours). null/0 = permanent.
         const DURATION_MAP: Record<string, number> = { "1h": 1, "24h": 24, "7d": 168, "30d": 720 };
         let expiresAt: string | null = null;
