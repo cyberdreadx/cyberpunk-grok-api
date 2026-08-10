@@ -25,6 +25,7 @@ import { Send, Users, Globe, Loader2, Plus, X, Lock, Zap, ShieldAlert, Sparkles,
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
 import MobileBottomNav from "@/components/MobileBottomNav";
+import DesktopChatLink from "@/components/DesktopChatLink";
 import MobileCreditsPill from "@/components/MobileCreditsPill";
 import FeatureExplainer from "@/components/FeatureExplainer";
 import ReelViewer from "@/components/ReelViewer";
@@ -916,7 +917,10 @@ const FeedPage: React.FC = () => {
       <div className="max-w-6xl mx-auto px-4 py-6 space-y-4 pb-24">
         {/* Top bar */}
         <div className="flex items-center justify-between gap-3 flex-wrap">
-          {navTrigger}
+          <div className="flex items-center gap-2">
+            {navTrigger}
+            <DesktopChatLink />
+          </div>
           {isAuthenticated && (
             <button
               onClick={() => navigate("/profile")}

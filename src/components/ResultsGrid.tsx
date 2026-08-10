@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Download, Maximize2, X, Trash2, ExternalLink, ChevronLeft, ChevronRight, Pencil, Film, Copy, Check, FolderPlus, FolderOpen, MoreVertical, FolderInput, Lock, LockOpen, ShieldCheck, Eye, EyeOff, ChevronDown, Send, Archive, Loader2, Link2, CheckSquare, Square, ListChecks, RotateCcw, XCircle, Search, CirclePlus, Lightbulb, Volume2, VolumeX } from "lucide-react";
+import { Download, Maximize2, X, Trash2, ExternalLink, ChevronLeft, ChevronRight, Pencil, Film, Copy, Check, FolderPlus, FolderOpen, MoreVertical, FolderInput, Lock, LockOpen, ShieldCheck, Eye, EyeOff, ChevronDown, Send, Archive, Loader2, Link2, CheckSquare, Square, ListChecks, RotateCcw, XCircle, Search, CirclePlus, Lightbulb, Volume2, VolumeX, LayoutGrid } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -878,6 +878,23 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
   // Sound toggle for the expanded video viewer — starts muted (autoplay), tap to unmute.
   const [expandedMuted, setExpandedMuted] = useState(true);
   const [mobileIndex, setMobileIndex] = useState(0);
+  /**
+   * Mobile layout: "single" is the original one-at-a-time swipe carousel,
+   * "grid" is a 2-up thumbnail wall for scanning a large library quickly.
+   * Persisted so the choice survives navigation — scrolling back through a few
+   * hundred items one swipe at a time was the complaint this fixes.
+   */
+  const [mobileView, setMobileView] = useState<"single" | "grid">(() => {
+    try {
+      return localStorage.getItem("library-mobile-view") === "grid" ? "grid" : "single";
+    } catch {
+      return "single";
+    }
+  });
+  const setMobileViewPersisted = useCallback((v: "single" | "grid") => {
+    setMobileView(v);
+    try { localStorage.setItem("library-mobile-view", v); } catch { /* ignore */ }
+  }, []);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [moveMenuId, setMoveMenuId] = useState<string | null>(null);
 
@@ -2003,8 +2020,98 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
         </div>
       )}
 
-      {/* Mobile swipeable carousel */}
+      {/* Mobile layout toggle — single (swipe) vs grid (scan) */}
       {filteredResults.length > 0 && (
+        <div className="sm:hidden flex items-center justify-between gap-2 pb-2">
+          <span className="font-mono-share text-[10px] text-muted-foreground/60">
+            {filteredResults.length} item{filteredResults.length === 1 ? "" : "s"}
+          </span>
+          <div className="flex items-center rounded border border-border/60 overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setMobileViewPersisted("single")}
+              aria-pressed={mobileView === "single"}
+              title="One at a time"
+              className={`flex items-center gap-1 px-2.5 py-1 font-orbitron text-[9px] tracking-widest transition-colors ${
+                mobileView === "single"
+                  ? "bg-primary/15 text-primary"
+                  : "text-muted-foreground hover:text-primary"
+              }`}
+            >
+              <Square className="w-3 h-3" /> ONE
+            </button>
+            <button
+              type="button"
+              onClick={() => setMobileViewPersisted("grid")}
+              aria-pressed={mobileView === "grid"}
+              title="Grid view"
+              className={`flex items-center gap-1 px-2.5 py-1 font-orbitron text-[9px] tracking-widest border-l border-border/60 transition-colors ${
+                mobileView === "grid"
+                  ? "bg-primary/15 text-primary"
+                  : "text-muted-foreground hover:text-primary"
+              }`}
+            >
+              <LayoutGrid className="w-3 h-3" /> GRID
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile grid — tap a tile to jump into single view at that item
+          (or to toggle selection while select mode is active). */}
+      {filteredResults.length > 0 && mobileView === "grid" && (
+        <div className="sm:hidden grid grid-cols-2 gap-2">
+          {filteredResults.map((result, idx) => (
+            <button
+              type="button"
+              key={result.id}
+              onClick={() => {
+                if (selectMode) { toggleSelect(result.id); return; }
+                setMobileIndex(idx);
+                setMobileViewPersisted("single");
+              }}
+              className={`relative aspect-square border rounded overflow-hidden bg-black/40 transition-colors ${
+                selectMode && selectedIds.has(result.id)
+                  ? "border-primary ring-1 ring-primary/40"
+                  : "border-border"
+              }`}
+            >
+              {result.type === "image" ? (
+                <img
+                  src={result.url}
+                  alt={result.revised_prompt || "Generated image"}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                  decoding="async"
+                />
+              ) : (
+                <>
+                  {/* preload="metadata" so the poster frame renders without
+                      pulling the whole clip for every tile. */}
+                  <video
+                    src={result.url}
+                    className="w-full h-full object-cover"
+                    muted
+                    playsInline
+                    preload="metadata"
+                  />
+                  <span className="absolute bottom-1 right-1 p-0.5 rounded bg-background/70 text-primary">
+                    <Film className="w-3 h-3" />
+                  </span>
+                </>
+              )}
+              {selectMode && selectedIds.has(result.id) && (
+                <span className="absolute top-1 left-1 w-4 h-4 rounded-full bg-primary text-background flex items-center justify-center text-[9px] font-bold">
+                  ✓
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Mobile swipeable carousel */}
+      {filteredResults.length > 0 && mobileView === "single" && (
         <div className="sm:hidden">
           <div
             className="relative border border-border rounded overflow-hidden bg-card"
