@@ -3,10 +3,11 @@ import { lazyWithRetry } from "@/lib/lazyWithRetry";
 import { createPortal } from "react-dom";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Sparkles, Image, Users, ShoppingCart, MoreHorizontal, HelpCircle, FileText, Shield, ScrollText, Rss, User, Settings as SettingsIcon, BadgeCheck, MessageSquare, Heart, Gift, Star, ClipboardList } from "lucide-react";
+import { Sparkles, Image, Users, ShoppingCart, MoreHorizontal, HelpCircle, FileText, Shield, ScrollText, Rss, User, Settings as SettingsIcon, BadgeCheck, MessageSquare, Heart, Gift, Star, ClipboardList, Mail } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCredits } from "@/hooks/useCredits";
 import { useChatUnread } from "@/hooks/useChatUnread";
+import { useDmUnread } from "@/hooks/useDmUnread";
 
 const CommunityPotDialog = lazyWithRetry(() => import("@/components/CommunityPotDialog"), "community-pot-dialog");
 
@@ -37,6 +38,7 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   const { user } = useAuth();
   const { totalCredits, loading: creditsLoading } = useCredits(user);
   const { unread: chatUnread } = useChatUnread(!!isAuthenticated);
+  const { unread: dmUnread } = useDmUnread(!!isAuthenticated);
   const [moreOpen, setMoreOpen] = useState(false);
   const [potOpen, setPotOpen] = useState(false);
 
@@ -45,6 +47,7 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   const isCharacters = location.pathname === "/characters";
   const isLibrary = location.pathname === "/library";
   const isChat = location.pathname === "/chat";
+  const isMessages = location.pathname === "/messages";
   const creditsBadge = !isAuthenticated ? null : creditsLoading ? "…" : totalCredits > 999 ? "999+" : totalCredits.toString();
 
   useEffect(() => {
@@ -77,15 +80,19 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
       active: isLibrary,
       onClick: () => { if (!isLibrary) navigate("/library"); setMoreOpen(false); },
     },
+    // DMs take the primary slot over the public chatroom: they're personal and
+    // time-sensitive, whereas the lobby is browsable. A 7th tab won't fit —
+    // min-w-[56px] x 7 overflows a 390px viewport — so CHAT ROOM stays in the
+    // "more" sheet below, where it now carries its own unread badge.
     ...(isAuthenticated ? [
       {
-        id: "chat",
-        label: "CHAT",
-        icon: MessageSquare,
-        active: isChat,
-        badge: chatUnread > 0 ? (chatUnread > 9 ? "9+" : String(chatUnread)) : null,
-        newBadge: chatUnread === 0,
-        onClick: () => { if (!isChat) navigate("/chat"); setMoreOpen(false); },
+        id: "messages",
+        label: "MSGS",
+        icon: Mail,
+        active: isMessages,
+        badge: dmUnread > 0 ? (dmUnread > 9 ? "9+" : String(dmUnread)) : null,
+        newBadge: dmUnread === 0,
+        onClick: () => { if (!isMessages) navigate("/messages"); setMoreOpen(false); },
       },
     ] : []),
     {
@@ -192,7 +199,12 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded hover:bg-primary/10 transition-colors"
               >
                 <MessageSquare className="w-4 h-4 text-primary/60" />
-                <span className="font-mono-share text-[11px] text-foreground/80">CHAT ROOM</span>
+                <span className="font-mono-share text-[11px] text-foreground/80 flex-1 text-left">CHAT ROOM</span>
+                {chatUnread > 0 && (
+                  <span className="min-w-[16px] h-4 px-1 rounded-full bg-primary text-background font-mono-share text-[9px] leading-4 text-center">
+                    {chatUnread > 9 ? "9+" : chatUnread}
+                  </span>
+                )}
               </button>
             )}
             {isAuthenticated && (

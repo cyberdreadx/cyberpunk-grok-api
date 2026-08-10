@@ -6,7 +6,7 @@ import CyberLayout from "@/components/CyberLayout";
 import StoriesBar from "@/components/StoriesBar";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import MobileCreditsPill from "@/components/MobileCreditsPill";
-import DesktopChatLink from "@/components/DesktopChatLink";
+import DesktopChatLink, { DesktopMessagesLink } from "@/components/DesktopChatLink";
 import PreferencesDialog from "@/components/PreferencesDialog";
 import SocialProofToast from "@/components/SocialProofToast";
 import {
@@ -1066,6 +1066,7 @@ const Index = () => {
         <div className="flex items-center justify-end sm:justify-start gap-2 flex-wrap pl-24 sm:pl-28">
           <MobileCreditsPill inline onOpenStore={() => setStoreOpen(true)} />
           <DesktopChatLink />
+          <DesktopMessagesLink />
         </div>
 
         {/* Stories */}

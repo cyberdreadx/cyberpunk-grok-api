@@ -25,7 +25,7 @@ import { Send, Users, Globe, Loader2, Plus, X, Lock, Zap, ShieldAlert, Sparkles,
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
 import MobileBottomNav from "@/components/MobileBottomNav";
-import DesktopChatLink from "@/components/DesktopChatLink";
+import DesktopChatLink, { DesktopMessagesLink } from "@/components/DesktopChatLink";
 import MobileCreditsPill from "@/components/MobileCreditsPill";
 import FeatureExplainer from "@/components/FeatureExplainer";
 import ReelViewer from "@/components/ReelViewer";
@@ -920,6 +920,7 @@ const FeedPage: React.FC = () => {
           <div className="flex items-center gap-2">
             {navTrigger}
             <DesktopChatLink />
+          <DesktopMessagesLink />
           </div>
           {isAuthenticated && (
             <button

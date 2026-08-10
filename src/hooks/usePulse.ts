@@ -35,6 +35,7 @@ export interface Pulse {
     tier: string | null;
   };
   notifUnread: number;
+  dmUnread: number;
   channels: ChannelPulse[];
 }
 

@@ -99,16 +99,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const rows = await sql`
         SELECT u.daily_credits, u.sub_credits, u.pack_credits, u.subscription_tier,
                (SELECT COUNT(*)::int FROM notifications n
-                 WHERE n.user_id = u.id AND n.read = false) AS notif_unread
+                 WHERE n.user_id = u.id AND n.read = false) AS notif_unread,
+               -- Two separate SUMs rather than one OR'd scan, so each side can
+               -- use its own index (idx_dm_threads_a / _b). Counts are
+               -- denormalised onto the thread, so this never touches dm_messages.
+               ((SELECT COALESCE(SUM(unread_a), 0)::int FROM dm_threads WHERE user_a = u.id)
+              + (SELECT COALESCE(SUM(unread_b), 0)::int FROM dm_threads WHERE user_b = u.id)
+               ) AS dm_unread
         FROM users u
         WHERE u.id = ${auth.userId}
       `;
       row = (rows as any[])[0];
     } catch {
-      // notifications table missing (migration 023 not applied) — degrade, don't 500.
+      // notifications / dm_threads missing (migration not applied) — degrade, don't 500.
       const rows = await sql`
         SELECT daily_credits, sub_credits, pack_credits, subscription_tier,
-               0 AS notif_unread
+               0 AS notif_unread, 0 AS dm_unread
         FROM users WHERE id = ${auth.userId}
       `;
       row = (rows as any[])[0];
@@ -136,6 +142,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         tier: row.subscription_tier ?? null,
       },
       notifUnread: Number(row.notif_unread || 0),
+      dmUnread: Number(row.dm_unread || 0),
       channels,
     });
   } catch (err: any) {

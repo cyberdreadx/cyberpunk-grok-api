@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { UserPlus, UserMinus, Edit2, Check, X, ArrowLeft, Camera, Loader2, Wallet, Ban, BadgeCheck, MessageSquare, Instagram, Link as LinkIcon } from "lucide-react";
+import { UserPlus, UserMinus, Edit2, Check, X, ArrowLeft, Camera, Loader2, Wallet, Ban, BadgeCheck, MessageSquare, Instagram, Link as LinkIcon, Mail } from "lucide-react";
 
 const SOCIAL_KEYS = ["instagram", "x", "tiktok", "onlyfans", "other"] as const;
 const SOCIAL_META: Record<string, { label: string; placeholder: string }> = {
@@ -222,6 +222,15 @@ const ProfilePage: React.FC = () => {
       if (personaPhotoInputRef.current) personaPhotoInputRef.current.value = "";
     }
   }, [profile?.officialCharacterId, toast, fetchProfile]);
+
+  // Open a DM with this profile. If a thread already exists, /messages finds it
+  // by userId; otherwise it opens a compose view and the first send creates it.
+  const [dmLoading, setDmLoading] = useState(false);
+  const startDm = () => {
+    if (!profile) return;
+    setDmLoading(true);
+    navigate(`/messages?to=${encodeURIComponent(profile.userId)}&u=${encodeURIComponent(profile.username || "user")}`);
+  };
 
   const handleFollow = async () => {
     if (!profile) return;
@@ -459,6 +468,17 @@ const ProfilePage: React.FC = () => {
                     <><UserPlus className="w-3 h-3 mr-1" /> FOLLOW</>
                   )}
                 </Button>
+                {user && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="font-mono-share text-[10px]"
+                    onClick={() => startDm()}
+                    disabled={dmLoading}
+                  >
+                    <Mail className="w-3 h-3 mr-1" /> {dmLoading ? "…" : "MESSAGE"}
+                  </Button>
+                )}
                 {profile.personaChatCharacterId && (
                   <Button
                     size="sm"
