@@ -24,25 +24,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const sql = getDb();
 
   // Self-heal: make sure the table exists even if migration 023 wasn't run.
-  try {
-    await sql`
-      CREATE TABLE IF NOT EXISTS notifications (
-        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-        user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        type text NOT NULL,
-        title text NOT NULL,
-        body text,
-        actor_id uuid REFERENCES users(id) ON DELETE SET NULL,
-        actor_username text,
-        actor_avatar_url text,
-        ref_id text,
-        read boolean NOT NULL DEFAULT false,
-        created_at timestamptz NOT NULL DEFAULT now()
-      )
-    `;
-  } catch (e) {
-    console.error("[notifications] ensure table failed", e);
-  }
+  // Guarded by a process-lifetime flag — this used to fire a DDL round-trip on
+  // EVERY request, which on a polled endpoint was a third of all traffic here
+  // doing nothing. Same pattern as _lib/notify.ts.
+  await ensureTable(sql);
 
   /* ── GET: list notifications ──────────────────────────── */
   if (req.method === "GET") {
@@ -92,4 +77,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   return res.status(405).json({ error: "Method not allowed" });
+}
+
+let tableEnsured = false;
+async function ensureTable(sql: any) {
+  if (tableEnsured) return;
+  try {
+    await sql`
+      CREATE TABLE IF NOT EXISTS notifications (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        type text NOT NULL,
+        title text NOT NULL,
+        body text,
+        actor_id uuid REFERENCES users(id) ON DELETE SET NULL,
+        actor_username text,
+        actor_avatar_url text,
+        ref_id text,
+        read boolean NOT NULL DEFAULT false,
+        created_at timestamptz NOT NULL DEFAULT now()
+      )
+    `;
+    await sql`CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, created_at DESC)`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_notifications_unread ON notifications(user_id, read) WHERE read = false`;
+    tableEnsured = true;
+  } catch (e) {
+    // Leave the flag unset so a later request retries; never block the response.
+    console.error("[notifications] ensure table failed", e);
+  }
 }

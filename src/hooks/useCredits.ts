@@ -4,7 +4,8 @@
  * No Supabase dependency. No realtime — uses polling after actions.
  */
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { usePulse } from "@/hooks/usePulse";
 import {
   apiFetch,
   backendEnabled,
@@ -79,33 +80,19 @@ export function useCredits(user: AuthUser | null) {
     fetchCredits();
   }, [fetchCredits]);
 
-  // Auto-refresh: poll while tab is visible, refetch on focus/visibility,
-  // and listen for cross-component "credits-changed" broadcasts so balances
-  // stay in sync without manual page refreshes.
+  // Auto-refresh: refetch on focus/visibility and on cross-component
+  // "credits-changed" broadcasts so balances stay in sync without a page reload.
+  //
+  // There is deliberately no timer here. /api/credits is one of the more
+  // expensive routes — it stacks the subscription + XRGE holder discount and
+  // reads the free-credit config — and a balance changes a handful of times a
+  // day, not every 30 seconds. The shared pulse carries a cheap balance
+  // signature instead; the effect below refetches only when it actually moves.
   useEffect(() => {
     if (!user) return;
 
-    let intervalId: ReturnType<typeof setInterval> | null = null;
-    const startPolling = () => {
-      if (intervalId) return;
-      intervalId = setInterval(() => {
-        if (document.visibilityState === "visible") fetchCredits();
-      }, 30000);
-    };
-    const stopPolling = () => {
-      if (intervalId) {
-        clearInterval(intervalId);
-        intervalId = null;
-      }
-    };
-
     const onVisibility = () => {
-      if (document.visibilityState === "visible") {
-        fetchCredits();
-        startPolling();
-      } else {
-        stopPolling();
-      }
+      if (document.visibilityState === "visible") fetchCredits();
     };
     const onFocus = () => fetchCredits();
     const onCreditsChanged = () => fetchCredits();
@@ -113,20 +100,37 @@ export function useCredits(user: AuthUser | null) {
       if (e.key === "credits-changed") fetchCredits();
     };
 
-    if (document.visibilityState === "visible") startPolling();
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("focus", onFocus);
     window.addEventListener("credits-changed", onCreditsChanged);
     window.addEventListener("storage", onStorage);
 
     return () => {
-      stopPolling();
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("focus", onFocus);
       window.removeEventListener("credits-changed", onCreditsChanged);
       window.removeEventListener("storage", onStorage);
     };
   }, [user, fetchCredits]);
+
+  // Pulse-driven refresh: the shared poll reports the authoritative balance and
+  // tier cheaply. When either differs from what we're showing, pull the full
+  // payload once. Steady state costs zero /api/credits requests.
+  const pulse = usePulse(!!user);
+  const lastSigRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!user || !pulse?.credits) return;
+    const sig = `${pulse.credits.total}|${pulse.credits.tier ?? ""}`;
+    if (lastSigRef.current === null) {
+      // First pulse after mount — fetchCredits() already ran, just record it.
+      lastSigRef.current = sig;
+      return;
+    }
+    if (lastSigRef.current !== sig) {
+      lastSigRef.current = sig;
+      fetchCredits();
+    }
+  }, [user, pulse, fetchCredits]);
 
   // Purchase one-time credit pack
   const purchaseCredits = useCallback(async (packageId: CreditPackage["id"]) => {

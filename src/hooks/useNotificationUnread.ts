@@ -1,52 +1,27 @@
 /**
- * Polls /api/notifications for unread count (bell badge).
+ * Unread notification count for the bell badge.
+ *
+ * No longer polls /api/notifications on its own clock — the count rides along
+ * on the shared /api/pulse loop (see usePulse.ts), which also serves the chat
+ * badge and the credit balance.
  */
-import { useCallback, useEffect, useState } from "react";
-import { apiFetch, hasAuthToken } from "@/lib/api";
+import { useCallback } from "react";
+import { usePulse, refreshPulse } from "@/hooks/usePulse";
 
-const POLL_MS = 20_000;
-
-export function useNotificationUnread(enabled: boolean) {
-  const [unread, setUnread] = useState(0);
-
-  const refresh = useCallback(async () => {
-    if (!enabled || !hasAuthToken()) {
-      setUnread(0);
-      return;
-    }
-    try {
-      const data = await apiFetch<{ unreadCount: number }>("/notifications?limit=1");
-      setUnread(Number(data?.unreadCount) || 0);
-    } catch {
-      /* silent */
-    }
-  }, [enabled]);
-
-  useEffect(() => {
-    if (!enabled) {
-      setUnread(0);
-      return;
-    }
-    refresh();
-    const id = setInterval(refresh, POLL_MS);
-    const onFocus = () => refresh();
-    const onRefresh = () => refresh();
-    window.addEventListener("focus", onFocus);
-    window.addEventListener("notifications-refresh", onRefresh as EventListener);
-    return () => {
-      clearInterval(id);
-      window.removeEventListener("focus", onFocus);
-      window.removeEventListener("notifications-refresh", onRefresh as EventListener);
-    };
-  }, [enabled, refresh]);
-
-  return { unread, refresh };
-}
-
+/** Ask every notification consumer to re-check. Call after marking read. */
 export function dispatchNotificationsRefresh() {
   try {
     window.dispatchEvent(new CustomEvent("notifications-refresh"));
   } catch {
     /* ignore */
   }
+}
+
+export function useNotificationUnread(enabled: boolean) {
+  const pulse = usePulse(enabled);
+  const refresh = useCallback(async () => {
+    refreshPulse();
+  }, []);
+
+  return { unread: enabled ? pulse?.notifUnread ?? 0 : 0, refresh };
 }

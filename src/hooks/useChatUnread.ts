@@ -1,14 +1,16 @@
 /**
- * Polls /api/chat?summary=1 and computes total unread count across channels
- * by comparing each channel's latest ts with localStorage `chat-last-seen-{c}`.
+ * Chat unread badge — counts channels with activity newer than the locally
+ * stored last-seen timestamp.
+ *
+ * Channel activity now arrives on the shared /api/pulse loop (usePulse.ts)
+ * instead of a dedicated /api/chat?summary=1 timer. The last-seen marks stay in
+ * localStorage, so marking a channel seen recomputes from data already in hand
+ * and costs no request at all.
  */
-import { useEffect, useState, useCallback } from "react";
-import { apiFetch, hasAuthToken } from "@/lib/api";
+import { useEffect, useMemo, useState } from "react";
+import { usePulse, refreshPulse } from "@/hooks/usePulse";
 
-const POLL_MS = 20_000;
 const LS_PREFIX = "chat-last-seen-";
-
-interface ChannelSummary { id: string; count: number; latest: number; }
 
 export function getLastSeen(channel: string): number {
   try { return Number(localStorage.getItem(LS_PREFIX + channel) || 0); } catch { return 0; }
@@ -19,41 +21,32 @@ export function setLastSeen(channel: string, ts: number) {
 }
 
 export function useChatUnread(enabled: boolean) {
-  const [unread, setUnread] = useState(0);
-
-  const refresh = useCallback(async () => {
-    if (!enabled || !hasAuthToken()) { setUnread(0); return; }
-    try {
-      const data = await apiFetch<{ channels: ChannelSummary[] }>(`/chat?summary=1`);
-      if (!data?.channels) return;
-      let total = 0;
-      for (const c of data.channels) {
-        const seen = getLastSeen(c.id);
-        // First time visiting: treat all current msgs as seen.
-        if (!seen) {
-          if (c.latest) setLastSeen(c.id, c.latest);
-          continue;
-        }
-        if (c.latest > seen) total += 1; // count channels with new activity
-      }
-      setUnread(total);
-    } catch { /* silent */ }
-  }, [enabled]);
+  const pulse = usePulse(enabled);
+  // Bumped when last-seen changes so the memo below recomputes; localStorage
+  // isn't reactive on its own.
+  const [seenVersion, setSeenVersion] = useState(0);
 
   useEffect(() => {
-    if (!enabled) { setUnread(0); return; }
-    refresh();
-    const id = setInterval(refresh, POLL_MS);
-    const onFocus = () => refresh();
-    const onRefresh = () => refresh();
-    window.addEventListener("focus", onFocus);
-    window.addEventListener("chat-unread-refresh", onRefresh as EventListener);
-    return () => {
-      clearInterval(id);
-      window.removeEventListener("focus", onFocus);
-      window.removeEventListener("chat-unread-refresh", onRefresh as EventListener);
-    };
-  }, [enabled, refresh]);
+    if (!enabled) return;
+    const onSeen = () => setSeenVersion((v) => v + 1);
+    window.addEventListener("chat-unread-refresh", onSeen as EventListener);
+    return () => window.removeEventListener("chat-unread-refresh", onSeen as EventListener);
+  }, [enabled]);
 
-  return { unread, refresh };
+  const unread = useMemo(() => {
+    if (!enabled || !pulse?.channels) return 0;
+    let total = 0;
+    for (const c of pulse.channels) {
+      const seen = getLastSeen(c.id);
+      // First visit: treat everything currently there as already seen.
+      if (!seen) {
+        if (c.latest) setLastSeen(c.id, c.latest);
+        continue;
+      }
+      if (c.latest > seen) total += 1; // count channels with new activity
+    }
+    return total;
+  }, [enabled, pulse, seenVersion]);
+
+  return { unread, refresh: refreshPulse };
 }

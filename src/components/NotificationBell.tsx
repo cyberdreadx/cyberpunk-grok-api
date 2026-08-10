@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bell, Check, MessageCircle, UserPlus, ThumbsUp, Unlock, Coins, Info } from "lucide-react";
 import { apiFetch } from "@/lib/api";
-import { dispatchNotificationsRefresh } from "@/hooks/useNotificationUnread";
+import { dispatchNotificationsRefresh, useNotificationUnread } from "@/hooks/useNotificationUnread";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatDistanceToNow } from "date-fns";
 
@@ -55,20 +55,14 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ isAuthenticated }) 
     }
   }, [isAuthenticated]);
 
-  // Poll for unread count every 30s
+  // Unread count comes from the shared /api/pulse loop — no dedicated timer and
+  // no /api/notifications hit just to read one number. Local setUnreadCount calls
+  // elsewhere in this component stay for optimistic updates; the next pulse
+  // reconciles them.
+  const { unread: pulseUnread } = useNotificationUnread(isAuthenticated);
   useEffect(() => {
-    if (!isAuthenticated) return;
-    const fetchCount = async () => {
-      try {
-        const data = await apiFetch("/notifications?limit=1");
-        setUnreadCount(data.unreadCount);
-        dispatchNotificationsRefresh();
-      } catch {}
-    };
-    fetchCount();
-    const id = setInterval(fetchCount, 30000);
-    return () => clearInterval(id);
-  }, [isAuthenticated]);
+    setUnreadCount(pulseUnread);
+  }, [pulseUnread]);
 
   // Fetch full list when opened
   useEffect(() => {
