@@ -6,6 +6,7 @@
 
 import { Resend } from "resend";
 import { getDb } from "./db";
+import { unsubUrl } from "./notification-prefs";
 
 export type { Resend };
 
@@ -1001,4 +1002,81 @@ export async function sendPayoutRejectedEmail(to: string, info: { amountCents: n
     return;
   }
   await logEmail(to, "payout_rejected", "sent", data?.id);
+}
+
+/* ── Social notification emails ────────────────────────────────────────────
+ * These are bulk mail, not transactional: they carry List-Unsubscribe and
+ * List-Unsubscribe-Post so Gmail/Yahoo render a native "Unsubscribe" control
+ * and one click resolves it without the user hunting through the body. Sending
+ * social mail WITHOUT these headers is what tanks a sending domain's
+ * reputation, which would then start eating the verification codes too.
+ */
+
+interface NotificationEmailParams {
+  to: string;
+  userId: string;
+  type: string;
+  title: string;
+  body?: string | null;
+  actorUsername?: string | null;
+  /** Path on the site the email should link to, e.g. "/feed?post=123". */
+  link?: string | null;
+}
+
+export async function sendNotificationEmail(p: NotificationEmailParams): Promise<boolean> {
+  const fromAddress = getFromAddress();
+  const siteUrl = process.env.SITE_URL || "https://grokrunner.gltch.app";
+  // Scope the unsubscribe to this one type — a user annoyed by upvote mail
+  // shouldn't have to kill unlock (revenue) mail to stop it.
+  const unsub = unsubUrl(p.userId, p.type);
+
+  const { data, error } = await getResend().emails.send({
+    from: `GLTCHRunner <${fromAddress}>`,
+    to: [p.to],
+    subject: p.title,
+    html: buildNotificationHtml(p.title, p.body, p.link ? `${siteUrl}${p.link}` : siteUrl, unsub),
+    headers: {
+      "List-Unsubscribe": `<${unsub}>`,
+      "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+    },
+  });
+
+  if (error) {
+    await logEmail(p.to, `notify_${p.type}`, "failed", null, error.message, { userId: p.userId });
+    console.error("[email] notification send failed:", error.message);
+    return false;
+  }
+
+  await logEmail(p.to, `notify_${p.type}`, "sent", data?.id, null, { userId: p.userId });
+  return true;
+}
+
+function escapeHtml(s: string): string {
+  return s.replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string),
+  );
+}
+
+export function buildNotificationHtml(
+  title: string,
+  body: string | null | undefined,
+  link: string,
+  unsub: string,
+): string {
+  // Titles/bodies carry usernames and comment text — escape, never interpolate raw.
+  return `
+    <div style="font-family: 'Courier New', monospace; background: #0a0a0f; color: #e0e0e0; padding: 32px; max-width: 520px; margin: 0 auto;">
+      <div style="border: 1px solid #00f0ff33; padding: 28px; border-radius: 4px;">
+        <div style="color: #00f0ff; font-size: 11px; letter-spacing: 3px; margin-bottom: 20px;">▌ GLTCH RUNNER</div>
+        <div style="color: #ffffff; font-size: 16px; line-height: 1.5; margin-bottom: 12px;">${escapeHtml(title)}</div>
+        ${body ? `<div style="color: #a0a0a0; font-size: 13px; line-height: 1.6; margin-bottom: 20px;">${escapeHtml(body)}</div>` : ""}
+        <a href="${link}" style="display: inline-block; margin-top: 8px; padding: 10px 20px; border: 1px solid #00f0ff; color: #00f0ff; text-decoration: none; font-size: 12px; letter-spacing: 2px;">VIEW</a>
+        <div style="margin-top: 28px; padding-top: 16px; border-top: 1px solid #ffffff14; color: #666; font-size: 10px; line-height: 1.6;">
+          You're getting this because you have notification emails on.<br>
+          <a href="${unsub}" style="color: #888;">Unsubscribe from these</a> ·
+          <a href="${process.env.SITE_URL || "https://grokrunner.gltch.app"}/profile" style="color: #888;">All notification settings</a>
+        </div>
+      </div>
+    </div>
+  `;
 }

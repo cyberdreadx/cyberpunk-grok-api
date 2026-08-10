@@ -32,6 +32,7 @@ import {
 import { PULSE_HZ_MAX, PULSE_HZ_MIN } from "@/lib/immersionZones";
 import ImmersionPulseGuide from "@/components/ImmersionPulseGuide";
 import { useToast } from "@/hooks/use-toast";
+import NotificationEmailPrefs from "@/components/NotificationEmailPrefs";
 
 interface PreferencesDialogProps {
   open: boolean;
@@ -290,6 +291,9 @@ const PreferencesDialog: React.FC<PreferencesDialogProps> = ({ open, onOpenChang
               )}
             </section>
           )}
+
+          {/* Email notifications */}
+          {user && <NotificationEmailPrefs />}
 
           {/* Language */}
           <section className="space-y-2 pt-4 border-t border-border/30">
