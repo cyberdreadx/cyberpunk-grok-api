@@ -30,6 +30,80 @@ import {
   readActiveCampaign,
   type CampaignJob,
 } from "./_lib/email-campaign";
+import {
+  parseRange,
+  rangeClause,
+  bucketSeriesCte,
+  SQL_BASE_MODE,
+  SQL_IS_REFUND,
+  SQL_IS_JOB,
+  SQL_NET_CREDITS,
+  SQL_PROVIDER,
+  SQL_XAI_EST_CENTS,
+  SQL_GATEWAY,
+  SQL_IS_REVENUE,
+  RUNPOD_CENTS_PER_SEC,
+  type Range,
+} from "./_lib/analytics";
+import {
+  getStripeWindow,
+  getStripeMrr,
+  getStripeBalance,
+  getStripeCharges,
+  clearStripeCache,
+} from "./_lib/stripe-finance";
+import { getRunpodBalance, isRunpodBalanceConfigured } from "./_lib/runpod-balance";
+
+/**
+ * Cost CTEs shared by every panel that prices generations.
+ *
+ * `scoped`  — job rows in the window, refund suffix stripped off into
+ *             `base_mode` so a refunded job still prices against its real mode.
+ * `rate`    — observed mean tracked cost per base mode. Used to fill in rows
+ *             that predate cost tracking (only ~1% of rows before June 2026)
+ *             and refunded rows, whose execution_time_ms was zeroed on refund
+ *             even though RunPod still billed the GPU seconds.
+ *
+ * `blended_cents` is therefore: real number where we have one, that mode's own
+ * observed average where we don't, xAI list price as a last resort.
+ */
+function costCtes(whereSql: string): string {
+  return `
+    scoped AS (
+      SELECT
+        id,
+        user_id,
+        mode,
+        ${SQL_BASE_MODE} AS base_mode,
+        ${SQL_PROVIDER}   AS provider,
+        credits_used,
+        ${SQL_NET_CREDITS} AS net_credits,
+        (${SQL_IS_REFUND}) AS is_refund,
+        execution_time_ms,
+        api_cost_cents,
+        ${SQL_XAI_EST_CENTS} AS xai_est_cents,
+        created_at
+      FROM usage_log
+      WHERE (${whereSql}) AND ${SQL_IS_JOB}
+    ),
+    rate AS (
+      SELECT base_mode, AVG(api_cost_cents) AS avg_cents
+      FROM scoped
+      WHERE api_cost_cents IS NOT NULL AND api_cost_cents > 0
+      GROUP BY base_mode
+    ),
+    priced AS (
+      SELECT
+        s.*,
+        COALESCE(
+          s.api_cost_cents,
+          r.avg_cents,
+          CASE WHEN s.provider = 'xai' THEN s.xai_est_cents ELSE 0 END
+        ) AS blended_cents
+      FROM scoped s
+      LEFT JOIN rate r ON r.base_mode = s.base_mode
+    )`;
+}
 
 function isAdmin(req: VercelRequest): boolean {
   const auth = getUserFromRequest(req);
@@ -89,7 +163,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     switch (action) {
       // -- Overview KPIs --
+      // `days` selects the primary window (default 30) so every headline card
+      // moves together with the range picker instead of being frozen at 30d.
       case "overview": {
+        const range = parseRange(req.body, 30);
+        const win = rangeClause(range, "created_at", 1);
+        const days = range.days;
+
         const [userStats] = await sql`
           SELECT
             COUNT(*)::int AS total_users,
@@ -101,102 +181,115 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           FROM users
         `;
 
-        const [revenueStats] = await sql`
-          SELECT
-            COALESCE(SUM(amount_cents), 0)::int AS total_revenue_cents,
-            COALESCE(SUM(amount_cents) FILTER (WHERE created_at > now() - interval '30 days'), 0)::int AS revenue_30d_cents,
-            COALESCE(SUM(amount_cents) FILTER (WHERE created_at > now() - interval '7 days'), 0)::int AS revenue_7d_cents,
-            COUNT(*)::int AS total_transactions,
-            COUNT(*) FILTER (WHERE type = 'pack')::int AS pack_purchases,
-            COUNT(*) FILTER (WHERE type = 'subscription')::int AS sub_renewals
-          FROM transactions
-        `;
+        // Revenue counts ONLY rows where money moved. Admin credit grants are
+        // written as type='pack' with a stripe_session_id at 0 cents, so the
+        // old unfiltered COUNT(*) reported 7,226 "transactions" against 3,452
+        // real ones and 6,809 "pack purchases" against 3,035.
+        const [revenueStats] = (await sql.query(
+          `SELECT
+             COALESCE(SUM(amount_cents) FILTER (WHERE ${SQL_IS_REVENUE}), 0)::int AS total_revenue_cents,
+             COALESCE(SUM(amount_cents) FILTER (WHERE ${SQL_IS_REVENUE} AND ${win.sql}), 0)::int AS revenue_window_cents,
+             COALESCE(SUM(amount_cents) FILTER (WHERE ${SQL_IS_REVENUE} AND created_at > now() - interval '30 days'), 0)::int AS revenue_30d_cents,
+             COALESCE(SUM(amount_cents) FILTER (WHERE ${SQL_IS_REVENUE} AND created_at > now() - interval '7 days'), 0)::int AS revenue_7d_cents,
+             COALESCE(SUM(amount_cents) FILTER (WHERE ${SQL_IS_REVENUE} AND created_at > now() - interval '24 hours'), 0)::int AS revenue_today_cents,
+             COUNT(*) FILTER (WHERE ${SQL_IS_REVENUE})::int AS total_transactions,
+             COUNT(*) FILTER (WHERE ${SQL_IS_REVENUE} AND type = 'pack')::int AS pack_purchases,
+             COUNT(*) FILTER (WHERE ${SQL_IS_REVENUE} AND type = 'subscription')::int AS sub_renewals,
+             COUNT(*) FILTER (WHERE NOT (${SQL_IS_REVENUE}))::int AS grant_rows,
+             COALESCE(SUM(credits) FILTER (WHERE NOT (${SQL_IS_REVENUE})), 0)::int AS granted_credits,
+             COUNT(DISTINCT user_id) FILTER (WHERE ${SQL_IS_REVENUE})::int AS paying_users
+           FROM transactions`,
+          win.params,
+        )) as any[];
 
-        const [usageStats] = await sql`
-          SELECT
-            COALESCE(SUM(credits_used), 0)::int AS total_credits_used,
-            COALESCE(SUM(credits_used) FILTER (WHERE created_at > now() - interval '30 days'), 0)::int AS credits_30d,
-            COALESCE(SUM(credits_used) FILTER (WHERE created_at > now() - interval '24 hours'), 0)::int AS credits_today,
-            COUNT(*)::int AS total_generations,
-            COUNT(*) FILTER (WHERE created_at > now() - interval '24 hours')::int AS generations_today
-          FROM usage_log
-        `;
+        // Usage counts only real jobs, and nets out refunds. `share`,
+        // `share-repeat`, `chat-message` and `goodwill-*` are analytics pings
+        // and ledger adjustments — ~21k rows that were being reported as
+        // generations.
+        const [usageStats] = (await sql.query(
+          `SELECT
+             COALESCE(SUM(${SQL_NET_CREDITS}), 0)::int AS total_credits_used,
+             COALESCE(SUM(${SQL_NET_CREDITS}) FILTER (WHERE ${win.sql}), 0)::int AS credits_window,
+             COALESCE(SUM(${SQL_NET_CREDITS}) FILTER (WHERE created_at > now() - interval '30 days'), 0)::int AS credits_30d,
+             COALESCE(SUM(${SQL_NET_CREDITS}) FILTER (WHERE created_at > now() - interval '24 hours'), 0)::int AS credits_today,
+             COUNT(*) FILTER (WHERE NOT (${SQL_IS_REFUND}))::int AS total_generations,
+             COUNT(*) FILTER (WHERE NOT (${SQL_IS_REFUND}) AND ${win.sql})::int AS generations_window,
+             COUNT(*) FILTER (WHERE NOT (${SQL_IS_REFUND}) AND created_at > now() - interval '24 hours')::int AS generations_today,
+             COUNT(*) FILTER (WHERE ${SQL_IS_REFUND})::int AS refunded_generations,
+             COALESCE(SUM(credits_used) FILTER (WHERE ${SQL_IS_REFUND}), 0)::int AS refunded_credits,
+             COUNT(*) FILTER (WHERE ${SQL_IS_REFUND} AND ${win.sql})::int AS refunded_window,
+             COUNT(DISTINCT user_id) FILTER (WHERE ${win.sql})::int AS active_users_window
+           FROM usage_log
+           WHERE ${SQL_IS_JOB}`,
+          win.params,
+        )) as any[];
 
         const [creditPool] = await sql`
           SELECT
             COALESCE(SUM(sub_credits), 0)::int AS total_sub_credits_outstanding,
-            COALESCE(SUM(pack_credits), 0)::int AS total_pack_credits_outstanding
+            COALESCE(SUM(pack_credits), 0)::int AS total_pack_credits_outstanding,
+            COALESCE(SUM(daily_credits), 0)::int AS total_daily_credits_outstanding
           FROM users
         `;
 
-        // Estimate API cost:
-        //   Successful images: $0.02/image (2 cents)
-        //   Moderated images: $0.05/image (5 cents) -- xAI charges more for blocked content!
-        //   Video: $0.05/sec (5 cents) -- same whether successful or blocked
-        const [costEstimate] = await sql`
-          SELECT
-            COALESCE(SUM(
-              CASE
-                WHEN mode IN ('moderation-image','moderation-edit') THEN credits_used * 5
-                WHEN mode IN ('generate-image','edit-image') THEN credits_used * 2
-                ELSE credits_used * 5
-              END
-            ) FILTER (WHERE created_at > now() - interval '30 days'), 0)::int AS estimated_cost_30d_cents,
-            COALESCE(SUM(
-              CASE
-                WHEN mode IN ('moderation-image','moderation-edit') THEN credits_used * 5
-                WHEN mode IN ('generate-image','edit-image') THEN credits_used * 2
-                ELSE credits_used * 5
-              END
-            ), 0)::int AS estimated_cost_total_cents
-          FROM usage_log
-        `;
+        // Cost, split by who actually sends the bill. The old estimate priced
+        // every mode at xAI's per-image/per-second rates — including the
+        // comfy-* modes that run on RunPod — and then displayed that total
+        // NEXT TO the RunPod number, double counting the same jobs.
+        const byProvider = (await sql.query(
+          `WITH ${costCtes(win.sql)}
+           SELECT
+             provider,
+             COUNT(*)::int                                   AS jobs,
+             COUNT(*) FILTER (WHERE is_refund)::int          AS refunded_jobs,
+             COALESCE(SUM(net_credits), 0)::int              AS net_credits,
+             COALESCE(SUM(api_cost_cents), 0)::numeric       AS tracked_cents,
+             COUNT(api_cost_cents)::int                      AS tracked_rows,
+             COALESCE(SUM(blended_cents), 0)::numeric        AS blended_cents,
+             COALESCE(SUM(execution_time_ms), 0)::bigint     AS exec_ms
+           FROM priced
+           GROUP BY provider
+           ORDER BY blended_cents DESC`,
+          win.params,
+        )) as any[];
 
-        // RunPod cost from tracked execution times (rate: $0.00155/s = 0.155 cents/s)
-        let runpodCost30dCents = 0;
-        try {
-          const [runpodCost] = await sql`
-            SELECT
-              COALESCE(SUM(execution_time_ms) FILTER (WHERE created_at > now() - interval '30 days'), 0)::bigint AS total_ms_30d
-            FROM usage_log
-            WHERE mode LIKE 'comfy-%' AND execution_time_ms IS NOT NULL
-          `;
-          runpodCost30dCents = Math.round((Number(runpodCost.total_ms_30d) / 1000) * 0.155);
-        } catch { /* column may not exist yet */ }
+        const providerCost: Record<string, any> = {};
+        let blendedTotal = 0, trackedTotal = 0, trackedRows = 0, jobRows = 0;
+        for (const r of byProvider) {
+          providerCost[r.provider] = {
+            jobs: r.jobs,
+            refundedJobs: r.refunded_jobs,
+            netCredits: r.net_credits,
+            trackedCents: Number(r.tracked_cents),
+            trackedRows: r.tracked_rows,
+            blendedCents: Number(r.blended_cents),
+            execMs: Number(r.exec_ms),
+          };
+          blendedTotal += Number(r.blended_cents);
+          trackedTotal += Number(r.tracked_cents);
+          trackedRows += r.tracked_rows;
+          jobRows += r.jobs;
+        }
 
-        // Actual tracked API costs (from api_cost_cents column)
-        let actualCosts = { actual_cost_30d_cents: 0, actual_cost_total_cents: 0, tracked_30d: 0, total_30d: 0 };
-        try {
-          const [ac] = await sql`
-            SELECT
-              COALESCE(SUM(api_cost_cents) FILTER (WHERE created_at > now() - interval '30 days'), 0)::numeric AS actual_cost_30d_cents,
-              COALESCE(SUM(api_cost_cents), 0)::numeric AS actual_cost_total_cents,
-              COUNT(api_cost_cents) FILTER (WHERE created_at > now() - interval '30 days')::int AS tracked_30d,
-              COUNT(*) FILTER (WHERE created_at > now() - interval '30 days')::int AS total_30d
-            FROM usage_log
-          `;
-          actualCosts = ac;
-        } catch { /* column may not exist yet */ }
+        // Moderation is an xAI-era concept (last block 2026-04-23). Its cost is
+        // already inside providerCost.xai, so it is reported here as a subset,
+        // never added on top.
+        const [moderationStats] = (await sql.query(
+          `SELECT
+             COUNT(*)::int AS total_blocks,
+             COUNT(*) FILTER (WHERE ${win.sql})::int AS blocks_window,
+             COUNT(*) FILTER (WHERE created_at > now() - interval '30 days')::int AS blocks_30d,
+             COUNT(*) FILTER (WHERE created_at > now() - interval '24 hours')::int AS blocks_today,
+             COALESCE(SUM(credits_used), 0)::int AS total_credits_burned,
+             COALESCE(SUM(credits_used) FILTER (WHERE ${win.sql}), 0)::int AS credits_burned_window,
+             COALESCE(SUM(credits_used) FILTER (WHERE created_at > now() - interval '30 days'), 0)::int AS credits_burned_30d,
+             COALESCE(SUM(COALESCE(api_cost_cents, credits_used * 5)), 0)::numeric AS wasted_cost_total_cents,
+             COALESCE(SUM(COALESCE(api_cost_cents, credits_used * 5)) FILTER (WHERE ${win.sql}), 0)::numeric AS wasted_cost_window_cents
+           FROM usage_log
+           WHERE mode LIKE 'moderation-%'`,
+          win.params,
+        )) as any[];
 
-        // Moderation stats
-        const [moderationStats] = await sql`
-          SELECT
-            COUNT(*)::int AS total_blocks,
-            COUNT(*) FILTER (WHERE created_at > now() - interval '30 days')::int AS blocks_30d,
-            COUNT(*) FILTER (WHERE created_at > now() - interval '24 hours')::int AS blocks_today,
-            COALESCE(SUM(credits_used), 0)::int AS total_credits_burned,
-            COALESCE(SUM(credits_used) FILTER (WHERE created_at > now() - interval '30 days'), 0)::int AS credits_burned_30d,
-            COALESCE(SUM(
-              CASE WHEN mode IN ('moderation-image','moderation-edit') THEN credits_used * 5 ELSE credits_used * 5 END
-            ), 0)::int AS wasted_cost_total_cents,
-            COALESCE(SUM(
-              CASE WHEN mode IN ('moderation-image','moderation-edit') THEN credits_used * 5 ELSE credits_used * 5 END
-            ) FILTER (WHERE created_at > now() - interval '30 days'), 0)::int AS wasted_cost_30d_cents
-          FROM usage_log
-          WHERE mode LIKE 'moderation-%'
-        `;
-
-        // Top moderation offenders
         const moderationOffenders = await sql`
           SELECT
             u.email,
@@ -211,179 +304,309 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           LIMIT 10
         `;
 
+        const revenueWindow = revenueStats.revenue_window_cents;
+        const creditsWindow = usageStats.credits_window;
+
         return res.status(200).json({
+          range: { days, bucket: range.bucket, label: range.label },
           users: userStats,
           revenue: revenueStats,
           usage: usageStats,
           creditPool,
-          apiCost: {
-            estimated30dCents: costEstimate.estimated_cost_30d_cents,
-            estimatedTotalCents: costEstimate.estimated_cost_total_cents,
+          cost: {
+            byProvider: providerCost,
+            blendedCents: Math.round(blendedTotal),
+            trackedCents: Math.round(trackedTotal),
+            trackedRows,
+            jobRows,
+            coverage: jobRows > 0 ? trackedRows / jobRows : 0,
+            runpodCentsPerSec: RUNPOD_CENTS_PER_SEC,
           },
-          runpodCost: {
-            estimated30dCents: runpodCost30dCents,
-          },
-          actualCost: {
-            actual30dCents: Number(actualCosts.actual_cost_30d_cents),
-            actualTotalCents: Number(actualCosts.actual_cost_total_cents),
-            tracked30d: actualCosts.tracked_30d,
-            total30d: actualCosts.total_30d,
+          margin: {
+            revenueCents: revenueWindow,
+            costCents: Math.round(blendedTotal),
+            grossCents: revenueWindow - Math.round(blendedTotal),
+            marginPct: revenueWindow > 0 ? (revenueWindow - blendedTotal) / revenueWindow : 0,
+            // Blended realized price of a credit in this window, and what one
+            // costs us to serve. The gap is the real unit economics.
+            revenuePerCredit: creditsWindow > 0 ? revenueWindow / creditsWindow : 0,
+            costPerCredit: creditsWindow > 0 ? blendedTotal / creditsWindow : 0,
           },
           moderation: {
             ...moderationStats,
+            wasted_cost_total_cents: Math.round(Number(moderationStats.wasted_cost_total_cents)),
+            wasted_cost_window_cents: Math.round(Number(moderationStats.wasted_cost_window_cents)),
             offenders: moderationOffenders,
           },
         });
       }
 
       // -- Revenue breakdown by pack/type/gateway --
+      // Grants ($0) are reported on their own rather than mixed into the
+      // revenue tables, where they used to show up as a top-selling "pack".
       case "revenue-breakdown": {
-        const byPack = await sql`
-          SELECT
-            package,
-            type,
-            COUNT(*)::int AS count,
-            SUM(amount_cents)::int AS total_cents,
-            SUM(credits)::int AS total_credits
-          FROM transactions
-          GROUP BY package, type
-          ORDER BY total_cents DESC
-        `;
-        const byGateway = await sql`
-          SELECT
-            CASE
-              WHEN payment_method = 'xrge' THEN 'xrge'
-              WHEN payment_method = 'paypal' THEN 'paypal'
-              WHEN stripe_session_id IS NOT NULL THEN 'stripe'
-              ELSE 'other'
-            END AS gateway,
-            COUNT(*)::int AS count,
-            SUM(amount_cents)::int AS total_cents
-          FROM transactions
-          GROUP BY 1
-          ORDER BY total_cents DESC
-        `;
-        const byPack30d = await sql`
-          SELECT
-            package,
-            type,
-            COUNT(*)::int AS count,
-            SUM(amount_cents)::int AS total_cents,
-            SUM(credits)::int AS total_credits
-          FROM transactions
-          WHERE created_at > now() - interval '30 days'
-          GROUP BY package, type
-          ORDER BY total_cents DESC
-        `;
-        return res.status(200).json({ byPack, byGateway, byPack30d });
+        const range = parseRange(req.body, 30);
+        const win = rangeClause(range, "created_at", 1);
+
+        const byPack = (await sql.query(
+          `SELECT package, type,
+                  COUNT(*)::int AS count,
+                  SUM(amount_cents)::int AS total_cents,
+                  SUM(credits)::int AS total_credits,
+                  ROUND(AVG(amount_cents))::int AS avg_cents,
+                  CASE WHEN SUM(credits) > 0
+                       THEN ROUND(SUM(amount_cents)::numeric / SUM(credits), 3)
+                       ELSE NULL END AS cents_per_credit
+           FROM transactions
+           WHERE ${SQL_IS_REVENUE}
+           GROUP BY package, type
+           ORDER BY total_cents DESC`,
+        )) as any[];
+
+        const byPackWindow = (await sql.query(
+          `SELECT package, type,
+                  COUNT(*)::int AS count,
+                  SUM(amount_cents)::int AS total_cents,
+                  SUM(credits)::int AS total_credits,
+                  ROUND(AVG(amount_cents))::int AS avg_cents,
+                  CASE WHEN SUM(credits) > 0
+                       THEN ROUND(SUM(amount_cents)::numeric / SUM(credits), 3)
+                       ELSE NULL END AS cents_per_credit
+           FROM transactions
+           WHERE ${SQL_IS_REVENUE} AND ${win.sql}
+           GROUP BY package, type
+           ORDER BY total_cents DESC`,
+          win.params,
+        )) as any[];
+
+        // Settlement rail, then the Stripe payment-method mix underneath it.
+        const byGateway = (await sql.query(
+          `SELECT ${SQL_GATEWAY} AS gateway,
+                  COUNT(*)::int AS count,
+                  SUM(amount_cents)::int AS total_cents,
+                  COUNT(*) FILTER (WHERE ${win.sql})::int AS count_window,
+                  COALESCE(SUM(amount_cents) FILTER (WHERE ${win.sql}), 0)::int AS window_cents
+           FROM transactions
+           WHERE ${SQL_IS_REVENUE}
+           GROUP BY 1
+           ORDER BY total_cents DESC`,
+          win.params,
+        )) as any[];
+
+        const byMethod = (await sql.query(
+          `SELECT COALESCE(payment_method, 'unknown') AS method,
+                  COUNT(*)::int AS count,
+                  SUM(amount_cents)::int AS total_cents,
+                  COUNT(*) FILTER (WHERE ${win.sql})::int AS count_window,
+                  COALESCE(SUM(amount_cents) FILTER (WHERE ${win.sql}), 0)::int AS window_cents
+           FROM transactions
+           WHERE ${SQL_IS_REVENUE}
+           GROUP BY 1
+           ORDER BY total_cents DESC`,
+          win.params,
+        )) as any[];
+
+        const grants = (await sql.query(
+          `SELECT package,
+                  COUNT(*)::int AS count,
+                  COALESCE(SUM(credits), 0)::int AS credits,
+                  COUNT(*) FILTER (WHERE ${win.sql})::int AS count_window
+           FROM transactions
+           WHERE NOT (${SQL_IS_REVENUE})
+           GROUP BY package
+           ORDER BY count DESC`,
+          win.params,
+        )) as any[];
+
+        return res.status(200).json({
+          range: { days: range.days, bucket: range.bucket, label: range.label },
+          byPack,
+          byGateway,
+          byMethod,
+          grants,
+          byPackWindow,
+          // Kept so an un-refreshed client bundle doesn't render an empty table.
+          byPack30d: byPackWindow,
+        });
       }
 
-      // -- Revenue time series (daily, last 30 days) --
+      // -- Revenue time series, gap-filled, any range/granularity --
       case "revenue": {
-        const rows = await sql`
-          SELECT
-            date_trunc('day', created_at)::date AS day,
-            SUM(amount_cents)::int AS revenue_cents,
-            COUNT(*)::int AS tx_count,
-            COUNT(*) FILTER (WHERE type = 'pack')::int AS packs,
-            COUNT(*) FILTER (WHERE type = 'subscription')::int AS subs
-          FROM transactions
-          WHERE created_at > now() - interval '30 days'
-          GROUP BY 1
-          ORDER BY 1
-        `;
-        return res.status(200).json({ revenue: rows });
+        const range = parseRange(req.body, 30);
+        const win = rangeClause(range, "t.created_at", 1);
+        const rows = (await sql.query(
+          `WITH ${bucketSeriesCte(range, "transactions")},
+           agg AS (
+             SELECT date_trunc('${range.bucket}', t.created_at)::date AS bucket,
+                    COALESCE(SUM(t.amount_cents), 0)::int AS revenue_cents,
+                    COUNT(*)::int AS tx_count,
+                    COUNT(*) FILTER (WHERE t.type = 'pack')::int AS packs,
+                    COUNT(*) FILTER (WHERE t.type = 'subscription')::int AS subs,
+                    COALESCE(SUM(t.amount_cents) FILTER (WHERE t.type = 'pack'), 0)::int AS pack_cents,
+                    COALESCE(SUM(t.amount_cents) FILTER (WHERE t.type = 'subscription'), 0)::int AS sub_cents,
+                    COUNT(DISTINCT t.user_id)::int AS buyers
+             FROM transactions t
+             WHERE ${SQL_IS_REVENUE} AND ${win.sql}
+             GROUP BY 1
+           )
+           SELECT b.bucket AS day,
+                  COALESCE(a.revenue_cents, 0) AS revenue_cents,
+                  COALESCE(a.tx_count, 0)      AS tx_count,
+                  COALESCE(a.packs, 0)         AS packs,
+                  COALESCE(a.subs, 0)          AS subs,
+                  COALESCE(a.pack_cents, 0)    AS pack_cents,
+                  COALESCE(a.sub_cents, 0)     AS sub_cents,
+                  COALESCE(a.buyers, 0)        AS buyers,
+                  SUM(COALESCE(a.revenue_cents, 0)) OVER (ORDER BY b.bucket)::int AS cumulative_cents
+           FROM buckets b
+           LEFT JOIN agg a ON a.bucket = b.bucket
+           ORDER BY b.bucket`,
+          win.params,
+        )) as any[];
+        return res.status(200).json({ revenue: rows, range: { days: range.days, bucket: range.bucket, label: range.label } });
       }
 
-      // -- User growth time series (daily, last 30 days) --
+      // -- User growth time series --
+      // `cumulative` is a true running total from day zero, not just the sum
+      // inside the window, so a 7d view still shows the real user count.
       case "users": {
-        const rows = await sql`
-          SELECT
-            day,
-            new_users,
-            SUM(new_users) OVER (ORDER BY day)::int AS cumulative
-          FROM (
-            SELECT
-              date_trunc('day', created_at)::date AS day,
-              COUNT(*)::int AS new_users
-            FROM users
-            GROUP BY 1
-          ) daily
-          ORDER BY day
-        `;
-        return res.status(200).json({ users: rows });
+        const range = parseRange(req.body, 30);
+        const win = rangeClause(range, "created_at", 1);
+        const rows = (await sql.query(
+          `WITH ${bucketSeriesCte(range, "users")},
+           agg AS (
+             SELECT date_trunc('${range.bucket}', created_at)::date AS bucket,
+                    COUNT(*)::int AS new_users,
+                    COUNT(*) FILTER (WHERE email_verified)::int AS verified
+             FROM users
+             GROUP BY 1
+           ),
+           joined AS (
+             SELECT b.bucket,
+                    COALESCE(a.new_users, 0) AS new_users,
+                    COALESCE(a.verified, 0)  AS verified
+             FROM buckets b LEFT JOIN agg a ON a.bucket = b.bucket
+           ),
+           base AS (
+             SELECT COALESCE(COUNT(*), 0)::int AS n
+             FROM users
+             WHERE created_at < (SELECT MIN(bucket) FROM buckets)
+           )
+           SELECT j.bucket AS day,
+                  j.new_users,
+                  j.verified,
+                  ((SELECT n FROM base) + SUM(j.new_users) OVER (ORDER BY j.bucket))::int AS cumulative
+           FROM joined j
+           ORDER BY j.bucket`,
+        )) as any[];
+        return res.status(200).json({ users: rows, range: { days: range.days, bucket: range.bucket, label: range.label } });
       }
 
-      // -- Generation volume by mode (daily, last 30 days) --
+      // -- Generation volume by mode --
+      // Modes are collapsed onto their base name, so `comfy-klein` and
+      // `comfy-klein-refunded-support` stop showing up as two products.
       case "usage": {
-        const rows = await sql`
-          SELECT
-            date_trunc('day', created_at)::date AS day,
-            mode,
-            COUNT(*)::int AS count,
-            SUM(credits_used)::int AS credits
-          FROM usage_log
-          WHERE created_at > now() - interval '30 days'
-          GROUP BY 1, 2
-          ORDER BY 1
-        `;
-        return res.status(200).json({ usage: rows });
+        const range = parseRange(req.body, 30);
+        const win = rangeClause(range, "created_at", 1);
+        const rows = (await sql.query(
+          `SELECT date_trunc('${range.bucket}', created_at)::date AS day,
+                  ${SQL_BASE_MODE} AS mode,
+                  COUNT(*) FILTER (WHERE NOT (${SQL_IS_REFUND}))::int AS count,
+                  COUNT(*) FILTER (WHERE ${SQL_IS_REFUND})::int AS refunded,
+                  COALESCE(SUM(${SQL_NET_CREDITS}), 0)::int AS credits
+           FROM usage_log
+           WHERE ${win.sql} AND ${SQL_IS_JOB}
+           GROUP BY 1, 2
+           HAVING COUNT(*) > 0
+           ORDER BY 1`,
+          win.params,
+        )) as any[];
+        return res.status(200).json({ usage: rows, range: { days: range.days, bucket: range.bucket, label: range.label } });
       }
 
-      // -- Transaction log (last 100 transactions) --
+      // -- Transaction log --
       case "transactions": {
-        const rows = await sql`
-          SELECT
-            t.created_at,
-            u.email,
-            t.type,
-            t.package,
-            t.credits,
-            t.amount_cents,
-            CASE
-              WHEN t.payment_method = 'xrge' THEN 'xrge'
-              WHEN t.payment_method = 'paypal' THEN 'paypal'
-              WHEN t.stripe_session_id IS NOT NULL THEN 'stripe'
-              ELSE 'other'
-            END AS gateway
-          FROM transactions t
-          LEFT JOIN users u ON u.id = t.user_id
-          ORDER BY t.created_at DESC
-          LIMIT 100
-        `;
+        const limit = Math.min(500, Math.max(1, parseInt(String(req.body?.limit ?? "100"), 10) || 100));
+        const includeGrants = req.body?.includeGrants === true;
+        const rows = (await sql.query(
+          // payment_method / stripe_session_id / amount_cents exist only on
+          // transactions, so the unqualified fragments resolve unambiguously
+          // across the join.
+          `SELECT t.created_at, u.email, t.type, t.package, t.credits, t.amount_cents,
+                  t.payment_method, ${SQL_GATEWAY} AS gateway
+           FROM transactions t
+           LEFT JOIN users u ON u.id = t.user_id
+           ${includeGrants ? "" : `WHERE ${SQL_IS_REVENUE}`}
+           ORDER BY t.created_at DESC
+           LIMIT $1`,
+          [limit],
+        )) as any[];
         return res.status(200).json({ transactions: rows });
       }
 
-      // -- Top users by credit usage --
+      // -- Top users by credit usage, with what each one actually costs us --
+      //
+      // The old shape ran two LATERAL subqueries per row across all 28k users
+      // and every one of the 422k usage rows, unwindowed. This aggregates each
+      // side once, ranks, then joins only the survivors — and adds the number
+      // that matters: spend minus serving cost, so a heavy-but-unprofitable
+      // account is visible instead of just "heavy".
       case "top-users": {
-        const rows = await sql`
-          SELECT
-            u.email,
-            u.subscription_tier,
-            u.subscription_cancel_at,
-            u.sub_credits,
-            u.pack_credits,
-            u.created_at,
-            COALESCE(t.total_spent_cents, 0)::int AS total_spent_cents,
-            COALESCE(g.total_generations, 0)::int AS total_generations,
-            COALESCE(g.total_credits_used, 0)::int AS total_credits_used,
-            g.last_generation
-          FROM users u
-          LEFT JOIN LATERAL (
-            SELECT SUM(amount_cents) AS total_spent_cents
-            FROM transactions WHERE user_id = u.id
-          ) t ON true
-          LEFT JOIN LATERAL (
-            SELECT
-              COUNT(*) AS total_generations,
-              SUM(credits_used) AS total_credits_used,
-              MAX(created_at) AS last_generation
-            FROM usage_log WHERE user_id = u.id
-          ) g ON true
-          ORDER BY COALESCE(g.total_credits_used, 0) DESC
-          LIMIT 25
-        `;
-        return res.status(200).json({ topUsers: rows });
+        const range = parseRange(req.body, 30);
+        const win = rangeClause(range, "created_at", 1);
+        const limit = Math.min(200, Math.max(1, parseInt(String(req.body?.limit ?? "25"), 10) || 25));
+        const sortBy = req.body?.sortBy === "margin" ? "margin_cents ASC"
+          : req.body?.sortBy === "spend" ? "spent_cents DESC"
+          : "credits_used DESC";
+
+        const rows = (await sql.query(
+          `WITH ${costCtes(win.sql)},
+           by_user AS (
+             SELECT ul.user_id,
+                    COUNT(*) FILTER (WHERE NOT (${SQL_IS_REFUND}))::int AS generations,
+                    COALESCE(SUM(${SQL_NET_CREDITS}), 0)::int AS credits_used,
+                    MAX(ul.created_at) AS last_generation
+             FROM usage_log ul
+             WHERE ${win.sql} AND ${SQL_IS_JOB}
+             GROUP BY ul.user_id
+           ),
+           cost_by_user AS (
+             SELECT user_id, SUM(blended_cents) AS cost_cents
+             FROM priced
+             GROUP BY user_id
+           ),
+           spend_by_user AS (
+             SELECT user_id, SUM(amount_cents)::int AS spent_cents, COUNT(*)::int AS purchases
+             FROM transactions
+             WHERE ${SQL_IS_REVENUE} AND ${win.sql}
+             GROUP BY user_id
+           ),
+           ranked AS (
+             SELECT b.user_id, b.generations, b.credits_used, b.last_generation,
+                    COALESCE(c.cost_cents, 0)::numeric AS cost_cents,
+                    COALESCE(s.spent_cents, 0)::int    AS spent_cents,
+                    COALESCE(s.purchases, 0)::int      AS purchases,
+                    (COALESCE(s.spent_cents, 0) - COALESCE(c.cost_cents, 0))::numeric AS margin_cents
+             FROM by_user b
+             LEFT JOIN cost_by_user c ON c.user_id = b.user_id
+             LEFT JOIN spend_by_user s ON s.user_id = b.user_id
+           )
+           SELECT u.email, u.subscription_tier, u.subscription_cancel_at,
+                  u.sub_credits, u.pack_credits, u.created_at,
+                  r.generations::int AS total_generations,
+                  r.credits_used::int AS total_credits_used,
+                  r.last_generation,
+                  r.spent_cents AS total_spent_cents,
+                  r.purchases,
+                  ROUND(r.cost_cents)::int   AS cost_cents,
+                  ROUND(r.margin_cents)::int AS margin_cents
+           FROM ranked r
+           JOIN users u ON u.id = r.user_id
+           ORDER BY ${sortBy}
+           LIMIT ${limit}`,
+          win.params,
+        )) as any[];
+        return res.status(200).json({ topUsers: rows, range: { days: range.days, bucket: range.bucket, label: range.label } });
       }
 
       // -- Credit farmers: users whose balance far exceeds what they ever paid for --
@@ -670,36 +893,312 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
 
-      // -- Profit per action breakdown (30d) --
-      case "profit-breakdown": {
+      // -- Per-mode unit economics --
+      //
+      // One row per product (base mode), carrying: how often it ran, what it
+      // cost, how much of that cost is measured vs inferred, and what it earns
+      // at the window's own realized credit price. `revenue_cents` is an
+      // attribution, not a booking — credits are sold in packs, so the honest
+      // way to value a generation is the blended ¢/credit actually realized in
+      // the same window.
+      case "profit-breakdown":
+      case "unit-economics": {
+        const range = parseRange(req.body, 30);
+        const win = rangeClause(range, "created_at", 1);
+
+        const [priceRow] = (await sql.query(
+          `SELECT COALESCE(SUM(amount_cents), 0)::int AS revenue_cents
+           FROM transactions WHERE ${SQL_IS_REVENUE} AND ${win.sql}`,
+          win.params,
+        )) as any[];
+
+        const rows = (await sql.query(
+          `WITH ${costCtes(win.sql)}
+           SELECT
+             base_mode AS mode,
+             MAX(provider) AS provider,
+             COUNT(*) FILTER (WHERE NOT is_refund)::int      AS generations,
+             COUNT(*) FILTER (WHERE is_refund)::int          AS refunded,
+             COALESCE(SUM(net_credits), 0)::int              AS credits_used,
+             COALESCE(SUM(credits_used) FILTER (WHERE is_refund), 0)::int AS refunded_credits,
+             COALESCE(SUM(execution_time_ms), 0)::bigint     AS total_exec_ms,
+             COUNT(execution_time_ms) FILTER (WHERE execution_time_ms > 0)::int AS exec_tracked,
+             COALESCE(SUM(api_cost_cents), 0)::numeric       AS actual_cost_cents,
+             COUNT(api_cost_cents)::int                      AS cost_tracked_count,
+             COALESCE(SUM(blended_cents), 0)::numeric        AS blended_cost_cents,
+             COUNT(*)::int                                   AS rows_total
+           FROM priced
+           GROUP BY base_mode
+           ORDER BY blended_cost_cents DESC`,
+          win.params,
+        )) as any[];
+
+        const totalCredits = rows.reduce((a, r) => a + Number(r.credits_used || 0), 0);
+        const centsPerCredit = totalCredits > 0 ? priceRow.revenue_cents / totalCredits : 0;
+
+        const breakdown = rows.map((r) => {
+          const credits = Number(r.credits_used);
+          const cost = Number(r.blended_cost_cents);
+          const revenue = credits * centsPerCredit;
+          const gens = Number(r.generations);
+          return {
+            mode: r.mode,
+            provider: r.provider,
+            generations: gens,
+            refunded: Number(r.refunded),
+            credits_used: credits,
+            refunded_credits: Number(r.refunded_credits),
+            total_exec_ms: Number(r.total_exec_ms),
+            exec_tracked: Number(r.exec_tracked),
+            actual_cost_cents: Number(r.actual_cost_cents),
+            cost_tracked_count: Number(r.cost_tracked_count),
+            blended_cost_cents: cost,
+            // Share of this mode's cost that is measured rather than inferred.
+            cost_coverage: Number(r.rows_total) > 0 ? Number(r.cost_tracked_count) / Number(r.rows_total) : 0,
+            cost_per_generation: gens > 0 ? cost / gens : 0,
+            cost_per_credit: credits > 0 ? cost / credits : 0,
+            revenue_cents: revenue,
+            margin_cents: revenue - cost,
+            margin_pct: revenue > 0 ? (revenue - cost) / revenue : 0,
+            avg_exec_sec: Number(r.exec_tracked) > 0 ? Number(r.total_exec_ms) / Number(r.exec_tracked) / 1000 : 0,
+          };
+        });
+
+        return res.status(200).json({
+          profitBreakdown: breakdown,
+          unitEconomics: breakdown,
+          centsPerCredit,
+          windowRevenueCents: priceRow.revenue_cents,
+          range: { days: range.days, bucket: range.bucket, label: range.label },
+        });
+      }
+
+      // -- Stripe ground truth + reconciliation against our own ledger --
+      //
+      // `transactions` only records money coming in, and only when a webhook
+      // lands. Stripe's balance-transaction ledger is the same source its own
+      // dashboard reports from and is the only one carrying fees, refunds and
+      // chargebacks — so this is the action that answers "what did we actually
+      // make", as opposed to "what did we book".
+      case "finance": {
+        const range = parseRange(req.body, 30);
+        const win = rangeClause(range, "created_at", 1);
+        if (req.body?.refresh === true) clearStripeCache();
+
+        const [stripeWindow, mrr, balance] = await Promise.all([
+          getStripeWindow(range.days, range.bucket).catch((e) => {
+            console.error("[admin finance] stripe window failed", e?.message);
+            return null;
+          }),
+          getStripeMrr().catch((e) => {
+            console.error("[admin finance] stripe mrr failed", e?.message);
+            return null;
+          }),
+          getStripeBalance().catch(() => null),
+        ]);
+
+        // Our own booked total for the same window, Stripe rail only, so the
+        // two sides are comparable (XRGE and grants never touch Stripe).
+        const [booked] = (await sql.query(
+          `SELECT COALESCE(SUM(amount_cents), 0)::int AS booked_cents,
+                  COUNT(*)::int AS booked_count
+           FROM transactions
+           WHERE ${SQL_IS_REVENUE} AND ${win.sql}
+             AND stripe_session_id IS NOT NULL
+             AND COALESCE(payment_method, '') <> 'admin'`,
+          win.params,
+        )) as any[];
+
+        const [allRails] = (await sql.query(
+          `SELECT COALESCE(SUM(amount_cents), 0)::int AS cents,
+                  COUNT(*)::int AS count
+           FROM transactions WHERE ${SQL_IS_REVENUE} AND ${win.sql}`,
+          win.params,
+        )) as any[];
+
+        // Cost for the same window, so margin is computed off net revenue
+        // rather than gross bookings.
+        const [cost] = (await sql.query(
+          `WITH ${costCtes(win.sql)}
+           SELECT COALESCE(SUM(blended_cents), 0)::numeric AS cost_cents,
+                  COUNT(*)::int AS jobs,
+                  COUNT(api_cost_cents)::int AS tracked
+           FROM priced`,
+          win.params,
+        )) as any[];
+
+        const costCents = Math.round(Number(cost.cost_cents));
+        const netCents = stripeWindow?.netCents ?? null;
+        const grossCents = stripeWindow?.grossCents ?? null;
+
+        // Reconciliation: a gap means Stripe collected money that never
+        // reached our ledger. Two known structural causes, both real:
+        //   • creator-verification checkouts only flip flags on `users`
+        //     (webhook.ts:638) and never write a transactions row at all;
+        //   • subscription renewals went unrecorded for all of April and May
+        //     2026 — 0 rows against 100/101 in the preceding months.
+        // The per-bucket series is what makes the second kind visible.
+        const drift =
+          grossCents !== null ? grossCents - booked.booked_cents : null;
+
+        const ledgerSeries = (await sql.query(
+          `SELECT to_char(date_trunc('${range.bucket}', created_at), 'YYYY-MM-DD') AS day,
+                  COALESCE(SUM(amount_cents), 0)::int AS booked,
+                  COUNT(*)::int AS booked_count
+           FROM transactions
+           WHERE ${SQL_IS_REVENUE} AND ${win.sql}
+             AND stripe_session_id IS NOT NULL
+             AND COALESCE(payment_method, '') <> 'admin'
+           GROUP BY 1 ORDER BY 1`,
+          win.params,
+        )) as any[];
+
+        const ledgerBy = new Map(ledgerSeries.map((r: any) => [r.day, r]));
+        const comparison = (stripeWindow?.series ?? []).map((s) => {
+          const l: any = ledgerBy.get(s.day);
+          const booked = l ? Number(l.booked) : 0;
+          return {
+            day: s.day,
+            stripeGross: s.gross,
+            stripeFee: s.fee,
+            stripeNet: s.net,
+            ledgerBooked: booked,
+            driftCents: s.gross - booked,
+          };
+        });
+
+        return res.status(200).json({
+          range: { days: range.days, bucket: range.bucket, label: range.label },
+          stripe: stripeWindow,
+          mrr,
+          balance,
+          booked: {
+            stripeRailCents: booked.booked_cents,
+            stripeRailCount: booked.booked_count,
+            allRailsCents: allRails.cents,
+            allRailsCount: allRails.count,
+          },
+          reconciliation: drift === null ? null : {
+            stripeGrossCents: grossCents,
+            ledgerCents: booked.booked_cents,
+            driftCents: drift,
+            driftPct: booked.booked_cents > 0 ? drift / booked.booked_cents : 0,
+            stripeCount: stripeWindow?.chargeCount ?? 0,
+            ledgerCount: booked.booked_count,
+            comparison,
+          },
+          cost: {
+            cents: costCents,
+            jobs: cost.jobs,
+            trackedRows: cost.tracked,
+            coverage: cost.jobs > 0 ? cost.tracked / cost.jobs : 0,
+          },
+          margin: netCents === null ? null : {
+            netRevenueCents: netCents,
+            costCents,
+            profitCents: netCents - costCents,
+            marginPct: netCents > 0 ? (netCents - costCents) / netCents : 0,
+          },
+        });
+      }
+
+      // -- RunPod: what we think we spent vs what RunPod says --
+      //
+      // `api_cost_cents` is execution time × one flat rate (comfyui.ts:3181),
+      // which is the H200 flex price applied to every endpoint — including
+      // jobs that landed on the cheaper ADA workers in the same GPU list. It
+      // also cannot see idle time, cold starts, or the seconds erased when a
+      // job is refunded. The balance snapshots are the correction: real
+      // drawdown per day, straight from the account.
+      case "runpod-truth": {
+        const range = parseRange(req.body, 30);
+        const win = rangeClause(range, "created_at", 1);
+
+        const [estimate] = (await sql.query(
+          `WITH ${costCtes(win.sql)}
+           SELECT
+             COUNT(*)::int                                AS jobs,
+             COUNT(*) FILTER (WHERE is_refund)::int       AS refunded_jobs,
+             COALESCE(SUM(execution_time_ms), 0)::bigint  AS exec_ms,
+             COALESCE(SUM(api_cost_cents), 0)::numeric    AS tracked_cents,
+             COUNT(api_cost_cents)::int                   AS tracked_rows,
+             COALESCE(SUM(blended_cents), 0)::numeric     AS blended_cents
+           FROM priced WHERE provider = 'runpod'`,
+          win.params,
+        )) as any[];
+
+        const perMode = (await sql.query(
+          `WITH ${costCtes(win.sql)}
+           SELECT base_mode AS mode,
+                  COUNT(*)::int AS jobs,
+                  COALESCE(SUM(blended_cents), 0)::numeric AS cents,
+                  COALESCE(AVG(NULLIF(execution_time_ms, 0)), 0)::numeric AS avg_ms
+           FROM priced WHERE provider = 'runpod'
+           GROUP BY base_mode ORDER BY cents DESC`,
+          win.params,
+        )) as any[];
+
+        // Real drawdown, if the snapshot cron has been running. Deposits show
+        // up as a balance increase, so only negative deltas are spend.
+        let snapshots: any[] = [];
+        let actualSpendCents: number | null = null;
+        const snapWin = rangeClause(range, "captured_at", 1);
         try {
-          const rows = await sql`
-            SELECT
-              mode,
-              COUNT(*)::int AS generations,
-              COALESCE(SUM(credits_used), 0)::int AS credits_used,
-              COALESCE(SUM(execution_time_ms), 0)::bigint AS total_exec_ms,
-              COUNT(execution_time_ms)::int AS tracked_count,
-              COALESCE(SUM(api_cost_cents), 0)::numeric AS actual_cost_cents,
-              COUNT(api_cost_cents)::int AS cost_tracked_count
-            FROM usage_log
-            WHERE created_at > now() - interval '30 days'
-              AND mode NOT LIKE 'moderation-%'
-            GROUP BY mode
-            ORDER BY credits_used DESC
-          `;
-          return res.status(200).json({ profitBreakdown: rows });
+          snapshots = (await sql.query(
+            `WITH s AS (
+               SELECT captured_at, balance_usd,
+                      LAG(balance_usd) OVER (ORDER BY captured_at) AS prev
+               FROM runpod_balance_snapshots
+               WHERE ${snapWin.sql}
+             )
+             SELECT captured_at, balance_usd,
+                    CASE WHEN prev IS NOT NULL AND balance_usd < prev
+                         THEN (prev - balance_usd) ELSE 0 END AS spend_usd
+             FROM s ORDER BY captured_at`,
+            snapWin.params,
+          )) as any[];
+          if (snapshots.length > 1) {
+            actualSpendCents = Math.round(
+              snapshots.reduce((a, r) => a + Number(r.spend_usd || 0), 0) * 100,
+            );
+          }
         } catch {
-          // Columns may not exist yet — return empty
-          const rows = await sql`
-            SELECT mode, COUNT(*)::int AS generations, COALESCE(SUM(credits_used), 0)::int AS credits_used,
-              0::bigint AS total_exec_ms, 0::int AS tracked_count, 0::numeric AS actual_cost_cents, 0::int AS cost_tracked_count
-            FROM usage_log
-            WHERE created_at > now() - interval '30 days' AND mode NOT LIKE 'moderation-%'
-            GROUP BY mode ORDER BY credits_used DESC
-          `;
-          return res.status(200).json({ profitBreakdown: rows });
+          // Table arrives with migration 054; before that we only have the estimate.
         }
+
+        const live = isRunpodBalanceConfigured() ? await getRunpodBalance().catch(() => null) : null;
+        const blended = Math.round(Number(estimate.blended_cents));
+
+        return res.status(200).json({
+          range: { days: range.days, bucket: range.bucket, label: range.label },
+          estimate: {
+            jobs: estimate.jobs,
+            refundedJobs: estimate.refunded_jobs,
+            execMs: Number(estimate.exec_ms),
+            trackedCents: Math.round(Number(estimate.tracked_cents)),
+            trackedRows: estimate.tracked_rows,
+            blendedCents: blended,
+            coverage: estimate.jobs > 0 ? estimate.tracked_rows / estimate.jobs : 0,
+            centsPerSec: RUNPOD_CENTS_PER_SEC,
+          },
+          perMode: perMode.map((r: any) => ({
+            mode: r.mode,
+            jobs: r.jobs,
+            cents: Math.round(Number(r.cents)),
+            avgSec: Number(r.avg_ms) / 1000,
+          })),
+          live,
+          snapshots,
+          actual: actualSpendCents === null ? null : {
+            spendCents: actualSpendCents,
+            // >1 means real spend exceeds what per-job execution time explains:
+            // idle workers, cold starts, and refunded jobs whose seconds were
+            // zeroed out of the log.
+            ratio: blended > 0 ? actualSpendCents / blended : null,
+            unexplainedCents: actualSpendCents - blended,
+            samples: snapshots.length,
+          },
+        });
       }
 
       // -- Media purge audit log (account deletes, library trash, admin sweeps) --
@@ -1118,7 +1617,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // -- API usage analytics --
       case "api-analytics": {
-        // KPI overview
+        const range = parseRange(req.body, 30);
+        const win = rangeClause(range, "created_at", 1);
+
         const [kpis] = await sql`
           SELECT
             COUNT(DISTINCT ak.user_id)::int AS total_api_users,
@@ -1129,64 +1630,106 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           FROM api_keys ak
         `;
 
-        // Requests last 30 days by day
-        const dailyVolume = await sql`
-          SELECT
-            date_trunc('day', created_at)::date AS day,
-            COUNT(*)::int AS requests,
-            SUM(credits_used)::int AS credits,
-            COUNT(DISTINCT api_key_id)::int AS unique_keys
-          FROM api_usage_log
-          WHERE created_at > now() - interval '30 days'
-          GROUP BY 1
-          ORDER BY 1
-        `;
+        const dailyVolume = (await sql.query(
+          `WITH ${bucketSeriesCte(range, "api_usage_log")},
+           agg AS (
+             SELECT date_trunc('${range.bucket}', created_at)::date AS bucket,
+                    COUNT(*)::int AS requests,
+                    COALESCE(SUM(credits_used), 0)::int AS credits,
+                    COUNT(DISTINCT api_key_id)::int AS unique_keys,
+                    COUNT(*) FILTER (WHERE status NOT IN ('200','ok','success'))::int AS errors
+             FROM api_usage_log
+             WHERE ${win.sql}
+             GROUP BY 1
+           )
+           SELECT b.bucket AS day,
+                  COALESCE(a.requests, 0)    AS requests,
+                  COALESCE(a.credits, 0)     AS credits,
+                  COALESCE(a.unique_keys, 0) AS unique_keys,
+                  COALESCE(a.errors, 0)      AS errors
+           FROM buckets b LEFT JOIN agg a ON a.bucket = b.bucket
+           ORDER BY b.bucket`,
+          win.params,
+        )) as any[];
 
-        // Top API consumers
-        const topConsumers = await sql`
-          SELECT
-            u.email,
-            ak.name AS key_name,
-            ak.key_prefix,
-            ak.total_requests::int,
-            ak.total_credits::int,
-            ak.last_used_at,
-            ak.created_at
-          FROM api_keys ak
-          JOIN users u ON u.id = ak.user_id
-          WHERE ak.is_active = true
-          ORDER BY ak.total_credits DESC
-          LIMIT 20
-        `;
+        // Ranked on windowed usage, not the lifetime counters on api_keys —
+        // those never decay, so the "top consumers" table used to be frozen on
+        // whoever was busiest six months ago.
+        const topConsumers = (await sql.query(
+          `WITH windowed AS (
+             SELECT api_key_id,
+                    COUNT(*)::int AS window_requests,
+                    COALESCE(SUM(credits_used), 0)::int AS window_credits
+             FROM api_usage_log
+             WHERE ${win.sql}
+             GROUP BY api_key_id
+           )
+           SELECT u.email, ak.name AS key_name, ak.key_prefix,
+                  ak.total_requests::int, ak.total_credits::int,
+                  ak.last_used_at, ak.created_at, ak.is_active,
+                  COALESCE(w.window_requests, 0) AS window_requests,
+                  COALESCE(w.window_credits, 0)  AS window_credits
+           FROM api_keys ak
+           JOIN users u ON u.id = ak.user_id
+           LEFT JOIN windowed w ON w.api_key_id = ak.id
+           WHERE ak.is_active = true
+           ORDER BY COALESCE(w.window_credits, 0) DESC, ak.total_credits DESC
+           LIMIT 20`,
+          win.params,
+        )) as any[];
 
-        // Revenue from API usage (credits × avg credit price ~$0.075)
-        const [apiRevenue] = await sql`
-          SELECT
-            COALESCE(SUM(credits_used), 0)::int AS total_credits,
-            COALESCE(SUM(credits_used) FILTER (WHERE created_at > now() - interval '30 days'), 0)::int AS credits_30d,
-            COALESCE(SUM(credits_used) FILTER (WHERE created_at > now() - interval '7 days'), 0)::int AS credits_7d,
-            COALESCE(SUM(credits_used) FILTER (WHERE created_at > now() - interval '24 hours'), 0)::int AS credits_today
-          FROM api_usage_log
-        `;
+        const [apiRevenue] = (await sql.query(
+          `SELECT
+             COALESCE(SUM(credits_used), 0)::int AS total_credits,
+             COALESCE(SUM(credits_used) FILTER (WHERE ${win.sql}), 0)::int AS credits_window,
+             COALESCE(SUM(credits_used) FILTER (WHERE created_at > now() - interval '30 days'), 0)::int AS credits_30d,
+             COALESCE(SUM(credits_used) FILTER (WHERE created_at > now() - interval '7 days'), 0)::int AS credits_7d,
+             COALESCE(SUM(credits_used) FILTER (WHERE created_at > now() - interval '24 hours'), 0)::int AS credits_today
+           FROM api_usage_log`,
+          win.params,
+        )) as any[];
 
-        // Usage by action type
-        const byAction = await sql`
-          SELECT
-            action,
-            COUNT(*)::int AS count,
-            SUM(credits_used)::int AS credits
-          FROM api_usage_log
-          WHERE created_at > now() - interval '30 days'
-          GROUP BY action
-          ORDER BY credits DESC
-        `;
+        const byAction = (await sql.query(
+          `SELECT action,
+                  COUNT(*)::int AS count,
+                  COALESCE(SUM(credits_used), 0)::int AS credits,
+                  COUNT(DISTINCT api_key_id)::int AS keys
+           FROM api_usage_log
+           WHERE ${win.sql}
+           GROUP BY action
+           ORDER BY credits DESC`,
+          win.params,
+        )) as any[];
+
+        // Value the API window at the same realized ¢/credit the rest of the
+        // panel uses, instead of the hardcoded 7.5¢ the old comment assumed.
+        const [creditPrice] = (await sql.query(
+          `WITH rev AS (
+             SELECT COALESCE(SUM(amount_cents), 0)::int AS cents
+             FROM transactions WHERE ${SQL_IS_REVENUE} AND ${win.sql}
+           ),
+           used AS (
+             SELECT COALESCE(SUM(${SQL_NET_CREDITS}), 0)::int AS credits
+             FROM usage_log WHERE ${win.sql} AND ${SQL_IS_JOB}
+           )
+           SELECT rev.cents, used.credits,
+                  CASE WHEN used.credits > 0
+                       THEN rev.cents::numeric / used.credits ELSE 0 END AS cents_per_credit
+           FROM rev, used`,
+          win.params,
+        )) as any[];
 
         return res.status(200).json({
+          range: { days: range.days, bucket: range.bucket, label: range.label },
           kpis,
           dailyVolume,
           topConsumers,
           apiRevenue,
           byAction,
+          centsPerCredit: Number(creditPrice.cents_per_credit),
+          impliedRevenueCents: Math.round(
+            Number(creditPrice.cents_per_credit) * Number(apiRevenue.credits_window),
+          ),
         });
       }
 

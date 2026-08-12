@@ -54,6 +54,7 @@ async function aggregateStats(sql: ReturnType<typeof getDb>) {
       COUNT(*) FILTER (WHERE type = 'subscription')::int AS sub_tx,
       COUNT(DISTINCT user_id)::int AS paying_users
     FROM transactions
+    WHERE amount_cents > 0
   `, [{ total_cents: 0, today_cents: 0, week_cents: 0, month_cents: 0, total_tx: 0, pack_tx: 0, sub_tx: 0, paying_users: 0 }]);
 
   // ── Users / growth ──
@@ -76,25 +77,32 @@ async function aggregateStats(sql: ReturnType<typeof getDb>) {
       COUNT(DISTINCT user_id) FILTER (WHERE created_at >= date_trunc('week', now()))::int AS wau,
       COUNT(DISTINCT user_id) FILTER (WHERE created_at >= date_trunc('month', now()))::int AS mau
     FROM usage_log
+    WHERE mode NOT IN ('share','share-repeat','chat-message','goodwill-discount-rounding')
   `, [{ dau: 0, wau: 0, mau: 0 }]);
 
   // ── Generation usage & cost ──
   const [usage] = await safe(sql`
     SELECT
-      COUNT(*)::int AS total_gens,
+      COUNT(*) FILTER (WHERE mode NOT LIKE '%-refunded%')::int AS total_gens,
       COUNT(*) FILTER (WHERE created_at >= date_trunc('day', now()))::int AS gens_today,
       COUNT(*) FILTER (WHERE created_at >= date_trunc('week', now()))::int AS gens_week,
       COUNT(*) FILTER (WHERE created_at >= date_trunc('month', now()))::int AS gens_month,
-      COALESCE(SUM(credits_used), 0)::int AS credits_total,
-      COALESCE(SUM(credits_used) FILTER (WHERE created_at >= date_trunc('month', now())), 0)::int AS credits_month
+      COALESCE(SUM(CASE WHEN mode LIKE '%-refunded%' THEN 0 ELSE credits_used END), 0)::int AS credits_total,
+      COALESCE(SUM(CASE WHEN mode LIKE '%-refunded%' THEN 0 ELSE credits_used END)
+               FILTER (WHERE created_at >= date_trunc('month', now())), 0)::int AS credits_month
     FROM usage_log
+    WHERE mode NOT IN ('share','share-repeat','chat-message','goodwill-discount-rounding')
+      AND mode NOT LIKE '%-refunded%'
   `, [{ total_gens: 0, gens_today: 0, gens_week: 0, gens_month: 0, credits_total: 0, credits_month: 0 }]);
 
   const topModes = await safe(sql`
-    SELECT mode, COUNT(*)::int AS n, COALESCE(SUM(credits_used),0)::int AS credits
+    SELECT split_part(mode, '-refunded', 1) AS mode,
+           COUNT(*) FILTER (WHERE mode NOT LIKE '%-refunded%')::int AS n,
+           COALESCE(SUM(CASE WHEN mode LIKE '%-refunded%' THEN 0 ELSE credits_used END),0)::int AS credits
     FROM usage_log
     WHERE created_at >= now() - interval '30 days'
-    GROUP BY mode
+      AND mode NOT IN ('share','share-repeat','chat-message','goodwill-discount-rounding')
+    GROUP BY 1
     ORDER BY n DESC
     LIMIT 8
   `, [] as any[]);
@@ -144,7 +152,7 @@ async function aggregateStats(sql: ReturnType<typeof getDb>) {
     SELECT date_trunc('day', created_at)::date AS d,
            COALESCE(SUM(amount_cents), 0)::int AS v
     FROM transactions
-    WHERE created_at >= now() - interval '30 days'
+    WHERE created_at >= now() - interval '30 days' AND amount_cents > 0
     GROUP BY 1 ORDER BY 1
   `, [] as { d: string; v: number }[]);
 
@@ -160,6 +168,7 @@ async function aggregateStats(sql: ReturnType<typeof getDb>) {
            COUNT(DISTINCT user_id)::int AS v
     FROM usage_log
     WHERE created_at >= now() - interval '30 days'
+      AND mode NOT IN ('share','share-repeat','chat-message','goodwill-discount-rounding')
     GROUP BY 1 ORDER BY 1
   `, [] as { d: string; v: number }[]);
 
@@ -167,6 +176,8 @@ async function aggregateStats(sql: ReturnType<typeof getDb>) {
     SELECT date_trunc('day', created_at)::date AS d, COUNT(*)::int AS v
     FROM usage_log
     WHERE created_at >= now() - interval '30 days'
+      AND mode NOT IN ('share','share-repeat','chat-message','goodwill-discount-rounding')
+      AND mode NOT LIKE '%-refunded%'
     GROUP BY 1 ORDER BY 1
   `, [] as { d: string; v: number }[]);
 

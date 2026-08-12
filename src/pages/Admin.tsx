@@ -34,8 +34,12 @@ import {
   Sparkles,
   ImageOff,
   Tractor,
+  Landmark,
+  Undo2,
 } from "lucide-react";
 import AdminInsightsPanel from "@/components/AdminInsightsPanel";
+import AdminFinancePanel from "@/components/AdminFinancePanel";
+import RangeControl, { loadRange, rangeLabel, type ChartRange } from "@/components/admin/RangeControl";
 import AdminChatModerationPanel from "@/components/AdminChatModerationPanel";
 import PurgeLogPanel from "@/components/PurgeLogPanel";
 import MediaErrorsPanel from "@/components/MediaErrorsPanel";
@@ -46,12 +50,15 @@ import {
   Area,
   BarChart,
   Bar,
+  ComposedChart,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
   Legend,
+  Brush,
 } from "recharts";
 import { Button } from "@/components/ui/button";
 import { apiFetch, hasAuthToken } from "@/lib/api";
@@ -66,37 +73,102 @@ function fmtDate(d: string): string {
   return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+/**
+ * Axis label matched to the bucket the server actually used. A month bucket
+ * rendered as "Aug 1" reads like a single day and drops the year, which
+ * matters now that the range can span more than a year.
+ */
+function fmtBucket(d: string, bucket: string): string {
+  const dt = new Date(d);
+  if (Number.isNaN(dt.getTime())) return d;
+  if (bucket === "month") {
+    return dt.toLocaleDateString("en-US", { month: "short", year: "2-digit", timeZone: "UTC" });
+  }
+  const label = dt.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+  return bucket === "week" ? `w/${label}` : label;
+}
+
+function fmtCompact(n: number): string {
+  if (!Number.isFinite(n)) return "--";
+  const abs = Math.abs(n);
+  if (abs >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (abs >= 1_000) return `${(n / 1_000).toFixed(abs >= 10_000 ? 0 : 1)}k`;
+  return String(Math.round(n));
+}
+
+function fmtPct(v: number | null | undefined, digits = 0): string {
+  if (v === null || v === undefined || !Number.isFinite(v)) return "--";
+  return `${(v * 100).toFixed(digits)}%`;
+}
+
+/** Distinct hues for stacked usage series, cycled by index. */
+const SERIES_COLORS = [
+  "hsl(var(--primary))",
+  "hsl(var(--secondary))",
+  "hsl(280 70% 60%)",
+  "hsl(35 90% 55%)",
+  "hsl(150 60% 45%)",
+  "hsl(200 80% 55%)",
+  "hsl(0 70% 55%)",
+  "hsl(60 70% 50%)",
+];
+
 // ── Types ──
 
 interface ModerationOffender {
   email: string; block_count: number; credits_burned: number; last_block: string;
 }
 interface ModerationStats {
-  total_blocks: number; blocks_30d: number; blocks_today: number;
-  total_credits_burned: number; credits_burned_30d: number;
-  wasted_cost_total_cents: number; wasted_cost_30d_cents: number;
+  total_blocks: number; blocks_window: number; blocks_30d: number; blocks_today: number;
+  total_credits_burned: number; credits_burned_window: number; credits_burned_30d: number;
+  wasted_cost_total_cents: number; wasted_cost_window_cents: number;
   offenders: ModerationOffender[];
 }
+/** Per-vendor cost for the selected window. Keys: runpod | xai | seedance | none. */
+interface ProviderCost {
+  jobs: number; refundedJobs: number; netCredits: number;
+  trackedCents: number; trackedRows: number; blendedCents: number; execMs: number;
+}
 interface Overview {
+  range: { days: number | null; bucket: string; label: string };
   users: { total_users: number; verified_users: number; active_subscribers: number; cancelling_subscribers: number; new_today: number; new_this_week: number };
-  revenue: { total_revenue_cents: number; revenue_30d_cents: number; revenue_7d_cents: number; total_transactions: number; pack_purchases: number; sub_renewals: number };
-  usage: { total_credits_used: number; credits_30d: number; credits_today: number; total_generations: number; generations_today: number };
-  creditPool: { total_sub_credits_outstanding: number; total_pack_credits_outstanding: number };
-  apiCost: { estimated30dCents: number; estimatedTotalCents: number };
-  runpodCost?: { estimated30dCents: number };
-  actualCost?: { actual30dCents: number; actualTotalCents: number; tracked30d: number; total30d: number };
+  revenue: {
+    total_revenue_cents: number; revenue_window_cents: number; revenue_30d_cents: number;
+    revenue_7d_cents: number; revenue_today_cents: number; total_transactions: number;
+    pack_purchases: number; sub_renewals: number; grant_rows: number; granted_credits: number; paying_users: number;
+  };
+  usage: {
+    total_credits_used: number; credits_window: number; credits_30d: number; credits_today: number;
+    total_generations: number; generations_window: number; generations_today: number;
+    refunded_generations: number; refunded_credits: number; refunded_window: number; active_users_window: number;
+  };
+  creditPool: { total_sub_credits_outstanding: number; total_pack_credits_outstanding: number; total_daily_credits_outstanding: number };
+  cost: {
+    byProvider: Record<string, ProviderCost>;
+    blendedCents: number; trackedCents: number; trackedRows: number; jobRows: number;
+    coverage: number; runpodCentsPerSec: number;
+  };
+  margin: {
+    revenueCents: number; costCents: number; grossCents: number; marginPct: number;
+    revenuePerCredit: number; costPerCredit: number;
+  };
   moderation: ModerationStats;
 }
 
-interface RevenueRow { day: string; revenue_cents: number; tx_count: number; packs: number; subs: number }
-interface UserRow { day: string; new_users: number; cumulative: number }
-interface UsageRow { day: string; mode: string; count: number; credits: number }
+interface RevenueRow {
+  day: string; revenue_cents: number; tx_count: number; packs: number; subs: number;
+  pack_cents: number; sub_cents: number; buyers: number; cumulative_cents: number;
+}
+interface UserRow { day: string; new_users: number; verified: number; cumulative: number }
+interface UsageRow { day: string; mode: string; count: number; refunded: number; credits: number }
 interface Transaction {
-  created_at: string; email: string; type: string; package: string; credits: number; amount_cents: number; gateway: string;
+  created_at: string; email: string; type: string; package: string; credits: number;
+  amount_cents: number; gateway: string; payment_method: string | null;
 }
 interface TopUser {
   email: string; subscription_tier: string | null; subscription_cancel_at: string | null; sub_credits: number; pack_credits: number;
   created_at: string; total_spent_cents: number; total_generations: number; total_credits_used: number; last_generation: string | null;
+  purchases: number; cost_cents: number; margin_cents: number;
 }
 
 // ── Shared Components ──
@@ -121,28 +193,66 @@ function KpiCard({ icon, label, value, sub, accent = "primary" }: {
   );
 }
 
+/**
+ * Values whose dataKey ends in `_cents` are money. The old rule guessed from
+ * the series *name* containing "revenue", so a "Packs" bar rendered as a raw
+ * cent count.
+ */
 function CyberTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
+  const rows = payload.filter((p: any) => p.value !== null && p.value !== undefined);
+  if (!rows.length) return null;
+  const total = rows.reduce((a: number, p: any) => a + (typeof p.value === "number" ? p.value : 0), 0);
+  const isMoney = String(rows[0]?.dataKey ?? "").endsWith("_cents");
   return (
     <div className="bg-card/95 border border-border/50 rounded px-3 py-2 shadow-xl backdrop-blur-sm">
       <p className="font-mono-share text-[10px] text-primary/70 mb-1">{label}</p>
-      {payload.map((p: any, i: number) => (
+      {rows.map((p: any, i: number) => (
         <p key={i} className="font-mono-share text-xs" style={{ color: p.color }}>
-          {p.name}: {typeof p.value === "number" && p.name?.toLowerCase().includes("revenue") ? fmt$(p.value) : p.value}
+          {p.name}: {typeof p.value === "number" && String(p.dataKey ?? "").endsWith("_cents")
+            ? fmt$(p.value)
+            : typeof p.value === "number" ? p.value.toLocaleString() : p.value}
         </p>
       ))}
+      {rows.length > 1 && (
+        <p className="font-mono-share text-[10px] text-muted-foreground/70 mt-1 pt-1 border-t border-border/30">
+          total: {isMoney ? fmt$(total) : total.toLocaleString()}
+        </p>
+      )}
     </div>
+  );
+}
+
+/** Small on/off pill for chart display options. */
+function ChartToggle({ active, onClick, title, children }: {
+  active: boolean; onClick: () => void; title?: string; children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      aria-pressed={active}
+      className={`px-2 py-1 font-mono-share text-[10px] tracking-wider rounded border transition-colors ${
+        active
+          ? "bg-primary/20 text-primary border-primary/40"
+          : "text-muted-foreground/60 border-border/30 hover:text-foreground hover:bg-primary/5"
+      }`}
+    >
+      {children}
+    </button>
   );
 }
 
 // ── Tab Definitions ──
 
-type TabId = "overview" | "insights" | "revenue" | "users" | "usage" | "moderation" | "farmers" | "referrals" | "payouts" | "emails" | "api" | "system" | "flash-sales" | "media-errors" | "purges" | "legacy-subs";
+type TabId = "overview" | "insights" | "revenue" | "finance" | "users" | "usage" | "moderation" | "farmers" | "referrals" | "payouts" | "emails" | "api" | "system" | "flash-sales" | "media-errors" | "purges" | "legacy-subs";
 
 const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
   { id: "overview", label: "OVERVIEW", icon: <Eye className="w-3.5 h-3.5" /> },
   { id: "insights", label: "INSIGHTS", icon: <Sparkles className="w-3.5 h-3.5" /> },
   { id: "revenue", label: "REVENUE", icon: <DollarSign className="w-3.5 h-3.5" /> },
+  { id: "finance", label: "FINANCE", icon: <Landmark className="w-3.5 h-3.5" /> },
   { id: "users", label: "USERS", icon: <Users className="w-3.5 h-3.5" /> },
   { id: "usage", label: "USAGE", icon: <BarChart3 className="w-3.5 h-3.5" /> },
   { id: "moderation", label: "DEFENSE", icon: <ShieldX className="w-3.5 h-3.5" /> },
@@ -162,7 +272,7 @@ const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
 // doesn't require horizontal scrolling to find anything.
 const TAB_GROUPS: { id: string; label: string; tabs: TabId[] }[] = [
   { id: "pulse", label: "PULSE", tabs: ["overview", "insights"] },
-  { id: "money", label: "MONEY", tabs: ["revenue", "payouts", "flash-sales", "legacy-subs"] },
+  { id: "money", label: "MONEY", tabs: ["revenue", "finance", "payouts", "flash-sales", "legacy-subs"] },
   { id: "people", label: "PEOPLE", tabs: ["users", "referrals", "emails"] },
   { id: "ops", label: "OPS", tabs: ["usage", "system", "media-errors", "purges"] },
   { id: "defense", label: "DEFENSE", tabs: ["moderation", "farmers", "api"] },
@@ -1152,6 +1262,9 @@ export default function Admin() {
   const [revenueBreakdown, setRevenueBreakdown] = useState<any>(null);
   const [referralStats, setReferralStats] = useState<any>(null);
   const [profitBreakdown, setProfitBreakdown] = useState<any[]>([]);
+  // Realized ¢/credit for the window, computed server-side off the same rows
+  // the cost table uses so the two can't disagree.
+  const [serverCentsPerCredit, setServerCentsPerCredit] = useState<number | null>(null);
   const [emailLogs, setEmailLogs] = useState<any[]>([]);
   const [emailStats, setEmailStats] = useState<any>(null);
   const [emailFilter, setEmailFilter] = useState<{ type?: string; status?: string }>({});
@@ -1159,6 +1272,16 @@ export default function Admin() {
   const [apiAnalytics, setApiAnalytics] = useState<any>(null);
   const [apiAnalyticsLoading, setApiAnalyticsLoading] = useState(false);
   const [apiAnalyticsError, setApiAnalyticsError] = useState<string | null>(null);
+  // One range drives every chart and KPI on the page. Persisted, so a refresh
+  // doesn't snap back to the old hardcoded 30 days.
+  const [range, setRange] = useState<ChartRange>(() => loadRange());
+  // Per-chart display toggles — kept local because they change nothing about
+  // what is fetched, only how it is drawn.
+  const [revenueCumulative, setRevenueCumulative] = useState(false);
+  const [revenueSplit, setRevenueSplit] = useState(false);
+  const [usageMetric, setUsageMetric] = useState<"count" | "credits">("count");
+  const [usageStacked, setUsageStacked] = useState(true);
+  const [usageTopN, setUsageTopN] = useState(6);
   const [refreshing, setRefreshing] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<any>(null);
@@ -1359,10 +1482,11 @@ export default function Admin() {
   const fetchAll = useCallback(async () => {
     setRefreshing(true);
     const errors: string[] = [];
+    const rangeBody = { days: range.days, ...(range.bucket ? { bucket: range.bucket } : {}) };
 
-    async function fetchAction(action: string) {
+    async function fetchAction(action: string, extra: Record<string, unknown> = {}) {
       try {
-        return await apiFetch("/admin", { method: "POST", body: { action } });
+        return await apiFetch("/admin", { method: "POST", body: { action, ...rangeBody, ...extra } });
       } catch (err: any) {
         const msg = err.message || String(err);
         if (msg.includes("Access denied") || msg.includes("403") || msg.includes("Unauthorized")) {
@@ -1387,15 +1511,22 @@ export default function Admin() {
         fetchAction("profit-breakdown"),
       ]);
 
+      // The server echoes back the bucket it actually used (AUTO resolves
+      // server-side), so axis labels match the real granularity.
+      const bucket: string = o?.range?.bucket || r?.range?.bucket || "day";
+
       if (o) setOverview(o);
-      if (r) setRevenue((r.revenue || []).map((row: RevenueRow) => ({ ...row, day: fmtDate(row.day) })));
-      if (u) setUsers((u.users || []).map((row: UserRow) => ({ ...row, day: fmtDate(row.day) })));
-      if (us) setUsage(us.usage || []);
+      if (r) setRevenue((r.revenue || []).map((row: RevenueRow) => ({ ...row, day: fmtBucket(row.day, bucket) })));
+      if (u) setUsers((u.users || []).map((row: UserRow) => ({ ...row, day: fmtBucket(row.day, bucket) })));
+      if (us) setUsage((us.usage || []).map((row: UsageRow) => ({ ...row, day: fmtBucket(row.day, bucket) })));
       if (t) setTopUsers(t.topUsers || []);
       if (tx) setTransactions(tx.transactions || []);
       if (ref) setReferralStats(ref.referrals || null);
       if (rb) setRevenueBreakdown(rb);
-      if (pb) setProfitBreakdown(pb.profitBreakdown || []);
+      if (pb) {
+        setProfitBreakdown(pb.profitBreakdown || []);
+        setServerCentsPerCredit(typeof pb.centsPerCredit === "number" ? pb.centsPerCredit : null);
+      }
 
       setAuthorized(true);
       setError(errors.length > 0 ? errors.join(" | ") : null);
@@ -1406,7 +1537,7 @@ export default function Admin() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [range.days, range.bucket]);
 
   const syncSubscriptions = useCallback(async () => {
     setSyncing(true);
@@ -1460,16 +1591,42 @@ export default function Admin() {
     }
   }, [activeTab, apiAnalytics, apiAnalyticsLoading, apiAnalyticsError, authorized, fetchApiAnalytics]);
 
-  const usagePivot = React.useMemo(() => {
-    const map = new Map<string, { day: string } & Record<string, number>>();
+  useEffect(() => {
+    // Range change invalidates the lazily-loaded API tab too.
+    setApiAnalytics(null);
+    setApiAnalyticsError(null);
+  }, [range.days, range.bucket]);
+
+  /**
+   * Long-tail modes are folded into OTHER: past ~8 series a stacked chart is
+   * unreadable and the legend is longer than the plot.
+   */
+  const { usagePivot, usageModes } = React.useMemo(() => {
+    const key = usageMetric === "credits" ? "credits" : "count";
+    const totals = new Map<string, number>();
     for (const row of usage) {
-      const d = fmtDate(row.day);
-      const entry = map.get(d) ?? ({ day: d } as { day: string } & Record<string, number>);
-      (entry as Record<string, number>)[row.mode] = ((entry as Record<string, number>)[row.mode] || 0) + row.count;
-      map.set(d, entry);
+      totals.set(row.mode, (totals.get(row.mode) || 0) + Number(row[key] || 0));
     }
-    return Array.from(map.values());
-  }, [usage]);
+    const ranked = Array.from(totals.entries()).sort((a, b) => b[1] - a[1]);
+    const top = ranked.slice(0, usageTopN).map(([m]) => m);
+    const topSet = new Set(top);
+    const hasOther = ranked.length > top.length;
+
+    const map = new Map<string, { day: string } & Record<string, number>>();
+    // usage rows arrive pre-formatted and already ordered by bucket, so
+    // insertion order is chronological.
+    for (const row of usage) {
+      const entry = map.get(row.day) ?? ({ day: row.day } as { day: string } & Record<string, number>);
+      const series = topSet.has(row.mode) ? row.mode : "OTHER";
+      const rec = entry as Record<string, number>;
+      rec[series] = (rec[series] || 0) + Number(row[key] || 0);
+      map.set(row.day, entry);
+    }
+    return {
+      usagePivot: Array.from(map.values()),
+      usageModes: hasOther ? [...top, "OTHER"] : top,
+    };
+  }, [usage, usageMetric, usageTopN]);
 
   // ── Loading / Auth gates ──
   if (loading) {
@@ -1519,20 +1676,19 @@ export default function Admin() {
   }
 
   const o = overview;
-  const xaiCost30d = o.apiCost.estimated30dCents;
-  const runpodCost30d = o.runpodCost?.estimated30dCents || 0;
-  const modCost30d = o.moderation.wasted_cost_30d_cents;
-  const actualCost30d = o.actualCost?.actual30dCents || 0;
-  const hasActualCosts = (o.actualCost?.tracked30d || 0) > 0;
-  const totalCost30d = hasActualCosts ? actualCost30d + modCost30d : xaiCost30d + runpodCost30d + modCost30d;
-  const trueMargin30d = o.revenue.revenue_30d_cents - totalCost30d;
-  // Blended realized ¢/credit: 30d revenue over 30d credits consumed.
-  // Falls back to 7.5¢ (≈ pack pricing) when either side is empty.
-  const profitCredits30d = profitBreakdown.reduce((a: number, r: any) => a + Number(r.credits_used || 0), 0);
-  const centsPerCredit = profitCredits30d > 0 && o.revenue.revenue_30d_cents > 0
-    ? o.revenue.revenue_30d_cents / profitCredits30d
-    : 7.5;
-  const costCoverage = o.actualCost ? `${o.actualCost.tracked30d}/${o.actualCost.total30d} tracked` : "estimated";
+  const winLabel = rangeLabel(range.days);
+  // Cost is now split by who sends the bill rather than by one blanket
+  // per-credit rate, so the RunPod and xAI cards no longer describe the same
+  // jobs twice.
+  const runpodCost = o.cost.byProvider.runpod?.blendedCents ?? 0;
+  const xaiCost = o.cost.byProvider.xai?.blendedCents ?? 0;
+  const seedanceCost = o.cost.byProvider.seedance?.blendedCents ?? 0;
+  const totalCost = o.cost.blendedCents;
+  const trueMargin = o.margin.grossCents;
+  // Realized ¢/credit for the window, from the server so the overview cards
+  // and the unit-economics table can't drift apart.
+  const centsPerCredit = serverCentsPerCredit ?? o.margin.revenuePerCredit ?? 0;
+  const costCoverage = `${o.cost.trackedRows.toLocaleString()}/${o.cost.jobRows.toLocaleString()} measured (${fmtPct(o.cost.coverage)})`;
 
   return (
     <div className="min-h-screen bg-background w-full overflow-x-hidden">
@@ -1620,27 +1776,45 @@ export default function Admin() {
         {/* ═══ OVERVIEW TAB ═══ */}
         {activeTab === "overview" && (
           <>
+            <div className="flex items-center gap-2 flex-wrap">
+              <RangeControl value={range} onChange={setRange} />
+              <span className="font-mono-share text-[10px] text-muted-foreground/50 ml-auto">
+                every figure below covers the selected window
+              </span>
+            </div>
+
             <section className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
-              <KpiCard icon={<Users className="w-4 h-4" />} label="TOTAL_USERS" value={o.users.total_users} sub={`${o.users.verified_users} verified // +${o.users.new_this_week} this week`} />
-              <KpiCard icon={<DollarSign className="w-4 h-4" />} label="REVENUE_30D" value={fmt$(o.revenue.revenue_30d_cents)} sub={`${fmt$(o.revenue.total_revenue_cents)} lifetime`} accent="secondary" />
-              <KpiCard icon={<Zap className="w-4 h-4" />} label="CREDITS_USED_30D" value={o.usage.credits_30d.toLocaleString()} sub={`${o.usage.generations_today} today // ${o.usage.total_generations} total`} />
-              <KpiCard icon={<Crown className="w-4 h-4" />} label="SUBSCRIBERS" value={o.users.active_subscribers} sub={`${o.users.cancelling_subscribers} cancelling // ${o.revenue.pack_purchases} pack buys`} accent="secondary" />
+              <KpiCard icon={<Users className="w-4 h-4" />} label="TOTAL_USERS" value={o.users.total_users.toLocaleString()} sub={`${o.users.verified_users.toLocaleString()} verified // +${o.users.new_this_week} this week`} />
+              <KpiCard icon={<DollarSign className="w-4 h-4" />} label={`REVENUE_${winLabel}`} value={fmt$(o.revenue.revenue_window_cents)} sub={`${fmt$(o.revenue.total_revenue_cents)} lifetime // ${o.revenue.paying_users} payers`} accent="secondary" />
+              <KpiCard icon={<Zap className="w-4 h-4" />} label={`CREDITS_USED_${winLabel}`} value={o.usage.credits_window.toLocaleString()} sub={`${o.usage.generations_window.toLocaleString()} gens // ${o.usage.active_users_window.toLocaleString()} active users`} />
+              <KpiCard icon={<Crown className="w-4 h-4" />} label="SUBSCRIBERS" value={o.users.active_subscribers} sub={`${o.users.cancelling_subscribers} cancelling // ${o.revenue.sub_renewals} renewals booked`} accent="secondary" />
             </section>
 
             <section className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
-              <KpiCard icon={<CreditCard className="w-4 h-4" />} label="xAI_COST_30D" value={fmt$(xaiCost30d)} sub="estimated from credit usage" accent="destructive" />
-              <KpiCard icon={<Server className="w-4 h-4" />} label="RUNPOD_COST_30D" value={runpodCost30d ? fmt$(runpodCost30d) : "N/A"} sub={runpodCost30d ? "from execution time" : "enable tracking"} accent="destructive" />
-              <KpiCard icon={<Activity className="w-4 h-4" />} label="ACTUAL_COST_30D" value={hasActualCosts ? fmt$(actualCost30d) : "N/A"} sub={costCoverage} accent="destructive" />
-              <KpiCard icon={<TrendingUp className="w-4 h-4" />} label="TRUE_MARGIN_30D" value={fmt$(trueMargin30d)} sub={`${Math.round((trueMargin30d / Math.max(1, o.revenue.revenue_30d_cents)) * 100)}% of revenue`} accent={trueMargin30d >= 0 ? "secondary" : "destructive"} />
+              <KpiCard icon={<Server className="w-4 h-4" />} label={`RUNPOD_${winLabel}`} value={fmt$(runpodCost)} sub={`${(o.cost.byProvider.runpod?.jobs ?? 0).toLocaleString()} GPU jobs`} accent="destructive" />
+              <KpiCard icon={<CreditCard className="w-4 h-4" />} label={`xAI_${winLabel}`} value={fmt$(xaiCost)} sub={xaiCost > 0 ? `${(o.cost.byProvider.xai?.jobs ?? 0).toLocaleString()} legacy jobs` : "no xAI jobs in window"} accent="destructive" />
+              <KpiCard icon={<Activity className="w-4 h-4" />} label={`TOTAL_COST_${winLabel}`} value={fmt$(totalCost)} sub={costCoverage} accent="destructive" />
+              <KpiCard icon={<TrendingUp className="w-4 h-4" />} label={`GROSS_MARGIN_${winLabel}`} value={fmt$(trueMargin)} sub={`${fmtPct(o.margin.marginPct)} of revenue`} accent={trueMargin >= 0 ? "secondary" : "destructive"} />
             </section>
 
-            <section className="grid grid-cols-2 md:grid-cols-3 gap-2 sm:gap-3">
-              <KpiCard icon={<Activity className="w-4 h-4" />} label="CREDITS_OUTSTANDING" value={(o.creditPool.total_sub_credits_outstanding + o.creditPool.total_pack_credits_outstanding).toLocaleString()} sub={`${o.creditPool.total_sub_credits_outstanding.toLocaleString()} sub + ${o.creditPool.total_pack_credits_outstanding.toLocaleString()} pack`} />
-              <KpiCard icon={<DollarSign className="w-4 h-4" />} label="REVENUE_7D" value={fmt$(o.revenue.revenue_7d_cents)} sub={`${o.revenue.total_transactions} total txns`} accent="secondary" />
-              <KpiCard icon={<Crown className="w-4 h-4" />} label="SUB_RENEWALS" value={o.revenue.sub_renewals} sub={`${o.revenue.pack_purchases} pack purchases`} accent="secondary" />
+            <section className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
+              <KpiCard icon={<Zap className="w-4 h-4" />} label="CREDIT_UNIT_ECON" value={`${o.margin.revenuePerCredit.toFixed(2)}¢`} sub={`sold // ${o.margin.costPerCredit.toFixed(2)}¢ to serve`} accent={o.margin.revenuePerCredit >= o.margin.costPerCredit ? "secondary" : "destructive"} />
+              <KpiCard icon={<Activity className="w-4 h-4" />} label="CREDITS_OUTSTANDING" value={fmtCompact(o.creditPool.total_sub_credits_outstanding + o.creditPool.total_pack_credits_outstanding + o.creditPool.total_daily_credits_outstanding)} sub={`liability ≈ ${fmt$(Math.round((o.creditPool.total_sub_credits_outstanding + o.creditPool.total_pack_credits_outstanding) * o.margin.costPerCredit))} to serve`} />
+              <KpiCard icon={<Undo2 className="w-4 h-4" />} label={`REFUNDED_${winLabel}`} value={o.usage.refunded_window.toLocaleString()} sub={`${o.usage.refunded_generations.toLocaleString()} lifetime // ${o.usage.refunded_credits.toLocaleString()} credits back`} accent={o.usage.refunded_window > 0 ? "destructive" : "primary"} />
+              <KpiCard icon={<Gift className="w-4 h-4" />} label="ADMIN_GRANTS" value={o.revenue.grant_rows.toLocaleString()} sub={`${o.revenue.granted_credits.toLocaleString()} credits, $0 revenue`} />
             </section>
+
+            <p className="font-mono-share text-[10px] text-muted-foreground/50 leading-relaxed">
+              Revenue counts only rows where money moved — the {o.revenue.grant_rows.toLocaleString()} admin grants are
+              excluded, as are refunded generations from credit totals. Cost is measured per job where RunPod reported an
+              execution time and inferred from that mode's own observed average where it didn't. For fees, refunds and
+              what actually reached the bank, see FINANCE.
+            </p>
           </>
         )}
+
+        {/* ═══ FINANCE TAB ═══ */}
+        {activeTab === "finance" && <AdminFinancePanel range={range} onRangeChange={setRange} />}
 
         {/* ═══ INSIGHTS TAB ═══ */}
         {activeTab === "insights" && <AdminInsightsPanel />}
@@ -1654,12 +1828,19 @@ export default function Admin() {
         {activeTab === "revenue" && (
           <>
             <div className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm p-3 sm:p-4 min-w-0 overflow-hidden">
-              <h2 className="font-orbitron text-xs tracking-wider text-primary/80 mb-4 flex items-center gap-2">
-                <DollarSign className="w-3.5 h-3.5" />
-                REVENUE_STREAM (30d)
-              </h2>
-              <ResponsiveContainer width="100%" height={250}>
-                <AreaChart data={revenue}>
+              <div className="flex items-center gap-2 flex-wrap mb-3">
+                <h2 className="font-orbitron text-xs tracking-wider text-primary/80 flex items-center gap-2">
+                  <DollarSign className="w-3.5 h-3.5" />
+                  REVENUE_STREAM
+                </h2>
+                <div className="ml-auto flex items-center gap-1.5 flex-wrap">
+                  <ChartToggle active={revenueSplit} onClick={() => setRevenueSplit((v) => !v)} title="Split packs from subscriptions">SPLIT</ChartToggle>
+                  <ChartToggle active={revenueCumulative} onClick={() => setRevenueCumulative((v) => !v)} title="Show a running total instead of per-bucket revenue">CUMULATIVE</ChartToggle>
+                </div>
+              </div>
+              <RangeControl value={range} onChange={setRange} className="mb-3" />
+              <ResponsiveContainer width="100%" height={280}>
+                <ComposedChart data={revenue}>
                   <defs>
                     <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="hsl(var(--secondary))" stopOpacity={0.3} />
@@ -1668,11 +1849,27 @@ export default function Admin() {
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.3} />
                   <XAxis dataKey="day" interval="preserveStartEnd" tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} />
-                  <YAxis tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} tickFormatter={(v) => fmt$(v)} width={48} />
+                  <YAxis tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} tickFormatter={(v) => fmt$(v)} width={56} />
                   <Tooltip content={<CyberTooltip />} />
-                  <Area type="monotone" dataKey="revenue_cents" name="Revenue" stroke="hsl(var(--secondary))" fill="url(#revGrad)" strokeWidth={2} />
-                </AreaChart>
+                  <Legend wrapperStyle={{ fontSize: 10 }} />
+                  {revenueCumulative ? (
+                    <Area type="monotone" dataKey="cumulative_cents" name="Cumulative revenue" stroke="hsl(var(--secondary))" fill="url(#revGrad)" strokeWidth={2} />
+                  ) : revenueSplit ? (
+                    <>
+                      <Bar dataKey="pack_cents" name="Packs" stackId="rev" fill="hsl(var(--primary))" fillOpacity={0.75} />
+                      <Bar dataKey="sub_cents" name="Subscriptions" stackId="rev" fill="hsl(var(--secondary))" fillOpacity={0.75} />
+                    </>
+                  ) : (
+                    <Area type="monotone" dataKey="revenue_cents" name="Revenue" stroke="hsl(var(--secondary))" fill="url(#revGrad)" strokeWidth={2} />
+                  )}
+                  {revenue.length > 24 && (
+                    <Brush dataKey="day" height={18} travellerWidth={8} stroke="hsl(var(--primary))" fill="hsl(var(--card))" />
+                  )}
+                </ComposedChart>
               </ResponsiveContainer>
+              <p className="font-mono-share text-[10px] text-muted-foreground/50 mt-2">
+                Bookings from our own ledger, grants excluded. Fees and refunds are not deducted here — see FINANCE.
+              </p>
             </div>
 
             {revenueBreakdown && (
@@ -1681,20 +1878,20 @@ export default function Admin() {
                   <div className="px-3 sm:px-4 py-3 border-b border-border/30">
                     <h2 className="font-orbitron text-xs tracking-wider text-secondary/80 flex items-center gap-2">
                       <CreditCard className="w-3.5 h-3.5" />
-                      REVENUE_BY_PACK (30d)
+                      REVENUE_BY_PACK ({winLabel})
                     </h2>
                   </div>
                   <div className="overflow-x-auto overscroll-x-contain">
                     <table className="w-full">
                       <thead>
                         <tr className="border-b border-border/20">
-                          {["PACK", "TYPE", "COUNT", "REVENUE", "CREDITS"].map((h) => (
+                          {["PACK", "TYPE", "COUNT", "REVENUE", "CREDITS", "¢/CR", "AVG"].map((h) => (
                             <th key={h} className="px-2.5 py-2 text-left font-mono-share text-[9px] text-muted-foreground/50 tracking-wider">{h}</th>
                           ))}
                         </tr>
                       </thead>
                       <tbody>
-                        {(revenueBreakdown.byPack30d || []).map((row: any, i: number) => (
+                        {(revenueBreakdown.byPackWindow || revenueBreakdown.byPack30d || []).map((row: any, i: number) => (
                           <tr key={i} className="border-b border-border/10 hover:bg-primary/5 transition-colors">
                             <td className="px-2.5 py-2 font-orbitron text-[10px] tracking-wider text-foreground/80">{row.package?.toUpperCase() || "--"}</td>
                             <td className="px-2.5 py-2">
@@ -1702,14 +1899,37 @@ export default function Admin() {
                                 row.type === "subscription" ? "bg-secondary/20 text-secondary border-secondary/30" : "bg-primary/20 text-primary border-primary/30"
                               }`}>{row.type?.toUpperCase()}</span>
                             </td>
-                            <td className="px-2.5 py-2 font-mono-share text-xs font-bold">{row.count}</td>
-                            <td className="px-2.5 py-2 font-mono-share text-xs text-secondary font-bold">{fmt$(row.total_cents)}</td>
-                            <td className="px-2.5 py-2 font-mono-share text-xs text-primary">{row.total_credits?.toLocaleString()}</td>
+                            <td className="px-2.5 py-2 font-mono-share text-xs font-bold" data-numeric>{row.count}</td>
+                            <td className="px-2.5 py-2 font-mono-share text-xs text-secondary font-bold" data-numeric>{fmt$(row.total_cents)}</td>
+                            <td className="px-2.5 py-2 font-mono-share text-xs text-primary" data-numeric>{row.total_credits?.toLocaleString()}</td>
+                            <td className="px-2.5 py-2 font-mono-share text-[10px] text-muted-foreground/70" data-numeric title="Cents of revenue per credit sold">
+                              {row.cents_per_credit ? Number(row.cents_per_credit).toFixed(2) : "--"}
+                            </td>
+                            <td className="px-2.5 py-2 font-mono-share text-[10px] text-muted-foreground/70" data-numeric title="Average order value">
+                              {fmt$(row.avg_cents)}
+                            </td>
                           </tr>
                         ))}
+                        {(revenueBreakdown.byPackWindow || []).length === 0 && (
+                          <tr><td colSpan={7} className="px-2.5 py-6 text-center font-mono-share text-[10px] text-muted-foreground/40">no purchases in this window</td></tr>
+                        )}
                       </tbody>
                     </table>
                   </div>
+                  {(revenueBreakdown.grants || []).length > 0 && (
+                    <div className="px-3 sm:px-4 py-3 border-t border-border/20">
+                      <h3 className="font-orbitron text-[9px] tracking-wider text-muted-foreground/50 mb-2">
+                        ADMIN_GRANTS — $0, excluded from every revenue figure above
+                      </h3>
+                      <div className="flex flex-wrap gap-2">
+                        {(revenueBreakdown.grants || []).map((g: any, i: number) => (
+                          <span key={i} className="font-mono-share text-[10px] px-2 py-1 rounded border border-border/30 bg-muted/10 text-muted-foreground/70">
+                            {g.package || "--"}: {g.count.toLocaleString()} rows // {g.credits.toLocaleString()} credits
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm overflow-hidden">
@@ -1731,7 +1951,7 @@ export default function Admin() {
                               : row.gateway === "paypal" ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
                               : row.gateway === "xrge" ? "bg-pink-500/20 text-pink-400 border border-pink-500/30"
                               : "bg-muted/20 text-muted-foreground"
-                            }`}>{row.gateway === "xrge" ? "$XRGE" : row.gateway?.toUpperCase()}</span>
+                            }`}>{row.gateway === "xrge" ? "$XRGE" : row.gateway === "xrge-bank" ? "$XRGE_BANK" : row.gateway?.toUpperCase()}</span>
                             <div className="flex items-center gap-3">
                               <span className="font-mono-share text-[10px] text-muted-foreground/60">{row.count} txns</span>
                               <span className="font-mono-share text-sm text-secondary font-bold">{fmt$(row.total_cents)}</span>
@@ -1740,13 +1960,41 @@ export default function Admin() {
                           </div>
                           <div className="w-full bg-border/20 rounded-full h-1.5 overflow-hidden">
                             <div className={`h-full rounded-full transition-all ${
-                              row.gateway === "stripe" ? "bg-indigo-500" : row.gateway === "paypal" ? "bg-blue-500" : row.gateway === "xrge" ? "bg-pink-500" : "bg-muted-foreground"
+                              row.gateway === "stripe" ? "bg-indigo-500" : row.gateway === "paypal" ? "bg-blue-500" : row.gateway?.startsWith("xrge") ? "bg-pink-500" : "bg-muted-foreground"
                             }`} style={{ width: `${pct}%` }} />
                           </div>
                         </div>
                       );
                     })}
                   </div>
+
+                  {/* Stripe's own payment-method mix. `payment_method` holds the
+                      Stripe type (card / link / apple_pay / klarna / …), which the
+                      gateway rollup above collapses into a single "STRIPE" bar. */}
+                  {(revenueBreakdown.byMethod || []).length > 0 && (
+                    <div className="px-3 sm:px-4 py-3 border-t border-border/20">
+                      <h3 className="font-orbitron text-[9px] tracking-wider text-muted-foreground/50 mb-2">PAYMENT_METHOD_MIX (lifetime)</h3>
+                      <div className="overflow-x-auto overscroll-x-contain">
+                        <table className="w-full">
+                          <thead><tr className="border-b border-border/20">
+                            {["METHOD", "#", "REVENUE", `${winLabel}`].map((h) => (
+                              <th key={h} className="px-2 py-1 text-left font-mono-share text-[8px] text-muted-foreground/40 tracking-wider">{h}</th>
+                            ))}
+                          </tr></thead>
+                          <tbody>
+                            {(revenueBreakdown.byMethod || []).slice(0, 12).map((m: any, i: number) => (
+                              <tr key={i} className="border-b border-border/10">
+                                <td className="px-2 py-1 font-mono-share text-[10px] text-foreground/75">{m.method}</td>
+                                <td className="px-2 py-1 font-mono-share text-[10px] text-muted-foreground/70" data-numeric>{m.count.toLocaleString()}</td>
+                                <td className="px-2 py-1 font-mono-share text-[10px] text-secondary" data-numeric>{fmt$(m.total_cents)}</td>
+                                <td className="px-2 py-1 font-mono-share text-[10px] text-muted-foreground/60" data-numeric>{fmt$(m.window_cents)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
                   <div className="px-3 sm:px-4 py-3 border-t border-border/20">
                     <h3 className="font-orbitron text-[9px] tracking-wider text-muted-foreground/50 mb-2">ALL_TIME_BY_PACK</h3>
                     <div className="overflow-x-auto overscroll-x-contain">
@@ -1826,13 +2074,20 @@ export default function Admin() {
         {/* ═══ USERS TAB ═══ */}
         {activeTab === "users" && (
           <>
+            {/*
+              Was an AreaChart with a <Bar> inside it, which recharts silently
+              dropped — so "New Users" never rendered. ComposedChart draws both,
+              on separate axes because a ~100/day signup count is invisible next
+              to a 28k cumulative line.
+            */}
             <div className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm p-3 sm:p-4 min-w-0 overflow-hidden">
-              <h2 className="font-orbitron text-xs tracking-wider text-primary/80 mb-4 flex items-center gap-2">
+              <h2 className="font-orbitron text-xs tracking-wider text-primary/80 mb-3 flex items-center gap-2">
                 <Users className="w-3.5 h-3.5" />
-                USER_GROWTH (30d)
+                USER_GROWTH
               </h2>
-              <ResponsiveContainer width="100%" height={250}>
-                <AreaChart data={users}>
+              <RangeControl value={range} onChange={setRange} className="mb-3" />
+              <ResponsiveContainer width="100%" height={280}>
+                <ComposedChart data={users}>
                   <defs>
                     <linearGradient id="userGrad" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
@@ -1841,12 +2096,21 @@ export default function Admin() {
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.3} />
                   <XAxis dataKey="day" interval="preserveStartEnd" tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} />
-                  <YAxis tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} width={30} />
+                  <YAxis yAxisId="total" tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} tickFormatter={fmtCompact} width={42} />
+                  <YAxis yAxisId="new" orientation="right" tick={{ fontSize: 9, fill: "hsl(var(--secondary))" }} tickFormatter={fmtCompact} width={42} />
                   <Tooltip content={<CyberTooltip />} />
-                  <Area type="monotone" dataKey="cumulative" name="Total Users" stroke="hsl(var(--primary))" fill="url(#userGrad)" strokeWidth={2} />
-                  <Bar dataKey="new_users" name="New Users" fill="hsl(var(--primary))" fillOpacity={0.5} />
-                </AreaChart>
+                  <Legend wrapperStyle={{ fontSize: 10 }} />
+                  <Area yAxisId="total" type="monotone" dataKey="cumulative" name="Total users" stroke="hsl(var(--primary))" fill="url(#userGrad)" strokeWidth={2} />
+                  <Bar yAxisId="new" dataKey="new_users" name="New signups" fill="hsl(var(--secondary))" fillOpacity={0.6} />
+                  <Line yAxisId="new" type="monotone" dataKey="verified" name="Verified" stroke="hsl(var(--secondary))" strokeWidth={1.5} dot={false} strokeDasharray="4 3" />
+                  {users.length > 24 && (
+                    <Brush dataKey="day" height={18} travellerWidth={8} stroke="hsl(var(--primary))" fill="hsl(var(--card))" />
+                  )}
+                </ComposedChart>
               </ResponsiveContainer>
+              <p className="font-mono-share text-[10px] text-muted-foreground/50 mt-2">
+                Total users is a true running count from day zero, so a short window still shows the real headcount.
+              </p>
             </div>
 
             {/* Grant Credits */}
@@ -2195,15 +2459,18 @@ export default function Admin() {
 
             <section className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm overflow-hidden">
               <div className="px-3 sm:px-4 py-3 border-b border-border/30">
-                <h2 className="font-orbitron text-xs tracking-wider text-primary/80 flex items-center gap-2">
+                <h2 className="font-orbitron text-xs tracking-wider text-primary/80 flex items-center gap-2 flex-wrap">
                   <Users className="w-3.5 h-3.5" />
-                  TOP_OPERATORS (by usage)
+                  TOP_OPERATORS ({winLabel})
+                  <span className="font-mono-share text-[9px] text-muted-foreground/50 tracking-normal normal-case">
+                    spend minus what their generations cost to serve
+                  </span>
                 </h2>
               </div>
               <div className="overflow-x-auto overscroll-x-contain">
-                <table className="w-full min-w-[560px]">
+                <table className="w-full min-w-[680px]">
                   <thead><tr className="border-b border-border/20">
-                    {["OPERATOR", "TIER", "SPENT", "GENS", "USED", "BAL", "LAST"].map((h) => (
+                    {["OPERATOR", "TIER", "SPENT", "COST", "MARGIN", "GENS", "USED", "BAL", "LAST"].map((h) => (
                       <th key={h} className="px-2.5 py-2 text-left font-mono-share text-[9px] text-muted-foreground/50 tracking-wider">{h}</th>
                     ))}
                   </tr></thead>
@@ -2220,21 +2487,29 @@ export default function Admin() {
                             <span className="font-mono-share text-[10px] text-muted-foreground/40">none</span>
                           )}
                         </td>
-                        <td className="px-2.5 py-2 font-mono-share text-xs text-secondary">{fmt$(u.total_spent_cents)}</td>
-                        <td className="px-2.5 py-2 font-mono-share text-xs">{Number(u.total_generations || 0).toLocaleString()}</td>
-                        <td className="px-2.5 py-2 font-mono-share text-xs">{Number(u.total_credits_used || 0).toLocaleString()}</td>
-                        <td className="px-2.5 py-2 font-mono-share text-xs text-primary">{(u.sub_credits + u.pack_credits).toLocaleString()}</td>
+                        <td className="px-2.5 py-2 font-mono-share text-xs text-secondary" data-numeric>{fmt$(u.total_spent_cents)}</td>
+                        <td className="px-2.5 py-2 font-mono-share text-xs text-destructive" data-numeric>{fmt$(u.cost_cents ?? 0)}</td>
+                        <td className={`px-2.5 py-2 font-mono-share text-xs font-bold ${(u.margin_cents ?? 0) >= 0 ? "text-green-400" : "text-destructive"}`} data-numeric>
+                          {fmt$(u.margin_cents ?? 0)}
+                        </td>
+                        <td className="px-2.5 py-2 font-mono-share text-xs" data-numeric>{Number(u.total_generations || 0).toLocaleString()}</td>
+                        <td className="px-2.5 py-2 font-mono-share text-xs" data-numeric>{Number(u.total_credits_used || 0).toLocaleString()}</td>
+                        <td className="px-2.5 py-2 font-mono-share text-xs text-primary" data-numeric>{(u.sub_credits + u.pack_credits).toLocaleString()}</td>
                         <td className="px-2.5 py-2 font-mono-share text-[10px] text-muted-foreground/50">
                           {u.last_generation ? new Date(u.last_generation).toLocaleDateString() : "never"}
                         </td>
                       </tr>
                     ))}
                     {topUsers.length === 0 && (
-                      <tr><td colSpan={7} className="px-4 py-8 text-center font-mono-share text-xs text-muted-foreground/40">No operator data yet.</td></tr>
+                      <tr><td colSpan={9} className="px-4 py-8 text-center font-mono-share text-xs text-muted-foreground/40">No operator data in this window.</td></tr>
                     )}
                   </tbody>
                 </table>
               </div>
+              <p className="px-3 sm:px-4 py-3 border-t border-border/20 font-mono-share text-[10px] text-muted-foreground/50">
+                SPENT is purchases inside the window, not lifetime — a negative margin here means that user cost more to
+                serve than they paid over this period, which for a subscriber on an annual plan is expected mid-term.
+              </p>
             </section>
 
             {/* ── USER INSPECTOR ── */}
@@ -2438,79 +2713,117 @@ export default function Admin() {
         {/* ═══ USAGE TAB ═══ */}
         {activeTab === "usage" && (
           <>
+            {/*
+              Series are derived from whatever the window actually contains.
+              The old chart hardcoded generate-image / edit-image /
+              generate-video — all three retired in April 2026 when generation
+              moved to RunPod — so it had been rendering an empty plot ever
+              since.
+            */}
             <div className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm p-3 sm:p-4 min-w-0 overflow-hidden">
-              <h2 className="font-orbitron text-xs tracking-wider text-primary/80 mb-4 flex items-center gap-2">
-                <Zap className="w-3.5 h-3.5" />
-                GENERATION_VOLUME (30d)
-              </h2>
-              <ResponsiveContainer width="100%" height={280}>
+              <div className="flex items-center gap-2 flex-wrap mb-3">
+                <h2 className="font-orbitron text-xs tracking-wider text-primary/80 flex items-center gap-2">
+                  <Zap className="w-3.5 h-3.5" />
+                  GENERATION_VOLUME
+                </h2>
+                <div className="ml-auto flex items-center gap-1.5 flex-wrap">
+                  <ChartToggle active={usageMetric === "count"} onClick={() => setUsageMetric("count")} title="Count generations">GENS</ChartToggle>
+                  <ChartToggle active={usageMetric === "credits"} onClick={() => setUsageMetric("credits")} title="Count credits consumed">CREDITS</ChartToggle>
+                  <span className="w-px h-4 bg-border/40 mx-0.5" />
+                  <ChartToggle active={usageStacked} onClick={() => setUsageStacked((v) => !v)} title="Stack modes into one bar per bucket">STACKED</ChartToggle>
+                  <select
+                    value={usageTopN}
+                    onChange={(e) => setUsageTopN(Number(e.target.value))}
+                    className="bg-card/60 border border-border/30 rounded px-1.5 py-1 font-mono-share text-[10px] text-foreground/80"
+                    title="How many modes to show before folding the rest into OTHER"
+                  >
+                    {[3, 4, 6, 8].map((n) => <option key={n} value={n}>TOP {n}</option>)}
+                  </select>
+                </div>
+              </div>
+              <RangeControl value={range} onChange={setRange} className="mb-3" />
+              <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={usagePivot}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.3} />
                   <XAxis dataKey="day" interval="preserveStartEnd" tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} />
-                  <YAxis tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} width={30} />
+                  <YAxis tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} tickFormatter={fmtCompact} width={42} />
                   <Tooltip content={<CyberTooltip />} />
                   <Legend wrapperStyle={{ fontSize: 9, fontFamily: "var(--font-mono-share)" }} />
-                  <Bar dataKey="generate-image" name="Images" stackId="a" fill="hsl(var(--primary))" fillOpacity={0.8} />
-                  <Bar dataKey="edit-image" name="Edits" stackId="a" fill="hsl(var(--secondary))" fillOpacity={0.8} />
-                  <Bar dataKey="generate-video" name="Videos" stackId="a" fill="#ff6b6b" fillOpacity={0.8} />
+                  {usageModes.map((mode, i) => (
+                    <Bar
+                      key={mode}
+                      dataKey={mode}
+                      name={mode}
+                      stackId={usageStacked ? "a" : undefined}
+                      fill={mode === "OTHER" ? "hsl(var(--muted-foreground))" : SERIES_COLORS[i % SERIES_COLORS.length]}
+                      fillOpacity={0.8}
+                    />
+                  ))}
+                  {usagePivot.length > 24 && (
+                    <Brush dataKey="day" height={18} travellerWidth={8} stroke="hsl(var(--primary))" fill="hsl(var(--card))" />
+                  )}
                 </BarChart>
               </ResponsiveContainer>
+              {usagePivot.length === 0 && (
+                <p className="font-mono-share text-[10px] text-muted-foreground/40 text-center py-6">no generations in this window</p>
+              )}
             </div>
 
             <section className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
-              <KpiCard icon={<Activity className="w-4 h-4" />} label="CREDITS_OUTSTANDING" value={(o.creditPool.total_sub_credits_outstanding + o.creditPool.total_pack_credits_outstanding).toLocaleString()} sub={`${o.creditPool.total_sub_credits_outstanding.toLocaleString()} sub + ${o.creditPool.total_pack_credits_outstanding.toLocaleString()} pack`} />
-              <KpiCard icon={<Zap className="w-4 h-4" />} label="CREDITS_TODAY" value={o.usage.credits_today.toLocaleString()} sub={`${o.usage.generations_today} generations`} />
-              <KpiCard icon={<Zap className="w-4 h-4" />} label="TOTAL_GENERATIONS" value={o.usage.total_generations.toLocaleString()} sub={`${o.usage.total_credits_used.toLocaleString()} credits all-time`} />
-              <KpiCard icon={<Server className="w-4 h-4" />} label="RUNPOD_COST_30D" value={runpodCost30d ? fmt$(runpodCost30d) : "N/A"} sub="from execution time tracking" accent="destructive" />
+              <KpiCard icon={<Activity className="w-4 h-4" />} label="CREDITS_OUTSTANDING" value={fmtCompact(o.creditPool.total_sub_credits_outstanding + o.creditPool.total_pack_credits_outstanding)} sub={`${o.creditPool.total_sub_credits_outstanding.toLocaleString()} sub + ${o.creditPool.total_pack_credits_outstanding.toLocaleString()} pack`} />
+              <KpiCard icon={<Zap className="w-4 h-4" />} label={`CREDITS_${winLabel}`} value={o.usage.credits_window.toLocaleString()} sub={`${o.usage.generations_window.toLocaleString()} generations`} />
+              <KpiCard icon={<Zap className="w-4 h-4" />} label="TOTAL_GENERATIONS" value={fmtCompact(o.usage.total_generations)} sub={`${fmtCompact(o.usage.total_credits_used)} credits all-time`} />
+              <KpiCard icon={<Server className="w-4 h-4" />} label={`GPU_COST_${winLabel}`} value={fmt$(runpodCost)} sub={`${fmtPct(o.cost.coverage)} measured`} accent="destructive" />
             </section>
 
             {profitBreakdown.length > 0 && (
               <section className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm overflow-hidden">
                 <div className="px-3 sm:px-4 py-3 border-b border-border/30">
-                  <h2 className="font-orbitron text-xs tracking-wider text-primary/80 flex items-center gap-2">
+                  <h2 className="font-orbitron text-xs tracking-wider text-primary/80 flex items-center gap-2 flex-wrap">
                     <BarChart3 className="w-3.5 h-3.5" />
-                    PROFIT_PER_ACTION (30d)
+                    UNIT_ECONOMICS ({winLabel})
                     <span className="font-mono-share text-[9px] text-muted-foreground/50 tracking-normal normal-case">
-                      revenue @ {centsPerCredit.toFixed(1)}¢/credit (30d revenue ÷ 30d credits)
+                      revenue attributed @ {centsPerCredit.toFixed(2)}¢/credit realized in this window
                     </span>
                   </h2>
                 </div>
                 <div className="overflow-x-auto overscroll-x-contain">
-                  <table className="w-full min-w-[640px]">
+                  <table className="w-full min-w-[780px]">
                     <thead><tr className="border-b border-border/20">
-                      {["MODE", "GENS", "CREDITS", "AVG CR", "ACTUAL COST", "EST. COST", "AVG TIME", "EST. REV", "MARGIN"].map((h) => (
+                      {["MODE", "VENDOR", "GENS", "CREDITS", "AVG CR", "AVG TIME", "COST", "¢/GEN", "MEASURED", "EST. REV", "MARGIN"].map((h) => (
                         <th key={h} className="px-2.5 py-2 text-left font-mono-share text-[9px] text-muted-foreground/50 tracking-wider">{h}</th>
                       ))}
                     </tr></thead>
                     <tbody>
                       {profitBreakdown.map((row: any, i: number) => {
                         const avgCr = row.generations > 0 ? (row.credits_used / row.generations).toFixed(1) : "—";
-                        const totalMs = Number(row.total_exec_ms);
-                        const avgTimeS = row.tracked_count > 0 ? (totalMs / row.tracked_count / 1000).toFixed(1) + "s" : "—";
-                        const estRunpodCents = Math.round((totalMs / 1000) * 0.155);
-                        const actualCostCents = Number(row.actual_cost_cents || 0);
-                        const costTracked = row.cost_tracked_count || 0;
-                        const displayCost = actualCostCents > 0 ? fmt$(Math.round(actualCostCents)) : "—";
-                        const estRevenueCents = row.credits_used * centsPerCredit;
-                        const bestCost = actualCostCents > 0 ? actualCostCents : (estRunpodCents > 0 ? estRunpodCents : 0);
-                        const marginPct = bestCost > 0 && estRevenueCents > 0
-                          ? Math.round(((estRevenueCents - bestCost) / estRevenueCents) * 100)
-                          : null;
+                        const marginPct = row.revenue_cents > 0 ? row.margin_pct : null;
                         return (
                           <tr key={i} className="border-b border-border/10 hover:bg-primary/5 transition-colors">
-                            <td className="px-2.5 py-2 font-orbitron text-[10px] tracking-wider text-foreground/80">{row.mode?.toUpperCase()}</td>
-                            <td className="px-2.5 py-2 font-mono-share text-xs">{row.generations}</td>
-                            <td className="px-2.5 py-2 font-mono-share text-xs text-primary font-bold">{row.credits_used.toLocaleString()}</td>
-                            <td className="px-2.5 py-2 font-mono-share text-xs">{avgCr}</td>
-                            <td className="px-2.5 py-2 font-mono-share text-xs text-destructive">
-                              {displayCost}
-                              {costTracked > 0 && <span className="text-muted-foreground/40 ml-1 text-[8px]">({costTracked})</span>}
+                            <td className="px-2.5 py-2 font-orbitron text-[10px] tracking-wider text-foreground/80">
+                              {row.mode?.toUpperCase()}
+                              {row.refunded > 0 && (
+                                <span className="ml-1.5 font-mono-share text-[8px] text-destructive/70" title={`${row.refunded} refunded, ${row.refunded_credits} credits returned — still cost GPU time`}>
+                                  ↩{row.refunded}
+                                </span>
+                              )}
                             </td>
-                            <td className="px-2.5 py-2 font-mono-share text-xs text-muted-foreground/50">{estRunpodCents > 0 ? fmt$(estRunpodCents) : "—"}</td>
-                            <td className="px-2.5 py-2 font-mono-share text-xs">{avgTimeS}</td>
-                            <td className="px-2.5 py-2 font-mono-share text-xs text-secondary">{fmt$(Math.round(estRevenueCents))}</td>
-                            <td className={`px-2.5 py-2 font-mono-share text-xs font-bold ${marginPct !== null && marginPct >= 0 ? "text-green-400" : "text-destructive"}`}>
-                              {marginPct !== null ? `${marginPct}%` : "—"}
+                            <td className="px-2.5 py-2 font-mono-share text-[9px] text-muted-foreground/60">{row.provider}</td>
+                            <td className="px-2.5 py-2 font-mono-share text-xs" data-numeric>{row.generations.toLocaleString()}</td>
+                            <td className="px-2.5 py-2 font-mono-share text-xs text-primary font-bold" data-numeric>{row.credits_used.toLocaleString()}</td>
+                            <td className="px-2.5 py-2 font-mono-share text-xs" data-numeric>{avgCr}</td>
+                            <td className="px-2.5 py-2 font-mono-share text-xs" data-numeric>{row.avg_exec_sec > 0 ? `${row.avg_exec_sec.toFixed(1)}s` : "—"}</td>
+                            <td className="px-2.5 py-2 font-mono-share text-xs text-destructive" data-numeric>{fmt$(Math.round(row.blended_cost_cents))}</td>
+                            <td className="px-2.5 py-2 font-mono-share text-xs text-destructive/70" data-numeric>{row.cost_per_generation.toFixed(2)}¢</td>
+                            <td className="px-2.5 py-2 font-mono-share text-[10px]" data-numeric
+                                title={`${row.cost_tracked_count} of ${row.generations + row.refunded} rows carry a real cost; the rest use this mode's observed average`}>
+                              <span className={row.cost_coverage >= 0.8 ? "text-secondary" : row.cost_coverage >= 0.4 ? "text-amber-400" : "text-muted-foreground/50"}>
+                                {fmtPct(row.cost_coverage)}
+                              </span>
+                            </td>
+                            <td className="px-2.5 py-2 font-mono-share text-xs text-secondary" data-numeric>{fmt$(Math.round(row.revenue_cents))}</td>
+                            <td className={`px-2.5 py-2 font-mono-share text-xs font-bold ${marginPct !== null && marginPct >= 0 ? "text-green-400" : "text-destructive"}`} data-numeric>
+                              {marginPct !== null ? fmtPct(marginPct) : "—"}
                             </td>
                           </tr>
                         );
@@ -2518,6 +2831,11 @@ export default function Admin() {
                     </tbody>
                   </table>
                 </div>
+                <p className="px-3 sm:px-4 py-3 border-t border-border/20 font-mono-share text-[10px] text-muted-foreground/50 leading-relaxed">
+                  Refunded jobs are excluded from credits and revenue but kept in cost — the GPU still ran. MEASURED is the
+                  share of rows carrying a real reported execution cost; the remainder is priced at that mode's own observed
+                  average rather than dropped to zero.
+                </p>
               </section>
             )}
           </>
@@ -2537,9 +2855,9 @@ export default function Admin() {
             </div>
             <div className="p-3 sm:p-4 space-y-3">
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2 sm:gap-3">
-                <KpiCard icon={<Ban className="w-4 h-4" />} label="FLAGGED_30D" value={o.moderation.blocks_30d} sub={`${o.moderation.blocks_today} today // ${o.moderation.total_blocks} total`} accent="destructive" />
-                <KpiCard icon={<Flame className="w-4 h-4" />} label="CREDITS_BURNED_30D" value={o.moderation.credits_burned_30d} sub={`${o.moderation.total_credits_burned} lifetime (not refunded)`} accent="destructive" />
-                <KpiCard icon={<CreditCard className="w-4 h-4" />} label="xAI_WASTE_30D" value={fmt$(o.moderation.wasted_cost_30d_cents)} sub={`${fmt$(o.moderation.wasted_cost_total_cents)} lifetime (xAI still charges you)`} accent="destructive" />
+                <KpiCard icon={<Ban className="w-4 h-4" />} label={`FLAGGED_${winLabel}`} value={o.moderation.blocks_window} sub={`${o.moderation.blocks_today} today // ${o.moderation.total_blocks} total`} accent="destructive" />
+                <KpiCard icon={<Flame className="w-4 h-4" />} label={`CREDITS_BURNED_${winLabel}`} value={o.moderation.credits_burned_window} sub={`${o.moderation.total_credits_burned} lifetime (not refunded)`} accent="destructive" />
+                <KpiCard icon={<CreditCard className="w-4 h-4" />} label={`xAI_WASTE_${winLabel}`} value={fmt$(o.moderation.wasted_cost_window_cents)} sub={`${fmt$(o.moderation.wasted_cost_total_cents)} lifetime — already counted inside xAI cost, not added on top`} accent="destructive" />
               </div>
               {o.moderation.offenders && o.moderation.offenders.length > 0 && (
                 <div className="overflow-x-auto overscroll-x-contain">
@@ -2923,13 +3241,15 @@ export default function Admin() {
 
             {apiAnalytics && (
               <>
+                <RangeControl value={range} onChange={setRange} />
+
                 {/* KPI Cards */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
                   <KpiCard icon={<Users className="w-3.5 h-3.5" />} label="API USERS" value={apiAnalytics.kpis?.total_api_users || 0} sub={`${apiAnalytics.kpis?.active_keys || 0} active keys`} />
-                  <KpiCard icon={<Zap className="w-3.5 h-3.5" />} label="TOTAL REQUESTS" value={(apiAnalytics.kpis?.total_requests || 0).toLocaleString()} />
-                  <KpiCard icon={<CreditCard className="w-3.5 h-3.5" />} label="CREDITS VIA API" value={(apiAnalytics.kpis?.total_credits_used || 0).toLocaleString()} />
-                  <KpiCard icon={<TrendingUp className="w-3.5 h-3.5" />} label="30D CREDITS" value={(apiAnalytics.apiRevenue?.credits_30d || 0).toLocaleString()} sub={`7d: ${apiAnalytics.apiRevenue?.credits_7d || 0}`} />
-                  <KpiCard icon={<DollarSign className="w-3.5 h-3.5" />} label="EST. API REV (30D)" value={fmt$(Math.round((apiAnalytics.apiRevenue?.credits_30d || 0) * centsPerCredit))} sub={`@ ${(centsPerCredit / 100).toFixed(3)}$/credit`} accent="secondary" />
+                  <KpiCard icon={<Zap className="w-3.5 h-3.5" />} label="TOTAL REQUESTS" value={Number(apiAnalytics.kpis?.total_requests || 0).toLocaleString()} sub="lifetime, from key counters" />
+                  <KpiCard icon={<CreditCard className="w-3.5 h-3.5" />} label="CREDITS VIA API" value={Number(apiAnalytics.kpis?.total_credits_used || 0).toLocaleString()} sub="lifetime" />
+                  <KpiCard icon={<TrendingUp className="w-3.5 h-3.5" />} label={`${winLabel} CREDITS`} value={(apiAnalytics.apiRevenue?.credits_window ?? 0).toLocaleString()} sub={`7d: ${apiAnalytics.apiRevenue?.credits_7d || 0} // today: ${apiAnalytics.apiRevenue?.credits_today || 0}`} />
+                  <KpiCard icon={<DollarSign className="w-3.5 h-3.5" />} label={`EST. API REV (${winLabel})`} value={fmt$(apiAnalytics.impliedRevenueCents ?? 0)} sub={`@ ${(apiAnalytics.centsPerCredit ?? centsPerCredit).toFixed(2)}¢/credit realized`} accent="secondary" />
                 </div>
 
                 {/* Daily Volume Chart */}
@@ -2937,14 +3257,15 @@ export default function Admin() {
                   <section className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm p-3 sm:p-4">
                     <div className="flex items-center gap-2 mb-3">
                       <BarChart3 className="w-3.5 h-3.5 text-primary" />
-                      <span className="font-orbitron text-[10px] tracking-wider text-muted-foreground">DAILY_API_VOLUME (30D)</span>
+                      <span className="font-orbitron text-[10px] tracking-wider text-muted-foreground">API_VOLUME ({winLabel})</span>
                     </div>
-                    <ResponsiveContainer width="100%" height={220}>
-                      <AreaChart data={apiAnalytics.dailyVolume.map((r: any) => ({ ...r, day: fmtDate(r.day) }))}>
+                    <ResponsiveContainer width="100%" height={240}>
+                      <AreaChart data={apiAnalytics.dailyVolume.map((r: any) => ({ ...r, day: fmtBucket(r.day, apiAnalytics.range?.bucket || "day") }))}>
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.2} />
-                        <XAxis dataKey="day" tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} />
-                        <YAxis tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} />
+                        <XAxis dataKey="day" interval="preserveStartEnd" tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} />
+                        <YAxis tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} tickFormatter={fmtCompact} width={42} />
                         <Tooltip content={<CyberTooltip />} />
+                        <Legend wrapperStyle={{ fontSize: 10 }} />
                         <Area type="monotone" dataKey="requests" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.15} strokeWidth={2} name="Requests" />
                         <Area type="monotone" dataKey="credits" stroke="hsl(var(--secondary))" fill="hsl(var(--secondary))" fillOpacity={0.1} strokeWidth={2} name="Credits" />
                       </AreaChart>
@@ -3001,8 +3322,9 @@ export default function Admin() {
                         <tr className="border-b border-border/20">
                           <th className="px-2.5 py-1.5 font-orbitron text-[9px] tracking-wider text-muted-foreground/50">USER</th>
                           <th className="px-2.5 py-1.5 font-orbitron text-[9px] tracking-wider text-muted-foreground/50">KEY</th>
-                          <th className="px-2.5 py-1.5 font-orbitron text-[9px] tracking-wider text-muted-foreground/50 text-right">REQUESTS</th>
-                          <th className="px-2.5 py-1.5 font-orbitron text-[9px] tracking-wider text-muted-foreground/50 text-right">CREDITS</th>
+                          <th className="px-2.5 py-1.5 font-orbitron text-[9px] tracking-wider text-muted-foreground/50 text-right">{winLabel} REQ</th>
+                          <th className="px-2.5 py-1.5 font-orbitron text-[9px] tracking-wider text-muted-foreground/50 text-right">{winLabel} CREDITS</th>
+                          <th className="px-2.5 py-1.5 font-orbitron text-[9px] tracking-wider text-muted-foreground/50 text-right">LIFETIME</th>
                           <th className="px-2.5 py-1.5 font-orbitron text-[9px] tracking-wider text-muted-foreground/50 text-right">LAST USED</th>
                         </tr>
                       </thead>
@@ -3013,8 +3335,11 @@ export default function Admin() {
                             <td className="px-2.5 py-2 font-mono-share text-[9px] text-muted-foreground/60">
                               {c.key_prefix} <span className="text-primary/50">({c.key_name})</span>
                             </td>
-                            <td className="px-2.5 py-2 font-mono-share text-xs text-right">{(c.total_requests || 0).toLocaleString()}</td>
-                            <td className="px-2.5 py-2 font-mono-share text-xs text-right text-secondary">{(c.total_credits || 0).toLocaleString()}</td>
+                            <td className="px-2.5 py-2 font-mono-share text-xs text-right" data-numeric>{(c.window_requests || 0).toLocaleString()}</td>
+                            <td className="px-2.5 py-2 font-mono-share text-xs text-right text-secondary" data-numeric>{(c.window_credits || 0).toLocaleString()}</td>
+                            <td className="px-2.5 py-2 font-mono-share text-[10px] text-right text-muted-foreground/60" data-numeric>
+                              {Number(c.total_credits || 0).toLocaleString()} cr
+                            </td>
                             <td className="px-2.5 py-2 font-mono-share text-[9px] text-muted-foreground/40 text-right">
                               {c.last_used_at ? new Date(c.last_used_at).toLocaleDateString() : "never"}
                             </td>
@@ -3022,7 +3347,7 @@ export default function Admin() {
                         ))}
                         {(!apiAnalytics.topConsumers || apiAnalytics.topConsumers.length === 0) && (
                           <tr>
-                            <td colSpan={5} className="px-2.5 py-4 text-center font-mono-share text-xs text-muted-foreground/40">
+                            <td colSpan={6} className="px-2.5 py-4 text-center font-mono-share text-xs text-muted-foreground/40">
                               No API keys created yet
                             </td>
                           </tr>

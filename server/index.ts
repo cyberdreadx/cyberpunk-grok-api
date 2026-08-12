@@ -217,6 +217,8 @@ function registerCron(_app: express.Express) {
     ["30 4 * * *", "/api/cron-r2-orphans?confirm=1"],
     ["*/2 * * * *", "/api/cron-email-campaign"],
     ["10 3 * * *", "/api/cron-xrge-snapshot"],
+    // Hourly so a day's GPU drawdown stays separable from a mid-day top-up.
+    ["5 * * * *", "/api/cron-runpod-snapshot"],
   ];
 
   for (const [schedule, path] of jobs) {
