@@ -33,6 +33,11 @@ export interface StripeWindow {
   adjustmentCents: number;
   /** Account-level fees not attached to a charge (billing, radar, payouts). */
   otherFeeCents: number;
+  /** Charges on this account that aren't platform revenue (see NON_PLATFORM_TYPES). */
+  nonPlatformCents: number;
+  nonPlatformCount: number;
+  /** grossCents minus nonPlatformCents — what the product actually earned. */
+  platformGrossCents: number;
   /** What actually landed: gross − fees − refunds − adjustments. */
   netCents: number;
   chargeCount: number;
@@ -104,17 +109,30 @@ function bucketKey(unixSeconds: number, bucket: string): string {
   return d.toISOString().slice(0, 10);
 }
 
+/**
+ * Checkout-session metadata types that are NOT platform revenue. The Stripe
+ * account is shared with an event the owner used to run, whose sessions carry
+ * `type: "ticket"`; no webhook branch handles them, so they can never appear in
+ * `transactions` and would otherwise show up forever as reconciliation drift.
+ */
+function nonPlatformTypes(): Set<string> {
+  const raw = process.env.STRIPE_NON_PLATFORM_TYPES ?? "ticket";
+  return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
+}
+
 interface DayRow {
   day: string;
   gross_cents: number; fee_cents: number; refund_cents: number;
   adjustment_cents: number; other_fee_cents: number;
   charge_count: number; refund_count: number; adjustment_count: number;
+  non_platform_cents: number; non_platform_count: number;
 }
 
 function emptyDay(day: string): DayRow {
   return {
     day, gross_cents: 0, fee_cents: 0, refund_cents: 0, adjustment_cents: 0,
     other_fee_cents: 0, charge_count: 0, refund_count: 0, adjustment_count: 0,
+    non_platform_cents: 0, non_platform_count: 0,
   };
 }
 
@@ -219,14 +237,43 @@ async function syncDailyCache(stripe: Stripe, from: Date): Promise<void> {
     if (!startingAfter) break;
   }
 
+  // Second pass: tag the non-platform share of each day from checkout-session
+  // metadata, which the balance-transaction ledger doesn't carry. Sessions are
+  // paid within minutes of creation, so bucketing on session date is accurate
+  // enough to net out of the same day's gross.
+  const skip = nonPlatformTypes();
+  if (skip.size > 0) {
+    let sAfter: string | undefined;
+    for (let p = 0; p < MAX_PAGES; p++) {
+      const page = await stripe.checkout.sessions.list({
+        limit: PAGE_LIMIT, created: { gte },
+        ...(sAfter ? { starting_after: sAfter } : {}),
+      });
+      for (const s of page.data) {
+        if (s.payment_status !== "paid" || (s.amount_total ?? 0) <= 0) continue;
+        if (!s.metadata?.type || !skip.has(s.metadata.type)) continue;
+        const k = new Date(s.created * 1000).toISOString().slice(0, 10);
+        let row = days.get(k);
+        if (!row) { row = emptyDay(k); days.set(k, row); }
+        row.non_platform_cents += s.amount_total ?? 0;
+        row.non_platform_count++;
+      }
+      if (!page.has_more) break;
+      sAfter = page.data[page.data.length - 1]?.id;
+      if (!sAfter) break;
+    }
+  }
+
   for (const r of days.values()) {
     await sql`
       INSERT INTO stripe_daily_cache (
         day, gross_cents, fee_cents, refund_cents, adjustment_cents,
-        other_fee_cents, charge_count, refund_count, adjustment_count, updated_at
+        other_fee_cents, charge_count, refund_count, adjustment_count,
+        non_platform_cents, non_platform_count, updated_at
       ) VALUES (
         ${r.day}::date, ${r.gross_cents}, ${r.fee_cents}, ${r.refund_cents}, ${r.adjustment_cents},
-        ${r.other_fee_cents}, ${r.charge_count}, ${r.refund_count}, ${r.adjustment_count}, now()
+        ${r.other_fee_cents}, ${r.charge_count}, ${r.refund_count}, ${r.adjustment_count},
+        ${r.non_platform_cents}, ${r.non_platform_count}, now()
       )
       ON CONFLICT (day) DO UPDATE SET
         gross_cents = EXCLUDED.gross_cents,
@@ -237,6 +284,8 @@ async function syncDailyCache(stripe: Stripe, from: Date): Promise<void> {
         charge_count = EXCLUDED.charge_count,
         refund_count = EXCLUDED.refund_count,
         adjustment_count = EXCLUDED.adjustment_count,
+        non_platform_cents = EXCLUDED.non_platform_cents,
+        non_platform_count = EXCLUDED.non_platform_count,
         updated_at = now()
     `;
   }
@@ -263,7 +312,8 @@ export async function getStripeWindow(
     const fromDay = from.toISOString().slice(0, 10);
     const rows = (await sql`
       SELECT day::text AS day, gross_cents, fee_cents, refund_cents, adjustment_cents,
-             other_fee_cents, charge_count, refund_count, adjustment_count
+             other_fee_cents, charge_count, refund_count, adjustment_count,
+             non_platform_cents, non_platform_count
       FROM stripe_daily_cache
       WHERE day >= ${fromDay}::date
       ORDER BY day
@@ -272,6 +322,7 @@ export async function getStripeWindow(
     const totals = {
       grossCents: 0, feeCents: 0, refundCents: 0, adjustmentCents: 0, otherFeeCents: 0,
       chargeCount: 0, refundCount: 0, adjustmentCount: 0,
+      nonPlatformCents: 0, nonPlatformCount: 0,
     };
     const series = new Map<string, { day: string; gross: number; fee: number; refund: number; net: number }>();
 
@@ -290,24 +341,31 @@ export async function getStripeWindow(
       totals.chargeCount += Number(r.charge_count);
       totals.refundCount += Number(r.refund_count);
       totals.adjustmentCount += Number(r.adjustment_count);
+      const nonPlatform = Number(r.non_platform_cents ?? 0);
+      totals.nonPlatformCents += nonPlatform;
+      totals.nonPlatformCount += Number(r.non_platform_count ?? 0);
 
       const k = bucketKey(Math.floor(new Date(`${r.day}T00:00:00Z`).getTime() / 1000), bucket);
       let row = series.get(k);
       if (!row) { row = { day: k, gross: 0, fee: 0, refund: 0, net: 0 }; series.set(k, row); }
-      row.gross += gross;
+      // The series charts platform revenue, so non-platform charges come out.
+      row.gross += gross - nonPlatform;
       row.fee += fee;
       row.refund += refund;
-      row.net += gross - fee - refund - adjustment - otherFee;
+      row.net += gross - nonPlatform - fee - refund - adjustment - otherFee;
     }
 
     const netCents =
-      totals.grossCents - totals.feeCents - totals.refundCents - totals.adjustmentCents - totals.otherFeeCents;
+      totals.grossCents - totals.nonPlatformCents - totals.feeCents
+      - totals.refundCents - totals.adjustmentCents - totals.otherFeeCents;
+    const platformGrossCents = totals.grossCents - totals.nonPlatformCents;
 
     return {
       days,
       ...totals,
+      platformGrossCents,
       netCents,
-      effectiveFeeRate: totals.grossCents > 0 ? totals.feeCents / totals.grossCents : 0,
+      effectiveFeeRate: platformGrossCents > 0 ? totals.feeCents / platformGrossCents : 0,
       series: Array.from(series.values()).sort((a, b) => a.day.localeCompare(b.day)),
       truncated: false,
     } satisfies StripeWindow;

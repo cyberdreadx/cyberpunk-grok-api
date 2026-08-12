@@ -1029,7 +1029,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         const costCents = Math.round(Number(cost.cost_cents));
         const netCents = stripeWindow?.netCents ?? null;
-        const grossCents = stripeWindow?.grossCents ?? null;
+        // Reconcile against PLATFORM gross. The Stripe account also carries
+        // event-ticket charges that no webhook branch handles, so including
+        // them would report a permanent drift for revenue that was never ours.
+        const grossCents = stripeWindow?.platformGrossCents ?? null;
 
         // Reconciliation: a gap means Stripe collected money that never
         // reached our ledger. Two known structural causes, both real:

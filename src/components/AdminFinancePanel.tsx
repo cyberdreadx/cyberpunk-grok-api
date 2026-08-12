@@ -171,8 +171,11 @@ export default function AdminFinancePanel({ range, onRangeChange }: {
       {s && (
         <>
           <section className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
-            <Stat icon={<DollarSign className="w-4 h-4" />} label="STRIPE_GROSS"
-              value={fmt$(s.grossCents)} sub={`${s.chargeCount} charges`} />
+            <Stat icon={<DollarSign className="w-4 h-4" />} label="PLATFORM_GROSS"
+              value={fmt$(s.platformGrossCents ?? s.grossCents)}
+              sub={s.nonPlatformCents
+                ? `${s.chargeCount} charges // ${fmt$(s.nonPlatformCents)} non-platform excluded`
+                : `${s.chargeCount} charges`} />
             <Stat icon={<Percent className="w-4 h-4" />} label="STRIPE_FEES"
               value={fmt$(s.feeCents + s.otherFeeCents)}
               sub={`${pct(s.effectiveFeeRate, 2)} effective rate`} tone="bad" />
@@ -215,11 +218,13 @@ export default function AdminFinancePanel({ range, onRangeChange }: {
               }
             >
               <p className="font-mono-share text-[10px] text-muted-foreground/60 mb-3 leading-relaxed">
-                Stripe charged <strong className="text-foreground/80">{fmt$(recon.stripeGrossCents)}</strong> across{" "}
-                {recon.stripeCount} charges; our transactions table booked{" "}
-                <strong className="text-foreground/80">{fmt$(recon.ledgerCents)}</strong> across {recon.ledgerCount}.
-                A positive drift is money Stripe collected that never reached the ledger — creator-verification
-                checkouts never write a row at all, and subscription renewals went unrecorded for April–May 2026.
+                Stripe collected <strong className="text-foreground/80">{fmt$(recon.stripeGrossCents)}</strong> in
+                platform revenue{s.nonPlatformCents ? ` (${fmt$(s.nonPlatformCents)} of non-platform charges excluded)` : ""};
+                our transactions table booked{" "}
+                <strong className="text-foreground/80">{fmt$(recon.ledgerCents)}</strong> across {recon.ledgerCount} rows.
+                Most of what's left is <strong className="text-foreground/80">deleted accounts</strong> —
+                {" "}<code>transactions.user_id</code> cascades on delete, so closing an account erases its entire
+                payment history. That gap can only grow, and no backfill closes it.
               </p>
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={comparison}>
