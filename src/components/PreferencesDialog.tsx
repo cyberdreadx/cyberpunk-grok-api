@@ -43,6 +43,7 @@ const PreferencesDialog: React.FC<PreferencesDialogProps> = ({ open, onOpenChang
   const { t, i18n } = useTranslation();
   const { matureFilter, setMatureFilter } = useMatureFilter();
   const { user } = useAuth();
+  const nsfwUnlocked = !!user?.posting?.purchased || !!user?.is_admin;
   const { toast } = useToast();
   const isAdmin = !!user?.is_admin;
 
@@ -332,14 +333,21 @@ const PreferencesDialog: React.FC<PreferencesDialogProps> = ({ open, onOpenChang
             </label>
             <button
               type="button"
-              onClick={() => setMatureFilter(!matureFilter)}
+              onClick={() => {
+                // Server-enforced: hasPurchased() decides, so flipping this
+                // without paying would just produce a toggle that disagrees
+                // with the feed it controls.
+                if (!nsfwUnlocked) return;
+                setMatureFilter(!matureFilter);
+              }}
+              disabled={!nsfwUnlocked}
               className={`w-full flex items-center justify-between px-3 py-2 rounded-md border transition-colors font-mono-share text-[11px] ${
                 matureFilter
                   ? "border-amber-400/40 bg-amber-400/5 text-amber-300"
                   : "border-border/40 bg-card/40 text-muted-foreground hover:text-foreground"
               }`}
             >
-              <span>{matureFilter ? "Hide 18+ content" : "Showing 18+ content"}</span>
+              <span>{!nsfwUnlocked ? "Hide 18+ content (members only)" : matureFilter ? "Hide 18+ content" : "Showing 18+ content"}</span>
               <span
                 className={`text-[9px] px-1.5 py-0.5 rounded ${
                   matureFilter ? "bg-amber-400/20" : "bg-muted/40"
@@ -351,6 +359,7 @@ const PreferencesDialog: React.FC<PreferencesDialogProps> = ({ open, onOpenChang
             <p className="font-mono-share text-[9px] text-muted-foreground/60 leading-relaxed">
               On by default. The feed filters 18+ posts out server-side, so they're never
               downloaded. Stories and creator cards blur theirs until you tap REVEAL.
+              {!nsfwUnlocked && " Viewing 18+ content requires any credit pack or subscription."}
             </p>
           </section>
 

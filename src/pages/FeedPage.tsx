@@ -58,6 +58,9 @@ const FeedPage: React.FC = () => {
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const { matureFilter, setMatureFilter } = useMatureFilter();
+  // Server's verdict, not a guess from the local user object — it's the same
+  // value the feed query was filtered by.
+  const [nsfwAllowed, setNsfwAllowed] = useState(false);
   const [rulesAcked, setRulesAcked] = useState(() => localStorage.getItem("feed-rules-acked") === "1");
   const [showRules, setShowRules] = useState(false);
 
@@ -118,9 +121,14 @@ const FeedPage: React.FC = () => {
       // NSFW off (the default) filters server-side rather than blurring, so
       // flagged media is never sent to the browser at all.
       if (matureFilter) params.set("sfw", "1");
-      const data = await apiFetch<{ posts: FeedTilePost[]; nextCursor: string | null }>(
+      const data = await apiFetch<{ posts: FeedTilePost[]; nextCursor: string | null; nsfwAllowed?: boolean }>(
         `/feed?${params.toString()}`
       );
+      setNsfwAllowed(!!data.nsfwAllowed);
+      // If the server says they can't have NSFW, make the local pref agree —
+      // otherwise a lapsed subscriber keeps a toggle that reads ON while the
+      // feed it produces is filtered, which just looks broken.
+      if (!data.nsfwAllowed && !matureFilter) setMatureFilter(true);
       if (cursor) {
         setPosts((prev) => {
           const seen = new Set(prev.map((p) => p.id));
@@ -465,6 +473,20 @@ const FeedPage: React.FC = () => {
             where people notice they want it. */}
         <button
           onClick={() => {
+            if (!isAuthenticated) {
+              toast({ title: "Sign in to change this", description: "18+ content is for paying members." });
+              navigate("/create?signup=1");
+              return;
+            }
+            if (!nsfwAllowed) {
+              // Locked, so sell it rather than just refusing.
+              toast({
+                title: "18+ content is members-only",
+                description: "Any credit pack or subscription unlocks it.",
+              });
+              setStoreOpen(true);
+              return;
+            }
             const showing = matureFilter; // about to turn NSFW ON
             setMatureFilter(!matureFilter);
             setLoading(true);
@@ -476,14 +498,23 @@ const FeedPage: React.FC = () => {
             });
           }}
           className={`flex items-center gap-1 px-2.5 py-1 rounded-full font-mono-share text-[10px] transition-colors border ${
-            matureFilter
-              ? `${baseInactive}`
-              : "border-amber-400/60 bg-amber-400/15 text-amber-300"
+            !nsfwAllowed
+              ? `${baseInactive} opacity-70`
+              : matureFilter
+                ? `${baseInactive}`
+                : "border-amber-400/60 bg-amber-400/15 text-amber-300"
           }`}
-          title={matureFilter ? "18+ posts are hidden — tap to show" : "18+ posts are showing — tap to hide"}
-          aria-pressed={!matureFilter}
+          title={
+            !nsfwAllowed
+              ? "18+ content is members-only — tap to unlock"
+              : matureFilter
+                ? "18+ posts are hidden — tap to show"
+                : "18+ posts are showing — tap to hide"
+          }
+          aria-pressed={nsfwAllowed && !matureFilter}
         >
-          <ShieldAlert className="w-3 h-3" /> NSFW {matureFilter ? "OFF" : "ON"}
+          {!nsfwAllowed ? <Lock className="w-3 h-3" /> : <ShieldAlert className="w-3 h-3" />}
+          NSFW {!nsfwAllowed ? "🔒" : matureFilter ? "OFF" : "ON"}
         </button>
         <button
           onClick={() => { setFilter("all"); setLoading(true); }}

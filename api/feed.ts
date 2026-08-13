@@ -67,14 +67,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // unflagged posts are a far better bet. It's a heuristic, not a
       // guarantee — but it's the only signal in the data, since nothing here
       // classifies images.
+      // NSFW is a paying-customer feature. A client-side toggle is a
+      // preference, not a permission — anyone can drop the query param — so
+      // eligibility is decided here and a non-payer is forced to sfw=1
+      // whatever they asked for. `strict` is never downgraded: it's already
+      // narrower, and the logged-out landing page depends on it.
+      const nsfwAllowed = authUserId ? await hasPurchased(sql, authUserId) : false;
+      const effectiveSfw = sfw === "strict" ? "strict" : nsfwAllowed ? sfw : "1";
+
       const sfwCond =
-        sfw === "strict"
+        effectiveSfw === "strict"
           ? sql`AND p.is_mature = false
                 AND EXISTS (
                   SELECT 1 FROM feed_posts fp
                   WHERE fp.user_id = p.user_id AND fp.is_mature = true
                 )`
-          : sfw === "1"
+          : effectiveSfw === "1"
             ? sql`AND p.is_mature = false`
             : sql``;
 
@@ -381,6 +389,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           };
         }),
         nextCursor: rows.length === limit ? rows[rows.length - 1].created_at : null,
+        // Whether this viewer may turn NSFW on at all. Sent with the feed so
+        // the toggle reflects what the server will actually honour rather than
+        // a second call the UI could render ahead of.
+        nsfwAllowed,
       });
     } catch (err: any) {
       console.error("[feed GET]", err.message);
