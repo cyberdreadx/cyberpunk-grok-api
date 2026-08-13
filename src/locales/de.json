@@ -314,7 +314,7 @@
   "referral": {
     "title": "EMPFEHLUNGSPROGRAMM",
     "description": "Teilen Sie Ihren Link — Freunde erhalten bei der Anmeldung <1>3 kostenlose Credits</1>. Bei ihrem ersten Kauf erhalten Sie <2>10 Credits</2> und sie <3>5 Bonus</3>.",
-    "descriptionSimple": "Teilen Sie Ihren Link — Freunde erhalten 3 kostenlose Credits bei der Anmeldung. Bei ihrem ersten Kauf erhalten Sie 10 Credits und sie 5 Bonus.",
+    "descriptionSimple": "Teilen Sie Ihren Link — beim ersten Kauf eines Freundes erhalten Sie 10 Credits und er 5 Bonus-Credits. Bei einem Abo erhalten Sie einen Gratismonat.",
     "referred": "{{count}} empfohlen",
     "converted": "{{count}} konvertiert",
     "earned": "+{{count}} Credits verdient"

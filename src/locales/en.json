@@ -343,7 +343,7 @@
   "referral": {
     "title": "REFERRAL_PROGRAM",
     "description": "Share your link — friends get <1>3 free credits</1> on signup. When they make their first purchase, you get <2>10 credits</2> and they get <3>5 bonus</3>.",
-    "descriptionSimple": "Share your link — friends get 3 free credits on signup. When they make their first purchase, you get 10 credits and they get 5 bonus.",
+    "descriptionSimple": "Share your link — when a friend makes their first purchase, you get 10 credits and they get 5 bonus. If they subscribe, you get a free month.",
     "referred": "{{count}} referred",
     "converted": "{{count}} converted",
     "earned": "+{{count}} credits earned"

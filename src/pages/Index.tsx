@@ -38,6 +38,7 @@ import ApiKeyDialog from "@/components/ApiKeyDialog";
 import ApiKeysPanel from "@/components/ApiKeysPanel";
 import AuthDialog from "@/components/AuthDialog";
 import CreditDisplay from "@/components/CreditDisplay";
+import EarnPromoBanner from "@/components/EarnPromoBanner";
 import FlashSaleBanner from "@/components/FlashSaleBanner";
 import BuyHoldBanner from "@/components/BuyHoldBanner";
 import LtxLaunchBanner from "@/components/LtxLaunchBanner";
@@ -1301,6 +1302,8 @@ const Index = () => {
             ))}
           </div>
         )}
+
+        <EarnPromoBanner className="mb-4" />
 
         {simpleMode ? (
           /* ── SIMPLE MODE ─────────────────────────────────────── */

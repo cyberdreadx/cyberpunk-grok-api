@@ -314,7 +314,7 @@
   "referral": {
     "title": "PROGRAMA_DE_INDICAÇÃO",
     "description": "Compartilhe seu link — amigos ganham <1>3 créditos grátis</1> no cadastro. Na primeira compra deles, você ganha <2>10 créditos</2> e eles <3>5 de bônus</3>.",
-    "descriptionSimple": "Compartilhe seu link — amigos ganham 3 créditos grátis no cadastro. Na primeira compra deles, você ganha 10 créditos e eles 5 bônus.",
+    "descriptionSimple": "Compartilhe seu link — quando um amigo faz a primeira compra, você ganha 10 créditos e ele 5 de bônus. Se ele assinar, você ganha um mês grátis.",
     "referred": "{{count}} indicados",
     "converted": "{{count}} convertidos",
     "earned": "+{{count}} créditos ganhos"

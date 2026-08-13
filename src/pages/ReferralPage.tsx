@@ -77,14 +77,17 @@ export default function ReferralPage() {
   const handleShare = useCallback(() => {
     if (!referralLink) return;
     if (navigator.share) {
-      navigator.share({ title: `Join ${BRAND.name}`, text: "Sign up with my link and get 3 free credits!", url: referralLink });
+      navigator.share({ title: `Join ${BRAND.name}`, text: "Sign up with my link and get 5 bonus credits on your first purchase.", url: referralLink });
     } else {
       handleCopy();
     }
   }, [referralLink, handleCopy]);
 
+  // Rewards as the code actually grants them. The signup grant was removed with
+  // the earn-only model (verify.ts, July 2026); this list still advertised it,
+  // so referred users were being promised credits that never arrived.
   const tiers = [
-    { label: "Friend signs up", you: "—", friend: "+3 credits", icon: Users },
+    { label: "Friend signs up", you: "—", friend: "—", icon: Users },
     { label: "Friend verifies email", you: "—", friend: "—", icon: Check },
     { label: "Friend makes 1st purchase", you: "+10 credits", friend: "+5 bonus", icon: Gift },
     { label: "Friend subscribes (any plan)", you: "+1 FREE MONTH", friend: "—", icon: Trophy },

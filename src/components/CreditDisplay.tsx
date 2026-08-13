@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import { useTranslation } from "react-i18next";
-import { Coins, ShoppingCart, Loader2, Crown, Settings, XCircle, AlertTriangle, Share2, Copy, Check, Gift, Users, Wallet, Flame } from "lucide-react";
+import { Coins, ShoppingCart, Loader2, Crown, Settings, XCircle, AlertTriangle, Share2, Copy, Check, Gift, Users, Wallet, Flame, ChevronRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useFlashSale } from "@/hooks/useFlashSale";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -518,6 +519,7 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
 /** Referral card — shows inside the credit store dialog. */
 function ReferralCard() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [code, setCode] = useState<string | null>(null);
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -593,6 +595,24 @@ function ReferralCard() {
               </span>
             </div>
           )}
+
+          {/* Cash upsell. Someone reading the "how do I get free credits" tab
+              has already told you they'd rather earn than pay. */}
+          <button
+            type="button"
+            onClick={() => navigate("/ambassador")}
+            className="w-full flex items-center justify-between gap-2 rounded border border-green-500/40 bg-green-500/10 px-2.5 py-2 hover:bg-green-500/20 transition-colors text-left"
+          >
+            <span className="min-w-0">
+              <span className="block font-orbitron text-[10px] tracking-wider text-green-300">
+                OR GET PAID IN REAL CASH
+              </span>
+              <span className="block font-mono-share text-[9px] text-muted-foreground/70 truncate">
+                Ambassadors earn 20% of everything their referrals spend
+              </span>
+            </span>
+            <ChevronRight className="w-3.5 h-3.5 text-green-400 shrink-0" />
+          </button>
         </>
       )}
     </div>

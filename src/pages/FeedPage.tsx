@@ -21,7 +21,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Send, Users, Globe, Loader2, Plus, X, Lock, Zap, ShieldAlert, Sparkles, Rss, Flame, Film, FolderOpen, ImageIcon, Star, Menu, Lightbulb, MessageCircle, MessagesSquare } from "lucide-react";
+import { Send, Users, Globe, Loader2, Plus, X, Lock, Zap, ShieldAlert, Sparkles, Rss, Flame, Film, FolderOpen, ImageIcon, Star, Menu, Lightbulb, MessageCircle, MessagesSquare, Gift, DollarSign } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
 import MobileBottomNav from "@/components/MobileBottomNav";
@@ -31,6 +31,7 @@ import FeatureExplainer from "@/components/FeatureExplainer";
 import ReelViewer from "@/components/ReelViewer";
 import StoriesBar from "@/components/StoriesBar";
 import SignupTeaser from "@/components/SignupTeaser";
+import EarnPromoBanner from "@/components/EarnPromoBanner";
 import CommandCenterLanding from "@/components/landing/CommandCenterLanding";
 import StoreOverlay from "@/components/StoreOverlay";
 import PreferencesDialog from "@/components/PreferencesDialog";
@@ -644,6 +645,34 @@ const FeedPage: React.FC = () => {
             </div>
           </div>
 
+          {/* Earn — mirrors GlobalNavMenu, which this drawer replaces on /feed. */}
+          {isAuthenticated && (
+            <div className="space-y-2">
+              <div className="px-2 font-mono-share text-[9px] tracking-[0.2em] text-muted-foreground/70">
+                ── EARN ──
+              </div>
+              <div className="flex flex-col gap-1">
+                <button
+                  type="button"
+                  onClick={() => { setNavOpen(false); navigate("/referral"); }}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-md font-orbitron text-xs tracking-widest text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
+                >
+                  <Gift className="w-4 h-4" /> INVITE + EARN
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setNavOpen(false); navigate("/ambassador"); }}
+                  className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-md font-orbitron text-xs tracking-widest text-green-300 bg-green-500/10 border border-green-500/40 hover:bg-green-500/20 transition-colors"
+                >
+                  <span className="flex items-center gap-3">
+                    <DollarSign className="w-4 h-4" /> AMBASSADOR
+                  </span>
+                  <span className="font-mono-share text-[9px] text-green-400/80 tracking-normal">20% CASH</span>
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Filters */}
           <div className="space-y-2">
             <div className="px-2 font-mono-share text-[9px] tracking-[0.2em] text-muted-foreground/70">
@@ -782,6 +811,10 @@ const FeedPage: React.FC = () => {
             <StoriesBar currentUserId={user?.id} isAdmin={!!user?.is_admin} />
 
         <FeaturedModelsStrip />
+          </div>
+
+          <div className="px-3 pt-3">
+            <EarnPromoBanner />
           </div>
 
           {/* Grid — edge-to-edge so cards' borders touch */}
@@ -939,6 +972,8 @@ const FeedPage: React.FC = () => {
         <StoriesBar currentUserId={user?.id} isAdmin={!!user?.is_admin} />
 
         <FeaturedModelsStrip />
+
+        <EarnPromoBanner />
 
         {isAuthenticated ? (
           <div className="bg-card/60 border border-border/40 rounded-lg p-4 space-y-3">

@@ -314,7 +314,7 @@
   "referral": {
     "title": "PROGRAMME_PARRAINAGE",
     "description": "Partagez votre lien — vos amis reçoivent <1>3 crédits gratuits</1> à l'inscription. Lors de leur premier achat, vous recevez <2>10 crédits</2> et ils obtiennent <3>5 bonus</3>.",
-    "descriptionSimple": "Partagez votre lien — vos amis reçoivent 3 crédits gratuits à l'inscription. Lors de leur premier achat, vous recevez 10 crédits et ils obtiennent 5 bonus.",
+    "descriptionSimple": "Partagez votre lien — lors du premier achat d'un ami, vous recevez 10 crédits et lui 5 en bonus. S'il s'abonne, vous obtenez un mois gratuit.",
     "referred": "{{count}} parrainés",
     "converted": "{{count}} convertis",
     "earned": "+{{count}} crédits gagnés"

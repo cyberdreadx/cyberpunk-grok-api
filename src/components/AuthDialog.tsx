@@ -310,8 +310,14 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
                 {referralCode && (
                   <div className="bg-green-500/10 border border-green-500/30 rounded px-3 py-2 flex items-center gap-2">
                     <span className="text-green-400 text-sm">&#127873;</span>
+                    {/* Says what the invite actually pays. The old copy promised
+                        3 credits on email verification — that grant was removed
+                        with the earn-only model in July 2026, so every referred
+                        signup was being told something that never arrived. The
+                        +5 first-purchase bonus is the reward that still exists
+                        (webhook.ts, referral purchase reward). */}
                     <p className="font-mono-share text-[10px] text-green-400">
-                      Referred by a friend! You'll get <span className="font-bold">3 free credits</span> after verifying your email.
+                      Invited by a friend — you'll get <span className="font-bold">+5 bonus credits</span> on your first purchase.
                     </p>
                   </div>
                 )}

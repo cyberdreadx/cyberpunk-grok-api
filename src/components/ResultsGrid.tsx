@@ -1178,19 +1178,32 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
 
   const [sharingId, setSharingId] = useState<string | null>(null);
   const refCodeRef = useRef<string | null>(null);
+  const ambassadorRef = useRef<{ pct: number } | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem("auth-token");
     if (!token) return;
     const apiBase = (import.meta.env.VITE_API_URL as string) || "/api";
-    fetch(`${apiBase}/referral`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ action: "get-code" }),
-    })
-      .then((r) => r.ok ? r.json() : null)
-      .then((d) => { if (d?.code) refCodeRef.current = d.code; })
-      .catch(() => {});
+    const post = (path: string, body: any) =>
+      fetch(`${apiBase}${path}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(body),
+      }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+
+    post("/referral", { action: "get-code" }).then((d) => { if (d?.code) refCodeRef.current = d.code; });
+
+    // An ambassador's vanity code has to win here. Sharing your own art is the
+    // single highest-intent moment on the site, and tagging those links with
+    // the credits-only referral code would quietly route an ambassador's whole
+    // audience past the path that actually pays them.
+    post("/ambassador", { action: "mine" }).then((d) => {
+      const amb = d?.ambassador;
+      if (amb?.code && amb.status === "active") {
+        refCodeRef.current = amb.code;
+        ambassadorRef.current = { pct: amb.commissionPct };
+      }
+    });
   }, []);
 
   /** Copy or share the link from a share API response */
@@ -1231,7 +1244,15 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
     }
 
     if (copied) {
-      toast.success(t("results.copyLink"));
+      // Peak-intent moment: they just shared something they made. Say what the
+      // link earns, since most people never learn their share links pay.
+      toast.success(t("results.copyLink"), {
+        description: ambassadorRef.current
+          ? `You earn ${ambassadorRef.current.pct}% cash on anything they buy.`
+          : refCodeRef.current
+            ? "Your referral code is attached — you earn credits if they sign up and buy."
+            : undefined,
+      });
     } else if (navigator.share) {
       try {
         await navigator.share({ title: BRAND.name, url: shareLink });

@@ -21,6 +21,7 @@ const SOCIAL_META: Record<string, { label: string; placeholder: string }> = {
 const normalizeUrl = (v: string) => (/^https?:\/\//i.test(v) ? v : `https://${v}`);
 import EarningsPanel from "@/components/EarningsPanel";
 import AdminUserPanel from "@/components/AdminUserPanel";
+import EarnPromoBanner from "@/components/EarnPromoBanner";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import VerificationDialog from "@/components/VerificationDialog";
 import HolderBadge from "@/components/HolderBadge";
@@ -576,6 +577,10 @@ const ProfilePage: React.FC = () => {
             </Button>
           </div>
         )}
+
+        {/* Earn — only on your own profile; nobody needs a referral pitch while
+            looking at someone else's page. */}
+        {profile.isOwn && <EarnPromoBanner variant="card" />}
 
         {/* Admin inspector (admins viewing other users) */}
         {!profile.isOwn && user?.is_admin && <AdminUserPanel userId={profile.userId} />}
