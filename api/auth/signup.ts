@@ -7,6 +7,7 @@ import { checkRateLimit, getClientIp } from "../_lib/ratelimit";
 import { isDisposableEmail } from "../_lib/disposable-domains";
 import { isDomainVelocityExceeded } from "../_lib/domain-velocity";
 import { verifyCaptcha } from "../_lib/captcha";
+import { findAmbassadorByCode, attributeSignup, type AmbassadorLookup } from "../_lib/ambassador";
 /** Basic email format validation. */
 function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -97,14 +98,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       SELECT id, email_verified FROM users WHERE email = ${normalizedEmail}
     `;
 
-    // Look up referrer if a referral code was provided
+    // Look up referrer if a referral code was provided. Ambassador vanity
+    // codes are checked first; an ambassador's original hex code still works
+    // because it falls through to the same legacy lookup below.
     let referrerId: string | null = null;
+    let ambassador: AmbassadorLookup | null = null;
     if (referral_code && typeof referral_code === "string") {
-      const refRows = await sql`
-        SELECT id, email FROM users WHERE referral_code = ${referral_code.trim().toUpperCase()}
-      `;
-      if (refRows.length > 0 && refRows[0].email !== normalizedEmail) {
-        referrerId = refRows[0].id;
+      try {
+        ambassador = await findAmbassadorByCode(sql, referral_code);
+      } catch (e: any) {
+        console.error("[ambassador] code lookup failed:", e?.message);
+        ambassador = null;
+      }
+      if (ambassador?.userId) {
+        const [ambUser] = await sql`
+          SELECT id, email FROM users WHERE id = ${ambassador.userId}::uuid
+        `;
+        if (ambUser && ambUser.email !== normalizedEmail) referrerId = ambUser.id;
+        else ambassador = null;
+      }
+      if (!referrerId) {
+        const refRows = await sql`
+          SELECT id, email FROM users WHERE referral_code = ${referral_code.trim().toUpperCase()}
+        `;
+        if (refRows.length > 0 && refRows[0].email !== normalizedEmail) {
+          referrerId = refRows[0].id;
+        }
       }
     }
 
@@ -153,6 +172,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           return res.status(409).json({ error: "An account with this email already exists" });
         }
         throw err;
+      }
+    }
+
+    // Ambassador attribution lives in its own table rather than riding on
+    // `referrals`, because it carries money: a commission window that can be
+    // extended, fraud state, and an audit trail. Never fatal to signup.
+    if (ambassador && referrerId) {
+      try {
+        await attributeSignup(sql, {
+          ambassadorId: ambassador.ambassadorId,
+          ambassadorUserId: ambassador.userId,
+          userId,
+          fingerprint: fp,
+        });
+      } catch (e: any) {
+        console.error("[ambassador] attribution failed:", e?.message);
       }
     }
 

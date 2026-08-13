@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TwoFactorSettingsDialog from "@/components/TwoFactorSettingsDialog";
 import KarmaBadge from "@/components/KarmaBadge";
 import { useAuth } from "@/hooks/useAuth";
+import { getStoredRef, clearStoredRef } from "@/lib/referral";
 
 interface AuthDialogProps {
   isAuthenticated: boolean;
@@ -88,11 +89,15 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
     if (open && !captchaToken) loadCaptcha();
   }, [open, captchaToken, loadCaptcha]);
 
-  // Read referral code from URL (?ref=CODE)
+  // Referral / ambassador code. Checks the URL first, then the code stored on
+  // arrival — otherwise attribution only survives if someone signs up on the
+  // very pageview they landed on, and every click that browses first is lost.
   const referralCode = React.useMemo(() => {
     try {
-      return new URLSearchParams(window.location.search).get("ref") || undefined;
-    } catch { return undefined; }
+      const fromUrl = new URLSearchParams(window.location.search).get("ref");
+      if (fromUrl) return fromUrl.trim().toUpperCase();
+    } catch { /* fall through to storage */ }
+    return getStoredRef();
   }, []);
 
   // Open dialog when verification or 2FA is needed
@@ -127,6 +132,9 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
         if (result?.emailWarning) {
           setError(result.emailWarning);
         }
+        // Attribution is spent — don't let it attach to a later account on a
+        // shared browser.
+        clearStoredRef();
         // User is now logged in (even if unverified) — close dialog
         setOpen(false);
       }

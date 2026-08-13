@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { lazyWithRetry } from "@/lib/lazyWithRetry";
+import { captureRefFromUrl } from "@/lib/referral";
 
 // Lazy-load heavy pages to keep initial bundle small
 const Admin = lazyWithRetry(() => import("./pages/Admin"), "admin");
@@ -19,6 +20,8 @@ const ApiDocs = lazyWithRetry(() => import("./pages/ApiDocs"), "api-docs");
 const FeedPage = lazyWithRetry(() => import("./pages/FeedPage"), "feed");
 const ProfilePage = lazyWithRetry(() => import("./pages/ProfilePage"), "profile");
 const ReferralPage = lazyWithRetry(() => import("./pages/ReferralPage"), "referral");
+const AmbassadorPage = lazyWithRetry(() => import("./pages/AmbassadorPage"), "ambassador");
+const RefLanding = lazyWithRetry(() => import("./pages/RefLanding"), "ref-landing");
 const TerminalMode = lazyWithRetry(() => import("./pages/TerminalMode"), "terminal");
 const VerificationStatusPage = lazyWithRetry(() => import("./pages/VerificationStatusPage"), "verification");
 const StripePriceSwap = lazyWithRetry(() => import("./pages/StripePriceSwap"), "stripe-price-swap");
@@ -41,6 +44,10 @@ const PageShell = ({ children }: { children: React.ReactNode }) => (
     </Suspense>
   </ErrorBoundary>
 );
+
+// Persist ?ref= before anything can navigate the query string away, and count
+// the click. Runs at module scope so it happens on the very first paint.
+captureRefFromUrl();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -70,6 +77,8 @@ const App = () => (
           <Route path="/profile" element={<PageShell><ProfilePage /></PageShell>} />
           <Route path="/profile/:username" element={<PageShell><ProfilePage /></PageShell>} />
           <Route path="/referral" element={<PageShell><ReferralPage /></PageShell>} />
+          <Route path="/ambassador" element={<PageShell><AmbassadorPage /></PageShell>} />
+          <Route path="/r/:code" element={<PageShell><RefLanding /></PageShell>} />
           <Route path="/terminal" element={<PageShell><TerminalMode /></PageShell>} />
           <Route path="/verification" element={<PageShell><VerificationStatusPage /></PageShell>} />
           <Route path="/admin/stripe-prices" element={<PageShell><StripePriceSwap /></PageShell>} />

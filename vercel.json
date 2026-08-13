@@ -80,6 +80,10 @@
     {
       "path": "/api/cron-xrge-snapshot",
       "schedule": "10 3 * * *"
+    },
+    {
+      "path": "/api/cron-ambassador-release",
+      "schedule": "20 2 * * *"
     }
   ],
   "headers": [

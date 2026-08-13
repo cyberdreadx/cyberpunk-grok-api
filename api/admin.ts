@@ -53,6 +53,13 @@ import {
   clearStripeCache,
 } from "./_lib/stripe-finance";
 import { getRunpodBalance, isRunpodBalanceConfigured } from "./_lib/runpod-balance";
+import {
+  normalizeCode,
+  validateCode,
+  suggestCode,
+  isCodeAvailable,
+  releaseMaturedCommissions,
+} from "./_lib/ambassador";
 
 /**
  * Cost CTEs shared by every panel that prices generations.
@@ -159,6 +166,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!admin && !modAllowed) {
     return res.status(403).json({ error: "Access denied" });
   }
+
+  // Who is acting, for audit columns (approved_by / reviewed_by). Null on the
+  // background-continuation path, which authenticates with CRON_SECRET and has
+  // no user behind it.
+  const actor = getUserFromRequest(req);
 
   try {
     switch (action) {
@@ -971,6 +983,329 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           windowRevenueCents: priceRow.revenue_cents,
           range: { days: range.days, bucket: range.bucket, label: range.label },
         });
+      }
+
+      // ── AMBASSADOR PROGRAM ────────────────────────────────────────────
+      //
+      // Approved promoters earning a cash percentage of what their referred
+      // customers actually pay. Distinct from `referrals`, which is the open
+      // credit-reward system anyone can use — and which is heavily farmed, so
+      // nothing here is granted automatically.
+      case "ambassadors": {
+        const [totals] = await sql`
+          SELECT
+            COUNT(*)::int                                   AS total,
+            COUNT(*) FILTER (WHERE status = 'active')::int  AS active,
+            COUNT(*) FILTER (WHERE status = 'paused')::int  AS paused,
+            COUNT(*) FILTER (WHERE status = 'revoked')::int AS revoked
+          FROM ambassadors
+        `;
+        const [pendingApps] = await sql`
+          SELECT COUNT(*)::int AS pending FROM ambassador_applications WHERE status = 'pending'
+        `;
+        // Liability view: what's on hold, what's been released, what's been
+        // reversed. Pending is the number that matters — it's money already
+        // owed that hasn't left yet.
+        const [money] = await sql`
+          SELECT
+            COALESCE(SUM(commission_cents) FILTER (WHERE status = 'pending'), 0)::bigint     AS pending_cents,
+            COALESCE(SUM(commission_cents) FILTER (WHERE status = 'available'), 0)::bigint   AS released_cents,
+            COALESCE(SUM(commission_cents) FILTER (WHERE status = 'clawed_back'), 0)::bigint AS clawed_cents,
+            COALESCE(SUM(commission_cents) FILTER (WHERE status = 'void'), 0)::bigint        AS void_cents,
+            COALESCE(SUM(gross_cents) FILTER (WHERE status <> 'clawed_back'), 0)::bigint     AS gross_cents,
+            COUNT(*)::int                                                                    AS ledger_rows
+          FROM ambassador_commissions
+        `;
+        const [attribution] = await sql`
+          SELECT COUNT(*)::int AS attributed,
+                 COUNT(*) FILTER (WHERE first_paid_at IS NOT NULL)::int AS converted,
+                 COUNT(*) FILTER (WHERE disqualified)::int AS disqualified
+          FROM ambassador_referrals
+        `;
+
+        const roster = await sql`
+          SELECT a.id, a.code, a.status, a.commission_pct, a.commission_months, a.hold_days,
+                 a.tier, a.display_name, a.approved_at, a.admin_notes,
+                 u.email, COALESCE(p.username, LEFT(u.email, 3) || '***') AS username,
+                 COALESCE(u.cash_balance_cents, 0)::int AS cash_balance_cents,
+                 (SELECT COUNT(*) FROM ambassador_referrals r WHERE r.ambassador_id = a.id)::int AS signups,
+                 (SELECT COUNT(*) FROM ambassador_referrals r
+                   WHERE r.ambassador_id = a.id AND r.first_paid_at IS NOT NULL)::int AS converted,
+                 (SELECT COUNT(*) FROM ambassador_referrals r
+                   WHERE r.ambassador_id = a.id AND r.disqualified)::int AS disqualified,
+                 (SELECT COALESCE(SUM(clicks), 0) FROM ambassador_click_days d
+                   WHERE d.ambassador_id = a.id)::int AS clicks,
+                 (SELECT COALESCE(SUM(c.commission_cents), 0) FROM ambassador_commissions c
+                   WHERE c.ambassador_id = a.id AND c.status = 'pending')::int AS pending_cents,
+                 a.lifetime_gross_cents, a.lifetime_commission_cents
+          FROM ambassadors a
+          LEFT JOIN users u ON u.id = a.user_id
+          LEFT JOIN profiles p ON p.user_id = a.user_id
+          ORDER BY a.lifetime_gross_cents DESC, a.approved_at DESC
+          LIMIT 200
+        `;
+
+        const applications = await sql`
+          SELECT ap.id, ap.user_id, ap.email, ap.requested_code, ap.display_name, ap.country,
+                 ap.socials, ap.audience_size, ap.channels, ap.pitch, ap.payout_pref,
+                 ap.status, ap.admin_notes, ap.created_at, ap.reviewed_at,
+                 COALESCE(p.username, LEFT(ap.email, 3) || '***') AS username,
+                 -- Context for the reviewer: has this person ever paid, and how
+                 -- many accounts share their device fingerprint. A 300-signup
+                 -- farmer applying looks identical to a real creator otherwise.
+                 COALESCE((SELECT SUM(t.amount_cents) FROM transactions t
+                            WHERE t.user_id = ap.user_id AND t.amount_cents > 0), 0)::int AS spent_cents,
+                 (SELECT COUNT(*) FROM referrals r WHERE r.referrer_id = ap.user_id)::int AS existing_referrals,
+                 (SELECT COUNT(*) FROM referrals r
+                   WHERE r.referrer_id = ap.user_id AND r.referee_purchased)::int AS existing_conversions,
+                 (SELECT COUNT(*) FROM users u2
+                   WHERE u2.device_fingerprint IS NOT NULL
+                     AND u2.device_fingerprint = (SELECT device_fingerprint FROM users WHERE id = ap.user_id)
+                 )::int AS fingerprint_cluster,
+                 u.created_at AS account_created_at
+          FROM ambassador_applications ap
+          JOIN users u ON u.id = ap.user_id
+          LEFT JOIN profiles p ON p.user_id = ap.user_id
+          WHERE ap.status = ${String(req.body?.appStatus || "pending")}
+          ORDER BY ap.created_at DESC
+          LIMIT 100
+        `;
+
+        const recentCommissions = await sql`
+          SELECT c.id, c.source_kind, c.gross_cents, c.commission_pct, c.commission_cents,
+                 c.status, c.available_at, c.created_at, a.code
+          FROM ambassador_commissions c
+          LEFT JOIN ambassadors a ON a.id = c.ambassador_id
+          ORDER BY c.created_at DESC
+          LIMIT 50
+        `;
+
+        return res.status(200).json({
+          totals: {
+            ambassadors: totals?.total || 0,
+            active: totals?.active || 0,
+            paused: totals?.paused || 0,
+            revoked: totals?.revoked || 0,
+            pendingApplications: pendingApps?.pending || 0,
+            attributedSignups: attribution?.attributed || 0,
+            convertedSignups: attribution?.converted || 0,
+            disqualified: attribution?.disqualified || 0,
+            ledgerRows: money?.ledger_rows || 0,
+          },
+          money: {
+            pendingCents: Number(money?.pending_cents || 0),
+            releasedCents: Number(money?.released_cents || 0),
+            clawedBackCents: Number(money?.clawed_cents || 0),
+            voidCents: Number(money?.void_cents || 0),
+            attributedGrossCents: Number(money?.gross_cents || 0),
+          },
+          roster,
+          applications,
+          recentCommissions,
+        });
+      }
+
+      // Approve or reject an application. Approving mints the ambassador row
+      // and locks in that person's terms — later rate changes don't rewrite a
+      // deal someone already accepted.
+      case "ambassador-review": {
+        const appId = String(req.body?.id || "");
+        const decision = String(req.body?.decision || "");
+        const notes = req.body?.notes ? String(req.body.notes).slice(0, 2000) : null;
+        if (!appId || !["approve", "reject"].includes(decision)) {
+          return res.status(400).json({ error: "id and decision (approve|reject) required" });
+        }
+
+        const [app] = await sql`
+          SELECT id, user_id, email, requested_code, display_name, status
+          FROM ambassador_applications WHERE id = ${appId}::uuid
+        `;
+        if (!app) return res.status(404).json({ error: "Application not found" });
+        if (app.status !== "pending") {
+          return res.status(409).json({ error: `Application already ${app.status}` });
+        }
+
+        if (decision === "reject") {
+          await sql`
+            UPDATE ambassador_applications
+            SET status = 'rejected', admin_notes = ${notes}, reviewed_at = now(),
+                reviewed_by = ${actor?.userId ?? null}::uuid, updated_at = now()
+            WHERE id = ${appId}::uuid
+          `;
+          return res.status(200).json({ ok: true, status: "rejected" });
+        }
+
+        const [already] = await sql`SELECT id FROM ambassadors WHERE user_id = ${app.user_id}::uuid`;
+        if (already) return res.status(409).json({ error: "User is already an ambassador" });
+
+        const requested = normalizeCode(req.body?.code || app.requested_code || "");
+        let code = requested;
+        if (code) {
+          const bad = validateCode(code);
+          if (bad) return res.status(400).json({ error: bad });
+          if (!(await isCodeAvailable(sql, code))) {
+            return res.status(409).json({ error: `Code ${code} is taken — assign a different one` });
+          }
+        } else {
+          code = suggestCode(app.display_name);
+          if (!(await isCodeAvailable(sql, code))) code = suggestCode(null);
+        }
+
+        const pct = req.body?.commissionPct != null ? Number(req.body.commissionPct) : 20;
+        const months = req.body?.commissionMonths != null ? Number(req.body.commissionMonths) : 12;
+        const holdDays = req.body?.holdDays != null ? Number(req.body.holdDays) : 30;
+        if (!(pct >= 0 && pct <= 100)) return res.status(400).json({ error: "commissionPct must be 0-100" });
+        if (!(months >= 0 && months <= 240)) return res.status(400).json({ error: "commissionMonths must be 0-240" });
+        if (!(holdDays >= 0 && holdDays <= 180)) return res.status(400).json({ error: "holdDays must be 0-180" });
+
+        const [amb] = await sql`
+          WITH ins AS (
+            INSERT INTO ambassadors
+              (user_id, code, display_name, commission_pct, commission_months, hold_days,
+               approved_by, admin_notes)
+            VALUES
+              (${app.user_id}::uuid, ${code}, ${app.display_name || null},
+               ${pct}, ${months}, ${holdDays}, ${actor?.userId ?? null}::uuid, ${notes})
+            RETURNING id, code
+          ), upd AS (
+            UPDATE ambassador_applications
+            SET status = 'approved', admin_notes = ${notes}, reviewed_at = now(),
+                reviewed_by = ${actor?.userId ?? null}::uuid, updated_at = now()
+            WHERE id = ${appId}::uuid
+            RETURNING 1
+          )
+          SELECT id, code FROM ins
+        `;
+        return res.status(200).json({ ok: true, status: "approved", ambassadorId: amb.id, code: amb.code });
+      }
+
+      // Pause / revoke / reinstate, adjust terms, rename the code.
+      //
+      // Pausing stops new attribution and new accrual but leaves held money on
+      // track to release. Revoking additionally voids anything still pending —
+      // use it for fraud, not for a quiet parting.
+      case "ambassador-update": {
+        const id = String(req.body?.id || "");
+        if (!id) return res.status(400).json({ error: "id required" });
+        const [amb] = await sql`SELECT id, code, status FROM ambassadors WHERE id = ${id}::uuid`;
+        if (!amb) return res.status(404).json({ error: "Ambassador not found" });
+
+        const status = req.body?.status ? String(req.body.status) : null;
+        if (status && !["active", "paused", "revoked"].includes(status)) {
+          return res.status(400).json({ error: "status must be active|paused|revoked" });
+        }
+
+        let code: string | null = null;
+        if (req.body?.code) {
+          code = normalizeCode(req.body.code);
+          const bad = validateCode(code);
+          if (bad) return res.status(400).json({ error: bad });
+          if (!(await isCodeAvailable(sql, code, id))) {
+            return res.status(409).json({ error: "That code is taken" });
+          }
+        }
+
+        const pct = req.body?.commissionPct != null ? Number(req.body.commissionPct) : null;
+        const months = req.body?.commissionMonths != null ? Number(req.body.commissionMonths) : null;
+        const holdDays = req.body?.holdDays != null ? Number(req.body.holdDays) : null;
+        if (pct != null && !(pct >= 0 && pct <= 100)) return res.status(400).json({ error: "commissionPct must be 0-100" });
+        if (months != null && !(months >= 0 && months <= 240)) return res.status(400).json({ error: "commissionMonths must be 0-240" });
+        if (holdDays != null && !(holdDays >= 0 && holdDays <= 180)) return res.status(400).json({ error: "holdDays must be 0-180" });
+
+        await sql`
+          UPDATE ambassadors SET
+            code              = COALESCE(${code}, code),
+            status            = COALESCE(${status}, status),
+            commission_pct    = COALESCE(${pct}::numeric, commission_pct),
+            commission_months = COALESCE(${months}::int, commission_months),
+            hold_days         = COALESCE(${holdDays}::int, hold_days),
+            tier              = COALESCE(${req.body?.tier ? String(req.body.tier).slice(0, 32) : null}, tier),
+            admin_notes       = COALESCE(${req.body?.notes ? String(req.body.notes).slice(0, 2000) : null}, admin_notes),
+            status_changed_at = CASE WHEN ${status}::text IS NOT NULL AND ${status} <> status
+                                     THEN now() ELSE status_changed_at END,
+            updated_at        = now()
+          WHERE id = ${id}::uuid
+        `;
+
+        // Revoking voids money still on hold. Anything already released stays
+        // released — it's in their cash balance and reversing that silently
+        // would be a withdrawal we never told them about.
+        let voided = 0;
+        if (status === "revoked") {
+          const [v] = await sql`
+            WITH upd AS (
+              UPDATE ambassador_commissions
+              SET status = 'void', clawback_reason = 'ambassador revoked'
+              WHERE ambassador_id = ${id}::uuid AND status = 'pending'
+              RETURNING commission_cents
+            )
+            SELECT COUNT(*)::int AS n, COALESCE(SUM(commission_cents), 0)::int AS cents FROM upd
+          `;
+          voided = v?.n || 0;
+        }
+
+        return res.status(200).json({ ok: true, voidedPending: voided });
+      }
+
+      // Extend the commission window on referred customers — the review-and-
+      // extend step, rather than committing to a lifetime deal up front.
+      // Scope "all" moves every live attribution; "expiring" only those inside
+      // the next 30 days, which is the usual renewal conversation.
+      case "ambassador-extend": {
+        const id = String(req.body?.id || "");
+        const months = Number(req.body?.months ?? 12);
+        const scope = String(req.body?.scope || "all");
+        if (!id) return res.status(400).json({ error: "id required" });
+        if (!(months > 0 && months <= 240)) return res.status(400).json({ error: "months must be 1-240" });
+        if (!["all", "expiring", "expired"].includes(scope)) {
+          return res.status(400).json({ error: "scope must be all|expiring|expired" });
+        }
+
+        // Extend from whichever is later: the current expiry or now. Extending
+        // from a date that already passed would hand back a window that already
+        // elapsed and look like nothing happened.
+        const [row] = await sql`
+          WITH upd AS (
+            UPDATE ambassador_referrals
+            SET commission_until = GREATEST(COALESCE(commission_until, now()), now())
+                                   + (${months}::int * INTERVAL '1 month'),
+                extended_count = extended_count + 1,
+                extended_at = now()
+            WHERE ambassador_id = ${id}::uuid
+              AND disqualified = false
+              AND commission_until IS NOT NULL
+              AND (
+                ${scope} = 'all'
+                OR (${scope} = 'expiring' AND commission_until > now()
+                    AND commission_until <= now() + INTERVAL '30 days')
+                OR (${scope} = 'expired' AND commission_until <= now())
+              )
+            RETURNING 1
+          )
+          SELECT COUNT(*)::int AS n FROM upd
+        `;
+        return res.status(200).json({ ok: true, extended: row?.n || 0, months });
+      }
+
+      // Flag or clear a single attribution without deleting it — a
+      // disqualified row stops earning but stays visible as evidence.
+      case "ambassador-disqualify": {
+        const referralId = String(req.body?.referralId || "");
+        const on = req.body?.disqualified !== false;
+        if (!referralId) return res.status(400).json({ error: "referralId required" });
+        await sql`
+          UPDATE ambassador_referrals
+          SET disqualified = ${on},
+              disqualified_reason = ${on ? String(req.body?.reason || "manual review").slice(0, 300) : null}
+          WHERE id = ${referralId}::uuid
+        `;
+        return res.status(200).json({ ok: true });
+      }
+
+      // Force the release job to run now instead of waiting for 02:20 UTC.
+      case "ambassador-release": {
+        const result = await releaseMaturedCommissions(sql, 500);
+        return res.status(200).json({ ok: true, ...result });
       }
 
       // -- Stripe ground truth + reconciliation against our own ledger --

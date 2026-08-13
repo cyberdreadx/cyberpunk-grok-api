@@ -34,11 +34,13 @@ import {
   Sparkles,
   ImageOff,
   Tractor,
+  Award,
   Landmark,
   Undo2,
 } from "lucide-react";
 import AdminInsightsPanel from "@/components/AdminInsightsPanel";
 import AdminFinancePanel from "@/components/AdminFinancePanel";
+import AdminAmbassadorPanel from "@/components/AdminAmbassadorPanel";
 import RangeControl, { loadRange, rangeLabel, type ChartRange } from "@/components/admin/RangeControl";
 import AdminChatModerationPanel from "@/components/AdminChatModerationPanel";
 import PurgeLogPanel from "@/components/PurgeLogPanel";
@@ -246,7 +248,7 @@ function ChartToggle({ active, onClick, title, children }: {
 
 // ── Tab Definitions ──
 
-type TabId = "overview" | "insights" | "revenue" | "finance" | "users" | "usage" | "moderation" | "farmers" | "referrals" | "payouts" | "emails" | "api" | "system" | "flash-sales" | "media-errors" | "purges" | "legacy-subs";
+type TabId = "overview" | "insights" | "revenue" | "finance" | "users" | "usage" | "moderation" | "farmers" | "referrals" | "ambassadors" | "payouts" | "emails" | "api" | "system" | "flash-sales" | "media-errors" | "purges" | "legacy-subs";
 
 const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
   { id: "overview", label: "OVERVIEW", icon: <Eye className="w-3.5 h-3.5" /> },
@@ -258,6 +260,7 @@ const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
   { id: "moderation", label: "DEFENSE", icon: <ShieldX className="w-3.5 h-3.5" /> },
   { id: "farmers", label: "FARMERS", icon: <Tractor className="w-3.5 h-3.5" /> },
   { id: "referrals", label: "REFERRALS", icon: <Share2 className="w-3.5 h-3.5" /> },
+  { id: "ambassadors", label: "AMBASSADORS", icon: <Award className="w-3.5 h-3.5" /> },
   { id: "payouts", label: "PAYOUTS", icon: <CreditCard className="w-3.5 h-3.5" /> },
   { id: "legacy-subs", label: "LEGACY SUBS", icon: <AlertTriangle className="w-3.5 h-3.5" /> },
   { id: "flash-sales", label: "FLASH SALES", icon: <Flame className="w-3.5 h-3.5" /> },
@@ -273,7 +276,7 @@ const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
 const TAB_GROUPS: { id: string; label: string; tabs: TabId[] }[] = [
   { id: "pulse", label: "PULSE", tabs: ["overview", "insights"] },
   { id: "money", label: "MONEY", tabs: ["revenue", "finance", "payouts", "flash-sales", "legacy-subs"] },
-  { id: "people", label: "PEOPLE", tabs: ["users", "referrals", "emails"] },
+  { id: "people", label: "PEOPLE", tabs: ["users", "referrals", "ambassadors", "emails"] },
   { id: "ops", label: "OPS", tabs: ["usage", "system", "media-errors", "purges"] },
   { id: "defense", label: "DEFENSE", tabs: ["moderation", "farmers", "api"] },
 ];
@@ -1815,6 +1818,9 @@ export default function Admin() {
 
         {/* ═══ FINANCE TAB ═══ */}
         {activeTab === "finance" && <AdminFinancePanel range={range} onRangeChange={setRange} />}
+
+        {/* ═══ AMBASSADORS TAB ═══ */}
+        {activeTab === "ambassadors" && <AdminAmbassadorPanel />}
 
         {/* ═══ INSIGHTS TAB ═══ */}
         {activeTab === "insights" && <AdminInsightsPanel />}

@@ -219,6 +219,8 @@ function registerCron(_app: express.Express) {
     ["10 3 * * *", "/api/cron-xrge-snapshot"],
     // Hourly so a day's GPU drawdown stays separable from a mid-day top-up.
     ["5 * * * *", "/api/cron-runpod-snapshot"],
+    // Ambassador commission holds are counted in days, so daily is enough.
+    ["20 2 * * *", "/api/cron-ambassador-release"],
   ];
 
   for (const [schedule, path] of jobs) {

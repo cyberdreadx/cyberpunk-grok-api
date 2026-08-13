@@ -195,6 +195,24 @@ export default function ReferralPage() {
               </div>
             </Card>
 
+            {/* Upsell into the paid tier. Kept visually distinct so it doesn't
+                read as though credits and cash are the same program. */}
+            <Card className="p-4 border-primary/40 bg-primary/5 space-y-2">
+              <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <DollarSign className="w-4 h-4 text-primary" />
+                Want paid in cash instead?
+              </h2>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Ambassadors earn <span className="text-primary font-bold">20% of everything</span> their referrals
+                spend, for 12 months each — withdrawable to your bank, PayPal or XRGE. Applications are reviewed
+                by hand.
+              </p>
+              <Button variant="outline" className="w-full border-primary/40 text-primary font-semibold gap-2"
+                onClick={() => navigate("/ambassador")}>
+                <Trophy className="w-4 h-4" /> Apply to be an ambassador
+              </Button>
+            </Card>
+
             {/* Who signed up with your link */}
             {referees.length > 0 && (
               <Card className="p-4 border-border bg-card space-y-3">

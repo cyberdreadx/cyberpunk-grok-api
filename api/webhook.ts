@@ -25,6 +25,7 @@ import {
   parseCreditsPerMonthFromMeta,
   getInvoiceSubscriptionId,
 } from "./_lib/stripe-sub-prices";
+import { accrueCommission, clawbackCommission } from "./_lib/ambassador";
 
 // Vercel needs raw body for signature verification
 export const config = { api: { bodyParser: false } };
@@ -622,6 +623,102 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       } catch (refErr: any) {
         // Non-critical — don't fail the webhook if referral logic errors
         console.error("[referral] purchase reward error:", refErr.message);
+      }
+    }
+
+    // ════════════════════════════════════════════════════════════════════
+    // AMBASSADOR COMMISSION (cash revenue share on settled payments)
+    // ════════════════════════════════════════════════════════════════════
+    // Scope comes for free from control flow: post unlocks, LoRA unlocks,
+    // verification checkouts and subscription *checkouts* all return earlier,
+    // so anything reaching here is a credit pack or a paid subscription
+    // invoice. Accrual is idempotent on the Stripe object id, which matters
+    // because markEventProcessed() runs before this body — a failure here is
+    // remembered as a success and Stripe's retry short-circuits to 200.
+    if (
+      event.type === "checkout.session.completed" ||
+      event.type === "checkout.session.async_payment_succeeded" ||
+      event.type === "invoice.paid"
+    ) {
+      try {
+        let buyerId: string | null = null;
+        let sourceId = "";
+        let grossCents = 0;
+        let paymentIntent: string | null = null;
+        let kind: "pack" | "subscription" = "pack";
+
+        if (event.type === "invoice.paid") {
+          const inv = event.data.object as Stripe.Invoice;
+          const subId = getInvoiceSubscriptionId(inv);
+          if (subId) {
+            const sub = await stripe.subscriptions.retrieve(subId);
+            buyerId = sub.metadata?.user_id || null;
+            sourceId = inv.id || "";
+            grossCents = inv.amount_paid || 0;
+            paymentIntent = typeof (inv as any).payment_intent === "string"
+              ? (inv as any).payment_intent
+              : (inv as any).payment_intent?.id || null;
+            kind = "subscription";
+          }
+        } else {
+          const s = event.data.object as Stripe.Checkout.Session;
+          buyerId = s.client_reference_id || s.metadata?.user_id || null;
+          sourceId = s.id;
+          grossCents = s.amount_total || 0;
+          paymentIntent = typeof s.payment_intent === "string"
+            ? s.payment_intent
+            : s.payment_intent?.id || null;
+          kind = "pack";
+        }
+
+        if (buyerId && sourceId && grossCents > 0) {
+          const accrued = await accrueCommission(sql, {
+            userId: buyerId,
+            sourceId,
+            sourceKind: kind,
+            grossCents,
+            eventId: event.id,
+            paymentIntent,
+          });
+          if (accrued) {
+            console.log(
+              `[ambassador] accrued $${(accrued.commissionCents / 100).toFixed(2)} ` +
+                `to ambassador ${accrued.ambassadorId} on ${sourceId} (holds until ${accrued.availableAt})`,
+            );
+          }
+        }
+      } catch (ambErr: any) {
+        console.error("[ambassador] accrual error:", ambErr.message);
+      }
+    }
+
+    // ── Commission clawback on refund or dispute ──
+    // Requires charge.refunded and charge.dispute.created to be enabled on the
+    // Stripe webhook endpoint; without them a refunded sale keeps paying out.
+    if (event.type === "charge.refunded" || event.type === "charge.dispute.created") {
+      try {
+        let pi: string | null = null;
+        let reason = "refund";
+        if (event.type === "charge.refunded") {
+          const ch = event.data.object as Stripe.Charge;
+          pi = typeof ch.payment_intent === "string" ? ch.payment_intent : ch.payment_intent?.id || null;
+          reason = "charge refunded";
+        } else {
+          const d = event.data.object as Stripe.Dispute;
+          pi = typeof d.payment_intent === "string" ? d.payment_intent : d.payment_intent?.id || null;
+          reason = "chargeback dispute opened";
+        }
+        if (pi) {
+          const clawed = await clawbackCommission(sql, { paymentIntent: pi, reason });
+          if (clawed) {
+            console.log(
+              `[ambassador] clawed back $${(clawed.commissionCents / 100).toFixed(2)} on ${pi}` +
+                (clawed.wasReleased ? " (already released — cash balance debited)" : " (was still on hold)"),
+            );
+          }
+        }
+      } catch (cbErr: any) {
+        console.error("[ambassador] clawback error:", cbErr.message);
       }
     }
 
