@@ -384,6 +384,7 @@ function fmtClock(d: Date) {
 export default function CommandCenterLanding() {
   const navigate = useNavigate();
   const go = () => navigate(SIGNUP);
+  const goSignIn = () => navigate("/create?signin=1");
 
   const [clock, setClock] = useState(() => new Date());
   const [tele, setTele] = useState({ load: 62, queue: 14, latency: 38, nodes: 28 });
@@ -528,7 +529,7 @@ export default function CommandCenterLanding() {
         </p>
         <div className="cc-cta-row">
           <button className="cc-btn cc-btn-primary" onClick={go}>
-            <Zap size={16} /> Deploy First Render
+            <Zap size={16} /> Start Creating Free
           </button>
           <button
             className="cc-btn cc-btn-ghost"
@@ -542,7 +543,7 @@ export default function CommandCenterLanding() {
         </div>
         <div className="cc-hero-meta">
           <span><b>◇</b> No card required</span>
-          <span><b>◇</b> Free daily credits</span>
+          <span><b>◇</b> Uncensored image + video</span>
           <span><b>◇</b> Instant creator payouts</span>
         </div>
         <div className="cc-scroll-hint">
@@ -677,13 +678,14 @@ export default function CommandCenterLanding() {
           <div className="cc-kicker" style={{ justifyContent: "center" }}><Globe size={13} /> The grid is online</div>
           <h2 className="cc-h2">Take command of <span className="g">the grid</span></h2>
           <p className="cc-lead" style={{ margin: "0 auto 30px" }}>
-            Free to start. Free credits daily. No limits on your imagination — just hit deploy.
+            Free to start. Uncensored image and video generation, a live creator feed,
+            and instant payouts — just hit deploy.
           </p>
           <div className="cc-cta-row" style={{ justifyContent: "center" }}>
             <button className="cc-btn cc-btn-primary" onClick={go}>
-              <Zap size={16} /> Create Free Account
+              <Zap size={16} /> Start Creating Free
             </button>
-            <button className="cc-btn cc-btn-ghost" onClick={go}>
+            <button className="cc-btn cc-btn-ghost" onClick={goSignIn}>
               <Layers size={15} /> Sign In
             </button>
           </div>

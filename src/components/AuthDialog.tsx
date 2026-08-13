@@ -54,6 +54,7 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
 }) => {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  const [tab, setTab] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -113,6 +114,31 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
       setOpen(true);
     }
   }, [referralCode, isAuthenticated]);
+
+  // Open straight from a landing-page CTA. `?signup=1` has been on every one
+  // of those buttons the whole time but nothing ever read it, so pressing
+  // "Deploy First Render" just dropped you on /create with no dialog and you
+  // had to go find the sign-in button yourself — one ask on the landing page,
+  // a second one after you'd already said yes.
+  useEffect(() => {
+    if (isAuthenticated) return;
+    let want: "signin" | "signup" | null = null;
+    try {
+      const q = new URLSearchParams(window.location.search);
+      if (q.get("signup") === "1") want = "signup";
+      else if (q.get("signin") === "1") want = "signin";
+    } catch { return; }
+    if (!want) return;
+    setTab(want);
+    setOpen(true);
+    // Drop the param so a refresh or a back-navigation doesn't reopen it.
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("signup");
+      url.searchParams.delete("signin");
+      window.history.replaceState({}, "", url.pathname + url.search + url.hash);
+    } catch { /* non-fatal */ }
+  }, [isAuthenticated]);
 
   const handleSubmit = async (action: "signin" | "signup") => {
     setLoading(true);
@@ -274,7 +300,7 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
               </DialogDescription>
             </DialogHeader>
 
-            <Tabs defaultValue="signin" className="mt-2">
+            <Tabs value={tab} onValueChange={(v) => setTab(v as "signin" | "signup")} className="mt-2">
               <TabsList className="grid w-full grid-cols-2 bg-input">
                 <TabsTrigger value="signin" className="font-orbitron text-[10px] tracking-wider">
                   SIGN_IN
