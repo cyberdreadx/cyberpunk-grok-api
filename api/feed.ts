@@ -54,8 +54,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Optional media filter: "video" returns only posts whose image_url ends in a video extension.
       const videoOnly = (mediaType as string) === "video";
       const videoCond = videoOnly ? sql`AND p.image_url ~* '\\.(mp4|webm|mov|m4v)(\\?|$)'` : sql``;
-      // sfw=1 → only posts NOT flagged mature (logged-out landing showcase).
-      const sfwCond = sfw === "1" ? sql`AND p.is_mature = false` : sql``;
+      // sfw=1      → drop posts flagged mature. Used by the signed-out feed and
+      //              by anyone with the NSFW toggle off, so the media never even
+      //              reaches the browser.
+      // sfw=strict → additionally require that the poster has flagged something
+      //              mature at least once.
+      //
+      // The strict tier exists because is_mature is self-reported and badly
+      // under-applied: 161 of 292 posters have never flagged anything, leaving
+      // ~336 unvetted posts that `sfw=1` happily returns. Someone who has used
+      // the flag before has demonstrated they know the control exists, so their
+      // unflagged posts are a far better bet. It's a heuristic, not a
+      // guarantee — but it's the only signal in the data, since nothing here
+      // classifies images.
+      const sfwCond =
+        sfw === "strict"
+          ? sql`AND p.is_mature = false
+                AND EXISTS (
+                  SELECT 1 FROM feed_posts fp
+                  WHERE fp.user_id = p.user_id AND fp.is_mature = true
+                )`
+          : sfw === "1"
+            ? sql`AND p.is_mature = false`
+            : sql``;
 
       // Ensure tables exist (safe for first deploy)
       await sql`CREATE TABLE IF NOT EXISTS feed_reports (

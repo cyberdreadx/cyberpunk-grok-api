@@ -6,6 +6,7 @@ import {
   Radar, Radio, ShieldCheck, Sparkles, Users, Wand2, Zap,
 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
+import { isAgeVerified, AGE_VERIFIED_EVENT } from "@/lib/ageGate";
 import "./commandCenter.css";
 
 const GridCity = lazy(() => import("./GridCity"));
@@ -292,10 +293,30 @@ function ShowcaseTile({ post, onJoin, onDead }: {
 function LiveShowcase({ onJoin }: { onJoin: () => void }) {
   const [posts, setPosts] = useState<ShowcasePost[]>([]);
   const [dead, setDead] = useState<Set<string>>(() => new Set());
+  const [ageOk, setAgeOk] = useState(() => isAgeVerified());
+
+  // The age gate is a modal, so it dims the page but leaves everything behind
+  // it in the DOM — showcase images were loading and showing through before
+  // anyone confirmed anything. Hold the fetch until age is confirmed so the
+  // media is never requested, not merely covered up.
+  useEffect(() => {
+    if (ageOk) return;
+    const onConfirm = () => setAgeOk(isAgeVerified());
+    window.addEventListener(AGE_VERIFIED_EVENT, onConfirm);
+    window.addEventListener("storage", onConfirm);
+    return () => {
+      window.removeEventListener(AGE_VERIFIED_EVENT, onConfirm);
+      window.removeEventListener("storage", onConfirm);
+    };
+  }, [ageOk]);
 
   useEffect(() => {
+    if (!ageOk) return;
     let alive = true;
-    apiFetch<{ posts: any[] }>("/feed?sort=top&sfw=1", { auth: false })
+    // strict, not sfw=1: the mature flag is self-reported and most posters have
+    // never touched it, so "not flagged" alone is not evidence of anything on a
+    // public page. strict also requires the poster to have used the flag before.
+    apiFetch<{ posts: any[] }>("/feed?sort=top&sfw=strict", { auth: false })
       .then((d) => {
         if (!alive || !Array.isArray(d?.posts)) return;
         const candidates = d.posts
@@ -316,7 +337,7 @@ function LiveShowcase({ onJoin }: { onJoin: () => void }) {
       })
       .catch(() => {}); // fetch failure → section simply doesn't render
     return () => { alive = false; };
-  }, []);
+  }, [ageOk]);
 
   const visible = posts.filter((p) => !dead.has(p.id)).slice(0, 7);
   if (visible.length < 3) return null;

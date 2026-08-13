@@ -339,7 +339,7 @@ const PreferencesDialog: React.FC<PreferencesDialogProps> = ({ open, onOpenChang
                   : "border-border/40 bg-card/40 text-muted-foreground hover:text-foreground"
               }`}
             >
-              <span>{matureFilter ? "Blur mature posts & stories" : "Mature content filter OFF"}</span>
+              <span>{matureFilter ? "Hide 18+ content" : "Showing 18+ content"}</span>
               <span
                 className={`text-[9px] px-1.5 py-0.5 rounded ${
                   matureFilter ? "bg-amber-400/20" : "bg-muted/40"
@@ -349,7 +349,8 @@ const PreferencesDialog: React.FC<PreferencesDialogProps> = ({ open, onOpenChang
               </span>
             </button>
             <p className="font-mono-share text-[9px] text-muted-foreground/60 leading-relaxed">
-              When ON, posts and stories the creator marked as mature are blurred until you tap REVEAL.
+              On by default. The feed filters 18+ posts out server-side, so they're never
+              downloaded. Stories and creator cards blur theirs until you tap REVEAL.
             </p>
           </section>
 

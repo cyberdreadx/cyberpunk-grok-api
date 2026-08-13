@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useMatureFilter } from "@/hooks/useMatureFilter";
 import CyberLayout from "@/components/CyberLayout";
 import FeaturedModelsStrip from "@/components/FeaturedModelsStrip";
 import FeedTile, { type FeedTilePost } from "@/components/FeedTile";
@@ -56,6 +57,7 @@ const FeedPage: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const isMobile = useIsMobile();
+  const { matureFilter, setMatureFilter } = useMatureFilter();
   const [rulesAcked, setRulesAcked] = useState(() => localStorage.getItem("feed-rules-acked") === "1");
   const [showRules, setShowRules] = useState(false);
 
@@ -113,6 +115,9 @@ const FeedPage: React.FC = () => {
       else if (filter === "trending") params.set("sort", "trending");
       else params.set("sort", "new"); // default ("all"/RECENT) = most recent first
       if (cursor) params.set("cursor", cursor);
+      // NSFW off (the default) filters server-side rather than blurring, so
+      // flagged media is never sent to the browser at all.
+      if (matureFilter) params.set("sfw", "1");
       const data = await apiFetch<{ posts: FeedTilePost[]; nextCursor: string | null }>(
         `/feed?${params.toString()}`
       );
@@ -139,7 +144,7 @@ const FeedPage: React.FC = () => {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [filter, toast]);
+  }, [filter, matureFilter, toast]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -453,6 +458,32 @@ const FeedPage: React.FC = () => {
           title="Vertical video reels — most recent"
         >
           <Film className="w-3 h-3" /> REELS
+        </button>
+        {/* NSFW switch. Off is the default and means the server never sends
+            flagged posts, so this is a real filter rather than a blur. Lives
+            in the filter row instead of buried in Settings, since the feed is
+            where people notice they want it. */}
+        <button
+          onClick={() => {
+            const showing = matureFilter; // about to turn NSFW ON
+            setMatureFilter(!matureFilter);
+            setLoading(true);
+            toast({
+              title: showing ? "NSFW content on" : "NSFW content hidden",
+              description: showing
+                ? "Posts marked 18+ will now appear in your feed."
+                : "Posts marked 18+ are filtered out. Change it here or in Settings.",
+            });
+          }}
+          className={`flex items-center gap-1 px-2.5 py-1 rounded-full font-mono-share text-[10px] transition-colors border ${
+            matureFilter
+              ? `${baseInactive}`
+              : "border-amber-400/60 bg-amber-400/15 text-amber-300"
+          }`}
+          title={matureFilter ? "18+ posts are hidden — tap to show" : "18+ posts are showing — tap to hide"}
+          aria-pressed={!matureFilter}
+        >
+          <ShieldAlert className="w-3 h-3" /> NSFW {matureFilter ? "OFF" : "ON"}
         </button>
         <button
           onClick={() => { setFilter("all"); setLoading(true); }}
