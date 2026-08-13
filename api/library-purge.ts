@@ -160,11 +160,39 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  // Legacy un-scoped keys: deletable only when nothing server-side references
-  // them. DB failure here must not block the ownership-proven deletions.
-  if (legacyKeys.length > 0 || legacyBlobUrls.length > 0) {
+  // Reference check, applied to EVERY candidate — not just the legacy ones.
+  //
+  // Owning a file is not the same as being free to delete it. Posting to the
+  // feed stores the generation-output URL directly rather than copying the
+  // object, so a user who posts a video and later empties their library trash
+  // deletes the bytes out from under their own public post. It 404s for
+  // everyone from then on, which is the "failed to load media" people are
+  // hitting: every R2-hosted feed video lives under comfyui-output/<uid>/…,
+  // and keyBelongsToUser() matches that, so ownership alone waved them
+  // straight past the check that legacy keys already got.
+  //
+  // A DB failure here must fail CLOSED. Deleting on the assumption that
+  // nothing references a file is exactly the mistake being fixed.
+  if (r2Keys.length > 0 || blobUrls.length > 0 || legacyKeys.length > 0 || legacyBlobUrls.length > 0) {
     try {
       const refs = await loadReferencedKeys();
+
+      const keepUnreferenced = (keys: string[]) => keys.filter((key) => {
+        if (refs.r2.has(key)) { skipped++; return false; }
+        return true;
+      });
+      const ownedR2 = keepUnreferenced(r2Keys);
+      r2Keys.length = 0;
+      r2Keys.push(...ownedR2);
+
+      const ownedBlob = blobUrls.filter((url) => {
+        const key = blobKeyFromUrl(url);
+        if (key && refs.blob.has(key)) { skipped++; return false; }
+        return true;
+      });
+      blobUrls.length = 0;
+      blobUrls.push(...ownedBlob);
+
       for (const key of legacyKeys) {
         if (refs.r2.has(key)) { skipped++; continue; }
         r2Keys.push(key);
@@ -176,8 +204,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         blobUrls.push(url);
       }
     } catch (err: any) {
-      console.warn("[library-purge] legacy ref check failed:", err?.message || err);
-      skipped += legacyKeys.length + legacyBlobUrls.length;
+      console.warn("[library-purge] ref check failed, deleting nothing:", err?.message || err);
+      skipped += r2Keys.length + blobUrls.length + legacyKeys.length + legacyBlobUrls.length;
+      r2Keys.length = 0;
+      blobUrls.length = 0;
     }
   }
 
