@@ -15,6 +15,8 @@ import { getDb } from "./_lib/db";
 import { getUserFromRequest, ADMIN_EMAIL, checkBan } from "./_lib/auth";
 import { checkRateLimit, getClientIp } from "./_lib/ratelimit";
 import { applyDiscount, getCombinedCreditDiscountPct } from "./_lib/discount";
+import { isEmailVerified, EMAIL_VERIFICATION_REQUIRED_MESSAGE, EMAIL_VERIFICATION_REQUIRED_CODE } from "./_lib/emailVerifiedGate";
+
 
 const XAI_API_BASE = "https://api.x.ai/v1";
 
@@ -256,6 +258,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const auth = getUserFromRequest(req);
     if (!auth) return res.status(401).json({ error: "Unauthorized" });
+
+    // Generation requires a verified email — see _lib/emailVerifiedGate.
+    if (!(await isEmailVerified(auth.userId))) {
+      return res.status(403).json({
+        error: EMAIL_VERIFICATION_REQUIRED_MESSAGE,
+        code: EMAIL_VERIFICATION_REQUIRED_CODE,
+      });
+    }
 
     const sql = getDb();
 

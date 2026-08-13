@@ -3,6 +3,7 @@ import { getDb } from "../_lib/db";
 import { signToken } from "../_lib/auth";
 import { applyCors } from "../_lib/cors";
 import { checkRateLimit, getClientIp } from "../_lib/ratelimit";
+import { clearEmailVerifiedCache } from "../_lib/emailVerifiedGate";
 
 const MAX_ATTEMPTS = 10;
 
@@ -94,6 +95,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           updated_at = now()
       WHERE id = ${user.id}
     `;
+
+    // Generation is gated on this flag and the gate caches for 30s — drop the
+    // entry now so someone who verifies isn't told to verify again.
+    clearEmailVerifiedCache(user.id);
 
     // Earn-only credit model (2026-07): no signup grant, no referral welcome
     // credits — free credits come exclusively from /api/earn engagement rewards.

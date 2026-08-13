@@ -15,6 +15,8 @@ import { getDb } from "./_lib/db";
 import { checkRateLimit } from "./_lib/ratelimit";
 import { checkPrompt, logSafetyViolation } from "./_lib/safety";
 import { applyDiscount, getCombinedCreditDiscountPct } from "./_lib/discount";
+import { isEmailVerified, EMAIL_VERIFICATION_REQUIRED_MESSAGE, EMAIL_VERIFICATION_REQUIRED_CODE } from "./_lib/emailVerifiedGate";
+
 
 const GLTCH_COST = 5;
 const GLTCH_HD_COST = 7;
@@ -68,6 +70,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const auth = getUserFromRequest(req);
   if (!auth) return res.status(401).json({ error: "Sign in to use GLTCH edit." });
+
+  // Generation requires a verified email — see _lib/emailVerifiedGate.
+  if (!(await isEmailVerified(auth.userId))) {
+    return res.status(403).json({
+      error: EMAIL_VERIFICATION_REQUIRED_MESSAGE,
+      code: EMAIL_VERIFICATION_REQUIRED_CODE,
+    });
+  }
 
   // Check if user is banned
   const sqlBan = getDb();

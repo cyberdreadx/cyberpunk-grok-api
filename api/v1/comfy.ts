@@ -22,6 +22,7 @@ import { getUserFromApiKey } from "../_lib/apikey-auth";
 import { checkRateLimit } from "../_lib/ratelimit";
 import { getDb } from "../_lib/db";
 import { deductCredits, refundCredits, logUsage, getUserCredits, discountedCostForUser } from "./_lib/credits";
+import { isEmailVerified, EMAIL_VERIFICATION_REQUIRED_MESSAGE, EMAIL_VERIFICATION_REQUIRED_CODE } from "../_lib/emailVerifiedGate";
 
 const RUNPOD_API_BASE = "https://api.runpod.ai/v2";
 
@@ -474,6 +475,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const auth = await getUserFromApiKey(req);
     if (!auth) {
       return res.status(401).json({ error: "Invalid or missing API key." });
+
+    // Same gate as the session paths: an API key issued to an unverified
+    // account is the identical hole with an extra step.
+    if (!(await isEmailVerified(auth.userId))) {
+      return res.status(403).json({
+        error: EMAIL_VERIFICATION_REQUIRED_MESSAGE,
+        code: EMAIL_VERIFICATION_REQUIRED_CODE,
+      });
+    }
     }
 
     const { allowed } = await checkRateLimit(

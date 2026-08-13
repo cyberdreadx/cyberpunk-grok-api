@@ -19,6 +19,8 @@ import { getUserFromRequest, ADMIN_EMAIL, checkBan } from "./_lib/auth";
 import { getDb } from "./_lib/db";
 import { checkRateLimit } from "./_lib/ratelimit";
 import { applyDiscount, getCombinedCreditDiscountPct } from "./_lib/discount";
+import { isEmailVerified, EMAIL_VERIFICATION_REQUIRED_MESSAGE, EMAIL_VERIFICATION_REQUIRED_CODE } from "./_lib/emailVerifiedGate";
+
 
 // Hosts we'll fetch a reference image from server-side (creator portraits,
 // generated media). Keeps the URL→base64 resolver from being an open SSRF.
@@ -2251,6 +2253,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const auth = getUserFromRequest(req);
   if (!auth) {
     return res.status(401).json({ error: "Sign in to use Comfy Lab." });
+  }
+
+  // Generation requires a verified email — see _lib/emailVerifiedGate.
+  if (!(await isEmailVerified(auth.userId))) {
+    return res.status(403).json({
+      error: EMAIL_VERIFICATION_REQUIRED_MESSAGE,
+      code: EMAIL_VERIFICATION_REQUIRED_CODE,
+    });
   }
 
   // Check if user is banned (allow poll/status actions for UX)
