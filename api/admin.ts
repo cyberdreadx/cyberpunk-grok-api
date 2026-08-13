@@ -22,6 +22,12 @@ import { getUserFromRequest, ADMIN_EMAIL } from "./_lib/auth";
 import { logCreditGrant } from "./_lib/credit-ledger";
 import { sendAnnouncementEmail, buildAnnouncementHtml, buildV47AnnouncementHtml, buildV48AnnouncementHtml, buildV49SubscriptionFixHtml } from "./_lib/email";
 import {
+  sendAmbassadorApprovedEmail,
+  sendAmbassadorRejectedEmail,
+  sendAmbassadorStatusEmail,
+} from "./_lib/email";
+import { notify } from "./_lib/notify";
+import {
   CAMPAIGN_CONFIG_KEY,
   getCampaignRemaining,
   getDefaultSubject,
@@ -1132,6 +1138,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 reviewed_by = ${actor?.userId ?? null}::uuid, updated_at = now()
             WHERE id = ${appId}::uuid
           `;
+          // Transactional: they applied and are waiting on an answer, so this
+          // ignores notification prefs.
+          if (app.email) {
+            sendAmbassadorRejectedEmail(app.email, { note: notes }).catch((e) =>
+              console.error("[ambassador] reject email:", e?.message),
+            );
+          }
+          notify({
+            userId: app.user_id,
+            type: "system",
+            title: "Ambassador application reviewed",
+            body: notes || "Your referral link still earns credits on every friend who buys.",
+            link: "/ambassador",
+            noEmail: true, // the dedicated email above already covers it
+          }).catch(() => {});
           return res.status(200).json({ ok: true, status: "rejected" });
         }
 
@@ -1176,6 +1197,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           )
           SELECT id, code FROM ins
         `;
+
+        if (app.email) {
+          sendAmbassadorApprovedEmail(app.email, {
+            code: amb.code,
+            commissionPct: pct,
+            commissionMonths: months,
+            holdDays,
+          }).catch((e) => console.error("[ambassador] approve email:", e?.message));
+        }
+        notify({
+          userId: app.user_id,
+          type: "system",
+          title: "You're a GLTCHRunner ambassador 🎉",
+          body: `Your link earns ${pct}% cash on everything your referrals spend.`,
+          link: "/ambassador",
+          noEmail: true,
+        }).catch(() => {});
+
         return res.status(200).json({ ok: true, status: "approved", ambassadorId: amb.id, code: amb.code });
       }
 
@@ -1187,7 +1226,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       case "ambassador-update": {
         const id = String(req.body?.id || "");
         if (!id) return res.status(400).json({ error: "id required" });
-        const [amb] = await sql`SELECT id, code, status FROM ambassadors WHERE id = ${id}::uuid`;
+        const [amb] = await sql`
+          SELECT a.id, a.code, a.status, a.user_id, u.email
+          FROM ambassadors a LEFT JOIN users u ON u.id = a.user_id
+          WHERE a.id = ${id}::uuid
+        `;
         if (!amb) return res.status(404).json({ error: "Ambassador not found" });
 
         const status = req.body?.status ? String(req.body.status) : null;
@@ -1242,6 +1285,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             SELECT COUNT(*)::int AS n, COALESCE(SUM(commission_cents), 0)::int AS cents FROM upd
           `;
           voided = v?.n || 0;
+        }
+
+        // Only mail on an actual transition — an admin nudging the rate
+        // shouldn't fire a "your account was paused" email.
+        if (status && status !== amb.status) {
+          if (amb.email) {
+            sendAmbassadorStatusEmail(amb.email, {
+              status: status as "active" | "paused" | "revoked",
+              note: req.body?.notes ? String(req.body.notes).slice(0, 2000) : null,
+            }).catch((e) => console.error("[ambassador] status email:", e?.message));
+          }
+          if (amb.user_id) {
+            notify({
+              userId: amb.user_id,
+              type: "system",
+              title: `Ambassador account ${status === "active" ? "reactivated" : status}`,
+              link: "/ambassador",
+              noEmail: true,
+            }).catch(() => {});
+          }
         }
 
         return res.status(200).json({ ok: true, voidedPending: voided });

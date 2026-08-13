@@ -11,6 +11,13 @@ const adminMod: any = await import("/home/neon/cyberpunk-grok-api/api/admin.ts")
 const ambassador = ambMod.default?.default ?? ambMod.default;
 const admin = adminMod.default?.default ?? adminMod.default;
 
+// Mail off for this suite. Applicant-facing sends already self-guard because
+// the fixtures use a reserved TLD, but the admin alert goes to the real
+// ADMIN_EMAIL — and ADMIN_EMAIL can't simply be overridden here, since the
+// suite authenticates as that address. getResend() reads the key at call time,
+// so clearing it now (before any handler runs) is enough.
+process.env.RESEND_API_KEY = "";
+
 const sql = getDb();
 const P = "ambapi-test";
 let pass = 0, fail = 0;

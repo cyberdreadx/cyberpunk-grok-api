@@ -14,8 +14,12 @@
 
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getDb } from "./_lib/db";
-import { getUserFromRequest } from "./_lib/auth";
+import { getUserFromRequest, ADMIN_EMAIL } from "./_lib/auth";
 import { applyCors } from "./_lib/cors";
+import {
+  sendAmbassadorApplicationReceivedEmail,
+  sendAmbassadorApplicationAdminEmail,
+} from "./_lib/email";
 import { checkRateLimit, getClientIp } from "./_lib/ratelimit";
 import {
   normalizeCode,
@@ -178,6 +182,46 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
              ${String(body.payoutPref || "").slice(0, 40) || null})
           RETURNING id, created_at
         `;
+
+        // Confirm to the applicant and alert the admin. Best-effort and not
+        // awaited — a Resend round trip shouldn't sit in front of the response,
+        // and a mail outage must not look like a failed application.
+        void (async () => {
+          try {
+            const [signals] = await sql`
+              SELECT
+                COALESCE(p.username, LEFT(u.email, 3) || '***') AS username,
+                COALESCE((SELECT SUM(t.amount_cents) FROM transactions t
+                           WHERE t.user_id = u.id AND t.amount_cents > 0), 0)::int AS spent_cents,
+                (SELECT COUNT(*) FROM referrals r WHERE r.referrer_id = u.id)::int AS existing_referrals,
+                (SELECT COUNT(*) FROM referrals r
+                  WHERE r.referrer_id = u.id AND r.referee_purchased)::int AS existing_conversions,
+                (SELECT COUNT(*) FROM users u2
+                  WHERE u2.device_fingerprint IS NOT NULL
+                    AND u2.device_fingerprint = u.device_fingerprint)::int AS fingerprint_cluster
+              FROM users u LEFT JOIN profiles p ON p.user_id = u.id
+              WHERE u.id = ${auth.userId}::uuid
+            `;
+            await Promise.allSettled([
+              sendAmbassadorApplicationReceivedEmail(auth.email),
+              sendAmbassadorApplicationAdminEmail(ADMIN_EMAIL, {
+                username: signals?.username || "user",
+                email: auth.email,
+                requestedCode: requestedCode || null,
+                audienceSize: audience,
+                channels: String(body.channels || "") || null,
+                pitch,
+                spentCents: signals?.spent_cents ?? 0,
+                existingReferrals: signals?.existing_referrals ?? 0,
+                existingConversions: signals?.existing_conversions ?? 0,
+                fingerprintCluster: signals?.fingerprint_cluster ?? 0,
+              }),
+            ]);
+          } catch (e: any) {
+            console.error("[ambassador] application email failed:", e?.message);
+          }
+        })();
+
         return res.status(201).json({ id: row.id, createdAt: row.created_at, status: "pending" });
       }
 

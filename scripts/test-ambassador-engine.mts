@@ -119,6 +119,11 @@ const [paidBal] = await sql`SELECT cash_balance_cents FROM users WHERE id = ${pr
 ok("matured commission lands in cash balance", paidBal.cash_balance_cents === 400, `bal=${paidBal.cash_balance_cents}`);
 ok("release reported", rel.released >= 1 && rel.releasedCents >= 400, `${rel.released} rows / ${rel.releasedCents}c`);
 
+// The release cron mails each ambassador off this breakdown.
+const mine = rel.recipients.find((r) => r.userId === promoter.id);
+ok("release names who to notify", !!mine && mine.cents === 400 && mine.count === 1,
+   `${JSON.stringify(mine)}`);
+
 const rel2 = await releaseMaturedCommissions(sql, 500);
 const [dblBal] = await sql`SELECT cash_balance_cents FROM users WHERE id = ${promoter.id}::uuid`;
 ok("second release pass pays nothing twice", dblBal.cash_balance_cents === 400, `bal=${dblBal.cash_balance_cents}`);

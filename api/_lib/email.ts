@@ -1004,6 +1004,243 @@ export async function sendPayoutRejectedEmail(to: string, info: { amountCents: n
   await logEmail(to, "payout_rejected", "sent", data?.id);
 }
 
+/* ── Ambassador program ────────────────────────────────────────────────────
+ * All transactional: these go to people who applied to a paid program and are
+ * waiting on an answer, or whose money just moved. They deliberately bypass
+ * notification prefs — someone who muted social email still needs to be told
+ * their application was decided. The one recurring send (commission released)
+ * fires at most once a night, from the release cron.
+ */
+
+const SITE = "https://grokrunner.gltch.app";
+
+/**
+ * RFC 2606 / 6761 reserved TLDs. These can never receive mail, so a send is a
+ * guaranteed hard bounce — and hard bounces are exactly what wrecks a sending
+ * domain's reputation, which would then start eating the verification codes.
+ * Test fixtures and typo'd addresses both land here.
+ */
+const UNDELIVERABLE_TLDS = /\.(test|invalid|example|localhost)$/i;
+
+function isSendable(to: string): boolean {
+  const addr = String(to || "").trim();
+  if (!addr.includes("@")) return false;
+  return !UNDELIVERABLE_TLDS.test(addr.split("@")[1] || "");
+}
+
+/**
+ * Send one ambassador email. Shared so the guard, error handling and delivery
+ * log can't drift apart across six near-identical senders.
+ */
+async function sendAmb(to: string, kind: string, subject: string, html: string): Promise<void> {
+  // No key configured is "mail is off", not an error worth logging as a
+  // delivery failure — and it's the switch the test suites flip so a run can't
+  // drop fake applications into a real inbox.
+  if (!process.env.RESEND_API_KEY) {
+    console.log(`[email] ${kind}: skipped, RESEND_API_KEY not set`);
+    return;
+  }
+  if (!isSendable(to)) {
+    console.log(`[email] ${kind}: skipped undeliverable address`);
+    return;
+  }
+  try {
+    const { data, error } = await getResend().emails.send({
+      from: `GLTCHRunner <${getFromAddress()}>`,
+      to: [to],
+      subject,
+      html,
+    });
+    if (error) {
+      await logEmail(to, kind, "failed", null, error.message);
+      console.error(`[email] ${kind}:`, error.message);
+      return;
+    }
+    await logEmail(to, kind, "sent", data?.id);
+  } catch (e: any) {
+    await logEmail(to, kind, "failed", null, e?.message).catch(() => {});
+    console.error(`[email] ${kind}:`, e?.message);
+  }
+}
+
+/** Shell shared by the ambassador emails so they read as one family. */
+function ambShell(opts: { accent: string; kicker: string; body: string }): string {
+  return `
+    <div style="font-family: 'Courier New', monospace; background: #0a0a0f; color: #e0e0e0; padding: 32px; max-width: 520px; margin: 0 auto;">
+      <div style="border: 1px solid ${opts.accent}44; padding: 24px; border-radius: 4px;">
+        <h1 style="color: #00f0ff; font-size: 16px; letter-spacing: 3px; margin: 0 0 8px;">GLTCHRUNNER</h1>
+        <p style="color: ${opts.accent}99; font-size: 11px; letter-spacing: 4px; margin: 0 0 20px;">${opts.kicker}</p>
+        ${opts.body}
+      </div>
+    </div>`;
+}
+
+function btn(href: string, label: string, accent: string): string {
+  return `<a href="${href}" style="display:inline-block; background:${accent}22; border:1px solid ${accent}55; color:${accent}; text-decoration:none; padding:12px 28px; border-radius:4px; font-size:12px; letter-spacing:2px;">${label}</a>`;
+}
+
+/** Confirm to the applicant that their application landed. */
+export async function sendAmbassadorApplicationReceivedEmail(to: string): Promise<void> {
+  await sendAmb(to, 'ambassador_applied', "Ambassador application received", ambShell({
+      accent: "#00f0ff",
+      kicker: "APPLICATION RECEIVED",
+      body: `
+        <p style="font-size:13px; color:#b0b0b0; line-height:1.7; margin:0 0 16px;">
+          Thanks for applying. Every application is read by a human, so give it a little time — you'll
+          get an email either way.
+        </p>
+        <p style="font-size:13px; color:#b0b0b0; line-height:1.7; margin:0 0 18px;">
+          In the meantime your normal referral link still works and still earns credits on every
+          friend who buys.
+        </p>
+        ${btn(`${SITE}/ambassador`, "VIEW STATUS →", "#00f0ff")}`,
+    }));
+}
+
+/** Alert the admin that an application is waiting, with the fraud signals inline. */
+export async function sendAmbassadorApplicationAdminEmail(
+  to: string,
+  info: {
+    username: string; email: string; requestedCode: string | null; audienceSize: number | null;
+    channels: string | null; pitch: string; spentCents: number; existingReferrals: number;
+    existingConversions: number; fingerprintCluster: number;
+  },
+): Promise<void> {
+  const esc = (s: string) => String(s || "").replace(/</g, "&lt;");
+  // The same signals the admin panel highlights — a farmer and a real creator
+  // read identically on the pitch alone.
+  const suspicious =
+    info.fingerprintCluster > 3 || (info.existingReferrals > 25 && info.existingConversions === 0);
+  const row = (k: string, v: string, bad = false) =>
+    `<tr><td style="color:#666;padding-right:12px;">${k}</td><td style="color:${bad ? "#ff4444" : "#b0b0b0"};">${v}</td></tr>`;
+
+  await sendAmb(to, 'ambassador_application_admin', `Ambassador application: @${info.username}${suspicious ? " ⚠ check signals" : ""}`, ambShell({
+      accent: suspicious ? "#ff4444" : "#00f0ff",
+      kicker: "AMBASSADOR APPLICATION",
+      body: `
+        <p style="font-size:14px; color:#e0e0e0; margin:0 0 4px;">@${esc(info.username)}</p>
+        <p style="font-size:11px; color:#666; margin:0 0 16px;">${esc(info.email)}</p>
+        <table style="font-size:13px; line-height:1.9; margin:0 0 16px;">
+          ${row("Wants code", info.requestedCode || "auto")}
+          ${row("Audience", info.audienceSize != null ? info.audienceSize.toLocaleString() : "—")}
+          ${row("Channels", esc(info.channels || "—"))}
+          ${row("Ever paid", fmtUsd(info.spentCents), info.spentCents === 0)}
+          ${row("Existing referrals", String(info.existingReferrals))}
+          ${row("…that converted", String(info.existingConversions),
+                info.existingReferrals > 25 && info.existingConversions === 0)}
+          ${row("Accounts on same device", String(info.fingerprintCluster), info.fingerprintCluster > 3)}
+        </table>
+        ${suspicious ? `<p style="font-size:12px;color:#ff4444;margin:0 0 16px;">⚠ Matches the farming pattern — lots of signups with no sales, or an account cluster.</p>` : ""}
+        <p style="font-size:12px; color:#888; line-height:1.6; margin:0 0 18px; white-space:pre-wrap;">${esc(info.pitch).slice(0, 800)}</p>
+        ${btn(`${SITE}/admin`, "REVIEW IN ADMIN →", "#00f0ff")}`,
+    }));
+}
+
+/** The approval. Carries the link and the terms so it's usable without a click. */
+export async function sendAmbassadorApprovedEmail(
+  to: string,
+  info: { code: string; commissionPct: number; commissionMonths: number; holdDays: number },
+): Promise<void> {
+  const link = `${SITE}/r/${info.code}`;
+  const window = info.commissionMonths > 0
+    ? `for ${info.commissionMonths} months per customer`
+    : `for as long as they stay subscribed`;
+
+  await sendAmb(to, 'ambassador_approved', `You're in — you're a GLTCHRunner ambassador 🎉`, ambShell({
+      accent: "#39ff14",
+      kicker: "APPLICATION APPROVED",
+      body: `
+        <p style="font-size:13px; color:#b0b0b0; line-height:1.7; margin:0 0 18px;">
+          You're approved. From now on anyone who signs up through your link is yours, and you earn
+          <span style="color:#39ff14;font-weight:bold;">${info.commissionPct}%</span> of everything they
+          spend, ${window}.
+        </p>
+        <div style="background:#111; border:1px solid #39ff1455; padding:18px; text-align:center; border-radius:4px; margin:0 0 18px;">
+          <p style="font-size:10px; color:#666; letter-spacing:2px; margin:0 0 8px;">YOUR LINK</p>
+          <div style="font-size:15px; color:#39ff14; word-break:break-all;">${link}</div>
+        </div>
+        <p style="font-size:12px; color:#888; line-height:1.7; margin:0 0 18px;">
+          Commission is held for ${info.holdDays} days before it becomes withdrawable, so refunds and
+          chargebacks can settle first. After that it lands in your cash balance and you can withdraw
+          it to your bank, PayPal or XRGE.
+        </p>
+        ${btn(`${SITE}/ambassador`, "OPEN DASHBOARD →", "#39ff14")}`,
+    }));
+}
+
+/** The rejection. Points at the program they can still use. */
+export async function sendAmbassadorRejectedEmail(to: string, info: { note?: string | null }): Promise<void> {
+  await sendAmb(to, 'ambassador_rejected', "About your ambassador application", ambShell({
+      accent: "#888888",
+      kicker: "APPLICATION REVIEWED",
+      body: `
+        <p style="font-size:13px; color:#b0b0b0; line-height:1.7; margin:0 0 16px;">
+          Thanks for applying — we're not able to take you into the ambassador program right now.
+        </p>
+        ${info.note ? `<p style="font-size:13px; color:#e0e0e0; line-height:1.7; margin:0 0 16px; padding-left:12px; border-left:2px solid #333;">${String(info.note).replace(/</g, "&lt;")}</p>` : ""}
+        <p style="font-size:13px; color:#b0b0b0; line-height:1.7; margin:0 0 18px;">
+          Your referral link still works and still pays: 10 credits every time someone you sent makes
+          their first purchase, and a free month if they subscribe. Build that up and you're welcome
+          to apply again.
+        </p>
+        ${btn(`${SITE}/referral`, "MY REFERRAL LINK →", "#00f0ff")}`,
+    }));
+}
+
+/** Paused, reactivated or revoked — never leave someone guessing why they stopped earning. */
+export async function sendAmbassadorStatusEmail(
+  to: string,
+  info: { status: "active" | "paused" | "revoked"; note?: string | null },
+): Promise<void> {
+  const copy = {
+    active: {
+      kicker: "REACTIVATED", accent: "#39ff14",
+      line: "Your ambassador account is active again. Your link is attributing signups and earning commission as normal.",
+    },
+    paused: {
+      kicker: "PAUSED", accent: "#ffaa00",
+      line: "Your ambassador account has been paused. New signups through your link won't be attributed for now, but commission already on hold will still pay out on schedule.",
+    },
+    revoked: {
+      kicker: "ACCOUNT CLOSED", accent: "#ff4444",
+      line: "Your ambassador account has been closed. Commission still inside its hold window has been cancelled. Anything already released stays in your balance and can still be withdrawn.",
+    },
+  }[info.status];
+
+  await sendAmb(to, 'ambassador_status', `Ambassador account ${info.status === "active" ? "reactivated" : info.status}`, ambShell({
+      accent: copy.accent,
+      kicker: copy.kicker,
+      body: `
+        <p style="font-size:13px; color:#b0b0b0; line-height:1.7; margin:0 0 16px;">${copy.line}</p>
+        ${info.note ? `<p style="font-size:13px; color:#e0e0e0; line-height:1.7; margin:0 0 16px; padding-left:12px; border-left:2px solid #333;">${String(info.note).replace(/</g, "&lt;")}</p>` : ""}
+        ${btn(`${SITE}/ambassador`, "VIEW DASHBOARD →", copy.accent)}`,
+    }));
+}
+
+/** Commission cleared its hold and is now withdrawable. Sent by the nightly cron. */
+export async function sendAmbassadorCommissionEmail(
+  to: string,
+  info: { releasedCents: number; count: number; withdrawableCents: number },
+): Promise<void> {
+  await sendAmb(to, 'ambassador_commission', `${fmtUsd(info.releasedCents)} commission is ready to withdraw 💸`, ambShell({
+      accent: "#39ff14",
+      kicker: "COMMISSION RELEASED",
+      body: `
+        <div style="background:#111; border:1px solid #39ff1455; padding:20px; text-align:center; border-radius:4px; margin:0 0 18px;">
+          <div style="font-size:28px; color:#39ff14; font-weight:bold;">${fmtUsd(info.releasedCents)}</div>
+          <p style="font-size:12px; color:#888; margin:6px 0 0;">
+            from ${info.count} ${info.count === 1 ? "sale" : "sales"} — cleared the hold window
+          </p>
+        </div>
+        <p style="font-size:13px; color:#b0b0b0; line-height:1.7; margin:0 0 18px;">
+          Your withdrawable balance is now
+          <span style="color:#39ff14;font-weight:bold;">${fmtUsd(info.withdrawableCents)}</span>.
+          Withdraw it to your bank, PayPal or XRGE whenever you like.
+        </p>
+        ${btn(`${SITE}/ambassador`, "VIEW EARNINGS →", "#39ff14")}`,
+    }));
+}
+
 /* ── Social notification emails ────────────────────────────────────────────
  * These are bulk mail, not transactional: they carry List-Unsubscribe and
  * List-Unsubscribe-Post so Gmail/Yahoo render a native "Unsubscribe" control

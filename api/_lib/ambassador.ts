@@ -302,9 +302,15 @@ export async function clawbackCommission(
  * instead of paid — marking them `available` without moving cents would leave
  * money owed to nobody sitting in the ledger as if it were payable.
  */
-export async function releaseMaturedCommissions(sql: Sql, limit = 500): Promise<{
-  released: number; releasedCents: number; voided: number;
-}> {
+export interface ReleaseResult {
+  released: number;
+  releasedCents: number;
+  voided: number;
+  /** Per-ambassador breakdown so the caller can tell them their money moved. */
+  recipients: { userId: string; cents: number; count: number }[];
+}
+
+export async function releaseMaturedCommissions(sql: Sql, limit = 500): Promise<ReleaseResult> {
   const [res] = await sql`
     WITH due AS (
       SELECT c.id, c.commission_cents, a.user_id, a.status AS amb_status
@@ -341,12 +347,22 @@ export async function releaseMaturedCommissions(sql: Sql, limit = 500): Promise<
     SELECT
       (SELECT COUNT(*) FROM rel)::int AS released,
       (SELECT COALESCE(SUM(commission_cents), 0) FROM rel)::int AS released_cents,
-      (SELECT COUNT(*) FROM void_dead)::int AS voided
+      (SELECT COUNT(*) FROM void_dead)::int AS voided,
+      (SELECT COALESCE(
+                json_agg(json_build_object('userId', x.user_id, 'cents', x.cents, 'count', x.n)),
+                '[]'::json)
+         FROM (
+           SELECT p.user_id, SUM(p.commission_cents)::int AS cents, COUNT(*)::int AS n
+           FROM payable p JOIN rel ON rel.id = p.id
+           GROUP BY p.user_id
+         ) x
+      ) AS recipients
   `;
   return {
     released: res?.released ?? 0,
     releasedCents: res?.released_cents ?? 0,
     voided: res?.voided ?? 0,
+    recipients: (res?.recipients ?? []) as ReleaseResult["recipients"],
   };
 }
 
