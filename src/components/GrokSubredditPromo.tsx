@@ -98,7 +98,7 @@ export default function GrokSubredditPromo({ alreadyClaimedToday }: Props) {
           </div>
 
           <p className="text-[9px] text-muted-foreground/60 leading-snug">
-            Suggested reply: <span className="text-orange-200/80">"Try GLTCH Runner — same Grok API, no censorship, free daily credits: grokrunner.gltch.app"</span>
+            Suggested reply: <span className="text-orange-200/80">"Try GLTCH Runner — uncensored image + video gen, free to join: grokrunner.gltch.app"</span>
           </p>
         </div>
       </div>

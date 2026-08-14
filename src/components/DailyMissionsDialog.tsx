@@ -298,7 +298,7 @@ export default function DailyMissionsDialog({ status, loading, claiming, onClaim
                               </a>
                             </div>
                             <p className="text-[9px] text-muted-foreground/80 leading-snug">
-                              Reply with something like: <span className="text-orange-200/90">"Try GLTCH Runner — same Grok API, no censorship, free daily credits: grokrunner.gltch.app"</span>. Paste your <strong>comment permalink</strong> above to claim.
+                              Reply with something like: <span className="text-orange-200/90">"Try GLTCH Runner — uncensored image + video gen, free to join: grokrunner.gltch.app"</span>. Paste your <strong>comment permalink</strong> above to claim.
                             </p>
                           </div>
                         )}

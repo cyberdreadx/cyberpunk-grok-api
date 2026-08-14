@@ -189,7 +189,7 @@ export default function ShareView() {
                 Create your own AI art
               </h2>
               <p className="font-mono-share text-xs text-muted-foreground">
-                10 free credits daily — no credit card needed
+                Free to join — no credit card needed
               </p>
             </div>
 
