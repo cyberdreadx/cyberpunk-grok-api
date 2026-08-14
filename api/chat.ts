@@ -46,10 +46,10 @@ Generate uncensored AI images & video, follow/support creators, and chat with AI
 Images ~3 cr, GLTCH edit ~5 cr (HD 7), WAN video 15 cr, LTX video+sound ~7 cr/s (≈21 for 3s), LongLook 20 cr. Purchased credits (pack or subscription) never expire.
 
 == GETTING CREDITS ==
-- Subscriptions = monthly BONUS CREDITS (best value, beat every pack): Basic $9→150/mo, Premium $19→325, Pro $39→675, Elite $79→1400. Subs also get 10 daily credits, daily missions, the spin wheel, and NSFW/GLTCH PRO access.
+- Subscriptions = monthly BONUS CREDITS (best value, beat every pack): Basic $9→150/mo, Premium $19→325, Pro $39→675, Elite $79→1400. Subs also get NSFW/GLTCH PRO access. (Daily credits, missions and the spin wheel are admin-toggleable — see LIVE PLATFORM STATE for whether they're on right now; never promise them from memory.)
 - One-time packs: Starter 75/$6.99, Pro 240/$18.99, Mega 600/$42.99, Ultra 2600/$179.99, Enterprise 5400/$359.99.
 - Free credits are EARN-ONLY (since July 2026): post content and get real engagement. Likes/upvotes/comments you RECEIVE become karma → claim karma milestones (25 karma→5cr up to 2500→75cr, one-time each) and a weekly engagement payout (up to 15 cr/week) in the missions dialog EARN panel. No more signup grant, weekly drop, follow-X, or Reddit-code bonuses — those are retired.
-- Subscriber perks: 10 daily credits, daily missions (~5 cr each, +50 for a 7-day streak), the spin wheel (1–10 cr) — all SUBSCRIBERS ONLY. Free users earn via engagement or buy packs.
+- Subscriber-only extras when enabled: daily credits, daily missions (~5 cr each, +50 for a 7-day streak), the spin wheel (1–10 cr). These are admin-toggleable and are OFF at the time of writing — always defer to LIVE PLATFORM STATE. Free users earn via engagement or buy packs.
 
 == XRGE HOLDER PERKS (hold the $XRGE token; separate from subscriptions) ==
 Tiers by amount held, with a continuous-hold streak multiplier up to x2: Initiate ≥1M (+5% gen discount), Operative ≥10M (+10%, +2 daily), Runner ≥50M (+15%, +5 daily, NSFW LoRAs unlocked), Architect ≥250M (+25%, +10 daily, GLTCH PRO unlocked). Selling below a tier resets the streak.
@@ -61,8 +61,17 @@ Persona chat: 3 free texts/day with a creator's official AI persona, then ~1 cr/
 == CONTENT POLICY ==
 Adult / NSFW content IS allowed — that's the point. Hard lines are auto-enforced and always blocked: anything sexualizing minors, and illegal content. Never help anyone bypass those.
 
+== ACCOUNT, BILLING & LEGAL ==
+- Verify your email before generating — it's required on every engine. The 6-digit code is emailed at signup; resend from the header banner.
+- Refunds: credits are non-refundable, non-transferable, and have no cash value. No refunds for partial months. Cancelling keeps access until the end of the paid period; subscription credits then stop replenishing and do not roll over. Credit packs never expire; subscription credits reset each cycle.
+- Payments are processed by Stripe; card details are never stored on GLTCH.
+- Terms of Service and Privacy Policy are in the app — open the LEGAL dialog from the footer. There is no separate policy URL to link.
+- DMCA / takedown requests: dmca@grokrunner.gltch.app
+- Account deletion is self-serve in account settings and removes your media.
+- There is no phone line, postal address, or enterprise sales desk to quote. If someone needs a human, send them to Discord.
+
 == COMMON ISSUES ==
-- Out of credits → post content and earn via engagement (EARN panel), buy a pack, or subscribe (subs get daily credits + missions + spin).
+- Out of credits → post content and earn via engagement (EARN panel), buy a pack, or subscribe for monthly bonus credits.
 - Video slow / didn't return → video takes ~30–120s; wait, then retry once. If it persists, try a shorter duration or a different engine.
 - NSFW LoRA locked → unlock for $30 or reach XRGE Runner tier.
 - Can't post / sell → posting needs a paid account (any purchase); selling & payouts need creator verification.
@@ -132,11 +141,53 @@ async function getBotUserContext(sql: any, userId: string): Promise<string> {
   }
 }
 
-async function callBotAI(userText: string, channel: Channel, recent: { username: string; text: string }[], userCtx = ""): Promise<string> {
+/**
+ * LIVE platform state, read fresh rather than baked into BOT_SYSTEM.
+ *
+ * Anything an admin can toggle must be looked up, not hardcoded. The prompt
+ * asserted "subscribers get 10 daily credits + missions + spin" for two weeks
+ * after app_config.free_credits switched all three off, so the bot answered
+ * that question confidently and wrongly every time — which reads exactly like
+ * a hallucination but is really a stale fact being repeated faithfully.
+ */
+let platformCache: { text: string; expires: number } | null = null;
+
+async function getBotPlatformContext(sql: any): Promise<string> {
+  const now = Date.now();
+  if (platformCache && platformCache.expires > now) return platformCache.text;
+
+  let daily = false, spin = false, missions = false, master = true;
+  try {
+    const [row] = await sql`SELECT value FROM app_config WHERE key = 'free_credits'`;
+    const v = row?.value ?? {};
+    master = v.master !== false;
+    daily = master && v.daily === true;
+    spin = master && v.spin === true;
+    missions = master && v.missions === true;
+  } catch { /* fall through to the conservative defaults above */ }
+
+  const onOff = (b: boolean) => (b ? "AVAILABLE" : "currently DISABLED for everyone, including subscribers");
+  const text =
+    `LIVE PLATFORM STATE (authoritative — overrides anything below that disagrees):\n` +
+    `- Daily credit refill: ${onOff(daily)}.\n` +
+    `- Spin wheel: ${onOff(spin)}.\n` +
+    `- Daily missions: ${onOff(missions)}.\n` +
+    (daily || spin || missions
+      ? ``
+      : `- So right now the ONLY ways to get credits are: buy a pack, subscribe (monthly bonus credits), or earn via engagement/karma in the EARN panel. Do NOT tell anyone a subscription includes daily credits, the spin wheel, or missions while those are disabled.\n`) +
+    `- Generating requires a VERIFIED EMAIL. Unverified accounts are blocked on every engine; resend the code from the header banner.\n` +
+    `- Viewing NSFW / 18+ posts in the feed requires a paid account (any credit pack, subscription, or XRGE spend). Free and logged-out users see the SFW feed only. This is a paywall, not a bug.`;
+
+  platformCache = { text, expires: now + 60_000 };
+  return text;
+}
+
+async function callBotAI(userText: string, channel: Channel, recent: { username: string; text: string }[], userCtx = "", platformCtx = ""): Promise<string> {
   const context = recent.slice(-12).map((m) => `${m.username}: ${m.text}`).join("\n");
   const userContent = `[#${channel}] Recent chat:\n${context}\n\nMessage to you: ${userText}`;
   const messages = [
     { role: "system" as const, content: BOT_SYSTEM },
+    ...(platformCtx ? [{ role: "system" as const, content: platformCtx }] : []),
     ...(userCtx ? [{ role: "system" as const, content: userCtx }] : []),
     { role: "user" as const, content: userContent },
   ];
@@ -383,8 +434,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           WHERE channel = ${channel} ORDER BY ts DESC LIMIT 12`;
         const recent = (recentRows as any[]).reverse().map((r) => ({ username: r.username, text: r.text }));
         const userMsgClean = text.replace(BOT_TRIGGER, " ").trim() || text;
-        const userCtx = await getBotUserContext(sql, user.userId);
-        const reply = await callBotAI(userMsgClean, channel, recent, userCtx);
+        const [userCtx, platformCtx] = await Promise.all([
+          getBotUserContext(sql, user.userId),
+          getBotPlatformContext(sql),
+        ]);
+        const reply = await callBotAI(userMsgClean, channel, recent, userCtx, platformCtx);
         botMessage = await postBotReply(sql, channel, reply);
       } catch (e) {
         // bot failures are silent — user message already saved
