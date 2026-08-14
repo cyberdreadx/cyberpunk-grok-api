@@ -50,6 +50,16 @@ function previewFilename(filename: string): string {
   return `${base}-preview.webp`;
 }
 
+/** Blob -> bare base64 (no data: prefix), for the relay upload path. */
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(String(reader.result || "").split(",")[1] || "");
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
 async function uploadOne(
   blob: Blob,
   folder: string,
@@ -85,7 +95,23 @@ async function uploadOne(
     if (/unauthorized|sign in required/i.test(msg)) {
       throw err;
     }
-    console.warn("[mediaUpload] R2 upload failed, falling back to Vercel Blob:", msg);
+    console.warn("[mediaUpload] direct-to-R2 failed, relaying through the API:", msg);
+  }
+
+  // Relay through the API. The presigned PUT above is cross-origin and needs a
+  // CORS policy on the bucket; when that's missing the browser preflight is
+  // rejected and the direct path can never work. This one has no CORS surface,
+  // so it keeps uploads alive regardless of bucket config — at the cost of a
+  // hop through the server, hence direct-to-R2 staying the preferred path.
+  try {
+    const dataBase64 = await blobToBase64(blob);
+    const relayed = await apiFetch<{ url: string }>("/media-upload", {
+      method: "POST",
+      body: { action: "proxy", folder, filename, contentType, dataBase64, clientPayload: authToken },
+    });
+    if (relayed?.url) return relayed.url;
+  } catch (relayErr: any) {
+    console.warn("[mediaUpload] relay upload failed, falling back to Vercel Blob:", relayErr?.message || relayErr);
   }
 
   const ext =

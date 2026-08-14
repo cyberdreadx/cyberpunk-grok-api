@@ -9,7 +9,12 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { verifyToken } from "./_lib/auth";
 import { applyCors } from "./_lib/cors";
-import { createPresignedMediaUpload, isR2MediaConfigured } from "./_lib/media-storage";
+import {
+  createPresignedMediaUpload,
+  isR2MediaConfigured,
+  uploadPublicMedia,
+  uniqueMediaKey,
+} from "./_lib/media-storage";
 
 const ALLOWED_TYPES = new Set([
   "image/png", "image/jpeg", "image/webp", "image/gif",
@@ -32,7 +37,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const body = req.body || {};
   const action = body.action || "presign";
 
-  if (action !== "presign") {
+  if (action !== "presign" && action !== "proxy") {
     return res.status(400).json({ error: "Unknown action" });
   }
 
@@ -47,6 +52,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (!ALLOWED_TYPES.has(contentType)) {
     return res.status(400).json({ error: `Content type not allowed: ${contentType}` });
+  }
+
+  // Server-side upload for when the browser can't PUT to R2 itself.
+  //
+  // The presigned PUT is cross-origin, so it needs a CORS policy on the
+  // bucket. Without one the preflight is rejected outright and every upload
+  // in the app dies — which is exactly what happened to feed posts and
+  // stories. Relaying the bytes through here costs a hop and some memory, but
+  // it has no CORS surface at all, so it works regardless of bucket config.
+  if (action === "proxy") {
+    const b64 = String(body.dataBase64 || "");
+    if (!b64) return res.status(400).json({ error: "dataBase64 required" });
+    let buf: Buffer;
+    try {
+      buf = Buffer.from(b64, "base64");
+    } catch {
+      return res.status(400).json({ error: "dataBase64 is not valid base64" });
+    }
+    // Express caps JSON at 50mb; base64 inflates ~33%, so this is the real
+    // ceiling for a relayed upload. Direct-to-R2 has no such limit.
+    if (!buf.length) return res.status(400).json({ error: "Empty upload" });
+    if (buf.length > 36 * 1024 * 1024) {
+      return res.status(413).json({ error: "File too large for relay upload (36MB max)" });
+    }
+    try {
+      const key = uniqueMediaKey(`${folder}/${jwt.userId}`, filename);
+      const out = await uploadPublicMedia(buf, key, contentType);
+      return res.status(200).json({ ...out, via: "proxy" });
+    } catch (err: any) {
+      console.error("[media-upload proxy]", err?.message);
+      return res.status(500).json({ error: err?.message || "Upload failed" });
+    }
   }
 
   try {
