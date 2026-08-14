@@ -1,8 +1,8 @@
 /**
  * /api/admin/free-credits — admin-only kill switch for free credits.
  *
- * GET  → { master, daily, spin, missions, source, envForcedDisabled, envEnabled }
- * POST { master?, daily?, spin?, missions? } → updates DB override (any subset).
+ * GET  → { master, daily, spin, missions, starter, starterCredits, source, envForcedDisabled, envEnabled }
+ * POST { master?, daily?, spin?, missions?, starter?, starterCredits? } → updates DB override (any subset).
  *
  * Reddit posting reward is NEVER gated by this endpoint.
  *
@@ -61,6 +61,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       daily: cfg.daily,
       spin: cfg.spin,
       missions: cfg.missions,
+      starter: cfg.starter,
+      starterCredits: cfg.starterCredits,
       reddit: true, // always-on, included for UI clarity
       envForcedDisabled: envForcedDisabled(),
       envEnabled: envEnabled(),
@@ -73,13 +75,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const body = req.body || {};
-  const updates: Record<string, boolean> = {};
-  for (const k of ["master", "daily", "spin", "missions"]) {
+  const updates: Record<string, boolean | number> = {};
+  for (const k of ["master", "daily", "spin", "missions", "starter"]) {
     if (typeof body[k] === "boolean") updates[k] = body[k];
+  }
+  // Grant size, clamped. 500 is well past anything sane and keeps a typo from
+  // handing out a fortune per signup.
+  if (typeof body.starterCredits === "number" && Number.isFinite(body.starterCredits)) {
+    updates.starterCredits = Math.max(0, Math.min(500, Math.floor(body.starterCredits)));
   }
   if (Object.keys(updates).length === 0) {
     return res.status(400).json({
-      error: "Body must include at least one boolean: master, daily, spin, missions.",
+      error: "Body must include at least one of: master, daily, spin, missions, starter (boolean) or starterCredits (number).",
     });
   }
 
@@ -107,6 +114,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       daily: cfg.daily,
       spin: cfg.spin,
       missions: cfg.missions,
+      starter: cfg.starter,
+      starterCredits: cfg.starterCredits,
       envForcedDisabled: envForcedDisabled(),
     });
   } catch (e: any) {

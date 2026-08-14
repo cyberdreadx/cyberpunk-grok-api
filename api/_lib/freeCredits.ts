@@ -6,9 +6,11 @@
  *   - daily    → cron-reset-daily.ts (daily credit refill)
  *   - spin     → spin.ts (free spin wheel)
  *   - missions → daily-missions.ts (daily mission rewards + streak bonus)
+ *   - starter  → auth/verify.ts (one-time grant on email verification)
  *
  * Configuration (app_config row, key='free_credits'):
- *   { master?: bool, daily?: bool, spin?: bool, missions?: bool }
+ *   { master?: bool, daily?: bool, spin?: bool, missions?: bool,
+ *     starter?: bool, starterCredits?: number }
  *
  * A source is ENABLED if its per-source flag is true, OR if it's unset and
  * master is true. Forced-disable env var overrides everything.
@@ -21,17 +23,31 @@
  */
 import { getDb } from "./db";
 
-export type FreeCreditSource = "daily" | "spin" | "missions";
-export const ALL_SOURCES: FreeCreditSource[] = ["daily", "spin", "missions"];
+export type FreeCreditSource = "daily" | "spin" | "missions" | "starter";
+export const ALL_SOURCES: FreeCreditSource[] = ["daily", "spin", "missions", "starter"];
+
+/** Size of the one-time starter grant when no override is configured. */
+export const DEFAULT_STARTER_CREDITS = 15;
 
 export interface FreeCreditsConfig {
   master: boolean;
   daily: boolean;
   spin: boolean;
   missions: boolean;
+  starter: boolean;
+  starterCredits: number;
 }
 
-const CACHE_TTL_MS = 5_000;
+/**
+ * Read at call time, not module load, so a test can drop it to 0 without
+ * depending on import order — and so a duplicate module instance (tsx resolves
+ * "./freeCredits" and "…/freeCredits.ts" to separate registry entries) can't
+ * leave one copy serving stale config.
+ */
+function cacheTtlMs(): number {
+  const v = Number(process.env.FREE_CREDITS_CACHE_TTL_MS);
+  return Number.isFinite(v) && v >= 0 ? v : 5_000;
+}
 let cache: { value: FreeCreditsConfig; expiresAt: number } | null = null;
 
 function envForcedDisabled(): boolean {
@@ -51,7 +67,7 @@ function asBool(v: unknown): boolean | null {
 /** Loads per-source config from DB (cached). */
 export async function getFreeCreditsConfig(): Promise<FreeCreditsConfig> {
   if (envForcedDisabled()) {
-    return { master: false, daily: false, spin: false, missions: false };
+    return { master: false, daily: false, spin: false, missions: false, starter: false, starterCredits: 0 };
   }
 
   const now = Date.now();
@@ -61,6 +77,8 @@ export async function getFreeCreditsConfig(): Promise<FreeCreditsConfig> {
   let dbDaily: boolean | null = null;
   let dbSpin: boolean | null = null;
   let dbMissions: boolean | null = null;
+  let dbStarter: boolean | null = null;
+  let dbStarterCredits: number | null = null;
 
   try {
     const sql = getDb();
@@ -77,6 +95,10 @@ export async function getFreeCreditsConfig(): Promise<FreeCreditsConfig> {
         dbDaily = asBool(v.daily);
         dbSpin = asBool(v.spin);
         dbMissions = asBool(v.missions);
+        dbStarter = asBool(v.starter);
+        if (typeof v.starterCredits === "number" && Number.isFinite(v.starterCredits)) {
+          dbStarterCredits = Math.max(0, Math.min(500, Math.floor(v.starterCredits)));
+        }
       }
     }
   } catch (e) {
@@ -89,8 +111,12 @@ export async function getFreeCreditsConfig(): Promise<FreeCreditsConfig> {
     daily: dbDaily !== null ? dbDaily : masterEnabled,
     spin: dbSpin !== null ? dbSpin : masterEnabled,
     missions: dbMissions !== null ? dbMissions : masterEnabled,
+    // Opt-in, not master-derived: turning the master switch on for daily
+    // refills shouldn't silently start handing out signup grants too.
+    starter: dbStarter === true,
+    starterCredits: dbStarterCredits ?? DEFAULT_STARTER_CREDITS,
   };
-  cache = { value: config, expiresAt: now + CACHE_TTL_MS };
+  cache = { value: config, expiresAt: now + cacheTtlMs() };
   return config;
 }
 
@@ -122,4 +148,5 @@ export const SOURCE_LABEL: Record<FreeCreditSource, string> = {
   daily: "Daily free credit refill",
   spin: "Free spin wheel",
   missions: "Daily missions",
+  starter: "Starter grant on email verification",
 };

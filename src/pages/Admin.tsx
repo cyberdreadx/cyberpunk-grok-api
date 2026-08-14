@@ -1300,6 +1300,7 @@ export default function Admin() {
   // Free credits per-source kill switch
   type FcState = {
     master: boolean; daily: boolean; spin: boolean; missions: boolean;
+    starter: boolean; starterCredits: number;
     reddit: boolean; envForcedDisabled: boolean; envEnabled: boolean;
   };
   const [fcLoading, setFcLoading] = useState(false);
@@ -1319,7 +1320,7 @@ export default function Admin() {
     }
   }, []);
 
-  const updateFreeCreditSource = useCallback(async (key: "master" | "daily" | "spin" | "missions", enabled: boolean) => {
+  const updateFreeCreditSource = useCallback(async (key: "master" | "daily" | "spin" | "missions" | "starter", enabled: boolean) => {
     setFcSaving(key); setFcResult(null);
     try {
       const res = await apiFetch<FcState & { ok: boolean }>("/admin/free-credits", { method: "POST", body: { [key]: enabled } });
@@ -2254,6 +2255,7 @@ export default function Admin() {
                       { key: "daily", label: "Daily credit refill (cron)", value: fcState.daily, locked: false },
                       { key: "spin", label: "Free spin wheel", value: fcState.spin, locked: false },
                       { key: "missions", label: "Daily missions + streak bonus", value: fcState.missions, locked: false },
+                      { key: "starter", label: `Starter grant on email verification (${fcState.starterCredits ?? 15} cr, once per device)`, value: fcState.starter, locked: false },
                       { key: "reddit", label: "Reddit posting reward (always on)", value: true, locked: true },
                     ] as const).map((row) => {
                       const saving = fcSaving === row.key;

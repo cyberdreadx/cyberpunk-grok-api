@@ -4,6 +4,7 @@ import { signToken } from "../_lib/auth";
 import { applyCors } from "../_lib/cors";
 import { checkRateLimit, getClientIp } from "../_lib/ratelimit";
 import { clearEmailVerifiedCache } from "../_lib/emailVerifiedGate";
+import { grantStarterCredits } from "../_lib/starterGrant";
 
 const MAX_ATTEMPTS = 10;
 
@@ -35,7 +36,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const normalizedEmail = email.toLowerCase().trim();
 
     const rows = await sql`
-      SELECT id, email, email_verified, verification_code, verification_code_expires_at, verification_attempts
+      SELECT id, email, email_verified, verification_code, verification_code_expires_at, verification_attempts, device_fingerprint
       FROM users
       WHERE email = ${normalizedEmail}
     `;
@@ -85,7 +86,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // Success — mark email as verified, grant 10 daily credits, and clear the code
+    // Success — mark email as verified and clear the code.
     await sql`
       UPDATE users
       SET email_verified = true,
@@ -100,8 +101,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // entry now so someone who verifies isn't told to verify again.
     clearEmailVerifiedCache(user.id);
 
-    // Earn-only credit model (2026-07): no signup grant, no referral welcome
-    // credits — free credits come exclusively from /api/earn engagement rewards.
+    // One-time starter grant, claimed per DEVICE rather than per account —
+    // see _lib/starterGrant. Disabled by default; admin toggles it under
+    // free-credit sources.
+    const starter = await grantStarterCredits(sql, user.id, user.device_fingerprint);
+    if (starter.granted) {
+      console.log(`[starter-grant] +${starter.credits} to ${user.id}`);
+    }
+
+    // Beyond the starter grant, free credits are earn-only (2026-07): they come
+    // exclusively from /api/earn engagement rewards.
     // Still mark the referral as verified so referrer stats stay accurate.
     try {
       await sql`
@@ -117,6 +126,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json({
       token,
       user: { id: user.id, email: user.email },
+      // Let the UI tell them they got something, rather than dropping them
+      // into an app whose balance silently changed.
+      starterCredits: starter.granted ? starter.credits : 0,
     });
   } catch (err: any) {
     console.error("[verify]", err.message);
