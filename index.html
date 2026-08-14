@@ -10,17 +10,20 @@
     <meta name="keywords" content="ai image generator, ai art, text to image, ai video generator, image editor ai, flux ai, stable diffusion, ai photo editor, free ai art, cyberpunk ai, neural rendering, image to video, ai animation" />
     <link rel="canonical" href="https://grokrunner.gltch.app/" />
 
-    <!-- Favicon -->
-    <link rel="icon" type="image/png" sizes="192x192" href="/pwa-192.png" />
-    <link rel="icon" type="image/png" sizes="512x512" href="/pwa-512.png" />
-    <link rel="shortcut icon" href="/pwa-192.png" />
+    <!-- Favicon. The tab icon is its own mark, not the PWA art: pwa-192.png is
+         a 1024px neon brain that turns to mush at the 16px a tab strip
+         actually renders. The PWA manifest still uses the brain, where it has
+         the room to work. -->
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/icon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/icon-16.png" />
 
     <!-- PWA -->
     <meta name="theme-color" content="#00ffff" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="GLTCHRunner" />
-    <link rel="apple-touch-icon" href="/pwa-192.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
 
     <!-- Open Graph -->
