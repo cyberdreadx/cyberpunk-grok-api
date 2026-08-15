@@ -20,6 +20,11 @@ export interface FeedTilePost {
   createdAt: string;
   score: number;
   commentCount: number;
+  // Returned by the API for every post; the grid ignores them, the text lane
+  // (TextPostCard) renders them.
+  userVote?: string | null;
+  viewCount?: number;
+  previewText?: string;
   isMature?: boolean;
   isOwner?: boolean;
   unlocked?: boolean;

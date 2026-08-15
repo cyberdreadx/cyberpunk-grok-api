@@ -51,9 +51,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const limit = 20;
       const sortMode = (sort as string) || "hot"; // hot | top | new | trending
       const viewMode = (view as string) || "posts"; // posts | creators
-      // Optional media filter: "video" returns only posts whose image_url ends in a video extension.
-      const videoOnly = (mediaType as string) === "video";
-      const videoCond = videoOnly ? sql`AND p.image_url ~* '\\.(mp4|webm|mov|m4v)(\\?|$)'` : sql``;
+      // Optional content-type filter:
+      //   video → posts whose image_url ends in a video extension
+      //   text  → posts with no media at all, which the client renders as a
+      //           single-column thread rather than a grid tile. A text post in
+      //           a 5-across media grid is a postage stamp of 11px type, which
+      //           is why the last one was written in April.
+      const mediaKind = (mediaType as string) || "";
+      const mediaCond =
+        mediaKind === "video"
+          ? sql`AND p.image_url ~* '\\.(mp4|webm|mov|m4v)(\\?|$)'`
+          : mediaKind === "text"
+            ? sql`AND (p.image_url IS NULL OR p.image_url = '') AND length(trim(p.text)) > 0`
+            : sql``;
       // sfw=1      → drop posts flagged mature. Used by the signed-out feed and
       //              by anyone with the NSFW toggle off, so the media never even
       //              reaches the browser.
@@ -319,7 +329,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           FROM feed_posts p
           JOIN profiles pr ON pr.user_id = p.user_id
           JOIN users uu ON uu.id = p.user_id
-          WHERE p.user_id = ${userId} ${cursorCond} ${videoCond} ${sfwCond}
+          WHERE p.user_id = ${userId} ${cursorCond} ${mediaCond} ${sfwCond}
           ORDER BY ${orderBy} LIMIT ${limit}
         `;
       } else if (filter === "following" && authUserId) {
@@ -329,7 +339,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           JOIN profiles pr ON pr.user_id = p.user_id
           JOIN users uu ON uu.id = p.user_id
           WHERE p.user_id IN (SELECT following_id FROM follows WHERE follower_id = ${authUserId})
-            ${cursorCond} ${videoCond} ${sfwCond}
+            ${cursorCond} ${mediaCond} ${sfwCond}
           ORDER BY ${orderBy} LIMIT ${limit}
         `;
       } else {
@@ -338,7 +348,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           FROM feed_posts p
           JOIN profiles pr ON pr.user_id = p.user_id
           JOIN users uu ON uu.id = p.user_id
-          WHERE 1=1 ${cursorCond} ${videoCond} ${sfwCond}
+          WHERE 1=1 ${cursorCond} ${mediaCond} ${sfwCond}
           ORDER BY ${orderBy} LIMIT ${limit}
         `;
       }

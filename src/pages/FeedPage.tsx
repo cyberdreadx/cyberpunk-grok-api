@@ -7,6 +7,7 @@ import { useMatureFilter } from "@/hooks/useMatureFilter";
 import CyberLayout from "@/components/CyberLayout";
 import FeaturedModelsStrip from "@/components/FeaturedModelsStrip";
 import FeedTile, { type FeedTilePost } from "@/components/FeedTile";
+import TextPostCard from "@/components/TextPostCard";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -22,7 +23,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Send, Users, Globe, Loader2, Plus, X, Lock, Zap, ShieldAlert, Sparkles, Rss, Flame, Film, FolderOpen, ImageIcon, Star, Menu, Lightbulb, MessageCircle, MessagesSquare, Gift, DollarSign } from "lucide-react";
+import { Send, Users, Globe, Loader2, Plus, X, Lock, Zap, ShieldAlert, Sparkles, Rss, Flame, Film, FolderOpen, ImageIcon, Star, Menu, Lightbulb, MessageCircle, MessagesSquare, Gift, DollarSign, LayoutGrid, AlignLeft, PenLine } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
 import MobileBottomNav from "@/components/MobileBottomNav";
@@ -67,6 +68,12 @@ const FeedPage: React.FC = () => {
   const [posts, setPosts] = useState<FeedTilePost[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "following" | "trending">("all");
+  // Content lane, orthogonal to `filter`. "media" is the grid; "text" is the
+  // single-column thread view. Sticky so someone who lives in the text lane
+  // isn't dropped back into the grid on every visit.
+  const [lane, setLane] = useState<"media" | "text">(
+    () => (localStorage.getItem("feed-lane") === "text" ? "text" : "media"),
+  );
   const [newText, setNewText] = useState("");
   const [posting, setPosting] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -118,6 +125,7 @@ const FeedPage: React.FC = () => {
       else if (filter === "trending") params.set("sort", "trending");
       else params.set("sort", "new"); // default ("all"/RECENT) = most recent first
       if (cursor) params.set("cursor", cursor);
+      if (lane === "text") params.set("mediaType", "text");
       // NSFW off (the default) filters server-side rather than blurring, so
       // flagged media is never sent to the browser at all.
       if (matureFilter) params.set("sfw", "1");
@@ -152,7 +160,19 @@ const FeedPage: React.FC = () => {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [filter, matureFilter, toast]);
+  }, [filter, lane, matureFilter, toast]);
+
+  /** Switch content lane and refetch. Persisted so it survives a reload. */
+  const switchLane = useCallback((next: "media" | "text") => {
+    setLane((cur) => {
+      if (cur === next) return cur;
+      localStorage.setItem("feed-lane", next);
+      setPosts([]);
+      setNextCursor(null);
+      setLoading(true);
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     if (authLoading) return;
@@ -226,7 +246,10 @@ const FeedPage: React.FC = () => {
       setLockXrge("");
       setPickedMedia(null);
       setLoading(true);
-      fetchPosts();
+      // Posting media from the text lane would drop it into a feed that filters
+      // media out — the post lands nowhere the author can see it. Follow it.
+      if (pickedMedia && lane === "text") switchLane("media");
+      else fetchPosts();
     } catch (err: any) {
       toast({ title: err.message, variant: "destructive" });
     } finally {
@@ -542,6 +565,44 @@ const FeedPage: React.FC = () => {
         >
           <Users className="w-3 h-3" /> FOLLOWING
         </button>
+
+        {/* Content lane — orthogonal to the sort chips above, so it gets its
+            own segmented group rather than becoming a fourth peer of
+            RECENT/TRENDING/FOLLOWING. */}
+        <div
+          className="mx-0.5 self-stretch w-px bg-border/40 shrink-0"
+          aria-hidden
+        />
+        <div
+          className="flex items-center gap-0.5 p-0.5 rounded-full border border-border/30 bg-card/40 shrink-0"
+          role="group"
+          aria-label="Content type"
+        >
+          <button
+            onClick={() => switchLane("media")}
+            aria-pressed={lane === "media"}
+            className={`flex items-center gap-1 px-2.5 py-0.5 rounded-full font-mono-share text-[10px] transition-colors ${
+              lane === "media"
+                ? "bg-primary/15 text-primary shadow-[0_0_8px_hsl(var(--primary)/0.25)]"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+            title="Images and video"
+          >
+            <LayoutGrid className="w-3 h-3" /> MEDIA
+          </button>
+          <button
+            onClick={() => switchLane("text")}
+            aria-pressed={lane === "text"}
+            className={`flex items-center gap-1 px-2.5 py-0.5 rounded-full font-mono-share text-[10px] transition-colors ${
+              lane === "text"
+                ? "bg-secondary/20 text-secondary shadow-[0_0_8px_hsl(var(--secondary)/0.3)]"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+            title="Text-only posts — discussion, no media"
+          >
+            <AlignLeft className="w-3 h-3" /> TEXT
+          </button>
+        </div>
       </div>
     );
   };
@@ -804,6 +865,73 @@ const FeedPage: React.FC = () => {
     </Sheet>
   );
 
+  /** Threads/X-style single column. Capped at a readable measure — full-width
+   *  prose on a desktop monitor is unreadable, which is half of why the grid
+   *  was a bad home for text in the first place. */
+  const textLane = (
+    <div className="mx-auto w-full max-w-[600px] border-x border-border/20">
+      {posts.map((p) => (
+        <TextPostCard
+          key={p.id}
+          post={p}
+          onUpdate={() => { setLoading(true); fetchPosts(); }}
+        />
+      ))}
+    </div>
+  );
+
+  const textLaneSkeleton = (
+    <div className="mx-auto w-full max-w-[600px] border-x border-border/20">
+      {[...Array(6)].map((_, i) => (
+        <div
+          key={i}
+          className="flex gap-3 px-4 py-3.5 border-b border-border/30 animate-in fade-in duration-300"
+          style={{ animationDelay: `${i * 60}ms` }}
+        >
+          <Skeleton className="w-10 h-10 rounded-full shrink-0" />
+          <div className="flex-1 space-y-2 pt-1">
+            <Skeleton className="h-2.5 w-28 rounded" />
+            <Skeleton className="h-3 w-full rounded" />
+            <Skeleton className="h-3 w-4/5 rounded" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
+  /** Empty state. The text lane gets a call to write rather than a shrug —
+   *  it starts with 51 posts, all from April, so it needs seeding. */
+  const emptyState = (
+    <div className="py-16 text-center px-6">
+      {lane === "text" ? (
+        <>
+          <PenLine className="w-8 h-8 mx-auto mb-3 text-secondary/60" />
+          <p className="font-orbitron text-xs tracking-widest text-foreground mb-1">
+            NOTHING HERE YET
+          </p>
+          <p className="font-mono-share text-[11px] text-muted-foreground mb-4">
+            {filter === "following"
+              ? "Nobody you follow has posted text yet."
+              : "Text posts are prompts, questions, wins, rants — no media needed."}
+          </p>
+          {isAuthenticated && (
+            <Button
+              size="sm"
+              onClick={() => setShowCompose(true)}
+              className="font-mono-share text-[10px]"
+            >
+              <PenLine className="w-3 h-3 mr-1" /> WRITE THE FIRST ONE
+            </Button>
+          )}
+        </>
+      ) : (
+        <p className="font-mono-share text-xs text-muted-foreground">
+          {filter === "following" ? "Follow users to see their posts here" : "No posts yet. Be the first to post!"}
+        </p>
+      )}
+    </div>
+  );
+
   const skeletonGrid = (cols: string) => (
     <div className={`grid ${cols} gap-3`}>
       {[...Array(8)].map((_, i) => (
@@ -882,15 +1010,12 @@ const FeedPage: React.FC = () => {
           {/* Grid — edge-to-edge so cards' borders touch */}
           <div className="pt-3">
             {loading ? (
-              <div className="px-3">{skeletonGrid("grid-cols-2")}</div>
+              lane === "text" ? textLaneSkeleton : <div className="px-3">{skeletonGrid("grid-cols-2")}</div>
             ) : posts.length === 0 ? (
-              <div className="py-16 text-center">
-                <p className="font-mono-share text-xs text-muted-foreground">
-                  {filter === "following" ? "Follow users to see their posts here" : "No posts yet. Be the first to post!"}
-                </p>
-              </div>
+              emptyState
             ) : (
               <>
+                {lane === "text" ? textLane : (
                 <div className="grid grid-cols-2 gap-0 -mx-px">
                   {posts.map((p) => (
                     <div key={p.id} className="-ml-px -mt-px">
@@ -898,6 +1023,7 @@ const FeedPage: React.FC = () => {
                     </div>
                   ))}
                 </div>
+                )}
                 <div ref={sentinelRef} className="h-12 flex items-center justify-center">
                   {loadingMore && <Loader2 className="w-5 h-5 animate-spin text-primary" />}
                 </div>
@@ -953,9 +1079,9 @@ const FeedPage: React.FC = () => {
               <Textarea
                 value={newText}
                 onChange={(e) => setNewText(e.target.value)}
-                placeholder="Share something..."
+                placeholder={lane === "text" ? "What's on your mind?" : "Share something..."}
                 maxLength={2000}
-                rows={3}
+                rows={lane === "text" ? 5 : 3}
                 autoFocus
                 className="font-mono-share text-sm bg-input/50 resize-none border-border/30 focus:border-primary/50"
               />
@@ -1042,9 +1168,9 @@ const FeedPage: React.FC = () => {
             <Textarea
               value={newText}
               onChange={(e) => setNewText(e.target.value)}
-              placeholder="Share something with the community..."
+              placeholder={lane === "text" ? "What's on your mind?" : "Share something with the community..."}
               maxLength={2000}
-              rows={3}
+              rows={lane === "text" ? 5 : 3}
               className="font-mono-share text-sm bg-input/50 resize-none border-border/30 focus:border-primary/50"
             />
             {attachControls}
@@ -1066,15 +1192,12 @@ const FeedPage: React.FC = () => {
         {filterTabs("desktop")}
 
         {loading ? (
-          skeletonGrid("grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5")
+          lane === "text" ? textLaneSkeleton : skeletonGrid("grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5")
         ) : posts.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="font-mono-share text-xs text-muted-foreground">
-              {filter === "following" ? "Follow users to see their posts here" : "No posts yet. Be the first to post!"}
-            </p>
-          </div>
+          emptyState
         ) : (
           <>
+            {lane === "text" ? textLane : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-0">
               {posts.map((p) => (
                 <div key={p.id} className="-ml-px -mt-px">
@@ -1087,6 +1210,7 @@ const FeedPage: React.FC = () => {
                 </div>
               ))}
             </div>
+            )}
             <div ref={sentinelRef} className="h-12 flex items-center justify-center">
               {loadingMore && <Loader2 className="w-5 h-5 animate-spin text-primary" />}
             </div>
