@@ -3189,10 +3189,15 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           if (data.executionTime && auth?.userId) {
             const execMs = Math.round(data.executionTime);
             const runpodCostCents = Number(((execMs / 1000) * 0.155).toFixed(2));
+            // delayTime is queue + worker boot — the cold start the user feels
+            // but that never showed up in any number we keep. Cost stays
+            // execution-derived; this is measurement, not billing.
+            const delayMs = Number.isFinite(data.delayTime) ? Math.round(data.delayTime) : null;
             try {
               const sql = getDb();
               const updated = await sql`
-                UPDATE usage_log SET execution_time_ms = ${execMs}, api_cost_cents = ${runpodCostCents}
+                UPDATE usage_log SET execution_time_ms = ${execMs}, api_cost_cents = ${runpodCostCents},
+                                     delay_time_ms = ${delayMs}
                 WHERE job_id = ${String(promptId)}
                   AND user_id = ${auth.userId}::uuid
                   AND execution_time_ms IS NULL
