@@ -2108,12 +2108,19 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
               ) : (
                 <>
                   {/* preload="metadata" so the poster frame renders without
-                      pulling the whole clip for every tile. */}
+                      pulling the whole clip for every tile. The #t=0.1 fragment
+                      is what actually makes a frame paint: metadata alone
+                      leaves some browsers (iOS Safari in particular) showing a
+                      black rectangle until playback starts. Local blob: URLs
+                      decode instantly; this is for the URL-only entries that
+                      still stream from R2. */}
                   <video
-                    src={result.url}
+                    src={`${result.url}${result.url.includes("#") ? "" : "#t=0.1"}`}
                     className="w-full h-full object-cover"
                     muted
                     playsInline
+                    // @ts-ignore - iOS Safari attribute
+                    webkit-playsinline="true"
                     preload="metadata"
                   />
                   <span className="absolute bottom-1 right-1 p-0.5 rounded bg-background/70 text-primary">
