@@ -46,7 +46,11 @@ export function extractPoster(url: string): Promise<string | null> {
     video.crossOrigin = "anonymous";
     video.muted = true;
     (video as any).playsInline = true;
-    video.preload = "auto";
+    // "metadata" rather than "auto": we seek to ~0.1s and capture one frame, so
+    // the browser only needs that range. "auto" pulls the whole file, and with
+    // a screenful of video tiles extracting at once that saturates the
+    // connection and every extraction hits the 8s timeout instead.
+    video.preload = "metadata";
     video.src = url;
 
     let settled = false;

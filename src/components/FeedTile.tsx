@@ -66,12 +66,28 @@ const FeedTile: React.FC<Props> = ({ post, onOpen, forceBlur, currentUserId }) =
     !post.unlocked && !isOwner &&
     ((post.lockCost || 0) > 0 || (post.lockPriceCents || 0) > 0 || xrge > 0);
 
+  // A tile wants a still, not the media itself.
+  //
+  // For video, prefer the server-generated first frame: pointing the tile at
+  // the .mp4 means every visible tile downloads a video and canvas-extracts a
+  // frame, which is slow enough to time out — the tile then sits at opacity-0
+  // and the grid looks like it has no thumbnails at all.
+  //
+  // For images we still prefer the original, because the derived
+  // -preview.webp URL 404s on anything posted before that convention existed.
+  const fullIsVideo = isVideoUrl(post.imageUrl || "");
   // When locked, the API already swaps imageUrl for the blurred preview.
-  const previewImg = forceBlur ? post.previewImageUrl : (post.imageUrl || post.previewImageUrl);
+  const previewImg = forceBlur
+    ? post.previewImageUrl
+    : fullIsVideo
+      ? (post.previewImageUrl || post.imageUrl)
+      : (post.imageUrl || post.previewImageUrl);
   const initials = (post.username || "?").slice(0, 2).toUpperCase();
   const isMatureBlur = !!post.isMature && matureFilter && !isLocked && !isOwner;
   const showLocked = isLocked || forceBlur;
   const showBlur = showLocked || isMatureBlur;
+  // Whether the thing we're about to render is itself a video — false once a
+  // still preview is in hand, even though the post is still a video post.
   const isVideo = !!previewImg && isVideoUrl(previewImg);
   const [mediaLoaded, setMediaLoaded] = useState(false);
   const { src: activeSrc, onError: handleMediaError, failed: mediaFailed } = useMediaSrc(previewImg, {
@@ -135,6 +151,11 @@ const FeedTile: React.FC<Props> = ({ post, onOpen, forceBlur, currentUserId }) =
                 webkit-playsinline="true"
                 preload="metadata"
                 className={`w-full h-full object-cover transition-[transform,opacity] duration-500 group-hover:scale-105 ${showBlur ? "blur-2xl scale-110" : ""} ${mediaLoaded ? "opacity-100" : "opacity-0"}`}
+                // `loadeddata` needs HAVE_CURRENT_DATA, which preload="metadata"
+                // is not obliged to reach — relying on it alone leaves the tile
+                // at opacity-0 forever. `loadedmetadata` always fires, so treat
+                // either as "safe to show".
+                onLoadedMetadata={() => setMediaLoaded(true)}
                 onLoadedData={() => setMediaLoaded(true)}
                 onError={handleMediaError}
               />
@@ -180,7 +201,9 @@ const FeedTile: React.FC<Props> = ({ post, onOpen, forceBlur, currentUserId }) =
           </div>
         )}
 
-        {isVideo && !mediaFailed && (
+        {/* Keyed off the post, not the rendered element — a video post still
+            earns the film badge once we're showing its still frame. */}
+        {fullIsVideo && !mediaFailed && (
           <div className="absolute top-2 left-2 px-1 py-0.5 rounded bg-black/60 backdrop-blur-sm flex items-center gap-1">
             <Film className="w-2.5 h-2.5 text-white/90" />
           </div>

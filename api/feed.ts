@@ -510,7 +510,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         `.catch(() => {});
       }
 
-      return res.status(201).json({ id: rows[0].id, createdAt: rows[0].created_at });
+      // Unlocked video posts need a still too — the grid renders a thumbnail,
+      // and without one the tile has to download the whole video to extract a
+      // frame client-side. Deliberately NOT awaited: it fetches the file and
+      // shells out to ffmpeg, and posting must stay fast.
+      const postId = rows[0].id;
+      if (imageUrl && !finalPreviewUrl && /\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(imageUrl)) {
+        void (async () => {
+          try {
+            const { ensurePreviewForUrl } = await import("./_lib/ensure-preview");
+            const url = await ensurePreviewForUrl(imageUrl);
+            if (url) {
+              await sql`UPDATE feed_posts SET preview_image_url = ${url} WHERE id = ${postId}::uuid`;
+            }
+          } catch (err: any) {
+            console.warn("[feed POST] video preview failed:", err?.message);
+          }
+        })();
+      }
+
+      return res.status(201).json({ id: postId, createdAt: rows[0].created_at });
     } catch (err: any) {
       console.error("[feed POST]", err.message);
       return res.status(500).json({ error: "Failed to create post" });
