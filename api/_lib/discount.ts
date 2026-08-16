@@ -18,15 +18,23 @@ const cache = new Map<string, { pct: number; expires: number }>();
 const combinedCache = new Map<string, { pct: number; expires: number }>();
 const TTL_MS = 30_000;
 
-const TIER_DISCOUNT_PCT: Record<string, number> = {
-  basic: 15, "basic-yearly": 15,
-  premium: 30, "premium-yearly": 30,
-  pro: 50, "pro-yearly": 50,
-  elite: 70, "elite-yearly": 70,
-};
-
 /**
  * Subscription-only discount %. For combined sub + holder use getCombinedCreditDiscountPct.
+ *
+ * `users.subscription_discount_pct` is the single source of truth — the column
+ * is `integer NOT NULL DEFAULT 0`, so it always has an answer.
+ *
+ * This used to read `(row?.pct ?? 0) || TIER_DISCOUNT_PCT[row.subscription_tier]`,
+ * a per-tier fallback table holding the retired 15/30/50/70% ladder. Because 0
+ * is falsy, an explicit 0 fell through to that table — so when subscriptions
+ * moved to monthly bonus credits and all 117 subscribers were set to 0, every
+ * one of them silently kept the old discount *as well as* the new credits, and
+ * writing 0 could never take a discount away. The fallback was also
+ * unreachable-by-design (NOT NULL), so it did nothing but resurrect retired
+ * pricing. Removed rather than fixed: a value of 0 has to mean zero.
+ *
+ * A subscriber who should still get a per-generation discount carries it as a
+ * positive value in the column.
  */
 export async function getUserDiscountPct(userId: string): Promise<number> {
   const now = Date.now();
@@ -36,11 +44,10 @@ export async function getUserDiscountPct(userId: string): Promise<number> {
   try {
     const sql = getDb();
     const [row] = await sql`
-      SELECT subscription_tier, COALESCE(subscription_discount_pct, 0)::int AS pct
+      SELECT subscription_discount_pct::int AS pct
       FROM users WHERE id = ${userId}::uuid
     `;
-    const fallbackPct = row?.subscription_tier ? (TIER_DISCOUNT_PCT[row.subscription_tier] || 0) : 0;
-    const pct = Math.max(0, Math.min(95, (row?.pct ?? 0) || fallbackPct));
+    const pct = Math.max(0, Math.min(95, Number(row?.pct) || 0));
     cache.set(userId, { pct, expires: now + TTL_MS });
     return pct;
   } catch {
