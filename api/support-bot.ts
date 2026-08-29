@@ -36,7 +36,7 @@ async function callLovableAI(system: string, user: string): Promise<string> {
   const deepseekKey = process.env.DEEPSEEK_API_KEY;
   const lovableKey = process.env.LOVABLE_API_KEY;
   if (!deepseekKey && !lovableKey) {
-    return "Support bot is offline: AI key not configured. Please open a support ticket in our Discord (https://discord.gg/CNpWqkFA65) or email ai-integrations@pm.me.";
+    return "Support bot is offline: AI key not configured. Please open a support ticket in our Discord (https://discord.gg/CNpWqkFA65) or email gltch.app@proton.me.";
   }
   const useDeepseek = !!deepseekKey;
   const url = useDeepseek
@@ -271,7 +271,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         `You are GLTCHRunner's in-app support assistant. The user has flagged "having an issue" but did NOT type details. ` +
         `Inspect the activity snapshot and proactively diagnose the most likely problem. ` +
         `Be concise (max 7 short lines, markdown bullets). Greet them by @username. ` +
-        `Suggest 2-3 concrete next steps. Always close with: "If none of this fits, open a support ticket in our Discord (https://discord.gg/CNpWqkFA65) with a screenshot, or email ai-integrations@pm.me." ` +
+        `Suggest 2-3 concrete next steps. Always close with: "If none of this fits, open a support ticket in our Discord (https://discord.gg/CNpWqkFA65) with a screenshot, or email gltch.app@proton.me." ` +
         `Never promise refunds — direct them to the "failed jobs" button for that.`;
       const ctx =
         `User: @${username}\n` +

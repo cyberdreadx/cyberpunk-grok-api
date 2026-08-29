@@ -263,7 +263,7 @@ export function TosContent() {
           identification of the infringing material, (3) your contact information,
           (4) a statement of good faith belief, (5) a statement of accuracy under
           penalty of perjury, and (6) your physical or electronic signature. Send
-          notices to: <span className="text-primary font-mono-share">dmca@grokrunner.gltch.app</span>.
+          notices to: <span className="text-primary font-mono-share">gltch.app@proton.me</span>.
           We will respond to valid DMCA notices in accordance with the Digital
           Millennium Copyright Act (17 U.S.C. § 512).
         </p>
@@ -685,8 +685,9 @@ export function PrivacyContent() {
           9. CONTACT
         </h3>
         <p>
-          For privacy inquiries, data requests, or concerns, reach out to us via
-          our Discord server or email. We aim to respond within 48 hours.
+          For privacy inquiries, data requests, or concerns, contact us at{" "}
+          <span className="text-secondary font-mono-share">gltch.app@proton.me</span>{" "}
+          or via our Discord server. We aim to respond within 48 hours.
         </p>
       </section>
 

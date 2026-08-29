@@ -65,7 +65,7 @@ const LegalPage: React.FC<Props> = ({ type }) => {
             {isTos ? "Privacy Policy" : "Terms of Service"}
           </Link>
           <a
-            href="mailto:dmca@grokrunner.gltch.app"
+            href="mailto:gltch.app@proton.me"
             className="text-muted-foreground hover:text-primary transition-colors"
           >
             DMCA / Copyright
