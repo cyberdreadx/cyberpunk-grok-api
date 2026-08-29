@@ -31,6 +31,7 @@ const CreatorsDirectory = lazyWithRetry(() => import("./pages/CreatorsDirectory"
 const Chat = lazyWithRetry(() => import("./pages/Chat"), "chat");
 const Messages = lazyWithRetry(() => import("./pages/Messages"), "messages");
 const PromptsPage = lazyWithRetry(() => import("./pages/PromptsPage"), "prompts");
+const LegalPage = lazyWithRetry(() => import("./pages/LegalPage"), "legal");
 import AgeGateDialog from "@/components/AgeGateDialog";
 import KonamiTerminalUnlock from "@/components/KonamiTerminalUnlock";
 import GlobalNavMenu from "@/components/GlobalNavMenu";
@@ -76,6 +77,11 @@ const App = () => (
           <Route path="/feed" element={<Navigate to="/" replace />} />
           <Route path="/profile" element={<PageShell><ProfilePage /></PageShell>} />
           <Route path="/profile/:username" element={<PageShell><ProfilePage /></PageShell>} />
+          {/* Terms and Privacy need real URLs, not just an in-app modal:
+              payment processors, app stores and DMCA notices all need
+              something they can link to. */}
+          <Route path="/terms" element={<PageShell><LegalPage type="tos" /></PageShell>} />
+          <Route path="/privacy" element={<PageShell><LegalPage type="privacy" /></PageShell>} />
           <Route path="/referral" element={<PageShell><ReferralPage /></PageShell>} />
           <Route path="/ambassador" element={<PageShell><AmbassadorPage /></PageShell>} />
           <Route path="/r/:code" element={<PageShell><RefLanding /></PageShell>} />

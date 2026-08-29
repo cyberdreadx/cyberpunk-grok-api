@@ -16,7 +16,9 @@ interface LegalDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-function TosContent() {
+/** Exported so /terms can render the same text the dialog shows — one source
+ *  of truth, so a public legal page can never drift from the in-app one. */
+export function TosContent() {
   return (
     <div className="space-y-5 font-rajdhani text-sm text-foreground/80 leading-relaxed">
       <p className="font-mono-share text-xs text-primary/60 border border-primary/20 rounded p-3 bg-primary/5">
@@ -394,7 +396,7 @@ function TosContent() {
   );
 }
 
-function PrivacyContent() {
+export function PrivacyContent() {
   const arrow = ">>";
   return (
     <div className="space-y-5 font-rajdhani text-sm text-foreground/80 leading-relaxed">
