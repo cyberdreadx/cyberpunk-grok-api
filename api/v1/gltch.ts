@@ -47,15 +47,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const auth = await getUserFromApiKey(req);
     if (!auth) {
       return res.status(401).json({ error: "Invalid or missing API key." });
+    }
 
     // Same gate as the session paths: an API key issued to an unverified
-    // account is the identical hole with an extra step.
+    // account is the identical hole with an extra step. This check used to sit
+    // INSIDE the !auth block above, after its return — so it never ran.
     if (!(await isEmailVerified(auth.userId))) {
       return res.status(403).json({
         error: EMAIL_VERIFICATION_REQUIRED_MESSAGE,
         code: EMAIL_VERIFICATION_REQUIRED_CODE,
       });
-    }
     }
 
     const { allowed } = await checkRateLimit(

@@ -1,9 +1,24 @@
 import React, { useState, useCallback } from "react";
-import { Copy, Check, Key, Zap, Shield, ArrowLeft, ExternalLink, Play, Loader2, Image, Video, Wand2, Cpu } from "lucide-react";
+import { Copy, Check, Key, Zap, Shield, ArrowLeft, ExternalLink, Play, Loader2, Wand2, Cpu } from "lucide-react";
 import { Link } from "react-router-dom";
 import CyberLayout from "@/components/CyberLayout";
 import GlitchText from "@/components/GlitchText";
 import { Button } from "@/components/ui/button";
+
+/**
+ * Where the API actually lives. This used to read
+ * "https://cyberpunk-grok-api.vercel.app" — a Vercel deployment that has been
+ * disabled since April 2026 and answers every path with HTTP 402
+ * DEPLOYMENT_DISABLED. Every sample on this page interpolates it, so every
+ * sample was a guaranteed failure, and the playground below just reported
+ * "API returned non-JSON".
+ *
+ * api.gltch.app is the API host; grokrunner.gltch.app is the app (Netlify
+ * proxies /api/* there to the same backend, so either base works). Keys and
+ * credits live on the app, so those links point at APP_URL instead.
+ */
+const API_BASE = "https://api.gltch.app";
+const APP_URL = "https://grokrunner.gltch.app";
 
 function CopyBlock({ code, language = "bash" }: { code: string; language?: string }) {
   const [copied, setCopied] = useState(false);
@@ -39,15 +54,12 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function ApiPlayground({ baseUrl }: { baseUrl: string }) {
   const [apiKey, setApiKey] = useState("");
   const [prompt, setPrompt] = useState("a cyberpunk cityscape at sunset, neon lights");
-  const [engine, setEngine] = useState<"grok" | "gltch" | "comfy">("gltch");
-  const [genType, setGenType] = useState<"image" | "video">("image");
-  const [model, setModel] = useState("grok-imagine-image");
-  const [n, setN] = useState(1);
-  const [duration, setDuration] = useState(5);
+  const [engine, setEngine] = useState<"gltch" | "comfy">("gltch");
   const [imageUrl, setImageUrl] = useState("");
   const [aspectRatio, setAspectRatio] = useState("1:1");
   const [hd, setHd] = useState(false);
-  const [comfyWorkflow, setComfyWorkflow] = useState("txt2img");
+  // "klein" is what the API falls back to when workflow is omitted.
+  const [comfyWorkflow, setComfyWorkflow] = useState("klein");
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -66,16 +78,7 @@ function ApiPlayground({ baseUrl }: { baseUrl: string }) {
     let url = "";
     let body: Record<string, unknown> = { prompt: prompt.trim() };
 
-    if (engine === "grok") {
-      url = `${baseUrl}/api/v1/generate`;
-      if (genType === "video") {
-        body.type = "video";
-        body.duration = duration;
-      } else {
-        body.model = model;
-        body.n = n;
-      }
-    } else if (engine === "gltch") {
+    if (engine === "gltch") {
       url = `${baseUrl}/api/v1/gltch`;
       if (!imageUrl.trim()) { setError("GLTCH requires an image_url"); setLoading(false); return; }
       body.image_url = imageUrl.trim();
@@ -84,7 +87,7 @@ function ApiPlayground({ baseUrl }: { baseUrl: string }) {
     } else {
       url = `${baseUrl}/api/v1/comfy`;
       body.workflow = comfyWorkflow;
-      if (["klein", "wan-video", "gltch-wan"].includes(comfyWorkflow)) {
+      if (["klein", "wan-video"].includes(comfyWorkflow)) {
         if (!imageUrl.trim()) { setError("This workflow requires an image_url"); setLoading(false); return; }
         body.image_url = imageUrl.trim();
       }
@@ -125,7 +128,7 @@ function ApiPlayground({ baseUrl }: { baseUrl: string }) {
     } finally {
       setLoading(false);
     }
-  }, [apiKey, prompt, engine, genType, model, n, duration, imageUrl, aspectRatio, hd, comfyWorkflow, baseUrl]);
+  }, [apiKey, prompt, engine, imageUrl, aspectRatio, hd, comfyWorkflow, baseUrl]);
 
   return (
     <div className="space-y-4">
@@ -167,32 +170,6 @@ function ApiPlayground({ baseUrl }: { baseUrl: string }) {
         ))}
       </div>
 
-      {/* Grok sub-type toggle */}
-      {engine === "grok" && (
-        <div className="flex gap-2">
-          <button
-            onClick={() => setGenType("image")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono border transition-colors ${
-              genType === "image"
-                ? "bg-primary/20 border-primary/40 text-primary"
-                : "bg-muted/30 border-primary/10 text-muted-foreground hover:border-primary/20"
-            }`}
-          >
-            <Image className="w-3 h-3" /> IMAGE
-          </button>
-          <button
-            onClick={() => setGenType("video")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono border transition-colors ${
-              genType === "video"
-                ? "bg-primary/20 border-primary/40 text-primary"
-                : "bg-muted/30 border-primary/10 text-muted-foreground hover:border-primary/20"
-            }`}
-          >
-            <Video className="w-3 h-3" /> VIDEO
-          </button>
-        </div>
-      )}
-
       {/* Prompt */}
       <div className="space-y-1">
         <label className="text-xs font-mono text-muted-foreground">PROMPT</label>
@@ -205,7 +182,7 @@ function ApiPlayground({ baseUrl }: { baseUrl: string }) {
       </div>
 
       {/* Image URL (for GLTCH and some ComfyUI workflows) */}
-      {(engine === "gltch" || (engine === "comfy" && ["klein", "wan-video", "gltch-wan"].includes(comfyWorkflow))) && (
+      {(engine === "gltch" || (engine === "comfy" && ["klein", "wan-video"].includes(comfyWorkflow))) && (
         <div className="space-y-1">
           <label className="text-xs font-mono text-muted-foreground">IMAGE URL</label>
           <input
@@ -220,44 +197,6 @@ function ApiPlayground({ baseUrl }: { baseUrl: string }) {
 
       {/* Options */}
       <div className="flex flex-wrap gap-3">
-        {engine === "grok" && genType === "image" && (
-          <>
-            <div className="space-y-1">
-              <label className="text-xs font-mono text-muted-foreground">MODEL</label>
-              <select
-                value={model}
-                onChange={(e) => setModel(e.target.value)}
-                className="bg-muted/50 border border-primary/20 rounded-lg px-2 py-1.5 text-xs font-mono text-foreground focus:outline-none focus:border-primary/50"
-              >
-                <option value="grok-imagine-image">grok-imagine-image (2 cr)</option>
-                <option value="grok-imagine-image-pro">grok-imagine-image-pro (5 cr)</option>
-              </select>
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-mono text-muted-foreground">COUNT (n)</label>
-              <select
-                value={n}
-                onChange={(e) => setN(Number(e.target.value))}
-                className="bg-muted/50 border border-primary/20 rounded-lg px-2 py-1.5 text-xs font-mono text-foreground focus:outline-none focus:border-primary/50"
-              >
-                {[1, 2, 3, 4].map((v) => <option key={v} value={v}>{v}</option>)}
-              </select>
-            </div>
-          </>
-        )}
-        {engine === "grok" && genType === "video" && (
-          <div className="space-y-1">
-            <label className="text-xs font-mono text-muted-foreground">DURATION</label>
-            <select
-              value={duration}
-              onChange={(e) => setDuration(Number(e.target.value))}
-              className="bg-muted/50 border border-primary/20 rounded-lg px-2 py-1.5 text-xs font-mono text-foreground focus:outline-none focus:border-primary/50"
-            >
-              <option value={5}>5s (15 cr)</option>
-              <option value={10}>10s (30 cr)</option>
-            </select>
-          </div>
-        )}
         {engine === "gltch" && (
           <>
             <div className="space-y-1">
@@ -291,10 +230,9 @@ function ApiPlayground({ baseUrl }: { baseUrl: string }) {
               onChange={(e) => setComfyWorkflow(e.target.value)}
               className="bg-muted/50 border border-primary/20 rounded-lg px-2 py-1.5 text-xs font-mono text-foreground focus:outline-none focus:border-primary/50"
             >
-              <option value="txt2img">txt2img (3 cr)</option>
               <option value="klein">klein edit (3 cr)</option>
+              <option value="txt2img">txt2img (3 cr)</option>
               <option value="wan-video">wan-video (15 cr)</option>
-              <option value="gltch-wan">gltch-wan (15 cr)</option>
             </select>
           </div>
         )}
@@ -343,7 +281,7 @@ function ApiPlayground({ baseUrl }: { baseUrl: string }) {
 }
 
 export default function ApiDocs() {
-  const baseUrl = "https://cyberpunk-grok-api.vercel.app";
+  const baseUrl = API_BASE;
 
   return (
     <CyberLayout>
@@ -362,16 +300,20 @@ export default function ApiDocs() {
             <GlitchText text="API DOCUMENTATION" />
           </h1>
           <p className="text-sm text-muted-foreground font-mono">
-            Generate images and videos programmatically using GLTCH and GLTCH PRO engines. Pay with credits from your account.
+            Edit images and generate video programmatically using the GLTCH and GLTCH PRO engines. Pay with credits from your account.
+          </p>
+          <p className="text-xs text-muted-foreground/70 font-mono">
+            Base URL: <code className="text-primary bg-muted/50 px-1 rounded">{API_BASE}</code>
           </p>
         </div>
 
         {/* Quick start */}
         <Section title="⚡ QUICK START">
           <ol className="list-decimal list-inside space-y-2 text-sm text-foreground/80 font-mono">
-            <li><a href={baseUrl} className="text-primary underline">{baseUrl}</a></li>
+            <li>Sign in at <a href={APP_URL} className="text-primary underline">{APP_URL}</a></li>
             <li>Generate an API key from the <strong className="text-primary">API KEYS</strong> button on the main page</li>
             <li>Use the key in your requests via the <code className="text-primary bg-muted/50 px-1 rounded">X-API-Key</code> header</li>
+            <li>Send requests to <code className="text-primary bg-muted/50 px-1 rounded">{API_BASE}</code></li>
           </ol>
         </Section>
 
@@ -394,156 +336,6 @@ export default function ApiDocs() {
         {/* Endpoint */}
         <Section title="📡 ENDPOINTS">
           <div className="space-y-4">
-            {/* Image Generation */}
-            <div className="border border-primary/20 rounded-lg overflow-hidden">
-              <div className="bg-primary/5 px-4 py-2 flex items-center gap-2">
-                <span className="text-xs font-mono font-bold bg-primary/20 text-primary px-2 py-0.5 rounded">POST</span>
-                <code className="text-sm font-mono text-foreground">/api/v1/generate</code>
-                <span className="text-[10px] font-mono text-muted-foreground ml-auto">IMAGE</span>
-              </div>
-              <div className="p-4 space-y-4">
-                <p className="text-sm text-foreground/80 font-mono">Generate images from a text prompt.</p>
-
-                <div>
-                  <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">REQUEST BODY</h4>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-xs font-mono">
-                      <thead>
-                        <tr className="border-b border-primary/10">
-                          <th className="text-left py-1.5 pr-3 text-muted-foreground">Parameter</th>
-                          <th className="text-left py-1.5 pr-3 text-muted-foreground">Type</th>
-                          <th className="text-left py-1.5 pr-3 text-muted-foreground">Default</th>
-                          <th className="text-left py-1.5 text-muted-foreground">Description</th>
-                        </tr>
-                      </thead>
-                      <tbody className="text-foreground/80">
-                        <tr className="border-b border-primary/5">
-                          <td className="py-1.5 pr-3 text-primary">prompt *</td>
-                          <td className="py-1.5 pr-3">string</td>
-                          <td className="py-1.5 pr-3">—</td>
-                          <td className="py-1.5">Text description (max 5000 chars)</td>
-                        </tr>
-                        <tr className="border-b border-primary/5">
-                          <td className="py-1.5 pr-3 text-primary">type</td>
-                          <td className="py-1.5 pr-3">string</td>
-                          <td className="py-1.5 pr-3">image</td>
-                          <td className="py-1.5">"image" or "video"</td>
-                        </tr>
-                        <tr className="border-b border-primary/5">
-                          <td className="py-1.5 pr-3 text-primary">model</td>
-                          <td className="py-1.5 pr-3">string</td>
-                          <td className="py-1.5 pr-3">grok-imagine-image</td>
-                          <td className="py-1.5">Model to use (see below)</td>
-                        </tr>
-                        <tr className="border-b border-primary/5">
-                          <td className="py-1.5 pr-3 text-primary">n</td>
-                          <td className="py-1.5 pr-3">integer</td>
-                          <td className="py-1.5 pr-3">1</td>
-                          <td className="py-1.5">Number of images (1–4)</td>
-                        </tr>
-                        <tr>
-                          <td className="py-1.5 pr-3 text-primary">response_format</td>
-                          <td className="py-1.5 pr-3">string</td>
-                          <td className="py-1.5 pr-3">url</td>
-                          <td className="py-1.5">"url" or "b64_json"</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                <div>
-                  <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">IMAGE MODELS</h4>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-xs font-mono">
-                      <thead>
-                        <tr className="border-b border-primary/10">
-                          <th className="text-left py-1.5 pr-3 text-muted-foreground">Model</th>
-                          <th className="text-left py-1.5 pr-3 text-muted-foreground">Credits/image</th>
-                          <th className="text-left py-1.5 text-muted-foreground">Description</th>
-                        </tr>
-                      </thead>
-                      <tbody className="text-foreground/80">
-                        <tr className="border-b border-primary/5">
-                          <td className="py-1.5 pr-3 text-primary">grok-imagine-image</td>
-                          <td className="py-1.5 pr-3">2 cr</td>
-                          <td className="py-1.5">Standard quality, fast generation</td>
-                        </tr>
-                        <tr>
-                          <td className="py-1.5 pr-3 text-primary">grok-imagine-image-pro</td>
-                          <td className="py-1.5 pr-3">5 cr</td>
-                          <td className="py-1.5">Higher quality, more detail</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Video Generation */}
-            <div className="border border-primary/20 rounded-lg overflow-hidden">
-              <div className="bg-primary/5 px-4 py-2 flex items-center gap-2">
-                <span className="text-xs font-mono font-bold bg-primary/20 text-primary px-2 py-0.5 rounded">POST</span>
-                <code className="text-sm font-mono text-foreground">/api/v1/generate</code>
-                <span className="text-[10px] font-mono text-muted-foreground ml-auto">VIDEO</span>
-              </div>
-              <div className="p-4 space-y-4">
-                <p className="text-sm text-foreground/80 font-mono">
-                  Generate videos from text (or image + text). The API polls for completion and returns the final video URL — no polling needed on your end.
-                </p>
-
-                <div>
-                  <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">REQUEST BODY</h4>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-xs font-mono">
-                      <thead>
-                        <tr className="border-b border-primary/10">
-                          <th className="text-left py-1.5 pr-3 text-muted-foreground">Parameter</th>
-                          <th className="text-left py-1.5 pr-3 text-muted-foreground">Type</th>
-                          <th className="text-left py-1.5 pr-3 text-muted-foreground">Default</th>
-                          <th className="text-left py-1.5 text-muted-foreground">Description</th>
-                        </tr>
-                      </thead>
-                      <tbody className="text-foreground/80">
-                        <tr className="border-b border-primary/5">
-                          <td className="py-1.5 pr-3 text-primary">prompt *</td>
-                          <td className="py-1.5 pr-3">string</td>
-                          <td className="py-1.5 pr-3">—</td>
-                          <td className="py-1.5">Text description (max 5000 chars)</td>
-                        </tr>
-                        <tr className="border-b border-primary/5">
-                          <td className="py-1.5 pr-3 text-primary">type *</td>
-                          <td className="py-1.5 pr-3">string</td>
-                          <td className="py-1.5 pr-3">—</td>
-                          <td className="py-1.5">Must be "video"</td>
-                        </tr>
-                        <tr className="border-b border-primary/5">
-                          <td className="py-1.5 pr-3 text-primary">duration</td>
-                          <td className="py-1.5 pr-3">integer</td>
-                          <td className="py-1.5 pr-3">5</td>
-                          <td className="py-1.5">5 or 10 seconds</td>
-                        </tr>
-                        <tr>
-                          <td className="py-1.5 pr-3 text-primary">image_url</td>
-                          <td className="py-1.5 pr-3">string</td>
-                          <td className="py-1.5 pr-3">—</td>
-                          <td className="py-1.5">Optional source image for image-to-video</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-2 p-3 bg-muted/30 border border-primary/10 rounded-lg">
-                  <Zap className="w-4 h-4 text-primary mt-0.5 shrink-0" />
-                  <p className="text-xs text-foreground/70 font-mono">
-                    Video generation takes 30–120 seconds. The API handles polling internally and returns the final video URL when ready. Credit cost: <strong className="text-primary">3 cr/second</strong> (15 cr for 5s, 30 cr for 10s).
-                  </p>
-                </div>
-              </div>
-            </div>
-
             {/* GLTCH Edit */}
             <div className="border border-primary/20 rounded-lg overflow-hidden">
               <div className="bg-primary/5 px-4 py-2 flex items-center gap-2">
@@ -632,8 +424,8 @@ export default function ApiDocs() {
                         <tr className="border-b border-primary/5">
                           <td className="py-1.5 pr-3 text-primary">workflow</td>
                           <td className="py-1.5 pr-3">string</td>
-                          <td className="py-1.5 pr-3">txt2img</td>
-                          <td className="py-1.5">txt2img, klein, wan-video, gltch-wan</td>
+                          <td className="py-1.5 pr-3">klein</td>
+                          <td className="py-1.5">txt2img, klein, wan-video</td>
                         </tr>
                         <tr className="border-b border-primary/5">
                           <td className="py-1.5 pr-3 text-primary">image_url</td>
@@ -645,13 +437,19 @@ export default function ApiDocs() {
                           <td className="py-1.5 pr-3 text-primary">width / height</td>
                           <td className="py-1.5 pr-3">integer</td>
                           <td className="py-1.5 pr-3">832×1216</td>
-                          <td className="py-1.5">Image dimensions (256–2048)</td>
+                          <td className="py-1.5">Dimensions, 256–2048. wan-video defaults to 832×480 and caps at 1024</td>
                         </tr>
                         <tr className="border-b border-primary/5">
                           <td className="py-1.5 pr-3 text-primary">steps</td>
                           <td className="py-1.5 pr-3">integer</td>
                           <td className="py-1.5 pr-3">20</td>
                           <td className="py-1.5">Sampling steps (1–100)</td>
+                        </tr>
+                        <tr className="border-b border-primary/5">
+                          <td className="py-1.5 pr-3 text-primary">cfg</td>
+                          <td className="py-1.5 pr-3">number</td>
+                          <td className="py-1.5 pr-3">7</td>
+                          <td className="py-1.5">Guidance scale (0.1–30)</td>
                         </tr>
                         <tr className="border-b border-primary/5">
                           <td className="py-1.5 pr-3 text-primary">checkpoint</td>
@@ -701,24 +499,19 @@ export default function ApiDocs() {
                       </thead>
                       <tbody className="text-foreground/80">
                         <tr className="border-b border-primary/5">
+                          <td className="py-1.5 pr-3 text-primary">klein</td>
+                          <td className="py-1.5 pr-3">3–4 cr</td>
+                          <td className="py-1.5">Flux Klein image editing, the default (+1 for HD)</td>
+                        </tr>
+                        <tr className="border-b border-primary/5">
                           <td className="py-1.5 pr-3 text-primary">txt2img</td>
                           <td className="py-1.5 pr-3">3 cr</td>
                           <td className="py-1.5">Text-to-image (SD / Flux models)</td>
                         </tr>
-                        <tr className="border-b border-primary/5">
-                          <td className="py-1.5 pr-3 text-primary">klein</td>
-                          <td className="py-1.5 pr-3">3–4 cr</td>
-                          <td className="py-1.5">Flux Klein image editing (+1 for HD)</td>
-                        </tr>
-                        <tr className="border-b border-primary/5">
+                        <tr>
                           <td className="py-1.5 pr-3 text-primary">wan-video</td>
                           <td className="py-1.5 pr-3">15 cr</td>
                           <td className="py-1.5">WAN image-to-video (requires image_url)</td>
-                        </tr>
-                        <tr>
-                          <td className="py-1.5 pr-3 text-primary">gltch-wan</td>
-                          <td className="py-1.5 pr-3">15 cr</td>
-                          <td className="py-1.5">GLTCH + WAN image-to-video (requires image_url)</td>
                         </tr>
                       </tbody>
                     </table>
@@ -745,98 +538,6 @@ export default function ApiDocs() {
         </Section>
         <Section title="💻 CODE EXAMPLES">
           <div className="space-y-4">
-            <div>
-              <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">cURL — Image</h4>
-              <CopyBlock code={`curl -X POST ${baseUrl}/api/v1/generate \\
-  -H "Content-Type: application/json" \\
-  -H "X-API-Key: gltch_sk_your_key_here" \\
-  -d '{
-    "prompt": "a cyberpunk cityscape at sunset, neon lights",
-    "model": "grok-imagine-image",
-    "n": 2
-  }'`} />
-            </div>
-
-            <div>
-              <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">cURL — Video</h4>
-              <CopyBlock code={`curl -X POST ${baseUrl}/api/v1/generate \\
-  -H "Content-Type: application/json" \\
-  -H "X-API-Key: gltch_sk_your_key_here" \\
-  -d '{
-    "prompt": "a drone flyover of a neon city at night",
-    "type": "video",
-    "duration": 5
-  }'`} />
-            </div>
-
-            <div>
-              <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">Python — Image</h4>
-              <CopyBlock language="python" code={`import requests
-
-response = requests.post(
-    "${baseUrl}/api/v1/generate",
-    headers={
-        "Content-Type": "application/json",
-        "X-API-Key": "gltch_sk_your_key_here",
-    },
-    json={
-        "prompt": "a cyberpunk cityscape at sunset",
-        "model": "grok-imagine-image",
-        "n": 1,
-    },
-)
-
-data = response.json()
-for image in data["data"]:
-    print(image["url"])`} />
-            </div>
-
-            <div>
-              <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">Python — Video (image-to-video)</h4>
-              <CopyBlock language="python" code={`import requests
-
-# Generate a video from a source image
-response = requests.post(
-    "${baseUrl}/api/v1/generate",
-    headers={
-        "Content-Type": "application/json",
-        "X-API-Key": "gltch_sk_your_key_here",
-    },
-    json={
-        "prompt": "camera slowly zooms in, cinematic lighting",
-        "type": "video",
-        "duration": 10,
-        "image_url": "https://example.com/my-image.jpg",
-    },
-    timeout=300,  # videos can take a few minutes
-)
-
-data = response.json()
-print(data["video_url"])
-print(f"Credits used: {data['credits_used']}")`} />
-            </div>
-
-            <div>
-              <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">JavaScript / Node.js</h4>
-              <CopyBlock language="javascript" code={`const response = await fetch("${baseUrl}/api/v1/generate", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "X-API-Key": "gltch_sk_your_key_here",
-  },
-  body: JSON.stringify({
-    prompt: "a cyberpunk cityscape at sunset",
-    model: "grok-imagine-image",
-    n: 1,
-  }),
-});
-
-const data = await response.json();
-console.log(data.data[0].url);
-console.log(\`Credits used: \${data.credits_used}\`);
-console.log(\`Credits remaining: \${data.credits_remaining}\`);`} />
-            </div>
-
             <div>
               <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">cURL — GLTCH Edit</h4>
               <CopyBlock code={`curl -X POST ${baseUrl}/api/v1/gltch \\
@@ -885,37 +586,41 @@ data = response.json()
 print(data["video_url"])
 print(f"Credits used: {data['credits_used']}")`} />
             </div>
+
+            <div>
+              <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">JavaScript / Node.js</h4>
+              <CopyBlock language="javascript" code={`const response = await fetch("${baseUrl}/api/v1/comfy", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "X-API-Key": "gltch_sk_your_key_here",
+  },
+  body: JSON.stringify({
+    prompt: "cyberpunk style, neon lighting",
+    workflow: "klein",
+    image_url: "https://example.com/photo.jpg",
+  }),
+});
+
+const data = await response.json();
+if (!response.ok) throw new Error(\`\${response.status}: \${data.error}\`);
+
+console.log(data.image_url);
+console.log(\`Credits used: \${data.credits_used}\`);
+console.log(\`Credits remaining: \${data.credits_remaining}\`);`} />
+            </div>
+
+            <div>
+              <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">cURL — List models &amp; checkpoints</h4>
+              <CopyBlock code={`curl -H "X-API-Key: gltch_sk_your_key_here" \\
+  ${baseUrl}/api/v1/models`} />
+            </div>
           </div>
         </Section>
 
         {/* Response */}
         <Section title="📦 RESPONSE FORMAT">
           <div className="space-y-3">
-            <div>
-              <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">IMAGE RESPONSE</h4>
-              <CopyBlock language="json" code={`{
-  "created": 1234567890,
-  "data": [
-    {
-      "url": "https://...",
-      "revised_prompt": "expanded prompt used for generation"
-    }
-  ],
-  "type": "image",
-  "credits_used": 4,
-  "credits_remaining": 146
-}`} />
-            </div>
-            <div>
-              <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">VIDEO RESPONSE</h4>
-              <CopyBlock language="json" code={`{
-  "type": "video",
-  "video_url": "https://...",
-  "duration": 5,
-  "credits_used": 15,
-  "credits_remaining": 131
-}`} />
-            </div>
             <div>
               <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">GLTCH EDIT RESPONSE</h4>
               <CopyBlock language="json" code={`{
@@ -931,10 +636,22 @@ print(f"Credits used: {data['credits_used']}")`} />
               <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">GLTCH PRO IMAGE RESPONSE</h4>
               <CopyBlock language="json" code={`{
   "type": "comfy-image",
-  "workflow": "txt2img",
+  "workflow": "klein",
   "image_url": "https://...",
+  "seed": 1234567890,
   "credits_used": 3,
   "credits_remaining": 138
+}`} />
+            </div>
+            <div>
+              <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">GLTCH PRO VIDEO RESPONSE</h4>
+              <CopyBlock language="json" code={`{
+  "type": "comfy-video",
+  "workflow": "wan-video",
+  "video_url": "https://...",
+  "seed": 1234567890,
+  "credits_used": 15,
+  "credits_remaining": 123
 }`} />
             </div>
           </div>
@@ -968,6 +685,11 @@ print(f"Credits used: {data['credits_used']}")`} />
                   <td className="py-1.5">Top up at the dashboard</td>
                 </tr>
                 <tr className="border-b border-primary/5">
+                  <td className="py-1.5 pr-3 text-primary">403</td>
+                  <td className="py-1.5 pr-3">Email not verified</td>
+                  <td className="py-1.5">Verify your account's email address, then retry</td>
+                </tr>
+                <tr className="border-b border-primary/5">
                   <td className="py-1.5 pr-3 text-primary">429</td>
                   <td className="py-1.5 pr-3">Rate limited</td>
                   <td className="py-1.5">Wait and retry (30 req/min default)</td>
@@ -976,6 +698,11 @@ print(f"Credits used: {data['credits_used']}")`} />
                   <td className="py-1.5 pr-3 text-primary">502</td>
                   <td className="py-1.5 pr-3">Generation failed</td>
                   <td className="py-1.5">Retry — credits are auto-refunded</td>
+                </tr>
+                <tr className="border-b border-primary/5">
+                  <td className="py-1.5 pr-3 text-primary">503</td>
+                  <td className="py-1.5 pr-3">Engine not configured</td>
+                  <td className="py-1.5">The GPU backend is down — nothing is charged</td>
                 </tr>
                 <tr>
                   <td className="py-1.5 pr-3 text-primary">504</td>
@@ -1000,7 +727,7 @@ print(f"Credits used: {data['credits_used']}")`} />
           <p className="text-sm text-foreground/80 font-mono">
             API usage deducts credits from your account at the same rates as the web app.
             Purchase credits or subscribe at{" "}
-            <a href={baseUrl} className="text-primary underline">{baseUrl}</a>.
+            <a href={APP_URL} className="text-primary underline">{APP_URL}</a>.
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <div className="border border-primary/20 rounded-lg p-3 text-center">
@@ -1060,22 +787,22 @@ print(f"Credits used: {data['credits_used']}")`} />
               <tbody>
                 <tr className="border-b border-border/20">
                   <td className="px-3 py-2 text-green-400">GET</td>
-                  <td className="px-3 py-2 text-foreground/80">/v1/xrge-balance</td>
+                  <td className="px-3 py-2 text-foreground/80">/api/v1/xrge-balance</td>
                   <td className="px-3 py-2 text-muted-foreground/70">Bank balance, loyalty tier, transactions</td>
                 </tr>
                 <tr className="border-b border-border/20">
                   <td className="px-3 py-2 text-blue-400">POST</td>
-                  <td className="px-3 py-2 text-foreground/80">/v1/xrge-deposit</td>
+                  <td className="px-3 py-2 text-foreground/80">/api/v1/xrge-deposit</td>
                   <td className="px-3 py-2 text-muted-foreground/70">Verify on-chain deposit → credit bank</td>
                 </tr>
                 <tr className="border-b border-border/20">
                   <td className="px-3 py-2 text-blue-400">POST</td>
-                  <td className="px-3 py-2 text-foreground/80">/v1/xrge-purchase</td>
+                  <td className="px-3 py-2 text-foreground/80">/api/v1/xrge-purchase</td>
                   <td className="px-3 py-2 text-muted-foreground/70">Buy credits from bank balance</td>
                 </tr>
                 <tr>
                   <td className="px-3 py-2 text-blue-400">POST</td>
-                  <td className="px-3 py-2 text-foreground/80">/v1/xrge-withdraw</td>
+                  <td className="px-3 py-2 text-foreground/80">/api/v1/xrge-withdraw</td>
                   <td className="px-3 py-2 text-muted-foreground/70">Request XRGE withdrawal to wallet</td>
                 </tr>
               </tbody>

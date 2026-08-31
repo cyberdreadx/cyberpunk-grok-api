@@ -22,11 +22,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // 2026-06-14; /v1/generate would bill xAI on the platform key). Only listed
   // if explicitly re-enabled.
   const grokEnabled = process.env.V1_GROK_ENABLED === "1";
+  // Costs must match generate.ts (IMAGE_CREDIT_COSTS / CREDITS_PER_VIDEO_SECOND).
+  // They used to read 4/10/30/60 here and 2/5/3-per-second there, so this
+  // endpoint quoted double the real price for models it can't even run.
   const grokModels = [
-    { id: "grok-imagine-image", type: "image", credits_per_unit: 4, description: "Standard quality image generation" },
-    { id: "grok-imagine-image-pro", type: "image", credits_per_unit: 10, description: "Higher quality image generation" },
-    { id: "grok-imagine-video", type: "video", credits_per_unit: 30, description: "5-second video generation (6 cr/sec)" },
-    { id: "grok-imagine-video-10s", type: "video", credits_per_unit: 60, description: "10-second video generation (6 cr/sec)" },
+    { id: "grok-imagine-image", type: "image", credits_per_unit: 2, description: "Standard quality image generation" },
+    { id: "grok-imagine-image-pro", type: "image", credits_per_unit: 5, description: "Higher quality image generation" },
+    { id: "grok-imagine-video", type: "video", credits_per_unit: 15, description: "5-second video generation (3 cr/sec)" },
+    { id: "grok-imagine-video-10s", type: "video", credits_per_unit: 30, description: "10-second video generation (3 cr/sec)" },
   ];
 
   // GLTCH models

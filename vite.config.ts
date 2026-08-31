@@ -9,7 +9,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   /** When `VITE_API_URL` is unset, `apiFetch` uses relative `/api` — Vite must proxy to a real backend or every request 404s. */
   const devApiProxyTarget =
-    env.VITE_DEV_API_PROXY_TARGET || "https://cyberpunk-grok-api.vercel.app";
+    env.VITE_DEV_API_PROXY_TARGET || "https://api.gltch.app";
 
   return {
   server: {

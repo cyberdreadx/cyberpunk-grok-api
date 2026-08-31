@@ -7,7 +7,7 @@
 // Production (Vercel): same origin — `/api` hits serverless routes.
 // Lovable preview hosts do not serve the backend, so they must call the deployed API directly.
 // Local dev: set `VITE_API_URL` to full API base, OR leave unset — Vite proxies `/api` → backend (see vite.config).
-const PREVIEW_API_BASE = "https://cyberpunk-grok-api.vercel.app/api";
+const PREVIEW_API_BASE = "https://api.gltch.app/api";
 const currentOrigin = typeof window !== "undefined" ? window.location.origin : "";
 const currentHost = typeof window !== "undefined" ? window.location.hostname : "";
 const isLovablePreviewHost = currentHost.endsWith(".lovable.app") || currentHost.endsWith(".lovableproject.com");

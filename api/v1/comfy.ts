@@ -23,6 +23,7 @@ import { checkRateLimit } from "../_lib/ratelimit";
 import { getDb } from "../_lib/db";
 import { deductCredits, refundCredits, logUsage, getUserCredits, discountedCostForUser } from "./_lib/credits";
 import { isEmailVerified, EMAIL_VERIFICATION_REQUIRED_MESSAGE, EMAIL_VERIFICATION_REQUIRED_CODE } from "../_lib/emailVerifiedGate";
+import { uploadPublicMedia } from "../_lib/media-storage";
 
 const RUNPOD_API_BASE = "https://api.runpod.ai/v2";
 
@@ -398,6 +399,35 @@ function cleanBase64(b64: string): string {
 
 // ── Output extraction ─────────────────────────────────────────────────
 
+/**
+ * The worker hands back base64, not a link — a completed poll weighs 1-2MB.
+ * The documented response promises `"image_url": "https://..."`, so anything
+ * that isn't already a URL gets stored and turned into one. Without this the
+ * field would carry a multi-megabyte base64 string under a name that says URL.
+ *
+ * Keyed under the owner's id: library-purge can only prove ownership of an
+ * object from its key, and anything it can't attribute outlives deletion.
+ */
+async function toPublicUrl(
+  data: string,
+  kind: "image" | "video",
+  userId: string,
+): Promise<string | null> {
+  if (/^https?:\/\//i.test(data)) return data;
+  try {
+    const buffer = Buffer.from(cleanBase64(data), "base64");
+    if (buffer.length < 1000) return null;
+    const ext = kind === "video" ? "mp4" : "png";
+    const mime = kind === "video" ? "video/mp4" : "image/png";
+    const key = `v1-api/${userId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const { url } = await uploadPublicMedia(buffer, key, mime, { cacheSeconds: 604800 });
+    return url || null;
+  } catch (err: any) {
+    console.error("[v1/comfy] upload failed:", err?.message);
+    return null;
+  }
+}
+
 function extractFileData(file: any): string | null {
   if (typeof file === "string" && file.length > 50) return file;
   if (!file || typeof file !== "object") return null;
@@ -418,6 +448,25 @@ function extractComfyOutput(
   const flatImage = out.image_url || out.image || out.output;
   if (!isVideo && typeof flatImage === "string" && flatImage.length > 50) {
     return { type: "image", data: flatImage };
+  }
+
+  // Top-level arrays. The RunPod worker returns { images: [...] } — no node-id
+  // wrapper at all — which the node scan below cannot see: it walks the keys of
+  // `out` expecting each value to be a node object carrying `.images`, so for
+  // key "images" it inspects the array itself and finds nothing. Every job that
+  // COMPLETED on this worker was reported back as "no image returned".
+  if (isVideo) {
+    for (const arrKey of ["videos", "gifs"]) {
+      const arr = out[arrKey];
+      if (Array.isArray(arr) && arr.length) {
+        const data = extractFileData(arr[arr.length - 1]);
+        if (data) return { type: "video", data };
+      }
+    }
+  }
+  if (Array.isArray(out.images) && out.images.length) {
+    const data = extractFileData(out.images[out.images.length - 1]);
+    if (data) return { type: isVideo ? "video" : "image", data };
   }
 
   // Scan node outputs (ComfyUI returns { "94": { gifs: [...] }, "9": { images: [...] } })
@@ -475,15 +524,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const auth = await getUserFromApiKey(req);
     if (!auth) {
       return res.status(401).json({ error: "Invalid or missing API key." });
+    }
 
     // Same gate as the session paths: an API key issued to an unverified
-    // account is the identical hole with an extra step.
+    // account is the identical hole with an extra step. This check used to sit
+    // INSIDE the !auth block above, after its return — so it never ran.
     if (!(await isEmailVerified(auth.userId))) {
       return res.status(403).json({
         error: EMAIL_VERIFICATION_REQUIRED_MESSAGE,
         code: EMAIL_VERIFICATION_REQUIRED_CODE,
       });
-    }
     }
 
     const { allowed } = await checkRateLimit(
@@ -683,13 +733,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return res.status(502).json({ error: `Generation completed but no ${outputType} returned. Credits refunded.` });
           }
 
+          const publicUrl = await toPublicUrl(result.data, result.type, auth.userId);
+          if (!publicUrl) {
+            await refundCredits(sql, auth.userId, d);
+            return res.status(502).json({ error: `Generation succeeded but the ${result.type} could not be stored. Credits refunded.` });
+          }
+
           await logUsage(sql, auth, `comfy:${workflowType}`, totalCost, ip);
 
           if (result.type === "video") {
             return res.status(200).json({
               type: "comfy-video",
               workflow: workflowType,
-              video_url: result.data,
+              video_url: publicUrl,
               seed,
               credits_used: totalCost,
               credits_remaining: available - totalCost,
@@ -698,7 +754,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           return res.status(200).json({
             type: "comfy-image",
             workflow: workflowType,
-            image_url: result.data,
+            image_url: publicUrl,
             seed,
             credits_used: totalCost,
             credits_remaining: available - totalCost,
