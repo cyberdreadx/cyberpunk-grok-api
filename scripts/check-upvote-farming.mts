@@ -30,7 +30,7 @@ console.log("\n── reciprocal voting: A upvotes B and B upvotes A ──");
 const pairs = await sql`
   WITH e AS (
     SELECT r.user_id AS voter, p.user_id AS author, count(*) AS n
-    FROM reactions r JOIN feed_posts p ON p.id = r.post_id
+    FROM feed_reactions r JOIN feed_posts p ON p.id = r.post_id
     WHERE r.user_id <> p.user_id
     GROUP BY 1, 2
   )
@@ -50,7 +50,7 @@ const conc = await sql`
   SELECT p.user_id, u.email, u.karma,
          count(*) AS votes, count(DISTINCT r.user_id) AS voters,
          (count(*)::float / GREATEST(count(DISTINCT r.user_id), 1))::numeric(6,1) AS per_voter
-  FROM reactions r JOIN feed_posts p ON p.id = r.post_id
+  FROM feed_reactions r JOIN feed_posts p ON p.id = r.post_id
   JOIN users u ON u.id = p.user_id
   WHERE r.user_id <> p.user_id
   GROUP BY p.user_id, u.email, u.karma
