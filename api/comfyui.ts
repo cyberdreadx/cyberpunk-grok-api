@@ -1755,6 +1755,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const ENHANCE_COST = 1;
       const enhanceSql = getDb();
       let enhanceCharged = false;
+      let enhanceSplit = { daily: 0, sub: 0, pack: 0 };
       if (!isAdminUser) {
         const credRows = await enhanceSql`SELECT daily_credits, sub_credits, pack_credits FROM users WHERE id = ${auth.userId}`;
         if (credRows.length === 0) return res.status(404).json({ error: "User not found." });
@@ -1763,7 +1764,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           return res.status(402).json({ error: "Not enough credits. Enhancing a prompt costs 1 credit." });
         }
         try {
-          await enhanceSql`SELECT deduct_credits(${auth.userId}::uuid, ${ENHANCE_COST})`;
+          const [split] = await enhanceSql`
+            SELECT * FROM deduct_credits_split(${auth.userId}::uuid, ${ENHANCE_COST})
+          ` as any[];
+          enhanceSplit = {
+            daily: Number(split?.from_daily) || 0,
+            sub: Number(split?.from_sub) || 0,
+            pack: Number(split?.from_pack) || 0,
+          };
           enhanceCharged = true;
         } catch {
           return res.status(402).json({ error: "Failed to deduct credits" });
@@ -1838,7 +1846,7 @@ Rules:
         console.error("[enhance-prompt]", err.message);
         // Refund the credit so a failed enhance is never charged.
         if (enhanceCharged) {
-          await enhanceSql`SELECT add_pack_credits(${auth.userId}::uuid, ${ENHANCE_COST})`
+          await enhanceSql`SELECT refund_credits(${auth.userId}::uuid, ${enhanceSplit.daily}, ${enhanceSplit.sub}, ${enhanceSplit.pack})`
             .catch((e: any) => console.error("[enhance-prompt] refund failed:", auth.userId, e.message));
         }
         return res.status(502).json({ error: "Prompt enhancement failed" });
@@ -1967,6 +1975,8 @@ Rules:
       const discountPct = rawCost > 0 ? await getCombinedCreditDiscountPct(auth.userId) : 0;
       const cost = applyDiscount(rawCost, discountPct);
       let creditDeducted = false;
+      /** Which buckets actually paid — refunds restore exactly these. */
+      let paidSplit = { daily: 0, sub: 0, pack: 0 };
 
       if (!isAdminUser || adminTestCredits) {
         // Rate limit: 20 comfy requests per 5 min
@@ -1985,7 +1995,18 @@ Rules:
         }
 
         try {
-          await sql`SELECT deduct_credits(${auth.userId}::uuid, ${cost})`;
+          // Capture WHICH buckets paid, so a refund can put them back where
+          // they came from. The flat add_pack_credits() refund this replaces
+          // turned every failed job's expiring daily/sub credits into
+          // permanent pack credits.
+          const [split] = await sql`
+            SELECT * FROM deduct_credits_split(${auth.userId}::uuid, ${cost})
+          ` as any[];
+          paidSplit = {
+            daily: Number(split?.from_daily) || 0,
+            sub: Number(split?.from_sub) || 0,
+            pack: Number(split?.from_pack) || 0,
+          };
           creditDeducted = true;
         } catch (err: any) {
           return res.status(402).json({ error: "Failed to deduct credits" });
@@ -2406,7 +2427,22 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           // Refund credits on submission failure
           if (creditDeducted) {
             const sql = getDb();
-            await sql`SELECT add_pack_credits(${auth.userId}::uuid, ${cost})`.catch((e: any) => { console.error("[comfyui] refund failed:", auth.userId, cost, e.message); });
+            await sql`SELECT refund_credits(${auth.userId}::uuid, ${paidSplit.daily}, ${paidSplit.sub}, ${paidSplit.pack})`.catch((e: any) => { console.error("[comfyui] refund failed:", auth.userId, cost, e.message); });
+          }
+          // Leave a trace. usage_log is only written AFTER a successful submit,
+          // so a rejected submit used to vanish: on 2026-08-31 RunPod ran out of
+          // balance and refused every job for ~20 minutes while the dashboard
+          // showed 225 healthy generations and no failures at all. A refunded
+          // row costs nothing and makes an outage visible in the same place
+          // every other failure already shows up.
+          {
+            const sql = getDb();
+            const reason = resp.status === 402 ? "gpu-unfunded" : `gpu-${resp.status}`;
+            await sql`
+              INSERT INTO usage_log (user_id, mode, credits_used, prompt, paid_daily, paid_sub, paid_pack)
+              VALUES (${auth.userId}::uuid, ${`comfy-${workflowType}-refunded-${reason}`}, 0,
+                      ${(prompt || "").slice(0, 500)}, 0, 0, 0)
+            `.catch(() => { });
           }
           throw new Error(`RunPod submit failed (${resp.status}): ${errText}`);
         }
@@ -2421,8 +2457,9 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           const sql = getDb();
           const logMode = `comfy-${workflowType}`;
           await sql`
-            INSERT INTO usage_log (user_id, mode, credits_used, prompt, job_id)
-            VALUES (${auth.userId}::uuid, ${logMode}, ${cost}, ${(prompt || "").slice(0, 500)}, ${String(result.id || "")})
+            INSERT INTO usage_log (user_id, mode, credits_used, prompt, job_id, paid_daily, paid_sub, paid_pack)
+            VALUES (${auth.userId}::uuid, ${logMode}, ${cost}, ${(prompt || "").slice(0, 500)}, ${String(result.id || "")},
+                    ${paidSplit.daily}, ${paidSplit.sub}, ${paidSplit.pack})
           `.catch(() => { });
         }
 
@@ -2446,7 +2483,7 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           const errText = await resp.text().catch(() => "Unknown error");
           if (creditDeducted) {
             const sql = getDb();
-            await sql`SELECT add_pack_credits(${auth.userId}::uuid, ${cost})`.catch((e: any) => { console.error("[comfyui] refund failed:", auth.userId, cost, e.message); });
+            await sql`SELECT refund_credits(${auth.userId}::uuid, ${paidSplit.daily}, ${paidSplit.sub}, ${paidSplit.pack})`.catch((e: any) => { console.error("[comfyui] refund failed:", auth.userId, cost, e.message); });
           }
           throw new Error(`ComfyUI prompt failed (${resp.status}): ${errText}`);
         }
@@ -2457,8 +2494,9 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           const sql = getDb();
           const logMode = `comfy-${workflowType}`;
           await sql`
-            INSERT INTO usage_log (user_id, mode, credits_used, prompt)
-            VALUES (${auth.userId}::uuid, ${logMode}, ${cost}, ${(prompt || "").slice(0, 500)})
+            INSERT INTO usage_log (user_id, mode, credits_used, prompt, paid_daily, paid_sub, paid_pack)
+            VALUES (${auth.userId}::uuid, ${logMode}, ${cost}, ${(prompt || "").slice(0, 500)},
+                    ${paidSplit.daily}, ${paidSplit.sub}, ${paidSplit.pack})
           `.catch(() => { });
         }
 
@@ -2831,11 +2869,20 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
                   AND mode LIKE 'comfy-%'
                   AND mode NOT LIKE '%-refunded%'
                   AND credits_used > 0
-                RETURNING id, credits_used
+                RETURNING id, credits_used, paid_daily, paid_sub, paid_pack
               ` as any[];
               if (claimed.length > 0) {
                 refunded = claimed[0].credits_used;
-                await sql`SELECT add_pack_credits(${auth.userId}::uuid, ${refunded})`;
+                // Rows written before migration 060 have no split recorded;
+                // refund_credits treats NULL as 0, so fall back to the old
+                // all-to-pack behaviour for them rather than refunding nothing.
+                const row = claimed[0];
+                const known = row.paid_daily != null || row.paid_sub != null || row.paid_pack != null;
+                if (known) {
+                  await sql`SELECT refund_credits(${auth.userId}::uuid, ${row.paid_daily || 0}, ${row.paid_sub || 0}, ${row.paid_pack || 0})`;
+                } else {
+                  await sql`SELECT add_pack_credits(${auth.userId}::uuid, ${refunded})`;
+                }
                 console.log(`[comfyui-poll] Refunded ${refunded} credits to ${auth.userId} after undelivered output (job ${promptId})`);
               } else {
                 console.log(`[comfyui-poll] No refundable row for job ${promptId} (user ${auth.userId}) — undelivered`);
@@ -2871,11 +2918,20 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
                   AND mode LIKE 'comfy-%'
                   AND mode NOT LIKE '%-refunded%'
                   AND credits_used > 0
-                RETURNING id, credits_used
+                RETURNING id, credits_used, paid_daily, paid_sub, paid_pack
               ` as any[];
               if (claimed.length > 0) {
                 refunded = claimed[0].credits_used;
-                await sql`SELECT add_pack_credits(${auth.userId}::uuid, ${refunded})`;
+                // Rows written before migration 060 have no split recorded;
+                // refund_credits treats NULL as 0, so fall back to the old
+                // all-to-pack behaviour for them rather than refunding nothing.
+                const row = claimed[0];
+                const known = row.paid_daily != null || row.paid_sub != null || row.paid_pack != null;
+                if (known) {
+                  await sql`SELECT refund_credits(${auth.userId}::uuid, ${row.paid_daily || 0}, ${row.paid_sub || 0}, ${row.paid_pack || 0})`;
+                } else {
+                  await sql`SELECT add_pack_credits(${auth.userId}::uuid, ${refunded})`;
+                }
                 console.log(`[comfyui-poll] Refunded ${refunded} credits to ${auth.userId} after RunPod ${data.status} (job ${promptId})`);
               } else {
                 console.log(`[comfyui-poll] No refundable row for job ${promptId} (user ${auth.userId}) — ${data.status}`);
