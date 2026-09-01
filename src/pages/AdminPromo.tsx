@@ -7,7 +7,7 @@
  */
 import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, ExternalLink, Loader2, Check, X } from "lucide-react";
+import { ArrowLeft, Check, Copy, ExternalLink, Loader2, Plus, X } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 
@@ -28,7 +28,16 @@ interface Claim {
   meetsRenders: boolean;
 }
 
+interface PromoCode {
+  id: string;
+  /** NULL for codes minted before migration 063, when only the hash was kept. */
+  code: string | null;
+  usedAt: string | null;
+  usedByEmail: string | null;
+}
+
 interface Payload {
+  codes: PromoCode[];
   config: { maxApproved: number; creditAmount: number; minAccountAgeDays: number; minRenders: number };
   approvedCount: number;
   slotsRemaining: number;
@@ -44,6 +53,8 @@ export default function AdminPromo() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [denied, setDenied] = useState(false);
+  const [copied, setCopied] = useState<string | null>(null);
+  const [minting, setMinting] = useState(false);
 
   const load = useCallback(async (status: string) => {
     setLoading(true);
@@ -93,6 +104,33 @@ export default function AdminPromo() {
     }
   };
 
+  const copy = (text: string, key: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(key);
+    setTimeout(() => setCopied(null), 1500);
+  };
+
+  const mintCodes = async () => {
+    if (minting) return;
+    setMinting(true);
+    try {
+      const r = await apiFetch<{ created: string[] }>("/admin/promo", {
+        method: "POST",
+        body: { action: "generate-codes", count: 10 },
+      });
+      toast({ title: `${r.created.length} codes generated` });
+      await load(tab);
+    } catch (e: unknown) {
+      toast({
+        title: "Failed",
+        description: e instanceof Error ? e.message : "Try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setMinting(false);
+    }
+  };
+
   if (denied) {
     return (
       <div className="min-h-[100dvh] bg-background text-foreground p-8">
@@ -134,6 +172,54 @@ export default function AdminPromo() {
             </button>
           ))}
         </div>
+
+        {data && (
+          <section className="border border-border/40 rounded-lg p-4 space-y-3">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="font-orbitron text-[11px] tracking-wider text-primary/80">INVITE_CODES</h2>
+              <span className="font-mono text-[10px] text-muted-foreground">
+                {data.codes.filter((c) => !c.usedAt).length} unused of {data.codes.length}
+              </span>
+              <button
+                onClick={mintCodes}
+                disabled={minting}
+                className="ml-auto flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-primary/40 text-primary hover:bg-primary/10 font-mono text-[11px] disabled:opacity-40 transition-colors"
+              >
+                {minting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+                GENERATE 10
+              </button>
+              <button
+                onClick={() => copy(data.codes.filter((c) => !c.usedAt && c.code).map((c) => c.code).join("\n"), "all")}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-border/50 text-muted-foreground hover:text-primary hover:border-primary/40 font-mono text-[11px] transition-colors"
+              >
+                {copied === "all" ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                COPY UNUSED
+              </button>
+            </div>
+
+            <div className="grid gap-1 sm:grid-cols-2 lg:grid-cols-3">
+              {data.codes.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => c.code && !c.usedAt && copy(c.code, c.id)}
+                  disabled={!c.code || !!c.usedAt}
+                  title={c.usedAt ? `Used by ${c.usedByEmail || "someone"}` : "Click to copy"}
+                  className={`flex items-center justify-between gap-2 px-2.5 py-1.5 rounded border font-mono text-[11px] text-left transition-colors ${c.usedAt
+                    ? "border-border/30 bg-muted/20 text-muted-foreground/50 line-through"
+                    : "border-primary/25 hover:border-primary/60 text-foreground"
+                    }`}
+                >
+                  <span className="truncate">{c.code || "(hash only — cannot display)"}</span>
+                  {c.usedAt
+                    ? <span className="text-[9px] shrink-0 no-underline">{(c.usedByEmail || "used").slice(0, 14)}</span>
+                    : copied === c.id
+                      ? <Check className="w-3 h-3 text-primary shrink-0" />
+                      : <Copy className="w-3 h-3 opacity-30 shrink-0" />}
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
 
         {loading && <Loader2 className="w-5 h-5 animate-spin text-primary" />}
 

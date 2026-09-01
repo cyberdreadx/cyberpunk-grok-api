@@ -15,7 +15,8 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getDb } from "../_lib/db";
 import { getUserFromRequest, ADMIN_EMAIL } from "../_lib/auth";
 import { applyCors } from "../_lib/cors";
-import { getPromoConfig, approvedCount } from "../_lib/promo";
+import { getPromoConfig, approvedCount, hashCode } from "../_lib/promo";
+import { randomBytes } from "crypto";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   applyCors(req, res, "GET, POST, OPTIONS");
@@ -56,9 +57,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         LIMIT 200
       ` as any[];
 
+      const codes = await sql`
+        SELECT c.id, c.code, c.used_at, u.email AS used_by_email
+        FROM promo_codes c
+        LEFT JOIN users u ON u.id = c.used_by
+        ORDER BY c.used_at NULLS FIRST, c.created_at ASC
+        LIMIT 200
+      ` as any[];
+
       const approved = await approvedCount();
       return res.status(200).json({
         config: cfg,
+        codes: codes.map((c) => ({
+          id: c.id,
+          // NULL for codes minted before migration 063, when only the hash was
+          // stored. They still work for whoever holds them; they just cannot
+          // be displayed.
+          code: c.code,
+          usedAt: c.used_at,
+          usedByEmail: c.used_by_email,
+        })),
         approvedCount: approved,
         slotsRemaining: Math.max(0, cfg.maxApproved - approved),
         claims: rows.map((r) => ({
@@ -86,6 +104,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { claimId, action, reason } = (req.body || {}) as {
       claimId?: string; action?: string; reason?: string;
     };
+
+    if (action === "generate-codes") {
+      const count = Math.min(50, Math.max(1, Number((req.body || {}).count) || 10));
+      // Crockford-ish: no O/0, I/1 or U, because these get read aloud and
+      // retyped by hand.
+      const ALPHABET = "ABCDEFGHJKLMNPQRSTVWXYZ23456789";
+      const block = (n: number) =>
+        Array.from(randomBytes(n)).map((b) => ALPHABET[b % ALPHABET.length]).join("");
+      const made: string[] = [];
+      for (let i = 0; i < count; i++) {
+        const code = `GLTCH-${block(4)}-${block(4)}`;
+        const rows = await sql`
+          INSERT INTO promo_codes (code_hash, code, label)
+          VALUES (${hashCode(code)}, ${code}, ${`admin-${new Date().toISOString().slice(0, 10)}`})
+          ON CONFLICT (code_hash) DO NOTHING
+          RETURNING id` as any[];
+        if (rows.length) made.push(code); else i--;
+      }
+      return res.status(201).json({ ok: true, created: made });
+    }
+
+    // Everything below acts on one claim, so it needs an id.
     if (!claimId || (action !== "approve" && action !== "reject")) {
       return res.status(400).json({ error: "claimId and action (approve|reject) are required" });
     }
