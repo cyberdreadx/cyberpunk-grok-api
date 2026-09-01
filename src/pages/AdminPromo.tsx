@@ -9,6 +9,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Check, Copy, ExternalLink, Loader2, Plus, X } from "lucide-react";
 import { apiFetch } from "@/lib/api";
+import { BRAND } from "@/lib/brand";
 import { useToast } from "@/hooks/use-toast";
 
 interface Claim {
@@ -45,6 +46,9 @@ interface Payload {
 }
 
 const TABS = ["pending", "approved", "rejected", "all"] as const;
+
+/** What a claimant is sent to. Absolute, because this gets pasted elsewhere. */
+const PUBLIC_URL = `${BRAND.siteUrl}/promo`;
 
 export default function AdminPromo() {
   const { toast } = useToast();
@@ -148,6 +152,15 @@ export default function AdminPromo() {
           </Link>
           <span className="text-border/60">/</span>
           <h1 className="font-orbitron text-xs tracking-wider text-primary">PROMO_REVIEW</h1>
+          <a
+            href="/promo"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 font-mono text-[10px] tracking-widest text-muted-foreground hover:text-primary transition-colors"
+            title="Open the page claimants see"
+          >
+            PUBLIC PAGE <ExternalLink className="w-3 h-3" />
+          </a>
           {data && (
             <span className="ml-auto font-mono text-[11px] text-muted-foreground">
               {data.approvedCount}/{data.config.maxApproved} paid · {data.slotsRemaining} left ·{" "}
@@ -189,11 +202,28 @@ export default function AdminPromo() {
                 GENERATE 10
               </button>
               <button
-                onClick={() => copy(data.codes.filter((c) => !c.usedAt && c.code).map((c) => c.code).join("\n"), "all")}
+                onClick={() => copy(
+                  `${PUBLIC_URL}\n\n` + data.codes.filter((c) => !c.usedAt && c.code).map((c) => c.code).join("\n"),
+                  "all",
+                )}
                 className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-border/50 text-muted-foreground hover:text-primary hover:border-primary/40 font-mono text-[11px] transition-colors"
               >
                 {copied === "all" ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
                 COPY UNUSED
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap pb-1">
+              <span className="font-mono text-[10px] text-muted-foreground/70">Send with each code:</span>
+              <code className="font-mono text-[10px] text-primary/80 bg-muted/40 px-2 py-1 rounded truncate max-w-full">
+                {PUBLIC_URL}
+              </code>
+              <button
+                onClick={() => copy(PUBLIC_URL, "link")}
+                className="flex items-center gap-1.5 px-2 py-1 rounded border border-border/50 text-muted-foreground hover:text-primary hover:border-primary/40 font-mono text-[10px] transition-colors"
+              >
+                {copied === "link" ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                COPY LINK
               </button>
             </div>
 
