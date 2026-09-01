@@ -29,6 +29,15 @@ const DAILY_CAPS: Partial<Record<KarmaReason, number>> = {
   // without limit, for as long as they kept typing. 40 is ~20 comments a day
   // on everything you have posted — above any real post's traffic here.
   comment_received: 40,
+  // upvote_received is +5 and was uncapped, making it 85% of the karma that
+  // earn.ts pays credits on — the cheapest thing to farm with alts.
+  //
+  // 150 comes from the distribution across 2,261 user-days: median 10, p90 55,
+  // p95 95, p99 280. It sits above p95, so it bites 2.6% of user-days, and it
+  // is 30 upvotes a day across everything an account has posted. Popular
+  // creators here draw votes from 200+ distinct accounts and stay under it on
+  // all but their best days.
+  upvote_received: 150,
 };
 
 let schemaEnsured = false;
