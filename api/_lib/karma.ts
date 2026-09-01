@@ -38,6 +38,12 @@ const DAILY_CAPS: Partial<Record<KarmaReason, number>> = {
   // creators here draw votes from 200+ distinct accounts and stay under it on
   // all but their best days.
   upvote_received: 150,
+  // Same rule applied to its own distribution across 1,439 user-days: median 4,
+  // p90 10, p95 13, p99 23, worst 40. 20 sits just above p95 and bites 1.3% of
+  // user-days. Each story like is only 1 karma, so this was the weakest of the
+  // three farms — but it was the last uncapped one, and "uncapped" is the part
+  // that matters.
+  story_like_received: 20,
 };
 
 let schemaEnsured = false;

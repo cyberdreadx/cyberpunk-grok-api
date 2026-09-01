@@ -1,21 +1,24 @@
 /**
- * What should the daily upvote_received cap be?
+ * Size a daily karma cap from the real distribution.
  *
- * upvote_received is +5 with no cap and is 85% of the karma earn.ts pays
- * credits on, so it is the cheapest thing to farm. A cap has to sit above what
- * genuinely popular posts earn and below what a voting ring can mint, so the
- * number comes from the actual daily distribution rather than from taste.
+ *   node --env-file=.env --import tsx scripts/size-upvote-cap.mts [reason]
+ *
+ * Defaults to upvote_received. A cap has to sit above what genuinely popular
+ * accounts earn and below what a ring can mint, so the number comes from the
+ * actual daily distribution rather than from taste.
  */
 process.env.RESEND_API_KEY = "";
 
 import { getDb } from "/home/neon/cyberpunk-grok-api/api/_lib/db.ts";
 const sql = getDb();
+const REASON = process.argv[2] || "upvote_received";
+console.log(`sizing a daily cap for: ${REASON}\n`);
 
-console.log("── daily upvote_received karma per user (days with any activity) ──");
+console.log("── daily karma per user (days with any activity) ──");
 const [d] = await sql`
   WITH daily AS (
     SELECT user_id, created_at::date AS day, sum(delta)::int AS karma
-    FROM karma_events WHERE reason = 'upvote_received'
+    FROM karma_events WHERE reason = ${REASON}
     GROUP BY 1, 2
   )
   SELECT
@@ -33,18 +36,19 @@ const top = await sql`
   SELECT k.user_id, u.email, k.created_at::date AS day, sum(k.delta)::int AS karma,
          count(*)::int AS votes
   FROM karma_events k JOIN users u ON u.id = k.user_id
-  WHERE k.reason = 'upvote_received'
+  WHERE k.reason = ${REASON}
   GROUP BY 1, 2, 3 ORDER BY karma DESC LIMIT 10` as any[];
 for (const r of top) {
   console.log(`  ${String(r.karma).padStart(4)} karma (${String(r.votes).padStart(3)} upvotes)  ${String(r.day)}  ${String(r.email).slice(0, 32)}`);
 }
 
 console.log("\n── how many user-days would each candidate cap actually bite? ──");
-for (const cap of [50, 75, 100, 150, 200, 300]) {
+const CANDIDATES = REASON === 'story_like_received' ? [10, 20, 30, 50, 75, 100] : [50, 75, 100, 150, 200, 300];
+for (const cap of CANDIDATES) {
   const [r] = await sql`
     WITH daily AS (
       SELECT user_id, created_at::date AS day, sum(delta)::int AS karma
-      FROM karma_events WHERE reason = 'upvote_received'
+      FROM karma_events WHERE reason = ${REASON}
       GROUP BY 1, 2
     )
     SELECT count(*) FILTER (WHERE karma > ${cap})::int AS bitten,
@@ -55,5 +59,5 @@ for (const cap of [50, 75, 100, 150, 200, 300]) {
   console.log(`  cap ${String(cap).padStart(3)}: bites ${String(r.bitten).padStart(4)} of ${r.total} user-days (${pct}%), removes ${r.karma_removed} karma`);
 }
 
-console.log("\n(a cap of N karma = N/5 upvotes a day across everything you have posted)");
+console.log(`\n(each ${REASON} event is worth ${REASON === "upvote_received" ? 5 : REASON === "comment_received" ? 2 : 1} karma)`);
 process.exit(0);
