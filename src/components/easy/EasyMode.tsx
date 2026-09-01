@@ -17,11 +17,12 @@
  * Classic is untouched by any of this.
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowUp, Loader2, Paperclip, Sliders, Sparkles, Video, Wand2, X } from "lucide-react";
+import { ArrowUp, Loader2, MessageSquarePlus, Menu, Paperclip, Sliders, Sparkles, Trash2, Video, Wand2, X } from "lucide-react";
 import type { ComfyJob, GrokResult } from "@/hooks/useGrokApi";
 import { apiFetch } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { getAssist, setAssist } from "@/lib/createMode";
+import { useEasyThreads, type StoredMessage } from "@/hooks/useEasyThreads";
 
 /** Only the fields Easy actually sends. The hook's own parameter types are
  *  wider; narrowing here keeps this file honest about what it uses. */
@@ -60,6 +61,8 @@ type Bubble =
   | {
     kind: "result";
     id: string;
+    /** easy_messages row, so the result can be written back when it lands. */
+    rowId?: string;
     jobId: string;
     prompt: string;
     phase: string;
@@ -132,6 +135,39 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
   const headAtSubmit = useRef<Map<string, string | null>>(new Map());
 
   const { results, comfyJobs } = engines;
+  const store = useEasyThreads(true);
+  const { loadMessages, createThread, selectThread, append: appendMsg, update: updateMsg } = store;
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const activeThreadRef = useRef<string | null>(null);
+  activeThreadRef.current = store.activeId;
+
+  // Load a thread's history when it becomes active. A message still marked
+  // `running` was interrupted by a reload — the job itself carried on and the
+  // render is in the Library, but this tab lost the binding, so say that
+  // rather than spinning forever.
+  useEffect(() => {
+    if (!store.activeId) { setThread([]); return; }
+    let cancelled = false;
+    void loadMessages(store.activeId).then((rows: StoredMessage[]) => {
+      if (cancelled) return;
+      setThread(rows.map((m): Bubble => m.role === "user"
+        ? { kind: "user", id: m.id, text: m.text || "" }
+        : {
+          kind: "result", id: m.id, rowId: m.id, jobId: "",
+          prompt: m.text || "", phase: "",
+          status: m.status === "running" ? "error" : (m.status || "done"),
+          error: m.status === "running"
+            ? "Interrupted by a reload — check your Library for the result."
+            : (m.error || undefined),
+          assets: (m.assets || []).map((a, i) => ({
+            id: `${m.id}-${i}`, url: a.url, previewUrl: a.previewUrl,
+            type: a.type, timestamp: 0,
+          })),
+          label: m.label || undefined,
+        }));
+    });
+    return () => { cancelled = true; };
+  }, [store.activeId, loadMessages]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -148,6 +184,7 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
 
         if (job.status === "error") {
           changed = true;
+          if (b.rowId) void updateMsg(b.rowId, { status: "error", error: job.error || "Generation failed" });
           return { ...b, status: "error" as const, error: job.error || "Generation failed", phase: "" };
         }
         if (job.status === "done") {
@@ -156,6 +193,12 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
           const fresh = results.slice(0, idx < 0 ? 0 : idx);
           if (fresh.length === 0) return b; // result not prepended yet
           changed = true;
+          if (b.rowId) {
+            void updateMsg(b.rowId, {
+              status: "done",
+              assets: fresh.map((a) => ({ url: a.url, previewUrl: a.previewUrl, type: a.type })),
+            });
+          }
           return { ...b, status: "done" as const, phase: "", assets: fresh };
         }
         if (job.phase && job.phase !== b.phase) {
@@ -166,7 +209,7 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
       });
       return changed ? next : prev;
     });
-  }, [comfyJobs, results]);
+  }, [comfyJobs, results, updateMsg]);
 
   const lastImage = useMemo(() => {
     for (let i = thread.length - 1; i >= 0; i--) {
@@ -215,6 +258,14 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
     setThread((p) => [...p, { kind: "user", id: `u-${Date.now()}`, text, attachment: attached?.preview }]);
 
     try {
+      // First message of a new chat creates the thread, titled from that
+      // message — the same thing every chat app does.
+      let threadId = activeThreadRef.current;
+      if (!threadId) {
+        threadId = await createThread(text.slice(0, 60));
+        if (threadId) selectThread(threadId);
+      }
+      if (threadId) void appendMsg(threadId, { role: "user", text });
       // A follow-up with no attachment refines the last image. Without an
       // assist the instruction is concatenated onto the previous prompt, which
       // is what the spec calls a "new take".
@@ -259,8 +310,11 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
 
       if (!jobId) throw new Error("Could not start the job");
       headAtSubmit.current.set(jobId, head);
+      const rowId = threadId
+        ? await appendMsg(threadId, { role: "result", text: prompt, status: "running", label: label ?? null })
+        : null;
       setThread((p) => [...p, {
-        kind: "result", id: `r-${jobId}`, jobId, prompt,
+        kind: "result", id: `r-${jobId}`, rowId: rowId ?? undefined, jobId, prompt,
         phase: "Starting…", status: "running", assets: [], label,
       }]);
     } catch (err: unknown) {
@@ -270,7 +324,8 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
       setBusy(false);
       taRef.current?.focus();
     }
-  }, [draft, busy, attachment, lastImage, assist, aspect, length, results, engines, enhance, toast]);
+  }, [draft, busy, attachment, lastImage, assist, aspect, length, results, engines, enhance, toast,
+      createThread, selectThread, appendMsg]);
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -290,8 +345,82 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
     }
   };
 
+  const newChat = () => {
+    selectThread(null);
+    setThread([]);
+    setSidebarOpen(false);
+    taRef.current?.focus();
+  };
+
+  const threadList = (
+    <div className="flex flex-col gap-1 p-2">
+      <button
+        onClick={newChat}
+        className="flex items-center gap-2 px-3 py-2 rounded-lg border border-primary/30 text-primary hover:bg-primary/10 font-mono text-[11px] tracking-wider transition-colors"
+      >
+        <MessageSquarePlus className="w-3.5 h-3.5" /> NEW CHAT
+      </button>
+      {store.threads.length === 0 && (
+        <p className="px-3 py-4 font-mono text-[11px] text-muted-foreground/60">No chats yet.</p>
+      )}
+      {store.threads.map((t) => (
+        <div
+          key={t.id}
+          className={`group flex items-center gap-1 rounded-lg transition-colors ${t.id === store.activeId ? "bg-primary/10" : "hover:bg-muted/50"
+            }`}
+        >
+          <button
+            onClick={() => { store.selectThread(t.id); setSidebarOpen(false); }}
+            className={`flex-1 text-left px-3 py-2 font-mono text-[11px] truncate ${t.id === store.activeId ? "text-primary" : "text-muted-foreground"
+              }`}
+          >
+            {t.title || "Untitled"}
+          </button>
+          <button
+            onClick={() => {
+              if (window.confirm("Delete this chat? Your images stay in the Library.")) void store.remove(t.id);
+            }}
+            className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1.5 text-muted-foreground hover:text-destructive transition-opacity"
+            aria-label="Delete chat"
+          >
+            <Trash2 className="w-3 h-3" />
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+
   return (
-    <div className="flex flex-col h-[calc(100dvh-var(--easy-chrome,120px))] min-h-[420px]">
+    <div className="flex h-[calc(100dvh-var(--easy-chrome,120px))] min-h-[420px]">
+      {/* Chat list — a rail on desktop, a slide-over on mobile */}
+      <aside className="hidden md:block w-56 shrink-0 border-r border-border/40 overflow-y-auto">
+        {threadList}
+      </aside>
+      {sidebarOpen && (
+        <div className="md:hidden fixed inset-0 z-40 flex">
+          <div className="w-64 bg-background border-r border-border/40 overflow-y-auto">{threadList}</div>
+          <button
+            className="flex-1 bg-black/50"
+            onClick={() => setSidebarOpen(false)}
+            aria-label="Close chat list"
+          />
+        </div>
+      )}
+
+      <div className="flex flex-col flex-1 min-w-0">
+      {/* Mobile header */}
+      <div className="md:hidden flex items-center gap-2 px-3 py-2 border-b border-border/40">
+        <button onClick={() => setSidebarOpen(true)} className="p-1.5 text-muted-foreground hover:text-primary" aria-label="Chats">
+          <Menu className="w-4 h-4" />
+        </button>
+        <span className="font-mono text-[11px] text-muted-foreground truncate">
+          {store.threads.find((t) => t.id === store.activeId)?.title || "New chat"}
+        </span>
+        <button onClick={newChat} className="ml-auto p-1.5 text-muted-foreground hover:text-primary" aria-label="New chat">
+          <MessageSquarePlus className="w-4 h-4" />
+        </button>
+      </div>
+
       {/* Thread */}
       <div className="flex-1 overflow-y-auto px-4 py-6">
         <div className="max-w-2xl mx-auto space-y-5">
@@ -482,6 +611,7 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
             </button>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );
