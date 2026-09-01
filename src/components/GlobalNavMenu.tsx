@@ -15,7 +15,7 @@ import PreferencesDialog from "@/components/PreferencesDialog";
 const GlobalNavMenu: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [open, setOpen] = useState(false);
   const [prefsOpen, setPrefsOpen] = useState(false);
 
@@ -121,6 +121,18 @@ const GlobalNavMenu: React.FC = () => {
             )}
 
             <div className="flex flex-col gap-1">
+              {isAuthenticated && user?.is_admin && (
+                <button
+                  type="button"
+                  onClick={() => go("/admin")}
+                  className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-md font-orbitron text-xs tracking-widest text-red-300 bg-red-500/10 border border-red-500/40 hover:bg-red-500/20 transition-colors w-full"
+                >
+                  <span className="flex items-center gap-3">
+                    <ShieldAlert className="w-4 h-4" /> ADMIN
+                  </span>
+                  <span className="font-mono-share text-[9px] text-red-400/80 tracking-normal">CONSOLE</span>
+                </button>
+              )}
               {isAuthenticated && (
                 <button
                   type="button"
