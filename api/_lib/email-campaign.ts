@@ -3,7 +3,8 @@
  * Designed for cron-driven processing (no fragile self-fetch chains).
  */
 
-import { getResend, getFromAddress, logEmail, buildAnnouncementHtml, buildV47AnnouncementHtml, buildV48AnnouncementHtml, buildV49SubscriptionFixHtml, buildV52AnnouncementHtml, buildV53AnnouncementHtml, buildLaunchAnnouncementHtml, buildCrackdownAnnouncementHtml } from "./email";
+import { unsubUrl } from "./notification-prefs";
+import { getResend, getFromAddress, logEmail, buildAnnouncementHtml, buildV47AnnouncementHtml, buildV48AnnouncementHtml, buildV49SubscriptionFixHtml, buildV52AnnouncementHtml, buildV53AnnouncementHtml, buildV55AnnouncementHtml, buildLaunchAnnouncementHtml, buildCrackdownAnnouncementHtml } from "./email";
 
 export const CAMPAIGN_CONFIG_KEY = "active_email_campaign";
 
@@ -26,6 +27,7 @@ export const DEFAULT_CAMPAIGN_SUBJECTS: Record<string, string> = {
   announcement_v49: "GLTCHRunner — Subscription Credits Fixed + Platform Update",
   announcement_v52: "⚡ GLTCHRunner v5.2 — Faster & More Reliable Than Ever",
   announcement_v53: "🔊 GLTCHRunner v5.3 — LTX video with SOUND is live",
+  announcement_v55: "🎬 GLTCHRunner v5.5 — video thumbnails fixed + text posts",
   announcement_launch: "🚀 GLTCH Runner is here — chat with AI models + video gen",
   announcement_crackdown: "🧹 GLTCHRunner — Credit farmers banned, full speed restored",
 };
@@ -42,6 +44,8 @@ export function getAnnouncementHtmlForCampaign(campaign: string): string {
       return buildV52AnnouncementHtml();
     case "announcement_v53":
       return buildV53AnnouncementHtml();
+    case "announcement_v55":
+      return buildV55AnnouncementHtml();
     case "announcement_launch":
       return buildLaunchAnnouncementHtml();
     case "announcement_crackdown":
@@ -62,7 +66,12 @@ export async function getCampaignRemaining(
   const rows = await sql`
     SELECT COUNT(*)::int AS count
     FROM users u
+    LEFT JOIN notification_prefs p ON p.user_id = u.id
     WHERE u.email_verified = true
+      -- Same opt-out filter as getCampaignRecipients, or the progress readout
+      -- never reaches zero and the batch loop keeps looking for people who
+      -- will never be selected.
+      AND COALESCE(p.email_enabled, true) = true
       AND u.email NOT IN (
         SELECT recipient FROM email_log
         WHERE email_type = ${campaign} AND status = 'sent'
@@ -75,11 +84,17 @@ export async function getCampaignRecipients(
   sql: ReturnType<typeof import("./db").getDb>,
   campaign: string,
   limit: number,
-): Promise<string[]> {
+): Promise<{ id: string; email: string }[]> {
   const rows = await sql`
-    SELECT u.email
+    SELECT u.id, u.email
     FROM users u
+    LEFT JOIN notification_prefs p ON p.user_id = u.id
     WHERE u.email_verified = true
+      -- Respect the opt-out. This clause was missing: migration 052 added
+      -- notification_prefs precisely because CAN-SPAM requires a working
+      -- opt-out, but campaigns never consulted it, so anyone who switched
+      -- email off still received every announcement. Absent row = opted in.
+      AND COALESCE(p.email_enabled, true) = true
       AND u.email NOT IN (
         SELECT recipient FROM email_log
         WHERE email_type = ${campaign} AND status = 'sent'
@@ -87,7 +102,7 @@ export async function getCampaignRecipients(
     ORDER BY u.created_at ASC
     LIMIT ${limit}
   `;
-  return rows.map((r: { email: string }) => r.email);
+  return rows.map((r: { id: string; email: string }) => ({ id: r.id, email: r.email }));
 }
 
 export async function isCampaignCancelled(
@@ -139,6 +154,23 @@ export interface BatchResult {
   complete: boolean;
 }
 
+/**
+ * Visible unsubscribe line appended to every campaign email.
+ *
+ * The List-Unsubscribe header covers Gmail/Yahoo's native button, but CAN-SPAM
+ * wants a link a person can actually see and click, and plenty of clients show
+ * no native button at all.
+ */
+function unsubFooter(url: string): string {
+  return `
+    <div style="font-family:'Courier New',monospace;max-width:540px;margin:0 auto;padding:0 32px 28px;text-align:center;">
+      <p style="font-size:11px;color:#555;line-height:1.6;margin:0;">
+        You're receiving this because you have a verified GLTCH Runner account.<br>
+        <a href="${url}" style="color:#666;text-decoration:underline;">Unsubscribe from these emails</a>
+      </p>
+    </div>`;
+}
+
 /** Send one batch via Resend batch API and log each recipient. */
 export async function processCampaignBatch(
   sql: ReturnType<typeof import("./db").getDb>,
@@ -164,13 +196,27 @@ export async function processCampaignBatch(
   const resend = getResend();
   const from = getFromAddress();
 
-  const payload = recipients.map((to) => ({
-    from: `GLTCHRunner <${from}>`,
-    to: [to],
-    subject,
-    html,
-    tags: [{ name: "campaign", value: campaign }],
-  }));
+  // Every campaign until now went out with no unsubscribe link and no
+  // List-Unsubscribe header, to ~25k recipients at a time. That is a CAN-SPAM
+  // problem and, since Gmail and Yahoo's 2024 bulk-sender rules, a
+  // deliverability one: RFC 8058 one-click is expected of anyone sending at
+  // this volume, and its absence pushes the whole domain toward spam.
+  // api/unsubscribe.ts already implements both GET and one-click POST — the
+  // campaign path simply never called it.
+  const payload = recipients.map(({ id, email }) => {
+    const unsub = unsubUrl(id, "*");
+    return {
+      from: `GLTCHRunner <${from}>`,
+      to: [email],
+      subject,
+      html: `${html}${unsubFooter(unsub)}`,
+      headers: {
+        "List-Unsubscribe": `<${unsub}>`,
+        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+      },
+      tags: [{ name: "campaign", value: campaign }],
+    };
+  });
 
   let sent = 0;
   let failed = 0;
@@ -179,7 +225,7 @@ export async function processCampaignBatch(
     const { data, error } = await resend.batch.send(payload);
 
     if (error) {
-      for (const email of recipients) {
+      for (const { email } of recipients) {
         await logEmail(email, campaign, "failed", null, error.message);
         failed++;
       }
@@ -195,14 +241,14 @@ export async function processCampaignBatch(
       // regardless of per-item id so the dedup always advances (loop-proof).
       const ids = (data?.data ?? []) as Array<{ id?: string }>;
       for (let i = 0; i < recipients.length; i++) {
-        const email = recipients[i];
+        const { email } = recipients[i];
         await logEmail(email, campaign, "sent", ids[i]?.id ?? null);
         sent++;
       }
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    for (const email of recipients) {
+    for (const { email } of recipients) {
       await logEmail(email, campaign, "failed", null, msg);
       failed++;
     }

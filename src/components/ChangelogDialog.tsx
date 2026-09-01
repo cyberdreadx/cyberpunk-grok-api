@@ -7,7 +7,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Zap, ImagePlus, Film, Download, Sparkles, Bug, FolderOpen, Smartphone, Share2, Users, Clock, Link2, ExternalLink, ShieldAlert, Camera, Wrench, Shield, Search, Globe, Trash2, Tag, BookOpen, Code, HelpCircle, Eye, Gem, Wallet, Key } from "lucide-react";
+import { Zap, ImagePlus, Film, Download, Sparkles, Bug, FolderOpen, Smartphone, Share2, Users, Clock, Link2, ExternalLink, ShieldAlert, Camera, Wrench, Shield, Search, Globe, Trash2, Tag, BookOpen, Code, HelpCircle, Eye, Gem, Wallet, Key, MessageSquare } from "lucide-react";
 
 /* ─── Changelog entries ─── */
 // Bump APP_BUILD in src/lib/version.ts when deploying.
@@ -23,6 +23,21 @@ interface ChangelogEntry {
 }
 
 const CHANGELOG: ChangelogEntry[] = [
+    {
+        version: "2026.09.01",
+        date: "September 1, 2026",
+        title: "v5.5 — Text Posts, Working Thumbnails & a Developer API That Works",
+        items: [
+            { icon: <MessageSquare className="w-3.5 h-3.5" />, text: "Text posts have their own lane — switch between MEDIA and TEXT in the feed for a single-column, readable layout instead of text squeezed into an image grid", tag: "new" },
+            { icon: <Film className="w-3.5 h-3.5" />, text: "Video thumbnails actually appear — every video post and library item showed a blank tile until you tapped it. Fixed, and all 223 existing video posts were backfilled", tag: "fix" },
+            { icon: <Wallet className="w-3.5 h-3.5" />, text: "Refunds return the same kind of credit you spent — a failed job paid for with daily or subscription credits used to come back as pack credits", tag: "fix" },
+            { icon: <Code className="w-3.5 h-3.5" />, text: "Developer API works again — every example on /docs pointed at a retired server, so nothing you copied could succeed. New engines too: gltch-wan video and Z-Image, the same ones the app uses", tag: "fix" },
+            { icon: <BookOpen className="w-3.5 h-3.5" />, text: "Terms of Service and Privacy Policy now have real pages at /terms and /privacy — previously they only existed inside a popup with no link to share", tag: "new" },
+            { icon: <HelpCircle className="w-3.5 h-3.5" />, text: "One real contact address for support and copyright notices: gltch.app@proton.me", tag: "improve" },
+            { icon: <Sparkles className="w-3.5 h-3.5" />, text: "New app icon — a neon brain drawn for small sizes, so the tab and home-screen icon stay legible", tag: "improve" },
+            { icon: <Gem className="w-3.5 h-3.5" />, text: "Subscription plans grant monthly credits, as announced in v5.4 — a leftover bug was still applying the retired per-generation discount on some accounts", tag: "fix" },
+        ],
+    },
     {
         version: "2026.07.15",
         date: "July 15, 2026",

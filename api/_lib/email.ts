@@ -675,6 +675,63 @@ export function buildV53AnnouncementHtml(): string {
   `;
 }
 
+export function buildV55AnnouncementHtml(): string {
+  return `
+    <div style="font-family: 'Courier New', monospace; background: #0a0a0f; color: #e0e0e0; padding: 32px; max-width: 540px; margin: 0 auto;">
+      <div style="border: 1px solid #00f0ff33; padding: 28px; border-radius: 4px;">
+
+        <h1 style="color: #00f0ff; font-size: 22px; letter-spacing: 4px; margin: 0 0 6px; text-align: center;">
+          GLTCHRUNNER
+        </h1>
+        <p style="color: #ff00e599; font-size: 11px; letter-spacing: 5px; text-align: center; margin: 0 0 28px;">
+          v5.5 // FIXED_AND_FASTER
+        </p>
+
+        <div style="background: linear-gradient(135deg, #00f0ff15, #ff00e515); border: 1px solid #00f0ff66; padding: 18px; border-radius: 4px; margin: 0 0 24px; text-align: center;">
+          <p style="color: #00f0ff; font-size: 12px; letter-spacing: 3px; margin: 0 0 8px;">🎬 VIDEO THUMBNAILS ARE BACK</p>
+          <p style="font-size: 13px; color: #c0c0c0; margin: 0; line-height: 1.6;">
+            Every video in the feed and your library showed a blank tile until you tapped it. That's fixed — and we went back and repaired all 223 existing video posts.
+          </p>
+        </div>
+
+        <p style="font-size: 14px; color: #c0c0c0; line-height: 1.7; margin: 0 0 20px;">
+          Hey Runner — this one is mostly repairs. Things that were quietly broken, now working.
+        </p>
+
+        <div style="background: #111; border: 1px solid #00f0ff44; padding: 20px; border-radius: 4px; margin: 0 0 16px;">
+          <h2 style="color: #00f0ff; font-size: 15px; margin: 0 0 10px; letter-spacing: 1px;">
+            ⚡ WHAT CHANGED
+          </h2>
+          <ul style="font-size: 13px; color: #b0b0b0; margin: 0; padding-left: 18px; line-height: 1.8;">
+            <li><strong style="color:#fff;">Text posts have their own lane</strong> — switch MEDIA / TEXT in the feed for a readable single column</li>
+            <li><strong style="color:#fff;">Video thumbnails</strong> — fixed across the feed, your library, and every old post</li>
+            <li><strong style="color:#fbbf24;">Refunds return the same credit you spent</strong> — a failed job paid with daily or subscription credits used to come back as pack credits</li>
+            <li><strong style="color:#fff;">Developer API works again</strong> — plus gltch-wan video and Z-Image, the same engines the app uses</li>
+            <li>Terms &amp; Privacy now live at real pages you can link to</li>
+          </ul>
+        </div>
+
+        <div style="background: #111; border: 1px solid #ff00e544; padding: 20px; border-radius: 4px; margin: 0 0 24px;">
+          <h2 style="color: #ff00e5; font-size: 15px; margin: 0 0 10px; letter-spacing: 1px;">💎 ON SUBSCRIPTIONS</h2>
+          <p style="font-size: 13px; color: #b0b0b0; margin: 0; line-height: 1.7;">
+            Plans grant <strong style="color:#fff;">monthly credits</strong> — Basic 150, Premium 325, Pro 675, Elite 1,400 — which replaced the old per-generation discount back in v5.4. A leftover bug was still applying that retired discount on some accounts, and it's now corrected. Your monthly credits are unchanged.
+          </p>
+        </div>
+
+        <div style="text-align: center; margin: 0 0 20px;">
+          <a href="https://grokrunner.gltch.app" style="display: inline-block; background: linear-gradient(135deg, #00f0ff22, #ff00e522); border: 1px solid #00f0ff55; color: #00f0ff; text-decoration: none; padding: 14px 36px; border-radius: 4px; font-size: 14px; letter-spacing: 3px; font-weight: bold;">
+            OPEN GLTCHRUNNER →
+          </a>
+        </div>
+
+        <p style="font-size: 11px; color: #444; margin: 0; text-align: center;">
+          Questions or a copyright notice? gltch.app@proton.me
+        </p>
+      </div>
+    </div>
+  `;
+}
+
 export function buildLaunchAnnouncementHtml(): string {
   return `
     <div style="font-family: 'Courier New', monospace; background: #0a0a0f; color: #e0e0e0; padding: 32px; max-width: 540px; margin: 0 auto;">
