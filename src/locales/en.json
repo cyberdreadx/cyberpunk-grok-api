@@ -181,15 +181,15 @@
   "ageGate": {
     "title": "NEURAL LINK VERIFICATION",
     "subtitle": "// SECTOR_RESTRICTED // AUTH_REQUIRED //",
-    "description": "This sector of the net is restricted to operatives aged {{age}} or older. By proceeding, you confirm your biological chassis has completed at least 18 solar rotations around the nearest star.",
-    "warning": "Minors caught in this zone will be escorted out by corporate security drones. No exceptions. No appeals.",
-    "ageCheck": "I confirm I am {{age}} years or older",
-    "tosCheck": "I have read and agree to the",
+    "description": "You must be 18 or older to use GLTCH Runner.",
+    "warning": "This site contains adult content.",
+    "ageCheck": "I am {{age}} or older.",
+    "tosCheck": "I agree to the",
     "tosLink": "Terms of Service",
-    "privacyCheck": "I have read and acknowledge the",
+    "privacyCheck": "I have read the",
     "privacyLink": "Privacy Policy",
     "confirm": "JACK IN",
-    "confirmDisabled": "COMPLETE ALL CHECKS TO PROCEED",
+    "confirmDisabled": "CHECK ALL THREE TO CONTINUE",
     "decline": "GET ME OUT OF HERE",
     "terminalAge": "age_check --strict --no-bypass",
     "terminalTos": "tos_acceptance --required",
@@ -239,7 +239,7 @@
   "changelog": {
     "title": "SYSTEM_CHANGELOG",
     "subtitle": "// latest patches and upgrades //",
-    "footer": "GLTCHRUNNER · all systems nominal",
+    "footer": "GLTCH Runner · all systems nominal",
     "tagNew": "NEW",
     "tagFix": "FIX",
     "tagImprove": "IMPROVE"
@@ -250,9 +250,9 @@
     "next": "Next",
     "gotIt": "Got it!",
     "welcome": {
-      "title": "Welcome to GLTCHRunner",
+      "title": "Welcome to GLTCH Runner",
       "subtitle": "AI image & video — GLTCH PRO, WAN, and FLUX",
-      "body1": "GLTCHRunner lets you generate, edit, and animate images and video using GLTCH engines.",
+      "body1": "GLTCH Runner lets you generate, edit, and animate images and video using GLTCH engines.",
       "body2": "This quick guide will walk you through the basics. You can revisit it anytime from the help menu."
     },
     "twoWays": {

@@ -222,26 +222,15 @@ const FEED_LINES: { a: string; t: string; alert?: boolean }[] = [
   { a: "PRISM", t: "style transfer locked in" },
 ];
 
-const SERVICES_INIT = [
-  { nm: "image-engine", k: "ok" as const },
-  { nm: "video-engine", k: "ok" as const },
-  { nm: "persona-chat", k: "ok" as const },
-  { nm: "render-swarm", k: "ok" as const },
-  { nm: "payouts", k: "warn" as const },
-  { nm: "moderation", k: "ok" as const },
-];
-
 const TICKER = [
   { b: "GRID", t: "all districts reporting" },
   { b: "RENDER", t: "swarm at nominal load" },
   { b: "MODELS", t: "uncensored set online" },
-  { b: "PAYOUTS", t: "instant rail active", r: true },
   { b: "CREATORS", t: "onboarding open" },
   { b: "CHAT", t: "personas responsive" },
   { b: "CREDITS", t: "daily drop armed" },
 ];
 
-const STATUS_LABEL: Record<string, string> = { ok: "ONLINE", warn: "DEGRADED", crit: "ALERT" };
 
 /* ──────────────────────────────────────────────────────────────────────────
    Live showcase — real top-rated posts pulled from the public feed API.
@@ -387,8 +376,6 @@ export default function CommandCenterLanding() {
   const goSignIn = () => navigate("/create?signin=1");
 
   const [clock, setClock] = useState(() => new Date());
-  const [tele, setTele] = useState({ load: 62, queue: 14, latency: 38, nodes: 28 });
-  const [services, setServices] = useState(SERVICES_INIT);
   const [feed, setFeed] = useState<{ id: number; ts: string; a: string; t: string; alert?: boolean }[]>([]);
   const feedId = useRef(0);
 
@@ -398,27 +385,6 @@ export default function CommandCenterLanding() {
     return () => clearInterval(i);
   }, []);
 
-  // Telemetry random-walk + occasional service status flips
-  useEffect(() => {
-    const i = setInterval(() => {
-      setTele((p) => ({
-        load: Math.min(96, Math.max(34, Math.round(p.load + (Math.random() - 0.5) * 11))),
-        queue: Math.min(48, Math.max(2, Math.round(p.queue + (Math.random() - 0.5) * 7))),
-        latency: Math.min(120, Math.max(18, Math.round(p.latency + (Math.random() - 0.5) * 14))),
-        nodes: Math.min(40, Math.max(18, Math.round(p.nodes + (Math.random() - 0.5) * 2))),
-      }));
-      if (Math.random() > 0.78) {
-        setServices((prev) =>
-          prev.map((s) => {
-            if (s.nm === "payouts") return s; // keep the standing "degraded" flavor
-            const roll = Math.random();
-            return { ...s, k: roll > 0.94 ? "warn" : "ok" };
-          })
-        );
-      }
-    }, 1600);
-    return () => clearInterval(i);
-  }, []);
 
   // Autonomous activity feed
   useEffect(() => {
@@ -455,11 +421,10 @@ export default function CommandCenterLanding() {
       <header className="cc-topbar cc-content">
         <div className="cc-brand">
           <span className="dot" />
-          <span><span className="accent">GLTCH</span>RUNNER</span>
+          <span><span className="accent">GLTCH</span> RUNNER</span>
           <span style={{ fontFamily: '"Share Tech Mono", monospace', fontSize: 9, letterSpacing: "0.2em", color: "hsl(var(--foreground) / 0.4)", marginLeft: 4 }}>// COMMAND</span>
         </div>
         <div className="cc-statuschips">
-          <span className="cc-chip"><span className="led" />SYSTEMS NOMINAL</span>
           <span className="cc-chip" style={{ fontVariantNumeric: "tabular-nums" }}><Radio size={11} />{clockStr} UTC</span>
           <button className="cc-btn cc-btn-primary" style={{ padding: "9px 18px", fontSize: 11 }} onClick={go}>
             SIGN UP <ArrowRight size={14} />
@@ -467,34 +432,15 @@ export default function CommandCenterLanding() {
         </div>
       </header>
 
-      {/* Floating HUD rails (desktop) */}
-      <aside className="cc-rail left cc-content" aria-hidden>
-        <div className="cc-panel" style={{ marginBottom: 16 }}>
-          <div className="cc-panel-head"><span>GRID TELEMETRY</span><Gauge size={12} /></div>
-          <div className="cc-panel-body">
-            <div className="cc-metric"><span className="label">Grid Load</span><span className={`value ${tele.load > 88 ? "red" : ""}`}>{tele.load}%</span></div>
-            <div className="cc-metric"><span className="label">Render Queue</span><span className="value">{tele.queue}</span></div>
-            <div className="cc-metric"><span className="label">Avg Latency</span><span className="value">{tele.latency}ms</span></div>
-            <div className="cc-metric"><span className="label">GPU Nodes</span><span className="value">{tele.nodes}</span></div>
-            <div style={{ marginTop: 10 }}>
-              <div style={{ fontFamily: '"Share Tech Mono", monospace', fontSize: 9, letterSpacing: "0.12em", color: "hsl(var(--foreground) / 0.45)", marginBottom: 4 }}>THROUGHPUT // renders/s</div>
-              <Sparkline />
-            </div>
-          </div>
-        </div>
-        <div className="cc-panel">
-          <div className="cc-panel-head"><span>SUBSYSTEMS</span><CircuitBoard size={12} /></div>
-          <div className="cc-panel-body">
-            {services.map((s) => (
-              <div className="cc-svc" key={s.nm}>
-                <span className={`led ${s.k}`} />
-                <span className="nm">{s.nm}</span>
-                <span className={`st ${s.k}`}>{STATUS_LABEL[s.k]}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </aside>
+      {/* The left HUD rail used to sit here with GRID TELEMETRY (grid load, queue
+          depth, latency, GPU node count) and SUBSYSTEMS (per-service ONLINE /
+          DEGRADED lights). Every number was a Math.random() walk and the
+          service lights flipped at random, with "payouts" pinned to DEGRADED
+          as deliberate flavour. The result was that a first-time visitor's
+          opening impression could be IMAGE-ENGINE DEGRADED — decoration
+          reporting an outage that wasn't happening. Removed rather than
+          wired up: real status belongs behind login or on a /status page,
+          not in the first paint. -- 2026-09-01 */}
 
       <aside className="cc-rail right cc-content" aria-hidden>
         <div className="cc-panel">
@@ -523,7 +469,7 @@ export default function CommandCenterLanding() {
           <span className="cc-glitch g" data-text="GRID">GRID</span>
         </h1>
         <p className="cc-subtitle">
-          GLTCHRunner is mission control for uncensored AI. Generate cinematic images and video,
+          GLTCH Runner is mission control for uncensored AI. Generate cinematic images and video,
           command a swarm of render nodes, and follow the creators building on the grid —
           all from one command center.
         </p>
@@ -544,7 +490,7 @@ export default function CommandCenterLanding() {
         <div className="cc-hero-meta">
           <span><b>◇</b> No card required</span>
           <span><b>◇</b> Uncensored image + video</span>
-          <span><b>◇</b> Instant creator payouts</span>
+          <span><b>◇</b> Runs in your browser</span>
         </div>
         <div className="cc-scroll-hint">
           <span>SCROLL TO EXPLORE</span>
@@ -695,9 +641,9 @@ export default function CommandCenterLanding() {
       {/* FOOTER */}
       <footer className="cc-footer">
         <div className="cc-brand" style={{ fontSize: 15 }}>
-          <span className="dot" /><span><span className="accent">GLTCH</span>RUNNER</span>
+          <span className="dot" /><span><span className="accent">GLTCH</span> RUNNER</span>
         </div>
-        <span>© {new Date().getFullYear()} GLTCHRUNNER // ALL DISTRICTS OPERATIONAL</span>
+        <span>© {new Date().getFullYear()} GLTCH Runner</span>
         <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><ShieldCheck size={12} /> 18+ ONLY · CONSENT ENFORCED</span>
       </footer>
 

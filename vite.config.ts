@@ -32,8 +32,8 @@ export default defineConfig(({ mode }) => {
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "pwa-192.png", "pwa-512.png"],
       manifest: {
-        name: "GLTCHRUNNER — Neural Rendering Interface",
-        short_name: "GLTCHRUNNER",
+        name: "GLTCH Runner — AI Image & Video",
+        short_name: "GLTCH Runner",
         description: "AI image & video generation — GLTCH PRO, WAN, and FLUX engines",
         theme_color: "#00ffff",
         background_color: "#0a0a14",

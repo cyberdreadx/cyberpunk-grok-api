@@ -1,8 +1,8 @@
 /** Product branding — site URL stays grokrunner.gltch.app until DNS moves. */
 export const BRAND = {
-  name: "GLTCHRunner",
+  name: "GLTCH Runner",
   nameCaps: "GLTCH RUNNER",
-  nameHeader: "GLTCHRUNNER",
+  nameHeader: "GLTCH RUNNER",
   tagline: "AI image & video — GLTCH engines, fewer limits",
   siteUrl: "https://grokrunner.gltch.app",
   // Public link domain for anything posted on social — gltch.app is blocked
