@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Users,
   DollarSign,
@@ -1776,6 +1776,25 @@ export default function Admin() {
       </nav>
 
       <main className="admin-shell max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
+
+        {/* Standalone admin pages. These live on their own routes rather than
+            as tabs, and nothing linked to them — /admin/stripe-prices and
+            /admin/promo were both reachable only by typing the URL. */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-mono-share text-[9px] tracking-widest text-muted-foreground/50">TOOLS:</span>
+          <Link
+            to="/admin/promo"
+            className="px-2.5 py-1 rounded border border-cyan-500/30 bg-cyan-500/5 font-mono-share text-[10px] text-cyan-300/80 hover:border-cyan-500/60 hover:text-cyan-300 transition-colors"
+          >
+            PROMO_REVIEW
+          </Link>
+          <Link
+            to="/admin/stripe-prices"
+            className="px-2.5 py-1 rounded border border-border/50 bg-card/40 font-mono-share text-[10px] text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors"
+          >
+            STRIPE_PRICES
+          </Link>
+        </div>
 
         {/* ═══ OVERVIEW TAB ═══ */}
         {activeTab === "overview" && (

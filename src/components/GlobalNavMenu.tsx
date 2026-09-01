@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Menu, Rss, Sparkles, Users, Star, ShieldAlert, FolderOpen, MessageCircle, MessagesSquare, Lightbulb, Gift, DollarSign, Settings as SettingsIcon } from "lucide-react";
+import { Menu, Rss, Sparkles, Users, Star, ShieldAlert, FolderOpen, MessageCircle, MessagesSquare, Lightbulb, Gift, DollarSign, Megaphone, Settings as SettingsIcon } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
+import { apiFetch } from "@/lib/api";
 import PreferencesDialog from "@/components/PreferencesDialog";
 
 /**
@@ -16,7 +17,18 @@ const GlobalNavMenu: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { isAuthenticated, user } = useAuth();
+  /* The AntiReddit promo is 20 payouts total. Linking it after the last one is
+     claimed would send people to a dead end, so the entry only appears while
+     slots remain. Fetched when the sheet opens rather than on every render. */
+  const [promoOpen, setPromoOpen] = useState<{ open: boolean; slots: number } | null>(null);
   const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (!open || !isAuthenticated || promoOpen !== null) return;
+    apiFetch<{ open: boolean; slotsRemaining: number }>("/promo-claim")
+      .then((d) => setPromoOpen({ open: !!d.open, slots: d.slotsRemaining ?? 0 }))
+      .catch(() => setPromoOpen({ open: false, slots: 0 }));
+  }, [open, isAuthenticated, promoOpen]);
   const [prefsOpen, setPrefsOpen] = useState(false);
 
   // Skip on routes that have their own header/nav to avoid overlap.
@@ -106,6 +118,20 @@ const GlobalNavMenu: React.FC = () => {
                   >
                     <Gift className="w-4 h-4" /> INVITE + EARN
                   </button>
+                  {promoOpen?.open && (
+                    <button
+                      type="button"
+                      onClick={() => go("/promo")}
+                      className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-md font-orbitron text-xs tracking-widest text-cyan-300 bg-cyan-500/10 border border-cyan-500/40 hover:bg-cyan-500/20 transition-colors"
+                    >
+                      <span className="flex items-center gap-3">
+                        <Megaphone className="w-4 h-4" /> FREE CREDITS
+                      </span>
+                      <span className="font-mono-share text-[9px] text-cyan-400/80 tracking-normal">
+                        {promoOpen.slots} SPOTS
+                      </span>
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => go("/ambassador")}
