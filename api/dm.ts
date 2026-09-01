@@ -136,12 +136,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const since = String(req.query.since || "").trim();
       const rows = since
         ? await sql`
-            SELECT id, sender_id, text, created_at FROM dm_messages
+            SELECT id, sender_id, text,
+                   to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS created_at
+            FROM dm_messages
             WHERE thread_id = ${threadId}::uuid AND created_at > ${since}::timestamptz
             ORDER BY created_at ASC LIMIT ${MAX_PAGE}
           `
         : await sql`
-            SELECT * FROM (
+            SELECT id, sender_id, text,
+                   to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS created_at
+            FROM (
               SELECT id, sender_id, text, created_at FROM dm_messages
               WHERE thread_id = ${threadId}::uuid
               ORDER BY created_at DESC LIMIT ${MAX_PAGE}
@@ -234,7 +238,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const [msg] = await sql`
         INSERT INTO dm_messages (thread_id, sender_id, text)
         VALUES (${thread.id}::uuid, ${me}::uuid, ${text})
-        RETURNING id, sender_id, text, created_at
+        -- Same full-precision shape as the GET, because the sender uses this
+        -- value as their next poll cursor.
+        RETURNING id, sender_id, text,
+                  to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS created_at
       `;
 
       // Notification + (throttled, opt-out-able) email. notify() never throws.

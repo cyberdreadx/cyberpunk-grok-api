@@ -24,6 +24,11 @@ export type KarmaReason = keyof typeof KARMA_AWARDS;
 const DAILY_CAPS: Partial<Record<KarmaReason, number>> = {
   comment_post: 10,    // max +10 karma/day from your own comments
   like_given: 5,       // max +5 karma/day from giving likes
+  // The receiving side was uncapped, which is the incentive behind comment
+  // spam: two accounts commenting on each other's posts minted +2 each,
+  // without limit, for as long as they kept typing. 40 is ~20 comments a day
+  // on everything you have posted — above any real post's traffic here.
+  comment_received: 40,
 };
 
 let schemaEnsured = false;

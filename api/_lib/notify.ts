@@ -53,13 +53,21 @@ export async function notify(params: NotifyParams): Promise<void> {
 
     const sql = getDb();
     await ensureTable(sql);
+    /*
+     * `message` is NOT NULL and this INSERT never set it, so every call failed
+     * the constraint — and the catch below swallowed it silently. The table
+     * held 4 rows dated no later than 2026-03-31: not one comment, DM, like or
+     * follow notification had been delivered in five months. `title` is what
+     * the UI renders, so it is what `message` carries.
+     */
     await sql`
-      INSERT INTO notifications (user_id, type, title, body, actor_id, actor_username, actor_avatar_url, ref_id)
+      INSERT INTO notifications (user_id, type, title, body, message, actor_id, actor_username, actor_avatar_url, ref_id)
       VALUES (
         ${params.userId},
         ${params.type},
         ${params.title},
         ${params.body || null},
+        ${params.title},
         ${params.actorId || null},
         ${params.actorUsername || null},
         ${params.actorAvatarUrl || null},

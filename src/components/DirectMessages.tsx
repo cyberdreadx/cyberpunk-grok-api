@@ -158,7 +158,17 @@ const DirectMessages: React.FC = () => {
       if (lastAt.current === null) {
         setMessages(data.messages);
       } else if (data.messages.length) {
-        setMessages((prev) => [...prev, ...data.messages]);
+        // Merge by id, never blind-append. The server cursor is exclusive, but
+        // it used to lose microseconds through JSON (Postgres stores .023267,
+        // a JS Date holds .023) so `created_at > since` matched the very row
+        // the cursor pointed at and every poll re-sent the newest message —
+        // which the UI then showed again, and again. The wire format is fixed;
+        // this makes any future cursor drift a no-op instead of a duplicate.
+        setMessages((prev) => {
+          const seen = new Set(prev.map((m) => m.id));
+          const fresh = data.messages.filter((m) => !seen.has(m.id));
+          return fresh.length ? [...prev, ...fresh] : prev;
+        });
       }
       if (data.messages.length) {
         lastAt.current = data.messages[data.messages.length - 1].createdAt;
@@ -210,7 +220,9 @@ const DirectMessages: React.FC = () => {
       });
       setText("");
       if (data?.message) {
-        setMessages((prev) => [...prev, data.message]);
+        setMessages((prev) =>
+          prev.some((m) => m.id === data.message.id) ? prev : [...prev, data.message],
+        );
         lastAt.current = data.message.createdAt;
       }
       stickToBottom.current = true;

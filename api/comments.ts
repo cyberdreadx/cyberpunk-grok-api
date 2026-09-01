@@ -1,8 +1,32 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { getUserFromRequest } from "./_lib/auth";
+import { getUserFromRequest, checkBan } from "./_lib/auth";
 import { getDb } from "./_lib/db";
 import { notify } from "./_lib/notify";
 import { awardKarma, revertKarma } from "./_lib/karma";
+import { checkRateLimit } from "./_lib/ratelimit";
+
+/*
+ * Comment anti-spam.
+ *
+ * This endpoint had no rate limit, no ban check and no duplicate guard, so a
+ * script could hold a post open indefinitely — and 107 comments had already
+ * been written by accounts that were banned at the time.
+ *
+ * The numbers come from the real distribution rather than from taste: across
+ * 1,309 comments, one user on one post is a median of 1, p95 of 2, p99 of 5.
+ * The only accounts above that were posting "ád" and single words. These
+ * limits sit well above genuine conversation and well below flooding.
+ */
+const MAX_PER_MINUTE = 10;
+const MAX_PER_HOUR = 60;
+/** Burst on a single post — p99 across all history is 5. */
+const MAX_PER_POST = 5;
+const PER_POST_WINDOW_MIN = 10;
+/** Repeating yourself verbatim on the same post is not a conversation. */
+const DUPLICATE_WINDOW_HOURS = 24;
+/** One notification per actor per post per window, however much they type. */
+const NOTIFY_COOLDOWN_MIN = 10;
+const MIN_LENGTH = 2;
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -44,10 +68,50 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   if (req.method === "POST") {
-    const { postId, text, parentId } = req.body || {};
+    const { postId, text: rawText, parentId } = req.body || {};
+    const text = typeof rawText === "string" ? rawText.trim() : "";
     if (!postId || !text) return res.status(400).json({ error: "postId and text required" });
+    // The old check was `!text`, which a string of spaces passes.
+    if (text.length < MIN_LENGTH) return res.status(400).json({ error: "That comment is too short." });
     if (text.length > 1000) return res.status(400).json({ error: "Comment too long (max 1000)" });
+
+    const { banned } = await checkBan(sql as any, auth.userId);
+    if (banned) return res.status(403).json({ error: "This account cannot comment." });
+
+    const minute = await checkRateLimit(`comment:${auth.userId}`, "comment-min",
+      { max: MAX_PER_MINUTE, windowSeconds: 60 });
+    if (!minute.allowed) {
+      return res.status(429).json({ error: "You're commenting too fast. Wait a moment." });
+    }
+    const hour = await checkRateLimit(`comment:${auth.userId}`, "comment-hour",
+      { max: MAX_PER_HOUR, windowSeconds: 3600 });
+    if (!hour.allowed) {
+      return res.status(429).json({ error: "You've hit the hourly comment limit." });
+    }
+
     try {
+      // Burst and duplicate are per (user, post), so they need the table
+      // rather than the shared counter.
+      const [guard] = await sql`
+        SELECT
+          count(*) FILTER (
+            WHERE created_at > now() - (${PER_POST_WINDOW_MIN} || ' minutes')::interval
+          )::int AS recent,
+          count(*) FILTER (
+            WHERE lower(btrim(text)) = lower(${text})
+              AND created_at > now() - (${DUPLICATE_WINDOW_HOURS} || ' hours')::interval
+          )::int AS same
+        FROM feed_comments
+        WHERE post_id = ${postId} AND user_id = ${auth.userId}
+      ` as any[];
+
+      if (Number(guard?.same) > 0) {
+        return res.status(409).json({ error: "You already posted that comment." });
+      }
+      if (Number(guard?.recent) >= MAX_PER_POST) {
+        return res.status(429).json({ error: "That's a lot of comments on one post. Give it a minute." });
+      }
+
       const rows = await sql`
         INSERT INTO feed_comments (post_id, user_id, parent_id, text)
         VALUES (${postId}, ${auth.userId}, ${parentId || null}, ${text})
@@ -62,7 +126,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const [postOwner] = await sql`SELECT user_id FROM feed_posts WHERE id = ${postId}`;
       if (postOwner && postOwner.user_id !== auth.userId) {
         await awardKarma(sql, postOwner.user_id, "comment_received", `comment_received:${commentId}`);
-        await notify({
+
+        // One notification per actor per post per cooldown. Without this a
+        // run of allowed comments still lands as a run of pings, which is the
+        // part the post owner actually experiences as spam.
+        const [prior] = await sql`
+          SELECT count(*)::int AS n FROM feed_comments
+          WHERE post_id = ${postId} AND user_id = ${auth.userId}
+            AND id <> ${commentId}
+            AND created_at > now() - (${NOTIFY_COOLDOWN_MIN} || ' minutes')::interval
+        ` as any[];
+        if (Number(prior?.n) === 0) await notify({
           userId: postOwner.user_id,
           type: "comment",
           title: `${profile?.username || "Someone"} commented on your post`,
