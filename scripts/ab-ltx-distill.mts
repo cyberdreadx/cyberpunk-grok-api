@@ -21,6 +21,7 @@ import { signToken } from "/home/neon/cyberpunk-grok-api/api/_lib/auth.ts";
 const sql = getDb();
 const BASE = "https://api.gltch.app";
 const LABEL = process.argv[2] || "run";
+const FRAMES = Number(process.argv[3]) || 97;
 const OUT = "/tmp/gltch-work";
 
 // Fixed so both runs are the same generation apart from the LoRA.
@@ -34,7 +35,7 @@ const [owner] = await sql`
   FROM users WHERE email = 'cyberdreadx@proton.me' LIMIT 1` as any[];
 const token = signToken({ userId: owner.id, email: owner.email });
 console.log(`${LABEL}: acting as ${owner.email}, ${owner.credits} credits`);
-console.log(`seed ${SEED}, fixed prompt\n`);
+console.log(`seed ${SEED}, ${FRAMES} frames (~${(FRAMES / 24).toFixed(1)}s at 24fps)\n`);
 
 const t0 = Date.now();
 const res = await fetch(`${BASE}/api/comfyui`, {
@@ -47,7 +48,7 @@ const res = await fetch(`${BASE}/api/comfyui`, {
     seed: SEED,
     width: 768,
     height: 512,
-    frameCount: 97,       // 4s at 24fps
+    frameCount: FRAMES,
     frameRate: 24,
     ltxAudio: false,      // audio is unused in production; keep the test to video
   }),
