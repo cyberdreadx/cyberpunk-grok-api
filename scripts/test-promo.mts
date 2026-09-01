@@ -64,7 +64,7 @@ const call = async (path: string, token: string, body?: any, method?: string) =>
   return { status: res.status, json: (await res.json().catch(() => ({}))) as any };
 };
 
-const post = (n: string) => `https://antireddit.com/a/gltchrunner/${n}`;
+const post = (n: string) => `https://antireddit.com/c/gltchrunner/${n}`;
 
 const [admin] = await sql`SELECT id, email FROM users WHERE email = 'cyberdreadx@proton.me' LIMIT 1`;
 const adminToken = signToken({ userId: admin.id, email: admin.email });
@@ -163,7 +163,7 @@ try {
 
   const secondRow = await sql`
     INSERT INTO promo_claims (user_id, post_url, post_url_norm, status)
-    VALUES (${good.id}::uuid, ${post("x")}, ${"antireddit.com/a/gltchrunner/x"}, 'pending')
+    VALUES (${good.id}::uuid, ${post("x")}, ${"antireddit.com/c/gltchrunner/x"}, 'pending')
     RETURNING id`;
   const forced = await call("/api/admin/promo", adminToken, { claimId: secondRow[0].id, action: "approve" });
   ok("even a hand-inserted second claim cannot be approved", forced.status === 409,

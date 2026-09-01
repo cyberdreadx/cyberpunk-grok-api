@@ -14,8 +14,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { apiFetch } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 
-const SUB = "a/gltchrunner";
-const SUB_URL = "https://antireddit.com/a/gltchrunner";
+const SUB = "c/gltchrunner";
+const SUB_URL = "https://antireddit.com/c/gltchrunner";
 
 interface Claim {
   id: string;
@@ -221,7 +221,7 @@ export default function PromoPage() {
               required
               value={postUrl}
               onChange={(e) => setPostUrl(e.target.value)}
-              placeholder="https://antireddit.com/a/gltchrunner/..."
+              placeholder="https://antireddit.com/c/gltchrunner/..."
               className="w-full bg-muted/50 border border-primary/20 rounded-lg px-3 py-2 text-xs font-mono text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/50"
             />
           </div>
