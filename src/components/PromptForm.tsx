@@ -482,6 +482,26 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
             </div>
           )}
 
+          <div className="flex items-center mt-2">
+            <Button
+              type="button"
+              onClick={enhancePrompt}
+              disabled={enhancing || !prompt.trim() || isLoading}
+              size="sm"
+              variant="ghost"
+              className="h-8 px-2.5 font-mono-share text-[10px] text-primary/70 hover:text-primary hover:bg-primary/10 disabled:opacity-30 gap-1.5 border border-primary/20 rounded"
+              title="Rewrite your prompt with AI · costs 1 credit"
+            >
+              {enhancing ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                <Sparkles className="w-3 h-3" />
+              )}
+              <span>{t("prompt.enhance").toUpperCase()}</span>
+              <span className="text-primary/40">1cr</span>
+            </Button>
+          </div>
+
           {/* Action buttons */}
           <div className="flex items-center gap-2 mt-3 pt-2 border-t border-primary/10">
             {/* Status indicators */}
@@ -495,23 +515,6 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
-              <Button
-                type="button"
-                onClick={enhancePrompt}
-                disabled={enhancing || !prompt.trim() || isLoading}
-                size="sm"
-                variant="ghost"
-                className="h-8 px-2 font-mono-share text-[10px] text-primary/60 hover:text-primary hover:bg-primary/10 disabled:opacity-30 gap-1"
-                title="Enhance prompt with AI · costs 1 credit"
-              >
-                {enhancing ? (
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                ) : (
-                  <Sparkles className="w-3 h-3" />
-                )}
-                <span className="hidden sm:inline">{t("prompt.enhance").toUpperCase()}</span>
-                <span className="text-primary/40">1cr</span>
-              </Button>
               <div className="flex flex-col items-end gap-1">
                 <TooltipProvider delayDuration={300}>
                   <Button

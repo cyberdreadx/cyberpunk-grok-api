@@ -1852,7 +1852,7 @@ const Index = () => {
                     <div>
                       <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Duration</label>
                       <div className="flex flex-wrap gap-1.5">
-                        {[{ label: "~2s", value: 49 }, { label: "~3s", value: 73 }, { label: "~5s", value: 121 }, { label: "~7s", value: 169 }, { label: "~10s", value: 257 }].map((p) => (
+                        {[{ label: "~2s", value: 49 }, { label: "~3s", value: 73 }, { label: "~5s", value: 121 }, { label: "~7s", value: 169 }, { label: "~10s", value: 257 }, { label: "~15s", value: 361 }].map((p) => (
                           <button key={p.value} type="button" onClick={() => setComfyFrameCount(p.value)}
                             className={`px-2 py-1 rounded text-[9px] font-mono-share transition-all ${comfyFrameCount === p.value ? "bg-amber-400/20 border-amber-400/50 text-amber-300 border" : "bg-card/30 border border-border text-muted-foreground hover:border-amber-400/30"}`}>
                             {p.label}
@@ -2009,7 +2009,7 @@ const Index = () => {
                     <div>
                       <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Duration</label>
                       <div className="flex flex-wrap gap-1.5">
-                        {[{ label: "~2s", value: 49 }, { label: "~3s", value: 73 }, { label: "~5s", value: 121 }, { label: "~7s", value: 169 }, { label: "~10s", value: 257 }].map((p) => (
+                        {[{ label: "~2s", value: 49 }, { label: "~3s", value: 73 }, { label: "~5s", value: 121 }, { label: "~7s", value: 169 }, { label: "~10s", value: 257 }, { label: "~15s", value: 361 }].map((p) => (
                           <button key={p.value} type="button" onClick={() => setComfyFrameCount(p.value)}
                             className={`px-2 py-1 rounded text-[9px] font-mono-share transition-all ${comfyFrameCount === p.value ? "bg-amber-400/20 border-amber-400/50 text-amber-300 border" : "bg-card/30 border border-border text-muted-foreground hover:border-amber-400/30"}`}>
                             {p.label}
