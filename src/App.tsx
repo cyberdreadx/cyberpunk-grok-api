@@ -32,6 +32,8 @@ const Chat = lazyWithRetry(() => import("./pages/Chat"), "chat");
 const Messages = lazyWithRetry(() => import("./pages/Messages"), "messages");
 const PromptsPage = lazyWithRetry(() => import("./pages/PromptsPage"), "prompts");
 const LegalPage = lazyWithRetry(() => import("./pages/LegalPage"), "legal");
+const PromoPage = lazyWithRetry(() => import("./pages/PromoPage"), "promo");
+const AdminPromo = lazyWithRetry(() => import("./pages/AdminPromo"), "admin-promo");
 import AgeGateDialog from "@/components/AgeGateDialog";
 import KonamiTerminalUnlock from "@/components/KonamiTerminalUnlock";
 import GlobalNavMenu from "@/components/GlobalNavMenu";
@@ -87,6 +89,8 @@ const App = () => (
           <Route path="/r/:code" element={<PageShell><RefLanding /></PageShell>} />
           <Route path="/terminal" element={<PageShell><TerminalMode /></PageShell>} />
           <Route path="/verification" element={<PageShell><VerificationStatusPage /></PageShell>} />
+          <Route path="/promo" element={<PageShell><PromoPage /></PageShell>} />
+          <Route path="/admin/promo" element={<PageShell><AdminPromo /></PageShell>} />
           <Route path="/admin/stripe-prices" element={<PageShell><StripePriceSwap /></PageShell>} />
           <Route path="/apply" element={<PageShell><Apply /></PageShell>} />
           <Route path="/apply/status" element={<PageShell><ApplyStatus /></PageShell>} />
