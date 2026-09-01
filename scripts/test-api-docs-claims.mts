@@ -6,9 +6,10 @@
  * HTTP 402. Every sample on the page pointed there, so every sample failed —
  * and the API had served 0 calls in the 90 days before this was found.
  *
- * These assertions pin the claims the page now makes. Only the klein and
- * txt2img runs spend credits (3 each); everything else stops at validation,
- * which happens before deductCredits.
+ * These assertions pin the claims the page now makes. Nothing here generates
+ * unless --spend is passed: the workflow list is read off the API's own
+ * rejection message, and every other call stops at validation, which happens
+ * before deductCredits. With --spend it runs a real zimage + klein pair.
  *
  *   node --env-file=.env --import tsx scripts/test-api-docs-claims.mts
  */
@@ -97,15 +98,20 @@ try {
   ok("/api/v1/generate is retired", (await call("/api/v1/generate", { prompt: "x" })).status === 410);
 
   console.log("\n── GLTCH PRO workflows ──");
-  const valid = ["klein", "txt2img", "wan-video"];
-  for (const w of valid) {
-    const r = await call("/api/v1/comfy", { prompt: "x", workflow: w });
-    ok(`'${w}' is accepted`, !/must be one of/.test(r.json?.error || ""), `HTTP ${r.status}`);
+  // Read the list off the API's own rejection rather than submitting each one:
+  // txt2img and zimage would otherwise start a real generation and bill for it.
+  const rejected = await call("/api/v1/comfy", { prompt: "x", workflow: "definitely-not-a-workflow" });
+  const offered = (rejected.json?.error || "").replace(/^.*must be one of:\s*/, "").split(/,\s*/);
+  ok("an unknown workflow is rejected", rejected.status === 400);
+  for (const w of ["klein", "gltch-wan", "zimage", "wan-video", "txt2img"]) {
+    ok(`'${w}' is offered`, offered.includes(w), offered.join(", "));
   }
-  ok("'gltch-wan' is not a v1 workflow, and the page no longer lists it",
-    /must be one of/.test((await call("/api/v1/comfy", { prompt: "x", workflow: "gltch-wan" })).json?.error || ""));
+  ok("the two the page leads with are the two people use",
+    offered[0] === "klein" && offered[1] === "gltch-wan", offered.slice(0, 2).join(", "));
   ok("omitting workflow defaults to klein, as documented",
     /klein/.test((await call("/api/v1/comfy", { prompt: "x" })).json?.error || ""));
+  ok("gltch-wan requires image_url, as documented",
+    /image_url is required/.test((await call("/api/v1/comfy", { prompt: "x", workflow: "gltch-wan" })).json?.error || ""));
 
   console.log("\n── every advertised checkpoint must actually load ──");
   const ckpts: string[] = live.json?.engines?.find((e: any) => e.id === "gltch-pro")?.checkpoints || [];
@@ -121,9 +127,9 @@ try {
     console.log("\n── real generations (--spend) ──");
     const before = Number(owner.credits);
     const t2i = await call("/api/v1/comfy", {
-      prompt: "a neon-lit cyberpunk alley", workflow: "txt2img", steps: 8, width: 512, height: 512,
+      prompt: "a neon-lit cyberpunk alley", workflow: "zimage",
     }, key.raw, 300000);
-    ok("txt2img completes", t2i.status === 200, `HTTP ${t2i.status} ${t2i.json?.error || ""}`);
+    ok("zimage completes", t2i.status === 200, `HTTP ${t2i.status} ${t2i.json?.error || ""}`);
     ok("image_url is a real URL, not base64",
       /^https:\/\//.test(t2i.json?.image_url || ""), String(t2i.json?.image_url || "").slice(0, 60));
     if (t2i.json?.image_url) {
@@ -145,7 +151,7 @@ try {
       SELECT daily_credits + sub_credits + pack_credits AS credits FROM users WHERE id = ${owner.id}::uuid`;
     console.log(`       credits ${before} → ${after.credits} (spent ${before - Number(after.credits)})`);
   } else {
-    console.log("\n(pass --spend to also run real klein + txt2img generations, ~6 credits)");
+    console.log("\n(pass --spend to also run real zimage + klein generations, ~6 credits)");
   }
 } finally {
   await sql`DELETE FROM api_keys WHERE id IN (${key.id}::uuid, ${unverifiedKey.id}::uuid)`;

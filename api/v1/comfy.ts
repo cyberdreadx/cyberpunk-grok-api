@@ -5,16 +5,22 @@
  *
  * Body:
  *   prompt: string (required)
- *   workflow: "txt2img" | "klein" | "wan-video" (default "klein")
- *   image_url?: string (required for klein)
+ *   workflow: "klein" | "gltch-wan" | "zimage" | "wan-video" | "txt2img"
+ *             (default "klein")
+ *   image_url?: string (required for klein, gltch-wan, wan-video)
  *   width?: number (256-2048, default 832)
- *   height?: number (256-2048, default 1216)
+ *   height?: number (256-2048, default 1216; video defaults 832x480, caps 1024)
  *   steps?: number (1-100, default 20)
  *   cfg?: number (0.1-30, default 7)
  *   checkpoint?: string (required for txt2img)
  *   lora?: string (optional LoRA name)
  *   lora_strength?: number (0-2, default 0.8)
  *   negative_prompt?: string
+ *   frame_count?: number (17-241, default 81; video only)
+ *   resolution?: number (480-1280, default 832; gltch-wan only)
+ *   shift?: number (1-15; gltch-wan only)
+ *   audio_mode?: "none" | "ambient"  (gltch-wan only)
+ *   audio_prompt?: string (gltch-wan only)
  */
 
 import type { VercelRequest, VercelResponse } from "@vercel/node";
@@ -24,17 +30,31 @@ import { getDb } from "../_lib/db";
 import { deductCredits, refundCredits, logUsage, getUserCredits, discountedCostForUser } from "./_lib/credits";
 import { isEmailVerified, EMAIL_VERIFICATION_REQUIRED_MESSAGE, EMAIL_VERIFICATION_REQUIRED_CODE } from "../_lib/emailVerifiedGate";
 import { uploadPublicMedia } from "../_lib/media-storage";
+// The same graphs the app runs — see api/_lib/comfy-workflows.ts.
+import {
+  buildGltchWanWorkflow,
+  buildGltchWanSimpleWorkflow,
+  buildZimageTurboWorkflow,
+} from "../_lib/comfy-workflows";
 
 const RUNPOD_API_BASE = "https://api.runpod.ai/v2";
 
+// Must track COMFY_COSTS in api/comfyui.ts — same work, same price either way in.
 const COMFY_COSTS: Record<string, number> = {
   "txt2img": 3,
+  "zimage": 3,
   "klein": 3,
   "klein-hd": 4,
   "wan-video": 15,
+  "gltch-wan": 15,
 };
 
-const VALID_WORKFLOWS = ["txt2img", "klein", "wan-video"];
+/**
+ * Ordered by what people actually run. klein and gltch-wan are 97.6% of all
+ * jobs; gltch-wan was missing from this list entirely while txt2img, which
+ * nobody has used in 90 days, was the documented default.
+ */
+const VALID_WORKFLOWS = ["klein", "gltch-wan", "zimage", "wan-video", "txt2img"];
 
 export const config = {
   api: { bodyParser: { sizeLimit: "2mb" } },
@@ -569,12 +589,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const rpApiKey = process.env.RUNPOD_API_KEY || "";
 
     // Resolve RunPod endpoint per workflow type
+    // Mirrors getRunPodEndpointForWorkflow() in api/comfyui.ts: each family has
+    // its own worker so their models don't compete for VRAM on one box.
     const fallbackEndpoint = process.env.RUNPOD_ENDPOINT_ID || "";
+    const qwenEndpoint = process.env.RUNPOD_QWEN_EDIT_ENDPOINT_ID || fallbackEndpoint;
     let rpEndpoint = fallbackEndpoint;
     if (workflowType === "klein") {
-      rpEndpoint = process.env.RUNPOD_QWEN_EDIT_ENDPOINT_ID || fallbackEndpoint;
-    } else if (workflowType === "wan-video") {
+      rpEndpoint = qwenEndpoint;
+    } else if (workflowType === "wan-video" || workflowType === "gltch-wan") {
       rpEndpoint = process.env.RUNPOD_WAN_ENDPOINT_ID || fallbackEndpoint;
+    } else if (workflowType === "zimage") {
+      rpEndpoint = process.env.RUNPOD_ZIMAGE_ENDPOINT_ID || qwenEndpoint;
     }
 
     if (!rpEndpoint || !rpApiKey) {
@@ -582,7 +607,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Fetch image for edit/video workflows
-    const needsImage = ["klein", "wan-video"].includes(workflowType);
+    const needsImage = ["klein", "wan-video", "gltch-wan"].includes(workflowType);
     const imageUrl = (body.image_url as string || "").trim();
     if (needsImage && !imageUrl) {
       return res.status(400).json({ error: `image_url is required for ${workflowType} workflow` });
@@ -631,7 +656,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Build the actual ComfyUI workflow JSON
     let comfyWorkflow: Record<string, any>;
-    const isVideo = workflowType === "wan-video";
+    const isVideo = workflowType === "wan-video" || workflowType === "gltch-wan";
 
     if (workflowType === "klein") {
       const loras: { name: string; strengthModel: number; strengthClip: number }[] = [];
@@ -647,6 +672,45 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         steps,
         cfg,
         loras,
+      });
+    } else if (workflowType === "gltch-wan") {
+      // The busiest video path in the app (3,784 jobs last month) and the one
+      // this endpoint had no way to reach. Same graph the app runs.
+      const width = Math.min(1024, Math.max(256, Number(body.width) || 832));
+      const height = Math.min(1024, Math.max(256, Number(body.height) || 480));
+      const frameCount = Math.min(241, Math.max(17, Number(body.frame_count) || 81));
+      const resolution = Math.min(1280, Math.max(480, Number(body.resolution) || 832));
+      const params = {
+        prompt,
+        negativePrompt: body.negative_prompt || WAN_DEFAULT_NEGATIVE,
+        imageFilename,
+        width,
+        height,
+        seed,
+        steps,
+        cfg,
+        frameCount,
+        resolution,
+        shift: body.shift ? Math.min(15, Math.max(1, Number(body.shift))) : undefined,
+        audioMode: (body.audio_mode === "ambient" ? "ambient" : "none") as "none" | "ambient",
+        audioPrompt: body.audio_prompt || undefined,
+      };
+      // Same switch the app honours, so both surfaces run the same graph.
+      comfyWorkflow = process.env.COMFYUI_GLTCH_SIMPLE === "1"
+        ? buildGltchWanSimpleWorkflow(params)
+        : buildGltchWanWorkflow({ ...params, useUpscale: false });
+    } else if (workflowType === "zimage") {
+      const width = Math.min(2048, Math.max(256, Number(body.width) || 832));
+      const height = Math.min(2048, Math.max(256, Number(body.height) || 1216));
+      comfyWorkflow = buildZimageTurboWorkflow({
+        prompt,
+        width,
+        height,
+        seed,
+        steps,
+        cfg,
+        lora: body.lora || undefined,
+        loraStrength: Number(body.lora_strength) || 1.0,
       });
     } else if (workflowType === "wan-video") {
       const width = Math.min(1024, Math.max(256, Number(body.width) || 832));

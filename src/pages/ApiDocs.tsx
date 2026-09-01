@@ -87,7 +87,7 @@ function ApiPlayground({ baseUrl }: { baseUrl: string }) {
     } else {
       url = `${baseUrl}/api/v1/comfy`;
       body.workflow = comfyWorkflow;
-      if (["klein", "wan-video"].includes(comfyWorkflow)) {
+      if (["klein", "gltch-wan", "wan-video"].includes(comfyWorkflow)) {
         if (!imageUrl.trim()) { setError("This workflow requires an image_url"); setLoading(false); return; }
         body.image_url = imageUrl.trim();
       }
@@ -182,7 +182,7 @@ function ApiPlayground({ baseUrl }: { baseUrl: string }) {
       </div>
 
       {/* Image URL (for GLTCH and some ComfyUI workflows) */}
-      {(engine === "gltch" || (engine === "comfy" && ["klein", "wan-video"].includes(comfyWorkflow))) && (
+      {(engine === "gltch" || (engine === "comfy" && ["klein", "gltch-wan", "wan-video"].includes(comfyWorkflow))) && (
         <div className="space-y-1">
           <label className="text-xs font-mono text-muted-foreground">IMAGE URL</label>
           <input
@@ -231,8 +231,10 @@ function ApiPlayground({ baseUrl }: { baseUrl: string }) {
               className="bg-muted/50 border border-primary/20 rounded-lg px-2 py-1.5 text-xs font-mono text-foreground focus:outline-none focus:border-primary/50"
             >
               <option value="klein">klein edit (3 cr)</option>
-              <option value="txt2img">txt2img (3 cr)</option>
+              <option value="gltch-wan">gltch-wan video (15 cr)</option>
+              <option value="zimage">zimage (3 cr)</option>
               <option value="wan-video">wan-video (15 cr)</option>
+              <option value="txt2img">txt2img (3 cr)</option>
             </select>
           </div>
         )}
@@ -425,13 +427,13 @@ export default function ApiDocs() {
                           <td className="py-1.5 pr-3 text-primary">workflow</td>
                           <td className="py-1.5 pr-3">string</td>
                           <td className="py-1.5 pr-3">klein</td>
-                          <td className="py-1.5">txt2img, klein, wan-video</td>
+                          <td className="py-1.5">klein, gltch-wan, zimage, wan-video, txt2img</td>
                         </tr>
                         <tr className="border-b border-primary/5">
                           <td className="py-1.5 pr-3 text-primary">image_url</td>
                           <td className="py-1.5 pr-3">string</td>
                           <td className="py-1.5 pr-3">—</td>
-                          <td className="py-1.5">Required for klein and wan-video</td>
+                          <td className="py-1.5">Required for klein, gltch-wan and wan-video</td>
                         </tr>
                         <tr className="border-b border-primary/5">
                           <td className="py-1.5 pr-3 text-primary">width / height</td>
@@ -475,11 +477,23 @@ export default function ApiDocs() {
                           <td className="py-1.5 pr-3">0.8</td>
                           <td className="py-1.5">LoRA strength (0–2)</td>
                         </tr>
-                        <tr>
+                        <tr className="border-b border-primary/5">
                           <td className="py-1.5 pr-3 text-primary">frame_count</td>
                           <td className="py-1.5 pr-3">integer</td>
                           <td className="py-1.5 pr-3">81</td>
-                          <td className="py-1.5">Video frames (17–241, wan-video only)</td>
+                          <td className="py-1.5">Video frames (17–241) — gltch-wan and wan-video</td>
+                        </tr>
+                        <tr className="border-b border-primary/5">
+                          <td className="py-1.5 pr-3 text-primary">resolution</td>
+                          <td className="py-1.5 pr-3">integer</td>
+                          <td className="py-1.5 pr-3">832</td>
+                          <td className="py-1.5">Render resolution 480–1280 (gltch-wan only)</td>
+                        </tr>
+                        <tr>
+                          <td className="py-1.5 pr-3 text-primary">audio_mode</td>
+                          <td className="py-1.5 pr-3">string</td>
+                          <td className="py-1.5 pr-3">none</td>
+                          <td className="py-1.5">"ambient" adds generated audio; pair with audio_prompt (gltch-wan only)</td>
                         </tr>
                       </tbody>
                     </table>
@@ -501,17 +515,27 @@ export default function ApiDocs() {
                         <tr className="border-b border-primary/5">
                           <td className="py-1.5 pr-3 text-primary">klein</td>
                           <td className="py-1.5 pr-3">3–4 cr</td>
-                          <td className="py-1.5">Flux Klein image editing, the default (+1 for HD)</td>
+                          <td className="py-1.5">Flux Klein image editing, the default (+1 for HD). Needs image_url</td>
                         </tr>
                         <tr className="border-b border-primary/5">
-                          <td className="py-1.5 pr-3 text-primary">txt2img</td>
-                          <td className="py-1.5 pr-3">3 cr</td>
-                          <td className="py-1.5">Text-to-image (SD / Flux models)</td>
+                          <td className="py-1.5 pr-3 text-primary">gltch-wan</td>
+                          <td className="py-1.5 pr-3">15 cr</td>
+                          <td className="py-1.5">GLTCH WAN image-to-video — the video engine the app uses. Needs image_url</td>
                         </tr>
-                        <tr>
+                        <tr className="border-b border-primary/5">
+                          <td className="py-1.5 pr-3 text-primary">zimage</td>
+                          <td className="py-1.5 pr-3">3 cr</td>
+                          <td className="py-1.5">Z-Image Turbo text-to-image — fast, no source image</td>
+                        </tr>
+                        <tr className="border-b border-primary/5">
                           <td className="py-1.5 pr-3 text-primary">wan-video</td>
                           <td className="py-1.5 pr-3">15 cr</td>
-                          <td className="py-1.5">WAN image-to-video (requires image_url)</td>
+                          <td className="py-1.5">Baseline WAN image-to-video. Needs image_url</td>
+                        </tr>
+                        <tr>
+                          <td className="py-1.5 pr-3 text-primary">txt2img</td>
+                          <td className="py-1.5 pr-3">3 cr</td>
+                          <td className="py-1.5">Checkpoint text-to-image (see /api/v1/models)</td>
                         </tr>
                       </tbody>
                     </table>
@@ -563,7 +587,7 @@ export default function ApiDocs() {
             </div>
 
             <div>
-              <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">Python — GLTCH PRO WAN Video</h4>
+              <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">Python — GLTCH WAN Video</h4>
               <CopyBlock language="python" code={`import requests
 
 response = requests.post(
@@ -574,7 +598,7 @@ response = requests.post(
     },
     json={
         "prompt": "girl walking through a neon-lit alley, cinematic",
-        "workflow": "wan-video",
+        "workflow": "gltch-wan",
         "image_url": "https://example.com/photo.jpg",
         "frame_count": 81,
         "steps": 20,
@@ -647,7 +671,7 @@ console.log(\`Credits remaining: \${data.credits_remaining}\`);`} />
               <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">GLTCH PRO VIDEO RESPONSE</h4>
               <CopyBlock language="json" code={`{
   "type": "comfy-video",
-  "workflow": "wan-video",
+  "workflow": "gltch-wan",
   "video_url": "https://...",
   "seed": 1234567890,
   "credits_used": 15,

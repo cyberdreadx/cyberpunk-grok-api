@@ -40,10 +40,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // ComfyUI / GLTCH PRO models
   const comfyAvailable = !!(process.env.RUNPOD_ENDPOINT_ID && process.env.RUNPOD_API_KEY);
+  // Ordered by real usage — klein and gltch-wan are 97.6% of all jobs.
+  // Must stay in step with VALID_WORKFLOWS/COMFY_COSTS in api/v1/comfy.ts.
   const comfyModels = comfyAvailable ? [
     { id: "comfy-klein", type: "image-edit", credits_per_unit: 3, description: "GLTCH PRO Flux Klein image editing (default workflow)" },
-    { id: "comfy-txt2img", type: "image", credits_per_unit: 3, description: "GLTCH PRO text-to-image (Stable Diffusion / Flux)" },
-    { id: "comfy-wan-video", type: "video", credits_per_unit: 15, description: "GLTCH PRO WAN image-to-video generation" },
+    { id: "comfy-gltch-wan", type: "video", credits_per_unit: 15, description: "GLTCH WAN image-to-video — the app's video engine" },
+    { id: "comfy-zimage", type: "image", credits_per_unit: 3, description: "Z-Image Turbo text-to-image (no source image needed)" },
+    { id: "comfy-wan-video", type: "video", credits_per_unit: 15, description: "Baseline WAN image-to-video generation" },
+    { id: "comfy-txt2img", type: "image", credits_per_unit: 3, description: "Checkpoint text-to-image — pass one of `checkpoints` below" },
   ] : [];
 
   // Available checkpoints (for txt2img)

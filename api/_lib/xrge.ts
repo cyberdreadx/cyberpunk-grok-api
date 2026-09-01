@@ -78,7 +78,13 @@ async function tryEndpoint(url: string): Promise<number | null> {
   }
 }
 
-async function fetchXrgePrice(): Promise<number> {
+/**
+ * Exported because api/payouts.ts imports it. It was not exported, so under
+ * esbuild's ESM->CJS interop the binding resolved to `undefined` rather than
+ * failing at import — the XRGE instant-payout path threw only when someone
+ * actually requested one. Nothing typechecked api/, so nothing caught it.
+ */
+export async function fetchXrgePrice(): Promise<number> {
   const now = Date.now();
   if (cachedPrice !== null && now - cachedAt < PRICE_CACHE_TTL_MS) {
     return cachedPrice;

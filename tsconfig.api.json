@@ -1,0 +1,33 @@
+{
+  /*
+   * The backend was never typechecked.
+   *
+   * tsconfig.json references only tsconfig.app.json ("include": ["src"]) and
+   * tsconfig.node.json ("include": ["vite.config.ts"]), so `tsc -p tsconfig.json`
+   * reported success while api/ and server/ went unread. A stray comment opener
+   * in api/comfyui.ts once commented out two live declarations and still passed.
+   *
+   * Settings match the app config's leniency (this is pre-existing code, not a
+   * new strictness bar) — the point is that the files get parsed at all.
+   * Run with `npm run typecheck`.
+   */
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2023"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    // scripts/*.mts import "…/api/_lib/db.ts" by design — tsx resolves those.
+    "allowImportingTsExtensions": true,
+    "types": ["node"],
+    "allowJs": false,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false
+  },
+  "include": ["api", "server", "scripts"]
+}
