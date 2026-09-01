@@ -49,7 +49,7 @@ function removeActiveJob(promptId: string) {
 export async function comfySubmitAndPollStandalone(
   body: Record<string, any>,
   opts: { pollInterval?: number; maxAttempts?: number } = {},
-): Promise<{ image?: string; video?: string }> {
+): Promise<{ image?: string; video?: string; previewUrl?: string }> {
   const { pollInterval = 2000, maxAttempts = 300 } = opts;
 
   const submitData = await apiFetch<{
@@ -99,12 +99,12 @@ export async function comfyPollUntilDone(
   promptId: string,
   outputType: string,
   opts: { runpodEndpointId?: string; pollInterval?: number; maxAttempts?: number } = {},
-): Promise<{ image?: string; video?: string }> {
+): Promise<{ image?: string; video?: string; previewUrl?: string }> {
   const { runpodEndpointId, pollInterval = 3000, maxAttempts = 200 } = opts;
 
   for (let i = 0; i < maxAttempts; i++) {
     await new Promise((r) => setTimeout(r, pollInterval));
-    const pollData = await apiFetch<{ status: string; image?: string; video?: string; error?: string }>("/comfyui", {
+    const pollData = await apiFetch<{ status: string; image?: string; video?: string; previewUrl?: string; error?: string }>("/comfyui", {
       method: "POST",
       body: { action: "poll", promptId, outputType, ...(runpodEndpointId && { runpodEndpointId }) },
     });
@@ -472,7 +472,7 @@ export function useGrokApi() {
           const pollBody = saved.pollEndpoint === "gltch"
             ? { action: "poll", promptId: saved.promptId }
             : { action: "poll", promptId: saved.promptId, outputType: saved.outputType, ...(saved.runpodEndpointId && { runpodEndpointId: saved.runpodEndpointId }) };
-          const poll = await apiFetch<{ status: string; image?: string; video?: string; error?: string }>(pollPath, { method: "POST", body: pollBody });
+          const poll = await apiFetch<{ status: string; image?: string; video?: string; previewUrl?: string; error?: string }>(pollPath, { method: "POST", body: pollBody });
 
           if (poll.status === "done") {
             comfyJobStarts.current.delete(jobId);
@@ -982,7 +982,7 @@ export function useGrokApi() {
         const submitData = await apiFetch<{
           promptId: string;
           seed: number;
-          syncResult?: { status: string; image?: string; error?: string };
+          syncResult?: { status: string; image?: string; previewUrl?: string; error?: string };
         }>("/gltch", {
           method: "POST",
           body: {
@@ -1183,7 +1183,7 @@ export function useGrokApi() {
   const comfySubmitAndPoll = useCallback(async (
     body: Record<string, any>,
     opts: { pollInterval?: number; maxAttempts?: number; onPromptId?: (promptId: string) => void } = {},
-  ): Promise<{ image?: string; video?: string }> => {
+  ): Promise<{ image?: string; video?: string; previewUrl?: string }> => {
     const { pollInterval = 2000, maxAttempts = 300, onPromptId } = opts;
 
     const submitData = await apiFetch<{

@@ -222,7 +222,9 @@ const FEED_LINES: { a: string; t: string; alert?: boolean }[] = [
   { a: "PRISM", t: "style transfer locked in" },
 ];
 
-const TICKER = [
+/** `r` (the red highlight) belonged to the PAYOUTS entry, which came off the
+ *  first screen. No item is highlighted now, so the type carries no `r`. */
+const TICKER: { b: string; t: string }[] = [
   { b: "GRID", t: "all districts reporting" },
   { b: "RENDER", t: "swarm at nominal load" },
   { b: "MODELS", t: "uncensored set online" },
@@ -652,7 +654,7 @@ export default function CommandCenterLanding() {
         <div className="cc-ticker-track">
           {[...TICKER, ...TICKER].map((t, i) => (
             <span className="cc-ticker-item" key={i}>
-              <b>{t.b}</b> <span className={t.r ? "r" : ""}>{t.t}</span>
+              <b>{t.b}</b> <span>{t.t}</span>
             </span>
           ))}
         </div>

@@ -61,7 +61,7 @@ const call = async (path: string, token: string, body?: any, method?: string) =>
     body: body === undefined ? undefined : JSON.stringify(body),
     signal: AbortSignal.timeout(30000),
   });
-  return { status: res.status, json: await res.json().catch(() => ({} as any)) };
+  return { status: res.status, json: (await res.json().catch(() => ({}))) as any };
 };
 
 const post = (n: string) => `https://antireddit.com/a/gltchrunner/${n}`;

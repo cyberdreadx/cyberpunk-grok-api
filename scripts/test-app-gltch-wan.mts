@@ -45,7 +45,7 @@ if (seed?.ok) {
     headers: { "Content-Type": "application/json", "X-API-Key": raw },
     body: JSON.stringify({ prompt: "a neon-lit alley, rain", workflow: "zimage" }),
     signal: AbortSignal.timeout(290000),
-  }).then(r => r.json());
+  }).then(r => r.json()) as any;
   await sql`DELETE FROM api_keys WHERE id = ${k.id}::uuid`;
   if (!z?.image_url) { console.error("could not produce a seed frame:", z); process.exit(1); }
   console.log(`seed frame: ${z.image_url}`);
@@ -88,7 +88,7 @@ while (Date.now() < deadline) {
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
     body: JSON.stringify({ action: "poll", promptId, workflow: "gltch-wan", outputType: "video" }),
     signal: AbortSignal.timeout(60000),
-  }).then(r => r.json()).catch(() => ({}));
+  }).then(r => r.json()).catch(() => ({})) as any;
   if (p.status === "done" || p.video || p.image || p.error) { out = p; break; }
   process.stdout.write(".");
 }

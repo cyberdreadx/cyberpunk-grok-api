@@ -56,7 +56,7 @@ try {
         }),
         signal: AbortSignal.timeout(240000),
       });
-      const data = await res.json().catch(() => ({}));
+      const data = (await res.json().catch(() => ({}))) as any;
       const secs = Math.round((Date.now() - t0) / 1000);
       if (res.ok && data.image_url) {
         working.push(ckpt);

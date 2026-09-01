@@ -41,7 +41,7 @@ const call = async (body: any, ms = 290000) => {
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(ms),
   });
-  const json = await res.json().catch(() => ({} as any));
+  const json = (await res.json().catch(() => ({}))) as any;
   return { status: res.status, json, secs: Math.round((Date.now() - t0) / 1000) };
 };
 

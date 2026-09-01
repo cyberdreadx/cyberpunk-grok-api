@@ -1085,7 +1085,6 @@ const Index = () => {
             }}
           />
         </div>
-        {storeOverlay}
       </CyberLayout>
     );
   }
