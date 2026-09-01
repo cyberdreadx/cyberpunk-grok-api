@@ -825,6 +825,7 @@ export function useGrokApi() {
         ));
       }
     })();
+    return jobId;
   }, [apiMode, makeRequest, makeProxyRequest, persistNewResults, prependResults]);
 
   // Video generation (text-to-video & image-to-video)
@@ -1067,6 +1068,7 @@ export function useGrokApi() {
         ));
       }
     })();
+    return jobId;
   }, [persistNewResults, prependResults]);
 
   const clearResults = useCallback(async () => {
@@ -1360,6 +1362,7 @@ export function useGrokApi() {
         ));
       }
     })();
+    return jobId;
   }, [comfySubmitAndPoll, persistNewResults, prependResults]);
 
   // ComfyUI Image Edit (fire-and-forget — Flux 2 Klein via `klein` workflow)
@@ -1434,6 +1437,7 @@ export function useGrokApi() {
         ));
       }
     })();
+    return jobId;
   }, [comfySubmitAndPoll, persistNewResults, prependResults]);
 
   // ComfyUI Image-to-Video (WAN Video) — fire-and-forget
@@ -1538,6 +1542,7 @@ export function useGrokApi() {
         ));
       }
     })();
+    return jobId;
   }, [comfySubmitAndPoll, persistNewResults, prependResults]);
 
   // LTX-2.3 video + native audio (text-to-video or image-to-video) — fire-and-forget
@@ -1611,6 +1616,7 @@ export function useGrokApi() {
         ));
       }
     })();
+    return jobId;
   }, [comfySubmitAndPoll, persistNewResults, prependResults]);
 
   // ComfyUI Chained Text-to-Video (zimage → gltch-wan) — fire-and-forget
@@ -1722,6 +1728,7 @@ export function useGrokApi() {
         ));
       }
     })();
+    return jobId;
   }, [comfySubmitAndPoll, persistNewResults, prependResults]);
 
   // ComfyUI LongLook Multi-Clip Video — fire-and-forget
@@ -1814,6 +1821,7 @@ export function useGrokApi() {
         ));
       }
     })();
+    return jobId;
   }, [comfySubmitAndPoll, persistNewResults, prependResults]);
 
   const clearError = useCallback(() => {

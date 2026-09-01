@@ -13,6 +13,7 @@ import {
   backendEnabled,
 } from "@/lib/api";
 import { getBrowserFingerprint } from "@/lib/fingerprint";
+import { setCreateModeDefaultForNewAccount } from "@/lib/createMode";
 
 export interface PostingStatus {
   can_post: boolean;
@@ -121,6 +122,10 @@ export function useAuth() {
     if (data.token) {
       setAuthToken(data.token);
       setUser({ ...data.user, email_verified: data.email_verified });
+      // Brand-new accounts start in Easy. Doing it here rather than by
+      // comparing dates is what makes "existing accounts keep Classic" true:
+      // an account with no stored preference is one that predates Easy.
+      setCreateModeDefaultForNewAccount();
     }
     // Still show verification prompt so they verify their account
     if (data.needsVerification) {

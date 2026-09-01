@@ -3,6 +3,8 @@ import { useTranslation } from "react-i18next";
 import { Terminal, Key, Coins, Shield, Eye, MessageCircle, HelpCircle, Server, Zap, Cpu, ChevronDown, Film, X, AlertCircle, CheckCircle2, Upload, Users, Image, Code, ToggleLeft, ToggleRight, Gift, Rss, BadgeCheck, MoreHorizontal, Star } from "lucide-react";
 import { Link } from "react-router-dom";
 import CyberLayout from "@/components/CyberLayout";
+import EasyMode from "@/components/easy/EasyMode";
+import { resolveCreateMode, setCreateMode, type CreateMode } from "@/lib/createMode";
 import StoriesBar from "@/components/StoriesBar";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import MobileCreditsPill from "@/components/MobileCreditsPill";
@@ -233,6 +235,17 @@ const Index = () => {
   const { history, addEntry, removeEntry, clearHistory } = usePromptHistory();
   const [activePrompt, setActivePrompt] = useState("");
   const [activeImageUrl, setActiveImageUrl] = useState("");
+
+  /* Easy | Classic. Classic is this file's existing flow, rendered unchanged
+     below; Easy is an additional view over the same generate calls. Resolved
+     once from ?mode=, then the stored preference, then Classic — so every
+     account that existed before Easy shipped keeps what it had, and Library
+     deep links (?action=edit|animate) always land on the parameter UI. */
+  const [createMode, setCreateModeState] = useState<CreateMode>(() => resolveCreateMode());
+  const switchCreateMode = useCallback((m: CreateMode) => {
+    setCreateModeState(m);
+    setCreateMode(m);
+  }, []);
 
   // Pick up deep-link actions from URL params (Library edit/animate, shared prompts)
   React.useEffect(() => {
@@ -1031,9 +1044,57 @@ const Index = () => {
     }
   };
 
+  /* The toggle. Rendered in both views so either one can reach the other. */
+  const modeToggle = (
+    <div className="flex justify-center">
+      <div className="inline-flex rounded-full border border-border/50 bg-muted/30 p-0.5">
+        {(["easy", "classic"] as const).map((m) => (
+          <button
+            key={m}
+            onClick={() => switchCreateMode(m)}
+            aria-pressed={createMode === m}
+            className={`px-4 py-1 rounded-full font-mono-share text-[11px] tracking-wider transition-colors ${createMode === m
+              ? "bg-primary/20 text-primary"
+              : "text-muted-foreground hover:text-foreground"
+              }`}
+          >
+            {m === "easy" ? "Easy" : "Classic"}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  /* Easy renders instead of the Classic body, never over it. Every hook above
+     has already run, so this early return changes nothing about Classic's own
+     tree — which is left byte-identical below. */
+  if (createMode === "easy") {
+    return (
+      <CyberLayout>
+        <div className="max-w-5xl mx-auto px-3 sm:px-4 pt-4">{modeToggle}</div>
+        <div className="px-0 sm:px-4">
+          <EasyMode
+            engines={{
+              comfyGenerate,
+              comfyEdit,
+              comfyVideo,
+              results,
+              comfyJobs,
+              onEditImage: (url) => { switchCreateMode("classic"); handleEditImage(url); },
+              onAnimateImage: (url) => { switchCreateMode("classic"); handleAnimateImage(url); },
+            }}
+          />
+        </div>
+        {storeOverlay}
+      </CyberLayout>
+    );
+  }
+
   return (
     <CyberLayout>
       <div className="max-w-5xl mx-auto px-3 sm:px-4 py-4 sm:py-8 pb-24 sm:pb-8 space-y-4 sm:space-y-6">
+        {modeToggle}
+
         {/* Promo strip — flash sale takes priority; otherwise Buy & Hold discovery. Only one ever shows. */}
         {flashSaleActive ? (
           <FlashSaleBanner onClick={() => setStoreOpen(true)} />
