@@ -118,6 +118,24 @@ if (!APPLY) {
 }
 
 console.log("\napplying…");
+
+/*
+ * feed_comments.parent_id cascades on delete, so removing a spam comment also
+ * removes replies to it — and those replies belong to other people. The first
+ * run of this took three real replies ("thank u", "thx", a compliment) with it,
+ * which had to be restored by hand from a backup.
+ *
+ * Any reply by someone else is detached first: it loses its thread context but
+ * keeps its author's words, which is the right trade.
+ */
+const ids = toDelete.map((r) => r.id);
+const rescued = await sql`
+  UPDATE feed_comments c SET parent_id = NULL
+  WHERE c.parent_id = ANY(${ids}::uuid[])
+    AND c.id <> ALL(${ids}::uuid[])
+  RETURNING c.id` as any[];
+if (rescued.length) console.log(`  detached ${rescued.length} repl${rescued.length === 1 ? "y" : "ies"} by other users first`);
+
 let deleted = 0;
 for (const r of toDelete) {
   // Karma first: if the delete fails the events are still keyed to a real row,
