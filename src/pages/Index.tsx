@@ -72,6 +72,31 @@ const ANNOUNCEMENTS: { id: string; message: string; type?: "info" | "warning" | 
 const SFW_LORA_KEYWORDS = ["skin", "angle"];
 const isNsfwLora = (name: string) => !SFW_LORA_KEYWORDS.some(k => name.toLowerCase().includes(k));
 
+/* Output shapes for the two RENDER engines.
+ *
+ * Every pair is divisible by 32, which satisfies LTX (buildLtxWorkflow rounds
+ * to 32, so an exact pair means the label matches the file) and WAN's /16 in
+ * one go. Pixel counts are held between 393k and 409k — near the 832x480 the
+ * COMFY chain has always used — because both engines are billed flat per clip
+ * or per second, not per pixel, so a shape change must not quietly double
+ * render time.
+ *
+ * COMFY reaches these indirectly: buildGltchWanWorkflow ignores the width and
+ * height it is handed and takes the video's shape from resizing the Z-Image
+ * start frame into a `resolution` x `resolution` box (ImageResizeKJv2,
+ * keep_proportion, divisible_by 16). Passing the pair's long edge as
+ * `resolution` reproduces the pair exactly, since the start frame already
+ * carries the ratio.
+ */
+type RenderAspect = "16:9" | "3:2" | "1:1" | "2:3" | "9:16";
+const RENDER_SIZES: Record<RenderAspect, [number, number]> = {
+  "16:9": [832, 480],
+  "3:2": [768, 512],
+  "1:1": [640, 640],
+  "2:3": [512, 768],
+  "9:16": [480, 832],
+};
+
 const Index = () => {
   const [simpleMode, setSimpleMode] = useState(() => localStorage.getItem("ui-mode") !== "advanced");
   // Keep the ring highlight on first visit, but the popover tooltip itself is gone.
@@ -340,6 +365,14 @@ const Index = () => {
   const [comfyWidth, setComfyWidth] = useState(832);
   const [comfyHeight, setComfyHeight] = useState(480);
   const [comfyFrameCount, setComfyFrameCount] = useState(81);
+
+  /* RENDER output shape. Kept apart from comfyWidth/comfyHeight, which belong
+     to the GLTCH edit picker and carry a 0x0 "AUTO" sentinel that means
+     nothing for a video. Both render engines were pinned to one hardcoded
+     pair — COMFY to 832x480, LTX to 768x512 — so this is the first control
+     either has had over its shape. */
+  const [renderAspect, setRenderAspect] = useState<RenderAspect>("16:9");
+  const [renderW, renderH] = RENDER_SIZES[renderAspect];
   
   const [comfyVideoLora, setComfyVideoLora] = useState("none");
   const [comfyVideoLoraStrength, setComfyVideoLoraStrength] = useState(0.30);
@@ -852,10 +885,12 @@ const Index = () => {
           comfyTextToVideo({
             prompt: data.prompt,
             negativePrompt: negPrompt || undefined,
-            width: 832, height: 480,
+            // Sets the Z-Image start frame, which is what the WAN step scales
+            // to get the video's shape; `resolution` is the box it scales into.
+            width: renderW, height: renderH,
             steps: 4, cfg: 1,
             frameCount: comfyFrameCount,
-            resolution: 832, shift: 8,
+            resolution: Math.max(renderW, renderH), shift: 8,
             useRife: true, useUpscale: true,
             videoLora: comfyVideoLora !== "none" ? comfyVideoLora : undefined,
             videoLoraStrength: comfyVideoLoraStrength,
@@ -868,7 +903,7 @@ const Index = () => {
           ltxVideo({
             prompt: data.prompt,
             negativePrompt: negPrompt || undefined,
-            width: 768, height: 512,
+            width: renderW, height: renderH,
             frameCount: comfyFrameCount,
             frameRate: 24,
             seed: globalSeed ? Number(globalSeed) : undefined,
@@ -1816,6 +1851,20 @@ const Index = () => {
                       </span>
                     </div>
                     <div>
+                      <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">
+                        Aspect
+                        <span className="text-muted-foreground/40 ml-1.5">{renderW}×{renderH}</span>
+                      </label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {(Object.keys(RENDER_SIZES) as RenderAspect[]).map((a) => (
+                          <button key={`ra-${a}`} type="button" onClick={() => setRenderAspect(a)}
+                            className={`px-2 py-1 rounded text-[9px] font-mono-share transition-all ${renderAspect === a ? "bg-purple-500/20 border-purple-500/50 text-purple-300 border" : "bg-card/30 border border-border text-muted-foreground hover:border-purple-500/30"}`}>
+                            {a}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
                       <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Duration</label>
                       <div className="flex flex-wrap gap-1.5">
                         {[{ label: "~2s", value: 33 }, { label: "~3s", value: 49 }, { label: "~5s", value: 81 }, { label: "~7s", value: 113 }, { label: "~10s", value: 161 }, { label: "~15s", value: 241 }].map((p) => (
@@ -1908,6 +1957,20 @@ const Index = () => {
                       <span className="font-mono-share text-[9px] text-amber-300/70">
                         LTX-2.3 — native sound · {Math.max(1, Math.round(comfyFrameCount / 24))}s · 7 cr/s
                       </span>
+                    </div>
+                    <div>
+                      <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">
+                        Aspect
+                        <span className="text-muted-foreground/40 ml-1.5">{renderW}×{renderH}</span>
+                      </label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {(Object.keys(RENDER_SIZES) as RenderAspect[]).map((a) => (
+                          <button key={`ral-${a}`} type="button" onClick={() => setRenderAspect(a)}
+                            className={`px-2 py-1 rounded text-[9px] font-mono-share transition-all ${renderAspect === a ? "bg-amber-400/20 border-amber-400/50 text-amber-300 border" : "bg-card/30 border border-border text-muted-foreground hover:border-amber-400/30"}`}>
+                            {a}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                     <div>
                       <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Duration</label>
