@@ -623,10 +623,12 @@ const Index = () => {
     const isComfyAnimate = mode === "image-to-video" && animateEngine === "comfy" && !longLookEnabled;
     const isComfyLongLook = mode === "image-to-video" && animateEngine === "comfy" && longLookEnabled;
 
+    // No 2K tier: grokEditQueued never sends `resolution`, so xAI renders at 1K
+    // and the server prices it at 1K. Quoting the 2K rate here only ever
+    // overstated the cost — and did it off a stale value, since RESOLUTION is
+    // not shown on this path.
     if (isGrokEdit) {
-      const is2k = (settings.resolution || "1k") === "2k";
-      const m: CreditMode = grokPro && is2k ? "edit-image-pro-2k" : grokPro ? "edit-image-pro" : is2k ? "edit-image-2k" : "edit-image";
-      return calculateCreditCost(m, settings.count);
+      return calculateCreditCost(grokPro ? "edit-image-pro" : "edit-image", settings.count);
     }
     if (isGltchEdit) return calculateCreditCost("comfy-image");
     if (isZimage || isComfyGen) return calculateCreditCost("comfy-image");
@@ -716,13 +718,9 @@ const Index = () => {
       // Calculate cost
       let cost: number;
       if (isGrokEdit) {
-        const is2k = (settings.resolution || "1k") === "2k";
-        let editMode: CreditMode;
-        if (grokPro && is2k) editMode = "edit-image-pro-2k";
-        else if (grokPro) editMode = "edit-image-pro";
-        else if (is2k) editMode = "edit-image-2k";
-        else editMode = "edit-image";
-        cost = calculateCreditCost(editMode, settings.count);
+        // Same 1K rate the deduction below and the server both use, so the gate
+        // can no longer refuse a job the user has the credits to run.
+        cost = calculateCreditCost(grokPro ? "edit-image-pro" : "edit-image", settings.count);
       } else if (isGltchEdit) {
         cost = calculateCreditCost("comfy-image");
       } else if (isZimage || isComfyGen) {
