@@ -436,6 +436,32 @@ const Index = () => {
     renderEngine === "grok" || animateEngine === "grok";
   const effectiveApiMode = apiMode;
 
+  /* Which render_config fields the selected mode+engine actually sends.
+     `<SettingsPanel />` is keyed on mode alone, so it used to show all of them
+     for all engines — ASPECT_RATIO on a comfy render did nothing but relabel
+     the summary, because that submit path passes a hardcoded 832×480, and the
+     comfy image paths render one image whatever BATCH_COUNT says. Mirrors
+     `handleSubmit` below; keep the two in step when an engine starts or stops
+     honouring a field. */
+  const renderConfigFields = React.useMemo(() => {
+    const grokish = (e: string) => e === "grok" || isSeedanceTier(e);
+    const isT2I = mode === "text-to-image";
+    const isT2V = mode === "text-to-video";
+    const isI2V = mode === "image-to-video";
+    return {
+      // generateImage sends aspect_ratio; generateVideo only sends it when there
+      // is no source image, so image-to-video never uses the picker.
+      aspectRatio: (isT2I && genEngine === "grok") || (isT2V && grokish(renderEngine)),
+      // resolution rides along on both Grok generate calls, but grokEditQueued
+      // omits it (it only changes the pre-flight credit estimate).
+      resolution: (isT2I && genEngine === "grok")
+        || (isT2V && grokish(renderEngine))
+        || (isI2V && grokish(animateEngine)),
+      count: (isT2I && genEngine === "grok") || (mode === "edit-image" && editEngine === "grok"),
+      duration: (isT2V && grokish(renderEngine)) || (isI2V && grokish(animateEngine)),
+    };
+  }, [mode, genEngine, editEngine, renderEngine, animateEngine]);
+
   // When Grok is selected without a key, open `<ApiKeyDialog />` (mounted while a Grok
   // engine is active). Dispatch from a post-render effect so the dialog's listener is
   // attached before the event fires.
@@ -1452,11 +1478,10 @@ const Index = () => {
               onImmersionChange={isAdmin ? handleImmersionChange : undefined}
               isAdmin={isAdmin}
               mode={mode}
-              showDuration={mode === "text-to-video"
-                ? (renderEngine === "grok" || isSeedanceTier(renderEngine))
-                : mode === "image-to-video"
-                  ? (animateEngine === "grok" || isSeedanceTier(animateEngine))
-                  : false}
+              showAspectRatio={renderConfigFields.aspectRatio}
+              showResolution={renderConfigFields.resolution}
+              showCount={renderConfigFields.count}
+              showDuration={renderConfigFields.duration}
             />
 
             {/* 3-step flow guide */}

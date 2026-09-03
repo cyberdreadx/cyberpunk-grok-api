@@ -33,6 +33,21 @@ interface SettingsPanelProps {
   onImmersionChange?: (settings: ImmersionSettings) => void;
   isAdmin?: boolean;
   mode: GrokMode;
+  /** Which controls the selected engine actually sends.
+   *
+   *  This panel is keyed on mode, not engine, so every control used to render
+   *  for every engine — but only the Grok/Seedance paths read most of them.
+   *  A comfy or LTX render took its dimensions from a hardcoded pair, so
+   *  picking 9:16 here changed the summary label and produced the same
+   *  landscape clip; the comfy image paths render one image regardless of
+   *  BATCH_COUNT. Each flag defaults true and Index passes false for the
+   *  mode+engine combinations whose submit path drops the field.
+   *
+   *  If nothing is left to configure the panel renders nothing at all, rather
+   *  than an empty box under a summary line implying settings that apply. */
+  showAspectRatio?: boolean;
+  showResolution?: boolean;
+  showCount?: boolean;
   /** Show the seconds DURATION slider. Only Grok/Seedance use it; other engines
       set length via their own panel presets, so it's hidden for them. Defaults true. */
   showDuration?: boolean;
@@ -83,14 +98,33 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
   onImmersionChange,
   isAdmin = false,
   mode,
+  showAspectRatio = true,
+  showResolution = true,
+  showCount = true,
   showDuration = true,
 }) => {
   const { t } = useTranslation();
   const isVideoMode = mode === "text-to-video" || mode === "image-to-video";
 
-  const summaryText = isVideoMode
-    ? `${videoSettings.aspectRatio} • ${videoSettings.resolution} • ${videoSettings.duration}s`
-    : `${settings.aspectRatio} • ×${settings.count} • ${(settings.resolution || "1k").toUpperCase()}`;
+  // Only the fields that survive to the request get a summary segment, so the
+  // collapsed line never claims a ratio or resolution the engine will discard.
+  const summaryText = (isVideoMode
+    ? [
+        showAspectRatio ? videoSettings.aspectRatio : null,
+        showResolution ? videoSettings.resolution : null,
+        showDuration ? `${videoSettings.duration}s` : null,
+      ]
+    : [
+        showAspectRatio ? settings.aspectRatio : null,
+        showCount ? `×${settings.count}` : null,
+        showResolution ? (settings.resolution || "1k").toUpperCase() : null,
+      ]
+  ).filter(Boolean).join(" • ");
+
+  const hasAnyControl = isVideoMode
+    ? showAspectRatio || showResolution || showDuration
+    : showAspectRatio || showResolution || showCount;
+  if (!hasAnyControl) return null;
 
   return (
     <Collapsible defaultOpen={false} className="terminal-block rounded-md overflow-hidden px-3 py-2">
@@ -109,7 +143,10 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
       <CollapsibleContent className="mt-4 space-y-5 animate-slide-up">
         {isVideoMode ? (
           <>
-            {/* Video Aspect Ratio */}
+            {/* Video Aspect Ratio — sent only on text-to-video via Grok/Seedance.
+                image-to-video takes its aspect from the source frame, and the
+                comfy/WAN/LTX paths pass their own width & height. */}
+            {showAspectRatio && (
             <div className="space-y-2">
               <label className="font-orbitron text-[10px] tracking-wider text-muted-foreground flex items-center gap-1.5">
                 <Maximize className="w-3 h-3" />
@@ -139,8 +176,10 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 ))}
               </div>
             </div>
+            )}
 
             {/* Video Resolution */}
+            {showResolution && (
             <div className="space-y-2">
               <label className="font-orbitron text-[10px] tracking-wider text-muted-foreground flex items-center gap-1.5">
                 <Monitor className="w-3 h-3" />
@@ -170,6 +209,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 ))}
               </div>
             </div>
+            )}
 
             {/* Video Duration — only shown for engines that use a per-second length (Grok/Seedance) */}
             {showDuration && (
@@ -199,7 +239,9 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
           </>
         ) : (
           <>
-            {/* Image Aspect Ratio */}
+            {/* Image Aspect Ratio — only text-to-image on Grok sends it. Edits
+                inherit the source image; zimage and comfy use fixed sizes. */}
+            {showAspectRatio && (
             <div className="space-y-2">
               <label className="font-orbitron text-[10px] tracking-wider text-muted-foreground flex items-center gap-1.5">
                 <Maximize className="w-3 h-3" />
@@ -229,8 +271,10 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 ))}
               </div>
             </div>
+            )}
 
             {/* Image Resolution */}
+            {showResolution && (
             <div className="space-y-2">
               <label className="font-orbitron text-[10px] tracking-wider text-muted-foreground flex items-center gap-1.5">
                 <Monitor className="w-3 h-3" />
@@ -260,8 +304,11 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 ))}
               </div>
             </div>
+            )}
 
-            {/* Image Count */}
+            {/* Image Count — n= only reaches the Grok image endpoints; every
+                comfy image path renders exactly one. */}
+            {showCount && (
             <div className="space-y-2">
               <label className="font-orbitron text-[10px] tracking-wider text-muted-foreground flex items-center gap-1.5">
                 <Hash className="w-3 h-3" />
@@ -284,6 +331,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 <span className="font-mono-share text-[9px] text-muted-foreground">10</span>
               </div>
             </div>
+            )}
 
           </>
         )}
