@@ -1726,6 +1726,43 @@ const Index = () => {
                     </button>
                   )}
                 </div>
+
+                {/* Z-Image was locked to 1024x1024 — the only size it was ever
+                    given, since render_config's ASPECT_RATIO never reached this
+                    path. These are the standard ~1MP aspect buckets: every one
+                    is a multiple of 64 (EmptyLatentImage floors to /8, and the
+                    model is trained at 1MP, so going far off either sends the
+                    composition sideways or wastes the latent). */}
+                {genEngine === "gltch" && (
+                  <div>
+                    <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">OUTPUT SIZE</label>
+                    <div className="grid grid-cols-4 gap-1">
+                      {([
+                        [1024, 1024, "1:1"],
+                        [1152, 896, "4:3"],
+                        [1216, 832, "3:2"],
+                        [1344, 768, "16:9"],
+                        [896, 1152, "3:4"],
+                        [832, 1216, "2:3"],
+                        [768, 1344, "9:16"],
+                      ] as [number, number, string][]).map(([w, h, label]) => (
+                        <button key={`zi-${w}x${h}`} type="button"
+                          onClick={() => { setZimageWidth(w); setZimageHeight(h); }}
+                          className={`px-1.5 py-1 rounded text-center font-mono-share text-[9px] border transition-all
+                            ${zimageWidth === w && zimageHeight === h
+                              ? "border-secondary bg-secondary/10 text-secondary"
+                              : "border-border bg-card/30 text-muted-foreground hover:border-secondary/40"
+                            }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="font-mono-share text-[8px] text-muted-foreground/50 mt-1">
+                      {zimageWidth}×{zimageHeight} — 3 cr at any size
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
