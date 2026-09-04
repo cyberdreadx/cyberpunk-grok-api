@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Activity, ArrowRight, Bot, Boxes, ChevronDown, CircuitBoard, Cpu, Eye,
@@ -9,25 +9,12 @@ import { apiFetch } from "@/lib/api";
 import { isAgeVerified, AGE_VERIFIED_EVENT } from "@/lib/ageGate";
 import "./commandCenter.css";
 
-const GridCity = lazy(() => import("./GridCity"));
 
 const SIGNUP = "/create?signup=1";
 
 /* ──────────────────────────────────────────────────────────────────────────
    Small utilities
    ────────────────────────────────────────────────────────────────────────── */
-
-function hasWebGL(): boolean {
-  try {
-    const c = document.createElement("canvas");
-    return !!(
-      (window as any).WebGLRenderingContext &&
-      (c.getContext("webgl") || c.getContext("experimental-webgl"))
-    );
-  } catch {
-    return false;
-  }
-}
 
 function prefersReducedMotion(): boolean {
   return typeof matchMedia !== "undefined" && matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -42,37 +29,38 @@ function themeColor(varName: string, fallback: string): string {
   }
 }
 
-/** Catches a WebGL/runtime failure in the canvas subtree → static fallback. */
-class CanvasBoundary extends React.Component<
-  { fallback: React.ReactNode; children: React.ReactNode },
-  { err: boolean }
-> {
-  state = { err: false };
-  static getDerivedStateFromError() {
-    return { err: true };
-  }
-  render() {
-    return this.state.err ? this.props.fallback : this.props.children;
-  }
-}
-
+/**
+ * The hero backdrop: a photograph, not a diagram.
+ *
+ * This was a three.js city of untextured extruded boxes, which read as a
+ * wireframe of a city rather than a city. Both images were generated on GLTCH
+ * itself, so the landing page is made of the product it sells.
+ *
+ * Two shapes rather than one cropped: a landscape skyline centre-cropped to a
+ * phone loses the skyline, which is the only part that matters. <picture>
+ * picks by orientation, so a phone downloads 125 KB and a desktop 51 KB —
+ * never both, and never the 808 KB three.js bundle this replaces.
+ *
+ * The drift is a slow scale-and-pan so the frame is never entirely still. It
+ * is decorative, so it stops outright under prefers-reduced-motion — a
+ * background that creeps is exactly what that setting exists to silence.
+ */
 function CanvasLayer() {
-  const cfg = useMemo(() => {
-    const mobile = typeof window !== "undefined" && window.innerWidth < 820;
-    return {
-      enabled: hasWebGL() && !prefersReducedMotion(),
-      density: mobile ? 14 : 22,
-      packets: mobile ? 90 : 220,
-    };
-  }, []);
-
-  if (!cfg.enabled) return <div className="cc-fallback" />;
   return (
-    <CanvasBoundary fallback={<div className="cc-fallback" />}>
-      <Suspense fallback={<div className="cc-fallback" />}>
-        <GridCity density={cfg.density} packets={cfg.packets} />
-      </Suspense>
-    </CanvasBoundary>
+    <picture>
+      <source media="(orientation: portrait) and (max-width: 820px)" srcSet="/hero/city-tall.webp" />
+      <img
+        src="/hero/city-wide.webp"
+        alt=""
+        aria-hidden
+        className="cc-hero-img"
+        /* eager + high priority: this is the largest contentful paint, so
+           lazy-loading it would only delay the thing being measured. */
+        loading="eager"
+        fetchPriority="high"
+        decoding="async"
+      />
+    </picture>
   );
 }
 
@@ -411,7 +399,8 @@ export default function CommandCenterLanding() {
         <CanvasLayer />
       </div>
 
-      {/* Atmosphere overlays */}
+      {/* Darkened for text contrast, then the existing atmosphere on top */}
+      <div className="cc-scrim" aria-hidden />
       <div className="cc-overlay cc-scanlines cc-flicker" aria-hidden />
       <div className="cc-overlay cc-vignette" aria-hidden />
       <span className="cc-corner tl" aria-hidden />

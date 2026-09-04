@@ -29,6 +29,32 @@
 }
 .cc-canvas canvas { display: block; }
 
+/* ---- Hero photograph ----
+   Replaces the three.js city. Scaled slightly past the viewport so the drift
+   never exposes an edge; object-fit keeps the skyline rather than squashing
+   it at any aspect. */
+.cc-hero-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 40%;
+  animation: cc-drift 44s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+@keyframes cc-drift {
+  from { transform: scale(1.06) translate3d(-0.8%, 0.4%, 0); }
+  to   { transform: scale(1.14) translate3d(0.8%, -0.6%, 0); }
+}
+
+/* Decorative motion only — a background that creeps is precisely what this
+   setting exists to stop. The scale stays so no edge is ever exposed. */
+@media (prefers-reduced-motion: reduce) {
+  .cc-hero-img { animation: none; transform: scale(1.06); }
+}
+
 .cc-fallback {
   position: absolute;
   inset: 0;
@@ -47,6 +73,26 @@
   z-index: 2;
   pointer-events: none;
 }
+/* Legibility scrim over the photograph.
+   The three.js scene was near-black by construction, so the headline had
+   contrast for free. A real skyline has lit windows and neon behind exactly
+   where the text sits, so it needs darkening — strongest at the top and
+   bottom where the bar and copy live, lightest through the middle so the city
+   is still visible rather than hidden behind a wash. */
+.cc-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg,
+      hsl(var(--background) / 0.88) 0%,
+      hsl(var(--background) / 0.55) 22%,
+      hsl(var(--background) / 0.35) 50%,
+      hsl(var(--background) / 0.72) 82%,
+      hsl(var(--background) / 0.92) 100%);
+}
+
 .cc-scanlines {
   background: repeating-linear-gradient(
     0deg,
