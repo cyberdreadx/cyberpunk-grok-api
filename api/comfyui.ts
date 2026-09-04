@@ -499,19 +499,24 @@ function buildLtxWorkflow(p: {
   }
 
   // ── Spatial upscale tail (x2 on the latent, before decode) ──────
-  // LTX decoded straight from the sampler while the WAN path ran RIFE plus a
-  // 4x ESRGAN pass, which is a large part of why LTX read softer next to it.
-  // ltx-2.3-spatial-upscaler-x2-1.1.safetensors has been sitting in
-  // models/latent_upscale_models since June, referenced by nothing.
+  // OFF IN PRODUCTION, AND SHOULD STAY OFF. Kept because the wiring is correct
+  // and hard to rediscover, not because it helps.
   //
-  // Upsampling the latent and letting VAEDecodeTiled decode at the higher
-  // resolution beats decoding then upscaling pixels: the detail is
-  // reconstructed by a model trained on this VAE's latent space rather than
-  // interpolated after the fact.
+  // The theory was that LTX read softer than WAN because WAN runs RIFE plus a
+  // 4x ESRGAN pass while LTX decoded straight from the sampler. Wiring the
+  // unused ltx-2.3-spatial-upscaler-x2-1.1 in did produce 960x1664 from a
+  // 480x832 request — and made the output visibly worse. It adds resolution
+  // while smoothing away the strand and pore detail the sampler had already
+  // produced, so a 4x pixel count carried only ~2x the bitrate.
   //
-  // Off unless LTX_SPATIAL_UPSCALER names a file. LTXVLatentUpsampler only
-  // landed in ComfyUI on 2026-01-04, so an env switch means a worker whose
-  // core predates it can be recovered without a redeploy.
+  // Rendering the target size NATIVELY beats it decisively, at 21s against 7s
+  // of sampling. See RENDER_SIZES in src/pages/Index.tsx, where the LTX
+  // presets are now the real output dimensions.
+  //
+  // Enabling this on top of those presets would ask for 3328x1920.
+  //
+  // LTXVLatentUpsampler landed in ComfyUI core on 2026-01-04; a worker older
+  // than that will reject the node.
   const SPATIAL_UPSCALER = process.env.LTX_SPATIAL_UPSCALER || "";
   if (SPATIAL_UPSCALER) {
     wf["24"] = { class_type: "LatentUpscaleModelLoader", inputs: { model_name: SPATIAL_UPSCALER } };

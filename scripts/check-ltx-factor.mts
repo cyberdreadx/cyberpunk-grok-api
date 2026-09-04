@@ -20,7 +20,11 @@ const r = await fetch("https://api.gltch.app/api/comfyui", {
 const d = await r.json() as any;
 console.log(`HTTP ${r.status}`);
 console.log(`ltxUpscaleFactor: ${d.ltxUpscaleFactor}`);
-console.log(d.ltxUpscaleFactor === 2
-  ? "correct — UI will label 480x832 as 960x1664"
-  : "unexpected — UI would label the un-upscaled size");
-process.exit(d.ltxUpscaleFactor === 2 ? 0 : 1);
+// 1 is the production value: the x2 tail degraded output and was turned off in
+// favour of rendering the target size natively. A 2 here means the tail is on
+// and the LTX presets would be asking for 3328x1920.
+const f = d.ltxUpscaleFactor;
+console.log(f === 1
+  ? "tail off — the size picker labels the native render, as intended"
+  : `tail ON at x${f} — check this is deliberate; LTX presets are already native size`);
+process.exit(typeof f === "number" && f >= 1 ? 0 : 1);

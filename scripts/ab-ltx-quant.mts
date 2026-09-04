@@ -26,6 +26,15 @@ import { signToken } from "/home/neon/cyberpunk-grok-api/api/_lib/auth.ts";
 const sql = getDb();
 const BASE = "https://api.gltch.app";
 const LABEL = process.argv[2] || "run";
+// Native render size. Defaults to the 9:16 preset; pass 960 1664 to render at
+// the tail's output resolution directly, which is how you tell whether the
+// upscaler is adding detail or just smoothing what the sampler produced.
+const W = Number(process.argv[3]) || 480;
+const H = Number(process.argv[4]) || 832;
+// Frame count. The long presets are the risk at native resolution: 361 frames
+// at 4x the pixels is a different memory profile from 49, and an OOM there
+// would only show up in production.
+const FRAMES = Number(process.argv[5]) || 49;
 const OUT = "/tmp/gltch-work";
 
 // Fixed so the two runs differ only by the model file.
@@ -39,7 +48,7 @@ const [owner] = await sql`
   SELECT id, email, daily_credits + sub_credits + pack_credits AS credits
   FROM users WHERE email = 'cyberdreadx@proton.me' LIMIT 1` as any[];
 const token = signToken({ userId: owner.id, email: owner.email });
-console.log(`[${LABEL}] ${owner.email}, ${owner.credits} credits · seed ${SEED}`);
+console.log(`[${LABEL}] ${owner.email}, ${owner.credits} credits · seed ${SEED} · ${W}x${H} · ${FRAMES}f native`);
 
 const post = (body: any) =>
   fetch(`${BASE}/api/comfyui`, {
@@ -53,8 +62,8 @@ const t0 = Date.now();
 const sub = await post({
   action: "generate", workflow: "ltx-video",
   prompt: PROMPT, seed: SEED,
-  width: 480, height: 832,
-  frameCount: 49, frameRate: 24, ltxAudio: false,
+  width: W, height: H,
+  frameCount: FRAMES, frameRate: 24, ltxAudio: false,
 });
 if (!sub.promptId) {
   console.error(`submit failed: ${JSON.stringify(sub).slice(0, 300)}`);
