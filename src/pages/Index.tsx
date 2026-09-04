@@ -423,7 +423,15 @@ const Index = () => {
   const [negPrompt, setNegPrompt] = useState("");
 
   // LongLook settings
-  const [longLookEnabled, setLongLookEnabled] = useState(false);
+  /* GLTCH PRO *is* LongLook: its button sets both, and every setter that turns
+     this off also switches the engine away, so this flag and
+     animateEngine === "comfy" always agree — except across a reload, because
+     the engine is persisted and this was not. A returning user got GLTCH PRO
+     still selected, its LongLook panel gone, and their job quietly running as
+     a plain animate. Seeded from the same stored value the engine reads. */
+  const [longLookEnabled, setLongLookEnabled] = useState<boolean>(() => {
+    try { return localStorage.getItem("engine-image-to-video") === "comfy"; } catch { return false; }
+  });
   const [longLookSeqCount, setLongLookSeqCount] = useState(2);
   const [longLookFrameCount, setLongLookFrameCount] = useState(81);
   const [longLookMotionScale, setLongLookMotionScale] = useState(1.5);
