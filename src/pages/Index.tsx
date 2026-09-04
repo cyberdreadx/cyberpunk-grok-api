@@ -70,6 +70,14 @@ const ANNOUNCEMENTS: { id: string; message: string; type?: "info" | "warning" | 
   { id: "gltch-wan-launch", message: "GLTCH Animate now defaults to a simpler WAN 2.2 stable mode for more reliable results.", type: "info" },
 ];
 
+/* Credit for LoRAs whose licence requires it.
+   Civitai's allowNoCredit=false means attribution is a condition of use, not a
+   courtesy, so it belongs next to the thing being used rather than buried in a
+   legal page. Keyed by filename; anything absent simply shows no credit. */
+const LORA_CREDITS: Record<string, string> = {
+  "klein_snofs_v1_4.safetensors": "SNOFS by Ashen3",
+};
+
 const SFW_LORA_KEYWORDS = ["skin", "angle"];
 const isNsfwLora = (name: string) => !SFW_LORA_KEYWORDS.some(k => name.toLowerCase().includes(k));
 
@@ -1675,6 +1683,11 @@ const Index = () => {
                             </option>
                           ))}
                         </select>
+                        {editLora !== "none" && LORA_CREDITS[editLora] && (
+                          <div className="font-mono-share text-[8px] text-muted-foreground/50 mt-1">
+                            {LORA_CREDITS[editLora]}
+                          </div>
+                        )}
                         {editLora !== "none" && (
                           <div className="mt-1.5">
                             <label className="font-mono-share text-[8px] text-muted-foreground/60 flex items-center justify-between">
