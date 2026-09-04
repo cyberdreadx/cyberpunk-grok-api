@@ -1,11 +1,16 @@
 /**
- * LtxLaunchBanner — announces the new LTX-2.3 video engine with native sound.
- * Dismissable (persisted in localStorage). Optional onClick (jumps to the LTX engine).
+ * LtxLaunchBanner — announces the LTX-2.3 video engine.
+ *
+ * Dismissable (persisted in localStorage). Optional onClick (jumps to the LTX
+ * engine). The dismiss key carries a version: bump it when the banner starts
+ * saying something materially new, or everyone who dismissed the previous
+ * announcement never sees the next one. Bumped to v2 for native HD and 15s
+ * clips — the copy had been advertising "2-7s" since June.
  */
 import { useState } from "react";
 import { Volume2, X } from "lucide-react";
 
-const DISMISS_KEY = "gltch-ltx-launch-dismissed-v1";
+const DISMISS_KEY = "gltch-ltx-launch-dismissed-v2";
 
 interface LtxLaunchBannerProps {
   onClick?: () => void;
@@ -37,14 +42,14 @@ export default function LtxLaunchBanner({ onClick }: LtxLaunchBannerProps) {
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-orbitron text-[10px] sm:text-xs tracking-widest text-amber-200 font-bold">
-              ✨ NEW — LTX-2.3
+              ✨ UPGRADED — LTX-2.3
             </span>
             <span className="font-mono-share text-[10px] sm:text-xs text-amber-100/90 truncate">
-              Video with native sound is live
+              Sharper video, now up to 15 seconds
             </span>
           </div>
           <div className="mt-0.5 font-mono-share text-[9px] sm:text-[10px] text-amber-200/70">
-            Text-to-video &amp; animate · synced audio in one pass · pick 2–7s · 7 cr/s
+            Native HD up to 1664×960 · synced audio in one pass · pick 2–15s · 7 cr/s
           </div>
         </div>
 

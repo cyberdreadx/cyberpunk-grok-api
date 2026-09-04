@@ -24,6 +24,23 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
     {
+        version: "2026.09.04",
+        date: "September 4, 2026",
+        title: "v5.6 — Sharper Video, Easy Mode & Size Controls That Work",
+        items: [
+            { icon: <Film className="w-3.5 h-3.5" />, text: "LTX video is visibly sharper — it now renders up to 1664×960 directly instead of enlarging a smaller frame afterwards. Faces, hair and fabric hold real detail. Same lengths, same 7 cr/s", tag: "improve" },
+            { icon: <MessageSquare className="w-3.5 h-3.5" />, text: "Easy mode — describe what you want in a chat instead of filling in a parameter panel. Switch any time with the Easy · Classic toggle; Classic is unchanged and your conversations are saved", tag: "new" },
+            { icon: <Camera className="w-3.5 h-3.5" />, text: "Video aspect ratio actually applies — RENDER has a working 16:9 / 3:2 / 1:1 / 2:3 / 9:16 control on every engine. Vertical clips for phones now come out vertical instead of landscape", tag: "fix" },
+            { icon: <ImagePlus className="w-3.5 h-3.5" />, text: "The GLTCH image engine was locked to square. It now offers 1:1, 4:3, 3:2, 16:9 and the portrait versions, at the same 3 credits whatever you pick", tag: "new" },
+            { icon: <Clock className="w-3.5 h-3.5" />, text: "LTX clips run up to 15 seconds, up from 7", tag: "new" },
+            { icon: <Eye className="w-3.5 h-3.5" />, text: "Settings only show controls the selected engine uses. Aspect ratio, resolution and batch count used to appear for engines that quietly ignored them, so changing them did nothing", tag: "fix" },
+            { icon: <Sparkles className="w-3.5 h-3.5" />, text: "The prompt enhancer keeps your uploaded image in frame instead of writing a different scene around it, and it is no longer buried next to the image field", tag: "improve" },
+            { icon: <MessageSquare className="w-3.5 h-3.5" />, text: "Direct messages no longer appear several times in the conversation after sending — they were only ever sent once, but the view duplicated them", tag: "fix" },
+            { icon: <Zap className="w-3.5 h-3.5" />, text: "Notifications are delivered again. Comments, replies and follows had silently failed to notify anyone for months", tag: "fix" },
+            { icon: <ShieldAlert className="w-3.5 h-3.5" />, text: "Comment spam limits and daily caps on karma from upvotes and story likes, after a small number of accounts were farming credits with bulk comments and votes", tag: "fix" },
+        ],
+    },
+    {
         version: "2026.09.01",
         date: "September 1, 2026",
         title: "v5.5 — Text Posts, Working Thumbnails & a Developer API That Works",
