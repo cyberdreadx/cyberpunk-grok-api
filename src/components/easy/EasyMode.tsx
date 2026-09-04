@@ -18,7 +18,7 @@
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowUp, Check, Loader2, MessageSquarePlus, Menu, Paperclip, Pencil, RefreshCw, Sliders, Sparkles, Square, Trash2, Video, Wand2, X } from "lucide-react";
-import type { ComfyJob, GrokResult } from "@/hooks/useGrokApi";
+import { getImageDimensions, type ComfyJob, type GrokResult } from "@/hooks/useGrokApi";
 import { apiFetch } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { getAssist, setAssist } from "@/lib/createMode";
@@ -50,6 +50,17 @@ export interface EasyEngines {
   comfyGenerate: (p: GenerateArgs) => string | undefined;
   comfyEdit: (p: EditArgs) => string | undefined;
   comfyVideo: (p: VideoArgs) => string | undefined;
+  /** LTX — the sharper engine, and the only one with sound. */
+  ltxVideo: (p: {
+    prompt: string;
+    imageBase64?: string;
+    imageFilename?: string;
+    width?: number;
+    height?: number;
+    frameCount?: number;
+    frameRate?: number;
+    audio?: boolean;
+  }) => string | undefined;
   results: GrokResult[];
   comfyJobs: ComfyJob[];
   /** Classic's own handlers, reused verbatim for "Open in Classic". */
@@ -116,6 +127,18 @@ const ASPECTS = [
 // Frame counts match Classic's COMFY duration presets exactly, so the same
 // choice costs and lasts the same in both modes. Easy stopped at ~7s while
 // Classic went to 15s.
+/** The two video engines, described by what a user gets rather than by which
+ *  model runs. "quick" is the WAN path Easy has always used; "best" is the LTX
+ *  one Classic gained today — sharper because it renders at full size instead
+ *  of enlarging afterwards, and the only one with sound. Priced differently:
+ *  WAN is flat per clip, LTX per second, so the cost hint is computed, never
+ *  written down. */
+const VIDEO_QUALITY = [
+  { id: "quick", label: "Quick", blurb: "Fast, no sound", flatCredits: 15 },
+  { id: "best", label: "Best", blurb: "Sharper, with sound", creditsPerSecond: 7 },
+] as const;
+type VideoQuality = (typeof VIDEO_QUALITY)[number]["id"];
+
 const LENGTHS = [
   { id: "short", label: "~3s", frames: 49 },
   { id: "normal", label: "~5s", frames: 81 },
@@ -133,6 +156,9 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [aspect, setAspect] = useState<(typeof ASPECTS)[number]["id"]>("portrait");
   const [length, setLength] = useState<(typeof LENGTHS)[number]["id"]>("normal");
+  // Defaults to what Easy already did, so nobody's next video silently costs
+  // more than their last one. Upgrading is one tap and states its price.
+  const [videoQuality, setVideoQuality] = useState<VideoQuality>("quick");
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
@@ -347,15 +373,38 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
 
       if (hasSource && wantsVideo) {
         const b64 = attached?.b64 ?? (await urlToBase64(sourceUrl!));
-        jobId = engines.comfyVideo({
-          prompt,
-          imageBase64: b64,
-          workflow: "gltch-wan",
-          width: 832, height: 480,
-          frameCount: len.frames, steps: 4, cfg: 1,
-          resolution: 832, shift: 8,
-          useRife: true, useUpscale: false,
-        });
+        if (videoQuality === "best") {
+          // LTX sizes from the source frame, matching Classic's animate path:
+          // the workflow centre-crops the input to the latent dimensions, so
+          // dimensions that ignore the source would crop the subject out.
+          // LTX needs multiples of 32.
+          const dim = await getImageDimensions(`data:image/jpeg;base64,${b64}`);
+          const round32 = (v: number) => Math.max(64, Math.round(v / 32) * 32);
+          let w = dim.width, h = dim.height;
+          if (w > 1024 || h > 1024) {
+            const scale = 1024 / Math.max(w, h);
+            w = Math.round(w * scale); h = Math.round(h * scale);
+          }
+          jobId = engines.ltxVideo({
+            prompt,
+            imageBase64: b64,
+            imageFilename: "easy_input.png",
+            width: round32(w), height: round32(h),
+            frameCount: len.frames, frameRate: 24,
+            audio: true,
+          });
+          label = "with sound";
+        } else {
+          jobId = engines.comfyVideo({
+            prompt,
+            imageBase64: b64,
+            workflow: "gltch-wan",
+            width: 832, height: 480,
+            frameCount: len.frames, steps: 4, cfg: 1,
+            resolution: 832, shift: 8,
+            useRife: true, useUpscale: false,
+          });
+        }
       } else if (hasSource) {
         const b64 = attached?.b64 ?? (await urlToBase64(sourceUrl!));
         jobId = engines.comfyEdit({
@@ -390,7 +439,7 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
       taRef.current?.focus();
     }
   }, [draft, busy, attachment, lastImage, assist, aspect, length, results, engines, enhance, toast,
-      createThread, selectThread, appendMsg]);
+      createThread, selectThread, appendMsg, updateMsg, videoQuality]);
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -672,6 +721,35 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
                   ))}
                 </div>
               </div>
+              <div className="space-y-1.5">
+                <div className="font-mono text-[10px] tracking-widest text-muted-foreground">VIDEO QUALITY</div>
+                <div className="flex gap-1.5 flex-wrap">
+                  {VIDEO_QUALITY.map((q) => {
+                    // Computed from the chosen length so the two prices are
+                    // comparable at a glance — one engine bills per clip and
+                    // the other per second, which is not obvious from a label.
+                    const secs = LENGTHS.find((l) => l.id === length)!.frames / 24;
+                    const cost = "flatCredits" in q
+                      ? q.flatCredits
+                      : Math.round(q.creditsPerSecond * secs);
+                    return (
+                      <button
+                        key={q.id}
+                        onClick={() => setVideoQuality(q.id)}
+                        className={`px-2.5 py-1 rounded-lg border text-left transition-colors ${videoQuality === q.id
+                          ? "border-primary/50 bg-primary/10"
+                          : "border-border/50 hover:border-primary/30"
+                          }`}
+                      >
+                        <div className={`font-mono text-[11px] ${videoQuality === q.id ? "text-primary" : "text-muted-foreground"}`}>
+                          {q.label} <span className="text-muted-foreground/60">· ~{cost} cr</span>
+                        </div>
+                        <div className="font-mono text-[9px] text-muted-foreground/60">{q.blurb}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
               <p className="font-mono text-[10px] text-muted-foreground/70">
                 Everything else — models, LoRAs, seeds, steps — lives in Classic.
               </p>
@@ -725,7 +803,7 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
                   whichever one the current draft will actually use. */}
               <span className="text-muted-foreground/60">
                 · {VIDEO_HINT.test(draft)
-                  ? LENGTHS.find((l) => l.id === length)!.label
+                  ? `${LENGTHS.find((l) => l.id === length)!.label} · ${VIDEO_QUALITY.find((q) => q.id === videoQuality)!.label}`
                   : ASPECTS.find((a) => a.id === aspect)!.label}
               </span>
             </button>

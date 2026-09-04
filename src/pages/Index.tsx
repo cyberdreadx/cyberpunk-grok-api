@@ -1151,6 +1151,7 @@ const Index = () => {
               comfyGenerate,
               comfyEdit,
               comfyVideo,
+              ltxVideo,
               results,
               comfyJobs,
               cancelComfyJob,
