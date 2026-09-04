@@ -25,6 +25,7 @@ const BASE = "https://api.gltch.app";
 const LORA = process.argv[2];
 const STRENGTH = Number(process.argv[3]) || 0.8;
 const SRC = "/tmp/gltch-work/quant-q8-crop.png";
+const WF = process.argv[4] || "klein";
 if (!LORA) { console.error("usage: lora-effect-check.mts <loraName> [strength]"); process.exit(1); }
 
 const [owner] = await sql`
@@ -44,11 +45,21 @@ const post = (body: any) =>
 
 async function run(label: string, withLora: boolean): Promise<string | null> {
   const sub = await post({
-    action: "generate", workflow: "klein",
-    prompt: "a photograph of a woman, natural skin",
-    imageBase64, imageFilename: "probe.png",
-    seed: SEED, steps: 8, cfg: 5,
-    ...(withLora ? { loras: [{ name: LORA, strengthModel: STRENGTH, strengthClip: STRENGTH }] } : {}),
+    action: "generate", workflow: WF,
+    prompt: WF === "krea2" ? "a portrait of a woman on a city street" : "a photograph of a woman, natural skin",
+    // krea2 is text-to-image; sending it a source image would be ignored.
+    ...(WF === "krea2" ? { width: 1024, height: 1024 } : { imageBase64, imageFilename: "probe.png" }),
+    seed: SEED, steps: 8, cfg: WF === "krea2" ? 1 : 5,
+    // The two paths take different shapes: klein reads a `loras` array,
+    // krea2 reads singular `lora`/`loraStrength`. Sending the wrong one is
+    // silently a no-LoRA run, which looks exactly like a LoRA that does
+    // nothing — this script reported 0.0 for a working adapter until this
+    // was fixed.
+    ...(withLora
+      ? (WF === "krea2"
+        ? { lora: LORA, loraStrength: STRENGTH }
+        : { loras: [{ name: LORA, strengthModel: STRENGTH, strengthClip: STRENGTH }] })
+      : {}),
   });
   if (!sub.promptId) { console.log(`${label}: submit failed`); return null; }
   process.stdout.write(`${label} `);

@@ -1706,6 +1706,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const editLoras = editLorasEnv
           ? editLorasEnv.split(",").map((m) => m.trim()).filter(Boolean)
           : [];
+        // Krea 2 style adapters. Separate list because they are architecture
+        // specific — a Klein or Qwen LoRA loads against Krea 2 and applies
+        // nothing, which is the failure this codebase has already shipped once.
+        const krea2LorasEnv = process.env.COMFYUI_KREA2_LORAS || "";
+        const krea2Loras = krea2LorasEnv
+          ? krea2LorasEnv.split(",").map((m) => m.trim()).filter(Boolean)
+          : [];
 
         // Check if user has LoRA access (XRGE holder OR $30 Stripe unlock)
         let xrgeHolder = isAdminUser;
@@ -1740,7 +1747,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // LTX_SPATIAL_UPSCALER off can't leave the UI quoting a size the
         // engine stopped producing.
         const ltxUpscaleFactor = process.env.LTX_SPATIAL_UPSCALER ? 2 : 1;
-        return res.status(200).json({ checkpoints, loras, videoLoras, editLoras, xrgeHolder: hasLoraAccess, loraUnlocked, ltxUpscaleFactor });
+        return res.status(200).json({ checkpoints, loras, videoLoras, editLoras, krea2Loras, xrgeHolder: hasLoraAccess, loraUnlocked, ltxUpscaleFactor });
       } else {
         const resp = await fetch(
           `${backend.comfyUrl}/object_info/CheckpointLoaderSimple`,
@@ -1771,6 +1778,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const editLorasEnv = process.env.COMFYUI_EDIT_LORAS || process.env.COMFYUI_QWEN_LORAS || "";
         const editLoras = editLorasEnv
           ? editLorasEnv.split(",").map((m) => m.trim()).filter(Boolean)
+          : [];
+        // Krea 2 style adapters. Separate list because they are architecture
+        // specific — a Klein or Qwen LoRA loads against Krea 2 and applies
+        // nothing, which is the failure this codebase has already shipped once.
+        const krea2LorasEnv = process.env.COMFYUI_KREA2_LORAS || "";
+        const krea2Loras = krea2LorasEnv
+          ? krea2LorasEnv.split(",").map((m) => m.trim()).filter(Boolean)
           : [];
         return res.status(200).json({ checkpoints, loras, videoLoras, editLoras });
       }

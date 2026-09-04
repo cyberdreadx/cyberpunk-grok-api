@@ -44,6 +44,7 @@ import EarnPromoBanner from "@/components/EarnPromoBanner";
 import FlashSaleBanner from "@/components/FlashSaleBanner";
 import BuyHoldBanner from "@/components/BuyHoldBanner";
 import LtxLaunchBanner from "@/components/LtxLaunchBanner";
+import Krea2LaunchBanner from "@/components/Krea2LaunchBanner";
 import DailyMissionsDialog from "@/components/DailyMissionsDialog";
 import { useDailyMissions } from "@/hooks/useDailyMissions";
 import LegalDialog from "@/components/LegalDialog";
@@ -74,6 +75,23 @@ const ANNOUNCEMENTS: { id: string; message: string; type?: "info" | "warning" | 
    Civitai's allowNoCredit=false means attribution is a condition of use, not a
    courtesy, so it belongs next to the thing being used rather than buried in a
    legal page. Keyed by filename; anything absent simply shows no credit. */
+/* Krea 2 style adapters: display name, and whether it is actually adult.
+   The isNsfwLora heuristic used elsewhere treats anything without "skin" or
+   "angle" in the filename as adult, which would gate a watercolour LoRA
+   behind the XRGE unlock. These are named explicitly instead. */
+const KREA2_LORA_META: Record<string, { label: string; nsfw?: boolean }> = {
+  "krea2_retroanime.safetensors": { label: "Retro anime" },
+  "krea2_darkbrush.safetensors": { label: "Dark brush" },
+  "krea2_dotmatrix.safetensors": { label: "Dot matrix" },
+  "krea2_kidsdrawing.safetensors": { label: "Kids drawing" },
+  "krea2_neondrip.safetensors": { label: "Neon drip" },
+  "krea2_rainywindow.safetensors": { label: "Rainy window" },
+  "krea2_softwatercolor.safetensors": { label: "Soft watercolour" },
+  "krea2_sunsetblur.safetensors": { label: "Sunset blur" },
+  "krea2_vintagetarot.safetensors": { label: "Vintage tarot" },
+  "realcumk4.safetensors": { label: "Real Cum", nsfw: true },
+};
+
 const LORA_CREDITS: Record<string, string> = {
   "klein_snofs_v1_4.safetensors": "SNOFS by Ashen3",
 };
@@ -376,6 +394,8 @@ const Index = () => {
   // Z-Image settings
   const [zimageWidth, setZimageWidth] = useState(1024);
   const [zimageHeight, setZimageHeight] = useState(1024);
+  const [krea2Lora, setKrea2Lora] = useState("none");
+  const [krea2LoraStrength, setKrea2LoraStrength] = useState(0.8);
   const [zimageLora, setZimageLora] = useState("none");
   const [zimageLoraStrength, setZimageLoraStrength] = useState(0.30);
 
@@ -846,6 +866,8 @@ const Index = () => {
           comfyGenerate({
             prompt: data.prompt,
             workflow: "krea2",
+            lora: krea2Lora !== "none" ? krea2Lora : undefined,
+            loraStrength: krea2LoraStrength,
             // Shares the Z-Image size picker: same ~1MP buckets, and Krea 2
             // Turbo is likewise trained around 1024.
             width: zimageWidth,
@@ -1165,6 +1187,10 @@ const Index = () => {
         )}
 
         {/* LTX-2.3 launch — video with native sound. Click jumps to the LTX engine. */}
+        {/* Newest first. Both are dismissable, so someone who wants neither
+            clears both and sees nothing rather than a stack that regrows. */}
+        <Krea2LaunchBanner onClick={() => { setMode("text-to-image"); setGenEngine("krea2"); }} />
+
         <LtxLaunchBanner onClick={() => { setMode("text-to-video"); setRenderEngine("ltx"); }} />
 
         {/* Verify email — compact inline pill (no longer a full-width banner) */}
@@ -1811,6 +1837,42 @@ const Index = () => {
                     <p className="font-mono-share text-[8px] text-muted-foreground/50 mt-1">
                       {zimageWidth}×{zimageHeight} — 3 cr at any size
                     </p>
+                  </div>
+                )}
+
+                {genEngine === "krea2" && comfyModels.krea2Loras.length > 0 && (
+                  <div>
+                    <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">STYLE (OPTIONAL)</label>
+                    <select value={krea2Lora}
+                      onChange={(e) => {
+                        const meta = KREA2_LORA_META[e.target.value];
+                        if (meta?.nsfw && !comfyModels.xrgeHolder) return;
+                        setKrea2Lora(e.target.value);
+                      }}
+                      className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-[10px] font-mono-share text-foreground">
+                      <option value="none">None</option>
+                      {comfyModels.krea2Loras.map((l) => {
+                        const meta = KREA2_LORA_META[l];
+                        const locked = !!meta?.nsfw && !comfyModels.xrgeHolder;
+                        return (
+                          <option key={l} value={l} disabled={locked}
+                            style={locked ? { color: "#666", fontStyle: "italic" } : undefined}>
+                            {locked ? "🔒 " : ""}{meta?.label || l.replace(/\.[^.]+$/, "")}
+                          </option>
+                        );
+                      })}
+                    </select>
+                    {krea2Lora !== "none" && (
+                      <div className="mt-1.5">
+                        <label className="font-mono-share text-[8px] text-muted-foreground/60 flex items-center justify-between">
+                          <span>STRENGTH</span>
+                          <span>{krea2LoraStrength.toFixed(1)}</span>
+                        </label>
+                        <input type="range" min="0" max="1.5" step="0.1" value={krea2LoraStrength}
+                          onChange={(e) => setKrea2LoraStrength(Number(e.target.value))}
+                          className="w-full h-1 accent-cyan-400" />
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

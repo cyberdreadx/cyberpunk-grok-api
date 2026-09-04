@@ -1266,6 +1266,7 @@ export function useGrokApi() {
     loras: string[];
     videoLoras: VideoLoraEntry[];
     editLoras: string[];
+    krea2Loras: string[];
     xrgeHolder: boolean;
     /** How much the LTX spatial tail multiplies the requested size. 1 when
         it's off, so the size picker can label what actually comes back. */
@@ -1275,6 +1276,7 @@ export function useGrokApi() {
     loras: [],
     videoLoras: [],
     editLoras: [],
+    krea2Loras: [],
     xrgeHolder: false,
     ltxUpscaleFactor: 1,
   });
@@ -1286,6 +1288,7 @@ export function useGrokApi() {
         loras?: string[];
         videoLoras?: VideoLoraEntry[];
         editLoras?: string[];
+        krea2Loras?: string[];
         xrgeHolder?: boolean;
         ltxUpscaleFactor?: number;
       }>("/comfyui", {
@@ -1297,11 +1300,12 @@ export function useGrokApi() {
         loras: data.loras || [],
         videoLoras: data.videoLoras || [],
         editLoras: data.editLoras || [],
+        krea2Loras: data.krea2Loras || [],
         xrgeHolder: data.xrgeHolder ?? false,
         ltxUpscaleFactor: data.ltxUpscaleFactor ?? 1,
       });
     } catch {
-      setComfyModels({ checkpoints: [], loras: [], videoLoras: [], editLoras: [], xrgeHolder: false, ltxUpscaleFactor: 1 });
+      setComfyModels({ checkpoints: [], loras: [], videoLoras: [], editLoras: [], krea2Loras: [], xrgeHolder: false, ltxUpscaleFactor: 1 });
     }
   }, []);
 
