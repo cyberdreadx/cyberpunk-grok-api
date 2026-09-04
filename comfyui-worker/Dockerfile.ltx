@@ -16,7 +16,15 @@ FROM runpod/worker-comfyui:5.7.1-base
 # ── Update ComfyUI core to latest (LTX-2.3 native support) ───────
 # LTX-2.3 needs recent core: comfy/ldm/lightricks, the ltxv DualCLIPLoader type,
 # and the built-in LatentUpscaleModelLoader. Same pattern as Dockerfile.zimage.
-RUN cd /comfyui && git fetch origin master && git reset --hard origin/master && \
+# Bump COMFYUI_PULLED to force a fresh core. Docker caches the RUN below, so
+# a rebuild that changes nothing above it silently reuses whatever ComfyUI
+# version was baked in — the build succeeds and the core is unchanged. That is
+# how a worker ends up not knowing LTX-2.3
+# despite having "just been rebuilt".
+ARG COMFYUI_PULLED=2026-09-04
+RUN echo "comfyui pulled $COMFYUI_PULLED" && \
+    cd /comfyui && git fetch origin master && git reset --hard origin/master && \
+    git log -1 --format="ComfyUI core now at %h %ad" --date=short && \
     uv pip install -r requirements.txt
 
 # ── Custom Nodes (git clone → uv pip install into /opt/venv) ─────
