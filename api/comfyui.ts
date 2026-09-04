@@ -1727,7 +1727,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         const hasLoraAccess = xrgeHolder || loraUnlocked;
-        return res.status(200).json({ checkpoints, loras, videoLoras, editLoras, xrgeHolder: hasLoraAccess, loraUnlocked });
+        // The LTX size picker labels what it delivers, and the x2 spatial tail
+        // doubles that. Reported rather than assumed client-side, so flipping
+        // LTX_SPATIAL_UPSCALER off can't leave the UI quoting a size the
+        // engine stopped producing.
+        const ltxUpscaleFactor = process.env.LTX_SPATIAL_UPSCALER ? 2 : 1;
+        return res.status(200).json({ checkpoints, loras, videoLoras, editLoras, xrgeHolder: hasLoraAccess, loraUnlocked, ltxUpscaleFactor });
       } else {
         const resp = await fetch(
           `${backend.comfyUrl}/object_info/CheckpointLoaderSimple`,

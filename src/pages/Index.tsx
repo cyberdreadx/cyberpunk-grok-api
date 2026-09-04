@@ -1961,7 +1961,16 @@ const Index = () => {
                     <div>
                       <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">
                         Aspect
-                        <span className="text-muted-foreground/40 ml-1.5">{renderW}×{renderH}</span>
+                        {/* The x2 spatial tail doubles what LTX delivers, so label the
+                            delivered size. The factor comes from the server — the tail is
+                            an env switch, and a hardcoded 2 would go stale the moment it
+                            was turned off. */}
+                        <span className="text-muted-foreground/40 ml-1.5">
+                          {renderW * comfyModels.ltxUpscaleFactor}×{renderH * comfyModels.ltxUpscaleFactor}
+                        </span>
+                        {comfyModels.ltxUpscaleFactor > 1 && (
+                          <span className="text-amber-300/50 ml-1.5">upscaled ×{comfyModels.ltxUpscaleFactor}</span>
+                        )}
                       </label>
                       <div className="flex flex-wrap gap-1.5">
                         {(Object.keys(RENDER_SIZES) as RenderAspect[]).map((a) => (

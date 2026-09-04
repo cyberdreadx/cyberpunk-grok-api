@@ -1261,12 +1261,16 @@ export function useGrokApi() {
     videoLoras: VideoLoraEntry[];
     editLoras: string[];
     xrgeHolder: boolean;
+    /** How much the LTX spatial tail multiplies the requested size. 1 when
+        it's off, so the size picker can label what actually comes back. */
+    ltxUpscaleFactor: number;
   }>({
     checkpoints: [],
     loras: [],
     videoLoras: [],
     editLoras: [],
     xrgeHolder: false,
+    ltxUpscaleFactor: 1,
   });
 
   const fetchComfyModels = useCallback(async () => {
@@ -1277,6 +1281,7 @@ export function useGrokApi() {
         videoLoras?: VideoLoraEntry[];
         editLoras?: string[];
         xrgeHolder?: boolean;
+        ltxUpscaleFactor?: number;
       }>("/comfyui", {
         method: "POST",
         body: { action: "models" },
@@ -1287,9 +1292,10 @@ export function useGrokApi() {
         videoLoras: data.videoLoras || [],
         editLoras: data.editLoras || [],
         xrgeHolder: data.xrgeHolder ?? false,
+        ltxUpscaleFactor: data.ltxUpscaleFactor ?? 1,
       });
     } catch {
-      setComfyModels({ checkpoints: [], loras: [], videoLoras: [], editLoras: [], xrgeHolder: false });
+      setComfyModels({ checkpoints: [], loras: [], videoLoras: [], editLoras: [], xrgeHolder: false, ltxUpscaleFactor: 1 });
     }
   }, []);
 
