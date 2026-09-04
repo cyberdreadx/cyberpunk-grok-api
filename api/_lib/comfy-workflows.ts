@@ -673,3 +673,84 @@ export function buildZimageTurboWorkflow(p: {
 
   return workflow;
 }
+
+/**
+ * Krea 2 Turbo text-to-image.
+ *
+ * Mirrors Comfy-Org's own template (workflow_templates/templates/
+ * image_krea2_turbo_t2i.json), reduced to the inference path — the published
+ * version wraps this in prompt-rewriting and switch nodes that are UI
+ * convenience, not part of the model.
+ *
+ * Two things about it are not guessable from the other builders here:
+ *
+ * The negative prompt is a ConditioningZeroOut of the positive, not a second
+ * CLIPTextEncode. Krea 2 Turbo runs at cfg 1, where a negative prompt has no
+ * effect anyway, and the template zeroes rather than encodes empty text.
+ *
+ * EmptyLatentImage is correct despite Krea2 declaring latent_format Wan21
+ * (16 channels, 3 dimensions). ComfyUI adapts the 4-channel latent to the
+ * model's format on the way into the sampler; the official template relies on
+ * this, so a hand-rolled 16-channel node would diverge from it.
+ *
+ * The text encoder is Qwen3-VL 4B loaded with CLIPLoader type "krea2", and the
+ * VAE is the Qwen Image VAE — both shared with models already on the volume,
+ * which is why this engine costs one file rather than three.
+ */
+export function buildKrea2Workflow(p: {
+  prompt: string;
+  width: number;
+  height: number;
+  seed: number;
+  steps?: number;
+  cfg?: number;
+  lora?: string;
+  loraStrength?: number;
+}): Record<string, any> {
+  const unet = process.env.KREA2_UNET || "krea2_turbo_fp8_scaled.safetensors";
+  const clip = process.env.KREA2_CLIP || "qwen3vl_4b_fp8_scaled.safetensors";
+  const vae = process.env.KREA2_VAE || "qwen_image_vae.safetensors";
+
+  const hasLora = !!p.lora && p.lora !== "none";
+  const modelSource: [string, number] = hasLora ? ["10", 0] : ["1", 0];
+
+  const wf: Record<string, any> = {
+    "1": { class_type: "UNETLoader", inputs: { unet_name: unet, weight_dtype: "default" } },
+    "2": { class_type: "CLIPLoader", inputs: { clip_name: clip, type: "krea2", device: "default" } },
+    "3": { class_type: "VAELoader", inputs: { vae_name: vae } },
+    "4": { class_type: "CLIPTextEncode", inputs: { text: p.prompt, clip: ["2", 0] } },
+    // Negative conditioning, zeroed rather than encoded — see above.
+    "5": { class_type: "ConditioningZeroOut", inputs: { conditioning: ["4", 0] } },
+    "6": {
+      class_type: "EmptyLatentImage",
+      inputs: { width: p.width, height: p.height, batch_size: 1 },
+    },
+    "7": {
+      class_type: "KSampler",
+      inputs: {
+        // Turbo defaults from the template: 8 steps at cfg 1, euler/simple.
+        seed: p.seed,
+        steps: p.steps ?? 8,
+        cfg: p.cfg ?? 1,
+        sampler_name: "euler",
+        scheduler: "simple",
+        denoise: 1,
+        model: modelSource,
+        positive: ["4", 0],
+        negative: ["5", 0],
+        latent_image: ["6", 0],
+      },
+    },
+    "8": { class_type: "VAEDecode", inputs: { samples: ["7", 0], vae: ["3", 0] } },
+    "9": { class_type: "SaveImage", inputs: { images: ["8", 0], filename_prefix: "GltchKrea2" } },
+  };
+
+  if (hasLora) {
+    wf["10"] = {
+      class_type: "LoraLoaderModelOnly",
+      inputs: { model: ["1", 0], lora_name: p.lora, strength_model: p.loraStrength ?? 0.8 },
+    };
+  }
+
+  return wf;
+}

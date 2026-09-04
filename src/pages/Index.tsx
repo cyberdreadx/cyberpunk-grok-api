@@ -298,7 +298,7 @@ const Index = () => {
 
   // Engine selectors per mode — persisted per mode across sessions
   type EditEngine = "grok" | "gltch";
-  type ComfyEngine = "grok" | "comfy" | "gltch" | "ltx" | "seedance" | "seedance-fast" | "seedance-pro";
+  type ComfyEngine = "grok" | "comfy" | "gltch" | "krea2" | "ltx" | "seedance" | "seedance-fast" | "seedance-pro";
   const isSeedanceTier = (v: string | null): v is "seedance" | "seedance-fast" | "seedance-pro" =>
     v === "seedance" || v === "seedance-fast" || v === "seedance-pro";
 
@@ -313,7 +313,7 @@ const Index = () => {
 
   const [genEngine, setGenEngineRaw] = useState<ComfyEngine>(() => {
     const v = localStorage.getItem("engine-text-to-image");
-    return (v === "comfy" || v === "gltch") ? v : "gltch";
+    return (v === "comfy" || v === "gltch" || v === "krea2") ? v : "gltch";
   });
   const setGenEngine = useCallback((v: ComfyEngine) => {
     localStorage.setItem("engine-text-to-image", v);
@@ -676,6 +676,7 @@ const Index = () => {
     const isGrokEdit = mode === "edit-image" && editEngine === "grok";
     const isGltchEdit = mode === "edit-image" && editEngine === "gltch";
     const isZimage = mode === "text-to-image" && genEngine === "gltch";
+    const isKrea2 = mode === "text-to-image" && genEngine === "krea2";
     const isComfyGen = mode === "text-to-image" && genEngine === "comfy";
     const isComfyRender = mode === "text-to-video" && renderEngine === "comfy";
     const isLtxRender = mode === "text-to-video" && renderEngine === "ltx";
@@ -683,7 +684,7 @@ const Index = () => {
     const isGltchWan = mode === "image-to-video" && animateEngine === "gltch";
     const isComfyAnimate = mode === "image-to-video" && animateEngine === "comfy" && !longLookEnabled;
     const isComfyLongLook = mode === "image-to-video" && animateEngine === "comfy" && longLookEnabled;
-    const isComfy = isZimage || isComfyGen || isGltchEdit || isGltchWan || isComfyRender || isComfyAnimate || isComfyLongLook || isLtxRender || isLtxAnimate;
+    const isComfy = isZimage || isKrea2 || isComfyGen || isGltchEdit || isGltchWan || isComfyRender || isComfyAnimate || isComfyLongLook || isLtxRender || isLtxAnimate;
     // Grok edit in BYOK mode uses the user's own API key directly — no credits needed
     const isGrokEditByok = isGrokEdit && effectiveApiMode === "byok" && apiKeySet;
     const isQueued = isGrokEdit || isGltchEdit || isComfy;
@@ -744,7 +745,7 @@ const Index = () => {
         cost = calculateCreditCost(grokPro ? "edit-image-pro" : "edit-image", settings.count);
       } else if (isGltchEdit) {
         cost = calculateCreditCost("comfy-image");
-      } else if (isZimage || isComfyGen) {
+      } else if (isZimage || isKrea2 || isComfyGen) {
         cost = calculateCreditCost("comfy-image");
       } else if (isComfyLongLook) {
         cost = calculateCreditCost("comfy-longlook", longLookSeqCount);
@@ -790,7 +791,7 @@ const Index = () => {
         if (isGrokEdit) cost = calculateCreditCost(grokPro ? "edit-image-pro" : "edit-image", settings.count);
         else if (isGltchEdit) cost = calculateCreditCost("comfy-image");
         else if (isGltchWan) cost = calculateCreditCost("comfy-video");
-        else if (isZimage || isComfyGen) cost = calculateCreditCost("comfy-image");
+        else if (isZimage || isKrea2 || isComfyGen) cost = calculateCreditCost("comfy-image");
         else if (isComfyLongLook) cost = calculateCreditCost("comfy-longlook", longLookSeqCount);
         else cost = calculateCreditCost("comfy-video");
         creditsHook.deductCreditsLocally(applyCreditDiscount(cost));
@@ -839,6 +840,19 @@ const Index = () => {
             steps: 4, cfg: 1,
             seed: parsedSeed,
             loras: editLora !== "none" ? [{ name: editLora, strengthModel: editLoraStrength, strengthClip: editLoraStrength }] : undefined,
+            ...(adminTestCredits ? { testCredits: true } : {}),
+          });
+        } else if (isKrea2) {
+          comfyGenerate({
+            prompt: data.prompt,
+            workflow: "krea2",
+            // Shares the Z-Image size picker: same ~1MP buckets, and Krea 2
+            // Turbo is likewise trained around 1024.
+            width: zimageWidth,
+            height: zimageHeight,
+            steps: 8,
+            cfg: 1,
+            seed: globalSeed ? Number(globalSeed) : undefined,
             ...(adminTestCredits ? { testCredits: true } : {}),
           });
         } else if (isZimage) {
@@ -1737,6 +1751,17 @@ const Index = () => {
                       <span className={genEngine === "gltch" ? "text-secondary/70" : "text-muted-foreground/50"}>3 cr</span>
                     </div>
                   </button>
+                  <button type="button" onClick={() => setGenEngine("krea2")}
+                    className={`p-2.5 border rounded text-left transition-all duration-200 ${genEngine === "krea2" ? "border-cyan-400 bg-cyan-400/5 shadow-[0_0_8px_rgba(34,211,238,0.15)]" : "border-border bg-card/30 hover:border-cyan-400/40"}`}>
+                    <div className={`font-orbitron text-[11px] flex items-center gap-1.5 ${genEngine === "krea2" ? "text-cyan-300" : "text-foreground"}`}>
+                      KREA 2
+                      <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-cyan-300/80 border-cyan-400/30 bg-cyan-400/10">NEW</span>
+                    </div>
+                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
+                      <span>Krea 2 Turbo</span>
+                      <span className={genEngine === "krea2" ? "text-cyan-300/70" : "text-muted-foreground/50"}>3 cr</span>
+                    </div>
+                  </button>
                   <button type="button" onClick={() => { setGenEngine("grok"); setApiMode("byok"); }}
                     className={`p-2.5 border rounded text-left transition-all duration-200 ${genEngine === "grok" ? "border-primary neon-border bg-primary/5" : "border-border bg-card/30 hover:border-primary/40"}`}>
                     <div className={`font-orbitron text-[11px] flex items-center gap-1.5 ${genEngine === "grok" ? "text-primary" : "text-foreground"}`}>
@@ -1763,7 +1788,7 @@ const Index = () => {
                     is a multiple of 64 (EmptyLatentImage floors to /8, and the
                     model is trained at 1MP, so going far off either sends the
                     composition sideways or wastes the latent). */}
-                {genEngine === "gltch" && (
+                {(genEngine === "gltch" || genEngine === "krea2") && (
                   <div>
                     <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">OUTPUT SIZE</label>
                     <div className="grid grid-cols-4 gap-1">

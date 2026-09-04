@@ -25,6 +25,7 @@ import {
   addMMAudioNodes,
   buildGltchWanSimpleWorkflow,
   buildGltchWanWorkflow,
+  buildKrea2Workflow,
   buildZimageTurboWorkflow,
 } from "./_lib/comfy-workflows";
 
@@ -189,6 +190,8 @@ const SAFE_ID_RE = /^[A-Za-z0-9_-]{1,128}$/;
 const COMFY_COSTS: Record<string, number> = {
   "txt2img": 3,
   "zimage": 3,
+  /** Krea 2 Turbo — one 8-step pass, same shape of job as zimage. */
+  "krea2": 3,
   /** Flux 2 Klein image edit (canonical) */
   "klein": 3,
   "klein-hd": 4,
@@ -384,7 +387,7 @@ function getRunPodEndpointForWorkflow(
   if (workflowType === "longlook") return longlook;
   if (workflowType === "wan-video" || workflowType === "gltch-wan") return wan;
   if (workflowType === "ltx-video" || workflowType === "ltx-animate") return ltx;
-  if (workflowType === "zimage") return zimage;
+  if (workflowType === "zimage" || workflowType === "krea2") return zimage;
   if (isKleinEditWorkflow(workflowType)) return qwen;
   return fallback;
 }
@@ -2421,6 +2424,17 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           seed: actualSeed,
           imageFilename: workflowType === "ltx-animate" ? imageFilename! : undefined,
           withAudio: req.body.ltxAudio !== false,
+        });
+      } else if (workflowType === "krea2") {
+        workflow = buildKrea2Workflow({
+          prompt: prompt.trim(),
+          width: clampW,
+          height: clampH,
+          seed: actualSeed,
+          steps: clampSteps,
+          cfg: clampCfg,
+          lora: lora || undefined,
+          loraStrength: Number(loraStrength) || 0.8,
         });
       } else if (workflowType === "zimage") {
         workflow = buildZimageTurboWorkflow({
