@@ -63,7 +63,9 @@ export default defineConfig(({ mode }) => {
       workbox: {
         skipWaiting: true,
         clientsClaim: true,
-        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+        // webp was missing, so the landing hero images were never precached and
+        // an offline PWA showed the page with no city behind it.
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,webp,woff2}"],
         globIgnores: ["**/heic2any-*.js", "**/heic-to-*.js", "**/vendor-3d-*.js", "**/vendor-charts-*.js"],
         // Never let the SW intercept API calls or share pages
         navigateFallback: "/index.html",
