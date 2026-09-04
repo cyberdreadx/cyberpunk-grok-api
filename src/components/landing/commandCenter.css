@@ -40,19 +40,23 @@
   height: 100%;
   object-fit: cover;
   object-position: center 40%;
-  animation: cc-drift 44s ease-in-out infinite alternate;
+  /* 26s rather than 44, and a wider throw. The first attempt moved 8% of
+     scale across 44s — about 0.18% a second, which is under what the eye
+     picks up, so it read as a static image. This is still slow enough to feel
+     like a held shot rather than a pan. */
+  animation: cc-drift 26s ease-in-out infinite alternate;
   will-change: transform;
 }
 
 @keyframes cc-drift {
-  from { transform: scale(1.06) translate3d(-0.8%, 0.4%, 0); }
-  to   { transform: scale(1.14) translate3d(0.8%, -0.6%, 0); }
+  from { transform: scale(1.05) translate3d(-2.2%, 1.4%, 0); }
+  to   { transform: scale(1.22) translate3d(2.2%, -1.8%, 0); }
 }
 
 /* Decorative motion only — a background that creeps is precisely what this
    setting exists to stop. The scale stays so no edge is ever exposed. */
 @media (prefers-reduced-motion: reduce) {
-  .cc-hero-img { animation: none; transform: scale(1.06); }
+  .cc-hero-img { animation: none; transform: scale(1.08); }
 }
 
 .cc-fallback {
