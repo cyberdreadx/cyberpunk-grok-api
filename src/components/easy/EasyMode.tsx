@@ -23,6 +23,7 @@ import { apiFetch } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { getAssist, setAssist } from "@/lib/createMode";
 import { useEasyThreads, type StoredMessage } from "@/hooks/useEasyThreads";
+import { uploadPublicMedia } from "@/lib/mediaUpload";
 
 /** Only the fields Easy actually sends. The hook's own parameter types are
  *  wider; narrowing here keeps this file honest about what it uses. */
@@ -110,10 +111,15 @@ const ASPECTS = [
   { id: "landscape", label: "Landscape", w: 1216, h: 832 },
 ] as const;
 
+// Frame counts match Classic's COMFY duration presets exactly, so the same
+// choice costs and lasts the same in both modes. Easy stopped at ~7s while
+// Classic went to 15s.
 const LENGTHS = [
   { id: "short", label: "~3s", frames: 49 },
   { id: "normal", label: "~5s", frames: 81 },
   { id: "long", label: "~7s", frames: 113 },
+  { id: "xlong", label: "~10s", frames: 161 },
+  { id: "max", label: "~15s", frames: 241 },
 ] as const;
 
 export default function EasyMode({ engines }: { engines: EasyEngines }) {
@@ -141,17 +147,35 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
   const activeThreadRef = useRef<string | null>(null);
   activeThreadRef.current = store.activeId;
 
-  // Load a thread's history when it becomes active. A message still marked
-  // `running` was interrupted by a reload — the job itself carried on and the
-  // render is in the Library, but this tab lost the binding, so say that
-  // rather than spinning forever.
+  /** Which thread the bubbles currently on screen belong to.
+   *
+   *  Without this the first message of a new chat destroys itself. send()
+   *  creates the thread, which flips store.activeId, which fires the load
+   *  effect below, whose response then overwrites the bubbles that same send
+   *  is still building — including the result bubble carrying jobId and
+   *  rowId. The render then had no bubble to bind to, so it vanished from the
+   *  chat and its assets were never written back. Every message in the
+   *  database had an empty assets array because of this. */
+  const shownThreadRef = useRef<string | null>(null);
+
+  // Load a thread's history when the user switches to a DIFFERENT thread. A
+  // message still marked `running` was interrupted by a reload — the job
+  // itself carried on and the render is in the Library, but this tab lost the
+  // binding, so say that rather than spinning forever.
   useEffect(() => {
-    if (!store.activeId) { setThread([]); return; }
+    if (!store.activeId) { shownThreadRef.current = null; setThread([]); return; }
+    // Already showing it — a reload here would clobber unsaved local bubbles.
+    if (shownThreadRef.current === store.activeId) return;
+    shownThreadRef.current = store.activeId;
     let cancelled = false;
     void loadMessages(store.activeId).then((rows: StoredMessage[]) => {
       if (cancelled) return;
       setThread(rows.map((m): Bubble => m.role === "user"
-        ? { kind: "user", id: m.id, text: m.text || "" }
+        ? {
+          kind: "user", id: m.id, text: m.text || "",
+          // The upload the user attached, restored from its stored URL.
+          attachment: m.assets?.[0]?.url,
+        }
         : {
           kind: "result", id: m.id, rowId: m.id, jobId: "",
           prompt: m.text || "", phase: "",
@@ -174,42 +198,48 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
   }, [thread]);
 
   // Bind live job state (phase, errors) and finished assets onto their bubbles.
+  //
+  // Reads `thread` directly instead of going through a setThread updater. A
+  // state updater must be pure, and this one wrote to the database from inside
+  // it — React is free to call an updater more than once, which meant
+  // duplicate writes (and double every one of them under StrictMode). The
+  // `changed` guard is what stops the `thread` dependency from looping.
   useEffect(() => {
-    setThread((prev) => {
-      let changed = false;
-      const next = prev.map((b) => {
-        if (b.kind !== "result" || b.status !== "running") return b;
-        const job = comfyJobs.find((j) => j.id === b.jobId);
-        if (!job) return b;
+    let changed = false;
+    const persist: Array<() => void> = [];
+    const next = thread.map((b) => {
+      if (b.kind !== "result" || b.status !== "running") return b;
+      const job = comfyJobs.find((j) => j.id === b.jobId);
+      if (!job) return b;
 
-        if (job.status === "error") {
-          changed = true;
-          if (b.rowId) void updateMsg(b.rowId, { status: "error", error: job.error || "Generation failed" });
-          return { ...b, status: "error" as const, error: job.error || "Generation failed", phase: "" };
+      if (job.status === "error") {
+        changed = true;
+        const error = job.error || "Generation failed";
+        if (b.rowId) persist.push(() => void updateMsg(b.rowId!, { status: "error", error }));
+        return { ...b, status: "error" as const, error, phase: "" };
+      }
+      if (job.status === "done") {
+        const head = headAtSubmit.current.get(b.jobId) ?? null;
+        const idx = head ? results.findIndex((r) => r.id === head) : results.length;
+        const fresh = results.slice(0, idx < 0 ? 0 : idx);
+        if (fresh.length === 0) return b; // result not prepended yet
+        changed = true;
+        if (b.rowId) {
+          const assets = fresh.map((a) => ({ url: a.url, previewUrl: a.previewUrl, type: a.type }));
+          persist.push(() => void updateMsg(b.rowId!, { status: "done", assets }));
         }
-        if (job.status === "done") {
-          const head = headAtSubmit.current.get(b.jobId) ?? null;
-          const idx = head ? results.findIndex((r) => r.id === head) : results.length;
-          const fresh = results.slice(0, idx < 0 ? 0 : idx);
-          if (fresh.length === 0) return b; // result not prepended yet
-          changed = true;
-          if (b.rowId) {
-            void updateMsg(b.rowId, {
-              status: "done",
-              assets: fresh.map((a) => ({ url: a.url, previewUrl: a.previewUrl, type: a.type })),
-            });
-          }
-          return { ...b, status: "done" as const, phase: "", assets: fresh };
-        }
-        if (job.phase && job.phase !== b.phase) {
-          changed = true;
-          return { ...b, phase: job.phase };
-        }
-        return b;
-      });
-      return changed ? next : prev;
+        return { ...b, status: "done" as const, phase: "", assets: fresh };
+      }
+      if (job.phase && job.phase !== b.phase) {
+        changed = true;
+        return { ...b, phase: job.phase };
+      }
+      return b;
     });
-  }, [comfyJobs, results, updateMsg]);
+    if (!changed) return;
+    setThread(next);
+    persist.forEach((run) => run());
+  }, [thread, comfyJobs, results, updateMsg]);
 
   const lastImage = useMemo(() => {
     for (let i = thread.length - 1; i >= 0; i--) {
@@ -263,9 +293,38 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
       let threadId = activeThreadRef.current;
       if (!threadId) {
         threadId = await createThread(text.slice(0, 60));
-        if (threadId) selectThread(threadId);
+        if (threadId) {
+          // Claim it before selecting, or the load effect races this send and
+          // overwrites the bubbles being built here.
+          shownThreadRef.current = threadId;
+          selectThread(threadId);
+        }
       }
-      if (threadId) void appendMsg(threadId, { role: "user", text });
+      if (threadId) {
+        const tid = threadId;
+        void appendMsg(tid, { role: "user", text }).then((rowId) => {
+          // The attachment reaches the engine as base64, which cannot be
+          // stored or re-served, so a reload used to lose the image the user
+          // uploaded while keeping their words. Copy it to R2 and hang the URL
+          // on the message. Deliberately not awaited before the job starts —
+          // the render does not need it, only the history does.
+          if (!rowId || !attached) return;
+          void (async () => {
+            try {
+              const blob = await (await fetch(attached.preview)).blob();
+              const up = await uploadPublicMedia(blob, "easy", `attach-${Date.now()}.png`);
+              await updateMsg(rowId, {
+                assets: [{ url: up.url, previewUrl: up.previewUrl, type: "image" }],
+              });
+              // Swap the local data URL for the stored one so this bubble and a
+              // reloaded one show the same image.
+              setThread((p) => p.map((b) =>
+                b.kind === "user" && b.attachment === attached.preview
+                  ? { ...b, attachment: up.url } : b));
+            } catch { /* history keeps the text; the image just won't persist */ }
+          })();
+        });
+      }
       // A follow-up with no attachment refines the last image. Without an
       // assist the instruction is concatenated onto the previous prompt, which
       // is what the spec calls a "new take".
