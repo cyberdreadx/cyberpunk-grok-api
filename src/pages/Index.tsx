@@ -92,6 +92,22 @@ const KREA2_LORA_META: Record<string, { label: string; nsfw?: boolean }> = {
   "realcumk4.safetensors": { label: "Real Cum", nsfw: true },
 };
 
+/* Klein edit adapters. Explicit labels because the filenames are training
+   artefacts — "bj_20260120_22-22-29epoch15_comfy" is what a user would
+   otherwise read in the menu — and explicit nsfw flags because the
+   isNsfwLora heuristic treats any name without "skin" or "angle" as adult,
+   which would lock the anatomy slider behind the XRGE unlock.
+   klein_9B_Turbo_r128 is deliberately absent: it is a step-count accelerator,
+   not a style, and belongs in the sampler settings rather than this menu. */
+const EDIT_LORA_META: Record<string, { label: string; nsfw?: boolean }> = {
+  "klein_snofs_v1_4.safetensors": { label: "SNOFS", nsfw: true },
+  "KLEIN-Unchained-V2.safetensors": { label: "Unchained", nsfw: true },
+  "klein_slider_anatomy.safetensors": { label: "Anatomy slider" },
+  "klein-deepthroat-15epoc-k3nk.safetensors": { label: "Deepthroat", nsfw: true },
+  "cowgirl_20260123_04-36-14epoch35.safetensors": { label: "Cowgirl", nsfw: true },
+  "bj_20260120_22-22-29epoch15_comfy.safetensors": { label: "Blowjob", nsfw: true },
+};
+
 const LORA_CREDITS: Record<string, string> = {
   "klein_snofs_v1_4.safetensors": "SNOFS by Ashen3",
 };
@@ -1710,18 +1726,22 @@ const Index = () => {
                       <div>
                         <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">LoRA (optional)</label>
                         <select value={editLora} onChange={(e) => {
-                          if (isNsfwLora(e.target.value) && !comfyModels.xrgeHolder && e.target.value !== "none") return;
+                          const meta = EDIT_LORA_META[e.target.value];
+                          if (meta?.nsfw && !comfyModels.xrgeHolder && e.target.value !== "none") return;
                           setEditLora(e.target.value);
                         }}
                           className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-[10px] font-mono-share text-foreground">
                           <option value="none">None</option>
-                          {comfyModels.editLoras.map((l) => (
-                            <option key={l} value={l}
-                              disabled={isNsfwLora(l) && !comfyModels.xrgeHolder}
-                              style={isNsfwLora(l) && !comfyModels.xrgeHolder ? { color: '#666', fontStyle: 'italic' } : undefined}>
-                              {isNsfwLora(l) && !comfyModels.xrgeHolder ? "🔒 " : ""}{l.replace(/\.[^.]+$/, "")}
-                            </option>
-                          ))}
+                          {comfyModels.editLoras.map((l) => {
+                            const meta = EDIT_LORA_META[l];
+                            const locked = !!meta?.nsfw && !comfyModels.xrgeHolder;
+                            return (
+                              <option key={l} value={l} disabled={locked}
+                                style={locked ? { color: '#666', fontStyle: 'italic' } : undefined}>
+                                {locked ? "🔒 " : ""}{meta?.label || l.replace(/\.[^.]+$/, "")}
+                              </option>
+                            );
+                          })}
                         </select>
                         {editLora !== "none" && LORA_CREDITS[editLora] && (
                           <div className="font-mono-share text-[8px] text-muted-foreground/50 mt-1">
@@ -1739,7 +1759,7 @@ const Index = () => {
                               className="w-full h-1 accent-secondary" />
                           </div>
                         )}
-                        {!comfyModels.xrgeHolder && comfyModels.editLoras.some(isNsfwLora) && (
+                        {!comfyModels.xrgeHolder && comfyModels.editLoras.some((l) => EDIT_LORA_META[l]?.nsfw) && (
                           <div className="font-mono-share text-[8px] text-pink-400/60 mt-1 space-y-1">
                             <p>🔒 NSFW LoRAs require unlock</p>
                             <button
