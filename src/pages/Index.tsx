@@ -64,6 +64,7 @@ import { useGrokApi, urlToBase64, getImageDimensions, type GrokMode, type Genera
 import { apiFetch, calculateCreditCost, type CreditMode } from "@/lib/api";
 import { AGE_VERIFIED_EVENT, isAgeVerified } from "@/lib/ageGate";
 import { APP_VERSION } from "@/lib/version";
+import { RENDER_SIZES, ZIMAGE_SIZES, ZIMAGE_ORDER, type RenderAspect } from "@/lib/renderSizes";
 
 const ANNOUNCEMENTS: { id: string; message: string; type?: "info" | "warning" | "success" }[] = [
   { id: "gltch-wan-launch", message: "GLTCH Animate now defaults to a simpler WAN 2.2 stable mode for more reliable results.", type: "info" },
@@ -72,42 +73,7 @@ const ANNOUNCEMENTS: { id: string; message: string; type?: "info" | "warning" | 
 const SFW_LORA_KEYWORDS = ["skin", "angle"];
 const isNsfwLora = (name: string) => !SFW_LORA_KEYWORDS.some(k => name.toLowerCase().includes(k));
 
-/* Output shapes for the two RENDER engines.
- *
- * Every pair is divisible by 32, which satisfies LTX (buildLtxWorkflow rounds
- * to 32, so an exact pair means the label matches the file) and WAN's /16 in
- * one go. Pixel counts are held between 393k and 409k — near the 832x480 the
- * COMFY chain has always used — because both engines are billed flat per clip
- * or per second, not per pixel, so a shape change must not quietly double
- * render time.
- *
- * COMFY reaches these indirectly: buildGltchWanWorkflow ignores the width and
- * height it is handed and takes the video's shape from resizing the Z-Image
- * start frame into a `resolution` x `resolution` box (ImageResizeKJv2,
- * keep_proportion, divisible_by 16). Passing the pair's long edge as
- * `resolution` reproduces the pair exactly, since the start frame already
- * carries the ratio.
- *
- * LTX renders at 2x COMFY's sizes because it renders them NATIVELY. The x2
- * latent upscale tail was tried first and produced visibly worse output —
- * it adds resolution while smoothing away the strand and pore detail the
- * sampler had already produced. Rendering 960x1664 directly beats rendering
- * 480x832 and upsampling to the same dimensions, at 21s against 7s of
- * sampling, which is noise next to cold-start model loading. Verified at the
- * longest preset too: 361 frames at 960x1664 renders in 272s with no drift
- * by frame 340, which is 6.9% of that clip's revenue.
- *
- * WAN deliberately does NOT follow. It is trained at 480p/720p buckets, so
- * 1664x960 would be well outside its training resolution.
- */
-type RenderAspect = "16:9" | "3:2" | "1:1" | "2:3" | "9:16";
-const RENDER_SIZES: Record<RenderAspect, { comfy: [number, number]; ltx: [number, number] }> = {
-  "16:9": { comfy: [832, 480], ltx: [1664, 960] },
-  "3:2": { comfy: [768, 512], ltx: [1536, 1024] },
-  "1:1": { comfy: [640, 640], ltx: [1280, 1280] },
-  "2:3": { comfy: [512, 768], ltx: [1024, 1536] },
-  "9:16": { comfy: [480, 832], ltx: [960, 1664] },
-};
+
 
 const Index = () => {
   const [simpleMode, setSimpleMode] = useState(() => localStorage.getItem("ui-mode") !== "advanced");
@@ -1788,15 +1754,9 @@ const Index = () => {
                   <div>
                     <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">OUTPUT SIZE</label>
                     <div className="grid grid-cols-4 gap-1">
-                      {([
-                        [1024, 1024, "1:1"],
-                        [1152, 896, "4:3"],
-                        [1216, 832, "3:2"],
-                        [1344, 768, "16:9"],
-                        [896, 1152, "3:4"],
-                        [832, 1216, "2:3"],
-                        [768, 1344, "9:16"],
-                      ] as [number, number, string][]).map(([w, h, label]) => (
+                      {ZIMAGE_ORDER.map((label) => {
+                        const [w, h] = ZIMAGE_SIZES[label];
+                        return (
                         <button key={`zi-${w}x${h}`} type="button"
                           onClick={() => { setZimageWidth(w); setZimageHeight(h); }}
                           className={`px-1.5 py-1 rounded text-center font-mono-share text-[9px] border transition-all
@@ -1807,7 +1767,8 @@ const Index = () => {
                         >
                           {label}
                         </button>
-                      ))}
+                        );
+                      })}
                     </div>
                     <p className="font-mono-share text-[8px] text-muted-foreground/50 mt-1">
                       {zimageWidth}×{zimageHeight} — 3 cr at any size

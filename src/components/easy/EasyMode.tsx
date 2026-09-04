@@ -24,6 +24,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getAssist, setAssist } from "@/lib/createMode";
 import { useEasyThreads, type StoredMessage } from "@/hooks/useEasyThreads";
 import { uploadPublicMedia } from "@/lib/mediaUpload";
+import { EASY_ASPECTS, ZIMAGE_SIZES } from "@/lib/renderSizes";
 
 /** Only the fields Easy actually sends. The hook's own parameter types are
  *  wider; narrowing here keeps this file honest about what it uses. */
@@ -117,12 +118,16 @@ async function urlToBase64(url: string): Promise<string> {
 const round8 = (v: number) => Math.round(Math.max(256, v) / 8) * 8;
 
 /** The only settings Easy varies. Each maps straight onto a parameter the
- *  generate call already takes, so there is nothing here that does nothing. */
-const ASPECTS = [
-  { id: "portrait", label: "Portrait", w: 832, h: 1216 },
-  { id: "square", label: "Square", w: 1024, h: 1024 },
-  { id: "landscape", label: "Landscape", w: 1216, h: 832 },
-] as const;
+ *  generate call already takes, so there is nothing here that does nothing.
+ *
+ *  Dimensions come from the shared table rather than being repeated here —
+ *  these three used to carry their own copies of numbers that also lived in
+ *  Classic's picker, agreeing by coincidence rather than by construction. */
+const ASPECTS = EASY_ASPECTS.map((a) => ({
+  ...a,
+  w: ZIMAGE_SIZES[a.aspect][0],
+  h: ZIMAGE_SIZES[a.aspect][1],
+}));
 
 // Frame counts match Classic's COMFY duration presets exactly, so the same
 // choice costs and lasts the same in both modes. Easy stopped at ~7s while
@@ -154,7 +159,7 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
   const [attachment, setAttachment] = useState<{ b64: string; preview: string } | null>(null);
   const [assist, setAssistOn] = useState(getAssist);
   const [optionsOpen, setOptionsOpen] = useState(false);
-  const [aspect, setAspect] = useState<(typeof ASPECTS)[number]["id"]>("portrait");
+  const [aspect, setAspect] = useState<(typeof EASY_ASPECTS)[number]["id"]>("portrait");
   const [length, setLength] = useState<(typeof LENGTHS)[number]["id"]>("normal");
   // Defaults to what Easy already did, so nobody's next video silently costs
   // more than their last one. Upgrading is one tap and states its price.
