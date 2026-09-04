@@ -88,7 +88,12 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 12px clamp(16px, 4vw, 40px);
+  /* The status bar and Dynamic Island overlap this bar on a notched iPhone —
+     index.html sets viewport-fit=cover, so the page draws under them and the
+     brand and SIGN UP were sitting behind the clock. The rest of the app
+     already allows for the inset; this bar never did. Falls back to a plain
+     12px everywhere the variable resolves to 0. */
+  padding: calc(12px + env(safe-area-inset-top, 0px)) clamp(16px, 4vw, 40px) 12px;
   background: linear-gradient(180deg, hsl(var(--background) / 0.92), hsl(var(--background) / 0.4));
   backdrop-filter: blur(8px);
   border-bottom: 1px solid hsl(var(--primary) / 0.18);
