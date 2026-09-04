@@ -4,7 +4,7 @@
  */
 
 import { unsubUrl } from "./notification-prefs";
-import { getResend, getFromAddress, logEmail, buildAnnouncementHtml, buildV47AnnouncementHtml, buildV48AnnouncementHtml, buildV49SubscriptionFixHtml, buildV52AnnouncementHtml, buildV53AnnouncementHtml, buildV55AnnouncementHtml, buildLaunchAnnouncementHtml, buildCrackdownAnnouncementHtml } from "./email";
+import { getResend, getFromAddress, logEmail, buildAnnouncementHtml, buildV47AnnouncementHtml, buildV48AnnouncementHtml, buildV49SubscriptionFixHtml, buildV52AnnouncementHtml, buildV53AnnouncementHtml, buildV55AnnouncementHtml, buildV56AnnouncementHtml, buildLaunchAnnouncementHtml, buildCrackdownAnnouncementHtml } from "./email";
 
 export const CAMPAIGN_CONFIG_KEY = "active_email_campaign";
 
@@ -28,6 +28,7 @@ export const DEFAULT_CAMPAIGN_SUBJECTS: Record<string, string> = {
   announcement_v52: "⚡ GLTCHRunner v5.2 — Faster & More Reliable Than Ever",
   announcement_v53: "🔊 GLTCHRunner v5.3 — LTX video with SOUND is live",
   announcement_v55: "🎬 GLTCHRunner v5.5 — video thumbnails fixed + text posts",
+  announcement_v56: "✨ GLTCHRunner v5.6 — new Krea 2 engine + sharper video",
   announcement_launch: "🚀 GLTCH Runner is here — chat with AI models + video gen",
   announcement_crackdown: "🧹 GLTCHRunner — Credit farmers banned, full speed restored",
 };
@@ -46,6 +47,8 @@ export function getAnnouncementHtmlForCampaign(campaign: string): string {
       return buildV53AnnouncementHtml();
     case "announcement_v55":
       return buildV55AnnouncementHtml();
+    case "announcement_v56":
+      return buildV56AnnouncementHtml();
     case "announcement_launch":
       return buildLaunchAnnouncementHtml();
     case "announcement_crackdown":

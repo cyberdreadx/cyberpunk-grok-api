@@ -1374,3 +1374,70 @@ export function buildNotificationHtml(
     </div>
   `;
 }
+
+/**
+ * v5.6 announcement — Krea 2, sharper LTX, Easy mode.
+ *
+ * Leads with the new engine and the LTX sharpness, because those are what a
+ * returning user would actually notice. The fixes are grouped into one block
+ * rather than given equal billing: "notifications work again" is important to
+ * say and not worth three sentences.
+ */
+export function buildV56AnnouncementHtml(): string {
+  return `
+    <div style="font-family: 'Courier New', monospace; background: #0a0a0f; color: #e0e0e0; padding: 32px; max-width: 540px; margin: 0 auto;">
+      <div style="border: 1px solid #00f0ff33; padding: 28px; border-radius: 4px;">
+
+        <h1 style="color: #00f0ff; font-size: 22px; letter-spacing: 4px; margin: 0 0 6px; text-align: center;">
+          GLTCHRUNNER
+        </h1>
+        <p style="color: #ff00e599; font-size: 11px; letter-spacing: 5px; text-align: center; margin: 0 0 28px;">
+          v5.6 // SHARPER_EVERYTHING
+        </p>
+
+        <div style="background: linear-gradient(135deg, #00f0ff15, #ff00e515); border: 1px solid #00f0ff66; padding: 18px; border-radius: 4px; margin: 0 0 24px; text-align: center;">
+          <p style="color: #00f0ff; font-size: 12px; letter-spacing: 3px; margin: 0 0 8px;">✨ NEW ENGINE — KREA 2</p>
+          <p style="font-size: 13px; color: #c0c0c0; margin: 0; line-height: 1.6;">
+            Photoreal, film-grade image generation. It answers to camera language — "35mm", "shallow depth of field" — the way a photograph does. Ten style presets including retro anime. Same 3 credits as GLTCH.
+          </p>
+        </div>
+
+        <div style="border: 1px solid #ff00e544; padding: 18px; border-radius: 4px; margin: 0 0 24px;">
+          <p style="color: #ff00e5; font-size: 12px; letter-spacing: 3px; margin: 0 0 8px;">🎬 LTX VIDEO IS VISIBLY SHARPER</p>
+          <p style="font-size: 13px; color: #c0c0c0; margin: 0; line-height: 1.6;">
+            LTX now renders at full size instead of enlarging a smaller frame afterwards. Faces, hair and fabric hold real detail. Clips run up to 15 seconds. Same price — still 7 cr/s.
+          </p>
+        </div>
+
+        <div style="border: 1px solid #00f0ff33; padding: 18px; border-radius: 4px; margin: 0 0 24px;">
+          <p style="color: #00f0ff; font-size: 12px; letter-spacing: 3px; margin: 0 0 10px;">💬 EASY MODE</p>
+          <p style="font-size: 13px; color: #c0c0c0; margin: 0 0 12px; line-height: 1.6;">
+            Describe what you want in a chat instead of filling in a panel. Your conversations are saved. Classic is unchanged — switch any time with the Easy · Classic toggle.
+          </p>
+          <p style="color: #00f0ff; font-size: 12px; letter-spacing: 3px; margin: 0 0 10px;">📐 SIZE CONTROLS THAT WORK</p>
+          <p style="font-size: 13px; color: #c0c0c0; margin: 0; line-height: 1.6;">
+            Vertical video now comes out vertical. The GLTCH image engine is no longer locked to square. And settings that an engine quietly ignored are hidden instead of pretending to do something.
+          </p>
+        </div>
+
+        <div style="border-left: 2px solid #00f0ff44; padding: 0 0 0 14px; margin: 0 0 26px;">
+          <p style="font-size: 12px; color: #909090; margin: 0; line-height: 1.7;">
+            Also fixed: direct messages appearing several times after sending, notifications that had silently stopped being delivered, and comment spam limits after a few accounts were farming credits in bulk.
+          </p>
+        </div>
+
+        <div style="text-align: center; margin: 0 0 24px;">
+          <a href="https://grokrunner.gltch.app" style="display: inline-block; background: linear-gradient(135deg, #00f0ff, #ff00e5); color: #0a0a0f; text-decoration: none; padding: 13px 32px; border-radius: 4px; font-weight: bold; letter-spacing: 2px; font-size: 13px;">
+            TRY KREA 2
+          </a>
+        </div>
+
+        <p style="color: #606060; font-size: 10px; text-align: center; margin: 0; line-height: 1.6;">
+          You're receiving this because you have a GLTCH Runner account.<br />
+          Manage email preferences in Settings.
+        </p>
+
+      </div>
+    </div>
+  `;
+}

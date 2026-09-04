@@ -28,7 +28,7 @@ const CHANGELOG: ChangelogEntry[] = [
         date: "September 4, 2026",
         title: "v5.6 — Sharper Video, Easy Mode & Size Controls That Work",
         items: [
-            { icon: <Sparkles className="w-3.5 h-3.5" />, text: "New image engine — Krea 2 Turbo. Photoreal, film-grade output at 3 credits, the same as GLTCH. Pick it under ENGINE in Generate", tag: "new" },
+            { icon: <Sparkles className="w-3.5 h-3.5" />, text: "New image engine — Krea 2 Turbo. Photoreal, film-grade output at 3 credits, the same as GLTCH, with ten style presets including retro anime. Pick it under ENGINE in Generate", tag: "new" },
             { icon: <Film className="w-3.5 h-3.5" />, text: "LTX video is visibly sharper — it now renders up to 1664×960 directly instead of enlarging a smaller frame afterwards. Faces, hair and fabric hold real detail. Same lengths, same 7 cr/s", tag: "improve" },
             { icon: <MessageSquare className="w-3.5 h-3.5" />, text: "Easy mode — describe what you want in a chat instead of filling in a parameter panel. Switch any time with the Easy · Classic toggle; Classic is unchanged and your conversations are saved", tag: "new" },
             { icon: <Camera className="w-3.5 h-3.5" />, text: "Video aspect ratio actually applies — RENDER has a working 16:9 / 3:2 / 1:1 / 2:3 / 9:16 control on every engine. Vertical clips for phones now come out vertical instead of landscape", tag: "fix" },
