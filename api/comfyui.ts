@@ -498,6 +498,32 @@ function buildLtxWorkflow(p: {
     wf["20"] = { class_type: "LTXVAudioVAEDecode", inputs: { samples: ["18", 1], audio_vae: ["4", 0] } };
   }
 
+  // ── Spatial upscale tail (x2 on the latent, before decode) ──────
+  // LTX decoded straight from the sampler while the WAN path ran RIFE plus a
+  // 4x ESRGAN pass, which is a large part of why LTX read softer next to it.
+  // ltx-2.3-spatial-upscaler-x2-1.1.safetensors has been sitting in
+  // models/latent_upscale_models since June, referenced by nothing.
+  //
+  // Upsampling the latent and letting VAEDecodeTiled decode at the higher
+  // resolution beats decoding then upscaling pixels: the detail is
+  // reconstructed by a model trained on this VAE's latent space rather than
+  // interpolated after the fact.
+  //
+  // Off unless LTX_SPATIAL_UPSCALER names a file. LTXVLatentUpsampler only
+  // landed in ComfyUI on 2026-01-04, so an env switch means a worker whose
+  // core predates it can be recovered without a redeploy.
+  const SPATIAL_UPSCALER = process.env.LTX_SPATIAL_UPSCALER || "";
+  if (SPATIAL_UPSCALER) {
+    wf["24"] = { class_type: "LatentUpscaleModelLoader", inputs: { model_name: SPATIAL_UPSCALER } };
+    // `vae` is the video VAE — the node needs its per-channel statistics to
+    // un-normalise before upsampling and re-normalise after.
+    wf["25"] = {
+      class_type: "LTXVLatentUpsampler",
+      inputs: { samples: videoDecodeRef, upscale_model: ["24", 0], vae: ["3", 0] },
+    };
+    videoDecodeRef = ["25", 0];
+  }
+
   wf["19"] = {
     class_type: "VAEDecodeTiled",
     inputs: { samples: videoDecodeRef, vae: ["3", 0], tile_size: 512, overlap: 64, temporal_size: 2048, temporal_overlap: 8 },
