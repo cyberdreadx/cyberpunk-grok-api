@@ -17,7 +17,7 @@
  * Classic is untouched by any of this.
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowUp, Loader2, MessageSquarePlus, Menu, Paperclip, Sliders, Sparkles, Trash2, Video, Wand2, X } from "lucide-react";
+import { ArrowUp, Check, Loader2, MessageSquarePlus, Menu, Paperclip, Pencil, RefreshCw, Sliders, Sparkles, Square, Trash2, Video, Wand2, X } from "lucide-react";
 import type { ComfyJob, GrokResult } from "@/hooks/useGrokApi";
 import { apiFetch } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
@@ -55,6 +55,8 @@ export interface EasyEngines {
   /** Classic's own handlers, reused verbatim for "Open in Classic". */
   onEditImage: (url: string) => void;
   onAnimateImage: (url: string) => void;
+  /** Classic already offers this on a running job; Easy had no way to stop one. */
+  cancelComfyJob: (jobId: string) => void | Promise<void>;
 }
 
 type Bubble =
@@ -136,14 +138,13 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
   const endRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
 
-  /** results[0].id at the moment each job was submitted — anything newer than
-   *  this that arrives while the job runs belongs to that bubble. */
-  const headAtSubmit = useRef<Map<string, string | null>>(new Map());
 
   const { results, comfyJobs } = engines;
   const store = useEasyThreads(true);
   const { loadMessages, createThread, selectThread, append: appendMsg, update: updateMsg } = store;
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameDraft, setRenameDraft] = useState("");
   const activeThreadRef = useRef<string | null>(null);
   activeThreadRef.current = store.activeId;
 
@@ -219,9 +220,10 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
         return { ...b, status: "error" as const, error, phase: "" };
       }
       if (job.status === "done") {
-        const head = headAtSubmit.current.get(b.jobId) ?? null;
-        const idx = head ? results.findIndex((r) => r.id === head) : results.length;
-        const fresh = results.slice(0, idx < 0 ? 0 : idx);
+        // Matched on the job that produced them, not on position. The old
+        // "everything above where results started when I submitted" rule gave
+        // one bubble another bubble's output the moment two sends overlapped.
+        const fresh = results.filter((r) => r.jobId === b.jobId);
         if (fresh.length === 0) return b; // result not prepended yet
         changed = true;
         if (b.rowId) {
@@ -272,14 +274,20 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
     }
   }, []);
 
-  const send = useCallback(async () => {
-    const text = draft.trim();
+  /** `overrideText` re-runs an earlier prompt without the user retyping it —
+   *  the "try again" on a finished result. It deliberately does NOT reuse that
+   *  result's attachment: a regenerate follows the same rules as typing the
+   *  same words now, which keeps what the button does predictable. */
+  const send = useCallback(async (overrideText?: string) => {
+    const text = (overrideText ?? draft).trim();
     if (!text || busy) return;
     setBusy(true);
 
-    const attached = attachment;
-    setDraft("");
-    setAttachment(null);
+    const attached = overrideText ? null : attachment;
+    if (!overrideText) {
+      setDraft("");
+      setAttachment(null);
+    }
 
     const wantsVideo = VIDEO_HINT.test(text);
     const sourceUrl = attached ? null : lastImage;
@@ -334,7 +342,6 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
 
       const ar = ASPECTS.find((a) => a.id === aspect)!;
       const len = LENGTHS.find((l) => l.id === length)!;
-      const head = results[0]?.id ?? null;
       let jobId: string | undefined;
       let label: string | undefined;
 
@@ -368,7 +375,6 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
       }
 
       if (!jobId) throw new Error("Could not start the job");
-      headAtSubmit.current.set(jobId, head);
       const rowId = threadId
         ? await appendMsg(threadId, { role: "result", text: prompt, status: "running", label: label ?? null })
         : null;
@@ -428,22 +434,63 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
           className={`group flex items-center gap-1 rounded-lg transition-colors ${t.id === store.activeId ? "bg-primary/10" : "hover:bg-muted/50"
             }`}
         >
-          <button
-            onClick={() => { store.selectThread(t.id); setSidebarOpen(false); }}
-            className={`flex-1 text-left px-3 py-2 font-mono text-[11px] truncate ${t.id === store.activeId ? "text-primary" : "text-muted-foreground"
-              }`}
-          >
-            {t.title || "Untitled"}
-          </button>
-          <button
-            onClick={() => {
-              if (window.confirm("Delete this chat? Your images stay in the Library.")) void store.remove(t.id);
-            }}
-            className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1.5 text-muted-foreground hover:text-destructive transition-opacity"
-            aria-label="Delete chat"
-          >
-            <Trash2 className="w-3 h-3" />
-          </button>
+          {renamingId === t.id ? (
+            /* Titles are frozen at the first 60 characters of the opening
+               message, which stops describing the chat almost immediately.
+               The rename API already existed with nothing calling it. */
+            <form
+              className="flex-1 flex items-center gap-1 px-2 py-1"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const title = renameDraft.trim();
+                if (title) void store.rename(t.id, title);
+                setRenamingId(null);
+              }}
+            >
+              <input
+                autoFocus
+                value={renameDraft}
+                onChange={(e) => setRenameDraft(e.target.value)}
+                onBlur={() => setRenamingId(null)}
+                onKeyDown={(e) => { if (e.key === "Escape") setRenamingId(null); }}
+                maxLength={120}
+                className="flex-1 min-w-0 bg-background/80 border border-primary/40 rounded px-2 py-1 font-mono text-[11px] text-foreground"
+                aria-label="Chat title"
+              />
+              {/* onMouseDown, because the input's onBlur would fire first and
+                  unmount this button before a click could land. */}
+              <button type="submit" onMouseDown={(e) => e.preventDefault()}
+                className="p-1 text-primary" aria-label="Save title">
+                <Check className="w-3 h-3" />
+              </button>
+            </form>
+          ) : (
+            <>
+              <button
+                onClick={() => { store.selectThread(t.id); setSidebarOpen(false); }}
+                className={`flex-1 text-left px-3 py-2 font-mono text-[11px] truncate ${t.id === store.activeId ? "text-primary" : "text-muted-foreground"
+                  }`}
+              >
+                {t.title || "Untitled"}
+              </button>
+              <button
+                onClick={() => { setRenamingId(t.id); setRenameDraft(t.title || ""); }}
+                className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1.5 text-muted-foreground hover:text-primary transition-opacity"
+                aria-label="Rename chat"
+              >
+                <Pencil className="w-3 h-3" />
+              </button>
+              <button
+                onClick={() => {
+                  if (window.confirm("Delete this chat? Your images stay in the Library.")) void store.remove(t.id);
+                }}
+                className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1.5 text-muted-foreground hover:text-destructive transition-opacity"
+                aria-label="Delete chat"
+              >
+                <Trash2 className="w-3 h-3" />
+              </button>
+            </>
+          )}
         </div>
       ))}
     </div>
@@ -513,6 +560,15 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
                   <div className="flex items-center gap-2 text-sm text-muted-foreground font-mono">
                     <Loader2 className="w-4 h-4 animate-spin text-primary" />
                     {b.phase || "Working…"}
+                    {b.jobId && (
+                      <button
+                        onClick={() => void engines.cancelComfyJob(b.jobId)}
+                        className="ml-1 flex items-center gap-1 px-2 py-0.5 rounded-md border border-border/50 text-[11px] text-muted-foreground hover:text-destructive hover:border-destructive/40 transition-colors"
+                        aria-label="Stop this generation"
+                      >
+                        <Square className="w-2.5 h-2.5 fill-current" /> Stop
+                      </button>
+                    )}
                   </div>
                 )}
                 {b.status === "error" && (
@@ -531,6 +587,13 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
                     </div>
                     {/* Only actions that already exist in Classic. */}
                     <div className="flex gap-2 flex-wrap">
+                      <button
+                        onClick={() => void send(b.prompt)}
+                        disabled={busy}
+                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-border/50 font-mono text-[11px] text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors disabled:opacity-40"
+                      >
+                        <RefreshCw className="w-3 h-3" /> Try again
+                      </button>
                       {b.assets[0]?.type === "image" && (
                         <>
                           <button
@@ -656,6 +719,15 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
                 }`}
             >
               <Sliders className="w-3 h-3" /> Options
+              {/* The active setting on the button itself. Aspect and length
+                  lived entirely behind this toggle, so the only way to know
+                  what a send would produce was to open it and look. Shows
+                  whichever one the current draft will actually use. */}
+              <span className="text-muted-foreground/60">
+                · {VIDEO_HINT.test(draft)
+                  ? LENGTHS.find((l) => l.id === length)!.label
+                  : ASPECTS.find((a) => a.id === aspect)!.label}
+              </span>
             </button>
             <button
               onClick={toggleAssist}

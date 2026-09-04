@@ -155,6 +155,12 @@ export const DEFAULT_VIDEO_SETTINGS: VideoSettings = {
 
 export interface GrokResult {
   id: string;
+  /** The comfyJobs id that produced this, when a queued job did.
+   *  Easy mode binds results to chat bubbles by this. Without it the only
+   *  available match was "whatever appeared at the head of results since I
+   *  submitted", which hands one bubble another bubble's output as soon as two
+   *  generations overlap. */
+  jobId?: string;
   url: string;
   previewUrl?: string;
   revised_prompt?: string;
@@ -1350,6 +1356,7 @@ export function useGrokApi() {
 
         const newResults: GrokResult[] = [{
           id: `comfy-img-${Date.now()}`,
+          jobId,
           url: result.image,
           previewUrl: result.previewUrl,
           revised_prompt: params.prompt,
@@ -1425,6 +1432,7 @@ export function useGrokApi() {
 
         const newResults: GrokResult[] = [{
           id: `comfy-edit-${Date.now()}`,
+          jobId,
           url: result.image,
           previewUrl: result.previewUrl,
           revised_prompt: params.prompt,
@@ -1530,6 +1538,7 @@ export function useGrokApi() {
         if (videoSrc.startsWith("blob:")) videoBlobUrls.current.set(rid, videoSrc);
         const newResults: GrokResult[] = [{
           id: rid,
+          jobId,
           url: videoSrc,
           previewUrl: result.previewUrl,
           revised_prompt: params.prompt,
@@ -1605,6 +1614,7 @@ export function useGrokApi() {
         if (videoSrc.startsWith("blob:")) videoBlobUrls.current.set(rid, videoSrc);
         const newResults: GrokResult[] = [{
           id: rid,
+          jobId,
           url: videoSrc,
           previewUrl: result.previewUrl,
           revised_prompt: params.prompt,
@@ -1716,6 +1726,7 @@ export function useGrokApi() {
         if (videoSrc.startsWith("blob:")) videoBlobUrls.current.set(rid, videoSrc);
         const newResults: GrokResult[] = [{
           id: rid,
+          jobId,
           url: videoSrc,
           previewUrl: vidResult.previewUrl,
           revised_prompt: params.prompt,
@@ -1809,6 +1820,7 @@ export function useGrokApi() {
         if (videoSrc.startsWith("blob:")) videoBlobUrls.current.set(rid, videoSrc);
         const newResults: GrokResult[] = [{
           id: rid,
+          jobId,
           url: videoSrc,
           previewUrl: result.previewUrl,
           revised_prompt: params.prompt,

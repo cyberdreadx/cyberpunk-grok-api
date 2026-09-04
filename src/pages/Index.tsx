@@ -1153,6 +1153,7 @@ const Index = () => {
               comfyVideo,
               results,
               comfyJobs,
+              cancelComfyJob,
               onEditImage: (url) => { switchCreateMode("classic"); handleEditImage(url); },
               onAnimateImage: (url) => { switchCreateMode("classic"); handleAnimateImage(url); },
             }}
