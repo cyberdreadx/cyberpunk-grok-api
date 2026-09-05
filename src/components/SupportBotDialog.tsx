@@ -215,6 +215,6 @@ export const SupportBotLauncher: React.FC<{ onClick: () => void }> = ({ onClick 
     className="fixed sm:!bottom-6 sm:!right-6 z-30 w-11 h-11 sm:w-12 sm:h-12 rounded-full border border-primary/40 bg-card/90 backdrop-blur-md shadow-lg shadow-primary/10 hover:bg-primary/10 hover:border-primary/70 hover:shadow-primary/30 active:scale-95 transition-all flex items-center justify-center group"
   >
     <LifeBuoy className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
-    <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-primary animate-pulse" />
+    <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-primary" />
   </button>
 );

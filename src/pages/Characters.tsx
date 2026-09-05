@@ -821,7 +821,7 @@ export default function Characters() {
 
             {galleryTab === "mine" && (
               loading ? (
-                <div className="text-center py-20 font-mono-share text-sm text-muted-foreground animate-pulse">Loading characters...</div>
+                <div className="text-center py-20 font-mono-share text-sm text-muted-foreground">Loading characters...</div>
               ) : characters.length === 0 ? (
                 <div className="text-center py-20 space-y-4">
                   <Sparkles className="w-12 h-12 mx-auto text-secondary/50" />
@@ -892,7 +892,7 @@ export default function Characters() {
 
             {galleryTab === "public" && (
               publicLoading ? (
-                <div className="text-center py-20 font-mono-share text-sm text-muted-foreground animate-pulse">Loading public characters...</div>
+                <div className="text-center py-20 font-mono-share text-sm text-muted-foreground">Loading public characters...</div>
               ) : publicChars.length === 0 ? (
                 <div className="text-center py-20 space-y-2">
                   <Sparkles className="w-12 h-12 mx-auto text-secondary/30" />
@@ -1109,7 +1109,7 @@ export default function Characters() {
                             <div className="absolute inset-0 border-2 border-secondary/20 rounded-full" />
                             <div className="absolute inset-0 border-2 border-secondary border-t-transparent rounded-full animate-spin" />
                           </div>
-                          <span className="font-mono-share text-[10px] text-secondary/70 animate-pulse">{genPhase}</span>
+                          <span className="font-mono-share text-[10px] text-secondary/70">{genPhase}</span>
                           <ElapsedTimer startTime={msg.timestamp} />
                         </div>
                       ) : msg.content ? (
@@ -1156,7 +1156,7 @@ export default function Characters() {
             {comfyModels.editLoras.length > 0 && (
               <div className="shrink-0 px-2 py-2 space-y-1.5 border-b border-border/60">
                 <div className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-secondary" />
                   <span className="font-mono-share text-[9px] text-secondary/70">Flux 2 Klein Edit + LoRA</span>
                 </div>
                 <div>

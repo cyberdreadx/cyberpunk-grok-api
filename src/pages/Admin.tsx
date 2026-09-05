@@ -1172,7 +1172,7 @@ function PayoutsPanel() {
     rejected: "text-destructive",
   };
 
-  if (loading) return <div className="py-8 text-center font-mono-share text-muted-foreground animate-pulse">Loading payouts...</div>;
+  if (loading) return <div className="py-8 text-center font-mono-share text-muted-foreground">Loading payouts...</div>;
 
   return (
     <div className="space-y-4">

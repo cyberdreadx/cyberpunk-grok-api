@@ -38,7 +38,7 @@ export default function Krea2LaunchBanner({ onClick }: Krea2LaunchBannerProps) {
     >
       <div className="relative flex items-center gap-3">
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-cyan-500/25 ring-2 ring-cyan-400/50">
-          <Sparkles className="h-4 w-4 text-cyan-300 animate-pulse" />
+          <Sparkles className="h-4 w-4 text-cyan-300" />
         </div>
 
         <div className="min-w-0 flex-1">

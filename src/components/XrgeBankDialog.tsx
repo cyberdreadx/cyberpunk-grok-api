@@ -944,7 +944,7 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
 
                   {/* Flash Sale Banner */}
                   {flashSale && (
-                    <div className="rounded-lg border border-orange-500/40 bg-orange-500/10 p-3 space-y-1 animate-pulse-slow">
+                    <div className="rounded-lg border border-orange-500/40 bg-orange-500/10 p-3 space-y-1 -slow">
                       <div className="flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full bg-orange-400 animate-pulse" />
                         <span className="font-orbitron text-[10px] tracking-wider text-orange-300">⚡ FLASH SALE — {flashSale.title.toUpperCase()}</span>

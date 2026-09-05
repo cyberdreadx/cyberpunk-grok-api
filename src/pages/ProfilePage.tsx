@@ -262,7 +262,7 @@ const ProfilePage: React.FC = () => {
     return (
       <CyberLayout>
         <div className="flex items-center justify-center min-h-[50vh]">
-          <div className="font-mono-share text-muted-foreground animate-pulse">LOADING PROFILE...</div>
+          <div className="font-mono-share text-muted-foreground">LOADING PROFILE...</div>
         </div>
       </CyberLayout>
     );

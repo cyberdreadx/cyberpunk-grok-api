@@ -472,7 +472,7 @@ export default function ComfyPanel({
             </span>
           )}
           {activeCount > 0 && (
-            <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-purple-500/80 text-[10px] font-mono font-bold text-white animate-pulse">
+            <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-purple-500/80 text-[10px] font-mono font-bold text-white">
               {activeCount}
             </span>
           )}

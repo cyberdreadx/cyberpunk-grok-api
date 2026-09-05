@@ -146,7 +146,7 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
             >
               <Users className="w-4 h-4 text-secondary/80" />
               <span className="font-mono-share text-[11px] text-foreground/80">FEATURED MODELS</span>
-              <span className="ml-auto font-mono-share text-[7px] px-1 py-px rounded-sm tracking-widest text-emerald-300 border border-emerald-400/40 bg-emerald-400/10 animate-pulse">NEW</span>
+              <span className="ml-auto font-mono-share text-[7px] px-1 py-px rounded-sm tracking-widest text-emerald-300 border border-emerald-400/40 bg-emerald-400/10">NEW</span>
             </button>
             <button
               onClick={() => {
@@ -290,7 +290,7 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
                       </span>
                     )}
                     {tab.newBadge && (
-                      <span className="absolute -top-2 -right-3 rounded-full border border-fuchsia-400/60 bg-card px-1 py-0.5 text-center font-orbitron text-[7px] leading-none text-fuchsia-300 shadow-[0_0_8px_hsl(300_90%_60%/0.4)] animate-pulse">
+                      <span className="absolute -top-2 -right-3 rounded-full border border-fuchsia-400/60 bg-card px-1 py-0.5 text-center font-orbitron text-[7px] leading-none text-fuchsia-300 shadow-[0_0_8px_hsl(300_90%_60%/0.4)]">
                         NEW
                       </span>
                     )}

@@ -36,7 +36,7 @@ export default function LtxLaunchBanner({ onClick }: LtxLaunchBannerProps) {
     >
       <div className="relative flex items-center gap-3">
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-500/25 ring-2 ring-amber-400/50">
-          <Volume2 className="h-4 w-4 text-amber-300 animate-pulse" />
+          <Volume2 className="h-4 w-4 text-amber-300" />
         </div>
 
         <div className="min-w-0 flex-1">

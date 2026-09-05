@@ -120,7 +120,7 @@ export default function ReferralPage() {
           </Card>
         ) : loading ? (
           <div className="space-y-4">
-            {[1,2,3].map(i => <div key={i} className="h-24 rounded bg-muted animate-pulse" />)}
+            {[1,2,3].map(i => <div key={i} className="h-24 rounded bg-muted" />)}
           </div>
         ) : (
           <>

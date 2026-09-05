@@ -34,7 +34,7 @@ export default function FeaturedModelsStrip() {
     <div className="space-y-2">
       <div className="flex items-center gap-2">
         <span className="font-orbitron text-[11px] tracking-widest text-secondary">FEATURED MODELS</span>
-        <span className="font-mono-share text-[8px] px-1 py-px rounded-sm tracking-widest text-emerald-300 border border-emerald-400/40 bg-emerald-400/10 animate-pulse">
+        <span className="font-mono-share text-[8px] px-1 py-px rounded-sm tracking-widest text-emerald-300 border border-emerald-400/40 bg-emerald-400/10">
           NEW
         </span>
         <button

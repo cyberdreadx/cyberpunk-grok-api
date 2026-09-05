@@ -128,7 +128,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ isAuthenticated }) 
       >
         <Bell className="w-4 h-4 text-muted-foreground" />
         {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold px-1 animate-pulse">
+          <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold px-1">
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}

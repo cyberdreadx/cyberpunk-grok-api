@@ -160,7 +160,7 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
               <ShoppingCart className="w-3 h-3" />
               <span className="hidden sm:inline">{t("nav.store")}</span>
               {flashSale && (
-                <span className="ml-1 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-orange-500/25 border border-orange-400/60 font-orbitron text-[8px] tracking-wider text-orange-200 animate-pulse">
+                <span className="ml-1 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-orange-500/25 border border-orange-400/60 font-orbitron text-[8px] tracking-wider text-orange-200">
                   <Flame className="w-2.5 h-2.5" />
                   SALE
                 </span>
@@ -185,7 +185,7 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
             <div className="mt-3 rounded-lg border-2 border-orange-500/60 bg-gradient-to-r from-orange-600/20 via-pink-500/15 to-orange-600/20 p-3 space-y-1.5 shadow-[0_0_24px_hsl(20_90%_50%/0.25)]">
               <div className="flex items-center gap-2 flex-wrap">
                 <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-orange-500/30 ring-2 ring-orange-400/60">
-                  <Flame className="h-3.5 w-3.5 text-orange-200 animate-pulse" />
+                  <Flame className="h-3.5 w-3.5 text-orange-200" />
                 </div>
                 <span className="font-orbitron text-[11px] tracking-widest text-orange-100 font-bold">⚡ FLASH SALE</span>
                 <span className="font-mono-share text-[11px] text-orange-100/90">{flashSale.title}</span>

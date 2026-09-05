@@ -74,7 +74,7 @@ export default function CreatorPersonaChatPanel() {
       </p>
 
       {loading ? (
-        <p className="font-mono-share text-[10px] text-muted-foreground animate-pulse">Loading…</p>
+        <p className="font-mono-share text-[10px] text-muted-foreground">Loading…</p>
       ) : published.length === 0 ? (
         <p className="font-mono-share text-[10px] text-amber-400/90">
           Publish a character under Characters → enable “Public”, then return here to link it.

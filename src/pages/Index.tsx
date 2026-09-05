@@ -1269,7 +1269,7 @@ const Index = () => {
               aria-label={t("header.sysOnline")}
               title={t("header.sysOnline")}
               className={`w-1.5 h-1.5 rounded-full transition-colors duration-500 ${
-                isLoading ? "bg-secondary animate-pulse" : "bg-primary animate-pulse-glow"
+                isLoading ?"bg-secondary" :"bg-primary -glow"
               }`}
             />
 
@@ -1462,7 +1462,7 @@ const Index = () => {
                   }`}
               >
                 <span className="flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse flex-shrink-0" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-current flex-shrink-0" />
                   {a.message}
                 </span>
                 <button
@@ -1490,7 +1490,7 @@ const Index = () => {
               <span className="font-orbitron text-sm sm:text-base font-bold text-foreground tracking-wide leading-tight">
                 Quick Create
               </span>
-              <div className={`w-2 h-2 rounded-full transition-colors duration-500 shrink-0 ml-auto ${isLoading ? "bg-secondary animate-pulse" : "bg-primary animate-pulse-glow"}`} />
+              <div className={`w-2 h-2 rounded-full transition-colors duration-500 shrink-0 ml-auto ${isLoading ?"bg-secondary" :"bg-primary -glow"}`} />
             </div>
             <div className="p-3 sm:p-5">
               <SimpleMode
@@ -1549,7 +1549,7 @@ const Index = () => {
                 — images, video, edits
               </span>
             </div>
-            <div className={`w-2 h-2 rounded-full transition-colors duration-500 shrink-0 ${isLoading ? "bg-secondary animate-pulse" : "bg-primary animate-pulse-glow"}`} />
+            <div className={`w-2 h-2 rounded-full transition-colors duration-500 shrink-0 ${isLoading ?"bg-secondary" :"bg-primary -glow"}`} />
           </div>
 
           {/* Terminal body */}
@@ -1634,7 +1634,7 @@ const Index = () => {
                   >
                     <div className={`font-orbitron text-[11px] flex items-center gap-1.5 ${editEngine === "gltch" ? "text-secondary" : "text-foreground"}`}>
                       GLTCH
-                      <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-red-400/80 border-red-500/30 bg-red-500/10 animate-pulse">RAW</span>
+                      <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-red-400/80 border-red-500/30 bg-red-500/10">RAW</span>
                     </div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>Edit + LoRA</span>
@@ -1660,7 +1660,7 @@ const Index = () => {
                 {editEngine === "gltch" && (
                   <>
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-secondary/5 border border-secondary/20 rounded">
-                      <div className="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse" />
+                      <div className="w-1.5 h-1.5 rounded-full bg-secondary" />
                       <span className="font-mono-share text-[9px] text-secondary/70">
                         2 cr/edit — Flux 2 Klein Edit + LoRA
                       </span>
@@ -1798,7 +1798,7 @@ const Index = () => {
                     className={`p-2.5 border rounded text-left transition-all duration-200 ${genEngine === "gltch" ? "border-secondary neon-border bg-secondary/5" : "border-border bg-card/30 hover:border-secondary/40"}`}>
                     <div className={`font-orbitron text-[11px] flex items-center gap-1.5 ${genEngine === "gltch" ? "text-secondary" : "text-foreground"}`}>
                       GLTCH
-                      <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-red-400/80 border-red-500/30 bg-red-500/10 animate-pulse">RAW</span>
+                      <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-red-400/80 border-red-500/30 bg-red-500/10">RAW</span>
                     </div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>Z-Image Turbo</span>
@@ -1950,7 +1950,7 @@ const Index = () => {
                 {renderEngine === "comfy" && (
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-500/5 border border-purple-500/20 rounded">
-                      <div className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
+                      <div className="w-1.5 h-1.5 rounded-full bg-purple-400" />
                       <span className="font-mono-share text-[9px] text-purple-400/70">
                         WAN 2.2 advanced mode — heavier post-processing
                       </span>
@@ -2058,7 +2058,7 @@ const Index = () => {
                 {renderEngine === "ltx" && (
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-400/5 border border-amber-400/20 rounded">
-                      <div className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                      <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
                       <span className="font-mono-share text-[9px] text-amber-300/70">
                         LTX-2.3 — native sound · {Math.max(1, Math.round(comfyFrameCount / 24))}s · 7 cr/s
                       </span>
@@ -2154,7 +2154,7 @@ const Index = () => {
                 {animateEngine === "gltch" && (
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-secondary/5 border border-secondary/20 rounded">
-                      <div className="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse" />
+                      <div className="w-1.5 h-1.5 rounded-full bg-secondary" />
                       <span className="font-mono-share text-[9px] text-secondary/70">
                         Native WAN baseline — simpler, cheaper, and more reliable
                       </span>
@@ -2238,7 +2238,7 @@ const Index = () => {
                 {animateEngine === "ltx" && (
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-400/5 border border-amber-400/20 rounded">
-                      <div className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                      <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
                       <span className="font-mono-share text-[9px] text-amber-300/70">
                         LTX-2.3 — native sound · {Math.max(1, Math.round(comfyFrameCount / 24))}s · 7 cr/s
                       </span>
@@ -2264,7 +2264,7 @@ const Index = () => {
             {mode === "image-to-video" && animateEngine === "comfy" && longLookEnabled && (
               <div className="space-y-2">
                 <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-500/5 border border-purple-500/20 rounded">
-                  <div className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-purple-400" />
                   <span className="font-mono-share text-[9px] text-purple-400/70">
                     LongLook MultiClip — generates {longLookSeqCount} chained sequences with FreeLong spectral blending
                   </span>

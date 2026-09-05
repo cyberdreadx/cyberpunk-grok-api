@@ -631,7 +631,7 @@ const FeedPage: React.FC = () => {
         title="Featured models directory"
       >
         <Users className="w-3.5 h-3.5" /> MODELS
-        <span className="font-mono-share text-[7px] px-1 rounded-sm tracking-widest text-emerald-300 border border-emerald-400/40 bg-emerald-400/10 animate-pulse">NEW</span>
+        <span className="font-mono-share text-[7px] px-1 rounded-sm tracking-widest text-emerald-300 border border-emerald-400/40 bg-emerald-400/10">NEW</span>
       </button>
       <button
         type="button"

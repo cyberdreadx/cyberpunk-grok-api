@@ -44,7 +44,7 @@ const StreakBadge: React.FC<{ streak: number; minPrize: number }> = ({ streak, m
         </p>
       </div>
       {streak >= 5 && (
-        <Flame className="w-3.5 h-3.5 text-orange-400 fill-orange-400/50 animate-pulse" />
+        <Flame className="w-3.5 h-3.5 text-orange-400 fill-orange-400/50" />
       )}
     </div>
   );
@@ -188,10 +188,10 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ onCreditsRefresh }) => {
           {isJackpot ? (
             <>
               <div className="relative">
-                <Sparkles className="w-20 h-20 text-yellow-400 fill-yellow-400 mb-2 drop-shadow-[0_0_30px_rgba(250,204,21,0.8)] animate-pulse" />
+                <Sparkles className="w-20 h-20 text-yellow-400 fill-yellow-400 mb-2 drop-shadow-[0_0_30px_rgba(250,204,21,0.8)]" />
                 <Zap className="absolute top-2 right-2 w-6 h-6 text-orange-400 fill-orange-400 animate-bounce" />
               </div>
-              <p className="font-orbitron text-xs tracking-[0.3em] text-yellow-400 uppercase animate-pulse">
+              <p className="font-orbitron text-xs tracking-[0.3em] text-yellow-400 uppercase">
                 🎉 JACKPOT! 🎉
               </p>
             </>
@@ -247,7 +247,7 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ onCreditsRefresh }) => {
         </div>
 
         {/* Outer glow ring */}
-        <div className={`absolute inset-[-4px] rounded-full ${spinning ? "animate-pulse" : ""}`}
+        <div className={`absolute inset-[-4px] rounded-full ${spinning ?"" :""}`}
           style={{ background: "conic-gradient(from 0deg, hsl(200 80% 50% / 0.3), hsl(280 70% 50% / 0.3), hsl(45 90% 50% / 0.3), hsl(200 80% 50% / 0.3))", filter: "blur(6px)" }}
         />
 

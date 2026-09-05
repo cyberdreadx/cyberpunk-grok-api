@@ -320,7 +320,7 @@ function PackCard({
     >
       {onFlash && (
         <div className="border-b border-orange-500/60 bg-gradient-to-r from-orange-600/40 via-pink-500/40 to-orange-600/40 py-1.5 px-2 flex items-center justify-center gap-1.5 font-orbitron text-[8px] tracking-[0.18em] text-orange-100">
-          <Flame className="w-3 h-3 animate-pulse" />
+          <Flame className="w-3 h-3" />
           FLASH SALE
           {flashSale!.discount_percent > 0 && <span className="text-yellow-200">{flashSale!.discount_percent}% OFF</span>}
           {flashSale!.bonus_credits_percent > 0 && <span className="text-green-200">+{flashSale!.bonus_credits_percent}% BONUS</span>}

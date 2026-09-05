@@ -113,7 +113,7 @@ export const CommunityPotDialog: React.FC<{ open: boolean; onClose: () => void }
 
         <div className="p-5 space-y-5">
           {loading && !data && (
-            <div className="text-center py-12 text-xs text-muted-foreground animate-pulse">Loading pot…</div>
+            <div className="text-center py-12 text-xs text-muted-foreground">Loading pot…</div>
           )}
 
           {data && (

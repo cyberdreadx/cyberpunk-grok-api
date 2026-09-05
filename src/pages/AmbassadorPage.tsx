@@ -162,7 +162,7 @@ export default function AmbassadorPage() {
     return (
       <CyberLayout>
         <Shell onBack={() => navigate(-1)}>
-          <div className="space-y-4">{[1, 2, 3].map((i) => <div key={i} className="h-24 rounded bg-muted animate-pulse" />)}</div>
+          <div className="space-y-4">{[1, 2, 3].map((i) => <div key={i} className="h-24 rounded bg-muted" />)}</div>
         </Shell>
       </CyberLayout>
     );

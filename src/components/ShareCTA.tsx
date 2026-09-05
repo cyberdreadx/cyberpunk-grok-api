@@ -81,7 +81,7 @@ const ShareCTA: React.FC<ShareCTAProps> = ({
       </button>
 
       <div className="flex items-center gap-2 pr-6">
-        <Flame className="w-4 h-4 text-orange-400 shrink-0 animate-pulse" />
+        <Flame className="w-4 h-4 text-orange-400 shrink-0" />
         <div className="flex-1 min-w-0">
           <p className="font-mono-share text-[10px] sm:text-[11px] text-foreground/80 leading-relaxed">
             {lastShareUrl ? (

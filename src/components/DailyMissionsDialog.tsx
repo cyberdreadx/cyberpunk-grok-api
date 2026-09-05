@@ -110,7 +110,7 @@ export default function DailyMissionsDialog({ status, loading, claiming, onClaim
           <CalendarCheck className="w-3.5 h-3.5" />
           Daily Missions
           {!todayComplete && missions.length > 0 && (
-            <span className="absolute -top-1 -right-1 w-2 h-2 bg-secondary rounded-full animate-pulse" />
+            <span className="absolute -top-1 -right-1 w-2 h-2 bg-secondary rounded-full" />
           )}
         </Button>
       </DialogTrigger>
@@ -155,7 +155,7 @@ export default function DailyMissionsDialog({ status, loading, claiming, onClaim
                           isCompleted
                             ? "bg-primary/20 border-primary text-primary"
                             : isCurrent
-                            ? "bg-secondary/20 border-secondary text-secondary animate-pulse"
+                            ?"bg-secondary/20 border-secondary text-secondary"
                             : "bg-muted/30 border-muted-foreground/20 text-muted-foreground/40"
                         }`}
                       >
