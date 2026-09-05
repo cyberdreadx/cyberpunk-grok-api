@@ -13,7 +13,7 @@
  * API key, no rate limit, and no user IP leaving the box to a third party.
  */
 
-import { readFileSync, existsSync } from "fs";
+import { readFileSync, existsSync, statSync } from "fs";
 import { join } from "path";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getDb } from "./db";
@@ -76,15 +76,36 @@ const DB_PATH = join(process.cwd(), "data", "dbip-city-lite.mmdb");
 type Reader = { get(ip: string): any };
 let reader: Reader | null = null;
 let readerTried = false;
+let loadedMtime = 0;
+let lastStat = 0;
+
+/** How often to notice that the monthly refresh has swapped the file in. */
+const STAT_INTERVAL_MS = 10 * 60_000;
+
+/**
+ * The database is replaced monthly by scripts/refresh-geo-db.sh. Watching its
+ * mtime means that swap takes effect on its own — a restart to pick up a geo
+ * database would drop in-flight generation polls for no good reason.
+ */
+function shouldReload(): boolean {
+  if (Date.now() - lastStat < STAT_INTERVAL_MS) return false;
+  lastStat = Date.now();
+  try {
+    return statSync(DB_PATH).mtimeMs !== loadedMtime;
+  } catch {
+    return false;
+  }
+}
 
 function getReader(): Reader | null {
-  if (readerTried) return reader;
+  if (readerTried && !shouldReload()) return reader;
   readerTried = true;
   try {
     if (!existsSync(DB_PATH)) {
       console.warn(`[geo] no database at ${DB_PATH} — geo blocking is INACTIVE`);
       return null;
     }
+    loadedMtime = statSync(DB_PATH).mtimeMs;
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const mm = require("maxmind");
     const MMReader = mm.Reader || mm.default?.Reader;
