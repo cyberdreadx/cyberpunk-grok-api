@@ -38,6 +38,7 @@ import {
   basescanTxUrl,
 } from "@/lib/xrgePublic";
 import HolderBadge from "@/components/HolderBadge";
+import HowToBuyXrgeDialog from "@/components/HowToBuyXrgeDialog";
 import { connectAndSign, hasInjectedWallet, isMobile, walletDeepLink } from "@/lib/walletConnect";
 
 interface HolderTierInfo {
@@ -181,6 +182,7 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
 
   // Copied state for address
   const [copied, setCopied] = useState(false);
+  const [showHowTo, setShowHowTo] = useState(false);
 
   const fetchBalance = useCallback(async () => {
     setLoading(true);
@@ -870,14 +872,23 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                       </div>
                     </div>
 
-                    <a
-                      href={XRGE_DEXSCREENER_URL}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 font-mono-share text-[10px] text-pink-400 hover:text-pink-300 underline underline-offset-2 transition-colors"
-                    >
-                      Get XRGE on DexScreener <ExternalLink className="w-3 h-3" />
-                    </a>
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setShowHowTo(true)}
+                        className="inline-flex items-center gap-1.5 font-mono-share text-[10px] text-pink-400 hover:text-pink-300 underline underline-offset-2 transition-colors"
+                      >
+                        New to crypto? How to buy XRGE
+                      </button>
+                      <a
+                        href={XRGE_DEXSCREENER_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 font-mono-share text-[10px] text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
+                      >
+                        DexScreener <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
                   </div>
 
                   {depositResult ? (
@@ -1120,6 +1131,8 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
           )}
         </div>
       </DialogContent>
+
+      <HowToBuyXrgeDialog open={showHowTo} onClose={() => setShowHowTo(false)} />
     </Dialog>
   );
 };

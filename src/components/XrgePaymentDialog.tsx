@@ -18,6 +18,7 @@ import {
   Gift,
 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
+import HowToBuyXrgeDialog from "@/components/HowToBuyXrgeDialog";
 import {
   XRGE_CHAIN_NAME,
   XRGE_CHAIN_ID,
@@ -64,6 +65,7 @@ const XrgePaymentDialog: React.FC<XrgePaymentDialogProps> = ({
   const [error, setError] = useState("");
   const [copied, setCopied] = useState<"address" | "amount" | "all" | null>(null);
   const [timeLeft, setTimeLeft] = useState("");
+  const [showHowTo, setShowHowTo] = useState(false);
   const [creditsAdded, setCreditsAdded] = useState(0);
   const [bonusAdded, setBonusAdded] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval>>();
@@ -212,7 +214,15 @@ const XrgePaymentDialog: React.FC<XrgePaymentDialogProps> = ({
             )}
             <ol className="list-decimal list-inside space-y-1 rounded border border-border/40 bg-card/40 px-3 py-2 font-mono-share text-[9px] text-muted-foreground leading-relaxed">
               <li>
-                Get XRGE on {XRGE_CHAIN_NAME} if needed —{" "}
+                Need XRGE first?{" "}
+                <button
+                  type="button"
+                  onClick={() => setShowHowTo(true)}
+                  className="text-primary underline underline-offset-2"
+                >
+                  Step-by-step guide
+                </button>{" "}
+                · or straight to{" "}
                 <a
                   href={XRGE_DEXSCREENER_URL}
                   target="_blank"
@@ -220,10 +230,6 @@ const XrgePaymentDialog: React.FC<XrgePaymentDialogProps> = ({
                   className="text-primary underline underline-offset-2"
                 >
                   DexScreener
-                </a>{" "}
-                · bridge ETH on{" "}
-                <a href="https://bridge.base.org" target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2">
-                  bridge.base.org
                 </a>
               </li>
               <li>Copy amount + address below (or use “Copy all”). Send XRGE only.</li>
@@ -443,6 +449,10 @@ const XrgePaymentDialog: React.FC<XrgePaymentDialogProps> = ({
           </div>
         )}
       </DialogContent>
+
+      {/* Sibling of DialogContent, not a child: nesting it would unmount the
+          guide the moment the payment dialog re-renders its step. */}
+      <HowToBuyXrgeDialog open={showHowTo} onClose={() => setShowHowTo(false)} />
     </Dialog>
   );
 };

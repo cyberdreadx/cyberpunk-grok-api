@@ -21,6 +21,14 @@
   status = 200
   force = true
 
+# Sitemap is generated (curated share pages live in the DB), not a static file.
+# public/sitemap.xml stays as the fallback if this rule is ever removed.
+[[redirects]]
+  from = "/sitemap.xml"
+  to = "https://api.gltch.app/api/sitemap"
+  status = 200
+  force = true
+
 # Share pages → server-rendered HTML (OG meta tags for social previews)
 #
 # Share links carry ?ref=CODE — that is the referral attribution path, and per
