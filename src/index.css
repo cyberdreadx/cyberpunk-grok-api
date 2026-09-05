@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -15,7 +15,15 @@
     --popover: 240 15% 7%;
     --popover-foreground: 180 100% 85%;
 
-    --primary: 180 100% 50%;
+    /* Softened from 180 100% 50%. Pure-saturation cyan on 748 elements is what
+       read as stale — not the hue. Dropping saturation and lifting lightness
+       keeps it unmistakably GLTCH while letting hierarchy exist again: things
+       that are genuinely urgent can now be louder than things that aren't,
+       which was impossible when everything was already at maximum. */
+    --primary: 184 74% 60%;
+    /* The old value, kept for the few places that should still shout — primary
+       CTAs and live state. Use sparingly; that is the entire point. */
+    --primary-vivid: 180 100% 50%;
     --primary-foreground: 240 15% 5%;
 
     --secondary: 300 100% 60%;
@@ -122,8 +130,15 @@
 }
 
 @layer utilities {
-  .font-orbitron {
-    font-family: 'Orbitron', sans-serif;
+  /* Name kept for the 512 existing call sites; the face behind it changed.
+     Orbitron is the free-font shorthand for "futuristic" — instantly
+     recognisable, and that recognition is what dated the interface. Archivo is
+     a narrower grotesque, so labels tuned to Orbitron's width now sit a little
+     airier, which suits the direction. */
+  .font-orbitron,
+  .font-display {
+    font-family: 'Archivo', system-ui, -apple-system, sans-serif;
+    letter-spacing: -0.005em;
   }
 
   .font-mono-share {

@@ -19,7 +19,9 @@ export default {
         "glow-ambient": "var(--glow-ambient)",
       },
       fontFamily: {
-        orbitron: ["Orbitron", "sans-serif"],
+        display: ["Archivo", "system-ui", "sans-serif"],
+        // Legacy alias — existing call sites say font-orbitron.
+        orbitron: ["Archivo", "system-ui", "sans-serif"],
         "mono-share": ["Share Tech Mono", "monospace"],
         rajdhani: ["Rajdhani", "sans-serif"],
         jetbrains: ["JetBrains Mono", "monospace"],
@@ -32,6 +34,7 @@ export default {
         foreground: "hsl(var(--foreground))",
         primary: {
           DEFAULT: "hsl(var(--primary))",
+          vivid: "hsl(var(--primary-vivid))",
           foreground: "hsl(var(--primary-foreground))",
         },
         secondary: {
