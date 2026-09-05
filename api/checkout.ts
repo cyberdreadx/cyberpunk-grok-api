@@ -32,6 +32,36 @@ const SUBSCRIPTIONS: Record<string, { priceEnvKey: string; creditsPerMonth: numb
   "elite-yearly":   { priceEnvKey: "STRIPE_PRICE_SUB_ELITE_YEARLY",     creditsPerMonth: 1400, discountPercent: 0 },
 };
 
+/**
+ * EU/UK VAT on digital services is owed in the buyer's country from the first
+ * sale — there is no small-seller threshold for a seller outside the bloc. These
+ * sessions collected none of it.
+ *
+ * Behind a switch on purpose. Stripe rejects a session outright when
+ * automatic_tax is on and a Price has no tax_behavior, so flipping this before
+ * the dashboard side is done takes down every checkout on the site. Run
+ * scripts/stripe-tax-preflight.mts, get a clean report, then set
+ * STRIPE_TAX_ENABLED=true.
+ */
+const TAX_ON = process.env.STRIPE_TAX_ENABLED === "true";
+
+/** Session fields that turn on tax collection. Spread into every session. */
+const taxFields = TAX_ON
+  ? {
+      automatic_tax: { enabled: true },
+      // Stripe needs a location to pick a rate. IP alone is thin evidence for
+      // digital services under EU rules; a billing address is the second signal.
+      billing_address_collection: "required" as const,
+    }
+  : {};
+
+/** Extra field required when a saved customer is attached — Stripe errors without it. */
+const taxCustomerUpdate = TAX_ON ? { customer_update: { address: "auto" as const } } : {};
+
+/** Electronically supplied services. Applied to inline prices only; prices
+ *  created in the dashboard carry their own tax_code there. */
+const TAX_CODE = "txcd_10000000";
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
@@ -81,10 +111,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           price_data: {
             currency: "usd",
             unit_amount: post.lock_price_cents,
-            product_data: { name: `Unlock Post` },
+            product_data: { name: `Unlock Post`, ...(TAX_ON ? { tax_code: TAX_CODE } : {}) },
+            ...(TAX_ON ? { tax_behavior: "exclusive" as const } : {}),
           },
           quantity: 1,
         }],
+        ...taxFields,
         client_reference_id: auth.userId,
         metadata: {
           user_id: auth.userId,
@@ -112,6 +144,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const session = await stripe.checkout.sessions.create({
         mode: "payment",
         line_items: [{ price: priceId, quantity: 1 }],
+        ...taxFields,
         client_reference_id: auth.userId,
         metadata: { user_id: auth.userId, type: "lora_unlock" },
         success_url: `${SITE_URL}?checkout=success&lora=unlocked`,
@@ -194,6 +227,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         mode: "subscription",
         customer: customerId,
         line_items: [{ price: priceId, quantity: 1 }],
+        ...taxFields,
+        ...taxCustomerUpdate,
         client_reference_id: auth.userId,
         metadata: { user_id: auth.userId, tier: tierId, credits_per_month: String(tier.creditsPerMonth), discount_pct: String(tier.discountPercent) },
         subscription_data: {
@@ -216,6 +251,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       line_items: [{ price: priceId, quantity: 1 }],
+      ...taxFields,
       client_reference_id: auth.userId,
       metadata: { user_id: auth.userId, package: packageId, credits: String(pkg.credits), type: "pack" },
       success_url: `${SITE_URL}?checkout=success`,
