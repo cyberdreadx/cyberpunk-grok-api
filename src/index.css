@@ -26,13 +26,16 @@
     --primary-vivid: 180 100% 50%;
     --primary-foreground: 240 15% 5%;
 
-    --secondary: 300 100% 60%;
+    /* Softened alongside --primary. Left at 100% it out-shouted the hero
+       colour and inverted the hierarchy this pass exists to restore. */
+    --secondary: 302 72% 66%;
     --secondary-foreground: 240 15% 5%;
 
     --muted: 240 10% 15%;
     --muted-foreground: 180 25% 65%;
 
-    --accent: 270 100% 65%;
+    /* Same reason as --secondary. */
+    --accent: 272 68% 70%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 80% 55%;
