@@ -9,6 +9,7 @@ import { isDomainVelocityExceeded } from "../_lib/domain-velocity";
 import { verifyCaptcha } from "../_lib/captcha";
 import { sameMailbox } from "../_lib/email-canonical";
 import { findAmbassadorByCode, attributeSignup, type AmbassadorLookup } from "../_lib/ambassador";
+import { enforceGeo } from "../_lib/geo";
 /** Basic email format validation. */
 function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -16,6 +17,9 @@ function isValidEmail(email: string): boolean {
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === "OPTIONS") return res.status(200).end();
+
+  // Legal geo restriction — see api/_lib/geo.ts. Runs before any work.
+  if (await enforceGeo(req, res, "signup")) return;
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   try {

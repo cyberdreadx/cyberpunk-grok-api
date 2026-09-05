@@ -6,10 +6,14 @@ import { applyCors } from "../_lib/cors";
 import { checkRateLimit, getClientIp } from "../_lib/ratelimit";
 import { ensureTrustedDevicesTable, isDeviceTrusted } from "../_lib/trustedDevice";
 import { sendTwoFactorEmail, generateVerificationCode } from "../_lib/email";
+import { enforceGeo } from "../_lib/geo";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   applyCors(req, res, "POST, OPTIONS");
   if (req.method === "OPTIONS") return res.status(200).end();
+
+  // Legal geo restriction — see api/_lib/geo.ts. Runs before any work.
+  if (await enforceGeo(req, res, "login")) return;
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   try {

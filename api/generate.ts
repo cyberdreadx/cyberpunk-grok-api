@@ -16,6 +16,7 @@ import { getUserFromRequest, ADMIN_EMAIL, checkBan } from "./_lib/auth";
 import { checkRateLimit, getClientIp } from "./_lib/ratelimit";
 import { applyDiscount, getCombinedCreditDiscountPct } from "./_lib/discount";
 import { isEmailVerified, EMAIL_VERIFICATION_REQUIRED_MESSAGE, EMAIL_VERIFICATION_REQUIRED_CODE } from "./_lib/emailVerifiedGate";
+import { enforceGeo } from "./_lib/geo";
 
 
 const XAI_API_BASE = "https://api.x.ai/v1";
@@ -163,6 +164,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
   if (req.method === "OPTIONS") return res.status(200).end();
+
+  // Legal geo restriction — refuse before any credits move.
+  if (await enforceGeo(req, res, "generate")) return;
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   try {

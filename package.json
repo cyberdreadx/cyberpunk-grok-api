@@ -72,6 +72,7 @@
     "jsonwebtoken": "^9.0.3",
     "jszip": "^3.10.1",
     "lucide-react": "^0.462.0",
+    "maxmind": "^5.0.7",
     "next-themes": "^0.3.0",
     "node-cron": "^4.2.1",
     "react": "^18.3.1",

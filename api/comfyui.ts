@@ -22,6 +22,7 @@ import { applyDiscount, getCombinedCreditDiscountPct } from "./_lib/discount";
 import { isEmailVerified, EMAIL_VERIFICATION_REQUIRED_MESSAGE, EMAIL_VERIFICATION_REQUIRED_CODE } from "./_lib/emailVerifiedGate";
 // Graphs shared with the public API (api/v1/comfy.ts) so the two cannot drift.
 import {
+import { enforceGeo } from "./_lib/geo";
   addMMAudioNodes,
   buildGltchWanSimpleWorkflow,
   buildGltchWanWorkflow,
@@ -1628,6 +1629,9 @@ function formatComfyHandlerError(err: unknown): string {
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === "OPTIONS") return res.status(200).end();
+
+  // Legal geo restriction — refuse before any credits move.
+  if (await enforceGeo(req, res, "generate")) return;
   if (req.method !== "POST")
     return res.status(405).json({ error: "Method not allowed" });
 
