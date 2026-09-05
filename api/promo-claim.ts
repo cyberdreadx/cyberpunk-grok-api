@@ -62,6 +62,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({
         open,
         slotsRemaining,
+        maxApproved: cfg.maxApproved,
+        allowedHosts: cfg.allowedHosts,
         creditAmount: cfg.creditAmount,
         requireCode: cfg.requireCode,
         minAccountAgeDays: cfg.minAccountAgeDays,
@@ -89,15 +91,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (banned) return res.status(403).json({ error: "This account cannot claim the promo." });
 
     if (!cfg.enabled) return res.status(403).json({ error: "The promo is closed." });
-    if (slotsRemaining <= 0) return res.status(403).json({ error: "All 20 spots are taken." });
+    if (slotsRemaining <= 0) return res.status(403).json({ error: "All spots are taken." });
     if (!eligibility.eligible) {
       return res.status(403).json({ error: eligibility.reasons[0], reasons: eligibility.reasons });
     }
 
     const body = (req.body || {}) as { postUrl?: string; code?: string };
-    const postUrlNorm = normalizePostUrl(body.postUrl || "");
+    const postUrlNorm = normalizePostUrl(body.postUrl || "", cfg.allowedHosts);
     if (!postUrlNorm) {
-      return res.status(400).json({ error: "Paste a full AntiReddit post link (antireddit.com/...)." });
+      return res.status(400).json({
+        error: `Paste a full post link from ${cfg.allowedHosts.join(", ")}`,
+      });
     }
 
     // Optional single-use invite code. Claimed here rather than at approval so

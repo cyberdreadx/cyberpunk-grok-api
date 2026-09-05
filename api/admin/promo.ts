@@ -15,7 +15,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getDb } from "../_lib/db";
 import { getUserFromRequest, ADMIN_EMAIL } from "../_lib/auth";
 import { applyCors } from "../_lib/cors";
-import { getPromoConfig, approvedCount, hashCode } from "../_lib/promo";
+import { getPromoConfig, approvedCount, hashCode, PROMO_KEY } from "../_lib/promo";
 import { randomBytes } from "crypto";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -104,6 +104,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { claimId, action, reason } = (req.body || {}) as {
       claimId?: string; action?: string; reason?: string;
     };
+
+    // Promo settings lived only in app_config, so changing the cap or turning
+    // off the invite-code requirement meant a hand-written SQL UPDATE. That is
+    // why the promo sat at 20 slots behind manually-issued codes with zero
+    // claims. Written through getPromoConfig's own clamps, so a bad value here
+    // cannot uncap payouts.
+    if (action === "save-config") {
+      const incoming = (req.body || {}).config as Record<string, unknown> | undefined;
+      if (!incoming || typeof incoming !== "object") {
+        return res.status(400).json({ error: "config object required" });
+      }
+      const merged = { ...(await getPromoConfig()), ...incoming };
+      await sql`
+        INSERT INTO app_config (key, value, updated_at)
+        VALUES (${PROMO_KEY}, ${JSON.stringify(merged)}::jsonb, now())
+        ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()
+      `;
+      // Read back through the clamps so the UI shows what actually took effect
+      // rather than what was asked for.
+      const saved = await getPromoConfig();
+      console.log(`[admin/promo] config saved by ${auth.email}:`, JSON.stringify(saved));
+      return res.status(200).json({ ok: true, config: saved });
+    }
 
     if (action === "generate-codes") {
       const count = Math.min(50, Math.max(1, Number((req.body || {}).count) || 10));

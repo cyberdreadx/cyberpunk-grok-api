@@ -37,9 +37,19 @@ interface PromoCode {
   usedByEmail: string | null;
 }
 
+interface PromoConfig {
+  enabled: boolean;
+  maxApproved: number;
+  creditAmount: number;
+  minAccountAgeDays: number;
+  minRenders: number;
+  requireCode: boolean;
+  allowedHosts: string[];
+}
+
 interface Payload {
   codes: PromoCode[];
-  config: { maxApproved: number; creditAmount: number; minAccountAgeDays: number; minRenders: number };
+  config: PromoConfig;
   approvedCount: number;
   slotsRemaining: number;
   claims: Claim[];
@@ -59,11 +69,16 @@ export default function AdminPromo() {
   const [denied, setDenied] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
   const [minting, setMinting] = useState(false);
+  const [savingCfg, setSavingCfg] = useState(false);
+  const [draft, setDraft] = useState<PromoConfig | null>(null);
 
   const load = useCallback(async (status: string) => {
     setLoading(true);
     try {
-      setData(await apiFetch<Payload>(`/admin/promo?status=${status}`));
+      const payload = await apiFetch<Payload>(`/admin/promo?status=${status}`);
+      setData(payload);
+      // Seed the settings form once; later loads must not stomp on unsaved edits.
+      setDraft((d) => d ?? payload.config);
       setDenied(false);
     } catch (e: any) {
       if (String(e?.message || "").toLowerCase().includes("admin")) setDenied(true);
@@ -112,6 +127,32 @@ export default function AdminPromo() {
     navigator.clipboard.writeText(text);
     setCopied(key);
     setTimeout(() => setCopied(null), 1500);
+  };
+
+  // Values land in app_config through the server's clamps, and the response is
+  // what actually took effect — so the form re-renders from that, not from what
+  // was typed.
+  const saveConfig = async (patch: Partial<PromoConfig>) => {
+    if (savingCfg) return;
+    setSavingCfg(true);
+    try {
+      const r = await apiFetch<{ config: PromoConfig }>("/admin/promo", {
+        method: "POST",
+        body: { action: "save-config", config: patch },
+      });
+      setData((d) => (d ? { ...d, config: r.config } : d));
+      setDraft(r.config);
+      toast({ title: "Promo settings saved" });
+      await load(tab);
+    } catch (e: unknown) {
+      toast({
+        title: "Failed",
+        description: e instanceof Error ? e.message : "Try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingCfg(false);
+    }
   };
 
   const mintCodes = async () => {
@@ -171,6 +212,87 @@ export default function AdminPromo() {
       </header>
 
       <main className="max-w-4xl mx-auto px-5 py-6 space-y-4">
+        {draft && (
+          <details className="rounded border border-border/40 bg-card/30" open={data?.slotsRemaining === 0}>
+            <summary className="cursor-pointer select-none px-4 py-2.5 font-mono text-[11px] tracking-widest text-primary">
+              PROMO_SETTINGS
+              {!draft.enabled && <span className="ml-2 text-destructive">· OFF</span>}
+              {draft.requireCode && <span className="ml-2 text-amber-400">· code required</span>}
+            </summary>
+            <div className="px-4 pb-4 pt-1 space-y-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {([
+                  ["maxApproved", "Max payouts", "Total claims that can ever be approved"],
+                  ["creditAmount", "Credits each", "Paid on approval"],
+                  ["minAccountAgeDays", "Min account age", "Days — anti-farm"],
+                  ["minRenders", "Min renders", "Anti-farm"],
+                ] as const).map(([key, label, hint]) => (
+                  <label key={key} className="block">
+                    <span className="font-mono text-[9px] tracking-widest text-muted-foreground">
+                      {label.toUpperCase()}
+                    </span>
+                    <input
+                      type="number"
+                      value={draft[key]}
+                      onChange={(e) =>
+                        setDraft({ ...draft, [key]: Number(e.target.value) })
+                      }
+                      className="mt-1 w-full h-8 rounded border border-border/40 bg-input/50 px-2 font-mono text-xs"
+                    />
+                    <span className="font-mono text-[8px] text-muted-foreground/50">{hint}</span>
+                  </label>
+                ))}
+              </div>
+
+              <label className="block">
+                <span className="font-mono text-[9px] tracking-widest text-muted-foreground">
+                  ACCEPTED LINK HOSTS
+                </span>
+                <input
+                  value={draft.allowedHosts.join(", ")}
+                  onChange={(e) =>
+                    setDraft({ ...draft, allowedHosts: e.target.value.split(/[\s,]+/).filter(Boolean) })
+                  }
+                  placeholder="antireddit.com, www.antireddit.com"
+                  className="mt-1 w-full h-8 rounded border border-border/40 bg-input/50 px-2 font-mono text-xs"
+                />
+                <span className="font-mono text-[8px] text-muted-foreground/50">
+                  Comma-separated. A claim link must point at one of these, or it's rejected before review.
+                </span>
+              </label>
+
+              <div className="flex flex-wrap items-center gap-4">
+                <label className="flex items-center gap-2 font-mono text-[10px] text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    checked={draft.enabled}
+                    onChange={(e) => setDraft({ ...draft, enabled: e.target.checked })}
+                  />
+                  PROMO OPEN
+                </label>
+                <label className="flex items-center gap-2 font-mono text-[10px] text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    checked={draft.requireCode}
+                    onChange={(e) => setDraft({ ...draft, requireCode: e.target.checked })}
+                  />
+                  REQUIRE INVITE CODE
+                  <span className="text-[8px] text-muted-foreground/50">
+                    (off = self-serve, no codes to hand out)
+                  </span>
+                </label>
+                <button
+                  onClick={() => saveConfig(draft)}
+                  disabled={savingCfg}
+                  className="ml-auto rounded border border-primary/40 bg-primary/10 px-4 py-1.5 font-mono text-[10px] tracking-widest text-primary hover:bg-primary/20 disabled:opacity-50"
+                >
+                  {savingCfg ? "SAVING…" : "SAVE SETTINGS"}
+                </button>
+              </div>
+            </div>
+          </details>
+        )}
+
         <div className="flex gap-2">
           {TABS.map((t) => (
             <button

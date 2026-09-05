@@ -21,6 +21,10 @@ export interface PromoConfig {
   minAccountAgeDays: number;
   minRenders: number;
   requireCode: boolean;
+  /** Hostnames a claim link may point at. Editable so a new community can be
+   *  added without a deploy — which matters now that this promo is the main way
+   *  GLTCH reaches new people rather than a side channel. */
+  allowedHosts: string[];
 }
 
 export const PROMO_DEFAULTS: PromoConfig = {
@@ -30,7 +34,26 @@ export const PROMO_DEFAULTS: PromoConfig = {
   minAccountAgeDays: 7,
   minRenders: 3,
   requireCode: true,
+  allowedHosts: ANTIREDDIT_HOSTS,
 };
+
+/** Lowercase, strip scheme/path/port, drop junk. Keeps app_config sane. */
+export function cleanHosts(input: unknown, fallback: string[]): string[] {
+  const list = Array.isArray(input) ? input : typeof input === "string" ? input.split(/[\s,]+/) : null;
+  if (!list) return fallback;
+  const out: string[] = [];
+  for (const raw of list) {
+    const h = String(raw ?? "")
+      .trim().toLowerCase()
+      .replace(/^https?:\/\//, "")
+      .replace(/[/:].*$/, "");
+    // A bare TLD or something with no dot is not a host worth trusting.
+    if (h && h.length <= 253 && /^[a-z0-9.-]+\.[a-z]{2,}$/.test(h) && !out.includes(h)) {
+      out.push(h);
+    }
+  }
+  return out.length ? out.slice(0, 25) : fallback;
+}
 
 export async function getPromoConfig(): Promise<PromoConfig> {
   try {
@@ -48,6 +71,7 @@ export async function getPromoConfig(): Promise<PromoConfig> {
       minAccountAgeDays: clamp(v.minAccountAgeDays, PROMO_DEFAULTS.minAccountAgeDays, 0, 365),
       minRenders: clamp(v.minRenders, PROMO_DEFAULTS.minRenders, 0, 10000),
       requireCode: v.requireCode ?? PROMO_DEFAULTS.requireCode,
+      allowedHosts: cleanHosts(v.allowedHosts, PROMO_DEFAULTS.allowedHosts),
     };
   } catch {
     return PROMO_DEFAULTS;
@@ -65,14 +89,17 @@ export function hashCode(code: string): string {
 }
 
 /**
- * Normalise an AntiReddit post URL for duplicate detection.
+ * Normalise a promo post URL for duplicate detection.
  *
- * Returns null if it isn't an AntiReddit post link at all — which is also the
- * "empty post" guard, since a blank or junk string cannot parse into one.
- * Query strings and fragments are dropped so ?utm_source=… cannot be used to
- * submit the same post twice.
+ * Returns null if it isn't a post link on one of the allowed hosts — which is
+ * also the "empty post" guard, since a blank or junk string cannot parse into
+ * one. Query strings and fragments are dropped so ?utm_source=… cannot be used
+ * to submit the same post twice.
+ *
+ * The stored value keeps its host, so widening allowedHosts later never
+ * collides with links already claimed under the old list.
  */
-export function normalizePostUrl(input: string): string | null {
+export function normalizePostUrl(input: string, hosts: string[] = ANTIREDDIT_HOSTS): string | null {
   const raw = (input || "").trim();
   if (!raw || raw.length > 500) return null;
   let u: URL;
@@ -82,7 +109,7 @@ export function normalizePostUrl(input: string): string | null {
     return null;
   }
   if (u.protocol !== "https:" && u.protocol !== "http:") return null;
-  if (!ANTIREDDIT_HOSTS.includes(u.hostname.toLowerCase())) return null;
+  if (!hosts.includes(u.hostname.toLowerCase())) return null;
   const path = u.pathname.replace(/\/+$/, "").toLowerCase();
   // A bare host, or /a/gltchrunner with no post after it, is not a post.
   if (path.length < 2) return null;

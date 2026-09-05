@@ -29,6 +29,8 @@ interface Claim {
 interface PromoState {
   open: boolean;
   slotsRemaining: number;
+  maxApproved: number;
+  allowedHosts: string[];
   creditAmount: number;
   requireCode: boolean;
   minAccountAgeDays: number;
@@ -142,7 +144,7 @@ export default function PromoPage() {
         <h1 className="font-orbitron text-lg text-primary tracking-wider">FREE CREDITS</h1>
         <div className="flex items-center gap-2 font-mono text-[11px]">
           <span className={state.slotsRemaining > 0 ? "text-primary" : "text-muted-foreground"}>
-            {state.slotsRemaining} of 20 spots left
+            {state.slotsRemaining} of {state.maxApproved} spots left
           </span>
           {state.slotsRemaining === 0 && <span className="text-muted-foreground">· closed</span>}
         </div>
@@ -158,7 +160,7 @@ export default function PromoPage() {
         >
           {SUB} <ExternalLink className="w-3 h-3" />
         </a>
-        . Paste the link. If it looks real I'll add credits. One per account. 20 spots.
+        . Paste the link. If it looks real I'll add credits. One per account. {state.maxApproved} spots.
       </p>
 
       {claim && (
@@ -195,7 +197,7 @@ export default function PromoPage() {
 
       {!state.open && !claim && (
         <p className="text-sm text-muted-foreground font-mono">
-          All 20 spots are taken. Nothing left to claim.
+          All {state.maxApproved} spots are taken. Nothing left to claim.
         </p>
       )}
 
@@ -221,7 +223,7 @@ export default function PromoPage() {
               required
               value={postUrl}
               onChange={(e) => setPostUrl(e.target.value)}
-              placeholder="https://antireddit.com/c/gltchrunner/..."
+              placeholder={`https://${state.allowedHosts[0] || "antireddit.com"}/...`}
               className="w-full bg-muted/50 border border-primary/20 rounded-lg px-3 py-2 text-xs font-mono text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/50"
             />
           </div>
