@@ -51,7 +51,7 @@ const ImmersionPulseGuide: React.FC<ImmersionPulseGuideProps> = ({ hz }) => {
           <div className="h-full bg-rose-600/50" style={{ width: `${w4}%` }} title={`Very high 15–${PULSE_HZ_MAX} Hz`} />
         </div>
         <div
-          className="pointer-events-none absolute -top-0.5 bottom-0 w-px bg-white shadow-[0_0_6px_rgba(255,255,255,0.9)]"
+          className="pointer-events-none absolute -top-0.5 bottom-0 w-px bg-white shadow-glow-focus"
           style={{ left: `calc(${markerPct}% - 0.5px)` }}
         />
       </div>

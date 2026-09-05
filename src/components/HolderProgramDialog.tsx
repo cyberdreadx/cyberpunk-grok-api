@@ -30,11 +30,11 @@ const HolderProgramDialog: React.FC<Props> = ({ open, onOpenChange, onOpenBank }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-card border-violet-500/30 shadow-[0_0_48px_hsl(280_80%_60%/0.18)] w-[min(96vw,42rem)] max-w-2xl max-h-[88vh] overflow-hidden p-0 gap-0 flex flex-col">
+      <DialogContent className="bg-card border-violet-500/30 shadow-glow-ambient w-[min(96vw,42rem)] max-w-2xl max-h-[88vh] overflow-hidden p-0 gap-0 flex flex-col">
         <div className="scrollbar-cyber min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-5 py-5 [color-scheme:dark]">
           <DialogHeader>
             <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-md border border-violet-400/40 bg-violet-500/15 text-violet-300 shadow-[0_0_12px_hsl(280_80%_60%/0.3)]">
+              <div className="flex h-8 w-8 items-center justify-center rounded-md border border-violet-400/40 bg-violet-500/15 text-violet-300 shadow-glow-live">
                 <Diamond className="h-4 w-4" strokeWidth={2.5} />
               </div>
               <DialogTitle className="font-orbitron text-sm tracking-widest text-violet-200 uppercase">
@@ -139,7 +139,7 @@ const HolderProgramDialog: React.FC<Props> = ({ open, onOpenChange, onOpenBank }
               href={XRGE_DEXSCREENER_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-[10px] font-orbitron uppercase tracking-wider shadow-[0_0_12px_hsl(var(--primary)/0.4)]"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-[10px] font-orbitron uppercase tracking-wider shadow-glow-live"
             >
               Buy XRGE on DexScreener
               <ExternalLink className="w-3 h-3" />

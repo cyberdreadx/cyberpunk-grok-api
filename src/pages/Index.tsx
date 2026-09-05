@@ -1806,7 +1806,7 @@ const Index = () => {
                     </div>
                   </button>
                   <button type="button" onClick={() => setGenEngine("krea2")}
-                    className={`p-2.5 border rounded text-left transition-all duration-200 ${genEngine === "krea2" ? "border-cyan-400 bg-cyan-400/5 shadow-[0_0_8px_rgba(34,211,238,0.15)]" : "border-border bg-card/30 hover:border-cyan-400/40"}`}>
+                    className={`p-2.5 border rounded text-left transition-all duration-200 ${genEngine === "krea2" ? "border-cyan-400 bg-cyan-400/5 shadow-glow-focus" : "border-border bg-card/30 hover:border-cyan-400/40"}`}>
                     <div className={`font-orbitron text-[11px] flex items-center gap-1.5 ${genEngine === "krea2" ? "text-cyan-300" : "text-foreground"}`}>
                       KREA 2
                       <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-cyan-300/80 border-cyan-400/30 bg-cyan-400/10">NEW</span>
@@ -1829,7 +1829,7 @@ const Index = () => {
                   </button>
                   {isAdmin && (
                     <button type="button" onClick={() => setGenEngine("comfy")}
-                      className={`p-2.5 border rounded text-left transition-all duration-200 ${genEngine === "comfy" ? "border-purple-500 bg-purple-500/5 shadow-[0_0_8px_rgba(168,85,247,0.15)]" : "border-border bg-card/30 hover:border-purple-500/40"}`}>
+                      className={`p-2.5 border rounded text-left transition-all duration-200 ${genEngine === "comfy" ? "border-purple-500 bg-purple-500/5 shadow-glow-focus" : "border-border bg-card/30 hover:border-purple-500/40"}`}>
                       <div className={`font-orbitron text-[11px] ${genEngine === "comfy" ? "text-purple-400" : "text-foreground"}`}>COMFY</div>
                       <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5">Admin</div>
                     </button>
@@ -1915,7 +1915,7 @@ const Index = () => {
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   <button type="button" onClick={() => setRenderEngine("comfy")}
-                    className={`p-2.5 border rounded text-left transition-all duration-200 ${renderEngine === "comfy" ? "border-purple-500 bg-purple-500/5 shadow-[0_0_8px_rgba(168,85,247,0.15)]" : "border-border bg-card/30 hover:border-purple-500/40"}`}>
+                    className={`p-2.5 border rounded text-left transition-all duration-200 ${renderEngine === "comfy" ? "border-purple-500 bg-purple-500/5 shadow-glow-focus" : "border-border bg-card/30 hover:border-purple-500/40"}`}>
                     <div className={`font-orbitron text-[11px] ${renderEngine === "comfy" ? "text-purple-400" : "text-foreground"}`}>COMFY</div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>WAN Video</span>
@@ -1934,7 +1934,7 @@ const Index = () => {
                     </div>
                   </button>
                   <button type="button" onClick={() => setRenderEngine("ltx")}
-                    className={`p-2.5 border rounded text-left transition-all duration-200 ${renderEngine === "ltx" ? "border-amber-400 bg-amber-400/5 shadow-[0_0_8px_rgba(251,191,36,0.2)]" : "border-border bg-card/30 hover:border-amber-400/40"}`}>
+                    className={`p-2.5 border rounded text-left transition-all duration-200 ${renderEngine === "ltx" ? "border-amber-400 bg-amber-400/5 shadow-glow-focus" : "border-border bg-card/30 hover:border-amber-400/40"}`}>
                     <div className={`font-orbitron text-[11px] flex items-center gap-1.5 ${renderEngine === "ltx" ? "text-amber-300" : "text-foreground"}`}>
                       LTX
                       <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-amber-300/90 border-amber-400/40 bg-amber-400/10">NEW</span>
@@ -2111,7 +2111,7 @@ const Index = () => {
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   <button type="button" onClick={() => { setAnimateEngine("comfy"); setLongLookEnabled(true); }}
-                    className={`p-2.5 border rounded text-left transition-all duration-200 ${animateEngine === "comfy" ? "border-purple-500 bg-purple-500/5 shadow-[0_0_8px_rgba(168,85,247,0.15)]" : "border-border bg-card/30 hover:border-purple-500/40"}`}>
+                    className={`p-2.5 border rounded text-left transition-all duration-200 ${animateEngine === "comfy" ? "border-purple-500 bg-purple-500/5 shadow-glow-focus" : "border-border bg-card/30 hover:border-purple-500/40"}`}>
                     <div className={`font-orbitron text-[11px] ${animateEngine === "comfy" ? "text-purple-400" : "text-foreground"}`}>GLTCH PRO</div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>MultiClip</span>
@@ -2138,7 +2138,7 @@ const Index = () => {
                     </div>
                   </button>
                   <button type="button" onClick={() => { setAnimateEngine("ltx"); setLongLookEnabled(false); }}
-                    className={`p-2.5 border rounded text-left transition-all duration-200 ${animateEngine === "ltx" ? "border-amber-400 bg-amber-400/5 shadow-[0_0_8px_rgba(251,191,36,0.2)]" : "border-border bg-card/30 hover:border-amber-400/40"}`}>
+                    className={`p-2.5 border rounded text-left transition-all duration-200 ${animateEngine === "ltx" ? "border-amber-400 bg-amber-400/5 shadow-glow-focus" : "border-border bg-card/30 hover:border-amber-400/40"}`}>
                     <div className={`font-orbitron text-[11px] flex items-center gap-1.5 ${animateEngine === "ltx" ? "text-amber-300" : "text-foreground"}`}>
                       LTX
                       <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-amber-300/90 border-amber-400/40 bg-amber-400/10">NEW</span>
@@ -2533,7 +2533,7 @@ const Index = () => {
                   <div
                     key={job.id}
                     className={`relative border rounded-lg p-3 transition-all overflow-hidden min-w-0 ${isActive
-                      ? "border-purple-500/40 bg-purple-500/5 shadow-[0_0_12px_rgba(168,85,247,0.1)]"
+                      ? "border-purple-500/40 bg-purple-500/5 shadow-glow-live"
                       : isDone
                         ? "border-green-500/30 bg-green-500/5"
                         : "border-red-500/30 bg-red-500/5"

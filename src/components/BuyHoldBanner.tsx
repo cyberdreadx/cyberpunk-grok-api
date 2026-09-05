@@ -37,7 +37,7 @@ const BuyHoldBanner: React.FC = () => {
   return (
     <section
       aria-label="XRGE Buy and Hold Program"
-      className="relative overflow-hidden rounded-lg border border-primary/30 bg-gradient-to-br from-primary/10 via-card/60 to-secondary/10 shadow-[0_0_24px_hsl(var(--primary)/0.12)] animate-slide-up"
+      className="relative overflow-hidden rounded-lg border border-primary/30 bg-gradient-to-br from-primary/10 via-card/60 to-secondary/10 shadow-glow-live animate-slide-up"
     >
       {/* Glitch corner accent */}
       <div className="pointer-events-none absolute -top-12 -right-12 w-40 h-40 rounded-full bg-secondary/20 blur-3xl" />
@@ -53,7 +53,7 @@ const BuyHoldBanner: React.FC = () => {
         </button>
 
         <div className="flex items-start gap-3 pr-6">
-          <div className="shrink-0 mt-0.5 w-9 h-9 rounded-md border border-primary/40 bg-primary/10 flex items-center justify-center text-primary shadow-[0_0_10px_hsl(var(--primary)/0.3)]">
+          <div className="shrink-0 mt-0.5 w-9 h-9 rounded-md border border-primary/40 bg-primary/10 flex items-center justify-center text-primary shadow-glow-focus">
             <Diamond className="w-4 h-4" strokeWidth={2.5} />
           </div>
           <div className="flex-1 min-w-0">
@@ -76,7 +76,7 @@ const BuyHoldBanner: React.FC = () => {
                 href={XRGE_DEXSCREENER_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-[10px] sm:text-[11px] font-orbitron uppercase tracking-wider shadow-[0_0_12px_hsl(var(--primary)/0.4)]"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-[10px] sm:text-[11px] font-orbitron uppercase tracking-wider shadow-glow-live"
               >
                 Buy XRGE
                 <ExternalLink className="w-3 h-3" />

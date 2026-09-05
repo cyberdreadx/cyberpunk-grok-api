@@ -1745,7 +1745,7 @@ export default function Admin() {
                 onClick={() => { if (!active) setActiveTab(group.tabs[0]); }}
                 className={`px-3.5 py-1.5 rounded-full font-orbitron text-[10px] tracking-widest whitespace-nowrap transition-all duration-200 hover-lift ${
                   active
-                    ? "bg-primary/15 text-primary shadow-[0_0_14px_hsl(var(--primary)/0.2),inset_0_0_0_1px_hsl(var(--primary)/0.45)]"
+                    ? "bg-primary/15 text-primary shadow-glow-live"
                     : "text-muted-foreground/60 hover:text-muted-foreground shadow-[inset_0_0_0_1px_hsl(var(--border)/0.4)] hover:shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.3)]"
                 }`}
               >

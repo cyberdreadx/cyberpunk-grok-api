@@ -184,7 +184,7 @@ function PinDialog({
                 onChange={(e) => handleChange(i, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(i, e)}
                 aria-label={`PIN digit ${i + 1}`}
-                className="w-12 h-14 text-center text-xl font-orbitron bg-background border-2 border-primary/30 rounded-md text-primary outline-none focus:border-primary focus:shadow-[0_0_10px_hsl(var(--neon-cyan)/0.3)] transition-all"
+                className="w-12 h-14 text-center text-xl font-orbitron bg-background border-2 border-primary/30 rounded-md text-primary outline-none focus:border-primary focus:shadow-glow-focus transition-all"
               />
             ))}
           </div>
@@ -1893,7 +1893,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
 
         {/* Purge / Empty Trash confirmation dialog */}
         <AlertDialog open={purgeConfirmOpen} onOpenChange={setPurgeConfirmOpen}>
-          <AlertDialogContent className="bg-card border-destructive/40 sm:max-w-md shadow-[0_0_30px_rgba(255,0,0,0.15)]">
+          <AlertDialogContent className="bg-card border-destructive/40 sm:max-w-md shadow-glow-ambient">
             <AlertDialogHeader>
               <AlertDialogTitle className="font-orbitron text-sm tracking-wider text-destructive flex items-center gap-2">
                 <Trash2 className="w-4 h-4" />
@@ -1943,7 +1943,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
 
         {/* Single-item delete confirmation */}
         <AlertDialog open={!!deleteConfirmId} onOpenChange={(open) => { if (!open) setDeleteConfirmId(null); }}>
-          <AlertDialogContent className="bg-card border-destructive/40 sm:max-w-sm shadow-[0_0_30px_rgba(255,0,0,0.15)]">
+          <AlertDialogContent className="bg-card border-destructive/40 sm:max-w-sm shadow-glow-ambient">
             <AlertDialogHeader>
               <AlertDialogTitle className="font-orbitron text-sm tracking-wider text-destructive flex items-center gap-2">
                 <Trash2 className="w-4 h-4" />
@@ -2516,7 +2516,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
       {/* Floating multi-select action bar */}
       {selectMode && selectedIds.size > 0 && (
         <div
-          className="fixed left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 bg-card border border-primary/30 rounded-lg shadow-[0_0_20px_rgba(168,85,247,0.15)] px-4 py-2.5 sm:bg-card/95 sm:backdrop-blur"
+          className="fixed left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 bg-card border border-primary/30 rounded-lg shadow-glow-live px-4 py-2.5 sm:bg-card/95 sm:backdrop-blur"
           style={{ bottom: 'calc(70px + env(safe-area-inset-bottom, 0px))' }}
         >
           <span className="font-mono-share text-xs text-primary mr-1">{selectedIds.size} selected</span>

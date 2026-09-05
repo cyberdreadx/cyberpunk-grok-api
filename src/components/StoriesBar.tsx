@@ -230,7 +230,7 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUserId, isAdmin }) => {
                 </div>
               </div>
               {u.hasUnviewed && (
-                <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-primary shadow-[0_0_6px_hsl(var(--primary))]" />
+                <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-primary shadow-glow-focus" />
               )}
             </div>
             <span

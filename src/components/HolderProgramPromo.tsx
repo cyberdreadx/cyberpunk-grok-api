@@ -61,7 +61,7 @@ const HolderProgramPromo: React.FC<Props> = ({ onOpenBank }) => {
   return (
     <section
       aria-label="XRGE Holder Program"
-      className="mt-3 rounded-lg border border-violet-500/30 bg-gradient-to-br from-violet-500/10 via-card/60 to-pink-500/10 px-3 py-2.5 shadow-[0_0_18px_hsl(280_80%_60%/0.15)]"
+      className="mt-3 rounded-lg border border-violet-500/30 bg-gradient-to-br from-violet-500/10 via-card/60 to-pink-500/10 px-3 py-2.5 shadow-glow-live"
     >
       <div className="flex items-center gap-2 flex-wrap">
         <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-violet-400/40 bg-violet-500/15 text-violet-300">

@@ -283,19 +283,19 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
                   }`}
                 >
                   <div className="relative">
-                    <Icon className={`w-5 h-5 ${tab.active ? "drop-shadow-[0_0_6px_hsl(var(--primary))]" : ""}`} />
+                    <Icon className={`w-5 h-5 ${tab.active ? "drop-shadow-glow-focus" : ""}`} />
                     {tab.badge && (
-                      <span className="absolute -top-2 -right-4 min-w-[1.75rem] rounded-full border border-primary/40 bg-card px-1 py-0.5 text-center font-orbitron text-[8px] leading-none text-primary shadow-[0_0_8px_hsl(var(--primary)/0.2)]">
+                      <span className="absolute -top-2 -right-4 min-w-[1.75rem] rounded-full border border-primary/40 bg-card px-1 py-0.5 text-center font-orbitron text-[8px] leading-none text-primary shadow-glow-focus">
                         {tab.badge}
                       </span>
                     )}
                     {tab.newBadge && (
-                      <span className="absolute -top-2 -right-3 rounded-full border border-fuchsia-400/60 bg-card px-1 py-0.5 text-center font-orbitron text-[7px] leading-none text-fuchsia-300 shadow-[0_0_8px_hsl(300_90%_60%/0.4)]">
+                      <span className="absolute -top-2 -right-3 rounded-full border border-fuchsia-400/60 bg-card px-1 py-0.5 text-center font-orbitron text-[7px] leading-none text-fuchsia-300 shadow-glow-focus">
                         NEW
                       </span>
                     )}
                     {tab.active && (
-                      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary shadow-[0_0_4px_hsl(var(--primary))]" />
+                      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary shadow-glow-focus" />
                     )}
                   </div>
                   <span className={`font-orbitron tracking-wider leading-none ${

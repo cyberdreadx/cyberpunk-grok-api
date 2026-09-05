@@ -452,7 +452,7 @@ const ProfilePage: React.FC = () => {
                   {profile.isOwn && !profile.verified && (
                     <button
                       onClick={() => setVerifyOpen(true)}
-                      className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-primary/40 bg-primary/10 hover:bg-primary/20 hover:border-primary/70 transition-colors font-mono-share text-[10px] text-primary tracking-widest shadow-[0_0_12px_hsl(var(--primary)/0.25)]"
+                      className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-primary/40 bg-primary/10 hover:bg-primary/20 hover:border-primary/70 transition-colors font-mono-share text-[10px] text-primary tracking-widest shadow-glow-live"
                     >
                       <BadgeCheck className="w-3 h-3" /> GET VERIFIED
                     </button>

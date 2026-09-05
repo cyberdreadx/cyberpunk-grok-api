@@ -55,6 +55,22 @@
     --neon-yellow: 55 100% 55%;
     --neon-red: 0 100% 55%;
 
+    /* Glow scale.
+       75 hand-rolled shadow-[0_0…] values across 62 distinct variants meant no
+       two glows agreed, so nothing read as more lit than anything else. Three
+       tiers by radius replace all of them.
+
+       currentColor is the point: the glow inherits whatever colour the element
+       already is, so a destructive badge glows red and a live dot glows cyan
+       without a token per hue. The rgba line is the fallback for engines
+       without color-mix; the second declaration wins where it is supported. */
+    --glow-focus:   0 0 8px  rgba(120, 220, 255, 0.35);
+    --glow-live:    0 0 16px rgba(120, 220, 255, 0.28);
+    --glow-ambient: 0 0 40px rgba(120, 220, 255, 0.10);
+    --glow-focus:   0 0 8px  color-mix(in srgb, currentColor 40%, transparent);
+    --glow-live:    0 0 16px color-mix(in srgb, currentColor 30%, transparent);
+    --glow-ambient: 0 0 40px color-mix(in srgb, currentColor 12%, transparent);
+
     /* ── IMMERSION CONTROL (MKULTRA Research Inspired) ── */
     --immersion-flicker: 0.35;
     --immersion-pulse-hz: 0.7;

@@ -14,7 +14,7 @@ const PwaInstallBanner: React.FC = () => {
     <>
       {/* Install banner */}
       <div className="fixed bottom-[72px] left-2 right-2 z-50 sm:hidden animate-slide-up">
-        <div className="terminal-block rounded-lg overflow-hidden shadow-[0_0_30px_hsl(var(--primary)/0.15)]">
+        <div className="terminal-block rounded-lg overflow-hidden shadow-glow-ambient">
           <div className="flex items-center gap-3 p-3">
             <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
               <Smartphone className="w-5 h-5 text-primary" />
@@ -69,7 +69,7 @@ const PwaInstallBanner: React.FC = () => {
       {/* iOS installation guide overlay */}
       {showIosGuide && (
         <div className="fixed inset-0 z-[60] bg-background/90 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
-          <div className="terminal-block rounded-lg w-full max-w-sm overflow-hidden animate-slide-up shadow-[0_0_40px_hsl(var(--primary)/0.2)]">
+          <div className="terminal-block rounded-lg w-full max-w-sm overflow-hidden animate-slide-up shadow-glow-ambient">
             {/* Title bar */}
             <div className="flex items-center gap-2 px-4 py-2.5 bg-primary/5 border-b border-primary/15">
               <div className="flex items-center gap-1">

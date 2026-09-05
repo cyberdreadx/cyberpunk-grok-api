@@ -35,10 +35,10 @@ const TIER_ICON: Record<string, LucideIcon> = {
 };
 
 const TIER_STYLE: Record<string, string> = {
-  initiate: "text-amber-300 border-amber-500/40 bg-amber-500/10 shadow-[0_0_8px_hsl(40_90%_60%/0.15)]",
-  operative: "text-cyan-300 border-cyan-400/40 bg-cyan-500/10 shadow-[0_0_8px_hsl(190_90%_60%/0.18)]",
-  runner: "text-violet-300 border-violet-400/40 bg-violet-500/10 shadow-[0_0_10px_hsl(265_90%_70%/0.22)]",
-  architect: "text-pink-300 border-pink-400/50 bg-pink-500/15 shadow-[0_0_14px_hsl(320_95%_70%/0.3)]",
+  initiate: "text-amber-300 border-amber-500/40 bg-amber-500/10 shadow-glow-focus",
+  operative: "text-cyan-300 border-cyan-400/40 bg-cyan-500/10 shadow-glow-focus",
+  runner: "text-violet-300 border-violet-400/40 bg-violet-500/10 shadow-glow-focus",
+  architect: "text-pink-300 border-pink-400/50 bg-pink-500/15 shadow-glow-live",
   none: "text-muted-foreground/60 border-border/30 bg-card/30",
 };
 
@@ -106,7 +106,7 @@ const HolderBadge: React.FC<HolderBadgeProps> = ({
       <span>{name}</span>
       {showFlame && (
         <span title={`${streakDays}-day continuous hold streak`} className="inline-flex items-center gap-0.5 ml-0.5 text-orange-400">
-          <Flame className={cn(sizing.icon, "drop-shadow-[0_0_4px_rgba(255,140,40,0.6)]")} strokeWidth={2.5} />
+          <Flame className={cn(sizing.icon, "drop-shadow-glow-focus")} strokeWidth={2.5} />
           {size !== "xs" && <span className="text-orange-300">{streakDays}d</span>}
         </span>
       )}

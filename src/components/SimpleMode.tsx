@@ -353,7 +353,7 @@ const SimpleMode: React.FC<SimpleModeProps> = ({
           className={`
             w-full flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-lg font-orbitron text-sm font-bold tracking-wider transition-all duration-200
             ${canGenerate && !insufficientCredits
-              ? "bg-primary/20 border border-primary/50 text-primary hover:bg-primary/30 hover:border-primary hover:shadow-[0_0_20px_hsl(var(--primary)/0.2)]"
+              ? "bg-primary/20 border border-primary/50 text-primary hover:bg-primary/30 hover:border-primary hover:shadow-glow-live"
               : "bg-card/30 border border-border/30 text-muted-foreground/30 cursor-not-allowed"
             }
             ${isTourActive && tourStep === 3 ? "relative z-50 ring-2 ring-primary/50 ring-offset-2 ring-offset-background" : ""}

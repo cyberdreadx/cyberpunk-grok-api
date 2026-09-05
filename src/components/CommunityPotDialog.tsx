@@ -89,7 +89,7 @@ export const CommunityPotDialog: React.FC<{ open: boolean; onClose: () => void }
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-lg bg-card border border-primary/30 sm:rounded-lg shadow-[0_0_40px_hsl(var(--primary)/0.25)] max-h-[90dvh] overflow-y-auto"
+        className="relative w-full max-w-lg bg-card border border-primary/30 sm:rounded-lg shadow-glow-ambient max-h-[90dvh] overflow-y-auto"
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 8px)" }}
         onClick={(e) => e.stopPropagation()}
       >

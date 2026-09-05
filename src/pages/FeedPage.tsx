@@ -485,7 +485,7 @@ const FeedPage: React.FC = () => {
             }
             setReelsOpen(true);
           }}
-          className={`flex items-center gap-1 px-3 py-1 rounded-full font-mono-share text-[10px] font-bold transition-colors border border-accent/60 bg-accent/15 text-accent shadow-[0_0_10px_hsl(var(--accent)/0.35)] hover:bg-accent/25`}
+          className={`flex items-center gap-1 px-3 py-1 rounded-full font-mono-share text-[10px] font-bold transition-colors border border-accent/60 bg-accent/15 text-accent shadow-glow-focus hover:bg-accent/25`}
           title="Vertical video reels — most recent"
         >
           <Film className="w-3 h-3" /> REELS
@@ -551,7 +551,7 @@ const FeedPage: React.FC = () => {
           onClick={() => { setFilter("trending"); setLoading(true); }}
           className={`flex items-center gap-1 px-2.5 py-1 rounded-full font-mono-share text-[10px] transition-colors border ${
             filter === "trending"
-              ? "border-secondary/50 bg-secondary/10 text-secondary shadow-[0_0_8px_hsl(var(--secondary)/0.3)]"
+              ? "border-secondary/50 bg-secondary/10 text-secondary shadow-glow-focus"
               : baseInactive
           }`}
         >
@@ -583,7 +583,7 @@ const FeedPage: React.FC = () => {
             aria-pressed={lane === "media"}
             className={`flex items-center gap-1 px-2.5 py-0.5 rounded-full font-mono-share text-[10px] transition-colors ${
               lane === "media"
-                ? "bg-primary/15 text-primary shadow-[0_0_8px_hsl(var(--primary)/0.25)]"
+                ? "bg-primary/15 text-primary shadow-glow-focus"
                 : "text-muted-foreground hover:text-foreground"
             }`}
             title="Images and video"
@@ -595,7 +595,7 @@ const FeedPage: React.FC = () => {
             aria-pressed={lane === "text"}
             className={`flex items-center gap-1 px-2.5 py-0.5 rounded-full font-mono-share text-[10px] transition-colors ${
               lane === "text"
-                ? "bg-secondary/20 text-secondary shadow-[0_0_8px_hsl(var(--secondary)/0.3)]"
+                ? "bg-secondary/20 text-secondary shadow-glow-focus"
                 : "text-muted-foreground hover:text-foreground"
             }`}
             title="Text-only posts — discussion, no media"
@@ -612,7 +612,7 @@ const FeedPage: React.FC = () => {
     <div className="flex flex-wrap items-center gap-1 p-1 rounded-lg border border-border/40 bg-card/40 w-fit max-w-[min(100%,28rem)]">
       <button
         type="button"
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md font-orbitron text-[10px] tracking-widest bg-primary/15 text-primary border border-primary/40 shadow-[0_0_8px_hsl(var(--primary)/0.25)]"
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md font-orbitron text-[10px] tracking-widest bg-primary/15 text-primary border border-primary/40 shadow-glow-focus"
         aria-current="page"
       >
         <Rss className="w-3.5 h-3.5" /> FEED
@@ -669,7 +669,7 @@ const FeedPage: React.FC = () => {
     <button
       type="button"
       onClick={() => setNavOpen(true)}
-      className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-primary/40 bg-primary/10 text-primary font-orbitron text-[10px] tracking-widest hover:bg-primary/20 transition-colors shadow-[0_0_8px_hsl(var(--primary)/0.2)]"
+      className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-primary/40 bg-primary/10 text-primary font-orbitron text-[10px] tracking-widest hover:bg-primary/20 transition-colors shadow-glow-focus"
       aria-label="Open navigation menu"
     >
       <Menu className="w-4 h-4" />

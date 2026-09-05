@@ -228,7 +228,7 @@ const ChatRoom: React.FC = () => {
               onClick={() => setChannel(c)}
               className={`px-3 py-1.5 text-xs uppercase tracking-wider rounded-md border transition flex items-center gap-1 ${
                 channel === c
-                  ? "border-primary text-primary bg-primary/10 shadow-[0_0_12px_hsl(var(--primary)/0.3)]"
+                  ? "border-primary text-primary bg-primary/10 shadow-glow-live"
                   : "border-border/60 text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -264,7 +264,7 @@ const ChatRoom: React.FC = () => {
             <div key={m.id} className={`group flex ${mine ? "justify-end" : "justify-start"}`}>
               <div className={`max-w-[85%] rounded-lg px-3 py-2 text-sm border ${
                 isBot
-                  ? "bg-accent/10 border-accent/50 text-foreground shadow-[0_0_12px_hsl(var(--accent)/0.25)]"
+                  ? "bg-accent/10 border-accent/50 text-foreground shadow-glow-live"
                   : mine
                     ? "bg-primary/10 border-primary/40 text-foreground"
                     : "bg-muted/30 border-border/60"

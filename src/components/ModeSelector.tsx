@@ -33,7 +33,7 @@ const ModeSelector: React.FC<ModeSelectorProps> = ({ activeMode, onModeChange, i
               className={`
                 flex items-center gap-1.5 px-3 py-2 rounded border whitespace-nowrap transition-all duration-200 shrink-0
                 ${isActive
-                  ? "border-primary/50 bg-primary/10 shadow-[0_0_12px_hsl(var(--primary)/0.15)]"
+                  ? "border-primary/50 bg-primary/10 shadow-glow-live"
                   : "border-border/40 bg-card/50 active:bg-card"
                 }
               `}
@@ -76,7 +76,7 @@ const ModeSelector: React.FC<ModeSelectorProps> = ({ activeMode, onModeChange, i
               className={`
                 relative group p-3 border rounded transition-all duration-300 text-left overflow-hidden
                 ${isActive
-                  ? "border-primary/50 bg-primary/5 shadow-[0_0_15px_hsl(var(--primary)/0.1)]"
+                  ? "border-primary/50 bg-primary/5 shadow-glow-live"
                   : "border-border/40 hover:border-primary/30 bg-card/30 hover:bg-card/60"
                 }
               `}
@@ -84,7 +84,7 @@ const ModeSelector: React.FC<ModeSelectorProps> = ({ activeMode, onModeChange, i
               {/* Top accent line */}
               <div
                 className={`absolute top-0 left-0 right-0 h-[2px] transition-all duration-300 ${
-                  isActive ? "bg-primary shadow-[0_0_8px_hsl(var(--primary)/0.5)]" : "bg-transparent group-hover:bg-primary/30"
+                  isActive ? "bg-primary shadow-glow-focus" : "bg-transparent group-hover:bg-primary/30"
                 }`}
               />
 

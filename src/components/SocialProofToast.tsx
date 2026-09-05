@@ -71,7 +71,7 @@ export default function SocialProofToast() {
       className="fixed bottom-20 left-3 z-50 animate-in slide-in-from-left-full duration-500 max-w-[260px]"
       style={{ animationFillMode: "both" }}
     >
-      <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg border border-primary/20 bg-background/95 backdrop-blur-md shadow-[0_0_20px_hsl(var(--primary)/0.15)]">
+      <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg border border-primary/20 bg-background/95 backdrop-blur-md shadow-glow-live">
         <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${isJackpot ? "bg-yellow-500/20" : "bg-primary/15"}`}>
           {isJackpot ? (
             <Sparkles className="w-4 h-4 text-yellow-400" />

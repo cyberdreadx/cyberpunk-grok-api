@@ -30,7 +30,7 @@ const ThemePicker: React.FC = () => {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full mt-1 z-50 min-w-[200px] bg-card/95 backdrop-blur-md border border-border rounded-md shadow-[0_0_30px_rgba(var(--primary-rgb,0,255,255),0.15)] overflow-hidden">
+          <div className="absolute right-0 top-full mt-1 z-50 min-w-[200px] bg-card/95 backdrop-blur-md border border-border rounded-md shadow-glow-ambient overflow-hidden">
             <div className="px-3 py-2 border-b border-border/50">
               <span className="font-mono-share text-[9px] text-muted-foreground/50">$ select --theme</span>
             </div>

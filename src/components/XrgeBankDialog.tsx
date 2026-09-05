@@ -328,7 +328,7 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-card border-border border-pink-500/20 shadow-[0_0_48px_hsl(var(--primary)/0.08)] w-[min(96vw,40rem)] max-w-2xl max-h-[85vh] overflow-hidden p-0 gap-0 flex flex-col">
+      <DialogContent className="bg-card border-border border-pink-500/20 shadow-glow-ambient w-[min(96vw,40rem)] max-w-2xl max-h-[85vh] overflow-hidden p-0 gap-0 flex flex-col">
         <div className="credit-store-scroll scrollbar-cyber min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-5 py-5 [color-scheme:dark]">
           <DialogHeader>
             <DialogTitle className="font-orbitron text-sm tracking-wider flex items-center gap-2">
@@ -612,7 +612,7 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                       {data.holder.tier !== "none" && (
                         <div className="rounded-lg border border-orange-500/25 bg-gradient-to-r from-orange-950/20 to-amber-950/10 p-3">
                           <div className="flex items-center gap-2">
-                            <Flame className={`w-4 h-4 ${data.holder.streakDays >= 30 ? "text-orange-400 drop-shadow-[0_0_6px_rgba(255,140,40,0.6)]" : "text-muted-foreground/40"}`} />
+                            <Flame className={`w-4 h-4 ${data.holder.streakDays >= 30 ? "text-orange-400 drop-shadow-glow-focus" : "text-muted-foreground/40"}`} />
                             <span className="font-orbitron text-[10px] tracking-wider text-orange-300">
                               {data.holder.streakBonus.label.toUpperCase()}
                             </span>

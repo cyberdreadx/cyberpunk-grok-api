@@ -120,7 +120,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
                 key={tier.id}
                 className={`relative flex min-w-0 max-w-full flex-col overflow-hidden rounded-lg border-2 transition-all ${
                   tier.popular
-                    ? "border-secondary/70 bg-secondary/[0.07] shadow-[0_0_24px_hsl(var(--secondary)/0.12)]"
+                    ? "border-secondary/70 bg-secondary/[0.07] shadow-glow-live"
                     : "border-border/90 bg-card/50"
                 } ${isActive ? "ring-2 ring-primary/45 ring-offset-2 ring-offset-background" : ""}`}
               >
@@ -310,11 +310,11 @@ function PackCard({
     <div
       className={`relative flex min-w-0 max-w-full flex-col overflow-hidden rounded-lg border-2 transition-all ${
         onFlash
-          ? "border-orange-500/70 bg-gradient-to-b from-orange-500/[0.08] to-card/50 shadow-[0_0_20px_hsl(20_90%_50%/0.18)]"
+          ? "border-orange-500/70 bg-gradient-to-b from-orange-500/[0.08] to-card/50 shadow-glow-live"
           : pkg.popular
-          ? "border-secondary/70 bg-secondary/[0.06] shadow-[0_0_20px_hsl(var(--secondary)/0.1)]"
+          ? "border-secondary/70 bg-secondary/[0.06] shadow-glow-live"
           : isBulk
-          ? "border-primary/45 bg-primary/[0.06] shadow-[0_0_16px_hsl(var(--primary)/0.08)]"
+          ? "border-primary/45 bg-primary/[0.06] shadow-glow-live"
           : "border-border/90 bg-card/50"
       }`}
     >

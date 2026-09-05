@@ -146,7 +146,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ isAuthenticated }) 
             ref={popoverRef}
             className="
               fixed sm:absolute z-50 flex flex-col overflow-hidden
-              bg-card border border-border/30 rounded-lg shadow-[0_0_30px_hsl(var(--primary)/0.15)]
+              bg-card border border-border/30 rounded-lg shadow-glow-ambient
               left-2 right-2 top-[calc(env(safe-area-inset-top,0px)+32px)] max-h-[70vh]
               sm:left-auto sm:right-0 sm:top-full sm:mt-2 sm:w-[320px] sm:max-h-[400px]
             "

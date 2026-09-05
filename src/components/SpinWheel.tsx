@@ -188,7 +188,7 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ onCreditsRefresh }) => {
           {isJackpot ? (
             <>
               <div className="relative">
-                <Sparkles className="w-20 h-20 text-yellow-400 fill-yellow-400 mb-2 drop-shadow-[0_0_30px_rgba(250,204,21,0.8)]" />
+                <Sparkles className="w-20 h-20 text-yellow-400 fill-yellow-400 mb-2 drop-shadow-glow-ambient" />
                 <Zap className="absolute top-2 right-2 w-6 h-6 text-orange-400 fill-orange-400 animate-bounce" />
               </div>
               <p className="font-orbitron text-xs tracking-[0.3em] text-yellow-400 uppercase">
@@ -197,13 +197,13 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ onCreditsRefresh }) => {
             </>
           ) : (
             <>
-              <Gift className="w-14 h-14 text-primary fill-primary/20 mb-2 drop-shadow-[0_0_20px_hsl(var(--primary)/0.6)]" />
+              <Gift className="w-14 h-14 text-primary fill-primary/20 mb-2 drop-shadow-glow-live" />
               <p className="font-orbitron text-xs tracking-widest text-muted-foreground uppercase">
                 You Won
               </p>
             </>
           )}
-          <p className={`font-orbitron text-3xl font-bold mt-1 ${isJackpot ? "text-yellow-400 drop-shadow-[0_0_20px_rgba(250,204,21,0.5)]" : "neon-text-cyan"}`}>
+          <p className={`font-orbitron text-3xl font-bold mt-1 ${isJackpot ? "text-yellow-400 drop-shadow-glow-live" : "neon-text-cyan"}`}>
             +{result.credits} CREDITS
           </p>
           {/* Streak info in result */}
@@ -243,7 +243,7 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ onCreditsRefresh }) => {
       {/* Pointer triangle */}
       <div className="relative w-[260px] h-[260px] sm:w-[300px] sm:h-[300px]">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1 z-10">
-          <div className="w-0 h-0 border-l-[10px] border-r-[10px] border-t-[18px] border-l-transparent border-r-transparent border-t-yellow-400 drop-shadow-[0_0_12px_rgba(250,204,21,0.7)]" />
+          <div className="w-0 h-0 border-l-[10px] border-r-[10px] border-t-[18px] border-l-transparent border-r-transparent border-t-yellow-400 drop-shadow-glow-live" />
         </div>
 
         {/* Outer glow ring */}
@@ -254,7 +254,7 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ onCreditsRefresh }) => {
         {/* Wheel */}
         <div
           ref={wheelRef}
-          className="w-full h-full rounded-full border-2 border-primary/40 shadow-[0_0_40px_hsl(var(--primary)/0.15)] overflow-hidden relative"
+          className="w-full h-full rounded-full border-2 border-primary/40 shadow-glow-ambient overflow-hidden relative"
           style={{
             transform: `rotate(${rotation}deg)`,
             transition: spinning ? "transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99)" : "none",
@@ -335,7 +335,7 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ onCreditsRefresh }) => {
           <Button
             onClick={() => doSpin(false)}
             disabled={spinning}
-            className="w-full font-orbitron text-xs tracking-wider gap-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white border-0 shadow-[0_0_20px_rgba(34,197,94,0.3)] h-11"
+            className="w-full font-orbitron text-xs tracking-wider gap-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white border-0 shadow-glow-live h-11"
           >
             {spinning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Gift className="w-4 h-4" />}
             {spinning ? "Spinning..." : `🎁 FREE SPIN${streak > 0 ? ` (${streak}🔥)` : ""}`}

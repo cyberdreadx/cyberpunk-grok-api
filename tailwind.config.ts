@@ -13,6 +13,11 @@ export default {
       },
     },
     extend: {
+      boxShadow: {
+        "glow-focus": "var(--glow-focus)",
+        "glow-live": "var(--glow-live)",
+        "glow-ambient": "var(--glow-ambient)",
+      },
       fontFamily: {
         orbitron: ["Orbitron", "sans-serif"],
         "mono-share": ["Share Tech Mono", "monospace"],

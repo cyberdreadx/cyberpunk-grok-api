@@ -75,7 +75,7 @@ const MobileCreditsPill: React.FC<MobileCreditsPillProps> = ({ onOpenStore, inli
         aria-label={`Open store — ${label} credits${byok ? ", BYOK active" : ""}`}
         className="group inline-flex items-center gap-1.5 h-7 ps-2.5 pe-2 rounded-full border border-primary/40 bg-card/70 backdrop-blur-md hover:bg-card/90 hover:border-primary/60 active:scale-[0.97] transition-all"
       >
-        <Coins className="w-3 h-3 text-primary drop-shadow-[0_0_3px_hsl(var(--primary))] shrink-0" />
+        <Coins className="w-3 h-3 text-primary drop-shadow-glow-focus shrink-0" />
         <span className="font-orbitron text-[10px] tracking-wider text-primary leading-none">
           {label}
         </span>
@@ -147,7 +147,7 @@ const MobileCreditsPill: React.FC<MobileCreditsPillProps> = ({ onOpenStore, inli
               onClick={() => setNoticeOpen(false)}
             />
             <div
-              className="absolute z-[56] mt-2 w-64 bg-card/95 backdrop-blur-md border border-primary/40 rounded-lg shadow-[0_0_20px_hsl(var(--primary)/0.25)] p-3 animate-fade-in"
+              className="absolute z-[56] mt-2 w-64 bg-card/95 backdrop-blur-md border border-primary/40 rounded-lg shadow-glow-live p-3 animate-fade-in"
               style={isRtl ? { left: 0, top: "100%" } : { right: 0, top: "100%" }}
               onClick={(e) => e.stopPropagation()}
             >
@@ -181,7 +181,7 @@ const MobileCreditsPill: React.FC<MobileCreditsPillProps> = ({ onOpenStore, inli
           onClick={() => setNoticeOpen(false)}
         >
           <div
-            className="absolute w-64 bg-card/95 backdrop-blur-md border border-primary/40 rounded-lg shadow-[0_0_20px_hsl(var(--primary)/0.25)] p-3 animate-fade-in"
+            className="absolute w-64 bg-card/95 backdrop-blur-md border border-primary/40 rounded-lg shadow-glow-live p-3 animate-fade-in"
             style={{
               top: hasTerminal
                 ? "calc(env(safe-area-inset-top, 0px) + 72px)"

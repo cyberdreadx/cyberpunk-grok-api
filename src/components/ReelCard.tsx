@@ -312,7 +312,7 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate, active = true, moun
           to the centered unlock CTA below. Mirrors owner badge placement. */}
       {isLocked && (
         <div
-          className="absolute z-20 flex items-center gap-1 px-2 py-1 rounded-md bg-black/70 backdrop-blur-sm border border-amber-400/50 font-mono-share text-[10px] text-amber-300 tracking-wider shadow-[0_0_12px_rgba(251,191,36,0.25)]"
+          className="absolute z-20 flex items-center gap-1 px-2 py-1 rounded-md bg-black/70 backdrop-blur-sm border border-amber-400/50 font-mono-share text-[10px] text-amber-300 tracking-wider shadow-glow-live"
           style={{ top: "calc(env(safe-area-inset-top, 0px) + 12px)", right: 12 }}
           title="Locked content — unlock to view"
         >

@@ -42,7 +42,7 @@ const NavPill: React.FC<{
       {label}
       {unread > 0 && (
         <span
-          className="absolute -top-1 -right-1 min-w-[14px] h-[14px] px-1 rounded-full bg-primary text-background font-mono-share text-[8px] leading-[14px] text-center shadow-[0_0_6px_hsl(var(--primary)/0.6)]"
+          className="absolute -top-1 -right-1 min-w-[14px] h-[14px] px-1 rounded-full bg-primary text-background font-mono-share text-[8px] leading-[14px] text-center shadow-glow-focus"
           aria-label={`${unread} unread`}
         >
           {unread > 9 ? "9+" : unread}

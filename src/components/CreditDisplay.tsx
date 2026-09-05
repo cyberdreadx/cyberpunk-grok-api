@@ -168,7 +168,7 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
             </Button>
           </DialogTrigger>
         )}
-        <DialogContent className="bg-card border-border border-primary/20 shadow-[0_0_48px_hsl(var(--primary)/0.08)] w-[min(96vw,72rem)] max-w-6xl max-h-[85vh] overflow-hidden p-0 gap-0 flex flex-col">
+        <DialogContent className="bg-card border-border border-primary/20 shadow-glow-ambient w-[min(96vw,72rem)] max-w-6xl max-h-[85vh] overflow-hidden p-0 gap-0 flex flex-col">
           {/* Inner scroll — must NOT be on DialogContent (grid + overflow quirks; OS scrollbars ignore webkit rules on some builds). */}
           <div className="credit-store-scroll scrollbar-cyber min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-6 py-6 [color-scheme:dark]">
           <DialogHeader>
@@ -182,7 +182,7 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
 
           {/* Flash sale banner — prominent, in-store */}
           {flashSale && (
-            <div className="mt-3 rounded-lg border-2 border-orange-500/60 bg-gradient-to-r from-orange-600/20 via-pink-500/15 to-orange-600/20 p-3 space-y-1.5 shadow-[0_0_24px_hsl(20_90%_50%/0.25)]">
+            <div className="mt-3 rounded-lg border-2 border-orange-500/60 bg-gradient-to-r from-orange-600/20 via-pink-500/15 to-orange-600/20 p-3 space-y-1.5 shadow-glow-live">
               <div className="flex items-center gap-2 flex-wrap">
                 <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-orange-500/30 ring-2 ring-orange-400/60">
                   <Flame className="h-3.5 w-3.5 text-orange-200" />
@@ -457,7 +457,7 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
                 <>
                   <span className="pointer-events-none absolute -top-1 -right-1 z-10 flex h-2.5 w-2.5">
                     <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet-400 opacity-75" />
-                    <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-violet-300 shadow-[0_0_8px_hsl(280_90%_70%)]" />
+                    <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-violet-300 shadow-glow-focus" />
                   </span>
                   <span
                     role="tooltip"
