@@ -7,6 +7,7 @@ import { checkRateLimit, getClientIp } from "../_lib/ratelimit";
 import { isDisposableEmail } from "../_lib/disposable-domains";
 import { isDomainVelocityExceeded } from "../_lib/domain-velocity";
 import { verifyCaptcha } from "../_lib/captcha";
+import { sameMailbox } from "../_lib/email-canonical";
 import { findAmbassadorByCode, attributeSignup, type AmbassadorLookup } from "../_lib/ambassador";
 /** Basic email format validation. */
 function isValidEmail(email: string): boolean {
@@ -114,14 +115,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const [ambUser] = await sql`
           SELECT id, email FROM users WHERE id = ${ambassador.userId}::uuid
         `;
-        if (ambUser && ambUser.email !== normalizedEmail) referrerId = ambUser.id;
+        // sameMailbox, not string equality: alice@gmail and alice+ref@gmail are
+        // one person, and comparing raw strings let them refer themselves.
+        if (ambUser && !sameMailbox(ambUser.email, normalizedEmail)) referrerId = ambUser.id;
         else ambassador = null;
       }
       if (!referrerId) {
         const refRows = await sql`
           SELECT id, email FROM users WHERE referral_code = ${referral_code.trim().toUpperCase()}
         `;
-        if (refRows.length > 0 && refRows[0].email !== normalizedEmail) {
+        if (refRows.length > 0 && !sameMailbox(refRows[0].email, normalizedEmail)) {
           referrerId = refRows[0].id;
         }
       }

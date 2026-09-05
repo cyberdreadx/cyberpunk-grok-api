@@ -18,6 +18,7 @@
  */
 
 import crypto from "crypto";
+import { sameMailbox } from "./email-canonical";
 
 type Sql = ReturnType<typeof import("./db").getDb>;
 
@@ -122,13 +123,25 @@ export async function attributeSignup(
   if (ambassadorUserId && ambassadorUserId === userId) {
     disqualified = true;
     reason = "self-referral";
-  } else if (fingerprint && ambassadorUserId) {
-    const [same] = await sql`
-      SELECT 1 AS hit FROM users
-      WHERE id = ${ambassadorUserId}::uuid AND device_fingerprint = ${fingerprint}
-      LIMIT 1
+  } else if (ambassadorUserId) {
+    // Matching on user id catches only the crudest version. An ambassador
+    // signing up as their own alias — alice@gmail.com referring
+    // alice+ref@gmail.com — is a different row with a different id, and passes
+    // the fingerprint check outright from a second device. This program pays
+    // cash, so the mailbox has to be compared too.
+    const [pair] = await sql`
+      SELECT
+        (SELECT email FROM users WHERE id = ${ambassadorUserId}::uuid) AS amb_email,
+        (SELECT email FROM users WHERE id = ${userId}::uuid) AS ref_email,
+        EXISTS (
+          SELECT 1 FROM users
+          WHERE id = ${ambassadorUserId}::uuid AND device_fingerprint = ${fingerprint ?? null}
+        ) AS same_fp
     `;
-    if (same) {
+    if (pair && sameMailbox(pair.amb_email, pair.ref_email)) {
+      disqualified = true;
+      reason = "same mailbox as ambassador";
+    } else if (fingerprint && pair?.same_fp) {
       disqualified = true;
       reason = "same device fingerprint as ambassador";
     }
