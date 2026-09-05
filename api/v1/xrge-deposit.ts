@@ -66,7 +66,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         console.warn(`[xrge-deposit] sender ${sender} already bound to another account; refusing for ${userId}`);
         return res.status(403).json({ error: "This wallet is linked to a different account." });
       }
-      await sql`UPDATE users SET wallet_address = ${sender}, updated_at = now() WHERE id = ${userId}`;
+      // Counts as verified: spending from an address is stronger proof of control
+      // than signing a message with it.
+      await sql`
+        UPDATE users
+           SET wallet_address = ${sender}, wallet_verified_at = now(), updated_at = now()
+         WHERE id = ${userId}`;
       console.log(`[xrge-deposit] bound wallet ${sender} to user ${userId} on first deposit`);
     }
 

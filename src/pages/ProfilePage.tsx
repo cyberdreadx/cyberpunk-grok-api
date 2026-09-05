@@ -350,14 +350,22 @@ const ProfilePage: React.FC = () => {
                     <label className="font-mono-share text-[10px] text-muted-foreground flex items-center gap-1">
                       <Wallet className="w-3 h-3" /> WALLET_ADDRESS (Base chain)
                     </label>
+                    {/* Read-only: the same column feeds holder tiers, so it can only
+                        be set by connecting and signing in the $XRGE bank. Clearing
+                        it here still works — unbinding needs no proof. */}
                     <Input
                       value={editWallet}
                       onChange={(e) => setEditWallet(e.target.value.trim())}
-                      placeholder="0x... (for XRGE payouts)"
+                      readOnly={!!editWallet}
+                      placeholder="Connect a wallet in the $XRGE bank"
                       maxLength={42}
-                      className="h-8 font-mono-share text-xs bg-input/50"
+                      className="h-8 font-mono-share text-xs bg-input/50 read-only:opacity-70 read-only:cursor-not-allowed"
                     />
-                    <span className="font-mono-share text-[8px] text-muted-foreground/50">Set this to receive instant XRGE payouts from locked content</span>
+                    <span className="font-mono-share text-[8px] text-muted-foreground/50">
+                      {editWallet
+                        ? "Receives instant XRGE payouts from locked content · clear this field to unbind"
+                        : "Connect & verify in the $XRGE bank to set a payout wallet"}
+                    </span>
                   </div>
                   <div>
                     <label className="font-mono-share text-[10px] text-muted-foreground flex items-center gap-1">

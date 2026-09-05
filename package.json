@@ -12,7 +12,6 @@
     "_typecheck_note": "tsconfig.json is references-only (files: []). `tsc -p` does NOT follow project references — only `tsc -b` does — so `tsc -p tsconfig.json` checked NOTHING. That is why an undefined variable shipped. `typecheck` is the enforceable gate (app + node, currently clean); `typecheck:api` is separate because api/ carries a pre-existing error backlog.",
     "typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.node.json",
     "typecheck:api": "tsc --noEmit -p tsconfig.api.json",
-    "typecheck:api": "tsc --noEmit -p tsconfig.api.json",
     "test": "vitest run",
     "test:watch": "vitest",
     "start": "node --env-file=.env --import tsx server/index.ts",
@@ -94,6 +93,7 @@
     "three": "^0.160.1",
     "tsx": "^4.22.3",
     "vaul": "^0.9.9",
+    "viem": "^2.56.3",
     "vite-plugin-pwa": "^1.2.0",
     "zod": "^3.25.76"
   },

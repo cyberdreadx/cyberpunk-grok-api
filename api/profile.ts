@@ -162,11 +162,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
       }
 
-      // Validate wallet address
-      if (walletAddress !== undefined && walletAddress !== null && walletAddress !== "") {
-        const clean = walletAddress.trim().toLowerCase();
-        if (!/^0x[a-f0-9]{40}$/.test(clean)) {
-          return res.status(400).json({ error: "Invalid wallet address (must be 0x + 40 hex chars)" });
+      // Wallet address is no longer settable here. profiles.wallet_address feeds
+      // the holder-tier snapshot, and this route never proved ownership or checked
+      // whether another account had already claimed the address — so it was a way
+      // to inherit a whale's balance by typing their public address. Binding now
+      // goes through the signature challenge in /api/v1/xrge-wallet.
+      //
+      // Resubmitting the address already on file is allowed as a no-op, because
+      // ProfilePage round-trips the whole form and would otherwise break every save.
+      let unbindWallet = false;
+      if (walletAddress !== undefined) {
+        const submitted = walletAddress === null ? "" : String(walletAddress).trim().toLowerCase();
+        const [current] = await sql`
+          SELECT LOWER(wallet_address) AS wallet_address FROM profiles WHERE user_id = ${auth.userId}
+        `;
+        const bound = current?.wallet_address || "";
+        if (submitted === "") {
+          // Clearing is only ever a downgrade, so it needs no proof.
+          unbindWallet = bound !== "";
+        } else if (submitted !== bound) {
+          return res.status(400).json({
+            error:
+              "Wallet binding moved — connect and sign in the $XRGE bank to prove you own this address",
+            code: "wallet_requires_signature",
+          });
         }
       }
       // Validate username
@@ -191,7 +210,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // Upsert profile
       const cleanUsername = username ? username.trim().toLowerCase() : undefined;
-      const cleanWallet = walletAddress !== undefined ? (walletAddress ? walletAddress.trim().toLowerCase() : null) : undefined;
+      // Never carries a new address — see the wallet block above. It only ever
+      // stays put (undefined) or clears (unbind).
+      const cleanWallet = undefined;
 
       // If avatar is being replaced, capture the previous URL so we can purge the old blob.
       let previousAvatar: string | null = null;
@@ -224,6 +245,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           socials = COALESCE(${socialsUpdate}::jsonb, profiles.socials),
           updated_at = NOW()
       `;
+
+      // Clearing the field unbinds everywhere, so the holder snapshot stops
+      // counting the address on the next cron pass.
+      if (unbindWallet) {
+        await sql`
+          UPDATE profiles SET wallet_address = NULL, wallet_verified_at = NULL, updated_at = NOW()
+           WHERE user_id = ${auth.userId}`;
+        await sql`
+          UPDATE users SET wallet_address = NULL, wallet_verified_at = NULL, updated_at = NOW()
+           WHERE id = ${auth.userId}`;
+      }
 
       // Best-effort: delete the old avatar file (Blob or R2) if it was replaced.
       if (previousAvatar && previousAvatar !== avatarUrl) {

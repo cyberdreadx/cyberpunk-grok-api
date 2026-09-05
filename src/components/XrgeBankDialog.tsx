@@ -38,6 +38,7 @@ import {
   basescanTxUrl,
 } from "@/lib/xrgePublic";
 import HolderBadge from "@/components/HolderBadge";
+import { connectAndSign, hasInjectedWallet, isMobile, walletDeepLink } from "@/lib/walletConnect";
 
 interface HolderTierInfo {
   id: string;
@@ -169,7 +170,6 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
   const [withdrawResult, setWithdrawResult] = useState<{ amount: number; status: string } | null>(null);
 
   // Holder wallet binding state
-  const [walletInput, setWalletInput] = useState("");
   const [bindingWallet, setBindingWallet] = useState(false);
   const [walletResult, setWalletResult] = useState<{
     walletAddress: string;
@@ -205,7 +205,6 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
       setWithdrawResult(null);
       setWithdrawAmount("");
       setWithdrawAddress("");
-      setWalletInput("");
       setWalletResult(null);
       // Fetch active flash sales
       apiFetch("/flash-sales").then(r => {
@@ -215,18 +214,19 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
     }
   }, [open, fetchBalance]);
 
+  // Connect → challenge → sign → bind. The address is never typed: it comes from
+  // the wallet itself and the server only accepts it with a signature over a
+  // one-shot nonce, so a bound wallet is one the account demonstrably controls.
   const handleBindWallet = async () => {
-    const clean = walletInput.trim().toLowerCase();
-    if (!/^0x[a-f0-9]{40}$/.test(clean)) {
-      setError("Invalid wallet address — must be 0x followed by 40 hex characters");
-      return;
-    }
     setBindingWallet(true);
     setError(null);
     try {
+      const { address, nonce, signature } = await connectAndSign((addr) =>
+        apiFetch(`/v1/xrge-wallet?address=${addr}`),
+      );
       const result = await apiFetch("/v1/xrge-wallet", {
         method: "POST",
-        body: { walletAddress: clean },
+        body: { walletAddress: address, signature, nonce },
       });
       setWalletResult({
         walletAddress: result.walletAddress,
@@ -234,7 +234,6 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
           ? { totalHeld: result.snapshot.totalHeld, tierName: result.snapshot.tier }
           : null,
       });
-      setWalletInput("");
       await fetchBalance();
     } catch (err: any) {
       setError(err.message);
@@ -748,27 +747,22 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                         ) : (
                           <div className="space-y-2">
                             <p className="font-mono-share text-[10px] text-muted-foreground/70 leading-relaxed">
-                              Bind your Base wallet to count on-chain XRGE toward your holder tier.
-                              No transactions or signatures required — read-only balance check.
+                              Connect your Base wallet to count on-chain XRGE toward your holder tier.
+                              You'll sign a short message to prove the wallet is yours — it's free,
+                              moves no tokens, and grants no spending approval.
                             </p>
                             {walletResult && (
                               <div className="rounded border border-green-500/30 bg-green-500/10 p-2">
                                 <p className="font-mono-share text-[9px] text-green-300">
-                                  Wallet bound · {walletResult.snapshot
+                                  Wallet verified · {walletResult.snapshot
                                     ? `Snapshot: ${walletResult.snapshot.totalHeld.toLocaleString(undefined, { maximumFractionDigits: 0 })} XRGE held → ${walletResult.snapshot.tierName} tier`
                                     : "Snapshot pending — check back in a moment"}
                                 </p>
                               </div>
                             )}
-                            <Input
-                              value={walletInput}
-                              onChange={e => setWalletInput(e.target.value)}
-                              placeholder="0x... (Base wallet address)"
-                              className="font-mono-share text-xs bg-input/50 border-border/30"
-                            />
                             <Button
                               onClick={handleBindWallet}
-                              disabled={bindingWallet || !walletInput.trim()}
+                              disabled={bindingWallet}
                               className="w-full font-orbitron text-xs tracking-wider bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/30"
                             >
                               {bindingWallet ? (
@@ -776,8 +770,36 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                               ) : (
                                 <Wallet className="w-4 h-4 mr-2" />
                               )}
-                              BIND WALLET
+                              CONNECT &amp; VERIFY
                             </Button>
+                            {/* No injected provider: a mobile PWA or plain mobile
+                                browser can't sign, so point at the wallet's own
+                                browser rather than failing at the click. */}
+                            {!hasInjectedWallet() && (
+                              <div className="rounded border border-amber-500/30 bg-amber-500/10 p-2 space-y-1.5">
+                                <p className="font-mono-share text-[9px] text-amber-300/90 leading-relaxed">
+                                  {isMobile()
+                                    ? "No wallet detected in this browser. Open GLTCH inside your wallet app to verify."
+                                    : "No wallet detected. Install MetaMask, Coinbase Wallet, or Rabby to verify."}
+                                </p>
+                                {isMobile() && (
+                                  <div className="flex gap-2">
+                                    <a
+                                      href={walletDeepLink("metamask")}
+                                      className="flex-1 text-center font-mono-share text-[9px] text-amber-300 border border-amber-500/30 rounded px-2 py-1 hover:bg-amber-500/10"
+                                    >
+                                      MetaMask
+                                    </a>
+                                    <a
+                                      href={walletDeepLink("coinbase")}
+                                      className="flex-1 text-center font-mono-share text-[9px] text-amber-300 border border-amber-500/30 rounded px-2 py-1 hover:bg-amber-500/10"
+                                    >
+                                      Coinbase
+                                    </a>
+                                  </div>
+                                )}
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>

@@ -124,6 +124,7 @@ export interface HolderState {
   walletBalance: number;
   bankBalance: number;
   walletAddress: string | null;
+  walletVerified: boolean;
   streakDays: number;
   streakBonus: StreakBonus;
   effectiveDiscount: number; // discountPercent × multiplier (rounded 1dp)
@@ -146,9 +147,8 @@ export async function getHolderState(sql: any, userId: string): Promise<HolderSt
       u.holder_tier_since,
       u.last_snapshot_at,
       u.last_snapshot_total,
-      p.wallet_address AS profile_wallet
+      u.wallet_verified_at
     FROM users u
-    LEFT JOIN profiles p ON p.user_id = u.id
     WHERE u.id = ${userId}
   `;
   if (!row) return null;
@@ -160,7 +160,8 @@ export async function getHolderState(sql: any, userId: string): Promise<HolderSt
   // re-derives both fresh.
   const walletBalance = Math.max(0, lastTotal - bankBalance);
 
-  const wallet = row.wallet_address || row.profile_wallet || null;
+  // profiles.wallet_address is no longer consulted here — see cron-xrge-snapshot.
+  const wallet = row.wallet_address || null;
   const totalHeld = lastTotal > 0 ? lastTotal : bankBalance;
 
   const tier = HOLDER_TIERS.find((t) => t.id === row.holder_tier) || getHolderTier(totalHeld);
@@ -181,6 +182,7 @@ export async function getHolderState(sql: any, userId: string): Promise<HolderSt
     walletBalance,
     bankBalance,
     walletAddress: wallet ? String(wallet).toLowerCase() : null,
+    walletVerified: !!row.wallet_verified_at,
     streakDays,
     streakBonus,
     effectiveDiscount: Math.round(tier.discountPercent * streakBonus.multiplier * 10) / 10,

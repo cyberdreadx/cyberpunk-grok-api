@@ -53,6 +53,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   let onChainFailures = 0;
 
   try {
+    // users.wallet_address is the only tier source. profiles.wallet_address used
+    // to be a fallback here, but it was writable through PUT /api/profile with no
+    // ownership proof and no uniqueness check, so it could carry an address the
+    // account did not control — or one another account had already claimed.
+    // It is a creator payout field now; tier binding goes through the signature
+    // challenge in /api/v1/xrge-wallet, which writes both columns.
     const users = (await sql`
       SELECT
         u.id,
@@ -60,13 +66,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         u.xrge_bank_balance,
         u.holder_tier,
         u.holder_tier_since,
-        p.wallet_address AS profile_wallet
+        NULL::text AS profile_wallet
       FROM users u
-      LEFT JOIN profiles p ON p.user_id = u.id
       WHERE
         u.wallet_address IS NOT NULL
-        OR p.wallet_address IS NOT NULL
         OR u.xrge_bank_balance > 0
+        -- Anyone still carrying a tier has to stay in the set even with nothing
+        -- left to measure, or the tier freezes at its last value. That covers
+        -- users who unbind, and the ones whose tier came from the profile column
+        -- this query no longer reads.
+        OR (u.holder_tier IS NOT NULL AND u.holder_tier <> 'none')
     `) as EligibleUser[];
 
     console.log(`[cron-xrge-snapshot] processing ${users.length} eligible users`);

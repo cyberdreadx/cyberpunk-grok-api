@@ -11,6 +11,7 @@ import { getDb } from "./db";
 // ── Constants ─────────────────────────────────────────────────────────────
 
 export const XRGE_CONTRACT = "0x147120faec9277ec02d957584cfcd92b56a24317";
+export const XRGE_CHAIN_ID = 8453; // Base
 export const XRGE_DECIMALS = 18;
 export const REQUIRED_CONFIRMATIONS = 5;
 
