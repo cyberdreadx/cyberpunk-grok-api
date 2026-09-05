@@ -22,6 +22,24 @@
   force = true
 
 # Share pages → server-rendered HTML (OG meta tags for social previews)
+#
+# Share links carry ?ref=CODE — that is the referral attribution path, and per
+# src/pages/RefLanding.tsx it was the only one that ever worked. Netlify does
+# NOT forward the incoming query string when the destination already has one of
+# its own, so `to = ".../share-page?id=:id"` silently dropped every ref code
+# before the API could see it. share-page reads req.query.ref and threads it
+# through all its CTAs, so the whole chain worked except this hop.
+#
+# Query matching requires the param to be present, so the ref-carrying rule
+# needs a plain twin below it for shares posted without a code. Order matters:
+# Netlify takes the first match.
+[[redirects]]
+  from = "/s/:id"
+  query = { ref = ":ref" }
+  to = "https://api.gltch.app/api/share-page?id=:id&ref=:ref"
+  status = 200
+  force = true
+
 [[redirects]]
   from = "/s/:id"
   to = "https://api.gltch.app/api/share-page?id=:id"
