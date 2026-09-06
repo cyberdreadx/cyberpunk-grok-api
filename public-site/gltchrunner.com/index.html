@@ -28,21 +28,84 @@
   <style>
     :root{
       --bg:#06070d; --bg2:#0b0e1a; --fg:#e6f0ff; --muted:#8290b3;
-      --primary:#22d3ee; --secondary:#d946ef; --line:rgba(120,140,200,.16);
+      --primary:#22d3ee; --secondary:#d946ef; --accent:#8b5cf6;
+      --ok:#34d399; --line:rgba(120,140,200,.16);
     }
     *{box-sizing:border-box} html{scroll-behavior:smooth}
     body{
-      margin:0; background:var(--bg); color:var(--fg);
+      margin:0; color:var(--fg);
+      /* --bg2 was declared and never used; the page was flat black. A single
+         cool wash above the fold gives the glows something to sit in. */
+      background:radial-gradient(95% 62% at 50% -12%,var(--bg2),transparent 62%),var(--bg);
       font-family:"Share Tech Mono",ui-monospace,monospace; line-height:1.6;
       -webkit-font-smoothing:antialiased; overflow-x:hidden;
     }
     a{color:inherit}
-    .grid-bg{position:fixed; inset:0; z-index:0; pointer-events:none; opacity:.05;
+    /* Background depth stack. Every layer is fixed, non-interactive and
+       animated on transform only, so the page paints once and the motion
+       rides on the compositor rather than costing a frame. */
+    .bg-layer{position:fixed; inset:0; z-index:0; pointer-events:none}
+
+    /* Oversized so a 54px translate loops seamlessly against the 54px grid —
+       drifting the transform instead of background-position keeps it off the
+       paint path. */
+    .grid-bg{inset:-80px; opacity:.06;
       background-image:linear-gradient(var(--primary) 1px,transparent 1px),linear-gradient(90deg,var(--primary) 1px,transparent 1px);
-      background-size:54px 54px;}
-    .glow{position:fixed; z-index:0; filter:blur(90px); opacity:.25; pointer-events:none}
-    .glow.a{top:-160px; left:-120px; width:480px; height:480px; background:var(--primary); border-radius:50%}
-    .glow.b{bottom:-200px; right:-140px; width:520px; height:520px; background:var(--secondary); border-radius:50%}
+      background-size:54px 54px;
+      /* Fades out behind the headline, so the grid reads as depth under the
+         page rather than graph paper printed over the copy. */
+      -webkit-mask-image:radial-gradient(120% 78% at 50% 2%,transparent 18%,#000 72%);
+      mask-image:radial-gradient(120% 78% at 50% 2%,transparent 18%,#000 72%);
+      animation:grid-drift 26s linear infinite}
+    @keyframes grid-drift{from{transform:translate3d(0,0,0)} to{transform:translate3d(54px,54px,0)}}
+
+    .glow{position:fixed; z-index:0; filter:blur(90px); pointer-events:none;
+      border-radius:50%; will-change:transform}
+    /* Three periods that share no common factor, so the field never visibly
+       repeats even though each blob is on a simple loop. */
+    .glow.a{top:-160px; left:-120px; width:480px; height:480px; background:var(--primary);
+      opacity:.25; animation:drift-a 37s ease-in-out infinite}
+    .glow.b{bottom:-200px; right:-140px; width:520px; height:520px; background:var(--secondary);
+      opacity:.25; animation:drift-b 46s ease-in-out infinite}
+    /* Centred on its own anchor point, and the keyframes start from the same
+       transform — without this base value the reduced-motion rule below strips
+       the centring along with the animation and drops it half its width off. */
+    .glow.c{top:42%; left:54%; width:440px; height:440px; background:var(--accent);
+      opacity:.17; transform:translate3d(-50%,-50%,0); animation:drift-c 59s ease-in-out infinite}
+    @keyframes drift-a{0%,100%{transform:translate3d(0,0,0) scale(1)} 50%{transform:translate3d(96px,64px,0) scale(1.14)}}
+    @keyframes drift-b{0%,100%{transform:translate3d(0,0,0) scale(1)} 50%{transform:translate3d(-78px,-54px,0) scale(1.09)}}
+    @keyframes drift-c{0%,100%{transform:translate3d(-50%,-50%,0) scale(1)} 50%{transform:translate3d(-60%,-40%,0) scale(1.16)}}
+
+    /* 90px blurs over near-black band badly on 8-bit panels — visible rings.
+       A little grain dithers them away and costs one tiled SVG. */
+    .grain{opacity:.038; mix-blend-mode:overlay; background-size:170px 170px;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='170' height='170'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+    .vignette{background:radial-gradient(118% 86% at 50% 34%,transparent 44%,rgba(2,3,9,.82) 100%)}
+
+    /* Ambience is never worth motion sickness. */
+    @media (prefers-reduced-motion:reduce){
+      .grid-bg,.glow{animation:none}
+    }
+    /* Site-wide notices. A list rather than markup, so the next one is data —
+       see the BANNERS array at the foot of the page. */
+    .banners{position:relative; z-index:2}
+    .banner{display:flex; align-items:center; flex-wrap:wrap; gap:4px 10px;
+      padding:10px 18px; border-bottom:1px solid transparent; font-size:12px; line-height:1.45}
+    .banner .t{font-family:"Orbitron",sans-serif; font-weight:700; letter-spacing:2px;
+      text-transform:uppercase; font-size:11px; white-space:nowrap}
+    .banner .b{flex:1 1 260px; min-width:0}
+    .banner .x{margin-left:auto; flex:0 0 auto; background:none; border:0; cursor:pointer;
+      font-size:17px; line-height:1; padding:2px 6px; border-radius:5px;
+      color:currentColor; opacity:.55; transition:.15s}
+    .banner .x:hover{opacity:1; background:rgba(255,255,255,.10)}
+    .banner.ok{background:rgba(52,211,153,.10); border-bottom-color:rgba(52,211,153,.34); color:#c7f5e4}
+    .banner.ok .t{color:var(--ok)}
+    .banner.info{background:rgba(34,211,238,.10); border-bottom-color:rgba(34,211,238,.34); color:#cdf1fa}
+    .banner.info .t{color:var(--primary)}
+    .banner.promo{background:rgba(217,70,239,.10); border-bottom-color:rgba(217,70,239,.34); color:#f6d9fb}
+    .banner.promo .t{color:var(--secondary)}
+
     .wrap{position:relative; z-index:1; max-width:1080px; margin:0 auto; padding:0 22px}
     header{display:flex; align-items:center; justify-content:space-between; padding:22px 0}
     .brand{font-family:"Orbitron",sans-serif; font-weight:900; letter-spacing:3px; font-size:18px}
@@ -98,7 +161,12 @@
   </style>
 </head>
 <body>
-  <div class="grid-bg"></div><div class="glow a"></div><div class="glow b"></div>
+  <div class="bg-layer grid-bg"></div>
+  <div class="glow a"></div><div class="glow b"></div><div class="glow c"></div>
+  <div class="bg-layer grain"></div>
+  <div class="bg-layer vignette"></div>
+
+  <div class="banners" id="banners"></div>
 
   <div class="wrap">
     <header>
@@ -164,6 +232,58 @@
       <script>document.getElementById('yr').textContent=new Date().getFullYear()</script>
     </footer>
   </div>
+
+  <script>
+  /* Site-wide banners.
+
+     A list, so adding the next one is a line of data rather than markup. Each
+     entry carries its own expiry and its own dismiss key: an announcement
+     nobody remembers to remove is the normal failure here, and a reused key
+     silently hides the next notice from everyone who dismissed the last one.
+
+     The status copy is deliberately identical to
+     src/components/MaintenanceBanner.tsx. These are two separate deploys —
+     nginx here, Netlify there — and README.md records that duplicated claims
+     on this page have already outlived the truth once. Change one, change both. */
+  (function () {
+    var BANNERS = [
+      {
+        id: 'status-2026-09-06-restored',
+        kind: 'ok',
+        expires: '2026-09-10T00:00:00Z',
+        title: 'All systems operational',
+        body: 'Generation was down for about 18 hours and is now fully restored. Sorry for the trouble \u2014 no credits were charged for anything that failed.'
+      }
+    ];
+
+    var host = document.getElementById('banners');
+    if (!host) return;
+    var now = Date.now();
+
+    BANNERS.forEach(function (b) {
+      if (b.expires && now > Date.parse(b.expires)) return;
+      var key = 'gltch-banner-' + b.id;
+      try { if (localStorage.getItem(key) === '1') return; } catch (e) { /* private mode */ }
+
+      var el = document.createElement('div');
+      el.className = 'banner ' + b.kind;
+      el.setAttribute('role', 'status');
+
+      var t = document.createElement('span'); t.className = 't'; t.textContent = b.title;
+      var p = document.createElement('span'); p.className = 'b'; p.textContent = b.body;
+      var x = document.createElement('button');
+      x.type = 'button'; x.className = 'x'; x.textContent = '\u00d7';
+      x.setAttribute('aria-label', 'Dismiss ' + b.title);
+      x.onclick = function () {
+        try { localStorage.setItem(key, '1'); } catch (e) { /* private mode */ }
+        el.remove();
+      };
+
+      el.appendChild(t); el.appendChild(p); el.appendChild(x);
+      host.appendChild(el);
+    });
+  })();
+  </script>
 
   <script>
   /* Real outputs, not stock art. Same public endpoint the app's own landing
