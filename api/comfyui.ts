@@ -20,9 +20,9 @@ import { getDb } from "./_lib/db";
 import { checkRateLimit } from "./_lib/ratelimit";
 import { applyDiscount, getCombinedCreditDiscountPct } from "./_lib/discount";
 import { isEmailVerified, EMAIL_VERIFICATION_REQUIRED_MESSAGE, EMAIL_VERIFICATION_REQUIRED_CODE } from "./_lib/emailVerifiedGate";
+import { enforceGeo } from "./_lib/geo";
 // Graphs shared with the public API (api/v1/comfy.ts) so the two cannot drift.
 import {
-import { enforceGeo } from "./_lib/geo";
   addMMAudioNodes,
   buildGltchWanSimpleWorkflow,
   buildGltchWanWorkflow,
