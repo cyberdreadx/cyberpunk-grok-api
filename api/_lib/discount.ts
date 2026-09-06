@@ -84,9 +84,15 @@ export async function getCombinedCreditDiscountPct(userId: string): Promise<numb
 export function applyDiscount(cost: number, pct: number): number {
   if (cost <= 0) return cost;
   if (!pct || pct <= 0) return cost;
-  // Round (not ceil) so low tiers actually get their advertised %: e.g. a 4-credit
-  // image at 15% → round(3.4)=3, not ceil=4 (which delivered 0 discount).
-  const reduced = Math.round(cost * (1 - pct / 100));
+  // Floor, not round, and definitely not ceil.
+  //
+  // Ceil gave low tiers nothing at all. Round was the fix for that, but it only
+  // moved the problem: at 12.5% a 3-credit render is 2.625, and round() puts it
+  // straight back to 3. Most images on this platform cost 3-4 credits, so an
+  // Operative holder saw their discount on almost nothing they actually did —
+  // it first became visible at 5 credits. Floor makes the advertised percentage
+  // real at the sizes people generate at.
+  const reduced = Math.floor(cost * (1 - pct / 100));
   return Math.max(1, reduced);
 }
 

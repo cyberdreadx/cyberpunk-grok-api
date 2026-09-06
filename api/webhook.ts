@@ -26,6 +26,7 @@ import {
   getInvoiceSubscriptionId,
 } from "./_lib/stripe-sub-prices";
 import { accrueCommission, clawbackCommission } from "./_lib/ambassador";
+import { getCombinedCreditDiscountPct } from "./_lib/discount";
 
 // Vercel needs raw body for signature verification
 export const config = { api: { bodyParser: false } };
@@ -264,12 +265,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Detect payment method (card, paypal, apple_pay, etc.)
       const paymentMethod = await detectPaymentMethod(stripe, session);
 
-      // Subscriber bonus: if buyer has an active discount, grant equivalent
-      // bonus credits so the in-app pack price effectively matches the discount.
-      // bonus = credits * pct / (100 - pct)  (e.g. 30% sub → +43%; 50% sub → +100%)
-      const [subRow] = await sql`SELECT COALESCE(subscription_discount_pct, 0)::int AS pct FROM users WHERE id = ${userId}::uuid`.catch(() => [{ pct: 0 }]);
-      const subPct = Math.max(0, Math.min(95, subRow?.pct ?? 0));
-      const bonusCredits = subPct > 0 ? Math.floor((credits * subPct) / (100 - subPct)) : 0;
+      // Buyer bonus: subscription discount AND XRGE holder tier both convert to
+      // bonus credits rather than a lower Stripe price.
+      // bonus = credits * pct / (100 - pct)  (e.g. 30% → +43%; 50% → +100%)
+      //
+      // The holder half used to be missing entirely. Holder tiers advertise a
+      // discount on credit purchases in three places in the UI, but neither
+      // this file nor checkout.ts contained a single reference to holder state,
+      // so an Operative on a 12.5% effective rate paid the full $6.99 like
+      // anyone else — for 65 days, in the case that surfaced it.
+      //
+      // getCombinedCreditDiscountPct is the same number the app shows the user,
+      // stacking subscription and holder multiplicatively, so the bonus can
+      // never disagree with the badge on their profile. It swallows its own
+      // failures and falls back to the subscription-only figure; the extra
+      // catch here is because this path is money and must not throw.
+      const pct = await getCombinedCreditDiscountPct(userId).catch(() => 0);
+      const bonusCredits = pct > 0 ? Math.floor((credits * pct) / (100 - pct)) : 0;
       const totalCreditsToGrant = credits + bonusCredits;
 
       // Atomic + idempotent: insert transaction first, then add credits only if inserted.
@@ -291,7 +303,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       `;
       const inserted = !!rows?.[0]?.inserted;
       if (inserted) {
-        console.log(`Added ${totalCreditsToGrant} pack credits to ${userId} (base ${credits} + ${bonusCredits} subscriber bonus @ ${subPct}%)`);
+        console.log(`Added ${totalCreditsToGrant} pack credits to ${userId} (base ${credits} + ${bonusCredits} buyer bonus @ ${pct}%)`);
       } else {
         console.log(`[webhook] Duplicate pack transaction skipped for session ${session.id}`);
       }

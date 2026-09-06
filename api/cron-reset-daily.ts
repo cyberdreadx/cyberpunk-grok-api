@@ -5,6 +5,13 @@
  * Base amount is 10; XRGE holders (operative+) get extra credits from tier +
  * continuous-hold streak (same rules as api/v1/_lib/xrge-holder.ts).
  *
+ * The base and the holder bonus are switched independently. free_credits.daily
+ * turns off the base for everyone — a pricing decision — but it used to return
+ * from this handler before the holder bonus was ever computed, so a tier that
+ * advertises "+2 daily credits" silently paid nothing from 2026-07-30 onward.
+ * Holders bought that perk with 10M+ XRGE; retiring the free tier is not the
+ * same decision as retiring a paid one, so the bonus now survives the switch.
+ *
  * Secured via CRON_SECRET Bearer token (same pattern as cron-reset-credits).
  *
  * Pass ?notify=true to also send "credits refilled" emails (adds ~60-120s
@@ -28,33 +35,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    if (await isSourceDisabled("daily")) {
-      console.log("[cron-reset-daily] Skipped — free credits disabled");
-      return res.status(200).json({
-        success: true,
-        skipped: true,
-        reason: "free_credits_disabled",
-        timestamp: new Date().toISOString(),
-      });
-    }
+    // Not an early return any more: the holder bonus is owed either way.
+    const baseOff = await isSourceDisabled("daily");
+    const base = baseOff ? 0 : DAILY_BASE;
 
     const sql = getDb();
 
-    // 1. Zero out non-subscribers (free credits are subscriber-only).
-    await sql`
-      UPDATE users
-      SET daily_credits = 0,
-          daily_credits_reset_at = now(),
-          updated_at = now()
-      WHERE COALESCE(subscription_tier, '') = ''
-        AND COALESCE(subscription_discount_pct, 0) <= 0
-    `;
-
-    // 2. Reset daily credits for subscribers: base + XRGE holder tier bonus.
+    // One statement, not two. It used to zero non-subscribers and then grant to
+    // subscribers, which meant a holder who was not a subscriber got zeroed by
+    // the first and skipped by the second no matter what tier they held.
+    //
+    // Base is subscriber-only and off entirely when free_credits.daily is off.
+    // The holder bonus is neither: it is attached to the tier, so it applies to
+    // subscribers and non-subscribers alike and ignores the free-credit switch.
     const result = await sql`
       UPDATE users
       SET daily_credits = (
-        ${DAILY_BASE} + FLOOR(
+        (CASE
+           WHEN ${base}::int = 0 THEN 0
+           WHEN subscription_tier IS NOT NULL OR COALESCE(subscription_discount_pct, 0) > 0 THEN ${base}::int
+           ELSE 0
+         END)
+        + FLOOR(
           (CASE COALESCE(holder_tier, 'none')
             WHEN 'operative' THEN 2::numeric
             WHEN 'runner' THEN 5::numeric
@@ -73,19 +75,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       )::int,
           daily_credits_reset_at = now(),
           updated_at = now()
-      WHERE subscription_tier IS NOT NULL
-         OR COALESCE(subscription_discount_pct, 0) > 0
     `;
 
     const resetCount = (result as any).count ?? 0;
-    console.log(`[cron-reset-daily] Reset ${resetCount} users (base ${DAILY_BASE} + holder bonuses where applicable)`);
+    console.log(`[cron-reset-daily] Reset ${resetCount} users (base ${base}${baseOff ? " — free_credits.daily is off" : ""} + holder bonuses where applicable)`);
 
     // 2. Send email notifications only when ?notify=true
     const shouldNotify = req.query.notify === "true";
     let emailsSent = 0;
     let emailsFailed = 0;
 
-    if (shouldNotify) {
+    // The refill email announces the base amount. With the base switched off
+    // there is nothing to announce — a holder's +2 does not make "your daily
+    // credits are ready" true for the subscribers this queries.
+    if (shouldNotify && baseOff) {
+      console.log("[cron-reset-daily] notify requested but base is off — no emails sent");
+    } else if (shouldNotify) {
       try {
         const users = await sql`
           SELECT email FROM users WHERE subscription_tier IS NOT NULL OR COALESCE(subscription_discount_pct, 0) > 0
@@ -94,7 +99,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (users.length > 0) {
           const resend = getResend();
           const fromAddress = getFromAddress();
-          const html = buildDailyCreditsHtml(DAILY_BASE);
+          const html = buildDailyCreditsHtml(base);
           const subject = `Your daily credits are ready`;
 
           for (let i = 0; i < users.length; i += BATCH_SIZE) {
@@ -124,7 +129,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     return res.status(200).json({
       success: true,
-      dailyBase: DAILY_BASE,
+      dailyBase: base,
+      baseDisabled: baseOff,
       reset: resetCount,
       notified: shouldNotify,
       emailsSent,
