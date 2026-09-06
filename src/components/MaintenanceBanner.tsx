@@ -45,7 +45,29 @@ const MaintenanceBanner: React.FC = () => {
   return (
     <div
       role="status"
-      className="relative z-50 flex items-center justify-center gap-2.5 px-4 py-2 border-b border-green-500/40 bg-green-500/10 text-green-100"
+      /*
+       * Seated below the app's top chrome, not fighting it for z-index.
+       *
+       * Three fixed things own the top of a phone screen: CyberLayout's
+       * terminal bar (0 to safe+28, z-30), the nav button (safe+36 to safe+72,
+       * z-40) and MobileCreditsPill (safe+36, top-right, z-55). The first
+       * version of this banner sat at z-50 starting at y=0, so the pill landed
+       * directly on top of the dismiss button and there was no way to close it
+       * on mobile.
+       *
+       * Padding rather than margin, and z-20 rather than z-50: the bar's top
+       * region is empty space that the chrome paints over, so the nav and the
+       * credits pill stay visible and tappable exactly where users expect them,
+       * and the banner's own text and dismiss button start below all of it
+       * where nothing can cover them.
+       *
+       * Desktop only has to clear the terminal bar — the pill is sm:hidden and
+       * the nav button sits in the empty left gutter beside centred text.
+       */
+      className="relative z-20 flex items-center justify-center gap-2.5 px-4 pb-2
+        pt-[calc(env(safe-area-inset-top,0px)+76px)]
+        sm:pt-[calc(env(safe-area-inset-top,0px)+32px)]
+        border-b border-green-500/40 bg-green-500/10 text-green-100"
     >
       <CheckCircle2 className="h-4 w-4 shrink-0 text-green-400" />
 
@@ -64,9 +86,9 @@ const MaintenanceBanner: React.FC = () => {
         type="button"
         onClick={dismiss}
         aria-label="Dismiss status message"
-        className="shrink-0 rounded p-0.5 text-green-200/60 transition-colors hover:bg-green-500/20 hover:text-green-100"
+        className="shrink-0 -m-1 rounded p-2.5 text-green-200/80 transition-colors hover:bg-green-500/20 hover:text-green-100"
       >
-        <X className="h-3.5 w-3.5" />
+        <X className="h-4 w-4" />
       </button>
     </div>
   );
