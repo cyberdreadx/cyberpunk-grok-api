@@ -105,6 +105,15 @@
     .banner.info .t{color:var(--primary)}
     .banner.promo{background:rgba(217,70,239,.10); border-bottom-color:rgba(217,70,239,.34); color:#f6d9fb}
     .banner.promo .t{color:var(--secondary)}
+    .banner.sale{background:rgba(249,115,22,.12); border-bottom-color:rgba(249,115,22,.38); color:#fde4cd}
+    .banner.sale .t{color:#fdba74}
+    .banner.hot{background:rgba(245,158,11,.11); border-bottom-color:rgba(245,158,11,.34); color:#fdecc8}
+    .banner.hot .t{color:#fcd34d}
+    /* Every promo is a route to the app, so the whole bar is the target — not
+       a bar with a link buried in it. */
+    a.banner{text-decoration:none; cursor:pointer}
+    a.banner:hover{filter:brightness(1.22)}
+    .banner .cd{font-variant-numeric:tabular-nums; white-space:nowrap; opacity:.85}
 
     .wrap{position:relative; z-index:1; max-width:1080px; margin:0 auto; padding:0 22px}
     header{display:flex; align-items:center; justify-content:space-between; padding:22px 0}
@@ -167,6 +176,158 @@
   <div class="bg-layer vignette"></div>
 
   <div class="banners" id="banners"></div>
+  <script>
+  /* Site-wide banners — the same set the app carries, in the same words.
+
+     This runs inline the moment the container is parsed, before the hero
+     exists in the DOM, so the static bars are part of the first paint and
+     shift nothing. Only the flash sale arrives late; it depends on a live API
+     answer and there is no honest way to show a countdown without one.
+
+     Copy is duplicated from src/components/*.tsx by hand because the two sites
+     are separate deploys — nginx here, Netlify there. README.md records this
+     page outliving the truth once already, when the free-credits line survived
+     two weeks past app_config.free_credits being switched off. Change one,
+     change both. */
+  (function () {
+    var SIGNUP = 'https://grokrunner.gltch.app/create?signup=1';
+
+    /* Priority order, highest first. Only MAX_VISIBLE ever render together:
+       five stacked bars would push the hero below the fold, which is the one
+       thing this page exists to avoid. As each expires or is dismissed the
+       next one takes the free slot, so the strip manages itself.
+
+       The launch banners carry an expiry the app's versions do not. "New" and
+       "Upgraded" are claims with a shelf life, and on a marketing page nobody
+       remembers to retire them \u2014 the LTX banner had already gone stale once
+       before it was rewritten on 2026-09-04. */
+    var MAX_VISIBLE = 2;
+
+    var BANNERS = [
+      { id: 'status-2026-09-06-restored', kind: 'ok',
+        expires: '2026-09-10T00:00:00Z',
+        title: 'All systems operational',
+        body: 'Generation was down for about 18 hours and is now fully restored. Sorry for the trouble \u2014 no credits were charged for anything that failed.' },
+
+      { id: 'flash-sale', kind: 'sale', live: 'flash', href: SIGNUP },
+
+      { id: 'krea2-launch-v1', kind: 'info', href: SIGNUP,
+        expires: '2026-09-25T00:00:00Z',
+        title: 'New \u2014 Krea 2',
+        body: 'Photoreal image engine, live now. Film-grade realism, any shape up to 1MP, 3 credits a render.' },
+
+      { id: 'ltx-23-upgrade-v1', kind: 'hot', href: SIGNUP,
+        expires: '2026-09-25T00:00:00Z',
+        title: 'Upgraded \u2014 LTX-2.3',
+        body: 'Sharper video, now up to 15 seconds. Native HD to 1664\u00d7960 with synced audio in one pass.' },
+
+      { id: 'buy-hold-v1', kind: 'promo', href: SIGNUP,
+        title: 'Buy & Hold XRGE',
+        body: 'Hold XRGE to unlock up to +25% off generations, +10 daily credits, NSFW LoRAs and GLTCH PRO. Continuous holders earn streak multipliers up to \u00d72.' }
+    ];
+
+    var host = document.getElementById('banners');
+    if (!host) return;
+
+    function dismissed(id) {
+      try { return localStorage.getItem('gltch-banner-' + id) === '1'; } catch (e) { return false; }
+    }
+    function eligible(b) {
+      if (dismissed(b.id)) return false;
+      if (b.expires && Date.now() > Date.parse(b.expires)) return false;
+      if (b.live && !b.resolved) return false;
+      return true;
+    }
+
+    function build(b) {
+      var el = document.createElement(b.href ? 'a' : 'div');
+      el.className = 'banner ' + b.kind;
+      el.setAttribute('role', 'status');
+      if (b.href) el.href = b.href;
+
+      var t = document.createElement('span'); t.className = 't'; t.textContent = b.title;
+      var p = document.createElement('span'); p.className = 'b'; p.textContent = b.body;
+      el.appendChild(t); el.appendChild(p);
+      if (b.countdown) el.appendChild(b.countdown);
+
+      var x = document.createElement('button');
+      x.type = 'button'; x.className = 'x'; x.textContent = '\u00d7';
+      x.setAttribute('aria-label', 'Dismiss ' + b.title);
+      x.onclick = function (ev) {
+        ev.preventDefault(); ev.stopPropagation();
+        try { localStorage.setItem('gltch-banner-' + b.id, '1'); } catch (e) { /* private mode */ }
+        b.hidden = true;
+        render();
+      };
+      el.appendChild(x);
+      return el;
+    }
+
+    function render() {
+      host.textContent = '';
+      var shown = 0;
+      for (var i = 0; i < BANNERS.length && shown < MAX_VISIBLE; i++) {
+        var b = BANNERS[i];
+        if (b.hidden || !eligible(b)) continue;
+        host.appendChild(build(b));
+        shown++;
+      }
+    }
+
+    /* Flash sale. Live from the API or not at all \u2014 a hard-coded sale is
+       exactly the drift README warns about, and a countdown to a date nobody
+       is holding to is worse than no banner. */
+    function left(ms) {
+      if (ms <= 0) return null;
+      var m = Math.floor(ms / 60000), h = Math.floor(m / 60), d = Math.floor(h / 24);
+      if (d > 0) return d + 'd ' + (h % 24) + 'h';
+      if (h > 0) return h + 'h ' + (m % 60) + 'm';
+      return m + 'm';
+    }
+
+    var flash = null;
+    for (var j = 0; j < BANNERS.length; j++) if (BANNERS[j].live === 'flash') flash = BANNERS[j];
+
+    if (flash && !dismissed(flash.id)) {
+      fetch('https://api.gltch.app/api/flash-sales')
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (d) {
+          var sale = d && d.sales && d.sales[0];
+          if (!sale) return;
+          var ends = Date.parse(sale.ends_at);
+          if (!(ends > Date.now())) return;
+
+          /* Keyed to the sale id, so a dismissal does not carry over to the
+             next sale the way a fixed key would. */
+          flash.id = 'flash-' + sale.id;
+          if (dismissed(flash.id)) return;
+
+          var bits = [];
+          if (sale.discount_percent > 0) bits.push(sale.discount_percent + '% off');
+          if (sale.bonus_credits_percent > 0) bits.push('+' + sale.bonus_credits_percent + '% bonus credits');
+          if (sale.title) bits.push(sale.title);
+
+          flash.title = 'Flash sale';
+          flash.body = bits.join(' \u00b7 ');
+          flash.countdown = document.createElement('span');
+          flash.countdown.className = 'cd';
+          flash.resolved = true;
+
+          function tick() {
+            var s = left(ends - Date.now());
+            if (!s) { flash.hidden = true; render(); return; }
+            flash.countdown.textContent = 'ends in ' + s;
+          }
+          tick();
+          setInterval(tick, 30000);
+          render();
+        })
+        .catch(function () { /* no sale banner rather than a wrong one */ });
+    }
+
+    render();
+  })();
+  </script>
 
   <div class="wrap">
     <header>
@@ -232,58 +393,6 @@
       <script>document.getElementById('yr').textContent=new Date().getFullYear()</script>
     </footer>
   </div>
-
-  <script>
-  /* Site-wide banners.
-
-     A list, so adding the next one is a line of data rather than markup. Each
-     entry carries its own expiry and its own dismiss key: an announcement
-     nobody remembers to remove is the normal failure here, and a reused key
-     silently hides the next notice from everyone who dismissed the last one.
-
-     The status copy is deliberately identical to
-     src/components/MaintenanceBanner.tsx. These are two separate deploys —
-     nginx here, Netlify there — and README.md records that duplicated claims
-     on this page have already outlived the truth once. Change one, change both. */
-  (function () {
-    var BANNERS = [
-      {
-        id: 'status-2026-09-06-restored',
-        kind: 'ok',
-        expires: '2026-09-10T00:00:00Z',
-        title: 'All systems operational',
-        body: 'Generation was down for about 18 hours and is now fully restored. Sorry for the trouble \u2014 no credits were charged for anything that failed.'
-      }
-    ];
-
-    var host = document.getElementById('banners');
-    if (!host) return;
-    var now = Date.now();
-
-    BANNERS.forEach(function (b) {
-      if (b.expires && now > Date.parse(b.expires)) return;
-      var key = 'gltch-banner-' + b.id;
-      try { if (localStorage.getItem(key) === '1') return; } catch (e) { /* private mode */ }
-
-      var el = document.createElement('div');
-      el.className = 'banner ' + b.kind;
-      el.setAttribute('role', 'status');
-
-      var t = document.createElement('span'); t.className = 't'; t.textContent = b.title;
-      var p = document.createElement('span'); p.className = 'b'; p.textContent = b.body;
-      var x = document.createElement('button');
-      x.type = 'button'; x.className = 'x'; x.textContent = '\u00d7';
-      x.setAttribute('aria-label', 'Dismiss ' + b.title);
-      x.onclick = function () {
-        try { localStorage.setItem(key, '1'); } catch (e) { /* private mode */ }
-        el.remove();
-      };
-
-      el.appendChild(t); el.appendChild(p); el.appendChild(x);
-      host.appendChild(el);
-    });
-  })();
-  </script>
 
   <script>
   /* Real outputs, not stock art. Same public endpoint the app's own landing
