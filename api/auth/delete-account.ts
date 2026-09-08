@@ -38,24 +38,63 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const valid = await bcrypt.compare(password, user.password_hash);
     if (!valid) return res.status(401).json({ error: "Incorrect password" });
 
-    // Cancel active Stripe subscription if exists
-    if (user.stripe_customer_id && user.subscription_tier) {
+    // ── Stripe subscriptions must be gone BEFORE the row is ───────────
+    //
+    // This used to warn and delete anyway. It cannot: transactions.user_id has
+    // a foreign key to users, so once the row is gone every future invoice for
+    // that customer 500s on the webhook — while the card keeps being charged,
+    // because deleting our row does not cancel anything at Stripe.
+    //
+    // That produced 11 subscriptions billing $470/month against accounts that
+    // no longer exist, $1,444.71 taken, one person paying for three of them.
+    // The cancel call had been failing every single time: the live key is
+    // restricted and has no Subscriptions Write scope, so it throws
+    // "Permission denied" and the old catch swallowed it.
+    //
+    // Refusing the deletion is the right failure. A user who cannot delete
+    // today is annoyed; a user silently charged for a year disputes, and three
+    // disputes in one month puts the whole account into Visa's monitoring
+    // programme.
+    if (user.stripe_customer_id) {
+      const STRIPE_KEY = process.env.STRIPE_SECRET_KEY;
+      if (!STRIPE_KEY) {
+        console.error("[delete-account] no Stripe key — refusing to delete a billable account");
+        return res.status(503).json({
+          error: "Account deletion is temporarily unavailable. Please try again later.",
+          code: "billing_unavailable",
+        });
+      }
+
+      let active: Stripe.Subscription[] = [];
       try {
-        const STRIPE_KEY = process.env.STRIPE_SECRET_KEY;
-        if (STRIPE_KEY) {
-          const stripe = new Stripe(STRIPE_KEY);
-          const subs = await stripe.subscriptions.list({
-            customer: user.stripe_customer_id,
-            status: "active",
-            limit: 5,
-          });
-          for (const sub of subs.data) {
-            await stripe.subscriptions.cancel(sub.id);
-          }
+        const stripe = new Stripe(STRIPE_KEY);
+        // status:"all" then filter, so trialing/past_due/unpaid count too —
+        // every one of those still bills or resumes billing later.
+        const subs = await stripe.subscriptions.list({
+          customer: user.stripe_customer_id,
+          status: "all",
+          limit: 100,
+        });
+        active = subs.data.filter((s) =>
+          ["active", "trialing", "past_due", "unpaid", "paused"].includes(s.status));
+
+        for (const sub of active) {
+          await stripe.subscriptions.cancel(sub.id);
+          console.log(`[delete-account] cancelled ${sub.id} for ${auth.userId}`);
         }
+        active = [];
       } catch (err: any) {
-        console.warn("[delete-account] Failed to cancel Stripe sub:", err.message);
-        // Continue with deletion anyway
+        console.error(
+          `[delete-account] REFUSED — could not cancel Stripe subscriptions for ${auth.userId}: ${err.message}`,
+        );
+        return res.status(409).json({
+          error:
+            "We could not cancel your active subscription automatically, so we have not deleted your " +
+            "account — deleting it now would leave you being charged with no way to stop it. " +
+            "Please cancel your subscription first from Settings, or email gltch.app@proton.me and " +
+            "we will cancel it and delete the account for you.",
+          code: "subscription_cancel_failed",
+        });
       }
     }
 

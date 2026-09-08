@@ -127,6 +127,30 @@ async function resolveUserIdFromInvoice(
  * Check if an event has already been processed. If not, mark it as processed.
  * Returns true if this is a new event, false if already processed.
  */
+/**
+ * Release a claim taken by markEventProcessed.
+ *
+ * The row is inserted BEFORE the work so two concurrent deliveries of the same
+ * event cannot both process it — Stripe does deliver the same event more than
+ * once. But leaving the row behind after a failure turned every failure into a
+ * permanent one: the handler 500s, Stripe retries, and the retry is discarded
+ * as a duplicate. Five real events died that way between 2026-08-26 and
+ * 2026-09-08, one of them a $24.99 invoice.paid.
+ *
+ * Claim before, release on failure. Concurrency is still covered, and a retry
+ * now finds the slot free.
+ */
+async function releaseEvent(sql: any, eventId: string): Promise<void> {
+  try {
+    await sql`DELETE FROM processed_events WHERE event_id = ${eventId}`;
+    console.warn(`[webhook] released ${eventId} for retry after failure`);
+  } catch (err: any) {
+    // Losing the release is bad but losing the 500 is worse — Stripe must still
+    // see a failure so it retries at all.
+    console.error(`[webhook] COULD NOT RELEASE ${eventId} — Stripe retries will be skipped:`, err.message);
+  }
+}
+
 async function markEventProcessed(sql: any, eventId: string): Promise<boolean> {
   try {
     await sql`
@@ -146,6 +170,9 @@ async function markEventProcessed(sql: any, eventId: string): Promise<boolean> {
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+
+  // Held outside the try so the catch can hand the claim back on failure.
+  let claimed: { sql: any; eventId: string } | null = null;
 
   try {
     const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
@@ -175,6 +202,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.log(`[webhook] Skipping duplicate event: ${event.id}`);
       return res.status(200).json({ received: true, duplicate: true });
     }
+    claimed = { sql, eventId: event.id };
 
     // ── checkout.session.completed OR async_payment_succeeded ──
     // PayPal (and other async methods) fire "completed" with payment_status="unpaid",
@@ -875,9 +903,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
+    claimed = null; // processed cleanly — the claim stands
     return res.status(200).json({ received: true });
   } catch (err: any) {
     console.error("[webhook]", err.message);
+    if (claimed) await releaseEvent(claimed.sql, claimed.eventId);
     return res.status(500).json({ error: "Webhook processing failed" });
   }
 }
