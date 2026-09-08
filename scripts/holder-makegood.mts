@@ -15,6 +15,12 @@
  * one needs a decision on whether the discount gets built or the wording gets
  * changed, so it is deliberately left alone.
  *
+ * SETTLED 2026-09-06: paid by hand from the admin panel as an admin_grant, not
+ * through this script, so the ref_key guard below never saw it. The duplicate
+ * check therefore also looks for any matching grant in the ledger — a script
+ * that pays a second time because someone did the job manually is worse than no
+ * script at all.
+ *
  *   node --env-file=.env --import tsx scripts/holder-makegood.mts          # dry run
  *   node --env-file=.env --import tsx scripts/holder-makegood.mts --apply
  */
@@ -25,8 +31,18 @@ import { logCreditGrant } from "/home/neon/cyberpunk-grok-api/api/_lib/credit-le
 
 const APPLY = process.argv.includes("--apply");
 
-/** Last day the daily cron actually completed, from daily_credits_reset_at. */
+/**
+ * The window the holder bonus went unpaid. Both ends are fixed.
+ *
+ * The end date matters as much as the start: this used to measure to Date.now(),
+ * so the "debt" grew by 2 every day the script sat unrun — it read 76 on the day
+ * it was written and 80 two days later. A make-good for a closed period is a
+ * fixed number, and anything that drifts cannot be reconciled against what was
+ * actually paid.
+ */
 const CRON_DIED = new Date("2026-07-30T00:00:00Z");
+/** First run after the 09-06 fix, when the bonus started paying again. */
+const CRON_RESUMED = new Date("2026-09-07T00:00:00Z");
 const PER_DAY = 2; // Operative tier daily bonus
 const REF = "holder-perk-backfill-2026-09-06";
 
@@ -40,7 +56,7 @@ const [u] = (await sql`
 
 if (!u) { console.error("user not found"); process.exit(1); }
 
-const days = Math.floor((Date.now() - CRON_DIED.getTime()) / 86_400_000);
+const days = Math.floor((CRON_RESUMED.getTime() - CRON_DIED.getTime()) / 86_400_000);
 const owed = days * PER_DAY;
 
 console.log(`user            @${u.username}  (${u.id})`);
@@ -49,12 +65,18 @@ console.log(`daily cron died ${CRON_DIED.toISOString().slice(0, 10)}  (reset_at 
 console.log(`days missed     ${days} x ${PER_DAY}/day = ${owed} credits`);
 console.log(`pack_credits    ${u.pack_credits} -> ${Number(u.pack_credits) + owed}`);
 
-// Re-running this must not pay twice.
+// Re-running this must not pay twice, and "twice" includes the hand grant that
+// actually settled this on 2026-09-06 without the script's ref_key. Matched on
+// source and date rather than amount: the hand grant was 76 and this now
+// computes 78, so an amount comparison would have missed it and paid again.
 const [dupe] = (await sql`
-  SELECT id, amount, created_at FROM credit_ledger
-  WHERE user_id = ${u.id}::uuid AND ref_key = ${REF} LIMIT 1`) as any[];
+  SELECT id, amount, source, created_at FROM credit_ledger
+  WHERE user_id = ${u.id}::uuid
+    AND (ref_key = ${REF}
+         OR (source IN ('holder_makegood', 'admin_grant') AND created_at >= ${CRON_DIED}))
+  ORDER BY created_at LIMIT 1`) as any[];
 if (dupe) {
-  console.log(`\nALREADY GRANTED: ${dupe.amount} credits on ${new Date(dupe.created_at).toISOString()}. Nothing to do.`);
+  console.log(`\nALREADY SETTLED: ${dupe.amount} credits via ${dupe.source} on ${new Date(dupe.created_at).toISOString()}. Nothing to do.`);
   process.exit(0);
 }
 
