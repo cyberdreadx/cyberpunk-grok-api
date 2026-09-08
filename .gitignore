@@ -34,3 +34,4 @@ dist-ssr
 
 # Geo database (DB-IP City Lite, CC-BY) — 122MB, refreshed monthly
 data/*.mmdb
+data/ops-alert-state.json

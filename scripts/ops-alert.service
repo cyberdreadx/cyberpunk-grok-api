@@ -1,0 +1,17 @@
+[Unit]
+Description=GLTCH ops alerting — API health, RunPod runway, generation flatline
+After=network-online.target grokrunner.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=neon
+WorkingDirectory=/home/neon/cyberpunk-grok-api
+ExecStart=/usr/bin/node --env-file=.env --import tsx scripts/ops-alert.mts
+# The monitor must never be the thing that breaks. A failed run logs and exits;
+# the next tick is 60s away.
+TimeoutStartSec=90
+Nice=10
+
+[Install]
+WantedBy=multi-user.target
