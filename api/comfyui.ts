@@ -2940,10 +2940,75 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           let outPreview = "";
           try { const s = JSON.stringify(out); outPreview = `Size: ${(s.length / 1024).toFixed(0)}KB, Preview: ${s.slice(0, 1000)}`; } catch { outPreview = "Could not serialize output"; }
           console.error("[comfyui-poll] No output found. Keys:", Object.keys(out), outPreview);
-          const blobToken = process.env.BLOB_READ_WRITE_TOKEN || process.env.grokrun_READ_WRITE_TOKEN || "";
-          const hint = !blobToken
-            ? " Vercel Blob token is missing (BLOB_READ_WRITE_TOKEN) — large videos cannot be delivered without it."
-            : " Check server logs for Blob upload errors.";
+
+          /*
+           * Log the whole envelope, not just the empty output.
+           *
+           * Every recorded instance of this logged `Keys: [] Preview: {}` and
+           * nothing else, which says what was missing but nothing about why.
+           * The failure is strongly duration-dependent — across 60 days of WAN
+           * jobs, zero of 3,982 under two minutes came back empty, against
+           * 3.62% over three minutes and 22.7% past eight — so the interesting
+           * fields are the timings and which worker served it. RunPod expires
+           * these jobs within about a day, so there is no autopsy after the
+           * fact: whatever is not logged here is gone.
+           */
+          console.error(
+            `[comfyui-poll] EMPTY OUTPUT envelope job=${promptId} endpoint=${pollEndpoint}` +
+            ` status=${data.status} delayTime=${data.delayTime ?? "?"}ms executionTime=${data.executionTime ?? "?"}ms` +
+            ` worker=${data.workerId ?? "?"} retries=${data.retries ?? "?"} rawSize=${rawSizeMB}MB` +
+            ` topLevelKeys=${JSON.stringify(Object.keys(data || {}))}`,
+          );
+
+          /*
+           * One re-read before giving up.
+           *
+           * COMPLETED with an empty output is either a result that never
+           * existed or one we asked for too early. Those need different
+           * answers and we cannot currently tell them apart, so ask again
+           * once: if it fills in, the user gets the video they paid for and
+           * keeps their credits, and if it stays empty we have learned the
+           * result is genuinely gone rather than merely late.
+           *
+           * Only on this path, which already ends in a refund, so the cost is
+           * a few seconds on a request that was about to fail anyway.
+           */
+          const EMPTY_RETRY_MS = 4000;
+          try {
+            await new Promise((r) => setTimeout(r, EMPTY_RETRY_MS));
+            const reResp = await runpodRequest(pollEndpoint!, backend.runpodKey!, `/status/${promptId}`);
+            if (reResp.ok) {
+              const reData = (await reResp.json()) as any;
+              const reOut = reData?.output || {};
+              const reKeys = Object.keys(reOut);
+              console.log(`[comfyui-poll] re-read after ${EMPTY_RETRY_MS}ms: status=${reData?.status} keys=${JSON.stringify(reKeys)}`);
+              if (reKeys.length > 0) {
+                const recovered = await findOutput(reOut);
+                if (recovered) {
+                  console.log(`[comfyui-poll] RECOVERED on re-read (job ${promptId}) — no refund needed`);
+                  cleanupS3Urls();
+                  return res.status(200).json({
+                    status: "done",
+                    [recovered.type]: recovered.uri,
+                    previewUrl: recovered.previewUrl,
+                  });
+                }
+              }
+            } else {
+              console.warn(`[comfyui-poll] re-read failed with HTTP ${reResp.status}`);
+            }
+          } catch (e: any) {
+            // A failed re-read must not cost the user their refund.
+            console.warn("[comfyui-poll] re-read errored:", e?.message);
+          }
+
+          /*
+           * The old message blamed a missing Vercel Blob token. That was
+           * wrong and actively misleading: the output object is empty before
+           * Blob is ever reached, so the token was never involved in any
+           * recorded case. Say what is actually known instead.
+           */
+          const hint = " The render finished but came back empty from the GPU host.";
 
           // Auto-refund: user paid but received nothing because delivery failed.
           // Bound to THIS job via job_id, and claimed with a single atomic UPDATE
