@@ -17,6 +17,14 @@
  *             Warns on days of runway, not dollars, because the dollar figure
  *             means nothing without the burn rate beside it.
  *
+ *   disputes  Open Stripe disputes, and the rolling 30-day rate against the
+ *             payments in the same window. This is the blindest spot on the
+ *             account: the dispute rate is what decides whether card
+ *             processing keeps working at all, and the denominator here is
+ *             small — 256 payments in August means two disputes is already
+ *             0.78%. June 2026 hit 1.24% and nobody knew. Also surfaces the
+ *             evidence deadline, because an unanswered dispute is auto-lost.
+ *
  *   flatline  Generations against the same hour on previous days. Traffic here
  *             is spiky — the median gap between jobs is 30 seconds but the
  *             longest legitimate quiet spell in 30 days was 6.2 hours — so a
@@ -59,6 +67,14 @@ const DB_CHECK_INTERVAL_MS = 10 * 60_000;
 
 const RUNWAY_WARN_DAYS = 3;
 const RUNWAY_CRIT_DAYS = 1;
+
+/** Card-network thresholds. Stripe reviews well before Visa's programme. */
+const DISPUTE_WARN_PCT = 0.75;
+const DISPUTE_CRIT_PCT = 0.9;
+/** Statuses that still need something from us. */
+const DISPUTE_OPEN = new Set([
+  "warning_needs_response", "warning_under_review", "needs_response", "under_review",
+]);
 
 /** Quiet spell before flatline is even considered, in minutes. */
 const FLATLINE_MIN = 45;
@@ -189,6 +205,57 @@ async function checkRunpod(sql: any): Promise<Check | null> {
   return { key: "runpod", sev: "ok", title: "RunPod balance healthy", detail: `Runway back to ${days.toFixed(1)} days ($${balance.toFixed(2)}).` };
 }
 
+// ── check: disputes, and how close the rate is to losing card processing ───
+async function checkDisputes(sql: any): Promise<Check | null> {
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) return null;
+
+  let all: any[];
+  try {
+    const r = await fetch("https://api.stripe.com/v1/disputes?limit=100", {
+      headers: { Authorization: `Bearer ${key}` },
+      signal: AbortSignal.timeout(20_000),
+    });
+    const j: any = await r.json();
+    // No dispute_read scope, or Stripe hiccup — say nothing rather than cry wolf.
+    if (j.error || !Array.isArray(j.data)) return null;
+    all = j.data;
+  } catch {
+    return null;
+  }
+
+  const cutoff = Date.now() / 1000 - 30 * 86400;
+  const recent = all.filter((d) => d.created >= cutoff);
+  const open = all.filter((d) => DISPUTE_OPEN.has(d.status));
+
+  const [p] = await sql`
+    SELECT COUNT(*)::int AS n FROM transactions WHERE created_at >= now() - interval '30 days'`;
+  const payments = Number(p?.n) || 0;
+  const rate = payments ? (recent.length / payments) * 100 : 0;
+
+  const lines: string[] = [];
+  for (const d of open) {
+    const due = d.evidence_details?.due_by
+      ? new Date(d.evidence_details.due_by * 1000).toUTCString().slice(0, 16)
+      : "no deadline given";
+    lines.push(`• $${(d.amount / 100).toFixed(2)} — ${d.reason} — respond by ${due}`);
+  }
+
+  const detail =
+    `**${open.length} open** · ${recent.length} in the last 30 days over ${payments} payments = **${rate.toFixed(2)}%**\n` +
+    (lines.length ? `\n${lines.join("\n")}\n` : "") +
+    `\nStripe reviews around ${DISPUTE_WARN_PCT}% and Visa's programme starts at ${DISPUTE_CRIT_PCT}%. ` +
+    `An unanswered dispute is lost by default.`;
+
+  if (open.length > 0 || rate >= DISPUTE_CRIT_PCT) {
+    return { key: "disputes", sev: "crit", title: open.length ? "Dispute needs a response" : "Dispute rate past Visa's threshold", detail };
+  }
+  if (rate >= DISPUTE_WARN_PCT) {
+    return { key: "disputes", sev: "warn", title: "Dispute rate approaching review", detail };
+  }
+  return { key: "disputes", sev: "ok", title: "Disputes back to normal", detail: `No open disputes; 30-day rate ${rate.toFixed(2)}%.` };
+}
+
 // ── check: has generation gone quiet when it normally would not? ───────────
 async function checkFlatline(sql: any): Promise<Check | null> {
   const [row] = await sql`
@@ -244,7 +311,7 @@ checks.push(await checkApi(state));
 // Throttled: the two that ask Postgres.
 const lastDb = Number((state as any).__dbcheck?.notified ?? 0);
 if (now - lastDb >= DB_CHECK_INTERVAL_MS) {
-  for (const c of [await checkRunpod(sql), await checkFlatline(sql)]) if (c) checks.push(c);
+  for (const c of [await checkRunpod(sql), await checkDisputes(sql), await checkFlatline(sql)]) if (c) checks.push(c);
   (state as any).__dbcheck = { sev: "ok", since: now, notified: now };
 } else {
   console.log(`(db checks throttled, ${Math.round((DB_CHECK_INTERVAL_MS - (now - lastDb)) / 1000)}s to go)`);
