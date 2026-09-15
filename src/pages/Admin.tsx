@@ -424,7 +424,7 @@ function AnnouncementPanel() {
   const abortRef = useRef(false);
   const [stats, setStats] = useState<{ totalVerified: number; alreadySent: number; remaining: number } | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
-  const [campaign, setCampaign] = useState<"announcement" | "announcement_v47" | "announcement_v48" | "announcement_v49" | "announcement_v52" | "announcement_launch">("announcement_launch");
+  const [campaign, setCampaign] = useState<"announcement" | "announcement_v47" | "announcement_v48" | "announcement_v49" | "announcement_v52" | "announcement_launch" | "promo_subscribe_2026_09">("announcement_launch");
   const [subject, setSubject] = useState("🚀 GLTCH Runner is here — chat with AI models + video gen");
   const [showEditor, setShowEditor] = useState(false);
   const [htmlContent, setHtmlContent] = useState("");
@@ -466,6 +466,7 @@ function AnnouncementPanel() {
 
   const CAMPAIGN_SUBJECTS: Record<string, string> = {
     announcement_launch: "🚀 GLTCH Runner is here — chat with AI models + video gen",
+    promo_subscribe_2026_09: "⚡ More credits for less — GLTCH Runner plans from $9",
     announcement_v52: "⚡ GLTCHRunner v5.2 — Faster & More Reliable Than Ever",
     announcement_v49: "GLTCHRunner — Subscription Credits Fixed + Platform Update",
     announcement_v48: "⚡ GLTCH Runner v4.8 // Signal Boost",
@@ -708,6 +709,7 @@ function AnnouncementPanel() {
             }}
             className="w-full bg-background/50 border border-primary/20 rounded px-2 py-1.5 font-mono-share text-xs text-foreground focus:outline-none focus:border-primary/50"
           >
+            <option value="promo_subscribe_2026_09">⚡ Subscribe promo — plans from $9 (targeted: real, non-subscribed inboxes)</option>
             <option value="announcement_launch">🚀 GLTCH Runner Launch — rebrand + AI models + video (NEW)</option>
             <option value="announcement_v52">v5.2 — Self-Hosted Backend + Reliability</option>
             <option value="announcement_v49">v4.9 — Subscription fix + Prompt Board</option>

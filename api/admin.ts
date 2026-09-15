@@ -35,6 +35,7 @@ import {
   saveCampaignJob,
   readActiveCampaign,
   type CampaignJob,
+  hasCampaignAudience,
 } from "./_lib/email-campaign";
 import {
   parseRange,
@@ -2136,6 +2137,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       case "announcement-stats": {
         const campaign = (req.body.campaign as string) || "announcement";
+        // A targeted campaign is only ever sent to its audience, so its total is
+        // the audience, not every verified account.
+        if (await hasCampaignAudience(sql, campaign)) {
+          const [{ audience }] = await sql`SELECT COUNT(*)::int AS audience FROM campaign_audience WHERE campaign = ${campaign}`;
+          const [{ already_sent }] = await sql`SELECT COUNT(DISTINCT recipient)::int AS already_sent FROM email_log WHERE email_type = ${campaign} AND status = 'sent'`;
+          const remaining = await getCampaignRemaining(sql, campaign);
+          return res.status(200).json({ campaign, totalVerified: audience, alreadySent: already_sent, remaining, targeted: true });
+        }
         const [{ total_verified }] = await sql`SELECT COUNT(*)::int AS total_verified FROM users WHERE email_verified = true`;
         const [{ already_sent }] = await sql`SELECT COUNT(DISTINCT recipient)::int AS already_sent FROM email_log WHERE email_type = ${campaign} AND status = 'sent'`;
         return res.status(200).json({ campaign, totalVerified: total_verified, alreadySent: already_sent, remaining: total_verified - already_sent });
@@ -2233,6 +2242,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const campaign = (req.body.campaign as string) || "announcement";
         const background = req.body.background === true || req.body._bg === true;
 
+        // The legacy direct path mails straight from users, so it would walk past
+        // a targeted audience (migration 067) and mail every verified account.
+        // Targeted campaigns go through queue-campaign only.
+        if (await hasCampaignAudience(sql, campaign)) {
+          return res.status(409).json({
+            error: `"${campaign}" has a targeted audience and must be sent with QUEUE_VIA_CRON, not the direct send.`,
+          });
+        }
+
         // Cancel handling for background mode.
         // - The FIRST batch (initiated by an admin via JWT, _bg=false) clears
         //   any stale cancel flag so a new campaign can start cleanly.
@@ -2273,7 +2291,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         const users = await sql`
           SELECT u.email FROM users u
+          LEFT JOIN notification_prefs p ON p.user_id = u.id
           WHERE u.email_verified = true
+            -- Respect the opt-out here too. The cron path gained this check with
+            -- notification_prefs; this path never did, so a user who unsubscribed
+            -- could still be mailed through it.
+            AND COALESCE(p.email_enabled, true) = true
             AND u.email NOT IN (
               SELECT recipient FROM email_log
               WHERE email_type = ${campaign} AND status = 'sent'
@@ -2285,7 +2308,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // Get total count for progress tracking
         const [{ count }] = await sql`
           SELECT COUNT(*)::int AS count FROM users u
+          LEFT JOIN notification_prefs p ON p.user_id = u.id
           WHERE u.email_verified = true
+            AND COALESCE(p.email_enabled, true) = true
             AND u.email NOT IN (
               SELECT recipient FROM email_log
               WHERE email_type = ${campaign} AND status = 'sent'

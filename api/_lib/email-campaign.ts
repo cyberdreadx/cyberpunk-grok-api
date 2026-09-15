@@ -4,7 +4,7 @@
  */
 
 import { unsubUrl } from "./notification-prefs";
-import { getResend, getFromAddress, logEmail, buildAnnouncementHtml, buildV47AnnouncementHtml, buildV48AnnouncementHtml, buildV49SubscriptionFixHtml, buildV52AnnouncementHtml, buildV53AnnouncementHtml, buildV55AnnouncementHtml, buildV56AnnouncementHtml, buildLaunchAnnouncementHtml, buildCrackdownAnnouncementHtml } from "./email";
+import { getResend, getFromAddress, logEmail, buildAnnouncementHtml, buildV47AnnouncementHtml, buildV48AnnouncementHtml, buildV49SubscriptionFixHtml, buildV52AnnouncementHtml, buildV53AnnouncementHtml, buildV55AnnouncementHtml, buildV56AnnouncementHtml, buildLaunchAnnouncementHtml, buildCrackdownAnnouncementHtml, buildSubscribePromoHtml } from "./email";
 
 export const CAMPAIGN_CONFIG_KEY = "active_email_campaign";
 
@@ -31,6 +31,7 @@ export const DEFAULT_CAMPAIGN_SUBJECTS: Record<string, string> = {
   announcement_v56: "✨ GLTCHRunner v5.6 — new Krea 2 engine + sharper video",
   announcement_launch: "🚀 GLTCH Runner is here — chat with AI models + video gen",
   announcement_crackdown: "🧹 GLTCHRunner — Credit farmers banned, full speed restored",
+  promo_subscribe_2026_09: "⚡ More credits for less — GLTCH Runner plans from $9",
 };
 
 export function getAnnouncementHtmlForCampaign(campaign: string): string {
@@ -53,6 +54,8 @@ export function getAnnouncementHtmlForCampaign(campaign: string): string {
       return buildLaunchAnnouncementHtml();
     case "announcement_crackdown":
       return buildCrackdownAnnouncementHtml();
+    case "promo_subscribe_2026_09":
+      return buildSubscribePromoHtml();
     default:
       return buildAnnouncementHtml();
   }
@@ -62,10 +65,49 @@ export function getDefaultSubject(campaign: string): string {
   return DEFAULT_CAMPAIGN_SUBJECTS[campaign] ?? DEFAULT_CAMPAIGN_SUBJECTS.announcement;
 }
 
+/**
+ * Does this campaign have a frozen audience (migration 067)? When it does, only
+ * those rows are ever mailed. Checked on every call rather than cached: an
+ * audience can be built after a campaign is registered, and mailing everyone
+ * because a cache was stale is the one mistake this must never make.
+ */
+export async function hasCampaignAudience(
+  sql: ReturnType<typeof import("./db").getDb>,
+  campaign: string,
+): Promise<boolean> {
+  const rows = await sql`SELECT 1 FROM campaign_audience WHERE campaign = ${campaign} LIMIT 1`;
+  return rows.length > 0;
+}
+
 export async function getCampaignRemaining(
   sql: ReturnType<typeof import("./db").getDb>,
   campaign: string,
 ): Promise<number> {
+  // Targeted campaign: the audience, re-checked live. Same clauses as the
+  // recipient query below, or progress never reaches zero.
+  if (await hasCampaignAudience(sql, campaign)) {
+    const rows = await sql`
+      SELECT COUNT(*)::int AS count
+      FROM campaign_audience a
+      JOIN users u ON u.id = a.user_id
+      LEFT JOIN notification_prefs p ON p.user_id = u.id
+      WHERE a.campaign = ${campaign}
+        AND u.email_verified = true
+        AND COALESCE(p.email_enabled, true) = true
+        AND NOT EXISTS (
+          SELECT 1 FROM user_bans b
+          WHERE b.user_id = u.id AND (b.expires_at IS NULL OR b.expires_at > now())
+        )
+        AND (a.skip_if_subscribed = false
+             OR (COALESCE(u.subscription_tier, '') = '' AND COALESCE(u.subscription_discount_pct, 0) <= 0))
+        AND u.email NOT IN (
+          SELECT recipient FROM email_log
+          WHERE email_type = ${campaign} AND status = 'sent'
+        )
+    `;
+    return (rows[0] as { count: number }).count;
+  }
+
   const rows = await sql`
     SELECT COUNT(*)::int AS count
     FROM users u
@@ -88,6 +130,33 @@ export async function getCampaignRecipients(
   campaign: string,
   limit: number,
 ): Promise<{ id: string; email: string }[]> {
+  // Targeted campaign: never step outside the audience. Bans and subscriptions
+  // are re-checked here, at send time, because the list may be days old.
+  if (await hasCampaignAudience(sql, campaign)) {
+    const rows = await sql`
+      SELECT u.id, u.email
+      FROM campaign_audience a
+      JOIN users u ON u.id = a.user_id
+      LEFT JOIN notification_prefs p ON p.user_id = u.id
+      WHERE a.campaign = ${campaign}
+        AND u.email_verified = true
+        AND COALESCE(p.email_enabled, true) = true
+        AND NOT EXISTS (
+          SELECT 1 FROM user_bans b
+          WHERE b.user_id = u.id AND (b.expires_at IS NULL OR b.expires_at > now())
+        )
+        AND (a.skip_if_subscribed = false
+             OR (COALESCE(u.subscription_tier, '') = '' AND COALESCE(u.subscription_discount_pct, 0) <= 0))
+        AND u.email NOT IN (
+          SELECT recipient FROM email_log
+          WHERE email_type = ${campaign} AND status = 'sent'
+        )
+      ORDER BY a.added_at ASC, u.created_at ASC
+      LIMIT ${limit}
+    `;
+    return rows.map((r: { id: string; email: string }) => ({ id: r.id, email: r.email }));
+  }
+
   const rows = await sql`
     SELECT u.id, u.email
     FROM users u
@@ -164,14 +233,33 @@ export interface BatchResult {
  * wants a link a person can actually see and click, and plenty of clients show
  * no native button at all.
  */
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
 function unsubFooter(url: string): string {
+  // CAN-SPAM also requires a valid physical postal address in commercial email
+  // (a PO box or registered-agent address qualifies), and no campaign carried
+  // one. Set once in the environment rather than pasted into every template;
+  // scripts/check-subscribe-campaign.mts refuses a promotional send without it.
+  const postal = (process.env.MAIL_POSTAL_ADDRESS || "").trim();
   return `
     <div style="font-family:'Courier New',monospace;max-width:540px;margin:0 auto;padding:0 32px 28px;text-align:center;">
       <p style="font-size:11px;color:#555;line-height:1.6;margin:0;">
         You're receiving this because you have a verified GLTCH Runner account.<br>
-        <a href="${url}" style="color:#666;text-decoration:underline;">Unsubscribe from these emails</a>
+        <a href="${url}" style="color:#666;text-decoration:underline;">Unsubscribe from these emails</a>${postal ? `<br>GLTCH Runner · ${escapeHtml(postal)}` : ""}
       </p>
     </div>`;
+}
+
+/**
+ * Exactly what one recipient receives: the campaign body plus that person's
+ * unsubscribe footer, built the same way processCampaignBatch builds it. For
+ * previews and pre-send checks, so what gets reviewed is what gets sent.
+ */
+export function renderCampaignEmail(job: Pick<CampaignJob, "campaign" | "html">, userId: string): string {
+  const html = job.html || getAnnouncementHtmlForCampaign(job.campaign);
+  return `${html}${unsubFooter(unsubUrl(userId, "*"))}`;
 }
 
 /** Send one batch via Resend batch API and log each recipient. */

@@ -7,6 +7,7 @@
 import { Resend } from "resend";
 import { getDb } from "./db";
 import { unsubUrl } from "./notification-prefs";
+import { DAILY_CREDITS_BY_TIER } from "./dailyCredits";
 
 export type { Resend };
 
@@ -1443,6 +1444,114 @@ export function buildV56AnnouncementHtml(): string {
         <p style="color: #606060; font-size: 10px; text-align: center; margin: 0; line-height: 1.6;">
           You're receiving this because you have a GLTCH Runner account.<br />
           Manage email preferences in Settings.
+        </p>
+
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Plan figures for the subscribe promo. creditsPerMonth mirrors api/checkout.ts
+ * SUBSCRIPTIONS and priceUsd mirrors the live Stripe prices; both are asserted by
+ * scripts/check-subscribe-campaign.mts before anything is sent. A promotional
+ * email is a promise, and most of 2026-09-15 went on removing promises that had
+ * quietly stopped being true. Daily credits are deliberately not repeated here:
+ * they come from the one table the cron pays from.
+ *
+ * Nothing about GLTCH PRO or NSFW LoRAs — those are a separate one-time unlock
+ * (webhook.ts, type "lora_unlock"), not part of any subscription.
+ */
+export const SUBSCRIBE_PROMO_PLANS = [
+  { tier: "basic", name: "Basic", priceUsd: 9, creditsPerMonth: 150 },
+  { tier: "premium", name: "Premium", priceUsd: 19, creditsPerMonth: 325 },
+  { tier: "pro", name: "Pro", priceUsd: 39, creditsPerMonth: 675 },
+  { tier: "elite", name: "Elite", priceUsd: 79, creditsPerMonth: 1400 },
+] as const;
+
+/** Best per-credit rate of any credit pack, in cents (ENTERPRISE, $359.99 / 5,400). Asserted against src/lib/api.ts. */
+export const SUBSCRIBE_PROMO_BEST_PACK_CENTS = 6.7;
+
+/** What an image generation usually costs. Asserted against real charges in usage_log. */
+export const SUBSCRIBE_PROMO_IMAGE_CREDITS = 3;
+
+export function buildSubscribePromoHtml(): string {
+  const fmt = (n: number) => n.toLocaleString("en-US");
+  const basic = SUBSCRIBE_PROMO_PLANS[0];
+  const basicCents = (basic.priceUsd / basic.creditsPerMonth) * 100;
+  const basicImages = Math.floor(basic.creditsPerMonth / SUBSCRIBE_PROMO_IMAGE_CREDITS);
+
+  const rows = SUBSCRIBE_PROMO_PLANS.map((p, i) => {
+    const daily = DAILY_CREDITS_BY_TIER[p.tier];
+    const line = i < SUBSCRIBE_PROMO_PLANS.length - 1 ? "border-bottom: 1px solid #00f0ff22;" : "";
+    return `
+          <tr>
+            <td style="padding: 10px 8px; ${line} color: #00f0ff; font-size: 13px; letter-spacing: 1px;">${p.name.toUpperCase()}</td>
+            <td style="padding: 10px 8px; ${line} color: #e0e0e0; font-size: 13px; text-align: right;">$${p.priceUsd}<span style="color: #707070; font-size: 11px;">/mo</span></td>
+            <td style="padding: 10px 8px; ${line} color: #e0e0e0; font-size: 13px; text-align: right;">${fmt(p.creditsPerMonth)}</td>
+            <td style="padding: 10px 8px; ${line} color: #ff00e5; font-size: 13px; text-align: right;">+${daily}/day</td>
+          </tr>`;
+  }).join("");
+
+  return `
+    <div style="font-family: 'Courier New', monospace; background: #0a0a0f; color: #e0e0e0; padding: 32px; max-width: 540px; margin: 0 auto;">
+      <div style="border: 1px solid #00f0ff33; padding: 28px; border-radius: 4px;">
+
+        <h1 style="color: #00f0ff; font-size: 22px; letter-spacing: 4px; margin: 0 0 6px; text-align: center;">GLTCHRUNNER</h1>
+        <p style="color: #ff00e599; font-size: 11px; letter-spacing: 5px; text-align: center; margin: 0 0 28px;">PLANS // MORE_FOR_LESS</p>
+
+        <div style="background: linear-gradient(135deg, #00f0ff15, #ff00e515); border: 1px solid #00f0ff66; padding: 20px; border-radius: 4px; margin: 0 0 24px; text-align: center;">
+          <p style="color: #00f0ff; font-size: 15px; letter-spacing: 3px; margin: 0 0 10px;">CREATE MORE. SPEND LESS.</p>
+          <p style="font-size: 13px; color: #c0c0c0; margin: 0; line-height: 1.7;">
+            A subscription tops up your credits every month, adds free credits every day, and unlocks more ways to earn — at a better rate than any credit pack. Plans start at $${basic.priceUsd} a month.
+          </p>
+        </div>
+
+        <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; margin: 0 0 8px; border: 1px solid #00f0ff33;">
+          <tr>
+            <td style="padding: 8px; color: #707070; font-size: 10px; letter-spacing: 2px;">PLAN</td>
+            <td style="padding: 8px; color: #707070; font-size: 10px; letter-spacing: 2px; text-align: right;">PRICE</td>
+            <td style="padding: 8px; color: #707070; font-size: 10px; letter-spacing: 2px; text-align: right;">CREDITS/MO</td>
+            <td style="padding: 8px; color: #707070; font-size: 10px; letter-spacing: 2px; text-align: right;">FREE DAILY</td>
+          </tr>${rows}
+        </table>
+        <p style="font-size: 11px; color: #707070; margin: 0 0 24px; line-height: 1.6; text-align: center;">
+          Monthly credits never expire. Daily credits reset at midnight UTC — use them each day.
+        </p>
+
+        <div style="border: 1px solid #ff00e544; padding: 18px; border-radius: 4px; margin: 0 0 24px;">
+          <p style="color: #ff00e5; font-size: 12px; letter-spacing: 3px; margin: 0 0 8px;">💎 BETTER VALUE THAN ANY PACK</p>
+          <p style="font-size: 13px; color: #c0c0c0; margin: 0; line-height: 1.7;">
+            Even Basic works out at ${basicCents.toFixed(0)}¢ a credit — our biggest credit pack is ${SUBSCRIBE_PROMO_BEST_PACK_CENTS}¢ — and your free daily credits bring that lower still. At ${SUBSCRIBE_PROMO_IMAGE_CREDITS} credits an image on GLTCH or Krea 2, Basic's monthly credits alone make about ${basicImages} images.
+          </p>
+        </div>
+
+        <div style="border: 1px solid #00f0ff33; padding: 18px; border-radius: 4px; margin: 0 0 24px;">
+          <p style="color: #00f0ff; font-size: 12px; letter-spacing: 3px; margin: 0 0 12px;">⚡ EVERY PLAN INCLUDES</p>
+          <p style="font-size: 13px; color: #c0c0c0; margin: 0; line-height: 1.9;">
+            ▸ Monthly credits that never expire<br />
+            ▸ Free credits every day<br />
+            ▸ A free spin of the wheel every 24 hours — win 1 to 25 credits<br />
+            ▸ Daily missions worth 3–25 credits each, plus a 50-credit streak bonus<br />
+            ▸ Cancel anytime
+          </p>
+        </div>
+
+        <div style="border-left: 2px solid #00f0ff44; padding: 0 0 0 14px; margin: 0 0 26px;">
+          <p style="color: #00f0ff; font-size: 11px; letter-spacing: 3px; margin: 0 0 6px;">NEW THIS MONTH</p>
+          <p style="font-size: 12px; color: #909090; margin: 0; line-height: 1.7;">
+            Krea 2, a photoreal image engine · sharper LTX video, clips up to 15 seconds · Easy Mode, where you describe what you want in a chat.
+          </p>
+        </div>
+
+        <div style="text-align: center; margin: 0 0 18px;">
+          <a href="https://grokrunner.gltch.app/create?store=1" style="display: inline-block; background: linear-gradient(135deg, #00f0ff, #ff00e5); color: #0a0a0f; text-decoration: none; padding: 13px 32px; border-radius: 4px; font-weight: bold; letter-spacing: 2px; font-size: 13px;">
+            SEE THE PLANS
+          </a>
+        </div>
+
+        <p style="color: #808080; font-size: 12px; text-align: center; margin: 0; line-height: 1.6;">
+          Thanks for creating with us. See you in the grid.
         </p>
 
       </div>
