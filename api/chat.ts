@@ -14,6 +14,7 @@ import { neon } from "@neondatabase/serverless";
 import { getDb } from "./_lib/db";
 import { handleCharacterChatMessage } from "./_lib/character-chat-message";
 import { getHolderState } from "./v1/_lib/xrge-holder";
+import { describeDailyCredits } from "./_lib/dailyCredits";
 
 /** Character chat sends large base64 images; channel chat stays small. */
 export const config = {
@@ -49,7 +50,7 @@ Images ~3 cr, GLTCH edit ~5 cr (HD 7), WAN video 15 cr, LTX video+sound ~7 cr/s 
 - Subscriptions = monthly BONUS CREDITS (best value, beat every pack): Basic $9→150/mo, Premium $19→325, Pro $39→675, Elite $79→1400. Subs also get NSFW/GLTCH PRO access. (Daily credits, missions and the spin wheel are admin-toggleable — see LIVE PLATFORM STATE for whether they're on right now; never promise them from memory.)
 - One-time packs: Starter 75/$6.99, Pro 240/$18.99, Mega 600/$42.99, Ultra 2600/$179.99, Enterprise 5400/$359.99.
 - Free credits are EARN-ONLY (since July 2026): post content and get real engagement. Likes/upvotes/comments you RECEIVE become karma → claim karma milestones (25 karma→5cr up to 2500→75cr, one-time each) and a weekly engagement payout (up to 15 cr/week) in the missions dialog EARN panel. No more signup grant, weekly drop, follow-X, or Reddit-code bonuses — those are retired.
-- Subscriber-only extras when enabled: daily credits, daily missions (~5 cr each, +50 for a 7-day streak), the spin wheel (1–10 cr). These are admin-toggleable and are OFF at the time of writing — always defer to LIVE PLATFORM STATE. Free users earn via engagement or buy packs.
+- Subscriber-only extras when enabled: daily credits (amount depends on plan — see LIVE PLATFORM STATE), daily missions (3–25 cr each, +50 for a 7-day streak), and one free spin of the wheel every 24h (1–25 cr). These are admin-toggleable — always defer to LIVE PLATFORM STATE for whether they are on. Free users earn via engagement or buy packs.
 
 == XRGE HOLDER PERKS (hold the $XRGE token; separate from subscriptions) ==
 Tiers by amount held, with a continuous-hold streak multiplier up to x2: Initiate ≥1M (+5% gen discount), Operative ≥10M (+10%, +2 daily), Runner ≥50M (+15%, +5 daily, NSFW LoRAs unlocked), Architect ≥250M (+25%, +10 daily, GLTCH PRO unlocked). Selling below a tier resets the streak.
@@ -169,7 +170,9 @@ async function getBotPlatformContext(sql: any): Promise<string> {
   const onOff = (b: boolean) => (b ? "AVAILABLE" : "currently DISABLED for everyone, including subscribers");
   const text =
     `LIVE PLATFORM STATE (authoritative — overrides anything below that disagrees):\n` +
-    `- Daily credit refill: ${onOff(daily)}.\n` +
+    // The amount comes from the same table cron-reset-daily pays from, so the bot
+    // cannot quote a number users do not actually receive.
+    `- Daily credit refill: ${daily ? `AVAILABLE to subscribers — ${describeDailyCredits()} credits a day by plan, resetting at 00:00 UTC with no rollover` : onOff(daily)}.\n` +
     `- Spin wheel: ${onOff(spin)}.\n` +
     `- Daily missions: ${onOff(missions)}.\n` +
     (daily || spin || missions

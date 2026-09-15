@@ -13,21 +13,32 @@
  *
  * Verification is the gate that makes this affordable at all — generation
  * already requires a verified email, so an unclaimed throwaway can't spend it.
+ *
+ * Also keyed on the INBOX. The device key is a fingerprint the browser computes,
+ * so it changes with the browser, profile or user agent, and farmers rotate it:
+ * in the first weeks 49 inboxes collected more than one grant — 102 extra, 27%
+ * of all grants — spread over N accounts on exactly N "devices". Plus-addressing
+ * covered the email side. The inbox is the canonical address (+tags stripped,
+ * Gmail dots collapsed), and a second account on an inbox already paid gets
+ * nothing. Both accounts still exist and work; only the free credits are held
+ * back, so this limits a promotion rather than deciding identity.
  */
 
 import { getFreeCreditsConfig } from "./freeCredits";
 import { logCreditGrant } from "./credit-ledger";
+import { canonicalEmail } from "./email-canonical";
 
 export interface StarterGrantResult {
   granted: boolean;
   credits: number;
-  reason?: "disabled" | "already-claimed" | "device-claimed" | "error";
+  reason?: "disabled" | "already-claimed" | "device-claimed" | "inbox-claimed" | "error";
 }
 
 export async function grantStarterCredits(
   sql: any,
   userId: string,
   fingerprint: string | null | undefined,
+  email?: string | null,
 ): Promise<StarterGrantResult> {
   let credits = 0;
   try {
@@ -38,15 +49,19 @@ export async function grantStarterCredits(
     credits = cfg.starterCredits;
 
     const fp = (fingerprint || "").trim() || null;
+    // canonicalEmail returns "" for anything unparseable. Store NULL instead, so
+    // two unparseable addresses can never collide in the unique index.
+    const mailbox = canonicalEmail(email) || null;
 
     // Claim first, credit second, in one statement. The UNIQUE constraints on
-    // user_id and fingerprint are what make this idempotent — a replayed
-    // verification or a second account on the same device inserts nothing and
-    // therefore grants nothing.
+    // user_id, fingerprint and mailbox are what make this idempotent — a replayed
+    // verification, a second account on the same device, or a second account on
+    // an inbox already paid inserts nothing and therefore grants nothing.
+    // ON CONFLICT with no target covers all three.
     const [row] = await sql`
       WITH claim AS (
-        INSERT INTO starter_grants (user_id, fingerprint, credits)
-        VALUES (${userId}::uuid, ${fp}, ${credits})
+        INSERT INTO starter_grants (user_id, fingerprint, mailbox, credits)
+        VALUES (${userId}::uuid, ${fp}, ${mailbox}, ${credits})
         ON CONFLICT DO NOTHING
         RETURNING id, user_id, credits
       ), pay AS (
@@ -59,18 +74,25 @@ export async function grantStarterCredits(
     `;
 
     if (!row?.granted) {
-      // Distinguish the two so admin can tell a repeat verification from a
-      // device that has already been paid out.
+      // Distinguish the three so admin can tell a repeat verification from a
+      // device already paid out from an inbox already paid out. COALESCE because
+      // a grant whose account was deleted has a NULL user_id, and NULL = x is
+      // NULL rather than false.
       const [seen] = await sql`
-        SELECT (user_id = ${userId}::uuid) AS same_user
+        SELECT COALESCE(user_id = ${userId}::uuid, false) AS same_user,
+               COALESCE(fingerprint = ${fp}::text, false) AS same_device
         FROM starter_grants
-        WHERE user_id = ${userId}::uuid OR (${fp}::text IS NOT NULL AND fingerprint = ${fp})
+        WHERE user_id = ${userId}::uuid
+           OR (${fp}::text IS NOT NULL AND fingerprint = ${fp})
+           OR (${mailbox}::text IS NOT NULL AND mailbox = ${mailbox})
+        ORDER BY COALESCE(user_id = ${userId}::uuid, false) DESC,
+                 COALESCE(fingerprint = ${fp}::text, false) DESC
         LIMIT 1
       `;
       return {
         granted: false,
         credits: 0,
-        reason: seen?.same_user ? "already-claimed" : "device-claimed",
+        reason: seen?.same_user ? "already-claimed" : seen?.same_device ? "device-claimed" : "inbox-claimed",
       };
     }
 

@@ -86,7 +86,7 @@ export default function HowToUseDialog({ open, onOpenChange }: HowToUseDialogPro
               <span className="font-semibold text-sm">{t("howToUse.twoWays.optionB", "Option B: Credits")}</span>
             </div>
             <p className="text-sm text-muted-foreground">
-              {t("howToUse.twoWays.optionBDesc", "Subscribe to any plan to unlock 10 free daily credits, the spin wheel, and daily missions. You can also buy credit packs anytime — they never expire.")}
+              {t("howToUse.twoWays.optionBDesc", "Subscribe to any plan to unlock free daily credits (more on higher plans), the spin wheel, and daily missions. You can also buy credit packs anytime — they never expire.")}
             </p>
           </div>
         </div>

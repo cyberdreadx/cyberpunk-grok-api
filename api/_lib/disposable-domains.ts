@@ -5373,6 +5373,14 @@ export const DISPOSABLE_DOMAINS = new Set<string>([
  * privacy alias service).
  */
 const LOCAL_DISPOSABLE_ADDITIONS = new Set<string>([
+  // 2026-09: throwaway domains that got past the upstream list and each collected
+  // starter grants (3-6 accounts apiece) under the domain velocity threshold.
+  "airhemp.com",
+  "xeramail.com",
+  "bowlfuel.com",
+  "daugr.com",
+  "fidhost.com",
+  "crybio.com",
   "web-library.net",
   "kuromee.com",
   "zipmail.one",

@@ -115,7 +115,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (!incoming || typeof incoming !== "object") {
         return res.status(400).json({ error: "config object required" });
       }
-      const merged = { ...(await getPromoConfig()), ...incoming };
+      // updated_by goes last, so a client cannot put someone else's name in the
+      // audit trail (migration 066) by sending one inside the config body.
+      const merged = { ...(await getPromoConfig()), ...incoming, updated_by: auth.email };
       await sql`
         INSERT INTO app_config (key, value, updated_at)
         VALUES (${PROMO_KEY}, ${JSON.stringify(merged)}::jsonb, now())

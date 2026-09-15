@@ -98,6 +98,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ...rest,
       ...updates,
       updated_at: new Date().toISOString(),
+      // Read by the app_config audit trigger (migration 066). On 2026-09-15 every
+      // source was switched on and nothing recorded who did it.
+      updated_by: getUserFromRequest(req)?.email ?? null,
     };
     const sql = getDb();
     const payload = JSON.stringify(merged);

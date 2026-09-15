@@ -101,10 +101,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // entry now so someone who verifies isn't told to verify again.
     clearEmailVerifiedCache(user.id);
 
-    // One-time starter grant, claimed per DEVICE rather than per account —
-    // see _lib/starterGrant. Disabled by default; admin toggles it under
+    // One-time starter grant, claimed per device AND per inbox rather than per
+    // account — see _lib/starterGrant. Disabled by default; admin toggles it under
     // free-credit sources.
-    const starter = await grantStarterCredits(sql, user.id, user.device_fingerprint);
+    const starter = await grantStarterCredits(sql, user.id, user.device_fingerprint, user.email);
     if (starter.granted) {
       console.log(`[starter-grant] +${starter.credits} to ${user.id}`);
     }

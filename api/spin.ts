@@ -23,6 +23,7 @@ import { getUserFromRequest } from "./_lib/auth";
 import { checkRateLimit } from "./_lib/ratelimit";
 import { isSourceDisabled, FREE_CREDITS_MAINTENANCE_MESSAGE } from "./_lib/freeCredits";
 import { isSubscriber, FREE_CREDITS_SUBSCRIBER_ONLY_MESSAGE } from "./_lib/subscriberGate";
+import { logCreditGrant } from "./_lib/credit-ledger";
 
 /* ── Prize table ─────────────────────────────────────────────── */
 
@@ -227,6 +228,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       updated_at   = now()
     WHERE id = ${auth.userId}
   `;
+
+  // Spin winnings were a grant path with no trail: the wheel paid into
+  // pack_credits and recorded nothing, so farming through it could not be seen
+  // afterwards. Free and paid spins are logged apart — a free spin is pure
+  // giveaway, a paid one returns part of what was just spent. Best-effort, like
+  // every ledger write: the credits are already banked.
+  await logCreditGrant(
+    sql,
+    auth.userId,
+    prize.credits,
+    paid ? "spin_paid" : "spin_free",
+    paid ? undefined : `free-${new Date().toISOString().slice(0, 10)}`,
+  );
 
   // ── Unlucky spin → drop 1 credit into the community pot ────────
   // Any spin that lands on the lowest tier (1 credit) contributes 1 credit

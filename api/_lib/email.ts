@@ -220,6 +220,14 @@ export async function sendAnnouncementEmail(
 }
 
 /** Build HTML for the big announcement email. */
+/**
+ * Also the default for sendAnnouncementEmail and for any campaign name the
+ * campaign map does not recognise, so it can go out again at any time. It
+ * promised "10 free credits every single day" to every verified account — wrong
+ * once daily went subscriber-only, and wrong again once it was scaled by plan on
+ * 2026-09-15. A template that can still be sent has to stay true, not merely
+ * have been true when it was written.
+ */
 export function buildAnnouncementHtml(): string {
   return `
     <div style="font-family: 'Courier New', monospace; background: #0a0a0f; color: #e0e0e0; padding: 32px; max-width: 520px; margin: 0 auto;">
@@ -234,11 +242,11 @@ export function buildAnnouncementHtml(): string {
 
         <div style="background: #111; border: 1px solid #00f0ff44; padding: 20px; border-radius: 4px; margin: 0 0 20px;">
           <h2 style="color: #00f0ff; font-size: 15px; margin: 0 0 12px; letter-spacing: 1px;">
-            🎁 10 FREE DAILY CREDITS
+            🎁 FREE DAILY CREDITS
           </h2>
           <p style="font-size: 13px; color: #b0b0b0; margin: 0; line-height: 1.6;">
-            Every verified account now gets <span style="color: #00f0ff; font-weight: bold;">10 free credits every single day</span>.
-            Generate images, create AI videos, edit photos, and chat with AI characters — all on us.
+            Subscribers get <span style="color: #00f0ff; font-weight: bold;">free credits every single day</span> — more on higher plans.
+            Generate images, create AI videos, edit photos, and chat with AI characters.
             Credits reset at midnight UTC so use them or lose them!
           </p>
         </div>
@@ -406,7 +414,7 @@ export function buildV47AnnouncementHtml(): string {
         </div>
 
         <p style="font-size: 11px; color: #444; margin: 0; text-align: center;">
-          Sent to verified GLTCHRunner accounts. Your 10 daily credits are waiting.
+          Sent to verified GLTCHRunner accounts.
         </p>
       </div>
     </div>
@@ -489,7 +497,7 @@ export function buildV49SubscriptionFixHtml(): string {
         </div>
 
         <p style="font-size: 11px; color: #444; margin: 0; text-align: center;">
-          Sent to verified GLTCHRunner accounts. Your 10 daily credits are still waiting.
+          Sent to verified GLTCHRunner accounts.
         </p>
       </div>
     </div>

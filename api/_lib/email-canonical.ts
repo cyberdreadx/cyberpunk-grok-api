@@ -7,6 +7,12 @@
  * always have been, and collapsing them would lock people out of accounts they
  * already own.
  *
+ * Limiting a promotion to one per inbox is not identity, and is allowed. The
+ * starter grant (_lib/starterGrant) refuses a second grant to an inbox already
+ * paid, but both accounts still exist and work — only the free credits are held
+ * back. The line: never decide who an account belongs to or whether it may
+ * exist; do decide whether an inbox has already had the giveaway.
+ *
  * The case this exists for: referral attribution compared raw strings, so
  * referring yourself cost one plus sign. 139 of 5,396 referrals on record are
  * a user referring their own alias. That was tolerable when the reward was

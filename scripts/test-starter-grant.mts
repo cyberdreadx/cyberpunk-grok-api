@@ -1,7 +1,8 @@
 /**
- * The starter grant is claimed per DEVICE, not per account. These lock down the
- * farming cases: a second account on the same device, a replayed verification,
- * and — the one that matters most — deleting the account and re-registering.
+ * The starter grant is claimed per DEVICE and per INBOX, not per account. These
+ * lock down the farming cases: a second account on the same device, a replayed
+ * verification, deleting the account and re-registering, and — the one farmers
+ * actually used — a fresh browser fingerprint with a new +tag on the same inbox.
  */
 process.env.RESEND_API_KEY = "";
 // No config caching for this suite — the switches are flipped between
@@ -43,6 +44,13 @@ async function mkUser(tag: string, fp: string | null) {
   const [u] = await sql`
     INSERT INTO users (email, password_hash, email_verified, device_fingerprint, pack_credits)
     VALUES (${`${P}-${tag}@example.test`}, 'x', true, ${fp}, 0) RETURNING id`;
+  return u.id as string;
+}
+/** Stored lowercased like signup does; the grant is handed the raw spelling. */
+async function mkUserEmail(fp: string | null, email: string) {
+  const [u] = await sql`
+    INSERT INTO users (email, password_hash, email_verified, device_fingerprint, pack_credits)
+    VALUES (${email.toLowerCase()}, 'x', true, ${fp}, 0) RETURNING id`;
   return u.id as string;
 }
 const balance = async (id: string) => {
@@ -99,6 +107,47 @@ try {
   const e = await mkUser("e", `${P}-fp-forty`);
   r = await grantStarterCredits(sql, e, `${P}-fp-forty`);
   ok("honours the configured amount", r.granted && r.credits === 40, `${JSON.stringify(r)}`);
+
+  console.log("\n── one grant per inbox, across devices ──");
+  await setCfg({ starter: true, starterCredits: 15 });
+  const first = `${P}.inbox+first@gmail.com`;
+  const i1 = await mkUserEmail(`${P}-fp-inbox-1`, first);
+  r = await grantStarterCredits(sql, i1, `${P}-fp-inbox-1`, first);
+  ok("first account on an inbox is granted", r.granted, JSON.stringify(r));
+
+  const second = `${P}inbox+second@gmail.com`;
+  const i2 = await mkUserEmail(`${P}-fp-inbox-2`, second);
+  r = await grantStarterCredits(sql, i2, `${P}-fp-inbox-2`, second);
+  ok("same inbox on a new device with a new +tag gets nothing", !r.granted && r.reason === "inbox-claimed", JSON.stringify(r));
+  ok("…and its balance stays 0", (await balance(i2)) === 0);
+
+  const third = `${P.toUpperCase()}.IN.BOX@googlemail.com`;
+  const i3 = await mkUserEmail(`${P}-fp-inbox-3`, third);
+  r = await grantStarterCredits(sql, i3, `${P}-fp-inbox-3`, third);
+  ok("dots, case and googlemail.com all resolve to the same inbox", !r.granted && r.reason === "inbox-claimed", JSON.stringify(r));
+
+  const other = `${P}-different@example.test`;
+  const i4 = await mkUserEmail(`${P}-fp-inbox-4`, other);
+  r = await grantStarterCredits(sql, i4, `${P}-fp-inbox-4`, other);
+  ok("a genuinely different inbox on a new device is granted", r.granted, JSON.stringify(r));
+
+  console.log("\n── dots only collapse where the provider ignores them ──");
+  const d1 = await mkUserEmail(`${P}-fp-dot-1`, `${P}.first.last@example.test`);
+  r = await grantStarterCredits(sql, d1, `${P}-fp-dot-1`, `${P}.first.last@example.test`);
+  ok("first.last@ on a non-Gmail domain is granted", r.granted, JSON.stringify(r));
+  const d2 = await mkUserEmail(`${P}-fp-dot-2`, `${P}firstlast@example.test`);
+  r = await grantStarterCredits(sql, d2, `${P}-fp-dot-2`, `${P}firstlast@example.test`);
+  ok("firstlast@ there is a different person and is granted too", r.granted, JSON.stringify(r));
+
+  console.log("\n── no usable email falls back to the device key alone ──");
+  const n1 = await mkUser("nomail1", `${P}-fp-nomail-1`);
+  r = await grantStarterCredits(sql, n1, `${P}-fp-nomail-1`, "not-an-email");
+  ok("an unparseable address does not block the grant", r.granted, JSON.stringify(r));
+  const [stored] = await sql`SELECT mailbox FROM starter_grants WHERE user_id = ${n1}::uuid`;
+  ok("…and is stored as NULL, never an empty string", stored?.mailbox === null, `mailbox=${JSON.stringify(stored?.mailbox)}`);
+  const n2 = await mkUser("nomail2", `${P}-fp-nomail-2`);
+  r = await grantStarterCredits(sql, n2, `${P}-fp-nomail-2`, "");
+  ok("two unusable addresses never collide with each other", r.granted, JSON.stringify(r));
 } finally {
   // Always put the live config back.
   if (original) {
