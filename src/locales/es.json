@@ -73,7 +73,7 @@
     "verifyEmail": "Verificar correo",
     "deleteAccount": "Eliminar cuenta",
     "neuralAuth": "NEURAL_AUTH",
-    "freeCreditsDaily": "10 CRÉDITOS GRATIS AL DÍA",
+    "freeCreditsDaily": "CRÉDITOS GRATIS PARA EMPEZAR",
     "freeOnLogin": "Únete gratis — sin tarjeta. Imagen, vídeo y chat con IA sin censura.",
     "signInPrompt": "Inicia sesión para usar créditos, o usa tu propia clave API gratis.",
     "authenticate": "Autenticar",
@@ -257,7 +257,7 @@
       "title": "Primeros pasos",
       "subtitle": "Configúralo en menos de un minuto",
       "byok1": "BYOK: Toca el icono de llave, pega tu clave API de xAI y listo.",
-      "credits1": "Créditos: Crea una cuenta para obtener 10 créditos gratis cada día.",
+      "credits1": "Créditos: crea una cuenta, verifica tu correo y luego suscríbete (desbloquea créditos gratis diarios, la ruleta y las misiones) o compra un pack de créditos.",
       "step2": "Elige un modo — Generar, Editar o Animar — y escribe un prompt."
     },
     "generating": {
@@ -289,7 +289,7 @@
   },
   "store": {
     "title": "TIENDA_CRÉDITOS",
-    "description": "10 créditos gratis al día + suscríbete o compra packs. Imágenes: 1-2 cr · Vídeos: 5 cr · HD upscale: 7 cr.",
+    "description": "Suscríbete para desbloquear créditos gratis diarios (más en los planes superiores), la ruleta y las misiones diarias, o compra packs de créditos cuando quieras.",
     "xrgeBankTitle": "Banco $XRGE — Depósito · Comprar Créditos · Recompensas de Lealtad",
     "xrgeBankDesc": "Deposita XRGE, compra créditos desde tu saldo, gana hasta +50% de bonus.",
     "getXrge": "Obtener XRGE →",

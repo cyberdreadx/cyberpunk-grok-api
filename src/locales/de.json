@@ -73,7 +73,7 @@
     "verifyEmail": "E-Mail bestätigen",
     "deleteAccount": "Konto löschen",
     "neuralAuth": "NEURAL_AUTH",
-    "freeCreditsDaily": "10 KOSTENLOSE CREDITS TÄGLICH",
+    "freeCreditsDaily": "GRATIS-CREDITS ZUM START",
     "freeOnLogin": "Kostenlos beitreten — keine Karte nötig. Unzensierte Bilder, Videos & KI-Chat.",
     "signInPrompt": "Anmelden um Credits zu nutzen, oder eigenen API-Schlüssel verwenden.",
     "authenticate": "Authentifizieren",
@@ -257,7 +257,7 @@
       "title": "Erste Schritte",
       "subtitle": "In weniger als einer Minute einrichten",
       "byok1": "BYOK: Tippen Sie auf das Schlüssel-Symbol, fügen Sie Ihren xAI API-Schlüssel ein, fertig.",
-      "credits1": "Credits: Erstellen Sie ein Konto für 10 kostenlose Credits täglich.",
+      "credits1": "Credits: Erstellen Sie ein Konto, bestätigen Sie Ihre E-Mail und abonnieren Sie dann (schaltet tägliche Gratis-Credits, Glücksrad und Missionen frei) oder kaufen Sie ein Credit-Paket.",
       "step2": "Wählen Sie einen Modus — Generieren, Bearbeiten oder Animieren — und geben Sie einen Prompt ein."
     },
     "generating": {
@@ -289,7 +289,7 @@
   },
   "store": {
     "title": "CREDIT_SHOP",
-    "description": "10 kostenlose Credits täglich + abonnieren oder Pakete kaufen. Bilder: 1-2 cr · Videos: 5 cr · HD Upscale: 7 cr.",
+    "description": "Abonnieren Sie, um tägliche Gratis-Credits (mehr bei höheren Plänen), das Glücksrad und tägliche Missionen freizuschalten – oder kaufen Sie jederzeit Credit-Pakete.",
     "xrgeBankTitle": "$XRGE Bank — Einzahlung · Credits kaufen · Treueprämien",
     "xrgeBankDesc": "Zahlen Sie XRGE ein, kaufen Sie Credits aus Ihrem Guthaben, verdienen Sie bis zu +50% Bonus.",
     "getXrge": "XRGE erhalten →",

@@ -73,7 +73,7 @@
     "verifyEmail": "验证邮箱",
     "deleteAccount": "删除账户",
     "neuralAuth": "NEURAL_AUTH",
-    "freeCreditsDaily": "每天10积分免费",
+    "freeCreditsDaily": "免费积分助你起步",
     "freeOnLogin": "免费注册 — 无需银行卡。无审查的图像、视频和 AI 聊天。",
     "signInPrompt": "登录使用积分，或使用自己的API密钥。",
     "authenticate": "认证",
@@ -257,7 +257,7 @@
       "title": "开始使用",
       "subtitle": "不到一分钟完成设置",
       "byok1": "BYOK：点击状态栏的钥匙图标，粘贴您的xAI API密钥即可。",
-      "credits1": "积分：创建账户即可每天获得10免费积分。",
+      "credits1": "积分：创建账户并验证邮箱，然后订阅（解锁每日免费积分、转盘和任务）或购买积分包。",
       "step2": "选择模式 — 生成、编辑或动画 — 然后输入提示词。"
     },
     "generating": {
@@ -289,7 +289,7 @@
   },
   "store": {
     "title": "积分商店",
-    "description": "每天10免费积分 + 订阅或购买套餐。图片：1-2 cr · 视频：5 cr · HD升级：7 cr。",
+    "description": "订阅即可解锁每日免费积分（方案越高越多）、幸运转盘和每日任务，也可随时购买积分包。",
     "xrgeBankTitle": "$XRGE银行 — 存入 · 购买积分 · 忠诚奖励",
     "xrgeBankDesc": "存入XRGE，从余额购买积分，赚取高达+50%奖励。",
     "getXrge": "获取XRGE →",

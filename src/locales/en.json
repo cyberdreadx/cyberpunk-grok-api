@@ -73,7 +73,7 @@
     "verifyEmail": "Verify Email",
     "deleteAccount": "Delete Account",
     "neuralAuth": "NEURAL_AUTH",
-    "freeCreditsDaily": "10 FREE CREDITS EVERY DAY",
+    "freeCreditsDaily": "FREE CREDITS TO GET STARTED",
     "freeOnLogin": "Free to join — no card needed. Uncensored image, video & AI chat.",
     "signInPrompt": "Sign in to use credits, or use your own API key for free.",
     "authenticate": "Authenticate",
@@ -318,7 +318,7 @@
   },
   "store": {
     "title": "CREDIT_STORE",
-    "description": "Subscribe to unlock 10 free daily credits + spin + missions, or buy credit packs anytime. Images: 1-2 cr · Videos: 5 cr · HD upscale: 7 cr.",
+    "description": "Subscribe to unlock free daily credits (more on higher plans), the spin wheel and daily missions — or buy credit packs anytime.",
     "xrgeBankTitle": "$XRGE Bank — Deposit · Buy Credits · Earn Loyalty Rewards",
     "xrgeBankDesc": "Deposit XRGE, buy credits from your balance, earn up to +50% bonus.",
     "getXrge": "Get XRGE →",

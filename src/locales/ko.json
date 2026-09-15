@@ -73,7 +73,7 @@
     "verifyEmail": "이메일 인증",
     "deleteAccount": "계정 삭제",
     "neuralAuth": "NEURAL_AUTH",
-    "freeCreditsDaily": "매일 10크레딧 무료",
+    "freeCreditsDaily": "시작용 무료 크레딧",
     "freeOnLogin": "무료 가입 — 카드 불필요. 무검열 이미지, 영상, AI 채팅.",
     "signInPrompt": "크레딧을 사용하려면 로그인하거나 자체 API 키를 사용하세요.",
     "authenticate": "인증",
@@ -257,7 +257,7 @@
       "title": "시작하기",
       "subtitle": "1분 이내 설정",
       "byok1": "BYOK: 상태 바의 키 아이콘을 탭하고 xAI API 키를 붙여넣으면 됩니다.",
-      "credits1": "크레딧: 계정을 만들면 매일 10크레딧을 무료로 받습니다.",
+      "credits1": "크레딧: 계정을 만들고 이메일을 인증한 뒤, 구독하거나(매일 무료 크레딧·스핀·미션 해제) 크레딧 팩을 구매하세요.",
       "step2": "모드 선택 — 생성, 편집 또는 애니메이트 — 하고 프롬프트를 입력하세요."
     },
     "generating": {
@@ -289,7 +289,7 @@
   },
   "store": {
     "title": "크레딧_스토어",
-    "description": "매일 10크레딧 무료 + 구독 또는 팩 구매. 이미지: 1-2 cr · 비디오: 5 cr · HD 업스케일: 7 cr.",
+    "description": "구독하면 매일 무료 크레딧(상위 플랜일수록 더 많음), 스핀 휠, 일일 미션이 열립니다. 크레딧 팩은 언제든 구매할 수 있습니다.",
     "xrgeBankTitle": "$XRGE 뱅크 — 입금 · 크레딧 구매 · 로열티 보상",
     "xrgeBankDesc": "XRGE를 입금하고, 잔액에서 크레딧을 구매하고, 최대 +50% 보너스를 받으세요.",
     "getXrge": "XRGE 받기 →",

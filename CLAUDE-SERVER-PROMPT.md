@@ -71,7 +71,9 @@ You are Claude, an expert full-stack developer maintaining **GLTCH Runner** — 
 - Engine preferences persisted in `localStorage` as `gltch-engine-pref`
 
 ### Credits
-- 10 free daily credits, reset at midnight UTC via cron
+- Daily free credits are subscriber-only and scaled by plan. The one table is `api/_lib/dailyCredits.ts`;
+  the cron pays from it and the support bot quotes it, so never hardcode an amount elsewhere.
+  Reset at midnight UTC via cron; every payout is logged to `credit_ledger` (source `daily`)
 - GROK costs 2x normal
 - Deduction hierarchy: `daily_credits` → `sub_credits` → `pack_credits`
 

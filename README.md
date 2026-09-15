@@ -41,7 +41,7 @@ See the in-app **Changelog** dialog for the full history.
 - **BYOK** — bring your own xAI / RunPod key, 100% client-side, never sent to us
 - **Credits** — Stripe checkout for one-time packs and monthly subscriptions
 - **$XRGE on Base** — pay or get paid in crypto; 80% of XRGE post/story unlocks go straight to the creator's wallet
-- **10 free daily credits** for verified accounts
+- **Free daily credits for subscribers**, scaled by plan — the table is `api/_lib/dailyCredits.ts`
 - **Daily Missions, Spin the Wheel, Referrals, Flash Sales** — gamified credit boosts
 
 ## 🎨 Creator platform

@@ -73,7 +73,7 @@
     "verifyEmail": "Vérifier l'e-mail",
     "deleteAccount": "Supprimer le compte",
     "neuralAuth": "NEURAL_AUTH",
-    "freeCreditsDaily": "10 CRÉDITS GRATUITS PAR JOUR",
+    "freeCreditsDaily": "CRÉDITS GRATUITS POUR COMMENCER",
     "freeOnLogin": "Inscription gratuite — sans carte. Images, vidéos et chat IA sans censure.",
     "signInPrompt": "Connectez-vous pour utiliser vos crédits, ou entrez votre clé API.",
     "authenticate": "Authentifier",
@@ -257,7 +257,7 @@
       "title": "Démarrage",
       "subtitle": "Installation en moins d'une minute",
       "byok1": "BYOK : Appuyez sur l'icône clé dans la barre d'état, collez votre clé API xAI, et c'est parti.",
-      "credits1": "Crédits : Créez un compte pour obtenir 10 crédits gratuits par jour.",
+      "credits1": "Crédits : créez un compte, vérifiez votre e-mail, puis abonnez-vous (débloque des crédits gratuits quotidiens, la roue et les missions) ou achetez un pack de crédits.",
       "step2": "Choisissez un mode — Générer, Modifier ou Animer — et saisissez un prompt."
     },
     "generating": {
@@ -289,7 +289,7 @@
   },
   "store": {
     "title": "BOUTIQUE_CRÉDITS",
-    "description": "10 crédits gratuits par jour + abonnez-vous ou achetez des packs. Images : 1-2 cr · Vidéos : 5 cr · HD upscale : 7 cr.",
+    "description": "Abonnez-vous pour débloquer des crédits gratuits quotidiens (davantage sur les formules supérieures), la roue et les missions quotidiennes, ou achetez des packs de crédits à tout moment.",
     "xrgeBankTitle": "Banque $XRGE — Dépôt · Achat de crédits · Récompenses fidélité",
     "xrgeBankDesc": "Déposez des XRGE, achetez des crédits depuis votre solde, gagnez jusqu'à +50% de bonus.",
     "getXrge": "Obtenir XRGE →",
