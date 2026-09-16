@@ -59,8 +59,12 @@ const clusters = new Set<string>(
     ) t GROUP BY fp HAVING COUNT(*) >= ${FARM_CLUSTER_MIN}`) as any[]).map((r) => String(r.fp)),
 );
 
+const suppressed = new Set<string>(
+  ((await sql`SELECT email FROM email_suppressions`) as any[]).map((r) => String(r.email).toLowerCase()),
+);
+
 const excluded: Record<string, number> = {
-  subscribed: 0, opted_out: 0, banned: 0, disposable: 0, farm_cluster: 0, unparseable_email: 0,
+  subscribed: 0, opted_out: 0, banned: 0, disposable: 0, suppressed: 0, farm_cluster: 0, unparseable_email: 0,
 };
 const bestByInbox = new Map<string, any>();
 let eligible = 0;
@@ -71,6 +75,7 @@ for (const u of users) {
   if (!u.opted_in) { excluded.opted_out++; continue; }
   if (u.banned) { excluded.banned++; continue; }
   if (isDisposableEmail(String(u.email))) { excluded.disposable++; continue; }
+  if (suppressed.has(String(u.email).toLowerCase())) { excluded.suppressed++; continue; }
   if (u.device_fingerprint && clusters.has(String(u.device_fingerprint)) && !payers.has(String(u.id))) {
     excluded.farm_cluster++; continue;
   }

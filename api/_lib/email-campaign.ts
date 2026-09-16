@@ -1,6 +1,11 @@
 /**
  * Reliable bulk email campaigns via Resend batch API + email_log dedup.
  * Designed for cron-driven processing (no fragile self-fetch chains).
+ *
+ * Recipients are also checked against email_suppressions (migration 068): once
+ * an address hard-bounces or reports spam, the Resend webhook records it there
+ * and no campaign selects it again. Mailing known-dead addresses is what costs
+ * a sending domain the reputation that also carries verification codes.
  */
 
 import { unsubUrl } from "./notification-prefs";
@@ -100,6 +105,7 @@ export async function getCampaignRemaining(
         )
         AND (a.skip_if_subscribed = false
              OR (COALESCE(u.subscription_tier, '') = '' AND COALESCE(u.subscription_discount_pct, 0) <= 0))
+        AND lower(u.email) NOT IN (SELECT email FROM email_suppressions)
         AND u.email NOT IN (
           SELECT recipient FROM email_log
           WHERE email_type = ${campaign} AND status = 'sent'
@@ -117,6 +123,7 @@ export async function getCampaignRemaining(
       -- never reaches zero and the batch loop keeps looking for people who
       -- will never be selected.
       AND COALESCE(p.email_enabled, true) = true
+      AND lower(u.email) NOT IN (SELECT email FROM email_suppressions)
       AND u.email NOT IN (
         SELECT recipient FROM email_log
         WHERE email_type = ${campaign} AND status = 'sent'
@@ -147,6 +154,7 @@ export async function getCampaignRecipients(
         )
         AND (a.skip_if_subscribed = false
              OR (COALESCE(u.subscription_tier, '') = '' AND COALESCE(u.subscription_discount_pct, 0) <= 0))
+        AND lower(u.email) NOT IN (SELECT email FROM email_suppressions)
         AND u.email NOT IN (
           SELECT recipient FROM email_log
           WHERE email_type = ${campaign} AND status = 'sent'
@@ -167,6 +175,7 @@ export async function getCampaignRecipients(
       -- opt-out, but campaigns never consulted it, so anyone who switched
       -- email off still received every announcement. Absent row = opted in.
       AND COALESCE(p.email_enabled, true) = true
+      AND lower(u.email) NOT IN (SELECT email FROM email_suppressions)
       AND u.email NOT IN (
         SELECT recipient FROM email_log
         WHERE email_type = ${campaign} AND status = 'sent'
