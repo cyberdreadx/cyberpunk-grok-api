@@ -95,6 +95,13 @@ try {
   await post(evt("email.bounced", { bounce: { type: "Transient", message: "Mailbox full" } }));
   const [{ n: soft }] = (await sql`SELECT COUNT(*)::int n FROM email_suppressions WHERE email=lower(${EMAIL})`) as any[];
   ok("a transient bounce does NOT suppress", soft === 0);
+  // Two transient bounces to the same address = a dead inbox whose provider keeps
+  // answering "554 service unavailable". Resend calls both transient; we stop anyway.
+  await post(evt("email.bounced", { bounce: { type: "Transient", subType: "General" } }));
+  const [rep] = (await sql`SELECT reason, detail FROM email_suppressions WHERE email=lower(${EMAIL})`) as any[];
+  ok("a SECOND transient bounce suppresses", rep?.reason === "bounced", rep?.detail ?? "not suppressed");
+  await sql`DELETE FROM email_suppressions WHERE email = lower(${EMAIL})`;
+
   await post(evt("email.bounced", { bounce: { type: "Permanent", message: "User unknown" } }));
   const [sup] = (await sql`SELECT reason, detail FROM email_suppressions WHERE email=lower(${EMAIL})`) as any[];
   ok("a hard bounce suppresses the address", sup?.reason === "bounced", sup?.detail ?? "none");

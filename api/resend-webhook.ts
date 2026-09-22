@@ -174,13 +174,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // A transient bounce is a full mailbox or a greylist, not a dead address:
       // suppressing on those would throw away reachable customers.
       const bounceType = String(data.bounce?.type ?? "").toLowerCase();
-      const permanent = name === "complained" || bounceType === "permanent" || bounceType === "undetermined";
+
+      // A single transient bounce is a full mailbox or a greylist — worth another
+      // try. The same address bouncing twice is not: in the first week of real
+      // data every repeat bouncer was an abandoned farm inbox whose provider
+      // answers "554 service unavailable" forever, which Resend still labels
+      // transient. Two strikes and we stop mailing it.
+      const priorBounces = (await sql`
+        SELECT COUNT(*)::int AS n FROM email_events
+        WHERE event = 'bounced' AND lower(recipient) = lower(${recipient}) AND svix_id <> ${svixId}
+      `) as any[];
+      const repeatBouncer = name === "bounced" && Number(priorBounces[0]?.n ?? 0) >= 1;
+
+      const permanent =
+        name === "complained" || bounceType === "permanent" || bounceType === "undetermined" || repeatBouncer;
 
       if (permanent) {
         const detail =
           name === "complained"
             ? "Recipient marked the email as spam"
-            : data.bounce?.message || data.bounce?.subType || "Hard bounce";
+            : repeatBouncer && bounceType !== "permanent"
+              ? `Bounced ${Number(priorBounces[0]?.n ?? 0) + 1} times (${data.bounce?.subType || "transient"})`
+              : data.bounce?.message || data.bounce?.subType || "Hard bounce";
         await sql`
           INSERT INTO email_suppressions (email, reason, detail)
           VALUES (lower(${recipient}), ${name}, ${detail})

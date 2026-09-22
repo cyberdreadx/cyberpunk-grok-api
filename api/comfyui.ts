@@ -374,7 +374,7 @@ function getBackend(): { mode: Backend; runpodEndpoint?: string; runpodKey?: str
  * don't compete with GLTCH edit models on the same worker.
  * Falls back to RUNPOD_QWEN_EDIT_ENDPOINT_ID, then RUNPOD_ENDPOINT_ID.
  */
-function getRunPodEndpointForWorkflow(
+export function getRunPodEndpointForWorkflow(
   workflowType: string,
   _options: { upscale?: boolean; useVidUpscale?: boolean } = {},
 ): string {
@@ -382,7 +382,19 @@ function getRunPodEndpointForWorkflow(
   const wan = process.env.RUNPOD_WAN_ENDPOINT_ID || fallback;
   const longlook = process.env.RUNPOD_LONGLOOK_ENDPOINT_ID || wan;
   const qwen = process.env.RUNPOD_QWEN_EDIT_ENDPOINT_ID || fallback;
-  const zimage = process.env.RUNPOD_ZIMAGE_ENDPOINT_ID || qwen; // dedicated Z-Image worker; falls back to qwen endpoint
+
+  // Z-Image and Krea2 ran on their own endpoint until 2026-09-22. It was built
+  // from the IDENTICAL worker image as the Qwen endpoint (dockerfile-zimage),
+  // on the same network volume in the same datacenter — so it bought nothing
+  // but a second pool of workers to keep warm. At ~1,083 jobs a month it was
+  // billed $142 while executing $19 of work: 87% of that endpoint's cost was
+  // idle time, the worst ratio of any endpoint.
+  //
+  // Merging the traffic onto the Qwen pool removes that idle bill and makes the
+  // shared pool warmer, so both Klein edits and Z-Image see fewer cold starts.
+  // Set RUNPOD_ZIMAGE_DEDICATED=1 to go back to the separate endpoint.
+  const zimageDedicated = process.env.RUNPOD_ZIMAGE_DEDICATED === "1";
+  const zimage = zimageDedicated ? (process.env.RUNPOD_ZIMAGE_ENDPOINT_ID || qwen) : qwen;
   const ltx = process.env.RUNPOD_LTX_ENDPOINT_ID || fallback; // dedicated LTX-2.3 audio/video worker
 
   if (workflowType === "longlook") return longlook;

@@ -5373,6 +5373,25 @@ export const DISPOSABLE_DOMAINS = new Set<string>([
  * privacy alias service).
  */
 const LOCAL_DISPOSABLE_ADDITIONS = new Set<string>([
+  // 2026-09-22: found by the Resend webhook's first week of bounce data. Every
+  // domain here bounced mail from the subscribe campaign, has ZERO paying
+  // customers, and zero generations in 90 days — dead inboxes whose only effect
+  // is to drag down the reputation that also delivers verification codes.
+  // Accounts already registered on them stay; this stops new ones.
+  "dropons.com",        // 107 accounts, 100 bounced
+  "emailax.pro",        //  75 accounts,  59 bounced
+  "denipl.com",         //  57 accounts,  49 bounced
+  "mailbaby.click",     //  18 accounts,  15 bounced
+  "dropcluster.click",  //  13 accounts,  12 bounced
+  "culondir.com",       //  13 accounts,  13 bounced
+  "iptakedownusa.com",
+  "clothance.com",
+  "disefl.com",
+  // These two rotate under 10minutemail's mail servers (MX prd-smtp.10minutemail.com):
+  // 67 accounts between them, 0 payers, 1,583 free credits burned. The MX check in
+  // mx-blocklist.ts catches the next domain the same service spins up.
+  "gonrr.net",
+  "vtmpj.com",
   // 2026-09: throwaway domains that got past the upstream list and each collected
   // starter grants (3-6 accounts apiece) under the domain velocity threshold.
   "airhemp.com",
@@ -5424,6 +5443,14 @@ const LOCAL_DISPOSABLE_ADDITIONS = new Set<string>([
 
 function isBlockedDomain(domain: string): boolean {
   return DISPOSABLE_DOMAINS.has(domain) || LOCAL_DISPOSABLE_ADDITIONS.has(domain);
+}
+
+/**
+ * The domains WE added, as opposed to the upstream list. scripts/check-blocklist-safety.mts
+ * holds these to a stricter rule: not one of them may have a paying customer.
+ */
+export function localDisposableAdditions(): Set<string> {
+  return new Set(LOCAL_DISPOSABLE_ADDITIONS);
 }
 
 export function isDisposableEmail(email: string): boolean {

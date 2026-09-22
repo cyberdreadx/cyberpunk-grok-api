@@ -5,6 +5,7 @@ import { signToken } from "../_lib/auth";
 import { generateVerificationCode, sendVerificationEmail } from "../_lib/email";
 import { checkRateLimit, getClientIp } from "../_lib/ratelimit";
 import { isDisposableEmail } from "../_lib/disposable-domains";
+import { isDisposableByMx } from "../_lib/mx-blocklist";
 import { isDomainVelocityExceeded } from "../_lib/domain-velocity";
 import { verifyCaptcha } from "../_lib/captcha";
 import { sameMailbox } from "../_lib/email-canonical";
@@ -34,6 +35,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: "Invalid email format" });
     }
     if (isDisposableEmail(email)) {
+      return res.status(400).json({ error: "Disposable email addresses are not allowed. Please use a permanent email." });
+    }
+    // Same check, one level deeper: a throwaway service rotates domain names but
+    // keeps its mail servers, so the new domain is caught on its first signup.
+    // Fails open on any DNS trouble — see mx-blocklist.ts.
+    if (await isDisposableByMx(email)) {
       return res.status(400).json({ error: "Disposable email addresses are not allowed. Please use a permanent email." });
     }
     if (password.length < 6) {
