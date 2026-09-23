@@ -31,6 +31,16 @@ import { buildCartRecoveryHtml, buildEmptyTankHtml, buildWinbackHtml } from "./_
 
 const SITE_URL = process.env.APP_URL || "https://grokrunner.gltch.app";
 
+/**
+ * Mirrors checkout.ts. Tax is off site-wide today, but if STRIPE_TAX_ENABLED is
+ * ever flipped, a recovered checkout must collect tax exactly like the original
+ * one did — otherwise this path silently becomes the cheap way to buy.
+ */
+const TAX_ON = process.env.STRIPE_TAX_ENABLED === "true";
+const taxFields = TAX_ON
+  ? { automatic_tax: { enabled: true }, billing_address_collection: "required" as const }
+  : {};
+
 /** An abandoned checkout, with everything needed to rebuild it. */
 interface AbandonedCart extends Candidate {
   sessionId: string;
@@ -98,6 +108,7 @@ async function mintResumeUrl(stripe: Stripe, cart: AbandonedCart): Promise<strin
     const session = await stripe.checkout.sessions.create({
       mode: cart.mode,
       line_items: [{ price: cart.priceId, quantity: 1 }],
+      ...taxFields,
       client_reference_id: cart.id,
       customer_email: cart.email,
       metadata: { ...cart.metadata, user_id: cart.id, recovered_from: cart.sessionId },
