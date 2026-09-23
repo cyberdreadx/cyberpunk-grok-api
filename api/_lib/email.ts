@@ -1558,3 +1558,106 @@ export function buildSubscribePromoHtml(): string {
     </div>
   `;
 }
+
+// ── Lifecycle emails ──────────────────────────────────────────────────────────
+// One person, one thing that just happened to them. These are not campaigns:
+// they are triggered by behaviour (a checkout left unfinished, a balance hitting
+// zero, a customer going quiet) and sent by api/cron-lifecycle.ts, which owns the
+// eligibility rules, frequency cap and kill switch.
+//
+// The shell below matches the v5.6 / subscribe-promo look so a triggered email
+// still reads as the same product. Footers are appended by the sender, which is
+// the only place that knows the recipient's unsubscribe token.
+
+function lifecycleShell(opts: {
+  eyebrow: string;
+  headline: string;
+  body: string;
+  ctaLabel: string;
+  ctaUrl: string;
+  footnote?: string;
+}): string {
+  return `
+<div style="background:#0a0a0f;padding:32px 0;font-family:'Courier New',monospace;">
+  <div style="max-width:540px;margin:0 auto;background:#12131b;border:1px solid rgba(0,240,255,0.18);">
+    <div style="padding:22px 32px 0;">
+      <div style="font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:#00f0ff;">GLTCH//RUNNER</div>
+      <div style="font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#6b7288;margin-top:4px;">${opts.eyebrow}</div>
+    </div>
+    <div style="padding:18px 32px 0;">
+      <h1 style="margin:0;font-size:25px;line-height:1.2;color:#e6e9f2;letter-spacing:0.02em;text-transform:uppercase;">${opts.headline}</h1>
+    </div>
+    <div style="padding:14px 32px 0;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#99a1b8;">
+      ${opts.body}
+    </div>
+    <div style="padding:24px 32px 6px;">
+      <a href="${opts.ctaUrl}" style="display:inline-block;background:#00f0ff;color:#05060a;text-decoration:none;padding:13px 26px;font-size:13px;font-weight:bold;letter-spacing:0.12em;text-transform:uppercase;">${opts.ctaLabel}</a>
+    </div>
+    ${opts.footnote ? `<div style="padding:10px 32px 26px;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.5;color:#6b7288;">${opts.footnote}</div>` : `<div style="padding-bottom:26px;"></div>`}
+  </div>
+</div>`;
+}
+
+const STORE_URL = "https://grokrunner.gltch.app/create?store=1";
+
+/**
+ * Checkout started, never finished. The first one goes out about an hour later,
+ * which catches "my card was in the other room"; the second the next day, which
+ * catches "I'll think about it". `resumeUrl` is a FRESH Stripe session — the
+ * original one is dead by the time anyone reads this.
+ */
+export function buildCartRecoveryHtml(opts: {
+  resumeUrl: string;
+  itemLabel: string;
+  credits: number | null;
+  priceUsd: string;
+  second: boolean;
+}): string {
+  const what = opts.credits
+    ? `<b style="color:#e6e9f2;">${opts.credits.toLocaleString("en-US")} credits</b> for $${opts.priceUsd}`
+    : `<b style="color:#e6e9f2;">${opts.itemLabel}</b> for $${opts.priceUsd}`;
+  return lifecycleShell({
+    eyebrow: opts.second ? "still waiting" : "you were one click away",
+    headline: opts.second ? "Still want these credits?" : "You left this behind",
+    body: opts.second
+      ? `<p style="margin:0 0 12px;">Your ${opts.itemLabel} checkout is still open — ${what}. One click and it's done.</p>
+         <p style="margin:0;">If you changed your mind, no hard feelings. This is the last we'll mention it.</p>`
+      : `<p style="margin:0 0 12px;">You picked ${what} and then something got in the way. It takes one click to finish.</p>
+         <p style="margin:0;">Credits never expire, and they work on every engine — Klein edits, WAN and LTX video, Krea 2.</p>`,
+    ctaLabel: opts.second ? "Finish checkout" : "Complete my purchase",
+    ctaUrl: opts.resumeUrl,
+    footnote: "Didn't try to buy anything? Ignore this — nothing was charged.",
+  });
+}
+
+/** Balance hit zero. Sent the day after, and only to people actually creating. */
+export function buildEmptyTankHtml(opts: { firstName?: string | null; recentJobs: number }): string {
+  return lifecycleShell({
+    eyebrow: "your balance is empty",
+    headline: "You're out of credits",
+    body: `<p style="margin:0 0 12px;">You made <b style="color:#e6e9f2;">${opts.recentJobs}</b> ${opts.recentJobs === 1 ? "creation" : "creations"} recently and your balance has run down to zero.</p>
+       <p style="margin:0 0 12px;">A $9 Basic plan is <b style="color:#e6e9f2;">150 credits a month plus 3 more every day</b>, and works out cheaper per credit than any one-off pack. If you'd rather not commit, packs start at $4.99.</p>
+       <p style="margin:0;">Either way your credits never expire.</p>`,
+    ctaLabel: "Top up",
+    ctaUrl: STORE_URL,
+    footnote: "Free credits still land daily from the spin and daily missions.",
+  });
+}
+
+/** Bought before, gone quiet 30-45 days. The window where win-backs actually work. */
+export function buildWinbackHtml(opts: { creditsLeft: number; wasSubscriber: boolean }): string {
+  const balance = opts.creditsLeft > 0
+    ? `<p style="margin:0 0 12px;">You still have <b style="color:#e6e9f2;">${opts.creditsLeft.toLocaleString("en-US")} credits</b> sitting in your account. They don't expire, and they're yours whenever you come back.</p>`
+    : "";
+  return lifecycleShell({
+    eyebrow: "it's been a while",
+    headline: opts.wasSubscriber ? "Your spot is still here" : "Come see what's new",
+    body: `${balance}
+       <p style="margin:0 0 12px;">Since you were last here: the <b style="color:#e6e9f2;">Krea 2</b> image engine, <b style="color:#e6e9f2;">sharper LTX video up to 15 seconds</b> with sound, and Easy Mode for one-box generating.</p>
+       <p style="margin:0;">${opts.wasSubscriber
+         ? "Plans start at $9 for 150 credits a month plus daily top-ups — and monthly credits never expire."
+         : "Packs start at $4.99, or a $9 plan gives you 150 credits a month plus 3 a day."}</p>`,
+    ctaLabel: opts.creditsLeft > 0 ? "Use my credits" : "See what's new",
+    ctaUrl: opts.creditsLeft > 0 ? "https://grokrunner.gltch.app/create" : STORE_URL,
+  });
+}
