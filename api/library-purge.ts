@@ -12,6 +12,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getUserFromRequest, verifyToken } from "./_lib/auth";
 import { deleteBlobs, isVercelBlobUrl } from "./_lib/blob";
 import { deleteR2Objects, isR2Url, r2KeyFromUrl } from "./_lib/r2";
+import { loadReferencedKeys, blobKeyFromUrl } from "./_lib/media-refs";
 import { previewKeyForKey } from "./_lib/preview-url";
 import { recordPurge } from "./_lib/purgeLog";
 import { getDb } from "./_lib/db";
@@ -47,45 +48,11 @@ function isLegacyTransientBlobKey(key: string): boolean {
 }
 
 /** Every R2 key + Blob pathname referenced by a DB table (mirrors the orphan crons). */
-async function loadReferencedKeys(): Promise<{ r2: Set<string>; blob: Set<string> }> {
-  const sql = getDb();
-  const r2 = new Set<string>();
-  const blob = new Set<string>();
-  const addRef = (url: unknown) => {
-    if (typeof url !== "string" || !url) return;
-    if (isR2Url(url)) {
-      const key = r2KeyFromUrl(url);
-      if (!key) return;
-      r2.add(key);
-      if (!key.endsWith("-preview.webp")) r2.add(previewKeyForKey(key));
-    } else if (isVercelBlobUrl(url)) {
-      const key = blobKeyFromUrl(url);
-      if (key) blob.add(key);
-    }
-  };
-  for (const r of await sql`SELECT image_url, preview_image_url FROM feed_posts`) {
-    addRef(r.image_url);
-    addRef(r.preview_image_url);
-  }
-  for (const r of await sql`SELECT media_url, preview_url FROM stories`) {
-    addRef(r.media_url);
-    addRef(r.preview_url);
-  }
-  for (const r of await sql`SELECT avatar_url FROM profiles WHERE avatar_url IS NOT NULL`) addRef(r.avatar_url);
-  for (const r of await sql`SELECT portrait_url FROM characters WHERE portrait_url IS NOT NULL`) addRef(r.portrait_url);
-  for (const r of await sql`SELECT DISTINCT actor_avatar_url FROM notifications WHERE actor_avatar_url IS NOT NULL`) addRef(r.actor_avatar_url);
-  for (const r of await sql`SELECT DISTINCT media_url FROM chat_messages WHERE media_url IS NOT NULL`.catch(() => [] as any[])) addRef(r.media_url);
-  return { r2, blob };
-}
+// One implementation of "what is still referenced", shared with the guard inside
+// deleteMediaUrls. Two copies of this logic is how a file ends up protected on
+// one deletion path and destroyed on another.
 
-function blobKeyFromUrl(url: string): string | null {
-  try {
-    const u = new URL(url);
-    return u.pathname.replace(/^\/+/, "") || null;
-  } catch {
-    return null;
-  }
-}
+
 
 /**
  * Returns true if the given key is owned by `userId` based on the

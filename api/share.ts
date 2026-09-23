@@ -42,14 +42,21 @@ function getBlobToken(): string {
 async function destroyShare(sql: any, shareId: string): Promise<void> {
   const token = getBlobToken();
   const meta = await fetchShareMetadata(shareId);
+  // Share-owned objects: these exist only for this share, so they always go.
   const keysToDelete: string[] = [`shares/${shareId}.json`];
   if (meta?.ext) keysToDelete.push(`shares/${shareId}.${meta.ext}`);
-  if (meta?.mediaUrl && isR2Url(String(meta.mediaUrl))) {
-    const k = r2KeyFromUrl(String(meta.mediaUrl));
-    if (k) keysToDelete.push(k);
-  }
-
   await deleteR2Objects(keysToDelete).catch(() => {});
+
+  // The shared MEDIA is a different matter. A share of a generation stores the
+  // generation's own URL, so this key is simultaneously the user's library video
+  // and, often, a feed post. Revoking a share used to delete it outright — which
+  // is why 60 of 191 video downloads 404'd on 2026-09-23 and feed posts were left
+  // pointing at nothing. deleteMediaUrls keeps anything still referenced and
+  // never touches library objects, so a revoke now removes the share, not the work.
+  if (meta?.mediaUrl) {
+    const { deleteMediaUrls } = await import("./_lib/media-delete");
+    await deleteMediaUrls([String(meta.mediaUrl)]).catch(() => {});
+  }
 
   if (token) {
     const { list, del } = await import("@vercel/blob");
