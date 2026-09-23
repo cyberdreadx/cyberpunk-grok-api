@@ -123,7 +123,23 @@ export async function filterEligible(
       )
   `) as any[];
   const allowed = new Set(rows.map((r) => String(r.id)));
-  return candidates.filter((c) => allowed.has(c.id));
+
+  // One person, one email per run — whatever the batch contains.
+  //
+  // The weekly cap above is evaluated once for the whole batch, so two
+  // candidates for the same person both pass it before either is written. That
+  // is not theoretical: on the first live run someone who had abandoned two
+  // separate checkouts got two recovery emails 0.6 seconds apart. The unique
+  // index still did its job (one row per cart) — it is the person, not the cart,
+  // that must not be mailed twice.
+  const seen = new Set<string>();
+  const out: Candidate[] = [];
+  for (const c of candidates) {
+    if (!allowed.has(c.id) || seen.has(c.id)) continue;
+    seen.add(c.id);
+    out.push(c);
+  }
+  return out;
 }
 
 /**

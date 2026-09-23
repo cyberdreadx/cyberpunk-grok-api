@@ -51,9 +51,16 @@ async function cleanup() {
 await cleanup();
 try {
   console.log("── the switch ──");
-  const cfg = await readLifecycleConfig(sql);
-  ok("off unless explicitly enabled", cfg.enabled === false, `enabled=${cfg.enabled}`);
-  ok("dry run is the default", cfg.dryRun === true);
+  // Test the DEFAULT, not whatever production happens to be set to today: with no
+  // config row at all the engine must refuse to send. (Asserting the live row is
+  // off would fail the moment the owner legitimately turns it on — which is what
+  // happened on 2026-09-23.)
+  const noRow = (() => Promise.resolve([])) as any;
+  const fallback = await readLifecycleConfig(noRow);
+  ok("with no config at all it is off", fallback.enabled === false);
+  ok("and dry run is the fallback", fallback.dryRun === true);
+  const live = await readLifecycleConfig(sql);
+  console.log(`  note  live config: enabled=${live.enabled} dryRun=${live.dryRun} maxPerRun=${live.maxPerRun}`);
 
   console.log("\n── who may be mailed ──");
   const good = await mk("good");
@@ -89,6 +96,15 @@ try {
   ok("weekly cap would block the second email", blocked.length === 0);
   const allowed = await filterEligible(sql, "cart_recovery_2", [{ ...seq, ref: "cs_test_1" }], { skipGlobalCooldown: true });
   ok("the sequence exemption lets it through", allowed.length === 1);
+
+  console.log("\n── two carts, one person, one email ──");
+  const twoCarts = await mk("twocarts");
+  const batch = [
+    { ...twoCarts, ref: "cs_cart_a" },
+    { ...twoCarts, ref: "cs_cart_b" },
+  ];
+  const deduped = await filterEligible(sql, "cart_recovery_1", batch);
+  ok("a batch with two carts for one person yields one send", deduped.length === 1, `got ${deduped.length}`);
 
   console.log("\n── a send can only happen once ──");
   const c = { ...good, ref: "cs_once" };

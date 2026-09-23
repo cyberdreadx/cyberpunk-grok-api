@@ -161,7 +161,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
       const carts = await findAbandonedCarts(stripe, sql);
 
-      const first = carts.filter((c) => c.ageHours >= 1 && c.ageHours < 20);
+      // If someone abandoned several carts, chase the biggest one — they only
+      // get one email, so make it the one worth the most to both of you.
+      const byValue = [...carts].sort((a, b) => Number(b.amountUsd) - Number(a.amountUsd));
+      const first = byValue.filter((c) => c.ageHours >= 1 && c.ageHours < 20);
       await run("cart_recovery_1", first, async (c) => {
         const cart = c as AbandonedCart;
         const url = cfg.dryRun ? "#" : await mintResumeUrl(stripe, cart);
@@ -176,7 +179,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           SELECT ref FROM lifecycle_sends
           WHERE flow = 'cart_recovery_1' AND sent_at > now() - interval '4 days'`) as any[]).map((r) => String(r.ref)),
       );
-      const second = carts.filter((c) => c.ageHours >= 20 && firstSent.has(c.sessionId));
+      const second = byValue.filter((c) => c.ageHours >= 20 && firstSent.has(c.sessionId));
       await run("cart_recovery_2", second, async (c) => {
         const cart = c as AbandonedCart;
         const url = cfg.dryRun ? "#" : await mintResumeUrl(stripe, cart);
