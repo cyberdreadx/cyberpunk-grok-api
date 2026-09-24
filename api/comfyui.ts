@@ -850,7 +850,7 @@ function buildWanVideoWorkflow(p: {
  *   - FinalFrameSelector for proper last-frame extraction between sequences
  *   - WanContinuationConditioning for seamless clip-to-clip continuation
  */
-function buildLongLookWorkflow(p: {
+export function buildLongLookWorkflow(p: {
   prompts: string[];
   negativePrompt: string;
   imageFilename: string;
@@ -1559,6 +1559,37 @@ function buildFlux2KleinEditWorkflow(p: {
 
 const RUNPOD_API_BASE = "https://api.runpod.ai/v2";
 
+
+/**
+ * RunPod drops a job response larger than 10MB (20MB on /runsync) and hands the
+ * client a COMPLETED job with an empty output object — no error, no warning.
+ * The worker did its job; the gateway threw the result away.
+ *
+ * That is what "Job completed but output could not be delivered" always was.
+ * LongLook is the only engine that reaches the cap, because it renders up to 4
+ * clips into one file: WAN returns a single clip and lands well under it.
+ *
+ * Measured on the live endpoint 2026-09-24 (480x480, base64 as returned):
+ *    68 frames →  0.58 MB      324 frames → 3.87 MB
+ * which is ~0.052 bytes per frame-pixel (3.87MB / (324 frames x 230,400 px)).
+ * The constant is deliberately taken
+ * from the larger sample, so the estimate errs high and we refuse slightly
+ * early rather than charge for a job that vanishes.
+ */
+const RUNPOD_OUTPUT_LIMIT_BYTES = 10 * 1024 * 1024;
+/** Headroom for the JSON envelope around the base64 payload. */
+const RUNPOD_OUTPUT_SAFE_BYTES = 8 * 1024 * 1024;
+const BYTES_PER_FRAME_PIXEL = 5.2e-2;
+
+export function estimateRunpodOutputBytes(totalFrames: number, width: number, height: number): number {
+  return Math.round(totalFrames * width * height * BYTES_PER_FRAME_PIXEL);
+}
+
+/** Largest total frame count whose response still fits inside the cap. */
+export function maxFramesForPayload(width: number, height: number): number {
+  return Math.max(17, Math.floor(RUNPOD_OUTPUT_SAFE_BYTES / (width * height * BYTES_PER_FRAME_PIXEL)));
+}
+
 async function runpodRequest(
   endpoint: string,
   apiKey: string,
@@ -2058,6 +2089,33 @@ Rules:
       if (!isLtxWorkflow && COMFY_COSTS[costKey] === undefined) {
         return res.status(400).json({ error: `Unknown workflow type: ${String(workflowType)}` });
       }
+      // Refuse a LongLook job whose result RunPod would silently discard — BEFORE
+      // charging for it. Users were paying 20 credits for a render that completed
+      // and then evaporated in the gateway; the credits were auto-refunded, but
+      // only after a 6-minute wait and an error that blamed the GPU host.
+      if (workflowType === "longlook") {
+        const seqN = Math.min(4, Math.max(1, Number(sequenceCount) || 1));
+        const framesPerClip = Math.min(241, Math.max(17, Number(frameCount) || 81));
+        const w = Math.min(2048, Math.max(256, Number(width)));
+        const h = Math.min(2048, Math.max(256, Number(height)));
+        const estimate = estimateRunpodOutputBytes(seqN * framesPerClip, w, h);
+        if (estimate > RUNPOD_OUTPUT_SAFE_BYTES) {
+          const budget = maxFramesForPayload(w, h);
+          const perClip = Math.max(17, Math.floor(budget / seqN));
+          console.warn(`[comfyui] longlook refused: ${seqN}x${framesPerClip} frames at ${w}x${h} ≈ ${(estimate / 1048576).toFixed(1)}MB > cap`);
+          return res.status(400).json({
+            error:
+              `That's too much video to return in one piece: ${seqN} clips of ${framesPerClip} frames at ${w}x${h} ` +
+              `would come back as about ${(estimate / 1048576).toFixed(1)}MB, and the GPU host discards anything over ` +
+              `${Math.round(RUNPOD_OUTPUT_LIMIT_BYTES / 1048576)}MB. Try ${perClip} frames per clip at this size, ` +
+              `fewer clips, or a smaller resolution.`,
+            code: "output_too_large",
+            maxFramesPerClip: perClip,
+            maxTotalFrames: budget,
+          });
+        }
+      }
+
       const baseCost = isLtxWorkflow ? ltxCostForFrames(frameCount) : COMFY_COSTS[costKey];
       // LTX bundles native audio into its per-second price; the +1 ambient surcharge is WAN-only.
       const audioCost = !isLtxWorkflow && audioMode === "ambient" ? 1 : 0;
@@ -3020,7 +3078,12 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
            * Blob is ever reached, so the token was never involved in any
            * recorded case. Say what is actually known instead.
            */
-          const hint = " The render finished but came back empty from the GPU host.";
+          // Name the real cause. The GPU host is not at fault: RunPod caps a job
+          // response at 10MB and drops the payload without an error, so a render
+          // that is simply too big arrives as a COMPLETED job with no output.
+          const hint = workflowType === "longlook"
+            ? " The video rendered, but it was too large to send back in one piece (the GPU host caps a result at 10MB). Fewer frames, fewer clips, or a smaller size will come through."
+            : " The render finished but came back empty from the GPU host.";
 
           // Auto-refund: user paid but received nothing because delivery failed.
           // Bound to THIS job via job_id, and claimed with a single atomic UPDATE
