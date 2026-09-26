@@ -60,7 +60,7 @@ export async function comfySubmitAndPollStandalone(
   }>("/comfyui", { method: "POST", body: { action: "generate", ...body } });
 
   const { promptId, outputType, runpodEndpointId } = submitData;
-  const outType = outputType || (body.workflow === "wan-video" || body.workflow === "longlook" ? "video" : "image");
+  const outType = outputType || (body.workflow === "wan-video" ? "video" : "image");
 
   // NOTE: Do NOT call saveActiveJob here — standalone polls are used by
   // character chat which has its own separate job queue (char-media-jobs).
@@ -1201,7 +1201,7 @@ export function useGrokApi() {
 
     const { promptId, outputType, runpodEndpointId } = submitData;
     onPromptId?.(promptId);
-    const VIDEO_WORKFLOWS = new Set(["wan-video", "longlook", "gltch-wan", "ltx-video", "ltx-animate"]);
+    const VIDEO_WORKFLOWS = new Set(["wan-video", "gltch-wan", "ltx-video", "ltx-animate"]);
     const outType = outputType || (VIDEO_WORKFLOWS.has(body.workflow as string) ? "video" : "image");
 
     saveActiveJob({ promptId, outputType: outType, submittedAt: Date.now(), ...(runpodEndpointId && { runpodEndpointId }), prompt: body.prompt as string || "" });
@@ -1752,100 +1752,6 @@ export function useGrokApi() {
     return jobId;
   }, [comfySubmitAndPoll, persistNewResults, prependResults]);
 
-  // ComfyUI LongLook Multi-Clip Video — fire-and-forget
-  const comfyLongLook = useCallback((params: {
-    prompt: string;
-    negativePrompt?: string;
-    imageBase64: string;
-    width?: number;
-    height?: number;
-    sequenceCount?: number;
-    frameCount?: number;
-    steps?: number;
-    cfg?: number;
-    seed?: number;
-    motionScale?: number;
-    useRife?: boolean;
-    useUpscale?: boolean;
-    videoLora?: string;
-    videoLoraStrength?: number;
-    videoLoraPass?: "high" | "low" | "both";
-    testCredits?: boolean;
-    audioMode?: "none" | "ambient";
-    audioPrompt?: string;
-  }) => {
-    const seqCount = Math.min(4, Math.max(1, params.sequenceCount ?? 2));
-    const jobId = `cj-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    const label = params.prompt.length > 80 ? params.prompt.slice(0, 80) + "…" : params.prompt;
-
-    const newJob: ComfyJob = {
-      id: jobId, status: "submitting", workflowType: "longlook",
-      prompt: label, phase: `Rendering ${seqCount} sequences...`, elapsed: 0, seed: null, error: null,
-    };
-    setComfyJobs(prev => [newJob, ...prev]);
-
-    const startTime = Date.now();
-    comfyJobStarts.current.set(jobId, startTime);
-
-    (async () => {
-      try {
-        setComfyJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "generating" } : j));
-        const result = await comfySubmitAndPoll({
-          workflow: "longlook",
-          prompt: params.prompt,
-          negativePrompt: params.negativePrompt,
-          imageBase64: params.imageBase64,
-          imageFilename: "input_longlook.jpg",
-          width: params.width || 832,
-          height: params.height || 480,
-          sequenceCount: seqCount,
-          frameCount: params.frameCount || 81,
-          steps: params.steps || 8,
-          cfg: params.cfg || 1,
-          seed: params.seed,
-          motionScale: params.motionScale ?? 1.5,
-          useRife: params.useRife ?? true,
-          useUpscale: params.useUpscale ?? false,
-          videoLora: params.videoLora,
-          videoLoraStrength: params.videoLoraStrength,
-          videoLoraPass: params.videoLoraPass,
-          audioMode: params.audioMode || "none",
-          audioPrompt: params.audioPrompt,
-          ...(params.testCredits ? { testCredits: true } : {}),
-        }, { pollInterval: 5000, maxAttempts: 240, onPromptId: (pid) => comfyPromptIds.current.set(jobId, pid) });
-
-        comfyJobStarts.current.delete(jobId);
-        comfyJobStarts.current.delete(jobId);
-
-        const videoSrc = result.video || result.image;
-        if (!videoSrc) throw new Error("No video returned from ComfyUI");
-
-        const rid = `comfy-ll-${Date.now()}`;
-        if (videoSrc.startsWith("blob:")) videoBlobUrls.current.set(rid, videoSrc);
-        const newResults: GrokResult[] = [{
-          id: rid,
-          jobId,
-          url: videoSrc,
-          previewUrl: result.previewUrl,
-          revised_prompt: params.prompt,
-          type: "video" as const,
-          timestamp: Date.now(),
-        }];
-        prependResults(newResults);
-        persistNewResults(newResults);
-        setComfyJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "done", phase: null } : j));
-      } catch (err: any) {
-        comfyJobStarts.current.delete(jobId);
-        comfyJobStarts.current.delete(jobId);
-        setComfyJobs(prev => prev.map(j => j.id === jobId
-          ? { ...j, status: "error", error: err.message || "LongLook render failed", phase: null }
-          : j
-        ));
-      }
-    })();
-    return jobId;
-  }, [comfySubmitAndPoll, persistNewResults, prependResults]);
-
   const clearError = useCallback(() => {
     setError(null);
   }, []);
@@ -1872,7 +1778,6 @@ export function useGrokApi() {
     comfyVideo,
     comfyTextToVideo,
     ltxVideo,
-    comfyLongLook,
     comfyPhase,
     comfyJobs,
     dismissComfyJob,

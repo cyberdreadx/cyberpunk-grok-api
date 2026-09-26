@@ -195,7 +195,6 @@ const Index = () => {
     comfyVideo,
     comfyTextToVideo,
     ltxVideo,
-    comfyLongLook,
     comfyPhase,
     comfyJobs,
     dismissComfyJob,
@@ -365,7 +364,11 @@ const Index = () => {
 
   const [animateEngine, setAnimateEngineRaw] = useState<ComfyEngine>(() => {
     const v = localStorage.getItem("engine-image-to-video");
-    return (v === "comfy" || v === "gltch" || v === "ltx") ? v as ComfyEngine : "gltch";
+    // "comfy" was GLTCH PRO / LongLook, retired 2026-09-26. Anyone still carrying
+    // it in localStorage falls back to GLTCH WAN instead of selecting an engine
+    // with no button — the same stale-preference trap that once left users
+    // running a plain animate while the UI showed something else.
+    return (v === "gltch" || v === "ltx") ? v as ComfyEngine : "gltch";
   });
   const setAnimateEngine = useCallback((v: ComfyEngine) => {
     localStorage.setItem("engine-image-to-video", v);
@@ -421,20 +424,6 @@ const Index = () => {
 
   // Shared negative prompt (all comfy workflows)
   const [negPrompt, setNegPrompt] = useState("");
-
-  // LongLook settings
-  /* GLTCH PRO *is* LongLook: its button sets both, and every setter that turns
-     this off also switches the engine away, so this flag and
-     animateEngine === "comfy" always agree — except across a reload, because
-     the engine is persisted and this was not. A returning user got GLTCH PRO
-     still selected, its LongLook panel gone, and their job quietly running as
-     a plain animate. Seeded from the same stored value the engine reads. */
-  const [longLookEnabled, setLongLookEnabled] = useState<boolean>(() => {
-    try { return localStorage.getItem("engine-image-to-video") === "comfy"; } catch { return false; }
-  });
-  const [longLookSeqCount, setLongLookSeqCount] = useState(2);
-  const [longLookFrameCount, setLongLookFrameCount] = useState(81);
-  const [longLookMotionScale, setLongLookMotionScale] = useState(1.5);
 
   // Fetch ComfyUI models on mount
   React.useEffect(() => {
@@ -685,8 +674,7 @@ const Index = () => {
     const isComfyRender = mode === "text-to-video" && renderEngine === "comfy";
     const isGltchWan = mode === "image-to-video" && animateEngine === "gltch";
     const isGrokAnimate = mode === "image-to-video" && animateEngine === "grok";
-    const isComfyAnimate = mode === "image-to-video" && animateEngine === "comfy" && !longLookEnabled;
-    const isComfyLongLook = mode === "image-to-video" && animateEngine === "comfy" && longLookEnabled;
+    const isComfyAnimate = mode === "image-to-video" && animateEngine === "comfy";
 
     // No 2K tier: grokEditQueued never sends `resolution`, so xAI renders at 1K
     // and the server prices it at 1K. Quoting the 2K rate here only ever
@@ -704,12 +692,11 @@ const Index = () => {
     if (seedTier === "ltx") return calculateCreditCost("comfy-ltx", 1, Math.max(1, Math.round(comfyFrameCount / 24))); // LTX-2.3 — 7 cr/s of output (24fps)
     if (isComfyRender || isComfyAnimate || isGltchWan) return calculateCreditCost("comfy-video");
     if (isGrokRender || isGrokAnimate) return calculateCreditCost("text-to-video", 1, videoSettings.duration);
-    if (isComfyLongLook) return calculateCreditCost("comfy-longlook", longLookSeqCount);
     // Grok generate (text-to-image)
     const is2k = (settings.resolution || "1k") === "2k";
     const cm: CreditMode = grokPro && is2k ? "text-to-image-pro-2k" : grokPro ? "text-to-image-pro" : is2k ? "text-to-image-2k" : "text-to-image";
     return calculateCreditCost(cm, settings.count);
-  }, [mode, editEngine, genEngine, renderEngine, animateEngine, longLookEnabled, settings, grokPro, longLookSeqCount, comfyFrameCount, videoSettings.duration, effectiveApiMode]);
+  }, [mode, editEngine, genEngine, renderEngine, animateEngine, settings, grokPro, comfyFrameCount, videoSettings.duration, effectiveApiMode]);
   const previewCreditCost = React.useMemo(
     () => rawPreviewCreditCost == null ? undefined : applyCreditDiscount(rawPreviewCreditCost),
     [rawPreviewCreditCost, applyCreditDiscount],
@@ -726,9 +713,8 @@ const Index = () => {
     const isLtxRender = mode === "text-to-video" && renderEngine === "ltx";
     const isLtxAnimate = mode === "image-to-video" && animateEngine === "ltx";
     const isGltchWan = mode === "image-to-video" && animateEngine === "gltch";
-    const isComfyAnimate = mode === "image-to-video" && animateEngine === "comfy" && !longLookEnabled;
-    const isComfyLongLook = mode === "image-to-video" && animateEngine === "comfy" && longLookEnabled;
-    const isComfy = isZimage || isKrea2 || isComfyGen || isGltchEdit || isGltchWan || isComfyRender || isComfyAnimate || isComfyLongLook || isLtxRender || isLtxAnimate;
+    const isComfyAnimate = mode === "image-to-video" && animateEngine === "comfy";
+    const isComfy = isZimage || isKrea2 || isComfyGen || isGltchEdit || isGltchWan || isComfyRender || isComfyAnimate || isLtxRender || isLtxAnimate;
     // Grok edit in BYOK mode uses the user's own API key directly — no credits needed
     const isGrokEditByok = isGrokEdit && effectiveApiMode === "byok" && apiKeySet;
     const isQueued = isGrokEdit || isGltchEdit || isComfy;
@@ -791,8 +777,6 @@ const Index = () => {
         cost = calculateCreditCost("comfy-image");
       } else if (isZimage || isKrea2 || isComfyGen) {
         cost = calculateCreditCost("comfy-image");
-      } else if (isComfyLongLook) {
-        cost = calculateCreditCost("comfy-longlook", longLookSeqCount);
       } else if (isGltchWan) {
         cost = calculateCreditCost("comfy-video");
       } else if (isComfyRender || isComfyAnimate || isLtxRender || isLtxAnimate) {
@@ -836,7 +820,6 @@ const Index = () => {
         else if (isGltchEdit) cost = calculateCreditCost("comfy-image");
         else if (isGltchWan) cost = calculateCreditCost("comfy-video");
         else if (isZimage || isKrea2 || isComfyGen) cost = calculateCreditCost("comfy-image");
-        else if (isComfyLongLook) cost = calculateCreditCost("comfy-longlook", longLookSeqCount);
         else cost = calculateCreditCost("comfy-video");
         creditsHook.deductCreditsLocally(applyCreditDiscount(cost));
         setTimeout(() => creditsHook.refreshCredits(), 5000);
@@ -978,36 +961,6 @@ const Index = () => {
             frameRate: 24,
             seed: globalSeed ? Number(globalSeed) : undefined,
             audio: true,
-            ...(adminTestCredits ? { testCredits: true } : {}),
-          });
-        } else if (isComfyLongLook) {
-          const imageBase64 = data.imageUrl?.startsWith("data:")
-            ? data.imageUrl
-            : data.imageUrl ? await urlToBase64(data.imageUrl) : "";
-          if (!imageBase64) throw new Error("Image is required for LongLook");
-          const dim = await getImageDimensions(imageBase64);
-          const round8 = (v: number) => Math.round(v / 8) * 8;
-          const maxDim = 1024;
-          let w = dim.width, h = dim.height;
-          if (w > maxDim || h > maxDim) { const s = maxDim / Math.max(w, h); w = Math.round(w * s); h = Math.round(h * s); }
-          const parsedSeedLL = globalSeed ? Number(globalSeed) : undefined;
-          comfyLongLook({
-            prompt: data.prompt,
-            negativePrompt: negPrompt || undefined,
-            imageBase64,
-            width: round8(Math.max(256, w)),
-            height: round8(Math.max(256, h)),
-            sequenceCount: longLookSeqCount,
-            frameCount: longLookFrameCount,
-            steps: 4, cfg: 1,
-            seed: parsedSeedLL,
-            motionScale: longLookMotionScale,
-            useRife: true, useUpscale: true,
-            videoLora: comfyVideoLora !== "none" ? comfyVideoLora : undefined,
-            videoLoraStrength: comfyVideoLoraStrength,
-            videoLoraPass: comfyVideoLoraPass,
-            audioMode: comfyAudioMode,
-            audioPrompt: comfyAudioPrompt || undefined,
             ...(adminTestCredits ? { testCredits: true } : {}),
           });
         } else if (isGltchWan) {
@@ -2110,15 +2063,7 @@ const Index = () => {
                   ENGINE
                 </label>
                 <div className="grid grid-cols-2 gap-2">
-                  <button type="button" onClick={() => { setAnimateEngine("comfy"); setLongLookEnabled(true); }}
-                    className={`p-2.5 border rounded text-left transition-all duration-200 ${animateEngine === "comfy" ? "border-purple-500 bg-purple-500/5 shadow-glow-focus" : "border-border bg-card/30 hover:border-purple-500/40"}`}>
-                    <div className={`font-orbitron text-[11px] ${animateEngine === "comfy" ? "text-purple-400" : "text-foreground"}`}>GLTCH PRO</div>
-                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
-                      <span>MultiClip</span>
-                      <span className={animateEngine === "comfy" ? "text-purple-400/70" : "text-muted-foreground/50"}>15 cr</span>
-                    </div>
-                  </button>
-                  <button type="button" onClick={() => { setAnimateEngine("gltch"); setLongLookEnabled(false); }}
+                  <button type="button" onClick={() => { setAnimateEngine("gltch"); }}
                     className={`p-2.5 border rounded text-left transition-all duration-200 ${animateEngine === "gltch" ? "border-secondary neon-border bg-secondary/5" : "border-border bg-card/30 hover:border-secondary/40"}`}>
                     <div className={`font-orbitron text-[11px] ${animateEngine === "gltch" ? "text-secondary" : "text-foreground"}`}>GLTCH</div>
                     <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
@@ -2126,7 +2071,7 @@ const Index = () => {
                       <span className={animateEngine === "gltch" ? "text-secondary/70" : "text-muted-foreground/50"}>15 cr</span>
                     </div>
                   </button>
-                  <button type="button" onClick={() => { setAnimateEngine("grok"); setLongLookEnabled(false); setApiMode("byok"); }}
+                  <button type="button" onClick={() => { setAnimateEngine("grok"); setApiMode("byok"); }}
                     className={`p-2.5 border rounded text-left transition-all duration-200 ${animateEngine === "grok" ? "border-primary neon-border bg-primary/5" : "border-border bg-card/30 hover:border-primary/40"}`}>
                     <div className={`font-orbitron text-[11px] flex items-center gap-1.5 ${animateEngine === "grok" ? "text-primary" : "text-foreground"}`}>
                       GROK
@@ -2137,7 +2082,7 @@ const Index = () => {
                       <span className={animateEngine === "grok" ? "text-primary/70" : "text-muted-foreground/50"}>free</span>
                     </div>
                   </button>
-                  <button type="button" onClick={() => { setAnimateEngine("ltx"); setLongLookEnabled(false); }}
+                  <button type="button" onClick={() => { setAnimateEngine("ltx"); }}
                     className={`p-2.5 border rounded text-left transition-all duration-200 ${animateEngine === "ltx" ? "border-amber-400 bg-amber-400/5 shadow-glow-focus" : "border-border bg-card/30 hover:border-amber-400/40"}`}>
                     <div className={`font-orbitron text-[11px] flex items-center gap-1.5 ${animateEngine === "ltx" ? "text-amber-300" : "text-foreground"}`}>
                       LTX
@@ -2260,73 +2205,6 @@ const Index = () => {
               </div>
             )}
 
-            {/* LongLook settings (when COMFY engine selected for I2V) */}
-            {mode === "image-to-video" && animateEngine === "comfy" && longLookEnabled && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-500/5 border border-purple-500/20 rounded">
-                  <div className="w-1.5 h-1.5 rounded-full bg-purple-400" />
-                  <span className="font-mono-share text-[9px] text-purple-400/70">
-                    LongLook MultiClip — generates {longLookSeqCount} chained sequences with FreeLong spectral blending
-                  </span>
-                </div>
-                <div>
-                  <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Sequences ({longLookSeqCount})</label>
-                  <div className="flex gap-1.5">
-                    {[1, 2, 3, 4].map((n) => (
-                      <button key={n} type="button" onClick={() => setLongLookSeqCount(n)}
-                        className={`px-3 py-1 rounded text-[9px] font-mono-share transition-all ${longLookSeqCount === n ? "bg-purple-500/20 border-purple-500/50 text-purple-300 border" : "bg-card/30 border border-border text-muted-foreground hover:border-purple-500/30"}`}>
-                        {n}x
-                      </button>
-                    ))}
-                  </div>
-                  <p className="mt-0.5 font-mono-share text-[8px] text-muted-foreground/50">
-                    Each sequence ≈ {Math.round(longLookFrameCount / 16)}s — total ≈ {Math.round((longLookFrameCount / 16) * longLookSeqCount)}s
-                  </p>
-                </div>
-                <div>
-                  <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Frames per sequence</label>
-                  <div className="flex flex-wrap gap-1.5">
-                    {[{ label: "~3s", value: 49 }, { label: "~5s", value: 81 }, { label: "~7s", value: 113 }].map((p) => (
-                      <button key={p.value} type="button" onClick={() => setLongLookFrameCount(p.value)}
-                        className={`px-2 py-1 rounded text-[9px] font-mono-share transition-all ${longLookFrameCount === p.value ? "bg-purple-500/20 border-purple-500/50 text-purple-300 border" : "bg-card/30 border border-border text-muted-foreground hover:border-purple-500/30"}`}>
-                        {p.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Motion Scale: {longLookMotionScale.toFixed(1)}</label>
-                  <input type="range" min={0.5} max={2.5} step={0.1} value={longLookMotionScale}
-                    onChange={(e) => setLongLookMotionScale(Number(e.target.value))}
-                    className="w-full accent-purple-400 mt-0.5" />
-                  <p className="font-mono-share text-[8px] text-muted-foreground/50">
-                    {"< 1.0 = slow motion | 1.0 = normal | > 1.0 = faster, more dynamic"}
-                  </p>
-                </div>
-                {comfyModels.videoLoras.length > 0 && (
-                  <div>
-                    <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Video LoRA (optional)</label>
-                    <select value={comfyVideoLora} onChange={(e) => setComfyVideoLora(e.target.value)}
-                      className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-[10px] font-mono-share text-foreground">
-                      <option value="none">None</option>
-                      {comfyModels.videoLoras.map((entry) => (
-                        <option key={entry.name} value={entry.name}>
-                          {entry.displayName || entry.name.replace(/_/g, " ")}
-                        </option>
-                      ))}
-                    </select>
-                    {comfyVideoLora !== "none" && (
-                      <div className="mt-1.5">
-                        <label className="font-mono-share text-[9px] text-muted-foreground/70">Strength: {comfyVideoLoraStrength.toFixed(2)}</label>
-                        <input type="range" min={0} max={2} step={0.05} value={comfyVideoLoraStrength}
-                          onChange={(e) => setComfyVideoLoraStrength(Number(e.target.value))}
-                          className="w-full accent-purple-400 mt-0.5" />
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
 
             {/* Seed control — shared across all GLTCH/Comfy engine modes */}
             {auth.isAuthenticated && (

@@ -38,7 +38,7 @@ export async function comfySubmitAndPoll(
     if (direct) return submit.video ? { video: direct } : { image: direct };
     throw new Error("No promptId returned from generate");
   }
-  const videoWorkflows = new Set(["wan-video", "longlook", "ltx-video", "ltx-animate"]);
+  const videoWorkflows = new Set(["wan-video", "ltx-video", "ltx-animate"]);
   const outputType: string =
     submit.outputType || (videoWorkflows.has(body.workflow as string) ? "video" : "image");
   const runpodEndpointId: string | undefined = submit.runpodEndpointId;
