@@ -1,0 +1,11 @@
+# gltchrunner.com — the public front door. The app itself lives on
+# grokrunner.gltch.app and has its own robots.txt served by Netlify.
+#
+# Share pages (/s/<id>) are the reason this file matters: ~18,000 of them are
+# server-rendered with real titles and OG tags, and nothing on the site links to
+# them, so the sitemap is their only route in.
+User-agent: *
+Allow: /
+Disallow: /api/
+
+Sitemap: https://gltchrunner.com/sitemap.xml
