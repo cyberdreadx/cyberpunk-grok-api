@@ -1637,10 +1637,11 @@ export function buildEmptyTankHtml(opts: { firstName?: string | null; recentJobs
     headline: "You're out of credits",
     body: `<p style="margin:0 0 12px;">You made <b style="color:#e6e9f2;">${opts.recentJobs}</b> ${opts.recentJobs === 1 ? "creation" : "creations"} recently and your balance has run down to zero.</p>
        <p style="margin:0 0 12px;">A $9 Basic plan is <b style="color:#e6e9f2;">150 credits a month plus 3 more every day</b>, and works out cheaper per credit than any one-off pack. If you'd rather not commit, packs start at $4.99.</p>
-       <p style="margin:0;">Either way your credits never expire.</p>`,
+       <p style="margin:0 0 12px;">Either way your credits never expire.</p>
+       <p style="margin:0;">Or bring someone with you: <b style="color:#e6e9f2;">you both get 15 credits</b> when a friend signs up with your link and makes something. Your link is on the Referrals page.</p>`,
     ctaLabel: "Top up",
     ctaUrl: STORE_URL,
-    footnote: "Free credits still land daily from the spin and daily missions.",
+    footnote: "The referral reward lands once your friend has verified their email and made a few creations.",
   });
 }
 

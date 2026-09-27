@@ -218,6 +218,7 @@ function registerCron(_app: express.Express) {
     ["*/2 * * * *", "/api/cron-email-campaign"],
     ["*/15 * * * *", "/api/cron-lifecycle"],
     ["20 5 * * *", "/api/cron-media-integrity"],
+    ["10 * * * *", "/api/cron-referral-rewards"],
     ["10 3 * * *", "/api/cron-xrge-snapshot"],
     // Hourly so a day's GPU drawdown stays separable from a mid-day top-up.
     ["5 * * * *", "/api/cron-runpod-snapshot"],

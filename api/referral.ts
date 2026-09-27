@@ -66,8 +66,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           WHERE referrer_id = ${auth.userId}::uuid
         `;
 
-        // Calculate total credits earned from referrals
-        const creditsEarned = (stats?.total_rewarded || 0) * 10;
+        // Credits earned, read from the ledger rather than assumed. Rewards are
+        // no longer a single flat +10 on purchase: activation rewards pay when
+        // an invited user becomes real, and the amounts are configurable.
+        const [earned] = await sql`
+          SELECT COALESCE(SUM(amount), 0)::int AS credits
+          FROM credit_ledger
+          WHERE user_id = ${auth.userId}::uuid
+            AND source = 'referral_activation'
+        `;
+        // Purchase rewards are still counted from the flag, not the ledger: the
+        // webhook grants them and has deliberately not been wired to the ledger
+        // yet (money-critical path, touched last). Counting both sources here
+        // would double every purchase reward the day that changes.
+        const creditsEarned = (earned?.credits || 0) + (stats?.total_rewarded || 0) * 10;
 
         // Get user's referral code + lifetime free months earned
         const [user] = await sql`
