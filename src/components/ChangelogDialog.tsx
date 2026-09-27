@@ -24,6 +24,16 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
     {
+        version: "2026.09.27",
+        date: "September 27, 2026",
+        title: "v5.7 — Your Library Stays Put",
+        items: [
+            { icon: <Shield className="w-3.5 h-3.5" />, text: "Revoking a share link no longer deletes the video itself. Sharing a generation never made a copy, so tearing a share down was quietly removing the file from your library and from any post using it. Deleting a post or letting a story expire could do the same. Fixed — your work now only disappears when you delete the work", tag: "fix" },
+            { icon: <Film className="w-3.5 h-3.5" />, text: "LongLook has been retired. Multi-clip renders were the one engine whose finished video was routinely too large for the GPU host to return, so the job completed and came back empty. Use GLTCH for image-to-video, or LTX when you want sound", tag: "improve" },
+            { icon: <Wrench className="w-3.5 h-3.5" />, text: "When a render does finish but arrives empty, the credits come straight back and the message says what actually happened instead of blaming your settings", tag: "fix" },
+        ],
+    },
+    {
         version: "2026.09.04",
         date: "September 4, 2026",
         title: "v5.6 — Sharper Video, Easy Mode & Size Controls That Work",
