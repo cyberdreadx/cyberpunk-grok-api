@@ -50,6 +50,9 @@ export interface StoredResult {
   timestamp: number;
   blob: Blob | null; // null for video (external URL kept as-is)
   url: string; // original URL for videos, empty string for images (rebuilt via objectURL)
+  /** Companion thumbnail for videos — the server makes one for every upload and
+   *  the library was throwing it away, leaving tiles to stream video headers. */
+  previewUrl?: string;
   folderId?: string | null;
 }
 
@@ -136,6 +139,7 @@ export async function saveResult(result: GrokResult): Promise<void> {
     timestamp: result.timestamp,
     blob: null,
     url: "",
+    previewUrl: result.previewUrl,
     folderId: result.folderId || null,
   };
 
@@ -209,6 +213,7 @@ export async function saveResults(results: GrokResult[]): Promise<void> {
       timestamp: result.timestamp,
       blob: null,
       url: "",
+      previewUrl: result.previewUrl,
       folderId: result.folderId || null,
     };
 
@@ -292,6 +297,9 @@ export async function loadResults(): Promise<{
           revised_prompt: rec.revised_prompt,
           timestamp: rec.timestamp,
           url,
+          // Older records predate this field; the grid derives one from the
+          // video URL when it is missing, so nothing needs migrating.
+          previewUrl: rec.previewUrl,
           folderId: rec.folderId || null,
         };
       });

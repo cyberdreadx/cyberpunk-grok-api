@@ -101,3 +101,40 @@ export function extractPoster(url: string): Promise<string | null> {
     setTimeout(() => finish(null), 8000);
   });
 }
+
+
+/**
+ * The still frame the SERVER already made for a video we host.
+ *
+ * Every upload gets a companion thumbnail beside it (`<name>-preview.webp`,
+ * ffmpeg in api/_lib/image-preview.ts). The library never used them: each tile
+ * mounted a <video preload="metadata"> and hoped the browser painted frame 0.1,
+ * which streams video headers for every tile on the page and still leaves a
+ * black rectangle on iOS Safari.
+ *
+ * Prefer this over extractPoster() where the media is ours — it is one ~20KB
+ * fetch instead of decoding a video frame in a canvas, and it cannot be tainted
+ * by CORS. extractPoster stays for anything hosted elsewhere.
+ *
+ * Returns undefined for blob:/data: URLs, which are local and decode instantly,
+ * and for hosts that are not ours, where the convention does not apply.
+ */
+const BLOB_HOST_SUFFIX = ".public.blob.vercel-storage.com";
+
+export function videoPosterUrl(url: string | null | undefined): string | undefined {
+  if (!url || typeof url !== "string") return undefined;
+  if (url.startsWith("blob:") || url.startsWith("data:")) return undefined;
+  let u: URL;
+  try { u = new URL(url); } catch { return undefined; }
+  const ours =
+    u.hostname.endsWith(BLOB_HOST_SUFFIX) ||
+    /\.r2\.dev$/.test(u.hostname) ||
+    /(^|\.)gltch\.app$/.test(u.hostname);
+  if (!ours) return undefined;
+  u.search = "";
+  if (u.pathname.endsWith("-preview.webp")) return u.toString();
+  const dot = u.pathname.lastIndexOf(".");
+  if (dot <= 0) return undefined;
+  u.pathname = `${u.pathname.slice(0, dot)}-preview.webp`;
+  return u.toString();
+}

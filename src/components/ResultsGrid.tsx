@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
+import { videoPosterUrl } from "@/lib/videoPoster";
 import { createPortal } from "react-dom";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Download, Maximize2, X, Trash2, ExternalLink, ChevronLeft, ChevronRight, Pencil, Film, Copy, Check, FolderPlus, FolderOpen, MoreVertical, FolderInput, Lock, LockOpen, ShieldCheck, Eye, EyeOff, ChevronDown, Send, Archive, Loader2, Link2, CheckSquare, Square, ListChecks, RotateCcw, XCircle, Search, CirclePlus, Lightbulb, Volume2, VolumeX, LayoutGrid } from "lucide-react";
@@ -2114,15 +2115,45 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
                       black rectangle until playback starts. Local blob: URLs
                       decode instantly; this is for the URL-only entries that
                       still stream from R2. */}
-                  <video
-                    src={`${result.url}${result.url.includes("#") ? "" : "#t=0.1"}`}
-                    className="w-full h-full object-cover"
-                    muted
-                    playsInline
-                    // @ts-ignore - iOS Safari attribute
-                    webkit-playsinline="true"
-                    preload="metadata"
-                  />
+                  {(() => {
+                    /* The server already made a thumbnail for this clip; use it.
+                       One ~20KB webp beats streaming video headers for every
+                       tile on the page, and it is the only thing that reliably
+                       paints on iOS Safari. Falls back to the old frame-0.1
+                       trick for local blob: videos and anything without a
+                       companion still. */
+                    const poster = result.previewUrl || videoPosterUrl(result.url);
+                    return poster ? (
+                      <img
+                        src={poster}
+                        alt=""
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                        decoding="async"
+                        onError={(e) => {
+                          // No companion after all — let the video paint itself.
+                          const img = e.currentTarget;
+                          const fallback = document.createElement("video");
+                          fallback.src = `${result.url}${result.url.includes("#") ? "" : "#t=0.1"}`;
+                          fallback.className = img.className;
+                          fallback.muted = true;
+                          fallback.playsInline = true;
+                          fallback.preload = "metadata";
+                          img.replaceWith(fallback);
+                        }}
+                      />
+                    ) : (
+                      <video
+                        src={`${result.url}${result.url.includes("#") ? "" : "#t=0.1"}`}
+                        className="w-full h-full object-cover"
+                        muted
+                        playsInline
+                        // @ts-ignore - iOS Safari attribute
+                        webkit-playsinline="true"
+                        preload="metadata"
+                      />
+                    );
+                  })()}
                   <span className="absolute bottom-1 right-1 p-0.5 rounded bg-background/70 text-primary">
                     <Film className="w-3 h-3" />
                   </span>
@@ -2157,6 +2188,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
             ) : currentResult ? (
               <video
                 src={currentResult.url}
+                poster={currentResult.previewUrl || videoPosterUrl(currentResult.url)}
                 className="w-full object-contain bg-black/40"
                 style={{ maxHeight: "70vh" }}
                 controls
