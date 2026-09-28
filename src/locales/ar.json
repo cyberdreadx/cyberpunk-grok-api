@@ -206,7 +206,7 @@
     "perYear": "سنوياً",
     "savePercent": "وفر {{percent}}%",
     "creditsPerMonth": "{{count}} رصيد/شهر",
-    "perCredit": "{{price}}/رصيد",
+    "perCredit": "لكل رصيد",
     "creditsReset": "يتم إعادة تعيين الأرصدة كل دورة فوترة",
     "managePlan": "إدارة_الخطة",
     "currentPlanHigher": "الخطة_الحالية_أعلى",
@@ -223,7 +223,8 @@
     "orCrypto": "أو_عملة_مشفرة",
     "payWithXrge": "ادفع بـ $XRGE",
     "bonusPercent": "+{{percent}}% مكافأة",
-    "baseChain": "سلسلة Base · مستويات ولاء حتى +50% مكافأة"
+    "baseChain": "سلسلة Base · مستويات ولاء حتى +50% مكافأة",
+    "planBeatsPacks": "تشتري الحزم كثيرًا؟ خطة {{plan}} تكلّف {{planRate}}¢ للرصيد الواحد — أرخص من كل حزمة هنا (أفضل حزمة: {{packRate}}¢) — وتمنحك {{daily}} رصيدًا مجانيًا كل يوم."
   },
   "changelog": {
     "title": "سجل_التغييرات",

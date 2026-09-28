@@ -206,7 +206,7 @@
     "perYear": "年額",
     "savePercent": "{{percent}}%お得",
     "creditsPerMonth": "{{count}} クレジット/月",
-    "perCredit": "{{price}}/クレジット",
+    "perCredit": "／クレジット",
     "creditsReset": "クレジットは請求サイクルごとにリセットされます",
     "managePlan": "プラン管理",
     "currentPlanHigher": "現在のプランが上位です",
@@ -223,7 +223,8 @@
     "orCrypto": "または暗号通貨",
     "payWithXrge": "$XRGEで支払う",
     "bonusPercent": "+{{percent}}%ボーナス",
-    "baseChain": "Baseチェーン · ロイヤリティ最大+50%ボーナス"
+    "baseChain": "Baseチェーン · ロイヤリティ最大+50%ボーナス",
+    "planBeatsPacks": "パックをよく買うなら、{{plan}} プランは1クレジット {{planRate}}¢。ここのどのパックより安く（最安パックは {{packRate}}¢）、さらに毎日 {{daily}} クレジットが無料で入ります。"
   },
   "changelog": {
     "title": "システム変更ログ",

@@ -206,7 +206,7 @@
     "perYear": "por año",
     "savePercent": "ahorra {{percent}}%",
     "creditsPerMonth": "{{count}} créditos/mes",
-    "perCredit": "{{price}}/crédito",
+    "perCredit": "por crédito",
     "creditsReset": "Los créditos se reinician cada ciclo",
     "managePlan": "GESTIONAR_PLAN",
     "currentPlanHigher": "PLAN_ACTUAL_SUPERIOR",
@@ -223,7 +223,8 @@
     "orCrypto": "O_CRYPTO",
     "payWithXrge": "PAGAR CON $XRGE",
     "bonusPercent": "+{{percent}}% bonus",
-    "baseChain": "Base chain · niveles de lealtad hasta +50% bonus"
+    "baseChain": "Base chain · niveles de lealtad hasta +50% bonus",
+    "planBeatsPacks": "¿Compras packs a menudo? El plan {{plan}} sale a {{planRate}}¢ por crédito —más barato que cualquier pack de aquí (el mejor pack: {{packRate}}¢)— y además suma {{daily}} créditos gratis cada día."
   },
   "changelog": {
     "title": "REGISTRO_SISTEMA",

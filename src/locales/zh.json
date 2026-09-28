@@ -206,7 +206,7 @@
     "perYear": "每年",
     "savePercent": "节省{{percent}}%",
     "creditsPerMonth": "{{count}} 积分/月",
-    "perCredit": "{{price}}/积分",
+    "perCredit": "每积分",
     "creditsReset": "积分在每个计费周期重置",
     "managePlan": "管理方案",
     "currentPlanHigher": "当前方案更高",
@@ -223,7 +223,8 @@
     "orCrypto": "或加密货币",
     "payWithXrge": "用 $XRGE 支付",
     "bonusPercent": "+{{percent}}% 奖励",
-    "baseChain": "Base链 · 忠诚度最高+50%奖励"
+    "baseChain": "Base链 · 忠诚度最高+50%奖励",
+    "planBeatsPacks": "经常买积分包？{{plan}} 套餐每积分 {{planRate}}¢，比这里任何一个包都便宜（最便宜的包为 {{packRate}}¢），而且每天还额外赠送 {{daily}} 积分。"
   },
   "changelog": {
     "title": "系统更新日志",

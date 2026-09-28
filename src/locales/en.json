@@ -206,7 +206,7 @@
     "perYear": "per year",
     "savePercent": "save {{percent}}%",
     "creditsPerMonth": "{{count}} credits/mo",
-    "perCredit": "{{price}}/credit",
+    "perCredit": "per credit",
     "creditsReset": "Credits reset each billing cycle",
     "managePlan": "MANAGE_PLAN",
     "currentPlanHigher": "CURRENT_PLAN_HIGHER",
@@ -234,7 +234,8 @@
     "creditsLabel": "credits",
     "makeEstimate": "≈ {{edits}} edits or {{videos}} videos",
     "withSubDiscount": "with your {{percent}}% sub discount",
-    "otherWaysToPay": "other ways to pay"
+    "otherWaysToPay": "other ways to pay",
+    "planBeatsPacks": "Buying packs often? The {{plan}} plan is {{planRate}}¢ a credit — cheaper than every pack here (best pack: {{packRate}}¢) — and adds {{daily}} free credits every day on top."
   },
   "changelog": {
     "title": "SYSTEM_CHANGELOG",

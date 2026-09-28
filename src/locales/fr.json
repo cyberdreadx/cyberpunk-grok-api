@@ -206,7 +206,7 @@
     "perYear": "par an",
     "savePercent": "économisez {{percent}}%",
     "creditsPerMonth": "{{count}} crédits/mois",
-    "perCredit": "{{price}}/crédit",
+    "perCredit": "par crédit",
     "creditsReset": "Les crédits sont réinitialisés à chaque cycle",
     "managePlan": "GÉRER_PLAN",
     "currentPlanHigher": "PLAN_ACTUEL_SUPÉRIEUR",
@@ -223,7 +223,8 @@
     "orCrypto": "OU_CRYPTO",
     "payWithXrge": "PAYER EN $XRGE",
     "bonusPercent": "+{{percent}}% bonus",
-    "baseChain": "Base chain · paliers fidélité jusqu'à +50% bonus"
+    "baseChain": "Base chain · paliers fidélité jusqu'à +50% bonus",
+    "planBeatsPacks": "Vous achetez souvent des packs ? Le plan {{plan}} revient à {{planRate}}¢ le crédit — moins cher que tous les packs ici (meilleur pack : {{packRate}}¢) — et ajoute {{daily}} crédits gratuits chaque jour."
   },
   "changelog": {
     "title": "JOURNAL_SYSTÈME",

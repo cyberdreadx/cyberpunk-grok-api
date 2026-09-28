@@ -58,6 +58,26 @@ const PricingCards: React.FC<PricingCardsProps> = ({
   const showSubs = section === "subscriptions" || section === "all";
   const showPacks = section === "packs" || section === "all";
 
+  /*
+   * Does a plan actually beat every pack per credit? Worked out here rather
+   * than written into the copy, so that if a price ever changes and a pack
+   * wins, the claim disappears instead of becoming a lie.
+   *
+   * Daily credits mirror DAILY_CREDITS_BY_TIER in api/_lib/dailyCredits.ts,
+   * which is what the midnight cron actually pays.
+   */
+  const DAILY_BY_TIER: Record<string, number> = { basic: 3, premium: 6, pro: 13, elite: 28 };
+  const cheapestPackRate = packages.length
+    ? Math.min(...packages.map((p) => p.priceCents / p.credits))
+    : Infinity;
+  const planRates = SUBSCRIPTION_TIERS_MONTHLY
+    .map((tier) => ({ tier, rate: tier.priceCents / tier.creditsPerMonth }))
+    .sort((a, b) => a.rate - b.rate);
+  const best = planRates[0];
+  const bestPlan = best && best.rate < cheapestPackRate ? best.tier : null;
+  const bestPlanRate = best?.rate ?? 0;
+  const bestPlanDaily = bestPlan ? DAILY_BY_TIER[bestPlan.id] ?? 0 : 0;
+
   return (
     <div className="space-y-6">
       {/* ── Subscription Plans ── */}
@@ -267,6 +287,25 @@ const PricingCards: React.FC<PricingCardsProps> = ({
             </div>
           </>
         )}
+
+        {/*
+         * The one place the customer's interest and ours point the same way: the
+         * cheapest plan is cheaper per credit than every pack on this page, and
+         * pays out daily on top. Computed, not asserted — if a price changes so
+         * that a pack wins, this simply stops claiming otherwise.
+         */}
+        {bestPlan && (
+          <div className="mt-4 rounded-lg border border-primary/30 bg-primary/[0.05] p-3">
+            <p className="font-mono-share text-[11px] leading-relaxed text-muted-foreground">
+              {t("pricing.planBeatsPacks", {
+                plan: bestPlan.name,
+                planRate: bestPlanRate.toFixed(1),
+                packRate: cheapestPackRate.toFixed(1),
+                daily: bestPlanDaily,
+              })}
+            </p>
+          </div>
+        )}
       </div>
       )}
     </div>
@@ -300,9 +339,17 @@ function PackCard({
     discountPct > 0 ? Math.floor((pkg.credits * discountPct) / (100 - discountPct)) : 0;
   const totalCredits = pkg.credits + bonusCredits;
 
-  // What the credits roughly buy, after any active sub discount.
-  const editCost = Math.max(1, Math.ceil(10 * (1 - discountPct / 100)));
-  const videoCost = Math.max(1, Math.ceil(25 * (1 - discountPct / 100)));
+  /*
+   * What the credits actually buy, after any active sub discount.
+   *
+   * These were 10 and 25 and had drifted badly from what the server charges:
+   * COMFY_COSTS in api/comfyui.ts bills an image edit at 3 and a WAN video at
+   * 15, which is also what the last 30 days of usage_log shows (16,203 jobs at
+   * 3 credits, 2,928 at 15). The store was quietly claiming a $18.99 pack made
+   * 24 images when it makes 80 — underselling every pack on the page.
+   */
+  const editCost = Math.max(1, Math.ceil(3 * (1 - discountPct / 100)));
+  const videoCost = Math.max(1, Math.ceil(15 * (1 - discountPct / 100)));
   const edits = Math.floor(totalCredits / editCost);
   const videos = Math.floor(totalCredits / videoCost);
 
@@ -344,7 +391,9 @@ function PackCard({
           <p className="font-orbitron text-xl font-bold tabular-nums leading-none text-foreground sm:text-2xl break-words">
             ${(pkg.priceCents / 100).toFixed(2)}
           </p>
-          <p className="font-mono-share text-[10px] uppercase tracking-wide text-muted-foreground">{t("pricing.oneTime")}</p>
+          <p className="font-mono-share text-[10px] uppercase tracking-wide text-muted-foreground">
+            {t("pricing.oneTime")} · {(pkg.priceCents / pkg.credits).toFixed(1)}¢ {t("pricing.perCredit")}
+          </p>
         </div>
 
         <div className="mb-1 flex flex-wrap items-center gap-1">

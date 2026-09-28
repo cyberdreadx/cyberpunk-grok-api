@@ -206,7 +206,7 @@
     "perYear": "년",
     "savePercent": "{{percent}}% 절약",
     "creditsPerMonth": "{{count}} 크레딧/월",
-    "perCredit": "{{price}}/크레딧",
+    "perCredit": "크레딧당",
     "creditsReset": "크레딧은 매 결제 주기마다 초기화됩니다",
     "managePlan": "플랜_관리",
     "currentPlanHigher": "현재_플랜이_상위",
@@ -223,7 +223,8 @@
     "orCrypto": "또는_암호화폐",
     "payWithXrge": "$XRGE로 결제",
     "bonusPercent": "+{{percent}}% 보너스",
-    "baseChain": "Base 체인 · 로열티 최대 +50% 보너스"
+    "baseChain": "Base 체인 · 로열티 최대 +50% 보너스",
+    "planBeatsPacks": "팩을 자주 구매하시나요? {{plan}} 플랜은 크레딧당 {{planRate}}¢로 여기 있는 모든 팩보다 저렴하고(최저 팩 {{packRate}}¢), 매일 {{daily}} 크레딧이 무료로 추가됩니다."
   },
   "changelog": {
     "title": "시스템_변경로그",
