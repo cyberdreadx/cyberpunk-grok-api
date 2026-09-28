@@ -8,6 +8,7 @@
  * Invoked via vercel.json rewrite: /s/:shareId → /api/share-page?id=:shareId
  */
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { getDb } from "./_lib/db";
 import { fetchShareMetadata } from "./_lib/share-metadata";
 
 export const config = { maxDuration: 10 };
@@ -214,13 +215,54 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const host = baseUrl.replace(/^https?:\/\//, "");
 
   const refCode = typeof req.query.ref === "string" ? req.query.ref.replace(/[^a-zA-Z0-9]/g, "").slice(0, 20) : "";
-  const refSuffix = refCode ? `?ref=${refCode}` : "";
 
   const shareId = (req.query.id as string) || "";
   if (!shareId || !/^[a-zA-Z0-9_-]{4,16}$/.test(shareId)) {
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     return res.status(404).send(notFoundPage(host, appUrl));
   }
+
+  /*
+   * A share link IS a referral link.
+   *
+   * 418 people landed on these pages yesterday, arriving from Reddit and X —
+   * more than used the app that day — and every CTA sent them in anonymously,
+   * so the person whose work pulled them in got nothing and the traffic was
+   * unattributed. The owner's code is looked up here rather than baked into the
+   * link at copy time, which makes all ~18,000 links already posted around the
+   * internet count from now on.
+   *
+   * This earns credits only through the referral activation reward, which pays
+   * when the invited person verifies, waits a day and actually creates
+   * something (api/_lib/referral-rewards.ts). That is deliberate: rewarding the
+   * ACT of sharing would be a money pump, since minting a link is free and a
+   * reward bigger than the 3 credits an image costs pays for its own farm.
+   * Rewarding arrivals means a farmer has to produce real people.
+   */
+  let ownerCode = "";
+  if (!refCode) {
+    try {
+      const rows = (await getDb()`
+        SELECT u.referral_code
+        FROM share_owners so
+        JOIN users u ON u.id = so.user_id
+        WHERE so.share_id = ${shareId}
+          AND u.referral_code IS NOT NULL
+          AND NOT EXISTS (
+            SELECT 1 FROM user_bans b
+            WHERE b.user_id = u.id AND (b.expires_at IS NULL OR b.expires_at > now())
+          )
+        LIMIT 1
+      `) as Array<{ referral_code: string }>;
+      ownerCode = String(rows[0]?.referral_code || "").replace(/[^a-zA-Z0-9]/g, "").slice(0, 20);
+    } catch (err: any) {
+      // Attribution is a bonus, never a reason to fail the page.
+      console.warn("[share-page] owner lookup failed:", err?.message);
+    }
+  }
+  /** An explicit ?ref= wins: that link was shared by someone else. */
+  const effectiveRef = refCode || ownerCode;
+  const refSuffix = effectiveRef ? `?ref=${effectiveRef}` : "";
 
   try {
     const meta = await fetchShareMetadata(shareId);
@@ -246,7 +288,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ? `${escapeHtml(truncatedPrompt)} — Try this prompt or create your own AI art at GLTCHRunner.`
       : "Create stunning AI images, edit photos, and generate videos. Powered by xAI.";
 
-    const tryPromptUrl = `${appUrl}/?prompt=${encodeURIComponent(String(meta.prompt || ""))}${refCode ? `&ref=${refCode}` : ""}`;
+    const tryPromptUrl = `${appUrl}/?prompt=${encodeURIComponent(String(meta.prompt || ""))}${effectiveRef ? `&ref=${effectiveRef}` : ""}`;
 
     const html = `<!DOCTYPE html>
 <html lang="en">
@@ -342,7 +384,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     </div>
 
     <div class="footer">
-      <a href="${appUrl}/">${appUrl.replace(/^https?:\/\//, "")}</a> — Powered by GLTCH & FLUX
+      <a href="${appUrl}/${refSuffix}">${appUrl.replace(/^https?:\/\//, "")}</a> — Powered by GLTCH & FLUX
     </div>
   </div>
 </body>
