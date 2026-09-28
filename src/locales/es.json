@@ -313,7 +313,7 @@
   },
   "referral": {
     "title": "PROGRAMA_REFERIDOS",
-    "descriptionSimple": "Comparte tu enlace — cuando un amigo hace su primera compra, tú recibes 10 créditos y él 5 de bonificación. Si se suscribe, consigues un mes gratis.",
+    "descriptionSimple": "Comparte tu enlace: cuando un amigo verifica su correo y crea algo, ambos recibís 15 créditos. Recibes 10 más con su primera compra y un mes gratis si se suscribe.",
     "referred": "{{count}} referidos",
     "converted": "{{count}} convertidos",
     "earned": "+{{count}} créditos ganados"

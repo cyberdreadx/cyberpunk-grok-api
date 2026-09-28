@@ -13,6 +13,7 @@ import { createPortal } from "react-dom";
 import { Coins, Info, X, ShoppingCart } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCredits } from "@/hooks/useCredits";
+import InviteCredits from "@/components/InviteCredits";
 
 interface MobileCreditsPillProps {
   onOpenStore?: () => void;
@@ -86,6 +87,7 @@ const MobileCreditsPill: React.FC<MobileCreditsPillProps> = ({ onOpenStore, inli
         )}
         <ShoppingCart className="w-3 h-3 text-secondary/80 group-hover:text-secondary transition-colors" />
       </button>
+      <InviteCredits credits={totalCredits} loading={loading} />
       <button
         type="button"
         onClick={() => setNoticeOpen((v) => !v)}

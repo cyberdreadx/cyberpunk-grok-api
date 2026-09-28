@@ -313,7 +313,7 @@
   },
   "referral": {
     "title": "PROGRAMME_PARRAINAGE",
-    "descriptionSimple": "Partagez votre lien — lors du premier achat d'un ami, vous recevez 10 crédits et lui 5 en bonus. S'il s'abonne, vous obtenez un mois gratuit.",
+    "descriptionSimple": "Partagez votre lien : quand un ami vérifie son e-mail et crée quelque chose, vous recevez chacun 15 crédits. Vous en gagnez 10 de plus à son premier achat, et un mois offert s'il s'abonne.",
     "referred": "{{count}} parrainés",
     "converted": "{{count}} convertis",
     "earned": "+{{count}} crédits gagnés"

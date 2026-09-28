@@ -22,6 +22,7 @@ import SpinWheel from "@/components/SpinWheel";
 import type { CreditPackage, SubscriptionTier } from "@/lib/api";
 import { XRGE_DEXSCREENER_URL, XRGE_CHAIN_NAME } from "@/lib/xrgePublic";
 import { BRAND } from "@/lib/brand";
+import InviteCredits from "@/components/InviteCredits";
 
 interface CreditDisplayProps {
   totalCredits: number;
@@ -145,6 +146,10 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
           )}
         </div>
       )}
+
+      {/* Invite, beside the balance rather than buried in the store dialog —
+          see InviteCredits. Only appears when the balance is nearly gone. */}
+      {!hideTrigger && <InviteCredits credits={totalCredits} loading={loading} className="mr-1" />}
 
       {/* Buy / Store button — always rendered (even when externally controlled),
           so the desktop header always exposes a visible cart entry point.

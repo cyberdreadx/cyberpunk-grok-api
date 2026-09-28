@@ -313,7 +313,7 @@
   },
   "referral": {
     "title": "EMPFEHLUNGSPROGRAMM",
-    "descriptionSimple": "Teilen Sie Ihren Link — beim ersten Kauf eines Freundes erhalten Sie 10 Credits und er 5 Bonus-Credits. Bei einem Abo erhalten Sie einen Gratismonat.",
+    "descriptionSimple": "Teile deinen Link: Wenn eine Freundin oder ein Freund die E-Mail bestätigt und etwas erstellt, bekommt ihr beide 15 Credits. Beim ersten Kauf erhältst du 10 weitere und bei einem Abo einen Gratismonat.",
     "referred": "{{count}} empfohlen",
     "converted": "{{count}} konvertiert",
     "earned": "+{{count}} Credits verdient"

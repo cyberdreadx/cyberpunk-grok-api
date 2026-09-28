@@ -313,7 +313,7 @@
   },
   "referral": {
     "title": "PROGRAMA_DE_INDICAÇÃO",
-    "descriptionSimple": "Compartilhe seu link — quando um amigo faz a primeira compra, você ganha 10 créditos e ele 5 de bônus. Se ele assinar, você ganha um mês grátis.",
+    "descriptionSimple": "Compartilhe seu link: quando um amigo verificar o e-mail e criar algo, vocês dois ganham 15 créditos. Você ganha mais 10 na primeira compra dele e um mês grátis se ele assinar.",
     "referred": "{{count}} indicados",
     "converted": "{{count}} convertidos",
     "earned": "+{{count}} créditos ganhos"

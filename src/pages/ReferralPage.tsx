@@ -86,9 +86,13 @@ export default function ReferralPage() {
   // Rewards as the code actually grants them. The signup grant was removed with
   // the earn-only model (verify.ts, July 2026); this list still advertised it,
   // so referred users were being promised credits that never arrived.
+  //
+  // The activation reward below replaced it on 2026-09-27 (cron-referral-rewards):
+  // it pays once the invited person is demonstrably real — verified, a day old,
+  // and having actually created something — rather than on signup.
   const tiers = [
     { label: "Friend signs up", you: "—", friend: "—", icon: Users },
-    { label: "Friend verifies email", you: "—", friend: "—", icon: Check },
+    { label: "Friend verifies + creates", you: "+15 credits", friend: "+15 credits", icon: Check },
     { label: "Friend makes 1st purchase", you: "+10 credits", friend: "+5 bonus", icon: Gift },
     { label: "Friend subscribes (any plan)", you: "+1 FREE MONTH", friend: "—", icon: Trophy },
   ];
