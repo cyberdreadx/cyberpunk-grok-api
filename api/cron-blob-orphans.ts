@@ -5,8 +5,8 @@
  * session uploads that nothing references after the job runs).
  *
  * An "orphan" is any blob no longer referenced by ANY of:
- *   - feed_posts.image_url
- *   - stories.media_url
+ *   - feed_posts.image_url AND preview_image_url
+ *   - stories.media_url AND preview_url
  *   - profiles.avatar_url
  *   - characters.portrait_url
  *   - notifications.actor_avatar_url   (snapshot URLs from older avatars)
@@ -23,6 +23,7 @@
  *     set is incomplete (e.g. a new column was added but not registered here).
  */
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { loadReferencedKeys } from "./_lib/media-refs";
 import { getDb } from "./_lib/db";
 import { requireCronAuth } from "./_lib/cron-auth";
 
@@ -77,16 +78,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (p) referenced.add(p);
     };
 
+    /*
+     * PREVIEWS COUNT. This list used to select feed_posts.image_url and
+     * stories.media_url and nothing else, so every preview thumbnail stored on
+     * Blob looked like an orphan. The Sunday 2026-09-27 sweep duly deleted all
+     * 123 of them — every feed preview on Blob — while the 408 on R2 survived,
+     * because cron-r2-orphans had already been taught about previews and this
+     * one never was. The daily integrity check found the damage on Monday.
+     *
+     * The reference set now comes from _lib/media-refs.ts, the same one the
+     * delete guard uses, so the two cannot drift apart again.
+     */
+    const shared = await loadReferencedKeys();
+    for (const key of shared.blob) referenced.add(key);
+
     const [posts, stories, profiles, characters, notifAvatars, chatMedia] = await Promise.all([
-      sql`SELECT image_url FROM feed_posts WHERE image_url IS NOT NULL`.catch(() => []),
-      sql`SELECT media_url FROM stories WHERE media_url IS NOT NULL`.catch(() => []),
+      sql`SELECT image_url, preview_image_url FROM feed_posts WHERE image_url IS NOT NULL OR preview_image_url IS NOT NULL`.catch(() => []),
+      sql`SELECT media_url, preview_url FROM stories WHERE media_url IS NOT NULL OR preview_url IS NOT NULL`.catch(() => []),
       sql`SELECT avatar_url FROM profiles WHERE avatar_url IS NOT NULL`.catch(() => []),
       sql`SELECT portrait_url FROM characters WHERE portrait_url IS NOT NULL`.catch(() => []),
       sql`SELECT DISTINCT actor_avatar_url FROM notifications WHERE actor_avatar_url IS NOT NULL`.catch(() => []),
       sql`SELECT DISTINCT media_url FROM chat_messages WHERE media_url IS NOT NULL`.catch(() => []),
     ]);
-    for (const r of posts as any[]) addRef(r.image_url);
-    for (const r of stories as any[]) addRef(r.media_url);
+    for (const r of posts as any[]) { addRef(r.image_url); addRef(r.preview_image_url); }
+    for (const r of stories as any[]) { addRef(r.media_url); addRef(r.preview_url); }
     for (const r of profiles as any[]) addRef(r.avatar_url);
     for (const r of characters as any[]) addRef(r.portrait_url);
     for (const r of notifAvatars as any[]) addRef(r.actor_avatar_url);
