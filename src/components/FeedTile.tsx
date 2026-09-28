@@ -3,7 +3,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Lock, ImageIcon, Heart, MessageSquare, ShieldAlert, Film } from "lucide-react";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import { useMatureFilter } from "@/hooks/useMatureFilter";
-import { extractPoster, getCachedPoster } from "@/lib/videoPoster";
+import { extractPoster, getCachedPoster, videoPosterUrl } from "@/lib/videoPoster";
 import { useMediaSrc } from "@/hooks/useMediaSrc";
 
 /** Minimal post shape consumed by the content-first feed grid. Mirrors the
@@ -106,17 +106,32 @@ const FeedTile: React.FC<Props> = ({ post, onOpen, forceBlur, currentUserId }) =
     return () => obs.disconnect();
   }, []);
 
+  /*
+   * Three ways to get a still, cheapest first.
+   *
+   * 1. The one the server already made. Every upload gets a companion
+   *    `-preview.webp` beside it (ffmpeg, api/_lib/image-preview.ts), so for our
+   *    own media this is a single ~20KB fetch — no video decode, nothing to
+   *    taint with CORS, and it works on iOS Safari where frame extraction does
+   *    not. The library switched to it; the feed was still decoding frames.
+   * 2. Canvas extraction, for media hosted somewhere we do not control.
+   * 3. The <video> element itself, which the render falls back to below.
+   */
+  const serverPoster = isVideo && previewImg ? videoPosterUrl(previewImg) : undefined;
+  const [serverPosterFailed, setServerPosterFailed] = useState(false);
   const [poster, setPoster] = useState<string | null>(() =>
-    isVideo && previewImg ? (getCachedPoster(previewImg) ?? null) : null
+    serverPoster ?? (isVideo && previewImg ? (getCachedPoster(previewImg) ?? null) : null)
   );
 
   useEffect(() => {
     if (!inView || !isVideo || !previewImg) return;
+    // A working server still makes extraction pointless.
+    if (serverPoster && !serverPosterFailed) return;
     if (getCachedPoster(previewImg) !== undefined) return;
     let cancelled = false;
     extractPoster(previewImg).then((p) => { if (!cancelled) setPoster(p); });
     return () => { cancelled = true; };
-  }, [inView, isVideo, previewImg]);
+  }, [inView, isVideo, previewImg, serverPoster, serverPosterFailed]);
 
   const showSkeleton = !!previewImg && !mediaFailed && !mediaLoaded;
 
@@ -139,7 +154,12 @@ const FeedTile: React.FC<Props> = ({ post, onOpen, forceBlur, currentUserId }) =
                 decoding="async"
                 className={`w-full h-full object-cover transition-[transform,opacity] duration-500 group-hover:scale-105 ${showBlur ? "blur-2xl scale-110" : ""} ${mediaLoaded ? "opacity-100" : "opacity-0"}`}
                 onLoad={() => setMediaLoaded(true)}
-                onError={() => setPoster(null)}
+                onError={() => {
+                  // No companion after all — let extraction (then the video
+                  // element) have a go, rather than leaving a broken image.
+                  if (serverPoster && poster === serverPoster) setServerPosterFailed(true);
+                  setPoster(null);
+                }}
               />
             ) : (
               <video

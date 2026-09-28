@@ -83,7 +83,14 @@ export async function notify(params: NotifyParams): Promise<void> {
       void maybeEmail(params).catch((e) => console.error("[notify:email]", e));
     }
   } catch (err) {
-    console.error("[notify]", err);
+    /*
+     * Name the type in the log. This helper swallows its errors by design — a
+     * notification must never fail the action that caused it — and that has now
+     * hidden two schema bugs for months: `message NOT NULL` with no default,
+     * then a CHECK constraint that rejected every type except comment and
+     * follow. Both were invisible because the log said only "[notify]".
+     */
+    console.error(`[notify] type=${params.type} user=${params.userId}:`, err);
   }
 }
 
