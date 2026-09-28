@@ -23,35 +23,50 @@ import { isR2Url } from "./_lib/r2";
 import { isVercelBlobUrl } from "./_lib/blob";
 
 const STATE_KEY = "media_integrity";
-const CONCURRENCY = 12;
+const CONCURRENCY = 6;  // gentle enough that the CDN does not start throttling
 const TIMEOUT_MS = 8000;
 
 interface Target { surface: string; id: string; owner: string | null; url: string; field: string }
 interface Broken extends Target { status: number | string }
 
 /**
- * HEAD, then a 1-byte GET if the host dislikes HEAD. One retry on a network
- * error: a flaky socket must never be reported as lost media.
+ * Is this file GONE, or did the request merely fail?
+ *
+ * Only 404 and 410 count as missing. Everything else — 429, 5xx, timeouts, a
+ * dropped socket — means the answer is unknown, and unknown must never be
+ * reported as lost media. That distinction is the whole difference between a
+ * useful alert and a liar: probing 1,441 files in 16 seconds gets the storage
+ * CDN throttling, and an earlier version counted every throttled response as a
+ * deleted file. It reported 139 missing while each of those URLs served 200
+ * when asked one at a time.
+ *
+ * A 404 is also confirmed a second time after a pause, because a freshly
+ * written object can 404 at the edge for a moment after it lands.
  */
 async function probe(url: string): Promise<number | string> {
-  for (let attempt = 0; attempt < 2; attempt++) {
+  const once = async (): Promise<number | string> => {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
     try {
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
-      try {
-        let r = await fetch(url, { method: "HEAD", signal: ctrl.signal });
-        if (r.status === 405 || r.status === 501) {
-          r = await fetch(url, { method: "GET", headers: { Range: "bytes=0-0" }, signal: ctrl.signal });
-        }
-        return r.ok ? 200 : r.status;
-      } finally {
-        clearTimeout(timer);
+      let r = await fetch(url, { method: "HEAD", signal: ctrl.signal });
+      if (r.status === 405 || r.status === 501) {
+        r = await fetch(url, { method: "GET", headers: { Range: "bytes=0-0" }, signal: ctrl.signal });
       }
+      return r.ok ? 200 : r.status;
     } catch (err: any) {
-      if (attempt === 1) return err?.name === "AbortError" ? "timeout" : "unreachable";
+      return err?.name === "AbortError" ? "timeout" : "unreachable";
+    } finally {
+      clearTimeout(timer);
     }
-  }
-  return "unreachable";
+  };
+
+  const first = await once();
+  if (first === 200) return 200;
+  // Anything that is not a definite "gone" is not evidence of anything.
+  if (first !== 404 && first !== 410) return 200;
+  await new Promise((r) => setTimeout(r, 1500));
+  const second = await once();
+  return second === 404 || second === 410 ? second : 200;
 }
 
 async function probeAll(targets: Target[]): Promise<Broken[]> {
