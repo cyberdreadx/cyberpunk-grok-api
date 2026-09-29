@@ -109,27 +109,34 @@ async function ensureProgress(sql: any, userId: string) {
     const todayDate = new Date(today);
     const diffDays = Math.floor((todayDate.getTime() - lastDate.getTime()) / 86400000);
 
+    /*
+     * This function used to ADVANCE the streak, and it is called on every
+     * status fetch and every claim — but the date it compared against,
+     * last_claim_date, is only written when a mission is actually claimed. So
+     * every call on a day whose last claim was "yesterday" saw diffDays === 1
+     * and stepped the streak again. Four missions a day meant four streak days
+     * a day; simply opening the app repeatedly did it too. A user reported
+     * reaching the 7-day bonus three times in one week, and 19 of 573 live
+     * streaks were ahead of their own cycle start — two of them at day 7 on the
+     * day the cycle began.
+     *
+     * Advancing now happens exactly once per day, in the claim path below,
+     * where the day is recorded in the same statement that moves the streak.
+     * All that is left here is ending a cycle that is genuinely over.
+     */
     if (diffDays > 1) {
-      // Missed a day — reset cycle
+      // Missed a day — the run is broken, start again from zero.
       [progress] = await sql`
         UPDATE daily_mission_progress
-        SET streak_day = 1, cycle_start = ${today}, streak_bonus_claimed = false, updated_at = now()
-        WHERE user_id = ${userId}
-        RETURNING *
-      `;
-    } else if (diffDays === 1 && progress.streak_day < CYCLE_DAYS) {
-      // New day — advance streak
-      [progress] = await sql`
-        UPDATE daily_mission_progress
-        SET streak_day = streak_day + 1, updated_at = now()
+        SET streak_day = 0, cycle_start = ${today}, streak_bonus_claimed = false, updated_at = now()
         WHERE user_id = ${userId}
         RETURNING *
       `;
     } else if (diffDays >= 1 && progress.streak_day >= CYCLE_DAYS) {
-      // Completed cycle, start new one
+      // Last cycle finished — a new one starts with today's first claim.
       [progress] = await sql`
         UPDATE daily_mission_progress
-        SET streak_day = 1, cycle_start = ${today}, streak_bonus_claimed = false, updated_at = now()
+        SET streak_day = 0, cycle_start = ${today}, streak_bonus_claimed = false, updated_at = now()
         WHERE user_id = ${userId}
         RETURNING *
       `;
@@ -297,10 +304,28 @@ async function claimMission(sql: any, userId: string, mission: string, res: Verc
     WHERE id = ${userId}
   `;
 
-  // Update progress
+  /*
+   * Move the streak here, in the same statement that stamps the day.
+   *
+   * The CASE is the whole fix: a second claim on the same day finds
+   * last_claim_date already equal to today and leaves streak_day alone, so the
+   * count can only ever rise once per calendar day no matter how many missions
+   * are claimed or how often the app is opened.
+   */
   await sql`
     UPDATE daily_mission_progress
-    SET last_claim_date = ${today}, total_earned = total_earned + ${creditAmount}, updated_at = now()
+    SET streak_day = CASE
+          WHEN last_claim_date = ${today}::date THEN streak_day
+          WHEN last_claim_date = ${today}::date - 1 THEN LEAST(streak_day + 1, ${CYCLE_DAYS})
+          ELSE 1
+        END,
+        cycle_start = CASE
+          WHEN last_claim_date IS NULL OR last_claim_date < ${today}::date - 1 THEN ${today}::date
+          ELSE cycle_start
+        END,
+        last_claim_date = ${today},
+        total_earned = total_earned + ${creditAmount},
+        updated_at = now()
     WHERE user_id = ${userId}
   `;
 
