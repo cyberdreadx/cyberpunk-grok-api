@@ -17,13 +17,12 @@ interface Props {
   user?: AuthUser | null;
 }
 
-type ProofPlatform = "reddit" | "grok_subreddit" | "twitter";
+// Reddit missions retired 2026-09-29 — unverifiable, see api/daily-missions.ts
+type ProofPlatform = "twitter";
 
 const MISSION_META: Record<string, { label: string; desc: string; icon: React.ReactNode; needsUrl?: ProofPlatform }> = {
   login:           { label: "Daily Check-in",   desc: "Open the app and claim",                 icon: <CalendarCheck className="w-4 h-4" /> },
   story:           { label: "Post a Story",      desc: "Share a creation to Stories",            icon: <MessageCircle className="w-4 h-4" /> },
-  reddit:          { label: "Share on Reddit",   desc: "Post to any subreddit & paste link",     icon: <Share2 className="w-4 h-4" />, needsUrl: "reddit" },
-  grok_subreddit:  { label: "Post in r/grok",    desc: "Post to r/grok (highest-converting!)",   icon: <Share2 className="w-4 h-4 text-orange-400" />, needsUrl: "grok_subreddit" },
   twitter:         { label: "Share on X",        desc: "Post on X & paste your link",            icon: <Share2 className="w-4 h-4" /> , needsUrl: "twitter" },
   share:           { label: "Share Creation",    desc: "Share any result with a link",           icon: <Share2 className="w-4 h-4" /> },
 };
@@ -51,17 +50,19 @@ function buildShareIntent(
     return { url: `https://x.com/intent/tweet?text=${encodeURIComponent(text)}`, label: "Open X", usingPrefill };
   }
 
-  // Reddit: r/grok for the premium mission, the platform's r/grokrunner otherwise
-  const subreddit = platform === "grok_subreddit" ? "grok" : "grokrunner";
+  /*
+   * Reddit used to be handled here. Those missions were retired on 2026-09-29
+   * because no Reddit post could be verified from the server, so the reward was
+   * paid for a link nobody read. Sharing to Reddit still works from the app's
+   * own share sheet — it just isn't a paid mission any more.
+   */
   const title = usingPrefill
     ? (caption.slice(0, 280) || "Made with GLTCH Runner")
     : "Check out what I made with GLTCH Runner";
-  const linkUrl = mediaUrl || APP_URL;
-  // `url=` makes it a link/image post (qualifies for r/grok mission's media requirement)
-  const params = new URLSearchParams({ title, url: linkUrl });
+  const params = new URLSearchParams({ title, url: mediaUrl || APP_URL });
   return {
-    url: `https://www.reddit.com/r/${subreddit}/submit?${params.toString()}`,
-    label: platform === "grok_subreddit" ? "Open r/grok" : "Open Reddit",
+    url: `https://www.reddit.com/r/grokrunner/submit?${params.toString()}`,
+    label: "Open Reddit",
     usingPrefill,
   };
 }
@@ -256,20 +257,13 @@ export default function DailyMissionsDialog({ status, loading, claiming, onClaim
                       </div>
                     </div>
 
-                    {/* URL proof flow for reddit / r/grok / twitter */}
+                    {/* URL proof flow — X only; the Reddit missions were retired */}
                     {isOpenProof && intent && !claimed && (
                       <div className="px-3 pb-3 space-y-2 border-t border-muted-foreground/10 pt-2">
                         <div className="flex items-center justify-between gap-2">
                           <p className="text-[10px] text-muted-foreground leading-snug flex-1">
-                            {meta.needsUrl === "grok_subreddit" ? (
-                              <>
-                                1. Post in r/grok (link or image — no text-only).{" "}
-                                2. Wait ~10 min so Reddit indexes it.{" "}
-                                3. Paste your post URL below.
-                              </>
-                            ) : (
-                              <>1. Post about GLTCH Runner. 2. Copy your post URL. 3. Paste it below.</>
-                            )}
+                            1. Post about GLTCH Runner, with a link to it. 2. Copy your post URL.
+                            3. Paste it below — we check the post actually links to us.
                           </p>
                           <a
                             href={intent.url}
@@ -281,27 +275,6 @@ export default function DailyMissionsDialog({ status, loading, claiming, onClaim
                             <ExternalLink className="w-3 h-3" />
                           </a>
                         </div>
-                        {meta.needsUrl === "grok_subreddit" && (
-                          <div className="rounded-md border border-orange-400/30 bg-orange-400/5 p-2 space-y-1.5">
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="text-[10px] font-bold text-orange-300 uppercase tracking-wider">
-                                💡 Find complaint threads
-                              </span>
-                              <a
-                                href={`https://www.reddit.com/r/grok/search/?q=${encodeURIComponent('limit OR broken OR censored OR "rate limit" OR refused OR "won\'t generate"')}&restrict_sr=1&sort=new`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="shrink-0 inline-flex items-center gap-1 text-[10px] text-orange-300 hover:text-orange-200 underline"
-                              >
-                                Search r/grok
-                                <ExternalLink className="w-3 h-3" />
-                              </a>
-                            </div>
-                            <p className="text-[9px] text-muted-foreground/80 leading-snug">
-                              Reply with something like: <span className="text-orange-200/90">"Try GLTCH Runner — uncensored image + video gen, free to join: grokrunner.gltch.app"</span>. Paste your <strong>comment permalink</strong> above to claim.
-                            </p>
-                          </div>
-                        )}
                         {intent.usingPrefill && (
                           <p className="text-[9px] text-primary/70 leading-snug">
                             ✨ Pre-filled with your latest feed post — most authentic posts get the most upvotes.
@@ -314,9 +287,7 @@ export default function DailyMissionsDialog({ status, loading, claiming, onClaim
                             placeholder={
                               meta.needsUrl === "twitter"
                                 ? "https://x.com/you/status/..."
-                                : meta.needsUrl === "grok_subreddit"
-                                  ? "https://reddit.com/r/grok/comments/..."
-                                  : "https://reddit.com/r/.../comments/..."
+                                : "https://x.com/you/status/..."
                             }
                             className="h-8 text-[11px] bg-background/50 border-muted-foreground/20"
                             disabled={claiming}

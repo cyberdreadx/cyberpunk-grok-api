@@ -7,7 +7,25 @@ import { notify } from "./_lib/notify";
 import { isSourceDisabled, FREE_CREDITS_MAINTENANCE_MESSAGE } from "./_lib/freeCredits";
 import { isSubscriber, FREE_CREDITS_SUBSCRIBER_ONLY_MESSAGE } from "./_lib/subscriberGate";
 
-const MISSIONS = ["login", "story", "reddit", "grok_subreddit", "twitter", "share"] as const;
+/*
+ * The Reddit missions are retired, not paused.
+ *
+ * They paid 10 and 25 credits for a link nobody could read: Reddit blocks this
+ * server (403 on every .json route), the old verifier soft-failed open so it
+ * approved everything, and the public front-ends that might have substituted
+ * managed one successful fetch in twenty attempts. 6,360 claims, 63,600 credits.
+ *
+ * The official API would fix it, but Reddit now gates API access behind an
+ * application review, which is not worth clearing to police a daily mission.
+ * Sharing is already rewarded better and unfarmably: share links carry the
+ * sharer's referral code, so bringing someone who verifies and creates pays 15
+ * credits, and nobody can mint that by pasting a stranger's URL.
+ *
+ * RETIRED_MISSIONS stay listed so old clients get a clear answer rather than
+ * "Invalid mission".
+ */
+const MISSIONS = ["login", "story", "twitter", "share"] as const;
+const RETIRED_MISSIONS = ["reddit", "grok_subreddit"] as const;
 const MISSION_CREDITS: Record<string, number> = {
   login: 3,
   story: 7,
@@ -52,6 +70,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const { mission, url } = req.body || {};
       if (mission === "streak_bonus") {
         return await claimStreakBonus(sql, auth.userId, res);
+      }
+      if ((RETIRED_MISSIONS as readonly string[]).includes(mission)) {
+        return res.status(410).json({
+          error:
+            "The Reddit missions have been retired — the posts couldn't be verified. " +
+            "Share from the app instead: your share links carry your referral code, and you earn " +
+            "15 credits when someone signs up through one and creates something.",
+          code: "mission_retired",
+        });
       }
       if (!MISSIONS.includes(mission)) {
         return res.status(400).json({ error: `Invalid mission. Must be one of: ${MISSIONS.join(", ")}` });
@@ -209,22 +236,6 @@ async function claimMission(sql: any, userId: string, mission: string, res: Verc
      * Paying for a claim nobody can check is just a faucet with extra steps.
      * They reopen when there are Reddit API credentials to check them with.
      */
-    if (mission === "reddit" || mission === "grok_subreddit") {
-      if (!redditApiConfigured()) {
-        return res.status(410).json({
-          error:
-            "The Reddit share mission is paused — we can't verify Reddit posts right now. " +
-            "Share from the app instead: your share links carry your referral code, and you earn " +
-            "15 credits when someone signs up through one and creates something.",
-          code: "mission_paused",
-        });
-      }
-      const check = await verifyRedditLinksToUs(trimmed, mission === "grok_subreddit");
-      if (!check.ok) {
-        return res.status(400).json({ error: (check as { ok: false; error: string }).error });
-      }
-    }
-
     // ── X/Twitter: the tweet must actually link to us ──
     if (mission === "twitter") {
       const check = await verifyTweetLinksToUs(trimmed);
