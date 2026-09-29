@@ -196,9 +196,38 @@ async function claimMission(sql: any, userId: string, mission: string, res: Verc
       return res.status(400).json({ error: hint });
     }
 
-    // ── r/grok strict checks: post must be ≥10min old AND have a link/image (not text-only) ──
-    if (mission === "grok_subreddit") {
-      const check = await verifyRedditPost(trimmed);
+    /*
+     * Reddit missions are CLOSED, not merely unverified.
+     *
+     * verifyRedditPost() soft-fails open when Reddit does not answer, and
+     * Reddit now returns 403 to this server for every request — datacenter IPs
+     * are blocked — so it has been verifying nothing and approving everything.
+     * Meanwhile 6,360 Reddit claims paid out 63,600 credits, and a sample of
+     * what people actually submitted was other users' posts and comments
+     * ("current_state_of_grok", "where_bad_rudy", r/askreddit threads).
+     *
+     * Paying for a claim nobody can check is just a faucet with extra steps.
+     * They reopen when there are Reddit API credentials to check them with.
+     */
+    if (mission === "reddit" || mission === "grok_subreddit") {
+      if (!redditApiConfigured()) {
+        return res.status(410).json({
+          error:
+            "The Reddit share mission is paused — we can't verify Reddit posts right now. " +
+            "Share from the app instead: your share links carry your referral code, and you earn " +
+            "15 credits when someone signs up through one and creates something.",
+          code: "mission_paused",
+        });
+      }
+      const check = await verifyRedditLinksToUs(trimmed, mission === "grok_subreddit");
+      if (!check.ok) {
+        return res.status(400).json({ error: (check as { ok: false; error: string }).error });
+      }
+    }
+
+    // ── X/Twitter: the tweet must actually link to us ──
+    if (mission === "twitter") {
+      const check = await verifyTweetLinksToUs(trimmed);
       if (!check.ok) {
         return res.status(400).json({ error: (check as { ok: false; error: string }).error });
       }
@@ -347,6 +376,137 @@ async function claimStreakBonus(sql: any, userId: string, res: VercelResponse) {
  * Reddit's `<permalink>.json` is unauthenticated and returns post metadata.
  * Returns { ok: true } on success or { ok: false, error } with a user-friendly message.
  */
+const OUR_DOMAINS_RE = /(gltchrunner\.com|grokrunner\.gltch\.app|gltch\.app)/i;
+
+/**
+ * Reddit needs credentials, and here is why the obvious alternatives are not used.
+ *
+ * reddit.com/*.json, old.reddit.com and api.reddit.com all return 403 to this
+ * server — datacenter IPs are blocked. (That is also why the previous verifier
+ * verified nothing: it soft-failed open, so every Reddit claim was approved.)
+ * Public front-ends were measured as a fallback on 2026-09-29 and are not fit
+ * to gate credits: safereddit, redlib.catsarch, libreddit.privacydev,
+ * rl.bloat.cat and redlib.perennialte.ch managed ONE successful fetch between
+ * them across twenty attempts.
+ *
+ * The official API works from a datacenter with an app's client credentials.
+ * Set REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET (reddit.com/prefs/apps, type
+ * "script") and the mission reopens on its own.
+ */
+export function redditApiConfigured(): boolean {
+  return !!(process.env.REDDIT_CLIENT_ID && process.env.REDDIT_CLIENT_SECRET);
+}
+
+let redditToken: { value: string; expires: number } | null = null;
+
+async function redditAccessToken(): Promise<string | null> {
+  if (redditToken && redditToken.expires > Date.now() + 30_000) return redditToken.value;
+  try {
+    const basic = Buffer.from(`${process.env.REDDIT_CLIENT_ID}:${process.env.REDDIT_CLIENT_SECRET}`).toString("base64");
+    const r = await fetch("https://www.reddit.com/api/v1/access_token", {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${basic}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+        "User-Agent": "GltchDailyMissionBot/1.0",
+      },
+      body: "grant_type=client_credentials",
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!r.ok) return null;
+    const d = (await r.json()) as { access_token?: string; expires_in?: number };
+    if (!d.access_token) return null;
+    redditToken = { value: d.access_token, expires: Date.now() + (d.expires_in ?? 3600) * 1000 };
+    return redditToken.value;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Does this Reddit post actually link to us, and is it old enough to not be a
+ * post-and-delete? Fails CLOSED — an unreadable post is not a paid one.
+ */
+async function verifyRedditLinksToUs(
+  url: string,
+  requireGrokSub: boolean,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const RETRY = "Couldn't read that post — make sure it's public, then try again in a minute.";
+  const token = await redditAccessToken();
+  if (!token) return { ok: false, error: RETRY };
+  try {
+    const clean = url.split("?")[0].replace(/\/$/, "").replace("www.reddit.com", "oauth.reddit.com")
+      .replace("old.reddit.com", "oauth.reddit.com").replace("new.reddit.com", "oauth.reddit.com") + ".json";
+    const r = await fetch(clean, {
+      headers: { Authorization: `Bearer ${token}`, "User-Agent": "GltchDailyMissionBot/1.0" },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!r.ok) return { ok: false, error: RETRY };
+    const data = await r.json();
+    const post = (data as any)?.[0]?.data?.children?.[0]?.data;
+    if (!post) return { ok: false, error: RETRY };
+
+    if (requireGrokSub && String(post.subreddit || "").toLowerCase() !== "grok") {
+      return { ok: false, error: "That post isn't in r/grok." };
+    }
+    const ageSec = Math.floor(Date.now() / 1000) - (post.created_utc || 0);
+    if (ageSec < 600) {
+      return { ok: false, error: `Post is too new — wait ~${Math.ceil((600 - ageSec) / 60)} more min before claiming.` };
+    }
+    // The link can be the post's destination, its title, or its body.
+    const haystack = [post.url_overridden_by_dest, post.url, post.title, post.selftext]
+      .filter(Boolean).join(" ");
+    if (!OUR_DOMAINS_RE.test(haystack)) {
+      return {
+        ok: false,
+        error: "That post doesn't link to GLTCH Runner. Share one of your creations — the link from the app counts.",
+      };
+    }
+    return { ok: true };
+  } catch {
+    return { ok: false, error: RETRY };
+  }
+}
+
+/**
+ * Does this tweet actually link to us?
+ *
+ * publish.twitter.com/oembed returns a public tweet's HTML without auth. Links
+ * inside are t.co-shortened, so each is resolved to its destination before
+ * looking for our domains.
+ *
+ * Fails CLOSED on purpose. The Reddit verifier next door fails open, which is
+ * how 63,600 credits went out for unchecked links; if we cannot see the tweet,
+ * we do not pay for it. A sample of 150 recent claims found 81 that linked
+ * somewhere else entirely and 5 that linked to us.
+ */
+async function verifyTweetLinksToUs(url: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const TOO_SOON = "Couldn't read that post — make sure it's public, then try again in a minute.";
+  try {
+    const resp = await fetch(
+      `https://publish.twitter.com/oembed?url=${encodeURIComponent(url)}&omit_script=1`,
+      { redirect: "follow", signal: AbortSignal.timeout(10000) },
+    );
+    if (!resp.ok) return { ok: false, error: TOO_SOON };
+    const data = (await resp.json()) as { html?: string };
+    const html = String(data?.html || "");
+    if (OUR_DOMAINS_RE.test(html)) return { ok: true };
+
+    for (const short of [...html.matchAll(/https:\/\/t\.co\/[A-Za-z0-9]+/g)].map((m) => m[0]).slice(0, 4)) {
+      try {
+        const r = await fetch(short, { method: "HEAD", redirect: "follow", signal: AbortSignal.timeout(8000) });
+        if (OUR_DOMAINS_RE.test(r.url || "")) return { ok: true };
+      } catch { /* one dead shortlink should not decide the claim */ }
+    }
+    return {
+      ok: false,
+      error: "That post doesn't link to GLTCH Runner. Share one of your creations — the link from the app counts.",
+    };
+  } catch {
+    return { ok: false, error: TOO_SOON };
+  }
+}
+
 async function verifyRedditPost(url: string): Promise<{ ok: true } | { ok: false; error: string }> {
   try {
     // Normalize → strip trailing slash, strip query, append .json
