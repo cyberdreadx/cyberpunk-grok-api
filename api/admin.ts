@@ -17,6 +17,7 @@
 
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import Stripe from "stripe";
+import crypto from "crypto";
 import { getDb } from "./_lib/db";
 import { getUserFromRequest, ADMIN_EMAIL } from "./_lib/auth";
 import { logCreditGrant } from "./_lib/credit-ledger";
@@ -119,6 +120,23 @@ function costCtes(whereSql: string): string {
     )`;
 }
 
+/**
+ * Constant-time comparison for the background-continuation secret.
+ *
+ * A plain `===` on two strings short-circuits at the first differing byte, so
+ * response timing leaks how long a matching prefix the caller supplied. The
+ * secret is high-entropy and the attack is impractical over a network, but
+ * there is no reason to hand out the signal for free. Hashing before the
+ * compare also hides the length, which a bare timingSafeEqual would still leak
+ * by throwing when the buffers differ in size.
+ */
+function bgSecretMatches(provided: string | string[] | undefined, expected: string): boolean {
+  if (typeof provided !== "string" || !expected) return false;
+  const a = crypto.createHash("sha256").update(provided).digest();
+  const b = crypto.createHash("sha256").update(expected).digest();
+  return crypto.timingSafeEqual(a, b);
+}
+
 function isAdmin(req: VercelRequest): boolean {
   const auth = getUserFromRequest(req);
   return !!auth && auth.email === ADMIN_EMAIL;
@@ -165,7 +183,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     action === "send-announcement" &&
     req.body?._bg === true &&
     !!cronSecret &&
-    req.headers["x-bg-secret"] === cronSecret;
+    bgSecretMatches(req.headers["x-bg-secret"], cronSecret);
 
   // Admins can perform all actions; feed mods only a small subset
   const admin = isAdmin(req) || isBackgroundContinuation;
