@@ -26,6 +26,11 @@ interface GrokResult {
   type: "image" | "video";
   timestamp: number;
   folderId?: string | null;
+  // Server-rendered still for a video. Both save paths below copy it onto the
+  // StoredResult, which has always declared it — this side did not, so every
+  // save read a property TypeScript said could not exist. Vite's build does no
+  // typecheck, so it shipped silently.
+  previewUrl?: string;
 }
 
 import { apiUrl } from "@/lib/api";

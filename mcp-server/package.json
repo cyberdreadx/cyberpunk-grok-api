@@ -1,0 +1,28 @@
+{
+  "name": "gltch-runner-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for the GLTCH Runner image and video generation API",
+  "type": "module",
+  "license": "MIT",
+  "homepage": "https://grokrunner.gltch.app/api-docs",
+  "keywords": ["mcp", "modelcontextprotocol", "gltch", "image-generation", "video-generation"],
+  "bin": {
+    "gltch-runner-mcp": "dist/index.js"
+  },
+  "files": ["dist", "README.md"],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.31.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.0"
+  }
+}

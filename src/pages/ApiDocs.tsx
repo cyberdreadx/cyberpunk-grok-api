@@ -560,6 +560,77 @@ export default function ApiDocs() {
             </div>
           </div>
         </Section>
+        <Section title="🔌 MCP SERVER">
+          <div className="space-y-4">
+            <p className="text-sm text-foreground/80 font-mono">
+              Use GLTCH Runner from Claude, Cursor, or any MCP client. The server wraps the endpoints above
+              as tools, so you generate and edit media in the conversation instead of writing requests by
+              hand. Same API key, same credit costs.
+            </p>
+
+            <div>
+              <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">Claude Code</h4>
+              <CopyBlock code={`claude mcp add gltch-runner \\
+  --env GLTCH_API_KEY=gltch_sk_... \\
+  -- npx -y gltch-runner-mcp`} />
+            </div>
+
+            <div>
+              <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">Claude Desktop — claude_desktop_config.json</h4>
+              <CopyBlock language="json" code={`{
+  "mcpServers": {
+    "gltch-runner": {
+      "command": "npx",
+      "args": ["-y", "gltch-runner-mcp"],
+      "env": { "GLTCH_API_KEY": "gltch_sk_..." }
+    }
+  }
+}`} />
+            </div>
+
+            <div>
+              <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">TOOLS</h4>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs font-mono">
+                  <thead>
+                    <tr className="border-b border-primary/20">
+                      <th className="text-left py-1.5 pr-3 text-muted-foreground">Tool</th>
+                      <th className="text-left py-1.5 pr-3 text-muted-foreground">Credits</th>
+                      <th className="text-left py-1.5 text-muted-foreground">Description</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-b border-primary/10">
+                      <td className="py-1.5 pr-3 text-foreground">list_models</td>
+                      <td className="py-1.5 pr-3 text-green-400">free</td>
+                      <td className="py-1.5">Engines, prices, checkpoints and LoRAs. Start here.</td>
+                    </tr>
+                    <tr className="border-b border-primary/10">
+                      <td className="py-1.5 pr-3 text-foreground">generate_image</td>
+                      <td className="py-1.5 pr-3">3&ndash;4</td>
+                      <td className="py-1.5">zimage or txt2img from a prompt; klein to edit an image</td>
+                    </tr>
+                    <tr className="border-b border-primary/10">
+                      <td className="py-1.5 pr-3 text-foreground">edit_image</td>
+                      <td className="py-1.5 pr-3">5 (7 HD)</td>
+                      <td className="py-1.5">GLTCH engine edit of an existing image</td>
+                    </tr>
+                    <tr>
+                      <td className="py-1.5 pr-3 text-foreground">generate_video</td>
+                      <td className="py-1.5 pr-3">15</td>
+                      <td className="py-1.5">Animate a still with GLTCH WAN. Takes minutes.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <p className="text-xs text-muted-foreground font-mono">
+              Every tool except list_models spends credits from the account that owns the key. Failed jobs
+              are refunded automatically.
+            </p>
+          </div>
+        </Section>
         <Section title="💻 CODE EXAMPLES">
           <div className="space-y-4">
             <div>
