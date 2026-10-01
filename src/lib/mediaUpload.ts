@@ -44,10 +44,18 @@ function userIdFromToken(token: string): string | null {
   }
 }
 
-function previewFilename(filename: string): string {
+/**
+ * Name the preview after what it actually is.
+ *
+ * This used to hardcode `-preview.webp` regardless of the blob's real type,
+ * which is how PNG bytes got stored under .webp names and served as
+ * image/webp. The extension and the Content-Type must both come from the blob.
+ */
+function previewFilename(filename: string, mime: string): string {
   const dot = filename.lastIndexOf(".");
   const base = dot > 0 ? filename.slice(0, dot) : filename;
-  return `${base}-preview.webp`;
+  const ext = mime === "image/webp" ? "webp" : mime === "image/jpeg" ? "jpg" : "png";
+  return `${base}-preview.${ext}`;
 }
 
 /** Blob -> bare base64 (no data: prefix), for the relay upload path. */
