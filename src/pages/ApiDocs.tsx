@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from "react";
+import ApiKeysPanel from "@/components/ApiKeysPanel";
 import { Copy, Check, Key, Zap, Shield, ArrowLeft, ExternalLink, Play, Loader2, Wand2, Cpu } from "lucide-react";
 import { Link } from "react-router-dom";
 import CyberLayout from "@/components/CyberLayout";
@@ -316,7 +317,15 @@ export default function ApiDocs() {
         <Section title="⚡ QUICK START">
           <ol className="list-decimal list-inside space-y-2 text-sm text-foreground/80 font-mono">
             <li>Sign in at <a href={APP_URL} className="text-primary underline">{APP_URL}</a></li>
-            <li>Generate an API key from the <strong className="text-primary">API KEYS</strong> button on the main page</li>
+            <li>
+              Create a key right here &mdash; it is shown once, so copy it:
+              {/* The only other way in is a 10px, 40%-opacity link inside a footer
+                  that is collapsed by default at the bottom of the create page. On a
+                  phone that is unfindable, which is the complaint this answers. */}
+              <span className="block mt-2">
+                <ApiKeysPanel triggerClassName="inline-flex items-center gap-2 px-3 py-2 rounded border border-primary/60 bg-primary/10 text-primary hover:bg-primary/20 transition-colors font-mono text-xs tracking-wider" />
+              </span>
+            </li>
             <li>Use the key in your requests via the <code className="text-primary bg-muted/50 px-1 rounded">X-API-Key</code> header</li>
             <li>Send requests to <code className="text-primary bg-muted/50 px-1 rounded">{API_BASE}</code></li>
           </ol>

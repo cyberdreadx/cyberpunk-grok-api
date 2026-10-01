@@ -76,6 +76,11 @@ const App = () => (
           <Route path="/library" element={<PageShell><Library /></PageShell>} />
           <Route path="/s/:shareId" element={<PageShell><ShareView /></PageShell>} />
           <Route path="/docs" element={<PageShell><ApiDocs /></PageShell>} />
+          {/* The published gltch-runner-mcp README and the gltchrunner.com
+              landing page both link to /api-docs. Only /docs existed, so
+              those links hit the 404 catch-all. Keep both working — the npm
+              package is already out there with this path baked in. */}
+          <Route path="/api-docs" element={<PageShell><ApiDocs /></PageShell>} />
           <Route path="/feed" element={<Navigate to="/" replace />} />
           <Route path="/profile" element={<PageShell><ProfilePage /></PageShell>} />
           <Route path="/profile/:username" element={<PageShell><ProfilePage /></PageShell>} />
