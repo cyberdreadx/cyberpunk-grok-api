@@ -106,6 +106,10 @@
     {
       "path": "/api/cron-api-jobs?quiet=1",
       "schedule": "*/2 * * * *"
+    },
+    {
+      "path": "/api/cron-share-proof-recheck?quiet=1",
+      "schedule": "40 * * * *"
     }
   ],
   "headers": [

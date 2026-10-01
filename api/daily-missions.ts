@@ -245,6 +245,26 @@ async function claimMission(sql: any, userId: string, mission: string, res: Verc
      */
     // ── X/Twitter: the tweet must actually link to us ──
     if (mission === "twitter") {
+      /*
+       * Accounts that post, collect, and delete do not get to keep doing it.
+       *
+       * The check below proves the post exists right now; it can say nothing
+       * about tomorrow. cron-share-proof-recheck re-reads these later and
+       * reverses the ones that vanished — 28% of them when it was measured,
+       * with one account responsible for 10 deletions. The clawback makes each
+       * round pointless; this makes the round stop.
+       *
+       * Two confirmed deletions, not one: deleting a post once is something an
+       * honest person does, and the credits for it have already come back by
+       * then.
+       */
+      const strikes = await confirmedDeletions(sql, userId);
+      if (strikes >= DELETIONS_BEFORE_BLOCK) {
+        return res.status(403).json({
+          error: `This mission is closed on your account — ${strikes} of your X posts were deleted after being credited. Posts have to stay up.`,
+        });
+      }
+    
       const check = await verifyTweetLinksToUs(trimmed);
       if (!check.ok) {
         return res.status(400).json({ error: (check as { ok: false; error: string }).error });
