@@ -64,14 +64,23 @@ tools accept, so you aren't guessing at strings.
 
 `generate_video` takes `gltch-wan` (the engine the app itself uses, and the
 default here) or `wan-video`. Both animate a still, so both need `image_url`.
-Video takes minutes rather than seconds.
+
+**Video often times out.** The API allows a generation 280 seconds and then
+refunds it, and a video regularly needs longer than that — the limit is the
+API's synchronous design, not the engine. Your credits always come back. A
+lower `frame_count` shortens the job and improves the odds. For a video that
+has to land, use the app.
 
 ## Configuration
 
 | Variable | Required | Default |
 |---|---|---|
 | `GLTCH_API_KEY` | yes | — |
-| `GLTCH_API_BASE` | no | `https://grokrunner.gltch.app` |
+| `GLTCH_API_BASE` | no | `https://api.gltch.app` |
+
+Use `api.gltch.app`, not `grokrunner.gltch.app`. The app host proxies to the
+same backend but times out at about 26 seconds, which is shorter than a real
+generation takes.
 
 ## Errors worth knowing
 

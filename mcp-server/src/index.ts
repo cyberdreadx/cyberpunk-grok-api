@@ -18,7 +18,19 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 
-const API_BASE = (process.env.GLTCH_API_BASE || "https://grokrunner.gltch.app").replace(/\/+$/, "");
+/*
+ * api.gltch.app, NOT grokrunner.gltch.app.
+ *
+ * The app host is Netlify, which proxies /api/* to this same backend — so it
+ * answers correctly and looks like a fine default. It isn't: the Netlify proxy
+ * gives up at roughly 26 seconds, and these calls hold the connection open for
+ * the whole generation. A models lookup returns in 0.2s and survives; a real
+ * image took 28s through the proxy and came back 502 while the backend had
+ * already produced it in 10s. Video, which runs for minutes, could never work.
+ * Credits are refunded on that 502, so it cost nothing but it looked exactly
+ * like a broken engine.
+ */
+const API_BASE = (process.env.GLTCH_API_BASE || "https://api.gltch.app").replace(/\/+$/, "");
 const API_KEY = process.env.GLTCH_API_KEY || "";
 
 /*
@@ -221,7 +233,7 @@ server.registerTool(
   {
     title: "Generate a video",
     description:
-      "Generate a short video on GLTCH Runner. SPENDS 15 CREDITS and takes minutes, not seconds. 'gltch-wan' animates an existing still and REQUIRES image_url — it is the engine the app itself uses. 'wan-video' also takes a source image. Returns a public URL to the finished video.",
+      "Generate a short video on GLTCH Runner. SPENDS 15 CREDITS and takes minutes. 'gltch-wan' animates an existing still and REQUIRES image_url — it is the engine the app itself uses. 'wan-video' also takes a source image. WARNING: the API gives a generation 280 seconds and then refunds it, and a video frequently needs longer, so this tool times out more often than it succeeds. The credits always come back. Lowering frame_count shortens the job and improves the odds. For a video that must land, use the app rather than the API.",
     inputSchema: {
       prompt: z.string().min(1).describe("How the shot should move and what should happen in it."),
       image_url: z.string().url().describe("Public URL of the still to animate."),

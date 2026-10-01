@@ -13,9 +13,12 @@ import { Button } from "@/components/ui/button";
  * sample was a guaranteed failure, and the playground below just reported
  * "API returned non-JSON".
  *
- * api.gltch.app is the API host; grokrunner.gltch.app is the app (Netlify
- * proxies /api/* there to the same backend, so either base works). Keys and
- * credits live on the app, so those links point at APP_URL instead.
+ * api.gltch.app is the API host; grokrunner.gltch.app is the app. Netlify
+ * proxies /api/* from the app to this same backend, but the two bases are NOT
+ * interchangeable: that proxy times out around 26s, and a generation holds the
+ * connection open longer than that. Measured — an image that the backend
+ * finished in 10s came back 502 through the app host at 28s. Always publish
+ * api.gltch.app. Keys and credits live on the app, so those links use APP_URL.
  */
 const API_BASE = "https://api.gltch.app";
 const APP_URL = "https://grokrunner.gltch.app";
