@@ -17,8 +17,10 @@
   <meta name="twitter:title" content="GLTCH Runner — Uncensored AI Image & Video Generation" />
   <meta name="twitter:description" content="Generate AI images and videos, edit photos, and chat with AI model personas. Fewer limits." />
   <meta name="twitter:image" content="https://gltchrunner.com/og-image.png" />
-  <link rel="icon" href="/favicon.ico" />
-  <link rel="apple-touch-icon" href="/og-image.png" />
+  <link rel="icon" href="/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/icon-32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/icon-16.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
   <meta name="theme-color" content="#06070d" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -26,21 +28,93 @@
   <style>
     :root{
       --bg:#06070d; --bg2:#0b0e1a; --fg:#e6f0ff; --muted:#8290b3;
-      --primary:#22d3ee; --secondary:#d946ef; --line:rgba(120,140,200,.16);
+      --primary:#22d3ee; --secondary:#d946ef; --accent:#8b5cf6;
+      --ok:#34d399; --line:rgba(120,140,200,.16);
     }
     *{box-sizing:border-box} html{scroll-behavior:smooth}
     body{
-      margin:0; background:var(--bg); color:var(--fg);
+      margin:0; color:var(--fg);
+      /* --bg2 was declared and never used; the page was flat black. A single
+         cool wash above the fold gives the glows something to sit in. */
+      background:radial-gradient(95% 62% at 50% -12%,var(--bg2),transparent 62%),var(--bg);
       font-family:"Share Tech Mono",ui-monospace,monospace; line-height:1.6;
       -webkit-font-smoothing:antialiased; overflow-x:hidden;
     }
     a{color:inherit}
-    .grid-bg{position:fixed; inset:0; z-index:0; pointer-events:none; opacity:.05;
+    /* Background depth stack. Every layer is fixed, non-interactive and
+       animated on transform only, so the page paints once and the motion
+       rides on the compositor rather than costing a frame. */
+    .bg-layer{position:fixed; inset:0; z-index:0; pointer-events:none}
+
+    /* Oversized so a 54px translate loops seamlessly against the 54px grid —
+       drifting the transform instead of background-position keeps it off the
+       paint path. */
+    .grid-bg{inset:-80px; opacity:.06;
       background-image:linear-gradient(var(--primary) 1px,transparent 1px),linear-gradient(90deg,var(--primary) 1px,transparent 1px);
-      background-size:54px 54px;}
-    .glow{position:fixed; z-index:0; filter:blur(90px); opacity:.25; pointer-events:none}
-    .glow.a{top:-160px; left:-120px; width:480px; height:480px; background:var(--primary); border-radius:50%}
-    .glow.b{bottom:-200px; right:-140px; width:520px; height:520px; background:var(--secondary); border-radius:50%}
+      background-size:54px 54px;
+      /* Fades out behind the headline, so the grid reads as depth under the
+         page rather than graph paper printed over the copy. */
+      -webkit-mask-image:radial-gradient(120% 78% at 50% 2%,transparent 18%,#000 72%);
+      mask-image:radial-gradient(120% 78% at 50% 2%,transparent 18%,#000 72%);
+      animation:grid-drift 26s linear infinite}
+    @keyframes grid-drift{from{transform:translate3d(0,0,0)} to{transform:translate3d(54px,54px,0)}}
+
+    .glow{position:fixed; z-index:0; filter:blur(90px); pointer-events:none;
+      border-radius:50%; will-change:transform}
+    /* Three periods that share no common factor, so the field never visibly
+       repeats even though each blob is on a simple loop. */
+    .glow.a{top:-160px; left:-120px; width:480px; height:480px; background:var(--primary);
+      opacity:.25; animation:drift-a 37s ease-in-out infinite}
+    .glow.b{bottom:-200px; right:-140px; width:520px; height:520px; background:var(--secondary);
+      opacity:.25; animation:drift-b 46s ease-in-out infinite}
+    /* Centred on its own anchor point, and the keyframes start from the same
+       transform — without this base value the reduced-motion rule below strips
+       the centring along with the animation and drops it half its width off. */
+    .glow.c{top:42%; left:54%; width:440px; height:440px; background:var(--accent);
+      opacity:.17; transform:translate3d(-50%,-50%,0); animation:drift-c 59s ease-in-out infinite}
+    @keyframes drift-a{0%,100%{transform:translate3d(0,0,0) scale(1)} 50%{transform:translate3d(96px,64px,0) scale(1.14)}}
+    @keyframes drift-b{0%,100%{transform:translate3d(0,0,0) scale(1)} 50%{transform:translate3d(-78px,-54px,0) scale(1.09)}}
+    @keyframes drift-c{0%,100%{transform:translate3d(-50%,-50%,0) scale(1)} 50%{transform:translate3d(-60%,-40%,0) scale(1.16)}}
+
+    /* 90px blurs over near-black band badly on 8-bit panels — visible rings.
+       A little grain dithers them away and costs one tiled SVG. */
+    .grain{opacity:.038; mix-blend-mode:overlay; background-size:170px 170px;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='170' height='170'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+    .vignette{background:radial-gradient(118% 86% at 50% 34%,transparent 44%,rgba(2,3,9,.82) 100%)}
+
+    /* Ambience is never worth motion sickness. */
+    @media (prefers-reduced-motion:reduce){
+      .grid-bg,.glow{animation:none}
+    }
+    /* Site-wide notices. A list rather than markup, so the next one is data —
+       see the BANNERS array at the foot of the page. */
+    .banners{position:relative; z-index:2}
+    .banner{display:flex; align-items:center; flex-wrap:wrap; gap:4px 10px;
+      padding:10px 18px; border-bottom:1px solid transparent; font-size:12px; line-height:1.45}
+    .banner .t{font-family:"Orbitron",sans-serif; font-weight:700; letter-spacing:2px;
+      text-transform:uppercase; font-size:11px; white-space:nowrap}
+    .banner .b{flex:1 1 260px; min-width:0}
+    .banner .x{margin-left:auto; flex:0 0 auto; background:none; border:0; cursor:pointer;
+      font-size:17px; line-height:1; padding:2px 6px; border-radius:5px;
+      color:currentColor; opacity:.55; transition:.15s}
+    .banner .x:hover{opacity:1; background:rgba(255,255,255,.10)}
+    .banner.ok{background:rgba(52,211,153,.10); border-bottom-color:rgba(52,211,153,.34); color:#c7f5e4}
+    .banner.ok .t{color:var(--ok)}
+    .banner.info{background:rgba(34,211,238,.10); border-bottom-color:rgba(34,211,238,.34); color:#cdf1fa}
+    .banner.info .t{color:var(--primary)}
+    .banner.promo{background:rgba(217,70,239,.10); border-bottom-color:rgba(217,70,239,.34); color:#f6d9fb}
+    .banner.promo .t{color:var(--secondary)}
+    .banner.sale{background:rgba(249,115,22,.12); border-bottom-color:rgba(249,115,22,.38); color:#fde4cd}
+    .banner.sale .t{color:#fdba74}
+    .banner.hot{background:rgba(245,158,11,.11); border-bottom-color:rgba(245,158,11,.34); color:#fdecc8}
+    .banner.hot .t{color:#fcd34d}
+    /* Every promo is a route to the app, so the whole bar is the target — not
+       a bar with a link buried in it. */
+    a.banner{text-decoration:none; cursor:pointer}
+    a.banner:hover{filter:brightness(1.22)}
+    .banner .cd{font-variant-numeric:tabular-nums; white-space:nowrap; opacity:.85}
+
     .wrap{position:relative; z-index:1; max-width:1080px; margin:0 auto; padding:0 22px}
     header{display:flex; align-items:center; justify-content:space-between; padding:22px 0}
     .brand{font-family:"Orbitron",sans-serif; font-weight:900; letter-spacing:3px; font-size:18px}
@@ -70,17 +144,212 @@
       background:radial-gradient(120% 140% at 50% 0%,rgba(217,70,239,.12),transparent 60%)}
     .band h2{font-family:"Orbitron",sans-serif; font-size:clamp(20px,3.4vw,30px); margin:0 0 10px}
     .band p{color:var(--muted); max-width:560px; margin:0 auto 22px}
+    .price{margin-top:14px; font-size:13px; color:var(--muted)}
+    .price b{color:var(--fg); font-weight:400}
+    .shots{padding:10px 0 6px}
+    .shots h2{font-family:"Orbitron",sans-serif; font-size:clamp(16px,2.6vw,22px); text-align:center; margin:0 0 6px}
+    .shots .cap{text-align:center; color:var(--muted); font-size:12px; margin:0 0 18px}
+    .shot-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px}
+    .shot{position:relative; aspect-ratio:1; border:1px solid var(--line); border-radius:12px; overflow:hidden;
+      background:rgba(20,26,46,.5); display:block}
+    .shot img{width:100%; height:100%; object-fit:cover; display:block; transition:.2s}
+    .shot:hover img{transform:scale(1.04)}
+    .shot .by{position:absolute; left:0; right:0; bottom:0; padding:6px 8px; font-size:10px; color:#dbe6ff;
+      background:linear-gradient(transparent,rgba(4,6,14,.85))}
+    /* The strip only exists if real renders load; if the feed is unreachable
+       the whole section stays hidden rather than showing empty frames. */
+    .shots[hidden]{display:none}
+    .creator-band{border:1px solid var(--line); border-radius:18px; padding:26px; margin:34px 0 0; text-align:center}
+    .creator-band h2{font-family:"Orbitron",sans-serif; font-size:clamp(16px,2.6vw,20px); margin:0 0 8px}
+    .creator-band p{color:var(--muted); max-width:520px; margin:0 auto 18px; font-size:14px}
     footer{border-top:1px solid var(--line); padding:26px 0 50px; text-align:center; color:var(--muted); font-size:13px}
     footer a{color:var(--primary); text-decoration:none}
+    footer .legal{margin-top:12px; font-size:12px}
+    footer .legal.adult{margin-top:10px; max-width:560px; margin-left:auto; margin-right:auto;
+      color:var(--muted); opacity:.75; font-size:11px; line-height:1.5}
+  
+    /* Developer band — added when the public API and MCP server shipped. The
+       landing page had no mention of either, so the only way to find the docs
+       was to already have an account. */
+    .dev-band{border:1px solid var(--line); border-radius:18px; padding:26px; margin:20px 0 0}
+    .dev-band h2{margin:0 0 8px}
+    .dev-band > p{color:var(--muted); margin:0 0 18px}
+    .dev-band .snip{background:rgba(6,7,13,.75); border:1px solid var(--line);
+      border-radius:10px; padding:14px 16px; overflow-x:auto; margin:0 0 10px}
+    .dev-band .snip code{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+      font-size:12.5px; line-height:1.7; color:#9ff3ff; white-space:pre; display:block}
+    .dev-band .snip .c{color:var(--muted)}
+    .dev-band .tools{list-style:none; padding:0; margin:0 0 18px; display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(168px,1fr)); gap:8px 18px}
+    .dev-band .tools li{font-family:ui-monospace,Menlo,monospace; font-size:12.5px; color:var(--muted)}
+    .dev-band .tools b{color:var(--fg); font-weight:600}
+    .dev-band .acts{display:flex; flex-wrap:wrap; gap:10px}
   </style>
 </head>
 <body>
-  <div class="grid-bg"></div><div class="glow a"></div><div class="glow b"></div>
+  <div class="bg-layer grid-bg"></div>
+  <div class="glow a"></div><div class="glow b"></div><div class="glow c"></div>
+  <div class="bg-layer grain"></div>
+  <div class="bg-layer vignette"></div>
+
+  <div class="banners" id="banners"></div>
+  <script>
+  /* Site-wide banners — the same set the app carries, in the same words.
+
+     This runs inline the moment the container is parsed, before the hero
+     exists in the DOM, so the static bars are part of the first paint and
+     shift nothing. Only the flash sale arrives late; it depends on a live API
+     answer and there is no honest way to show a countdown without one.
+
+     Copy is duplicated from src/components/*.tsx by hand because the two sites
+     are separate deploys — nginx here, Netlify there. README.md records this
+     page outliving the truth once already, when the free-credits line survived
+     two weeks past app_config.free_credits being switched off. Change one,
+     change both. */
+  (function () {
+    var SIGNUP = 'https://grokrunner.gltch.app/create?signup=1';
+
+    /* Priority order, highest first. Only MAX_VISIBLE ever render together:
+       five stacked bars would push the hero below the fold, which is the one
+       thing this page exists to avoid. As each expires or is dismissed the
+       next one takes the free slot, so the strip manages itself.
+
+       The launch banners carry an expiry the app's versions do not. "New" and
+       "Upgraded" are claims with a shelf life, and on a marketing page nobody
+       remembers to retire them \u2014 the LTX banner had already gone stale once
+       before it was rewritten on 2026-09-04. */
+    var MAX_VISIBLE = 2;
+
+    var BANNERS = [
+      { id: 'status-2026-09-06-restored', kind: 'ok',
+        expires: '2026-09-10T00:00:00Z',
+        title: 'All systems operational',
+        body: 'Generation was down for about 18 hours and is now fully restored. Sorry for the trouble \u2014 no credits were charged for anything that failed.' },
+
+      { id: 'flash-sale', kind: 'sale', live: 'flash', href: SIGNUP },
+
+      { id: 'krea2-launch-v1', kind: 'info', href: SIGNUP,
+        expires: '2026-09-25T00:00:00Z',
+        title: 'New \u2014 Krea 2',
+        body: 'Photoreal image engine, live now. Film-grade realism, any shape up to 1MP, 3 credits a render.' },
+
+      { id: 'ltx-23-upgrade-v1', kind: 'hot', href: SIGNUP,
+        expires: '2026-09-25T00:00:00Z',
+        title: 'Upgraded \u2014 LTX-2.3',
+        body: 'Sharper video, now up to 15 seconds. Native HD to 1664\u00d7960 with synced audio in one pass.' },
+
+      { id: 'buy-hold-v1', kind: 'promo', href: SIGNUP,
+        title: 'Buy & Hold XRGE',
+        body: 'Hold XRGE to unlock up to +25% off generations, +10 daily credits, NSFW LoRAs and GLTCH PRO. Continuous holders earn streak multipliers up to \u00d72.' }
+    ];
+
+    var host = document.getElementById('banners');
+    if (!host) return;
+
+    function dismissed(id) {
+      try { return localStorage.getItem('gltch-banner-' + id) === '1'; } catch (e) { return false; }
+    }
+    function eligible(b) {
+      if (dismissed(b.id)) return false;
+      if (b.expires && Date.now() > Date.parse(b.expires)) return false;
+      if (b.live && !b.resolved) return false;
+      return true;
+    }
+
+    function build(b) {
+      var el = document.createElement(b.href ? 'a' : 'div');
+      el.className = 'banner ' + b.kind;
+      el.setAttribute('role', 'status');
+      if (b.href) el.href = b.href;
+
+      var t = document.createElement('span'); t.className = 't'; t.textContent = b.title;
+      var p = document.createElement('span'); p.className = 'b'; p.textContent = b.body;
+      el.appendChild(t); el.appendChild(p);
+      if (b.countdown) el.appendChild(b.countdown);
+
+      var x = document.createElement('button');
+      x.type = 'button'; x.className = 'x'; x.textContent = '\u00d7';
+      x.setAttribute('aria-label', 'Dismiss ' + b.title);
+      x.onclick = function (ev) {
+        ev.preventDefault(); ev.stopPropagation();
+        try { localStorage.setItem('gltch-banner-' + b.id, '1'); } catch (e) { /* private mode */ }
+        b.hidden = true;
+        render();
+      };
+      el.appendChild(x);
+      return el;
+    }
+
+    function render() {
+      host.textContent = '';
+      var shown = 0;
+      for (var i = 0; i < BANNERS.length && shown < MAX_VISIBLE; i++) {
+        var b = BANNERS[i];
+        if (b.hidden || !eligible(b)) continue;
+        host.appendChild(build(b));
+        shown++;
+      }
+    }
+
+    /* Flash sale. Live from the API or not at all \u2014 a hard-coded sale is
+       exactly the drift README warns about, and a countdown to a date nobody
+       is holding to is worse than no banner. */
+    function left(ms) {
+      if (ms <= 0) return null;
+      var m = Math.floor(ms / 60000), h = Math.floor(m / 60), d = Math.floor(h / 24);
+      if (d > 0) return d + 'd ' + (h % 24) + 'h';
+      if (h > 0) return h + 'h ' + (m % 60) + 'm';
+      return m + 'm';
+    }
+
+    var flash = null;
+    for (var j = 0; j < BANNERS.length; j++) if (BANNERS[j].live === 'flash') flash = BANNERS[j];
+
+    if (flash && !dismissed(flash.id)) {
+      fetch('https://api.gltch.app/api/flash-sales')
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (d) {
+          var sale = d && d.sales && d.sales[0];
+          if (!sale) return;
+          var ends = Date.parse(sale.ends_at);
+          if (!(ends > Date.now())) return;
+
+          /* Keyed to the sale id, so a dismissal does not carry over to the
+             next sale the way a fixed key would. */
+          flash.id = 'flash-' + sale.id;
+          if (dismissed(flash.id)) return;
+
+          var bits = [];
+          if (sale.discount_percent > 0) bits.push(sale.discount_percent + '% off');
+          if (sale.bonus_credits_percent > 0) bits.push('+' + sale.bonus_credits_percent + '% bonus credits');
+          if (sale.title) bits.push(sale.title);
+
+          flash.title = 'Flash sale';
+          flash.body = bits.join(' \u00b7 ');
+          flash.countdown = document.createElement('span');
+          flash.countdown.className = 'cd';
+          flash.resolved = true;
+
+          function tick() {
+            var s = left(ends - Date.now());
+            if (!s) { flash.hidden = true; render(); return; }
+            flash.countdown.textContent = 'ends in ' + s;
+          }
+          tick();
+          setInterval(tick, 30000);
+          render();
+        })
+        .catch(function () { /* no sale banner rather than a wrong one */ });
+    }
+
+    render();
+  })();
+  </script>
 
   <div class="wrap">
     <header>
-      <div class="brand"><b>GLTCH</b><span>//</span>RUNNER</div>
-      <a class="nav-cta" href="https://grokrunner.gltch.app">USE APP →</a>
+      <div class="brand"><b>GLTCH</b> RUNNER</div>
+      <a class="nav-cta" href="https://grokrunner.gltch.app/create">USE APP →</a>
     </header>
 
     <section class="hero">
@@ -88,31 +357,139 @@
       <h1>Create anything.<br/><span class="em">Fewer limits.</span></h1>
       <p class="sub">GLTCH Runner is an uncensored AI image generator, video creator, and photo editor — plus AI model personas you can actually chat with. Run it free in your browser.</p>
       <div class="cta-row">
-        <a class="btn btn-primary" href="https://grokrunner.gltch.app">USE APP</a>
-        <a class="btn btn-ghost" href="https://grokrunner.gltch.app/apply">BECOME A CREATOR</a>
+        <a class="btn btn-primary" href="https://grokrunner.gltch.app/create?signup=1">START CREATING FREE</a>
       </div>
-      <div class="note">No install · free credits to start · works on mobile &amp; desktop</div>
+      <!-- 75 credits for $6.99 is the real STARTER pack (src/lib/api.ts
+           CREDIT_PACKAGES). No invented price, no invented plan. -->
+      <div class="price">Free daily credits. Then pay as you go — <b>75 credits for $6.99</b>.</div>
+      <div class="note">No install · works on mobile &amp; desktop · uncensored image, video &amp; chat</div>
     </section>
 
     <section class="features">
       <div class="card"><div class="ic">🖼️</div><h3>AI Images</h3><p>Generate and edit images with GLTCH &amp; GLTCH PRO engines, LoRAs, and styles — high quality, fast, fewer restrictions.</p></div>
-      <div class="card"><div class="ic">🎬</div><h3>AI Video</h3><p>Turn a prompt or a photo into motion with WAN &amp; LTX video engines — now with sound. Image-to-video in a click.</p></div>
+      <div class="card"><div class="ic">🎬</div><h3>AI Video</h3><p>Turn a prompt or a photo into motion with LTX-2.3, WAN &amp; Seedance. Native HD clips up to 15 seconds with synced audio. Image-to-video in a click.</p></div>
+      <div class="card"><div class="ic">🔌</div><h3>Developer API</h3><p>Generate images, edits, and video from your own code — or straight from an AI agent. A REST API plus an <strong>MCP server</strong> for Claude, Claude Code, and Cursor. Same credits as the app.</p></div>
       <div class="card"><div class="ic">💬</div><h3>Model Personas</h3><p>Chat with AI personas of featured creators — they reply in character and can send photos &amp; videos.</p></div>
       <div class="card"><div class="ic">💸</div><h3>Creator Earnings</h3><p>Models earn from their content and chats, with real cash payouts. Apply to get featured.</p></div>
     </section>
 
+    <section class="shots" id="shots" hidden>
+      <h2>Made on GLTCH Runner</h2>
+      <p class="cap">Real posts from the public feed.</p>
+      <div class="shot-grid" id="shot-grid"></div>
+    </section>
+
+    <section class="creator-band">
+      <h2>Make money from your work?</h2>
+      <p>Featured creators earn from their content and chats, with real cash payouts.</p>
+      <a class="btn btn-ghost" href="https://grokrunner.gltch.app/apply">BECOME A CREATOR</a>
+    </section>
+
+    <section class="dev-band" id="developers">
+      <h2>Build with it</h2>
+      <p>A REST API for image generation, image editing, and image&#8209;to&#8209;video &mdash; and an
+        MCP server so Claude, Claude&nbsp;Code, or Cursor can create directly in a conversation.
+        Same engines and the same credits as the app.</p>
+
+      <div class="snip"><code><span class="c"># add it to Claude Code</span>
+claude mcp add gltch-runner \
+  --env GLTCH_API_KEY=gltch_sk_... \
+  -- npx -y gltch-runner-mcp</code></div>
+
+      <ul class="tools">
+        <li><b>generate_image</b> &middot; 3 credits</li>
+        <li><b>edit_image</b> &middot; 5 credits</li>
+        <li><b>generate_video</b> &middot; 15 credits</li>
+        <li><b>list_models</b> &middot; free</li>
+      </ul>
+
+      <div class="acts">
+        <a class="btn btn-ghost" href="https://grokrunner.gltch.app/api-docs">API DOCS</a>
+        <a class="btn btn-ghost" href="https://www.npmjs.com/package/gltch-runner-mcp" rel="noopener">NPM PACKAGE</a>
+      </div>
+    </section>
+
     <section class="band">
       <h2>Ready to make something?</h2>
-      <p>Jump into the app, claim your free credits, and start generating in seconds.</p>
-      <a class="btn btn-primary" href="https://grokrunner.gltch.app">USE APP →</a>
+      <p>Create an account and start generating in seconds.</p>
+      <a class="btn btn-primary" href="https://grokrunner.gltch.app/create?signup=1">START CREATING FREE →</a>
     </section>
 
     <footer>
       © <span id="yr"></span> GLTCH Runner ·
-      <a href="https://grokrunner.gltch.app">Launch app</a> ·
+      <a href="https://grokrunner.gltch.app/create">Launch app</a> ·
       <a href="https://grokrunner.gltch.app/apply">Become a creator</a>
+      <!-- Legal links are not decoration: card processors and app stores both
+           check that Terms, Privacy and a copyright contact are reachable from
+           the public landing page without signing in. -->
+      <div class="legal">
+        <a href="https://grokrunner.gltch.app/terms">Terms of Service</a> ·
+        <a href="https://grokrunner.gltch.app/privacy">Privacy Policy</a> ·
+        <a href="mailto:gltch.app@proton.me">DMCA</a>
+      </div>
+      <div class="legal adult">
+        18+ only. All models and users are 18 or older. This site contains
+        adult content — by entering you confirm you are of legal age in your
+        jurisdiction.
+      </div>
       <script>document.getElementById('yr').textContent=new Date().getFullYear()</script>
     </footer>
   </div>
+
+  <script>
+  /* Real outputs, not stock art. Same public endpoint the app's own landing
+     uses: logged-out feed responses carry preview thumbnails only, and this
+     additionally keeps just SFW, unlocked, non-video posts.
+
+     Tiles are added only once their image has actually decoded. Roughly half
+     the top feed's thumbnails are pre-migration Vercel Blob URLs that now 404,
+     so filtering on the API response alone would paint a row of broken frames.
+     The section stays hidden until six have loaded, and stays hidden forever
+     if six never do. */
+  (function () {
+    var WANT = 8, MIN = 6;
+    var sec = document.getElementById('shots');
+    var grid = document.getElementById('shot-grid');
+    if (!sec || !grid) return;
+    var SIGNUP = 'https://grokrunner.gltch.app/create?signup=1';
+
+    fetch('https://api.gltch.app/api/feed?sort=top&limit=60')
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (!d || !Array.isArray(d.posts)) return;
+        var queue = d.posts.filter(function (p) {
+          return p.previewImageUrl && !p.isMature && !p.lockCost
+            && !/\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(p.previewImageUrl);
+        });
+        var shown = 0, settled = 0, total = queue.length;
+        if (!total) return;
+
+        queue.forEach(function (p) {
+          var img = new Image();
+          img.loading = 'lazy';
+          img.alt = 'Render by @' + p.username;
+          img.onload = function () {
+            settled++;
+            if (shown < WANT) {
+              var a = document.createElement('a');
+              a.className = 'shot';
+              a.href = SIGNUP;
+              a.appendChild(img);
+              var by = document.createElement('span');
+              by.className = 'by';
+              by.textContent = '@' + p.username;
+              a.appendChild(by);
+              grid.appendChild(a);
+              shown++;
+              if (shown >= MIN) sec.hidden = false;
+            }
+          };
+          img.onerror = function () { settled++; };
+          img.src = p.previewImageUrl;
+        });
+      })
+      .catch(function () { /* leave it hidden */ });
+  })();
+  </script>
 </body>
 </html>
