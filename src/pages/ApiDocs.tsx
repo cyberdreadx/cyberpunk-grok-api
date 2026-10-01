@@ -563,6 +563,104 @@ export default function ApiDocs() {
             </div>
           </div>
         </Section>
+        <Section title="⏳ ASYNC JOBS — FOR VIDEO">
+          <div className="space-y-4">
+            <p className="text-sm text-foreground/80 font-mono">
+              <code className="text-foreground">/api/v1/comfy</code> holds the connection open for the whole
+              generation and refunds if it passes <strong>280 seconds</strong>. Images finish well inside
+              that. Video regularly does not. Submit video here instead: you get a job id back immediately
+              and poll it.
+            </p>
+
+            <div className="border border-primary/20 rounded-lg overflow-hidden">
+              <div className="bg-primary/5 px-4 py-2 flex items-center gap-2">
+                <span className="text-xs font-mono font-bold bg-primary/20 text-primary px-2 py-0.5 rounded">POST</span>
+                <code className="text-sm font-mono text-foreground">/api/v1/jobs</code>
+                <span className="text-[10px] font-mono text-muted-foreground ml-auto">SUBMIT</span>
+              </div>
+              <div className="p-4 space-y-2">
+                <p className="text-sm text-foreground/80 font-mono">
+                  Body is identical to <code>/api/v1/comfy</code>. Credits are taken at submit and returned
+                  in full if the job fails or expires. Responds <code>202</code>.
+                </p>
+                <CopyBlock code={`curl -X POST ${baseUrl}/api/v1/jobs \\
+  -H "X-API-Key: gltch_sk_..." \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "prompt": "slow drift, heat shimmer",
+    "workflow": "gltch-wan",
+    "image_url": "https://example.com/still.png",
+    "frame_count": 81
+  }'`} />
+                <CopyBlock language="json" code={`{
+  "job_id": "446315c8-75ca-4e36-b111-e15c6c3e42b8",
+  "status": "running",
+  "kind": "video",
+  "credits_held": 15,
+  "poll_url": "/api/v1/jobs?id=446315c8-75ca-4e36-b111-e15c6c3e42b8"
+}`} />
+              </div>
+            </div>
+
+            <div className="border border-primary/20 rounded-lg overflow-hidden">
+              <div className="bg-primary/5 px-4 py-2 flex items-center gap-2">
+                <span className="text-xs font-mono font-bold bg-primary/20 text-primary px-2 py-0.5 rounded">GET</span>
+                <code className="text-sm font-mono text-foreground">/api/v1/jobs?id=</code>
+                <span className="text-[10px] font-mono text-muted-foreground ml-auto">POLL · FREE</span>
+              </div>
+              <div className="p-4 space-y-2">
+                <p className="text-sm text-foreground/80 font-mono">
+                  Poll every 10&ndash;15s for video, 3&ndash;5s for images. Polling costs nothing. Omit
+                  <code> id</code> to list your 20 most recent jobs.
+                </p>
+                <CopyBlock code={`curl -H "X-API-Key: gltch_sk_..." \\
+  "${baseUrl}/api/v1/jobs?id=446315c8-75ca-4e36-b111-e15c6c3e42b8"`} />
+                <CopyBlock language="json" code={`{
+  "job_id": "446315c8-75ca-4e36-b111-e15c6c3e42b8",
+  "status": "completed",
+  "kind": "video",
+  "video_url": "https://.../result.mp4",
+  "seed": 2065886194,
+  "credits_used": 15
+}`} />
+              </div>
+            </div>
+
+            <div>
+              <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">STATUS VALUES</h4>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs font-mono">
+                  <thead>
+                    <tr className="border-b border-primary/20">
+                      <th className="text-left py-1.5 pr-3 text-muted-foreground">status</th>
+                      <th className="text-left py-1.5 text-muted-foreground">Meaning</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-b border-primary/10">
+                      <td className="py-1.5 pr-3 text-foreground">running</td>
+                      <td className="py-1.5">Queued or rendering. Keep polling.</td>
+                    </tr>
+                    <tr className="border-b border-primary/10">
+                      <td className="py-1.5 pr-3 text-green-400">completed</td>
+                      <td className="py-1.5"><code>image_url</code> or <code>video_url</code> is present. Credits kept.</td>
+                    </tr>
+                    <tr>
+                      <td className="py-1.5 pr-3 text-red-400">failed</td>
+                      <td className="py-1.5"><code>error</code> explains why. Credits already refunded.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <p className="text-xs text-muted-foreground font-mono">
+              You do not have to keep polling to avoid losing work. A job whose caller stops polling is
+              finished by a server-side sweep, so the result is stored and the credits are settled either
+              way. Images are written off after 20 minutes, video after an hour, and both are refunded.
+            </p>
+          </div>
+        </Section>
         <Section title="🔌 MCP SERVER">
           <div className="space-y-4">
             <p className="text-sm text-foreground/80 font-mono">

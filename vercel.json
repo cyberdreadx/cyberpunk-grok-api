@@ -53,12 +53,30 @@
     }
   },
   "rewrites": [
-    { "source": "/s/:id", "destination": "/api/share-page?id=:id" },
-    { "source": "/api/:path*", "destination": "/api/:path*" },
-    { "source": "/library", "destination": "/index.html" },
-    { "source": "/characters", "destination": "/index.html" },
-    { "source": "/docs", "destination": "/index.html" },
-    { "source": "/prompts", "destination": "/index.html" }
+    {
+      "source": "/s/:id",
+      "destination": "/api/share-page?id=:id"
+    },
+    {
+      "source": "/api/:path*",
+      "destination": "/api/:path*"
+    },
+    {
+      "source": "/library",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/characters",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/docs",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/prompts",
+      "destination": "/index.html"
+    }
   ],
   "crons": [
     {
@@ -84,6 +102,10 @@
     {
       "path": "/api/cron-ambassador-release",
       "schedule": "20 2 * * *"
+    },
+    {
+      "path": "/api/cron-api-jobs?quiet=1",
+      "schedule": "*/2 * * * *"
     }
   ],
   "headers": [

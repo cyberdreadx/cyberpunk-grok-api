@@ -219,6 +219,10 @@ function registerCron(_app: express.Express) {
     ["*/15 * * * *", "/api/cron-lifecycle"],
     ["20 5 * * *", "/api/cron-media-integrity"],
     ["10 * * * *", "/api/cron-referral-rewards"],
+    // Finishes async API jobs whose caller stopped polling. Frequent because
+    // every minute it waits is a minute a caller's credits sit held on work
+    // RunPod has already finished.
+    ["*/2 * * * *", "/api/cron-api-jobs?quiet=1"],
     ["10 3 * * *", "/api/cron-xrge-snapshot"],
     // Hourly so a day's GPU drawdown stays separable from a mid-day top-up.
     ["5 * * * *", "/api/cron-runpod-snapshot"],

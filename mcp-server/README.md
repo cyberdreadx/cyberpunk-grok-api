@@ -47,12 +47,14 @@ Restart the client and the tools appear.
 | `generate_image` | Generates an image (`zimage`, `txt2img`, or `klein` to edit) | 3–4 |
 | `edit_image` | Edits an existing image with the GLTCH engine | 5, or 7 HD |
 | `generate_video` | Animates a still into a short video | 15 |
+| `check_job` | Collects a video that was still rendering | free |
 
 **These tools spend real credits** from the account that owns the key. Only
 `list_models` is free. Buy credits or subscribe in the app.
 
 Start with `list_models` — it returns the checkpoint and LoRA names the other
-tools accept, so you aren't guessing at strings.
+tools accept, so you aren't guessing at strings. `check_job` with no arguments
+lists your recent jobs.
 
 ## Choosing a workflow
 
@@ -65,11 +67,14 @@ tools accept, so you aren't guessing at strings.
 `generate_video` takes `gltch-wan` (the engine the app itself uses, and the
 default here) or `wan-video`. Both animate a still, so both need `image_url`.
 
-**Video often times out.** The API allows a generation 280 seconds and then
-refunds it, and a video regularly needs longer than that — the limit is the
-API's synchronous design, not the engine. Your credits always come back. A
-lower `frame_count` shortens the job and improves the odds. For a video that
-has to land, use the app.
+Video runs through the asynchronous `/api/v1/jobs` endpoint, so it is not
+bound by the 280-second ceiling on the synchronous one. `generate_video`
+submits the job and waits for it — expect a call lasting several minutes.
+
+If it stops waiting before the render finishes, the job keeps going on the
+server and you get a `job_id` back. Hand that to `check_job` to collect it.
+Nothing is lost and you are not charged twice. A job that fails or expires is
+refunded in full.
 
 ## Configuration
 

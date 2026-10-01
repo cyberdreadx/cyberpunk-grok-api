@@ -227,24 +227,37 @@ server.registerTool(
 );
 
 // ── generate_video ────────────────────────────────────────────────────────
+//
+// Video goes through the ASYNCHRONOUS endpoint, not /api/v1/comfy. The
+// synchronous one holds a connection open and refunds at 280 seconds, which a
+// gltch-wan job routinely outlives — measured: refunded at 282s having never
+// failed. /api/v1/jobs submits and hands back a job_id to poll, so the only
+// limit left is how long this tool is willing to wait.
+//
+// It polls for the caller rather than making the model do it, because a model
+// told to "poll every 15 seconds" either forgets or burns turns doing it. If
+// the wait runs out, the job_id comes back in the message and check_job
+// resumes it — the work keeps running server-side and nothing is lost.
+
+const VIDEO_POLL_MS = 12_000;
+const VIDEO_WAIT_MS = 9 * 60 * 1000;
+
+async function pollJob(jobId: string): Promise<Ok | Err> {
+  return call(`/api/v1/jobs?id=${encodeURIComponent(jobId)}`, { method: "GET" }, 30_000);
+}
 
 server.registerTool(
   "generate_video",
   {
     title: "Generate a video",
     description:
-      "Generate a short video on GLTCH Runner. SPENDS 15 CREDITS and takes minutes. 'gltch-wan' animates an existing still and REQUIRES image_url — it is the engine the app itself uses. 'wan-video' also takes a source image. WARNING: the API gives a generation 280 seconds and then refunds it, and a video frequently needs longer, so this tool times out more often than it succeeds. The credits always come back. Lowering frame_count shortens the job and improves the odds. For a video that must land, use the app rather than the API.",
+      "Generate a short video on GLTCH Runner. SPENDS 15 CREDITS and takes several minutes — typically 3 to 8. 'gltch-wan' animates an existing still and REQUIRES image_url; it is the engine the app itself uses. This submits the job and waits for it, so expect a long call. If the wait runs out the job keeps running and you get a job_id to resume with check_job — nothing is lost and you are not charged twice. A failed or expired job is refunded in full. Fewer frames finishes sooner.",
     inputSchema: {
-      prompt: z.string().min(1).describe("How the shot should move and what should happen in it."),
+      prompt: z.string().min(1).describe("How the shot should move and what happens in it."),
       image_url: z.string().url().describe("Public URL of the still to animate."),
       workflow: z.enum(["gltch-wan", "wan-video"]).default("gltch-wan").describe("gltch-wan is the app default."),
-      frame_count: z
-        .number()
-        .int()
-        .min(17)
-        .max(241)
-        .optional()
-        .describe("Default 81. More frames is a longer clip and a longer wait."),
+      frame_count: z.number().int().min(17).max(241).optional()
+        .describe("Default 81. Fewer frames is a shorter clip and a shorter wait."),
       resolution: z.number().int().min(480).max(1280).optional().describe("gltch-wan only. Default 832."),
       shift: z.number().min(1).max(15).optional().describe("gltch-wan only."),
       audio_mode: z.enum(["none", "ambient"]).optional().describe("gltch-wan only."),
@@ -253,9 +266,55 @@ server.registerTool(
     },
   },
   async (args) => {
-    const r = await call("/api/v1/comfy", { method: "POST", body: JSON.stringify(args) }, TIMEOUT_VIDEO_MS);
+    const submitted = await call("/api/v1/jobs", { method: "POST", body: JSON.stringify(args) }, 120_000);
+    if (!submitted.ok) return fail(submitted.message);
+
+    const jobId = String(submitted.data.job_id ?? "");
+    if (!jobId) return fail("The API accepted the job but returned no job_id.");
+
+    const deadline = Date.now() + VIDEO_WAIT_MS;
+    while (Date.now() < deadline) {
+      await new Promise((r) => setTimeout(r, VIDEO_POLL_MS));
+      const p = await pollJob(jobId);
+      if (!p.ok) continue;                       // a failed status read is not a failed job
+      const status = String(p.data.status ?? "");
+      if (status === "completed") return text(renderResult(p.data));
+      if (status === "failed") {
+        return fail(`${p.data.error ?? "Generation failed."} Credits were refunded.`);
+      }
+    }
+    return text(
+      `Still rendering after ${Math.round(VIDEO_WAIT_MS / 60000)} minutes. The job is not lost — it is still running on the server.\n` +
+      `job_id: ${jobId}\n` +
+      `Call check_job with that id to collect it. Credits are only kept if it succeeds.`,
+    );
+  },
+);
+
+// ── check_job ─────────────────────────────────────────────────────────────
+
+server.registerTool(
+  "check_job",
+  {
+    title: "Check a job",
+    description:
+      "Check an asynchronous job by its job_id — use this to collect a video that was still rendering when generate_video stopped waiting. Free; polling costs nothing. Returns the media URL once finished, or the current status. Call it without a job_id to list recent jobs on the account.",
+    inputSchema: {
+      job_id: z.string().optional().describe("The job_id to check. Omit to list the 20 most recent jobs."),
+    },
+  },
+  async ({ job_id }) => {
+    if (!job_id) {
+      const r = await call("/api/v1/jobs", { method: "GET" }, 30_000);
+      if (!r.ok) return fail(r.message);
+      return text(JSON.stringify(r.data, null, 2));
+    }
+    const r = await pollJob(job_id);
     if (!r.ok) return fail(r.message);
-    return text(renderResult(r.data));
+    const status = String(r.data.status ?? "");
+    if (status === "completed") return text(renderResult(r.data));
+    if (status === "failed") return fail(`${r.data.error ?? "Generation failed."} Credits were refunded.`);
+    return text(`Still ${status} after ${r.data.elapsed_seconds}s. Check again shortly.`);
   },
 );
 
