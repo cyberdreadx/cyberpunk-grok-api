@@ -716,10 +716,15 @@ export default function ApiDocs() {
                       <td className="py-1.5 pr-3">5 (7 HD)</td>
                       <td className="py-1.5">GLTCH engine edit of an existing image</td>
                     </tr>
-                    <tr>
+                    <tr className="border-b border-primary/10">
                       <td className="py-1.5 pr-3 text-foreground">generate_video</td>
                       <td className="py-1.5 pr-3">15</td>
-                      <td className="py-1.5">Animate a still with GLTCH WAN. Takes minutes.</td>
+                      <td className="py-1.5">Animate a still with GLTCH WAN. Submits async and waits.</td>
+                    </tr>
+                    <tr>
+                      <td className="py-1.5 pr-3 text-foreground">check_job</td>
+                      <td className="py-1.5 pr-3 text-green-400">free</td>
+                      <td className="py-1.5">Collect a video still rendering when generate_video stopped waiting</td>
                     </tr>
                   </tbody>
                 </table>
