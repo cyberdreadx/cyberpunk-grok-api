@@ -47,7 +47,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // GET — list feed posts
   if (req.method === "GET") {
     try {
-      const { filter, cursor, userId, sort, view, mediaType, sfw } = req.query;
+      const { filter, cursor, userId, sort, view, mediaType, sfw, postId } = req.query;
       const limit = 20;
       const sortMode = (sort as string) || "hot"; // hot | top | new | trending
       const viewMode = (view as string) || "posts"; // posts | creators
@@ -323,7 +323,41 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       let rows;
       const cursorCond = cursor ? sql`AND p.created_at < ${cursor}` : sql``;
 
-      if (userId) {
+      /*
+       * A single post by id, for deep links.
+       *
+       * Notifications and share URLs both point at one specific post, and until
+       * now nothing could fetch one. ReelViewer loaded the first page of the feed
+       * and ran findIndex for its target; when the target was not on that page it
+       * got -1 and fell back to index 0, silently opening the newest post
+       * instead. Measured: only 7 of 72 notified posts were within the first
+       * page, median rank 85 and worst 894 — so 90% of notification taps opened
+       * the wrong post. /feed?post= share links did nothing at all.
+       *
+       * No cursor, sort or media filter here: a direct link has to resolve
+       * regardless of how the viewer happens to have the feed filtered, which is
+       * the whole point of a direct link. The maturity filter still applies,
+       * except to the post's own author — otherwise someone could not open a
+       * notification about their own post.
+       */
+      if (postId) {
+        // The ::uuid cast throws on anything malformed, which turned a bad query
+        // string into a 500. Reject the shape here and answer empty instead.
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(postId))) {
+          return res.status(200).json({ posts: [], nextCursor: null, nsfwAllowed });
+        }
+        const ownSfwCond = authUserId
+          ? sql`AND (p.user_id = ${authUserId} OR NOT COALESCE(p.is_mature, false) OR ${nsfwAllowed})`
+          : sql`AND NOT COALESCE(p.is_mature, false)`;
+        rows = await sql`
+          SELECT ${selectCols(authUserId)}
+          FROM feed_posts p
+          JOIN profiles pr ON pr.user_id = p.user_id
+          JOIN users uu ON uu.id = p.user_id
+          WHERE p.id = ${postId}::uuid ${ownSfwCond}
+          LIMIT 1
+        `;
+      } else if (userId) {
         rows = await sql`
           SELECT ${selectCols(authUserId)}
           FROM feed_posts p

@@ -183,7 +183,14 @@ const FeedPage: React.FC = () => {
   // Open ReelViewer when arriving from a notification click
   useEffect(() => {
     if (!isAuthenticated) return;
-    const stashed = sessionStorage.getItem("openReelPostId");
+    /*
+     * Two ways in. The notification bell stashes the id and navigates here;
+     * share links built by PostCard look like /feed?post=<id>, and nothing
+     * read that parameter at all, so every shared post link just landed on
+     * the feed.
+     */
+    const fromUrl = new URLSearchParams(window.location.search).get("post");
+    const stashed = fromUrl || sessionStorage.getItem("openReelPostId");
     if (stashed) {
       sessionStorage.removeItem("openReelPostId");
       setReelTarget({ postId: stashed });

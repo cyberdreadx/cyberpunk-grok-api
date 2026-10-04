@@ -97,10 +97,41 @@ const ReelViewer: React.FC<Props> = ({ open, onClose, initialPostId, userId, fil
         const data = await apiFetch<{ posts: FeedPost[]; nextCursor: string | null }>(buildUrl());
         if (!alive) return;
         const list = data.posts || [];
-        setPosts(list);
         setNextCursor(data.nextCursor);
         const idx = initialPostId ? list.findIndex((p) => p.id === initialPostId) : 0;
-        setActiveIdx(idx >= 0 ? idx : 0);
+        if (idx >= 0) {
+          setPosts(list);
+          setActiveIdx(idx);
+        } else if (initialPostId) {
+          /*
+           * The target is not on the first page, which is the normal case rather
+           * than the exception: only 7 of 72 notified posts were within the first
+           * 20, median rank 85 and worst 894. This used to be
+           * `setActiveIdx(idx >= 0 ? idx : 0)`, so a miss opened the NEWEST post in
+           * the feed — a notification about a week-old post dropped you at the top
+           * of the feed with nothing to indicate it had failed.
+           *
+           * Fetch the post itself and put it first. If that also comes back empty
+           * the post is deleted or not visible to this viewer, so fall back to the
+           * feed rather than a blank screen.
+           */
+          try {
+            const one = await apiFetch<{ posts: FeedPost[] }>(
+              `/feed?postId=${encodeURIComponent(initialPostId)}`,
+            );
+            if (!alive) return;
+            const target = (one.posts || [])[0];
+            setPosts(target ? [target, ...list.filter((q) => q.id !== target.id)] : list);
+            setActiveIdx(0);
+          } catch {
+            if (!alive) return;
+            setPosts(list);
+            setActiveIdx(0);
+          }
+        } else {
+          setPosts(list);
+          setActiveIdx(0);
+        }
       } catch {
         setPosts([]);
       } finally {
