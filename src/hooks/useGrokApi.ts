@@ -39,6 +39,7 @@ function saveActiveJob(job: ActiveJob) {
 
 function removeActiveJob(promptId: string) {
   try {
+    lastPollAt.delete(promptId);
     const jobs = getActiveJobs().filter(j => j.promptId !== promptId);
     if (jobs.length) localStorage.setItem("comfy-active-jobs", JSON.stringify(jobs));
     else localStorage.removeItem("comfy-active-jobs");
@@ -67,18 +68,13 @@ export async function comfySubmitAndPollStandalone(
   // Writing to the shared comfy-active-jobs queue causes character media
   // to leak into the main UI results grid when the user navigates back.
 
+  const pollState = { consecutiveFailures: 0 };
+
   for (let i = 0; i < maxAttempts; i++) {
     await new Promise((r) => setTimeout(r, pollInterval));
 
-    const pollData = await apiFetch<{
-      status: string;
-      image?: string;
-      video?: string;
-      error?: string;
-    }>("/comfyui", {
-      method: "POST",
-      body: { action: "poll", promptId, outputType: outType, ...(runpodEndpointId && { runpodEndpointId }) },
-    });
+    const pollData = await pollComfyOnce(promptId, outType, runpodEndpointId, pollState);
+    if (!pollData) continue;
 
     if (pollData.status === "done") {
       removeActiveJob(promptId);
@@ -94,6 +90,90 @@ export async function comfySubmitAndPollStandalone(
   throw new Error("ComfyUI generation timed out");
 }
 
+/**
+ * One poll attempt that survives the network going away.
+ *
+ * Both poll loops below used to `await apiFetch(...)` bare, so any thrown
+ * request killed the generation. That is precisely what happens when someone
+ * switches apps: iOS and Android suspend the network stack and drop in-flight
+ * fetches, the next poll rejects, the exception escapes the loop, and the job
+ * is reported failed — while the GPU finishes it normally and the credits stay
+ * spent.
+ *
+ * A failed request says nothing about the job. So: while the page is hidden,
+ * network errors are ignored indefinitely (bounded only by the attempt budget),
+ * because a poll cannot be expected to succeed from a backgrounded tab. Once
+ * visible, a few consecutive failures are tolerated for an ordinary blip before
+ * giving up. Any success resets the count.
+ */
+const POLL_FAILURES_BEFORE_GIVING_UP = 6;
+
+/**
+ * When each job was last polled by anything in this tab.
+ *
+ * The foreground sweep needs to distinguish a job with a healthy poll loop from
+ * one whose loop is gone — a page suspended mid-await can leave a promise that
+ * never settles, and a promptId alone cannot tell the two apart. A job polled
+ * recently is being looked after; one that has not been polled in
+ * POLL_STALE_MS is not, and gets picked up. Without this the sweep would either
+ * skip genuinely dead jobs or start a second poller on a live one and deliver
+ * the same result twice.
+ */
+const lastPollAt = new Map<string, number>();
+const POLL_STALE_MS = 90_000;
+
+/**
+ * How long after submission a job is still worth resuming.
+ *
+ * Was 15 minutes, which is shorter than the thing it protects: a gltch-wan
+ * video regularly runs 3-8 minutes, so a user who switched apps for a quarter
+ * of an hour came back to a job that had been dropped rather than collected.
+ * A job still recorded here has not been refunded — the undelivered refund only
+ * fires from a poll, and that same poll clears the record — so resuming one
+ * cannot hand out free credits.
+ */
+const RESUMABLE_FOR_MS = 30 * 60 * 1000;
+
+export function markJobPolled(promptId: string) {
+  lastPollAt.set(promptId, Date.now());
+}
+
+export function isJobBeingPolled(promptId: string): boolean {
+  const seen = lastPollAt.get(promptId);
+  return !!seen && Date.now() - seen < POLL_STALE_MS;
+}
+
+type PollResponse = {
+  status: string;
+  image?: string;
+  video?: string;
+  previewUrl?: string;
+  error?: string;
+};
+
+async function pollComfyOnce(
+  promptId: string,
+  outputType: string,
+  runpodEndpointId: string | undefined,
+  state: { consecutiveFailures: number },
+): Promise<PollResponse | null> {
+  lastPollAt.set(promptId, Date.now());
+  try {
+    const data = await apiFetch<PollResponse>("/comfyui", {
+      method: "POST",
+      body: { action: "poll", promptId, outputType, ...(runpodEndpointId && { runpodEndpointId }) },
+    });
+    state.consecutiveFailures = 0;
+    return data;
+  } catch (err) {
+    const hidden = typeof document !== "undefined" && document.visibilityState === "hidden";
+    if (hidden) return null;                       // backgrounded: not evidence of anything
+    state.consecutiveFailures += 1;
+    if (state.consecutiveFailures >= POLL_FAILURES_BEFORE_GIVING_UP) throw err;
+    return null;                                   // transient: try again
+  }
+}
+
 /** Poll an already-submitted ComfyUI job by promptId. Used to resume jobs after navigation. */
 export async function comfyPollUntilDone(
   promptId: string,
@@ -102,12 +182,12 @@ export async function comfyPollUntilDone(
 ): Promise<{ image?: string; video?: string; previewUrl?: string }> {
   const { runpodEndpointId, pollInterval = 3000, maxAttempts = 200 } = opts;
 
+  const pollState = { consecutiveFailures: 0 };
+
   for (let i = 0; i < maxAttempts; i++) {
     await new Promise((r) => setTimeout(r, pollInterval));
-    const pollData = await apiFetch<{ status: string; image?: string; video?: string; previewUrl?: string; error?: string }>("/comfyui", {
-      method: "POST",
-      body: { action: "poll", promptId, outputType, ...(runpodEndpointId && { runpodEndpointId }) },
-    });
+    const pollData = await pollComfyOnce(promptId, outputType, runpodEndpointId, pollState);
+    if (!pollData) continue;
     if (pollData.status === "done") {
       removeActiveJob(promptId);
       return { image: pollData.image, video: pollData.video };
@@ -451,11 +531,15 @@ export function useGrokApi() {
     };
   }, []);
 
-  // ── Resume interrupted ComfyUI jobs on mount (supports multiple) ──
+  // ── Resume interrupted ComfyUI jobs: on mount AND on returning to the app ──
+  //
+  // This used to run on mount only. That covers iOS discarding the page, which
+  // forces a reload, but not the ordinary case of switching apps and coming
+  // back: React never remounts, so nothing re-checked, and any job whose poll
+  // loop had died stayed dead. The loops themselves no longer fail on a dropped
+  // request, so this is now the second line of defence rather than the only one.
   useEffect(() => {
     let cancelled = false;
-    const activeJobs = getActiveJobs().filter(j => Date.now() - j.submittedAt < 15 * 60 * 1000);
-    if (!activeJobs.length) { localStorage.removeItem("comfy-active-jobs"); localStorage.removeItem("comfy-active-job"); return; }
 
     const resumeOne = async (saved: ActiveJob) => {
       const jobId = `resume-${saved.promptId}`;
@@ -513,8 +597,31 @@ export function useGrokApi() {
       } catch { comfyJobStarts.current.delete(jobId); removeActiveJob(saved.promptId); }
     };
 
-    activeJobs.forEach(j => resumeOne(j));
-    return () => { cancelled = true; };
+    const sweep = () => {
+      if (cancelled) return;
+      const jobs = getActiveJobs().filter(j => Date.now() - j.submittedAt < RESUMABLE_FOR_MS);
+      if (!jobs.length) {
+        try { localStorage.removeItem("comfy-active-jobs"); localStorage.removeItem("comfy-active-job"); } catch {}
+        return;
+      }
+      for (const j of jobs) {
+        // Skip anything already being polled — otherwise returning to the app
+        // starts a second poller and the result arrives twice.
+        if (isJobBeingPolled(j.promptId)) continue;
+        if (comfyJobStarts.current.has(`resume-${j.promptId}`)) continue;
+        resumeOne(j);
+      }
+    };
+
+    sweep();
+    const onVisible = () => { if (document.visibilityState === "visible") sweep(); };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("pageshow", sweep);
+    return () => {
+      cancelled = true;
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("pageshow", sweep);
+    };
   }, [prependResults]);
 
   // ── Warn before closing tab if generations are in progress ──

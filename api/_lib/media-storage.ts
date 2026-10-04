@@ -2,7 +2,7 @@
  * Unified public media storage — prefers Cloudflare R2 (free egress) over Vercel Blob.
  */
 import { put } from "@vercel/blob";
-import { getPresignedUploadUrl, getPublicUrl, isR2MediaConfigured, uploadToR2 } from "./r2";
+import { getPresignedUploadUrl, getPublicUrl, isR2MediaConfigured, uploadToR2 , R2_DEFAULT_CACHE } from "./r2";
 import { generateImagePreviewBuffer } from "./image-preview";
 import { previewKeyForKey } from "./preview-url";
 
@@ -122,7 +122,7 @@ export async function createPresignedMediaUpload(
   folder: string,
   filename: string,
   contentType: string,
-): Promise<{ uploadUrl: string; publicUrl: string; key: string; storage: MediaStorageBackend }> {
+): Promise<{ uploadUrl: string; publicUrl: string; key: string; storage: MediaStorageBackend; cacheControl: string }> {
   if (!isR2MediaConfigured()) {
     throw new Error("R2_NOT_CONFIGURED");
   }
@@ -130,5 +130,6 @@ export async function createPresignedMediaUpload(
   const uploadUrl = await getPresignedUploadUrl(key, contentType);
   const publicUrl = getPublicUrl(key);
   if (!publicUrl) throw new Error("R2 public URL not configured");
-  return { uploadUrl, publicUrl, key, storage: "r2" };
+  // The client must send this on the PUT or R2 stores the object without it.
+  return { uploadUrl, publicUrl, key, storage: "r2", cacheControl: R2_DEFAULT_CACHE };
 }

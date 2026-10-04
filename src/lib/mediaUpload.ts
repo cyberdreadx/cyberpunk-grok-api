@@ -79,6 +79,7 @@ async function uploadOne(
     const presign = await apiFetch<{
       uploadUrl: string;
       publicUrl: string;
+      cacheControl?: string;
     }>("/media-upload", {
       method: "POST",
       body: {
@@ -90,10 +91,24 @@ async function uploadOne(
       },
     });
 
+    /*
+     * Cache-Control has to go on the PUT.
+     *
+     * The presigned PutObject is signed WITH a CacheControl value, but a
+     * presigned upload only stores headers the client actually sends. This sent
+     * Content-Type alone, so every client-uploaded image and video landed in R2
+     * with no cache header, leaving browsers to revalidate on essentially every
+     * view. Verified against live R2: without the header the object comes back
+     * with no cache-control, with it a year of immutable caching. The server
+     * returns the value it signed so the two cannot drift.
+     */
     const putResp = await fetch(presign.uploadUrl, {
       method: "PUT",
       body: blob,
-      headers: { "Content-Type": contentType },
+      headers: {
+        "Content-Type": contentType,
+        ...(presign.cacheControl ? { "Cache-Control": presign.cacheControl } : {}),
+      },
     });
     if (!putResp.ok) throw new Error(`R2 upload failed (${putResp.status})`);
     return presign.publicUrl;

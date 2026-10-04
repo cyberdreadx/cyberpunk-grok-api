@@ -26,7 +26,19 @@ function getR2(): S3Client {
 
 const BUCKET = process.env.R2_BUCKET_NAME || "grokker-media";
 
-const DEFAULT_CACHE = "public, max-age=31536000, immutable";
+/**
+ * Exported so the browser can echo it back on a presigned PUT.
+ *
+ * CacheControl is part of the signed PutObject, but a presigned upload only
+ * stores headers the client actually sends — and mediaUpload.ts sent only
+ * Content-Type. So every client-uploaded object landed in R2 with no
+ * Cache-Control at all, and browsers fell back to heuristic revalidation: a
+ * round trip per image per feed view, twenty of them before anything paints.
+ * Server-side uploads were unaffected, which is why the only object carrying a
+ * cache header was one re-encoded by a backfill script.
+ */
+export const R2_DEFAULT_CACHE = "public, max-age=31536000, immutable";
+const DEFAULT_CACHE = R2_DEFAULT_CACHE;
 
 /** True when R2 credentials + a public URL base are configured. */
 export function isR2MediaConfigured(): boolean {
