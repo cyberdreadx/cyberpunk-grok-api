@@ -1241,7 +1241,7 @@ const Index = () => {
           <div className="flex items-center gap-2 mb-3">
             <span className="font-mono-share text-primary/40 text-xs">❯</span>
             <GlitchText
-              text="SELECT_MODE"
+              text={isStudio ? "Choose a mode" : "SELECT_MODE"}
               className="font-orbitron text-tiny tracking-widest text-muted-foreground"
               glitchIntensity="low"
             />
@@ -2374,7 +2374,7 @@ const Index = () => {
           <CollapsibleTrigger className="flex items-center gap-2 mb-4 w-full group cursor-pointer">
             <span className="font-mono-share text-secondary/40 text-tiny group-data-[state=open]:text-secondary/60">▸</span>
             <GlitchText
-              text="OUTPUT_STREAM"
+              text={isStudio ? "Your creations" : "OUTPUT_STREAM"}
               className="font-orbitron text-tiny tracking-widest text-muted-foreground"
               glitchIntensity="low"
             />

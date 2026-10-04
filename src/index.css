@@ -844,3 +844,113 @@
 :root[data-cyber-theme="studio"] .cyber-corner-frame {
   display: none;
 }
+
+/* Pale text in Studio. 259 places colour text with a 50-300 shade of some hue —
+   chosen to glow on Runner's near-black, nearly invisible on Studio's white
+   (the launch banners were the visible case). In Studio each of those maps to
+   the same hue's 800 shade: amber stays amber, pink stays pink, at 7:1 or more
+   on white. Only text is remapped; background tints and borders already work on
+   a light ground. The attribute selectors outrank the single-class utilities
+   without !important. */
+:root[data-cyber-theme="studio"] [class*="text-red-50"],
+:root[data-cyber-theme="studio"] [class*="text-red-100"],
+:root[data-cyber-theme="studio"] [class*="text-red-200"],
+:root[data-cyber-theme="studio"] [class*="text-red-300"] {
+  color: #991b1b;
+}
+:root[data-cyber-theme="studio"] [class*="text-orange-50"],
+:root[data-cyber-theme="studio"] [class*="text-orange-100"],
+:root[data-cyber-theme="studio"] [class*="text-orange-200"],
+:root[data-cyber-theme="studio"] [class*="text-orange-300"] {
+  color: #9a3412;
+}
+:root[data-cyber-theme="studio"] [class*="text-amber-50"],
+:root[data-cyber-theme="studio"] [class*="text-amber-100"],
+:root[data-cyber-theme="studio"] [class*="text-amber-200"],
+:root[data-cyber-theme="studio"] [class*="text-amber-300"] {
+  color: #92400e;
+}
+:root[data-cyber-theme="studio"] [class*="text-yellow-50"],
+:root[data-cyber-theme="studio"] [class*="text-yellow-100"],
+:root[data-cyber-theme="studio"] [class*="text-yellow-200"],
+:root[data-cyber-theme="studio"] [class*="text-yellow-300"] {
+  color: #854d0e;
+}
+:root[data-cyber-theme="studio"] [class*="text-lime-50"],
+:root[data-cyber-theme="studio"] [class*="text-lime-100"],
+:root[data-cyber-theme="studio"] [class*="text-lime-200"],
+:root[data-cyber-theme="studio"] [class*="text-lime-300"] {
+  color: #3f6212;
+}
+:root[data-cyber-theme="studio"] [class*="text-green-50"],
+:root[data-cyber-theme="studio"] [class*="text-green-100"],
+:root[data-cyber-theme="studio"] [class*="text-green-200"],
+:root[data-cyber-theme="studio"] [class*="text-green-300"] {
+  color: #166534;
+}
+:root[data-cyber-theme="studio"] [class*="text-emerald-50"],
+:root[data-cyber-theme="studio"] [class*="text-emerald-100"],
+:root[data-cyber-theme="studio"] [class*="text-emerald-200"],
+:root[data-cyber-theme="studio"] [class*="text-emerald-300"] {
+  color: #065f46;
+}
+:root[data-cyber-theme="studio"] [class*="text-teal-50"],
+:root[data-cyber-theme="studio"] [class*="text-teal-100"],
+:root[data-cyber-theme="studio"] [class*="text-teal-200"],
+:root[data-cyber-theme="studio"] [class*="text-teal-300"] {
+  color: #115e59;
+}
+:root[data-cyber-theme="studio"] [class*="text-cyan-50"],
+:root[data-cyber-theme="studio"] [class*="text-cyan-100"],
+:root[data-cyber-theme="studio"] [class*="text-cyan-200"],
+:root[data-cyber-theme="studio"] [class*="text-cyan-300"] {
+  color: #155e75;
+}
+:root[data-cyber-theme="studio"] [class*="text-sky-50"],
+:root[data-cyber-theme="studio"] [class*="text-sky-100"],
+:root[data-cyber-theme="studio"] [class*="text-sky-200"],
+:root[data-cyber-theme="studio"] [class*="text-sky-300"] {
+  color: #075985;
+}
+:root[data-cyber-theme="studio"] [class*="text-blue-50"],
+:root[data-cyber-theme="studio"] [class*="text-blue-100"],
+:root[data-cyber-theme="studio"] [class*="text-blue-200"],
+:root[data-cyber-theme="studio"] [class*="text-blue-300"] {
+  color: #1e40af;
+}
+:root[data-cyber-theme="studio"] [class*="text-indigo-50"],
+:root[data-cyber-theme="studio"] [class*="text-indigo-100"],
+:root[data-cyber-theme="studio"] [class*="text-indigo-200"],
+:root[data-cyber-theme="studio"] [class*="text-indigo-300"] {
+  color: #3730a3;
+}
+:root[data-cyber-theme="studio"] [class*="text-violet-50"],
+:root[data-cyber-theme="studio"] [class*="text-violet-100"],
+:root[data-cyber-theme="studio"] [class*="text-violet-200"],
+:root[data-cyber-theme="studio"] [class*="text-violet-300"] {
+  color: #5b21b6;
+}
+:root[data-cyber-theme="studio"] [class*="text-purple-50"],
+:root[data-cyber-theme="studio"] [class*="text-purple-100"],
+:root[data-cyber-theme="studio"] [class*="text-purple-200"],
+:root[data-cyber-theme="studio"] [class*="text-purple-300"] {
+  color: #6b21a8;
+}
+:root[data-cyber-theme="studio"] [class*="text-fuchsia-50"],
+:root[data-cyber-theme="studio"] [class*="text-fuchsia-100"],
+:root[data-cyber-theme="studio"] [class*="text-fuchsia-200"],
+:root[data-cyber-theme="studio"] [class*="text-fuchsia-300"] {
+  color: #86198f;
+}
+:root[data-cyber-theme="studio"] [class*="text-pink-50"],
+:root[data-cyber-theme="studio"] [class*="text-pink-100"],
+:root[data-cyber-theme="studio"] [class*="text-pink-200"],
+:root[data-cyber-theme="studio"] [class*="text-pink-300"] {
+  color: #9d174d;
+}
+:root[data-cyber-theme="studio"] [class*="text-rose-50"],
+:root[data-cyber-theme="studio"] [class*="text-rose-100"],
+:root[data-cyber-theme="studio"] [class*="text-rose-200"],
+:root[data-cyber-theme="studio"] [class*="text-rose-300"] {
+  color: #9f1239;
+}

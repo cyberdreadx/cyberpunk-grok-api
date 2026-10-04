@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { isStudio } from "@/lib/edition";
 
 interface GlitchTextProps {
   text: string;
@@ -16,6 +17,8 @@ const GlitchText: React.FC<GlitchTextProps> = ({
   const [isGlitching, setIsGlitching] = useState(false);
 
   useEffect(() => {
+    // Studio is plain text: no periodic glitch, so no doubled offset copies.
+    if (isStudio) return;
     const intervals = { low: 8000, medium: 4000, high: 2000 };
     const timeouts: ReturnType<typeof setTimeout>[] = [];
     const interval = setInterval(() => {
