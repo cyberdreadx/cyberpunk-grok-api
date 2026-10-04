@@ -194,7 +194,13 @@
     "terminalAge": "age_check --strict --no-bypass",
     "terminalTos": "tos_acceptance --required",
     "terminalReady": "all_checks_passed -- ready_to_jack_in",
-    "terminalWaiting": "awaiting_confirmation..."
+    "terminalWaiting": "awaiting_confirmation...",
+    "title_studio": "Before you start",
+    "description_studio": "You must be 18 or older to use GLTCH Studio.",
+    "warning_studio": "GLTCH Studio's AI can produce mature content, so it's for adults only.",
+    "confirm_studio": "Continue",
+    "confirmDisabled_studio": "Tick all three to continue",
+    "decline_studio": "Leave"
   },
   "pricing": {
     "subscriptionPlans": "SUBSCRIPTION_PLANS",

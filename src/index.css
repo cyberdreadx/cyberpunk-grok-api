@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,6 +6,16 @@
 
 @layer base {
   :root {
+    /* Font roles. Every font class reads one of these, so an edition can
+       remap all of them at once — GLTCH Studio swaps 3,155 monospace class uses
+       for a plain sans without touching a component. Each has a default that
+       reproduces Runner exactly: an undefined var() with no fallback discards
+       the whole font-family declaration rather than falling through the list. */
+    --font-display: 'Archivo', system-ui, -apple-system, sans-serif;
+    --font-ui-mono: 'Share Tech Mono', monospace;
+    --font-rajdhani: 'Rajdhani', sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+
     --background: 240 15% 5%;
     --foreground: 180 100% 85%;
 
@@ -140,16 +150,16 @@
      airier, which suits the direction. */
   .font-orbitron,
   .font-display {
-    font-family: 'Archivo', system-ui, -apple-system, sans-serif;
+    font-family: var(--font-display);
     letter-spacing: -0.005em;
   }
 
   .font-mono-share {
-    font-family: 'Share Tech Mono', monospace;
+    font-family: var(--font-ui-mono);
   }
 
   .font-rajdhani {
-    font-family: 'Rajdhani', sans-serif;
+    font-family: var(--font-rajdhani);
   }
 
   .font-jetbrains {
@@ -804,4 +814,33 @@
 @media (prefers-reduced-motion: reduce) {
   .skeleton-cyber,
   .skeleton-cyber::after { animation: none; }
+}
+
+/* ── GLTCH Studio structural overrides ─────────────────────────────────────
+   Colours and fonts arrive through the theme tokens; these are the few things
+   tokens cannot express. data-cyber-theme is set by applyThemeVisuals, which is
+   locked to the Studio theme on the Studio edition. */
+:root[data-cyber-theme="studio"] {
+  color-scheme: light;
+}
+/* Wide tracking is half of what makes the Runner UI read as a terminal. */
+:root[data-cyber-theme="studio"] .tracking-wide,
+:root[data-cyber-theme="studio"] .tracking-wider,
+:root[data-cyber-theme="studio"] .tracking-widest {
+  letter-spacing: 0.005em;
+}
+/* No scanline overlays. Only the pure overlays are hidden: .scanline and the
+   loaders' sweep line and ::after stripes are decoration with
+   pointer-events: none. .crt-curve is deliberately NOT listed — it is a
+   container style (rounding, clipping), and hiding it would hide content. */
+:root[data-cyber-theme="studio"] .scanline,
+:root[data-cyber-theme="studio"] .loader-scanline {
+  display: none !important;
+}
+:root[data-cyber-theme="studio"] .loader-scanlines::after {
+  content: none;
+}
+/* Decorative corner brackets around the viewport. */
+:root[data-cyber-theme="studio"] .cyber-corner-frame {
+  display: none;
 }

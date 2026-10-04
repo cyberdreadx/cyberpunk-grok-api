@@ -14,8 +14,11 @@ import {
 import { ShieldAlert, Shield, Eye, ChevronDown, Globe } from "lucide-react";
 import LegalDialog from "@/components/LegalDialog";
 import { AGE_VERIFIED_EVENT, AGE_VERIFIED_KEY } from "@/lib/ageGate";
+import { isStudio } from "@/lib/edition";
 
 const AGE = "18";
+
+const studioCtx = isStudio ? "studio" : undefined;
 
 export default function AgeGateDialog() {
   const { t, i18n } = useTranslation();
@@ -93,22 +96,22 @@ export default function AgeGateDialog() {
               </div>
             </div>
             <AlertDialogTitle className="font-orbitron text-lg tracking-wider text-secondary text-center">
-              {t("ageGate.title")}
+              {t("ageGate.title", { context: studioCtx })}
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-3 text-center" asChild>
               <div>
                 <p className="font-mono-share text-[10px] text-primary/50 animate-flicker">
-                  {t("ageGate.subtitle")}
+                  {!isStudio && t("ageGate.subtitle")}
                 </p>
                 <p className="font-rajdhani text-sm text-foreground/70 leading-relaxed">
-                  {t("ageGate.description", { age: AGE }).split(AGE).map((part, i, arr) =>
+                  {t("ageGate.description", { age: AGE, context: studioCtx }).split(AGE).map((part, i, arr) =>
                     i < arr.length - 1 ? (
                       <span key={i}>{part}<span className="text-secondary font-bold">{AGE}</span></span>
                     ) : <span key={i}>{part}</span>
                   )}
                 </p>
                 <p className="font-rajdhani text-sm text-foreground/50 leading-relaxed">
-                  {t("ageGate.warning")}
+                  {t("ageGate.warning", { context: studioCtx })}
                 </p>
 
                 {/* Checkboxes */}
@@ -170,11 +173,13 @@ export default function AgeGateDialog() {
                   </label>
                 </div>
 
+                {!isStudio && (
                 <div className="font-mono-share text-[9px] text-muted-foreground/30 border border-border/30 rounded p-2 bg-background/50 mt-2">
                   <div>{">"} {t("ageGate.terminalAge")}</div>
                   <div>{">"} {t("ageGate.terminalTos")}</div>
                   <div>{">"} {allChecked ? t("ageGate.terminalReady") : t("ageGate.terminalWaiting")}</div>
                 </div>
+                )}
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -188,13 +193,13 @@ export default function AgeGateDialog() {
                   : "bg-muted/20 border border-border/30 text-muted-foreground/30 cursor-not-allowed"
               }`}
             >
-              {allChecked ? t("ageGate.confirm") : t("ageGate.confirmDisabled")}
+              {allChecked ? t("ageGate.confirm", { context: studioCtx }) : t("ageGate.confirmDisabled", { context: studioCtx })}
             </AlertDialogAction>
             <AlertDialogCancel
               onClick={handleDecline}
               className="w-full bg-destructive/10 border border-destructive/30 text-destructive hover:bg-destructive/20 font-orbitron text-xs tracking-wider"
             >
-              {t("ageGate.decline")}
+              {t("ageGate.decline", { context: studioCtx })}
             </AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>

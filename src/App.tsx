@@ -37,6 +37,7 @@ const AdminPromo = lazyWithRetry(() => import("./pages/AdminPromo"), "admin-prom
 import AgeGateDialog from "@/components/AgeGateDialog";
 import KonamiTerminalUnlock from "@/components/KonamiTerminalUnlock";
 import GlobalNavMenu from "@/components/GlobalNavMenu";
+import { isStudio } from "@/lib/edition";
 
 const queryClient = new QueryClient();
 
@@ -64,10 +65,34 @@ const App = () => (
         }}
       >
         <AgeGateDialog />
-        <KonamiTerminalUnlock />
+        {!isStudio && <KonamiTerminalUnlock />}
         <GlobalNavMenu />
         <MaintenanceBanner />
         <Routes>
+          {isStudio ? (
+            /*
+             * GLTCH Studio — the plain consumer edition. Only what a normal creator
+             * needs: make things, keep them, manage the account. No feed, stories,
+             * chat, creators, personas, terminal or developer pages; anything else
+             * redirects home rather than 404ing, since a Studio visitor following an
+             * old Runner link should land somewhere useful.
+             */
+            <>
+              <Route path="/" element={<PageShell><Index /></PageShell>} />
+              <Route path="/create" element={<Navigate to="/" replace />} />
+              <Route path="/library" element={<PageShell><Library /></PageShell>} />
+              <Route path="/profile" element={<PageShell><ProfilePage /></PageShell>} />
+              <Route path="/s/:shareId" element={<PageShell><ShareView /></PageShell>} />
+              <Route path="/terms" element={<PageShell><LegalPage type="tos" /></PageShell>} />
+              <Route path="/privacy" element={<PageShell><LegalPage type="privacy" /></PageShell>} />
+              <Route path="/promo" element={<PageShell><PromoPage /></PageShell>} />
+              <Route path="/referral" element={<PageShell><ReferralPage /></PageShell>} />
+              <Route path="/r/:code" element={<PageShell><RefLanding /></PageShell>} />
+              <Route path="/verification" element={<PageShell><VerificationStatusPage /></PageShell>} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </>
+          ) : (
+            <>
           <Route path="/" element={<PageShell><FeedPage /></PageShell>} />
           <Route path="/create" element={<PageShell><Index /></PageShell>} />
           <Route path="/index" element={<Navigate to="/create" replace />} />
@@ -105,6 +130,8 @@ const App = () => (
           <Route path="/prompts" element={<PageShell><PromptsPage /></PageShell>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
+            </>
+          )}
         </Routes>
       </BrowserRouter>
     </TooltipProvider>

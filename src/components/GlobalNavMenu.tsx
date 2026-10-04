@@ -5,6 +5,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { useAuth } from "@/hooks/useAuth";
 import { apiFetch } from "@/lib/api";
 import PreferencesDialog from "@/components/PreferencesDialog";
+import { isStudio } from "@/lib/edition";
 
 /**
  * Global hamburger nav drawer mounted on every page (except FeedPage which
@@ -88,9 +89,20 @@ const GlobalNavMenu: React.FC = () => {
           <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
             <div className="space-y-2">
               <div className="px-2 font-mono-share text-[9px] tracking-[0.2em] text-muted-foreground/70">
-                ── PAGES ──
+                {isStudio ? "Pages" : "── PAGES ──"}
               </div>
               <div className="flex flex-col gap-1">
+                {isStudio ? (
+                  // GLTCH Studio: the five things a plain creator needs, nothing social.
+                  <>
+                    {navItem("/", Sparkles, "Create")}
+                    {navItem("/library", FolderOpen, "Library")}
+                    {isAuthenticated && navItem("/profile", Star, "Account")}
+                    {isAuthenticated && navItem("/referral", Star, "Invite friends")}
+                    {navItem("/promo", Star, "Redeem a code")}
+                  </>
+                ) : (
+                  <>
                 {navItem("/", Rss, "FEED")}
                 {navItem("/create", Sparkles, "CREATE")}
                 {navItem("/library", FolderOpen, "LIBRARY")}
@@ -100,12 +112,14 @@ const GlobalNavMenu: React.FC = () => {
                 {isAuthenticated && navItem("/chat", MessagesSquare, "CHAT")}
                 {navItem("/apply", Star, "APPLY")}
                 {isAuthenticated && navItem("/profile", Star, "MY PROFILE")}
+                  </>
+                )}
               </div>
             </div>
 
             {/* Earn — its own section rather than another grey row in PAGES.
                 Both of these were previously URL-only, reachable by nobody. */}
-            {isAuthenticated && (
+            {!isStudio && isAuthenticated && (
               <div className="space-y-2">
                 <div className="px-2 font-mono-share text-[9px] tracking-[0.2em] text-muted-foreground/70">
                   ── EARN ──
@@ -168,6 +182,7 @@ const GlobalNavMenu: React.FC = () => {
                   <SettingsIcon className="w-4 h-4" /> SETTINGS
                 </button>
               )}
+              {!isStudio && (
               <button
                 type="button"
                 onClick={() => { setOpen(false); navigate("/docs"); }}
@@ -175,6 +190,7 @@ const GlobalNavMenu: React.FC = () => {
               >
                 <ShieldAlert className="w-4 h-4" /> API DOCS
               </button>
+              )}
             </div>
           </div>
         </SheetContent>

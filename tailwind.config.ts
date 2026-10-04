@@ -19,11 +19,14 @@ export default {
         "glow-ambient": "var(--glow-ambient)",
       },
       fontFamily: {
-        display: ["Archivo", "system-ui", "sans-serif"],
+        // Every family reads a role variable defined in index.css, so an edition
+        // can remap all of them at once. Defaults reproduce Runner exactly.
+        display: ["var(--font-display)"],
         // Legacy alias — existing call sites say font-orbitron.
-        orbitron: ["Archivo", "system-ui", "sans-serif"],
-        "mono-share": ["Share Tech Mono", "monospace"],
-        rajdhani: ["Rajdhani", "sans-serif"],
+        orbitron: ["var(--font-display)"],
+        "mono-share": ["var(--font-ui-mono)"],
+        rajdhani: ["var(--font-rajdhani)"],
+        mono: ["var(--font-mono)"],
         jetbrains: ["JetBrains Mono", "monospace"],
       },
       colors: {

@@ -1,4 +1,5 @@
 import { apiFetch } from "@/lib/api";
+import { isStudio } from "./edition";
 
 export interface ImmersionSettings {
   flicker: number;
@@ -45,6 +46,8 @@ export async function fetchMasterImmersion(): Promise<ImmersionSettings> {
 
 /** Push immersion tuning to :root so CSS can read --immersion-* vars. */
 export function applyImmersionToRoot(settings: ImmersionSettings): void {
+  // Studio has no scanlines, flicker, glow or vignette, whatever asks.
+  if (isStudio) settings = BARE_IMMERSION;
   const root = document.documentElement;
   root.style.setProperty("--immersion-flicker", String(settings.flicker));
   root.style.setProperty("--immersion-pulse-hz", String(settings.pulseHz));

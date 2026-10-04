@@ -4,6 +4,7 @@
  * The active theme is persisted in localStorage.
  */
 
+import { isStudio } from "./edition";
 import {
   applyImmersionToRoot,
   BARE_IMMERSION,
@@ -228,10 +229,84 @@ export const THEMES: CyberTheme[] = [
   },
 ];
 
+/**
+ * GLTCH Studio's theme. Not in THEMES, so it never appears in the Runner theme
+ * picker; it is forced by the edition instead.
+ *
+ * Light, because Studio is the consumer edition and light is what people expect
+ * of a plain creative tool. That is safe here because 5,307 colour uses go
+ * through these tokens against about 200 hard-coded ones, and most of those
+ * (bg-black/60 under video controls, text-white over images) are overlays on
+ * media that read correctly on either ground.
+ *
+ * Cool neutrals with a slight blue bias rather than pure grey, a deep teal
+ * primary that keeps a thread back to Runner's cyan without any of its glow, and
+ * a violet accent used sparingly. The neon-* tokens are remapped to calm values
+ * and every glow is off, because components reference them directly.
+ */
+export const STUDIO_THEME: CyberTheme = {
+  id: "studio",
+  name: "STUDIO",
+  label: "GLTCH Studio",
+  swatch: "#0e7490",
+  vars: {
+    "--background": "210 25% 98%",
+    "--foreground": "222 28% 12%",
+    "--card": "0 0% 100%",
+    "--card-foreground": "222 28% 12%",
+    "--popover": "0 0% 100%",
+    "--popover-foreground": "222 28% 12%",
+    "--primary": "191 80% 31%",
+    "--primary-vivid": "191 80% 36%",
+    "--primary-foreground": "0 0% 100%",
+    // Runner uses `secondary` as an ACCENT, not a surface: 302 uses as text
+    // colour, and most of its 136 bg uses are tints like bg-secondary/10. So it
+    // must be a strong colour that holds contrast on white (violet, ~7:1); the
+    // tints then come out as pale washes, which is what they should be.
+    "--secondary": "262 52% 46%",
+    "--secondary-foreground": "0 0% 100%",
+    "--muted": "214 24% 95%",
+    "--muted-foreground": "215 14% 40%",
+    "--accent": "221 70% 48%",
+    "--accent-foreground": "0 0% 100%",
+    "--destructive": "0 72% 48%",
+    "--destructive-foreground": "0 0% 100%",
+    "--border": "214 20% 87%",
+    "--input": "214 20% 89%",
+    "--ring": "191 80% 38%",
+    "--radius": "0.75rem",
+    "--neon-cyan": "191 80% 31%",
+    "--neon-magenta": "262 52% 46%",
+    "--neon-purple": "262 52% 46%",
+    "--neon-yellow": "38 92% 44%",
+    "--neon-red": "0 72% 48%",
+    "--glow-cyan": "none",
+    "--glow-magenta": "none",
+    "--glow-purple": "none",
+    "--glow-focus": "none",
+    "--glow-live": "none",
+    "--glow-ambient": "none",
+    "--sidebar-background": "0 0% 100%",
+    "--sidebar-foreground": "222 28% 12%",
+    "--sidebar-primary": "191 80% 31%",
+    "--sidebar-primary-foreground": "0 0% 100%",
+    "--sidebar-accent": "214 24% 95%",
+    "--sidebar-accent-foreground": "222 28% 12%",
+    "--font-display": "'Manrope', system-ui, -apple-system, sans-serif",
+    "--font-ui-mono": "'Manrope', system-ui, -apple-system, sans-serif",
+    "--font-rajdhani": "'Manrope', system-ui, -apple-system, sans-serif",
+    "--font-mono": "'Manrope', system-ui, -apple-system, sans-serif",
+  },
+};
+
 const THEME_KEY = "cyber-theme";
 
 /** Apply palette + `data-cyber-theme` only (use before React paint; no network). */
 export function applyThemeVisuals(theme: CyberTheme): void {
+  // Studio is locked to its own theme. Five call sites apply themes after boot
+  // (create page, layout, picker, preferences); guarding here covers all of
+  // them and any added later, instead of trusting each to check.
+  if (isStudio) theme = STUDIO_THEME;
   const root = document.documentElement;
   for (const [prop, value] of Object.entries(theme.vars)) {
     root.style.setProperty(prop, value);
@@ -248,6 +323,7 @@ export function getStoredThemeId(): string {
 }
 
 export function getThemeById(id: string): CyberTheme {
+  if (isStudio) return STUDIO_THEME;
   return THEMES.find((t) => t.id === id) || THEMES[0];
 }
 

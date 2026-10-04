@@ -5,6 +5,7 @@ import RunpodStatusDot from "@/components/RunpodStatusDot";
 import { useAuth } from "@/hooks/useAuth";
 import { BARE_THEME_ID } from "@/lib/themes";
 import { applyImmersionToRoot, BARE_IMMERSION, DEFAULT_IMMERSION, fetchMasterImmersion } from "@/lib/immersion";
+import { isStudio } from "@/lib/edition";
 
 interface CyberLayoutProps {
   children: React.ReactNode;
@@ -77,23 +78,30 @@ const CyberLayout: React.FC<CyberLayoutProps> = ({ children }) => {
         className="cyber-terminal-bar fixed top-0 left-0 right-0 z-30 bg-card/95 border-b border-primary/20 flex items-end px-4 gap-3"
         style={{ paddingTop: 'env(safe-area-inset-top, 0px)', height: 'calc(env(safe-area-inset-top, 0px) + 28px)' }}
       >
+        {!isStudio && (
         <div className="flex items-center gap-1.5 pb-1">
           <div className="w-2.5 h-2.5 rounded-full bg-destructive/70" />
           <div className="w-2.5 h-2.5 rounded-full bg-neon-yellow/70" />
           <div className="w-2.5 h-2.5 rounded-full bg-primary/70" />
         </div>
-        <div className="font-mono-share text-[10px] text-muted-foreground/50 flex-1 text-center pb-1">
-          gltch@gltch:~/neural-render — bash
-        </div>
-        <div className="pb-1 shrink-0">
+        )}
+        {isStudio ? (
+          // GLTCH Studio: a plain header, not a terminal window.
+          <div className="font-display font-bold text-sm text-foreground flex-1 pb-1.5">GLTCH Studio</div>
+        ) : (
+          <div className="font-mono-share text-[10px] text-muted-foreground/50 flex-1 text-center pb-1">
+            gltch@gltch:~/neural-render — bash
+          </div>
+        )}
+        {!isStudio && (<div className="pb-1 shrink-0">
           <RunpodStatusDot />
-        </div>
+        </div>)}
         <div className="pb-0.5 shrink-0">
           <NotificationBell isAuthenticated={isAuthenticated} />
         </div>
-        <div className="font-mono-share text-[10px] text-muted-foreground/30 pb-1 hidden sm:block">
+        {!isStudio && (<div className="font-mono-share text-[10px] text-muted-foreground/30 pb-1 hidden sm:block">
           PID:4F7A
-        </div>
+        </div>)}
       </div>
 
       {/* Horizontal scan line — desktop only (animation + layer cost) */}

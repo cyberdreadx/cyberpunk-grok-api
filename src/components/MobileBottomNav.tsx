@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCredits } from "@/hooks/useCredits";
 import { useChatUnread } from "@/hooks/useChatUnread";
 import { useDmUnread } from "@/hooks/useDmUnread";
+import { isStudio } from "@/lib/edition";
 
 const CommunityPotDialog = lazyWithRetry(() => import("@/components/CommunityPotDialog"), "community-pot-dialog");
 
@@ -42,8 +43,12 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   const [moreOpen, setMoreOpen] = useState(false);
   const [potOpen, setPotOpen] = useState(false);
 
-  const isFeed = location.pathname === "/" || location.pathname === "";
-  const isCreate = location.pathname === "/create";
+  // In Studio, create IS the home page and there is no feed.
+  const isFeed = !isStudio && (location.pathname === "/" || location.pathname === "");
+  const isCreate = isStudio
+    ? location.pathname === "/" || location.pathname === ""
+    : location.pathname === "/create";
+  const isAccount = location.pathname === "/profile";
   const isCharacters = location.pathname === "/characters";
   const isLibrary = location.pathname === "/library";
   const isChat = location.pathname === "/chat";
@@ -54,6 +59,25 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
     setMoreOpen(false);
     setPotOpen(false);
   }, [location.pathname]);
+
+  /*
+   * GLTCH Studio's bar: four plain destinations in title case. No feed, no
+   * messages, no "more" sheet full of social features that Studio does not
+   * have — Account replaces it.
+   */
+  const studioTabs: Array<{
+    id: string; label: string; icon: any; active: boolean;
+    onClick: () => void; badge?: string | null; newBadge?: boolean;
+  }> = [
+    { id: "create", label: "Create", icon: Sparkles, active: isCreate,
+      onClick: () => { if (!isCreate) navigate("/"); } },
+    { id: "library", label: "Library", icon: Image, active: isLibrary,
+      onClick: () => { if (!isLibrary) navigate("/library"); } },
+    { id: "store", label: "Credits", icon: ShoppingCart, active: false, badge: creditsBadge,
+      onClick: () => { if (onOpenStore) onOpenStore(); else navigate("/?store=1"); } },
+    { id: "account", label: "Account", icon: User, active: isAccount,
+      onClick: () => { if (!isAccount) navigate("/profile"); } },
+  ];
 
   const tabs: Array<{
     id: string; label: string; icon: any; active: boolean;
@@ -270,7 +294,7 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
       <nav className="fixed bottom-0 left-0 right-0 z-50 sm:hidden">
         <div className="bg-card/95 backdrop-blur-md border-t border-border/50 shadow-[0_-2px_20px_rgba(0,0,0,0.3)]">
           <div className="flex items-center justify-around px-1 py-1">
-            {tabs.map((tab) => {
+            {(isStudio ? studioTabs : tabs).map((tab) => {
               const Icon = tab.icon;
               return (
                 <button

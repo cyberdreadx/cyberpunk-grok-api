@@ -4,8 +4,14 @@ import "./index.css";
 import "./lib/i18n";
 import { applyThemeVisuals, getThemeById, getStoredThemeId } from "./lib/themes";
 import { watchForUpdates } from "./lib/swUpdate";
+import { EDITION, BRAND_NAME, isStudio } from "./lib/edition";
 
+
+// Before first paint, so Studio never flashes the cyberpunk theme. In Studio,
+// applyThemeVisuals is locked to the Studio theme whatever it is given.
+document.documentElement.dataset.edition = EDITION;
 applyThemeVisuals(getThemeById(getStoredThemeId()));
+if (isStudio) document.title = `${BRAND_NAME} — AI image & video creator`;
 
 createRoot(document.getElementById("root")!).render(<App />);
 
