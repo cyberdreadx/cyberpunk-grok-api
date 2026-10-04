@@ -163,7 +163,10 @@
     "suggestVideoZoom": "Slow zoom in with gentle movement",
     "suggestVideoPan": "Camera pans across the scene",
     "suggestVideoWind": "Dramatic wind and motion",
-    "suggestVideoParticles": "Subtle animation with floating particles"
+    "suggestVideoParticles": "Subtle animation with floating particles",
+    "editShort": "Edit",
+    "createShort": "Create",
+    "videoShort": "Video"
   },
   "common": {
     "loading": "Loading…",

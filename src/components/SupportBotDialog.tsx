@@ -202,7 +202,13 @@ const SupportBotDialog: React.FC<Props> = ({ open, onOpenChange, username, onRef
 
 export default SupportBotDialog;
 
-/** Floating launcher button — drop anywhere. */
+/**
+ * Floating launcher button — desktop only.
+ *
+ * On a phone a permanent floating button sits over whatever ends up above the
+ * tab bar, and on the Create page that was the Apply button. Phones get a help
+ * icon in the page's top row instead.
+ */
 export const SupportBotLauncher: React.FC<{ onClick: () => void }> = ({ onClick }) => (
   <button
     onClick={onClick}
@@ -212,7 +218,7 @@ export const SupportBotLauncher: React.FC<{ onClick: () => void }> = ({ onClick 
       bottom: "calc(env(safe-area-inset-bottom, 0px) + 84px)",
       right: "calc(env(safe-area-inset-right, 0px) + 16px)",
     }}
-    className="fixed sm:!bottom-6 sm:!right-6 z-30 w-11 h-11 sm:w-12 sm:h-12 rounded-full border border-primary/40 bg-card/90 backdrop-blur-md shadow-lg shadow-primary/10 hover:bg-primary/10 hover:border-primary/70 hover:shadow-primary/30 active:scale-95 transition-all flex items-center justify-center group"
+    className="fixed sm:!bottom-6 sm:!right-6 z-30 w-11 h-11 sm:w-12 sm:h-12 rounded-full border border-primary/40 bg-card/90 backdrop-blur-md shadow-lg shadow-primary/10 hover:bg-primary/10 hover:border-primary/70 hover:shadow-primary/30 active:scale-95 transition-all hidden sm:flex items-center justify-center group"
   >
     <LifeBuoy className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
     <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-primary" />

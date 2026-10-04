@@ -114,7 +114,7 @@ const CyberLayout: React.FC<CyberLayoutProps> = ({ children }) => {
       />
 
       {/* HUD overlay */}
-      <HudOverlay />
+      {!isStudio && <HudOverlay />}
 
       {/* Main content — offset by terminal bar height + safe area */}
       <div

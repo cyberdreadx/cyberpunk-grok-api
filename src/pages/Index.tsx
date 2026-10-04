@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect, Suspense } from "react";
 import { useTranslation } from "react-i18next";
-import { Terminal, Key, Coins, Shield, Eye, MessageCircle, HelpCircle, Server, Zap, Cpu, ChevronDown, Film, X, AlertCircle, CheckCircle2, Upload, Users, Image, Code, ToggleLeft, ToggleRight, Gift, Rss, BadgeCheck, MoreHorizontal, Star } from "lucide-react";
+import { Terminal, Key, Coins, Shield, Eye, MessageCircle, HelpCircle, Server, Zap, Cpu, ChevronDown, Film, X, AlertCircle, CheckCircle2, Upload, Users, Image, Code, ToggleLeft, ToggleRight, Gift, Rss, BadgeCheck, MoreHorizontal, Star, LifeBuoy } from "lucide-react";
 import { Link } from "react-router-dom";
 import CyberLayout from "@/components/CyberLayout";
 import EasyMode from "@/components/easy/EasyMode";
@@ -66,6 +66,7 @@ import { apiFetch, calculateCreditCost, type CreditMode } from "@/lib/api";
 import { AGE_VERIFIED_EVENT, isAgeVerified } from "@/lib/ageGate";
 import { APP_VERSION } from "@/lib/version";
 import { RENDER_SIZES, ZIMAGE_SIZES, ZIMAGE_ORDER, type RenderAspect } from "@/lib/renderSizes";
+import { isStudio } from "@/lib/edition";
 
 const ANNOUNCEMENTS: { id: string; message: string; type?: "info" | "warning" | "success" }[] = [
   { id: "gltch-wan-launch", message: "GLTCH Animate now defaults to a simpler WAN 2.2 stable mode for more reliable results.", type: "info" },
@@ -116,6 +117,11 @@ const SFW_LORA_KEYWORDS = ["skin", "angle"];
 const isNsfwLora = (name: string) => !SFW_LORA_KEYWORDS.some(k => name.toLowerCase().includes(k));
 
 
+
+/** A launch banner the visitor has closed. The banners write "1" on dismiss. */
+function bannerDismissed(key: string): boolean {
+  try { return localStorage.getItem(key) === "1"; } catch { return false; }
+}
 
 const Index = () => {
   const [simpleMode, setSimpleMode] = useState(() => localStorage.getItem("ui-mode") !== "advanced");
@@ -1156,19 +1162,21 @@ const Index = () => {
       <div className="max-w-5xl mx-auto px-3 sm:px-4 py-4 sm:py-8 pb-24 sm:pb-8 space-y-4 sm:space-y-6">
         {modeToggle}
 
-        {/* Promo strip — flash sale takes priority; otherwise Buy & Hold discovery. Only one ever shows. */}
-        {flashSaleActive ? (
-          <FlashSaleBanner onClick={() => setStoreOpen(true)} />
-        ) : (
-          <BuyHoldBanner />
-        )}
-
-        {/* LTX-2.3 launch — video with native sound. Click jumps to the LTX engine. */}
-        {/* Newest first. Both are dismissable, so someone who wants neither
-            clears both and sees nothing rather than a stack that regrows. */}
-        <Krea2LaunchBanner onClick={() => { setMode("text-to-image"); setGenEngine("krea2"); }} />
-
-        <LtxLaunchBanner onClick={() => { setMode("text-to-video"); setRenderEngine("ltx"); }} />
+        {/* Top tabs replaced by global hamburger MENU (GlobalNavMenu).
+            Keep the inline credits pill so mobile users still see balance. */}
+        <div className="flex items-center justify-end sm:justify-start gap-2 flex-wrap pl-24 sm:pl-28">
+          <MobileCreditsPill inline onOpenStore={() => setStoreOpen(true)} />
+          <button
+            type="button"
+            onClick={() => setSupportOpen(true)}
+            aria-label="Help"
+            className="sm:hidden w-8 h-8 rounded-full border border-primary/30 bg-card/80 flex items-center justify-center text-primary active:scale-95 transition"
+          >
+            <LifeBuoy className="w-4 h-4" />
+          </button>
+          {!isStudio && <DesktopChatLink />}
+          {!isStudio && <DesktopMessagesLink />}
+        </div>
 
         {/* Verify email — compact inline pill (no longer a full-width banner) */}
         {auth.isAuthenticated && auth.user && !auth.user.email_verified && (
@@ -1188,258 +1196,17 @@ const Index = () => {
           </div>
         )}
 
-        {/* Top tabs replaced by global hamburger MENU (GlobalNavMenu).
-            Keep the inline credits pill so mobile users still see balance. */}
-        <div className="flex items-center justify-end sm:justify-start gap-2 flex-wrap pl-24 sm:pl-28">
-          <MobileCreditsPill inline onOpenStore={() => setStoreOpen(true)} />
-          <DesktopChatLink />
-          <DesktopMessagesLink />
-        </div>
-
-        {/* Stories */}
-        <StoriesBar currentUserId={auth.user?.id} isAdmin={auth.user?.is_admin} />
-
-        {/* Header — minimal: orb (desktop) · title · status dot · primary actions · overflow menu */}
-        <header className="text-center space-y-2 animate-slide-up">
-          {/* Grok Orb — desktop only, lazy-loaded */}
-          <div className="hidden sm:block sm:w-48 sm:h-48 md:w-64 md:h-64 mx-auto">
-            <Suspense fallback={<div className="w-full h-full rounded-full bg-primary/5 animate-pulse" />}>
-              <GrokOrb isGenerating={isLoading} />
-            </Suspense>
-          </div>
-
-          <GlitchText
-            text={BRAND.nameHeader}
-            as="h1"
-            className="font-orbitron text-2xl sm:text-3xl md:text-5xl font-black tracking-wider neon-text-cyan"
-            glitchIntensity="medium"
-          />
-
-          {/* Compact action row — only essentials are inline; everything else lives behind "More". */}
-          <div className="flex items-center justify-center gap-2 pt-2 flex-wrap">
-            {/* Status indicator (just the dot — no text) */}
-            <span
-              aria-label={t("header.sysOnline")}
-              title={t("header.sysOnline")}
-              className={`w-1.5 h-1.5 rounded-full transition-colors duration-500 ${
-                isLoading ?"bg-secondary" :"bg-primary -glow"
-              }`}
-            />
-
-            {/* Credits — primary, always visible for authenticated users */}
-            {canUseCredits && (
-              <CreditDisplay
-                totalCredits={creditsHook.totalCredits}
-                dailyCredits={creditsHook.dailyCredits}
-                subCredits={creditsHook.subCredits}
-                packCredits={creditsHook.packCredits}
-                subscriptionTier={creditsHook.subscriptionTier}
-                subscriptionRenewsAt={creditsHook.subscriptionRenewsAt}
-                subscriptionCancelAt={creditsHook.subscriptionCancelAt}
-                subscriptionDiscountPct={creditsHook.subscriptionDiscountPct}
-                loading={creditsHook.loading}
-                purchasing={creditsHook.purchasing}
-                purchaseError={creditsHook.purchaseError}
-                clearPurchaseError={creditsHook.clearPurchaseError}
-                packages={creditsHook.packages}
-                subscriptionTiers={creditsHook.subscriptionTiers}
-                onPurchase={creditsHook.purchaseCredits}
-                onSubscribe={creditsHook.subscribeToPlan}
-                onManageSubscription={creditsHook.manageSubscription}
-                onCreditsRefresh={creditsHook.refreshCredits}
-                externalOpen={storeOpen}
-                onExternalOpenChange={setStoreOpen}
-                freeCreditsDisabled={creditsHook.freeCreditsDisabled}
-                maintenanceMessage={creditsHook.maintenanceMessage}
-                subscriberOnlyFreeCredits={creditsHook.subscriberOnlyFreeCredits}
-              />
-            )}
-
-            {/* Auth — primary */}
-            {auth.enabled && (
-              <AuthDialog
-                isAuthenticated={auth.isAuthenticated}
-                userEmail={auth.user?.email}
-                onSignIn={auth.signIn}
-                onSignUp={auth.signUp}
-                onSignOut={auth.signOut}
-                pendingVerificationEmail={auth.pendingVerificationEmail}
-                onVerify={auth.verifyEmail}
-                onResendCode={auth.resendCode}
-                onCancelVerification={auth.cancelVerification}
-                pendingTwoFactorEmail={auth.pendingTwoFactorEmail}
-                onVerifyTwoFactor={auth.verifyTwoFactor}
-                onCancelTwoFactor={auth.cancelTwoFactor}
-                onForgotPassword={auth.forgotPassword}
-                onResetPassword={auth.resetPassword}
-                onDeleteAccount={auth.deleteAccount}
-              />
-            )}
-
-            {/* Overflow menu — everything secondary lives here */}
-            <Popover>
-              <PopoverTrigger asChild>
-                <button
-                  type="button"
-                  title={t("header.more", "More")}
-                  aria-label={t("header.more", "More")}
-                  className={`flex items-center justify-center w-7 h-7 rounded border border-border/50 bg-card/40 text-muted-foreground/70 hover:text-foreground hover:border-primary/40 transition-colors ${
-                    showToggleTooltip ? "ring-2 ring-primary/50 ring-offset-1 ring-offset-background animate-pulse" : ""
-                  }`}
-                  onClick={() => {
-                    if (showToggleTooltip) {
-                      setShowToggleTooltip(false);
-                      localStorage.setItem("onboarding-toggle-seen", "1");
-                    }
-                  }}
-                >
-                  <MoreHorizontal className="w-3.5 h-3.5" />
-                </button>
-              </PopoverTrigger>
-              <PopoverContent align="end" className="w-60 p-3 space-y-3">
-                {/* Simple / Advanced toggle */}
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-mono-share text-[10px] text-muted-foreground/70 uppercase tracking-wider">
-                    {t("header.mode", "Mode")}
-                  </span>
-                  <button
-                    onClick={() => {
-                      const next = !simpleMode;
-                      setSimpleMode(next);
-                      localStorage.setItem("ui-mode", next ? "simple" : "advanced");
-                      localStorage.setItem("onboarding-toggle-seen", "1");
-                      setShowToggleTooltip(false);
-                      if (next && !["edit-image", "text-to-image", "image-to-video"].includes(mode)) {
-                        setMode("edit-image");
-                      }
-                    }}
-                    className={`flex items-center gap-1 px-2 py-1 text-[10px] font-mono-share transition-colors rounded border ${
-                      simpleMode
-                        ? "border-primary/30 bg-primary/10 text-primary"
-                        : "border-border/50 bg-card/40 text-muted-foreground/60 hover:text-muted-foreground"
-                    }`}
-                  >
-                    {simpleMode ? <ToggleLeft className="w-3 h-3" /> : <ToggleRight className="w-3 h-3" />}
-                    {simpleMode ? t("header.simple") : t("header.advanced")}
-                  </button>
-                </div>
-
-                {/* BYOK key dialog now lives in the always-visible action row above. */}
-
-                {/* Daily Missions */}
-                {auth.isAuthenticated && (
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-mono-share text-[10px] text-muted-foreground/70 uppercase tracking-wider">
-                      {t("header.missions", "Missions")}
-                    </span>
-                    <DailyMissionsDialog
-                      status={missionsHook.status}
-                      loading={missionsHook.loading}
-                      claiming={missionsHook.claiming}
-                      onClaim={missionsHook.claimMission}
-                      onClaimStreak={missionsHook.claimStreakBonus}
-                      onCreditsRefresh={creditsHook.refreshCredits}
-                      user={auth.user}
-                    />
-                  </div>
-                )}
-
-                {/* Theme */}
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-mono-share text-[10px] text-muted-foreground/70 uppercase tracking-wider">
-                    {t("header.theme", "Theme")}
-                  </span>
-                  <ThemePicker />
-                </div>
-
-                {/* Admin: test credit spending toggle */}
-                {isAdmin && (
-                  <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/30">
-                    <span className="font-mono-share text-[10px] text-muted-foreground/70 uppercase tracking-wider">
-                      Admin
-                    </span>
-                    <button
-                      onClick={() => setAdminTestCredits(prev => !prev)}
-                      className={`px-2 py-1 rounded text-[10px] font-mono border transition-colors ${
-                        adminTestCredits
-                          ? "border-yellow-500/60 bg-yellow-500/20 text-yellow-300"
-                          : "border-white/10 bg-white/5 text-white/40 hover:text-white/60"
-                      }`}
-                      title={adminTestCredits ? "Credits WILL be deducted (testing mode)" : "Credits are bypassed (admin mode)"}
-                    >
-                      {adminTestCredits ? "TEST CR: ON" : "TEST CR: OFF"}
-                    </button>
-                  </div>
-                )}
-              </PopoverContent>
-            </Popover>
-          </div>
-        </header>
-
-
-        {/* Value prop strip */}
-        <Collapsible defaultOpen={false}>
-          <CollapsibleTrigger className="flex items-center gap-2 w-full group py-1">
-            <span className="font-mono-share text-primary/40 text-[9px] group-data-[state=open]:text-primary/60">▸</span>
-            <span className="font-mono-share text-[9px] tracking-widest text-muted-foreground/40 group-hover:text-muted-foreground/60 transition-colors">STATUS</span>
-            <div className="h-px flex-1 bg-primary/5" />
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 py-1.5 animate-slide-up">
-              {[
-                { icon: "⚡", label: t("header.valueFast") },
-                { icon: "🔞", label: t("header.valueNsfw") },
-                { icon: "🎬", label: t("header.valueMedia") },
-                { icon: "💳", label: t("header.valuePayPerCredit") },
-              ].map(({ icon, label }) => (
-                <span key={label} className="flex items-center gap-1 font-mono-share text-[10px] text-muted-foreground/50">
-                  <span className="text-primary/60">{icon}</span>
-                  {label}
-                </span>
-              ))}
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
-
-        {/* Announcements */}
-        {visibleAnnouncements.length > 0 && (
-          <div className="space-y-2 mb-4 animate-slide-up">
-            {visibleAnnouncements.map(a => (
-              <div
-                key={a.id}
-                className={`flex items-center justify-between gap-3 px-4 py-2.5 rounded border font-mono-share text-[10px] ${a.type === "warning"
-                  ? "bg-amber-500/5 border-amber-500/30 text-amber-300"
-                  : a.type === "success"
-                    ? "bg-green-500/5 border-green-500/30 text-green-300"
-                    : "bg-secondary/5 border-secondary/30 text-secondary"
-                  }`}
-              >
-                <span className="flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-current flex-shrink-0" />
-                  {a.message}
-                </span>
-                <button
-                  onClick={() => dismissAnnouncement(a.id)}
-                  className="text-current/50 hover:text-current transition-colors flex-shrink-0"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <EarnPromoBanner className="mb-4" />
-
         {simpleMode ? (
           /* ── SIMPLE MODE ─────────────────────────────────────── */
           <section className="animate-slide-up border border-border rounded bg-card/40 backdrop-blur-sm overflow-hidden" style={{ animationDelay: "100ms" }}>
             <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50 bg-card/60">
+              {!isStudio && (
               <div className="flex items-center gap-1.5">
                 <div className="w-2 h-2 rounded-full bg-neon-red/60" />
                 <div className="w-2 h-2 rounded-full bg-neon-yellow/60" />
                 <div className="w-2 h-2 rounded-full bg-primary/60" />
               </div>
+              )}
               <span className="font-orbitron text-sm sm:text-base font-bold text-foreground tracking-wide leading-tight">
                 Quick Create
               </span>
@@ -2354,6 +2121,26 @@ const Index = () => {
           </>
         )}
 
+        {/*
+          ONE banner, under the generator. This page used to open with three
+          stacked banners (flash sale, Krea 2, LTX), then two more further down,
+          and the prompt box sat 1,264px down on a phone — a screen and a half
+          of announcements before anyone could type. Priority: a running flash
+          sale (it earns money), then the newest launch not yet dismissed, then
+          Buy & Hold. Dismissing one reveals the next on the following render.
+        */}
+        {/* Studio carries no XRGE (crypto) promotions — out of place in a plain
+            consumer app — so it skips the flash sale and Buy & Hold. */}
+          {!isStudio && flashSaleActive ? (
+          <FlashSaleBanner onClick={() => setStoreOpen(true)} />
+        ) : !bannerDismissed("gltch-krea2-launch-dismissed-v1") ? (
+          <Krea2LaunchBanner onClick={() => { setMode("text-to-image"); setGenEngine("krea2"); }} />
+        ) : !bannerDismissed("gltch-ltx-launch-dismissed-v2") ? (
+          <LtxLaunchBanner onClick={() => { setMode("text-to-video"); setRenderEngine("ltx"); }} />
+        ) : !isStudio ? (
+          <BuyHoldBanner />
+        ) : null}
+
         {/* Error display */}
         {error && (
           <div className="border border-destructive/50 rounded overflow-hidden animate-slide-up">
@@ -2639,6 +2426,246 @@ const Index = () => {
           )}
           </CollapsibleContent>
         </section>
+        </Collapsible>
+
+        {/*
+          Moved below the generator and its results: announcements, the earn
+          promo, stories, the orb-and-wordmark header with its action row, and
+          the value-prop strip. All still here — just no longer between a
+          visitor and the thing they came to do.
+        */}
+        {/* Announcements */}
+        {visibleAnnouncements.length > 0 && (
+          <div className="space-y-2 mb-4 animate-slide-up">
+            {visibleAnnouncements.map(a => (
+              <div
+                key={a.id}
+                className={`flex items-center justify-between gap-3 px-4 py-2.5 rounded border font-mono-share text-[10px] ${a.type === "warning"
+                  ? "bg-amber-500/5 border-amber-500/30 text-amber-300"
+                  : a.type === "success"
+                    ? "bg-green-500/5 border-green-500/30 text-green-300"
+                    : "bg-secondary/5 border-secondary/30 text-secondary"
+                  }`}
+              >
+                <span className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-current flex-shrink-0" />
+                  {a.message}
+                </span>
+                <button
+                  onClick={() => dismissAnnouncement(a.id)}
+                  className="text-current/50 hover:text-current transition-colors flex-shrink-0"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <EarnPromoBanner className="mb-4" />
+
+        {/* Stories */}
+        <StoriesBar currentUserId={auth.user?.id} isAdmin={auth.user?.is_admin} />
+
+        {/* Header — minimal: orb (desktop) · title · status dot · primary actions · overflow menu */}
+        <header className="text-center space-y-2 animate-slide-up">
+          {/* Grok Orb — desktop only, lazy-loaded */}
+          <div className="hidden sm:block sm:w-48 sm:h-48 md:w-64 md:h-64 mx-auto">
+            <Suspense fallback={<div className="w-full h-full rounded-full bg-primary/5 animate-pulse" />}>
+              <GrokOrb isGenerating={isLoading} />
+            </Suspense>
+          </div>
+
+          <GlitchText
+            text={BRAND.nameHeader}
+            as="h1"
+            className="font-orbitron text-2xl sm:text-3xl md:text-5xl font-black tracking-wider neon-text-cyan"
+            glitchIntensity="medium"
+          />
+
+          {/* Compact action row — only essentials are inline; everything else lives behind "More". */}
+          <div className="flex items-center justify-center gap-2 pt-2 flex-wrap">
+            {/* Status indicator (just the dot — no text) */}
+            <span
+              aria-label={t("header.sysOnline")}
+              title={t("header.sysOnline")}
+              className={`w-1.5 h-1.5 rounded-full transition-colors duration-500 ${
+                isLoading ?"bg-secondary" :"bg-primary -glow"
+              }`}
+            />
+
+            {/* Credits — primary, always visible for authenticated users */}
+            {canUseCredits && (
+              <CreditDisplay
+                totalCredits={creditsHook.totalCredits}
+                dailyCredits={creditsHook.dailyCredits}
+                subCredits={creditsHook.subCredits}
+                packCredits={creditsHook.packCredits}
+                subscriptionTier={creditsHook.subscriptionTier}
+                subscriptionRenewsAt={creditsHook.subscriptionRenewsAt}
+                subscriptionCancelAt={creditsHook.subscriptionCancelAt}
+                subscriptionDiscountPct={creditsHook.subscriptionDiscountPct}
+                loading={creditsHook.loading}
+                purchasing={creditsHook.purchasing}
+                purchaseError={creditsHook.purchaseError}
+                clearPurchaseError={creditsHook.clearPurchaseError}
+                packages={creditsHook.packages}
+                subscriptionTiers={creditsHook.subscriptionTiers}
+                onPurchase={creditsHook.purchaseCredits}
+                onSubscribe={creditsHook.subscribeToPlan}
+                onManageSubscription={creditsHook.manageSubscription}
+                onCreditsRefresh={creditsHook.refreshCredits}
+                externalOpen={storeOpen}
+                onExternalOpenChange={setStoreOpen}
+                freeCreditsDisabled={creditsHook.freeCreditsDisabled}
+                maintenanceMessage={creditsHook.maintenanceMessage}
+                subscriberOnlyFreeCredits={creditsHook.subscriberOnlyFreeCredits}
+              />
+            )}
+
+            {/* Auth — primary */}
+            {auth.enabled && (
+              <AuthDialog
+                isAuthenticated={auth.isAuthenticated}
+                userEmail={auth.user?.email}
+                onSignIn={auth.signIn}
+                onSignUp={auth.signUp}
+                onSignOut={auth.signOut}
+                pendingVerificationEmail={auth.pendingVerificationEmail}
+                onVerify={auth.verifyEmail}
+                onResendCode={auth.resendCode}
+                onCancelVerification={auth.cancelVerification}
+                pendingTwoFactorEmail={auth.pendingTwoFactorEmail}
+                onVerifyTwoFactor={auth.verifyTwoFactor}
+                onCancelTwoFactor={auth.cancelTwoFactor}
+                onForgotPassword={auth.forgotPassword}
+                onResetPassword={auth.resetPassword}
+                onDeleteAccount={auth.deleteAccount}
+              />
+            )}
+
+            {/* Overflow menu — everything secondary lives here */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  title={t("header.more", "More")}
+                  aria-label={t("header.more", "More")}
+                  className={`flex items-center justify-center w-7 h-7 rounded border border-border/50 bg-card/40 text-muted-foreground/70 hover:text-foreground hover:border-primary/40 transition-colors ${
+                    showToggleTooltip ? "ring-2 ring-primary/50 ring-offset-1 ring-offset-background animate-pulse" : ""
+                  }`}
+                  onClick={() => {
+                    if (showToggleTooltip) {
+                      setShowToggleTooltip(false);
+                      localStorage.setItem("onboarding-toggle-seen", "1");
+                    }
+                  }}
+                >
+                  <MoreHorizontal className="w-3.5 h-3.5" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-60 p-3 space-y-3">
+                {/* Simple / Advanced toggle */}
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-mono-share text-[10px] text-muted-foreground/70 uppercase tracking-wider">
+                    {t("header.mode", "Mode")}
+                  </span>
+                  <button
+                    onClick={() => {
+                      const next = !simpleMode;
+                      setSimpleMode(next);
+                      localStorage.setItem("ui-mode", next ? "simple" : "advanced");
+                      localStorage.setItem("onboarding-toggle-seen", "1");
+                      setShowToggleTooltip(false);
+                      if (next && !["edit-image", "text-to-image", "image-to-video"].includes(mode)) {
+                        setMode("edit-image");
+                      }
+                    }}
+                    className={`flex items-center gap-1 px-2 py-1 text-[10px] font-mono-share transition-colors rounded border ${
+                      simpleMode
+                        ? "border-primary/30 bg-primary/10 text-primary"
+                        : "border-border/50 bg-card/40 text-muted-foreground/60 hover:text-muted-foreground"
+                    }`}
+                  >
+                    {simpleMode ? <ToggleLeft className="w-3 h-3" /> : <ToggleRight className="w-3 h-3" />}
+                    {simpleMode ? t("header.simple") : t("header.advanced")}
+                  </button>
+                </div>
+
+                {/* BYOK key dialog now lives in the always-visible action row above. */}
+
+                {/* Daily Missions */}
+                {auth.isAuthenticated && (
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-mono-share text-[10px] text-muted-foreground/70 uppercase tracking-wider">
+                      {t("header.missions", "Missions")}
+                    </span>
+                    <DailyMissionsDialog
+                      status={missionsHook.status}
+                      loading={missionsHook.loading}
+                      claiming={missionsHook.claiming}
+                      onClaim={missionsHook.claimMission}
+                      onClaimStreak={missionsHook.claimStreakBonus}
+                      onCreditsRefresh={creditsHook.refreshCredits}
+                      user={auth.user}
+                    />
+                  </div>
+                )}
+
+                {/* Theme */}
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-mono-share text-[10px] text-muted-foreground/70 uppercase tracking-wider">
+                    {t("header.theme", "Theme")}
+                  </span>
+                  <ThemePicker />
+                </div>
+
+                {/* Admin: test credit spending toggle */}
+                {isAdmin && (
+                  <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/30">
+                    <span className="font-mono-share text-[10px] text-muted-foreground/70 uppercase tracking-wider">
+                      Admin
+                    </span>
+                    <button
+                      onClick={() => setAdminTestCredits(prev => !prev)}
+                      className={`px-2 py-1 rounded text-[10px] font-mono border transition-colors ${
+                        adminTestCredits
+                          ? "border-yellow-500/60 bg-yellow-500/20 text-yellow-300"
+                          : "border-white/10 bg-white/5 text-white/40 hover:text-white/60"
+                      }`}
+                      title={adminTestCredits ? "Credits WILL be deducted (testing mode)" : "Credits are bypassed (admin mode)"}
+                    >
+                      {adminTestCredits ? "TEST CR: ON" : "TEST CR: OFF"}
+                    </button>
+                  </div>
+                )}
+              </PopoverContent>
+            </Popover>
+          </div>
+        </header>
+
+        {/* Value prop strip */}
+        <Collapsible defaultOpen={false}>
+          <CollapsibleTrigger className="flex items-center gap-2 w-full group py-1">
+            <span className="font-mono-share text-primary/40 text-[9px] group-data-[state=open]:text-primary/60">▸</span>
+            <span className="font-mono-share text-[9px] tracking-widest text-muted-foreground/40 group-hover:text-muted-foreground/60 transition-colors">STATUS</span>
+            <div className="h-px flex-1 bg-primary/5" />
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 py-1.5 animate-slide-up">
+              {[
+                { icon: "⚡", label: t("header.valueFast") },
+                { icon: "🔞", label: t("header.valueNsfw") },
+                { icon: "🎬", label: t("header.valueMedia") },
+                { icon: "💳", label: t("header.valuePayPerCredit") },
+              ].map(({ icon, label }) => (
+                <span key={label} className="flex items-center gap-1 font-mono-share text-[10px] text-muted-foreground/50">
+                  <span className="text-primary/60">{icon}</span>
+                  {label}
+                </span>
+              ))}
+            </div>
+          </CollapsibleContent>
         </Collapsible>
 
         {/* Footer */}

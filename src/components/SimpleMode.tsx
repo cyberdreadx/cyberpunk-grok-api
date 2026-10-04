@@ -14,12 +14,12 @@ interface SimpleModeProps {
   currentMode: GrokMode;
 }
 
-type SimpleTab = { id: GrokMode; labelKey: string; icon: React.ElementType; descKey: string };
+type SimpleTab = { id: GrokMode; labelKey: string; shortKey: string; icon: React.ElementType; descKey: string };
 
 const SIMPLE_TABS: SimpleTab[] = [
-  { id: "edit-image" as GrokMode, labelKey: "simple.editImage", icon: Pencil, descKey: "simple.descEdit" },
-  { id: "text-to-image" as GrokMode, labelKey: "simple.createImage", icon: Image, descKey: "simple.descCreate" },
-  { id: "image-to-video" as GrokMode, labelKey: "simple.makeVideo", icon: Film, descKey: "simple.descVideo" },
+  { id: "edit-image" as GrokMode, labelKey: "simple.editImage", shortKey: "simple.editShort", icon: Pencil, descKey: "simple.descEdit" },
+  { id: "text-to-image" as GrokMode, labelKey: "simple.createImage", shortKey: "simple.createShort", icon: Image, descKey: "simple.descCreate" },
+  { id: "image-to-video" as GrokMode, labelKey: "simple.makeVideo", shortKey: "simple.videoShort", icon: Film, descKey: "simple.descVideo" },
 ];
 
 const SIMPLE_SUGGESTION_KEYS: Record<string, string[]> = {
@@ -213,7 +213,7 @@ const SimpleMode: React.FC<SimpleModeProps> = ({
                 key={tab.id}
                 onClick={() => handleTabChange(tab.id)}
                 className={`
-                  flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-md transition-all duration-200 font-mono-share text-xs
+                  flex-1 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 sm:py-2.5 rounded-md transition-all duration-200 font-mono-share text-xs
                   ${isActive
                     ? "bg-primary/10 border border-primary/30 text-primary shadow-sm"
                     : "text-muted-foreground/60 hover:text-foreground/80 hover:bg-card/60"
@@ -221,6 +221,9 @@ const SimpleMode: React.FC<SimpleModeProps> = ({
                 `}
               >
                 <Icon className="w-4 h-4" />
+                {/* Phones got three unlabelled icons. They now get a short label under
+                    the icon; the full label returns from sm: up. */}
+                <span className="sm:hidden text-[11px] leading-none">{t(tab.shortKey, { defaultValue: t(tab.labelKey) })}</span>
                 <span className="hidden sm:inline">{t(tab.labelKey)}</span>
               </button>
             );
