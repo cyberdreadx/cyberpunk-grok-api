@@ -49,7 +49,7 @@ import DailyMissionsDialog from "@/components/DailyMissionsDialog";
 import { useDailyMissions } from "@/hooks/useDailyMissions";
 import LegalDialog from "@/components/LegalDialog";
 import HowToUseDialog from "@/components/HowToUseDialog";
-import ChangelogDialog, { hasUnseenChangelog } from "@/components/ChangelogDialog";
+import ChangelogDialog, { hasUnseenChangelog, markChangelogSeen } from "@/components/ChangelogDialog";
 import ThemePicker from "@/components/ThemePicker";
 import PwaInstallBanner from "@/components/PwaInstallBanner";
 import SupportBotDialog, { SupportBotLauncher } from "@/components/SupportBotDialog";
@@ -67,6 +67,7 @@ import { AGE_VERIFIED_EVENT, isAgeVerified } from "@/lib/ageGate";
 import { APP_VERSION } from "@/lib/version";
 import { RENDER_SIZES, ZIMAGE_SIZES, ZIMAGE_ORDER, type RenderAspect } from "@/lib/renderSizes";
 import { isStudio } from "@/lib/edition";
+import { claimInterruption } from "@/lib/interruptions";
 
 const ANNOUNCEMENTS: { id: string; message: string; type?: "info" | "warning" | "success" }[] = [
   { id: "gltch-wan-launch", message: "GLTCH Animate now defaults to a simpler WAN 2.2 stable mode for more reliable results.", type: "info" },
@@ -117,6 +118,13 @@ const SFW_LORA_KEYWORDS = ["skin", "angle"];
 const isNsfwLora = (name: string) => !SFW_LORA_KEYWORDS.some(k => name.toLowerCase().includes(k));
 
 
+
+/** Any trace of an earlier visit: a changelog they saw, or the guide. */
+function isReturningUser(): boolean {
+  try {
+    return localStorage.getItem("changelog-seen-version") !== null || localStorage.getItem("how-to-use-seen") !== null;
+  } catch { return false; }
+}
 
 /** A launch banner the visitor has closed. The banners write "1" on dismiss. */
 function bannerDismissed(key: string): boolean {
@@ -446,12 +454,17 @@ const Index = () => {
   // Legal & guide dialog state
   const [tosOpen, setTosOpen] = useState(false);
   const [privacyOpen, setPrivacyOpen] = useState(false);
-  const [guideOpen, setGuideOpen] = useState(() => isAgeVerified() && !localStorage.getItem("how-to-use-seen"));
+  // The 9-step guide no longer opens itself. New users get the short tooltip
+  // tour inside the generator instead, which points at the actual controls;
+  // two tours at once was one too many. The guide stays in the help menu.
+  const [guideOpen, setGuideOpen] = useState(false);
   const [changelogOpen, setChangelogOpen] = useState(() => {
     if (!isAgeVerified()) return false;
-    // Auto-show changelog only if the user has already seen the guide (not first visit)
-    if (!localStorage.getItem("how-to-use-seen")) return false;
-    return hasUnseenChangelog();
+    // The changelog is for people who used an earlier version. Someone with no
+    // trace of a previous visit is marked up to date silently — otherwise every
+    // new account met a list of fixes to a product it had never used.
+    if (!isReturningUser()) { markChangelogSeen(); return false; }
+    return hasUnseenChangelog() && claimInterruption();
   });
   const [storeOpen, setStoreOpen] = useState(false);
   const [prefsOpen, setPrefsOpen] = useState(false);
@@ -462,14 +475,10 @@ const Index = () => {
     if (isAgeVerified()) return;
 
     const handleAgeVerified = () => {
-      if (!localStorage.getItem("how-to-use-seen")) {
-        setGuideOpen(true);
-        return;
-      }
-
-      if (hasUnseenChangelog()) {
-        setChangelogOpen(true);
-      }
+      // Passing the age gate used this visit's one interruption. A new user goes
+      // straight to the generator and its tooltip tour; a returning user with an
+      // unseen changelog gets it on their next visit.
+      if (!isReturningUser()) markChangelogSeen();
     };
 
     window.addEventListener(AGE_VERIFIED_EVENT, handleAgeVerified);

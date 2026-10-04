@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Globe, Eye, Clock, Lock, AlertTriangle, Sparkles, Diamond, Flame, Wallet, Coins } from "lucide-react";
+import { claimInterruption } from "@/lib/interruptions";
 
 type ExplainerKey = "feed" | "stories" | "holder";
 
@@ -65,8 +66,9 @@ const FeatureExplainer: React.FC<FeatureExplainerProps> = ({ feature, open: cont
   useEffect(() => {
     if (controlledOpen !== undefined) return;
     if (!hasSeenExplainer(feature)) {
-      // Slight delay so it doesn't fight the page mount
-      const t = setTimeout(() => setAutoOpen(true), 400);
+      // Slight delay so it doesn't fight the page mount. If something else already
+      // interrupted this visit, wait — it will show on a later one.
+      const t = setTimeout(() => { if (claimInterruption()) setAutoOpen(true); }, 400);
       return () => clearTimeout(t);
     }
   }, [feature, controlledOpen]);

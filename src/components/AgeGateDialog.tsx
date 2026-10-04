@@ -15,6 +15,7 @@ import { ShieldAlert, Shield, Eye, ChevronDown, Globe } from "lucide-react";
 import LegalDialog from "@/components/LegalDialog";
 import { AGE_VERIFIED_EVENT, AGE_VERIFIED_KEY } from "@/lib/ageGate";
 import { isStudio } from "@/lib/edition";
+import { markInterrupted } from "@/lib/interruptions";
 
 const AGE = "18";
 
@@ -37,6 +38,9 @@ export default function AgeGateDialog() {
   useEffect(() => {
     const verified = localStorage.getItem(AGE_VERIFIED_KEY);
     if (!verified) {
+      // The gate is legally required and always wins; it uses up this visit's
+      // one interruption so nothing else stacks on top once it is passed.
+      markInterrupted();
       setOpen(true);
     }
   }, []);
