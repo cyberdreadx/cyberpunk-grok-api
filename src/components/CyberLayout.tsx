@@ -1,5 +1,4 @@
 import React, { useEffect } from "react";
-import HudOverlay from "@/components/HudOverlay";
 import NotificationBell from "@/components/NotificationBell";
 import RunpodStatusDot from "@/components/RunpodStatusDot";
 import { useAuth } from "@/hooks/useAuth";
@@ -114,7 +113,11 @@ const CyberLayout: React.FC<CyberLayoutProps> = ({ children }) => {
       />
 
       {/* HUD overlay */}
-      {!isStudio && <HudOverlay />}
+      {/* HudOverlay retired from the layout. Its four fixed corner blocks — 10-20%
+          opacity telemetry text, desktop only, z-30 above content — collided with
+          something real in every corner: the menu button top-left, page controls
+          such as MY PROFILE top-right, the credit toast bottom-left and the help
+          button bottom-right. The component is kept if it ever finds a home. */}
 
       {/* Main content — offset by terminal bar height + safe area */}
       <div
