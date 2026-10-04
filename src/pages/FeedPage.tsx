@@ -332,6 +332,9 @@ const FeedPage: React.FC = () => {
   ) : null;
 
   // Karma / posting eligibility strip — always shown to authenticated users.
+  // No posting payload means we cannot tell, so keep the composer as before.
+  const canPost = user?.posting ? user.posting.can_post !== false : true;
+
   const karmaStrip = isAuthenticated && user?.posting ? (
     <KarmaBadge posting={user.posting} onOpenStore={() => setStoreOpen(true)} />
   ) : null;
@@ -1142,7 +1145,7 @@ const FeedPage: React.FC = () => {
   /* ───── DESKTOP GRID VIEW ───── */
   return (
     <CyberLayout>
-      <div className="max-w-6xl mx-auto px-4 py-6 space-y-4 pb-24">
+      <div className="max-w-7xl mx-auto px-4 py-6 space-y-4 pb-24">
         {/* Top bar */}
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2">
@@ -1161,75 +1164,87 @@ const FeedPage: React.FC = () => {
         </div>
 
         {isAuthenticated && rulesBanner}
-        {karmaStrip}
-
-        {/* Stories at the very top */}
+        {/* Stories run across the full width, above both columns. */}
         <StoriesBar currentUserId={user?.id} isAdmin={!!user?.is_admin} />
 
-        <FeaturedModelsStrip />
-
-        <EarnPromoBanner />
-
-        {isAuthenticated ? (
-          <div className="bg-card/60 border border-border/40 rounded-lg p-4 space-y-3">
-            <Textarea
-              value={newText}
-              onChange={(e) => setNewText(e.target.value)}
-              placeholder={lane === "text" ? "What's on your mind?" : "Share something with the community..."}
-              maxLength={2000}
-              rows={lane === "text" ? 5 : 3}
-              className="font-mono-share text-sm bg-input/50 resize-none border-border/30 focus:border-primary/50"
-            />
-            {attachControls}
-            {lockControls}
-            <div className="flex items-center justify-between">
-              <span className="font-mono-share text-tiny text-muted-foreground">{newText.length}/2000</span>
-              <Button size="sm" onClick={handlePost} disabled={posting || (!newText.trim() && !pickedMedia)} className="font-mono-share text-tiny">
-                {posting ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Send className="w-3 h-3 mr-1" />}
-                POST
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <SignupTeaser variant="desktop" />
-        )}
-
-        
-
-        {filterTabs("desktop")}
-
-        {loading ? (
-          lane === "text" ? textLaneSkeleton : skeletonGrid("grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5")
-        ) : posts.length === 0 ? (
-          emptyState
-        ) : (
-          <>
-            {lane === "text" ? textLane : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-0">
-              {posts.map((p) => (
-                <div key={p.id} className="-ml-px -mt-px">
-                  <FeedTile
-                    post={p}
-                    onOpen={openPost}
-                    forceBlur={!isAuthenticated}
-                    currentUserId={user?.id}
-                  />
+        {/*
+          Desktop: posts in the main column, everything else in a sticky right
+          rail. This page used to stack a full-width posting-status panel,
+          stories, a single featured-model card stranded in an 1,100px row, the
+          referral card and a post composer before the first post — at 1440x900
+          not one post was on screen. The rail comes FIRST in the DOM and is
+          moved right with order-2, so below lg the page stacks exactly as it
+          always has.
+        */}
+        <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-6 space-y-4 lg:space-y-0">
+          <aside className="space-y-4 lg:order-2 lg:sticky lg:top-12 lg:self-start lg:max-h-[calc(100vh-4rem)] lg:overflow-y-auto">
+            {karmaStrip}
+            {/* The composer only appears to someone who can post. It used to sit
+                right under a "Posting locked" panel for users who could not. */}
+            {isAuthenticated ? (canPost ? (
+              <div className="bg-card/60 border border-border/40 rounded-lg p-4 space-y-3">
+                <Textarea
+                  value={newText}
+                  onChange={(e) => setNewText(e.target.value)}
+                  placeholder={lane === "text" ? "What's on your mind?" : "Share something with the community..."}
+                  maxLength={2000}
+                  rows={lane === "text" ? 5 : 3}
+                  className="font-mono-share text-sm bg-input/50 resize-none border-border/30 focus:border-primary/50"
+                />
+                {attachControls}
+                {lockControls}
+                <div className="flex items-center justify-between">
+                  <span className="font-mono-share text-tiny text-muted-foreground">{newText.length}/2000</span>
+                  <Button size="sm" onClick={handlePost} disabled={posting || (!newText.trim() && !pickedMedia)} className="font-mono-share text-tiny">
+                    {posting ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Send className="w-3 h-3 mr-1" />}
+                    POST
+                  </Button>
                 </div>
-              ))}
-            </div>
-            )}
-            <div ref={sentinelRef} className="h-12 flex items-center justify-center">
-              {loadingMore && <Loader2 className="w-5 h-5 animate-spin text-primary" />}
-            </div>
-            {!loadingMore && !nextCursor && posts.length > 0 && (
-              <div className="py-8 text-center">
-                <p className="font-mono-share text-tiny tracking-widest text-muted-foreground/70">
-                  ── YOU'RE ALL CAUGHT UP ──
-                </p>
               </div>
+            ) : null) : (
+              <SignupTeaser variant="desktop" />
             )}
-          </>
-        )}
+            <FeaturedModelsStrip />
+            <EarnPromoBanner />
+          </aside>
+
+          <main className="min-w-0 lg:order-1 space-y-4">
+            {filterTabs("desktop")}
+
+            {loading ? (
+              lane === "text" ? textLaneSkeleton : skeletonGrid("grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4")
+            ) : posts.length === 0 ? (
+              emptyState
+            ) : (
+              <>
+                {lane === "text" ? textLane : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 gap-0">
+                  {posts.map((p) => (
+                    <div key={p.id} className="-ml-px -mt-px">
+                      <FeedTile
+                        post={p}
+                        onOpen={openPost}
+                        forceBlur={!isAuthenticated}
+                        currentUserId={user?.id}
+                      />
+                    </div>
+                  ))}
+                </div>
+                )}
+                <div ref={sentinelRef} className="h-12 flex items-center justify-center">
+                  {loadingMore && <Loader2 className="w-5 h-5 animate-spin text-primary" />}
+                </div>
+                {!loadingMore && !nextCursor && posts.length > 0 && (
+                  <div className="py-8 text-center">
+                    <p className="font-mono-share text-tiny tracking-widest text-muted-foreground/70">
+                      ── YOU'RE ALL CAUGHT UP ──
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
+          </main>
+        </div>
       </div>
 
       <MobileCreditsPill onOpenStore={() => setStoreOpen(true)} />
