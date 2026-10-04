@@ -173,11 +173,14 @@ export async function uploadPublicMedia(
     const previewBlob = await generatePreviewBlob(blob);
     if (previewBlob) {
       try {
+        // The blob's own type, not the type we hoped for: canvas.toBlob may have
+        // fallen back to JPEG. Name and Content-Type must both say what it is.
+        const previewMime = previewBlob.type || "image/webp";
         previewUrl = await uploadOne(
           previewBlob,
           folder,
-          previewFilename(filename),
-          "image/webp",
+          previewFilename(filename, previewMime),
+          previewMime,
           authToken,
         );
       } catch {

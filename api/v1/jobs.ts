@@ -173,7 +173,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const img = await fetchSourceImage(imageUrl);
       if (!img.ok) {
         await refundCredits(sql, auth.userId, split);
-        return res.status(400).json({ error: img.message });
+        // strictNullChecks is off project-wide, so `!img.ok` does not narrow the union.
+        return res.status(400).json({ error: (img as { ok: false; message: string }).message });
       }
       imageBase64 = img.base64;
     }
@@ -182,7 +183,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const submitted = await submitToRunPod(endpoint, graph, imageBase64, imageFilename);
     if (!submitted.ok) {
       await refundCredits(sql, auth.userId, split);
-      return res.status(502).json({ error: `${submitted.message} Credits refunded.` });
+      return res.status(502).json({ error: `${(submitted as { ok: false; message: string }).message} Credits refunded.` });
     }
 
     const kind = isVideoWorkflow(workflow) ? "video" : "image";

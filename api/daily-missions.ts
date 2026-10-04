@@ -7,6 +7,7 @@ import { notify } from "./_lib/notify";
 import { isSourceDisabled, FREE_CREDITS_MAINTENANCE_MESSAGE } from "./_lib/freeCredits";
 import { isSubscriber, FREE_CREDITS_SUBSCRIBER_ONLY_MESSAGE } from "./_lib/subscriberGate";
 import { PROMO_CREDIT_DAYS, PAID_CREDIT_DAYS } from "./_lib/credit-expiry";
+import { confirmedDeletions, DELETIONS_BEFORE_BLOCK } from "./_lib/share-proof-recheck";
 
 /*
  * The Reddit missions are retired, not paused.
