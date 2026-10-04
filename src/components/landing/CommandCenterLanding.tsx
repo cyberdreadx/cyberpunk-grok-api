@@ -413,10 +413,10 @@ export default function CommandCenterLanding() {
         <div className="cc-brand">
           <span className="dot" />
           <span><span className="accent">GLTCH</span> RUNNER</span>
-          <span style={{ fontFamily: '"Share Tech Mono", monospace', fontSize: 9, letterSpacing: "0.2em", color: "hsl(var(--foreground) / 0.4)", marginLeft: 4 }}>// COMMAND</span>
+          <span className="cc-brand-sub" style={{ fontFamily: '"Share Tech Mono", monospace', fontSize: 9, letterSpacing: "0.2em", color: "hsl(var(--foreground) / 0.4)", marginLeft: 4 }}>// COMMAND</span>
         </div>
         <div className="cc-statuschips">
-          <span className="cc-chip" style={{ fontVariantNumeric: "tabular-nums" }}><Radio size={11} />{clockStr} UTC</span>
+          <span className="cc-chip cc-clock" style={{ fontVariantNumeric: "tabular-nums" }}><Radio size={11} />{clockStr} UTC</span>
           <button className="cc-btn cc-btn-primary" style={{ padding: "9px 18px", fontSize: 11 }} onClick={go}>
             SIGN UP <ArrowRight size={14} />
           </button>

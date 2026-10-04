@@ -163,7 +163,10 @@ const Library: React.FC = () => {
       <div className="max-w-6xl mx-auto px-4 py-6 sm:pb-8 space-y-6" style={{ paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 0px))' }}>
         {/* Header — collapses on scroll-down, snaps back on scroll-up */}
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
+          {/* pl-12 clears the global menu button, which floats fixed at the top-left
+              of every page and sat on top of this back button on phones. From xl the
+              centred column already starts clear of it. */}
+          <div className="flex items-center justify-between pl-12 xl:pl-0">
             <div className="flex items-center gap-3">
               <button
                 onClick={() => navigate("/")}

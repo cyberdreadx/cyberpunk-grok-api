@@ -467,3 +467,14 @@
   }
   .cc-reveal { opacity: 1; transform: none; transition: none; }
 }
+
+/* Phones: the top bar tried to fit the wordmark, "// COMMAND", a live UTC
+   clock and SIGN UP across 390px. The wordmark wrapped onto two lines and the
+   button ran off the right edge. The decorative label and the clock go; the
+   brand and the button never wrap. */
+.cc-brand,
+.cc-topbar .cc-btn { white-space: nowrap; }
+@media (max-width: 520px) {
+  .cc-brand-sub,
+  .cc-clock { display: none !important; }
+}

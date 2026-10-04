@@ -12,6 +12,9 @@ import { EDITION, BRAND_NAME, isStudio } from "./lib/edition";
 document.documentElement.dataset.edition = EDITION;
 applyThemeVisuals(getThemeById(getStoredThemeId()));
 if (isStudio) document.title = `${BRAND_NAME} — AI image & video creator`;
+// The status-bar tint on an installed PWA. index.html hard-codes Runner's cyan,
+// which would paint a neon bar above Studio's white interface.
+if (isStudio) document.querySelector('meta[name="theme-color"]')?.setAttribute("content", "#f8fafc");
 
 createRoot(document.getElementById("root")!).render(<App />);
 
