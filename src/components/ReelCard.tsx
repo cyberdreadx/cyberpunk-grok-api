@@ -295,7 +295,7 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate, active = true, moun
           so this confirms at a glance that the post IS locked for other viewers. */}
       {post.isOwner && ((post.lockCost || 0) > 0 || (post.lockPriceCents || 0) > 0 || !!(post.lockXrgeAmount && parseFloat(post.lockXrgeAmount) > 0)) && (
         <div
-          className="absolute z-20 flex items-center gap-1 px-2 py-1 rounded-md bg-black/70 backdrop-blur-sm border border-amber-400/50 font-mono-share text-[10px] text-amber-300 tracking-wider"
+          className="absolute z-20 flex items-center gap-1 px-2 py-1 rounded-md bg-black/70 backdrop-blur-sm border border-amber-400/50 font-mono-share text-tiny text-amber-300 tracking-wider"
           style={{ top: "calc(env(safe-area-inset-top, 0px) + 12px)", left: 12 }}
           title="Locked for other viewers — they see a blurred preview and must unlock."
         >
@@ -312,7 +312,7 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate, active = true, moun
           to the centered unlock CTA below. Mirrors owner badge placement. */}
       {isLocked && (
         <div
-          className="absolute z-20 flex items-center gap-1 px-2 py-1 rounded-md bg-black/70 backdrop-blur-sm border border-amber-400/50 font-mono-share text-[10px] text-amber-300 tracking-wider shadow-glow-live"
+          className="absolute z-20 flex items-center gap-1 px-2 py-1 rounded-md bg-black/70 backdrop-blur-sm border border-amber-400/50 font-mono-share text-tiny text-amber-300 tracking-wider shadow-glow-live"
           style={{ top: "calc(env(safe-area-inset-top, 0px) + 12px)", right: 12 }}
           title="Locked content — unlock to view"
         >
@@ -413,7 +413,7 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate, active = true, moun
               <MessageCircle className="w-6 h-6" />
             </div>
             {commentCount > 0 && (
-              <span className="font-mono-share text-[10px] text-white/70">{commentCount}</span>
+              <span className="font-mono-share text-tiny text-white/70">{commentCount}</span>
             )}
           </button>
         )}
@@ -422,13 +422,13 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate, active = true, moun
           <div className="p-2 rounded-full backdrop-blur-sm bg-black/30 text-white/50">
             <Eye className="w-5 h-5" />
           </div>
-          <span className="font-mono-share text-[10px] text-white/50">{post.viewCount || 0}</span>
+          <span className="font-mono-share text-tiny text-white/50">{post.viewCount || 0}</span>
         </div>
 
         {user?.id !== post.userId && flagCount > 0 && (
           <div className="flex flex-col items-center gap-0.5 opacity-60">
             <Flag className="w-4 h-4 text-destructive/70" />
-            <span className="font-mono-share text-[10px] text-destructive/80">{flagCount}</span>
+            <span className="font-mono-share text-tiny text-destructive/80">{flagCount}</span>
           </div>
         )}
 
@@ -495,7 +495,7 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate, active = true, moun
         <button onClick={() => navigate(`/profile/${post.username}`)} className="flex items-center gap-2 mb-2">
           <Avatar className="w-9 h-9 border-2 border-white/30">
             {post.avatarUrl && <AvatarImage src={post.avatarUrl} alt={post.username} />}
-            <AvatarFallback className="bg-primary/20 text-primary font-orbitron text-[10px]">
+            <AvatarFallback className="bg-primary/20 text-primary font-orbitron text-tiny">
               {post.username.slice(0, 2).toUpperCase()}
             </AvatarFallback>
           </Avatar>
@@ -503,7 +503,7 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate, active = true, moun
             <span className="font-orbitron text-xs text-white font-semibold block drop-shadow-md">
               @{post.username}
             </span>
-            <span className="font-mono-share text-[9px] text-white/60">{timeAgo}</span>
+            <span className="font-mono-share text-tiny text-white/60">{timeAgo}</span>
           </div>
         </button>
 
@@ -522,7 +522,7 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate, active = true, moun
         >
           <div className="flex items-center justify-between px-4 pt-3 pb-1 sticky top-0 bg-card/95 backdrop-blur-md z-10">
             <span className="font-orbitron text-xs text-foreground tracking-wider">COMMENTS</span>
-            <button onClick={() => setShowComments(false)} className="font-mono-share text-[10px] text-muted-foreground">
+            <button onClick={() => setShowComments(false)} className="font-mono-share text-tiny text-muted-foreground">
               CLOSE
             </button>
           </div>

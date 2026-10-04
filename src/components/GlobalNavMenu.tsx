@@ -88,7 +88,7 @@ const GlobalNavMenu: React.FC = () => {
 
           <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
             <div className="space-y-2">
-              <div className="px-2 font-mono-share text-[9px] tracking-[0.2em] text-muted-foreground/70">
+              <div className="px-2 font-mono-share text-tiny tracking-[0.2em] text-muted-foreground/70">
                 {isStudio ? "Pages" : "── PAGES ──"}
               </div>
               <div className="flex flex-col gap-1">
@@ -121,7 +121,7 @@ const GlobalNavMenu: React.FC = () => {
                 Both of these were previously URL-only, reachable by nobody. */}
             {!isStudio && isAuthenticated && (
               <div className="space-y-2">
-                <div className="px-2 font-mono-share text-[9px] tracking-[0.2em] text-muted-foreground/70">
+                <div className="px-2 font-mono-share text-tiny tracking-[0.2em] text-muted-foreground/70">
                   ── EARN ──
                 </div>
                 <div className="flex flex-col gap-1">
@@ -141,7 +141,7 @@ const GlobalNavMenu: React.FC = () => {
                       <span className="flex items-center gap-3">
                         <Megaphone className="w-4 h-4" /> FREE CREDITS
                       </span>
-                      <span className="font-mono-share text-[9px] text-cyan-400/80 tracking-normal">
+                      <span className="font-mono-share text-tiny text-cyan-400/80 tracking-normal">
                         {promoOpen.slots} SPOTS
                       </span>
                     </button>
@@ -154,7 +154,7 @@ const GlobalNavMenu: React.FC = () => {
                     <span className="flex items-center gap-3">
                       <DollarSign className="w-4 h-4" /> AMBASSADOR
                     </span>
-                    <span className="font-mono-share text-[9px] text-green-400/80 tracking-normal">20% CASH</span>
+                    <span className="font-mono-share text-tiny text-green-400/80 tracking-normal">20% CASH</span>
                   </button>
                 </div>
               </div>
@@ -170,7 +170,7 @@ const GlobalNavMenu: React.FC = () => {
                   <span className="flex items-center gap-3">
                     <ShieldAlert className="w-4 h-4" /> ADMIN
                   </span>
-                  <span className="font-mono-share text-[9px] text-red-400/80 tracking-normal">CONSOLE</span>
+                  <span className="font-mono-share text-tiny text-red-400/80 tracking-normal">CONSOLE</span>
                 </button>
               )}
               {isAuthenticated && (

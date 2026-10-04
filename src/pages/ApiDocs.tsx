@@ -150,7 +150,7 @@ function ApiPlayground({ baseUrl }: { baseUrl: string }) {
           placeholder="gltch_sk_..."
           value={apiKey}
           onChange={(e) => setApiKey(e.target.value)}
-          className="w-full bg-muted/50 border border-primary/20 rounded-lg px-3 py-2 text-xs font-mono text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50"
+          className="w-full bg-muted/50 border border-primary/20 rounded-lg px-3 py-2 text-xs font-mono text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:border-primary/50"
         />
       </div>
 
@@ -181,7 +181,7 @@ function ApiPlayground({ baseUrl }: { baseUrl: string }) {
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           rows={3}
-          className="w-full bg-muted/50 border border-primary/20 rounded-lg px-3 py-2 text-xs font-mono text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50 resize-none"
+          className="w-full bg-muted/50 border border-primary/20 rounded-lg px-3 py-2 text-xs font-mono text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:border-primary/50 resize-none"
         />
       </div>
 
@@ -194,7 +194,7 @@ function ApiPlayground({ baseUrl }: { baseUrl: string }) {
             placeholder="https://example.com/image.jpg"
             value={imageUrl}
             onChange={(e) => setImageUrl(e.target.value)}
-            className="w-full bg-muted/50 border border-primary/20 rounded-lg px-3 py-2 text-xs font-mono text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50"
+            className="w-full bg-muted/50 border border-primary/20 rounded-lg px-3 py-2 text-xs font-mono text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:border-primary/50"
           />
         </div>
       )}
@@ -355,7 +355,7 @@ export default function ApiDocs() {
               <div className="bg-primary/5 px-4 py-2 flex items-center gap-2">
                 <span className="text-xs font-mono font-bold bg-primary/20 text-primary px-2 py-0.5 rounded">POST</span>
                 <code className="text-sm font-mono text-foreground">/api/v1/gltch</code>
-                <span className="text-[10px] font-mono text-muted-foreground ml-auto">GLTCH EDIT</span>
+                <span className="text-tiny font-mono text-muted-foreground ml-auto">GLTCH EDIT</span>
               </div>
               <div className="p-4 space-y-4">
                 <p className="text-sm text-foreground/80 font-mono">
@@ -410,7 +410,7 @@ export default function ApiDocs() {
               <div className="bg-primary/5 px-4 py-2 flex items-center gap-2">
                 <span className="text-xs font-mono font-bold bg-primary/20 text-primary px-2 py-0.5 rounded">POST</span>
                 <code className="text-sm font-mono text-foreground">/api/v1/comfy</code>
-                <span className="text-[10px] font-mono text-muted-foreground ml-auto">GLTCH PRO</span>
+                <span className="text-tiny font-mono text-muted-foreground ml-auto">GLTCH PRO</span>
               </div>
               <div className="p-4 space-y-4">
                 <p className="text-sm text-foreground/80 font-mono">
@@ -561,7 +561,7 @@ export default function ApiDocs() {
               <div className="bg-primary/5 px-4 py-2 flex items-center gap-2">
                 <span className="text-xs font-mono font-bold bg-primary/20 text-primary px-2 py-0.5 rounded">GET</span>
                 <code className="text-sm font-mono text-foreground">/api/v1/models</code>
-                <span className="text-[10px] font-mono text-muted-foreground ml-auto">DISCOVERY</span>
+                <span className="text-tiny font-mono text-muted-foreground ml-auto">DISCOVERY</span>
               </div>
               <div className="p-4 space-y-2">
                 <p className="text-sm text-foreground/80 font-mono">
@@ -585,7 +585,7 @@ export default function ApiDocs() {
               <div className="bg-primary/5 px-4 py-2 flex items-center gap-2">
                 <span className="text-xs font-mono font-bold bg-primary/20 text-primary px-2 py-0.5 rounded">POST</span>
                 <code className="text-sm font-mono text-foreground">/api/v1/jobs</code>
-                <span className="text-[10px] font-mono text-muted-foreground ml-auto">SUBMIT</span>
+                <span className="text-tiny font-mono text-muted-foreground ml-auto">SUBMIT</span>
               </div>
               <div className="p-4 space-y-2">
                 <p className="text-sm text-foreground/80 font-mono">
@@ -615,7 +615,7 @@ export default function ApiDocs() {
               <div className="bg-primary/5 px-4 py-2 flex items-center gap-2">
                 <span className="text-xs font-mono font-bold bg-primary/20 text-primary px-2 py-0.5 rounded">GET</span>
                 <code className="text-sm font-mono text-foreground">/api/v1/jobs?id=</code>
-                <span className="text-[10px] font-mono text-muted-foreground ml-auto">POLL · FREE</span>
+                <span className="text-tiny font-mono text-muted-foreground ml-auto">POLL · FREE</span>
               </div>
               <div className="p-4 space-y-2">
                 <p className="text-sm text-foreground/80 font-mono">
@@ -965,22 +965,22 @@ console.log(\`Credits remaining: \${data.credits_remaining}\`);`} />
             <div className="border border-amber-600/30 rounded-lg p-3 text-center bg-amber-900/10">
               <div className="text-lg font-mono font-bold text-amber-500">+30%</div>
               <div className="text-xs text-amber-400 font-orbitron tracking-wider">BRONZE</div>
-              <div className="text-[10px] text-muted-foreground font-mono mt-1">Default</div>
+              <div className="text-tiny text-muted-foreground font-mono mt-1">Default</div>
             </div>
             <div className="border border-slate-400/30 rounded-lg p-3 text-center bg-slate-700/10">
               <div className="text-lg font-mono font-bold text-slate-300">+35%</div>
               <div className="text-xs text-slate-300 font-orbitron tracking-wider">SILVER</div>
-              <div className="text-[10px] text-muted-foreground font-mono mt-1">50M XRGE spent</div>
+              <div className="text-tiny text-muted-foreground font-mono mt-1">50M XRGE spent</div>
             </div>
             <div className="border border-yellow-500/30 rounded-lg p-3 text-center bg-yellow-900/10">
               <div className="text-lg font-mono font-bold text-yellow-400">+42%</div>
               <div className="text-xs text-yellow-400 font-orbitron tracking-wider">GOLD</div>
-              <div className="text-[10px] text-muted-foreground font-mono mt-1">200M XRGE spent</div>
+              <div className="text-tiny text-muted-foreground font-mono mt-1">200M XRGE spent</div>
             </div>
             <div className="border border-cyan-400/30 rounded-lg p-3 text-center bg-cyan-900/10">
               <div className="text-lg font-mono font-bold text-cyan-300">+50%</div>
               <div className="text-xs text-cyan-300 font-orbitron tracking-wider">DIAMOND</div>
-              <div className="text-[10px] text-muted-foreground font-mono mt-1">500M XRGE spent</div>
+              <div className="text-tiny text-muted-foreground font-mono mt-1">500M XRGE spent</div>
             </div>
           </div>
 

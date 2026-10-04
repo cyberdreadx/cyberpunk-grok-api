@@ -128,7 +128,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ isAuthenticated }) 
       >
         <Bell className="w-4 h-4 text-muted-foreground" />
         {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold px-1">
+          <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-tiny font-bold px-1">
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
@@ -153,13 +153,13 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ isAuthenticated }) 
           >
           {/* Header */}
           <div className="flex items-center justify-between px-3 py-2 border-b border-border/20">
-            <span className="font-orbitron text-[10px] tracking-wider text-foreground uppercase">
+            <span className="font-orbitron text-tiny tracking-wider text-foreground uppercase">
               Notifications
             </span>
             {unreadCount > 0 && (
               <button
                 onClick={markAllRead}
-                className="font-mono-share text-[9px] text-primary hover:text-primary/80 flex items-center gap-1 transition-colors"
+                className="font-mono-share text-tiny text-primary hover:text-primary/80 flex items-center gap-1 transition-colors"
               >
                 <Check className="w-3 h-3" /> Mark all read
               </button>
@@ -174,8 +174,8 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ isAuthenticated }) 
               </div>
             ) : notifications.length === 0 ? (
               <div className="text-center py-8">
-                <Bell className="w-6 h-6 text-muted-foreground/30 mx-auto mb-2" />
-                <p className="font-mono-share text-[10px] text-muted-foreground/50">No notifications yet</p>
+                <Bell className="w-6 h-6 text-muted-foreground/60 mx-auto mb-2" />
+                <p className="font-mono-share text-tiny text-muted-foreground/70">No notifications yet</p>
               </div>
             ) : (
               notifications.map((n) => (
@@ -190,7 +190,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ isAuthenticated }) 
                   {n.actor_avatar_url ? (
                     <Avatar className="w-7 h-7 shrink-0 mt-0.5">
                       <AvatarImage src={n.actor_avatar_url} />
-                      <AvatarFallback className="bg-primary/10 text-primary font-orbitron text-[8px]">
+                      <AvatarFallback className="bg-primary/10 text-primary font-orbitron text-micro">
                         {(n.actor_username || "?").slice(0, 2).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
@@ -200,15 +200,15 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ isAuthenticated }) 
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <p className="font-mono-share text-[11px] text-foreground/90 leading-snug">
+                    <p className="font-mono-share text-xs text-foreground/90 leading-snug">
                       {n.title}
                     </p>
                     {n.body && (
-                      <p className="font-mono-share text-[10px] text-muted-foreground/60 truncate mt-0.5">
+                      <p className="font-mono-share text-tiny text-muted-foreground/60 truncate mt-0.5">
                         {n.body}
                       </p>
                     )}
-                    <p className="font-mono-share text-[8px] text-muted-foreground/40 mt-0.5">
+                    <p className="font-mono-share text-micro text-muted-foreground/60 mt-0.5">
                       {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
                     </p>
                   </div>

@@ -74,7 +74,7 @@ const ApiKeyDialog: React.FC<ApiKeyDialogProps> = ({ hasKey, onSave, onClear }) 
         <div className="space-y-4 mt-2">
           {hasKey && storedKey && (
             <div className="space-y-1.5">
-              <label className="font-mono-share text-[10px] text-muted-foreground/60 uppercase tracking-wider">Current Key</label>
+              <label className="font-mono-share text-tiny text-muted-foreground/60 uppercase tracking-wider">Current Key</label>
               <div className="flex items-center gap-2 bg-input border border-border rounded px-3 py-2">
                 <span className="font-mono-share text-sm text-foreground/80 flex-1 break-all">
                   {showStored ? storedKey : storedKey.slice(0, 6) + "•".repeat(Math.min(storedKey.length - 6, 20))}
@@ -93,7 +93,7 @@ const ApiKeyDialog: React.FC<ApiKeyDialogProps> = ({ hasKey, onSave, onClear }) 
           )}
 
           <div className="space-y-1.5">
-            <label className="font-mono-share text-[10px] text-muted-foreground/60 uppercase tracking-wider">
+            <label className="font-mono-share text-tiny text-muted-foreground/60 uppercase tracking-wider">
               {hasKey ? "Replace Key" : "Enter Key"}
             </label>
             <div className="relative">
@@ -151,7 +151,7 @@ const ApiKeyDialog: React.FC<ApiKeyDialogProps> = ({ hasKey, onSave, onClear }) 
           </a>
 
           <div className="border-t border-border pt-3">
-            <p className="text-[10px] font-mono-share text-muted-foreground/60 leading-relaxed">
+            <p className="text-tiny font-mono-share text-muted-foreground/60 leading-relaxed">
 ⚠ Your key is stored in localStorage and proxied server-side to xAI — never sent directly from your browser.
               Clear browser data to remove it.
             </p>

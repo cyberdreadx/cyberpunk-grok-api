@@ -43,31 +43,31 @@ export default function FlashSaleBanner({ onClick }: FlashSaleBannerProps) {
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-orbitron text-[10px] sm:text-xs tracking-widest text-orange-200 font-bold">
+            <span className="font-orbitron text-tiny sm:text-xs tracking-widest text-orange-200 font-bold">
               ⚡ FLASH SALE
             </span>
-            <span className="font-mono-share text-[10px] sm:text-xs text-orange-100/90 truncate">
+            <span className="font-mono-share text-tiny sm:text-xs text-orange-100/90 truncate">
               {sale.title}
             </span>
           </div>
           <div className="flex items-center gap-2 sm:gap-3 mt-0.5 flex-wrap">
             {sale.discount_percent > 0 && (
-              <span className="font-orbitron text-[10px] sm:text-xs font-bold text-yellow-300">
+              <span className="font-orbitron text-tiny sm:text-xs font-bold text-yellow-300">
                 {sale.discount_percent}% OFF
               </span>
             )}
             {sale.bonus_credits_percent > 0 && (
-              <span className="font-orbitron text-[10px] sm:text-xs font-bold text-green-300">
+              <span className="font-orbitron text-tiny sm:text-xs font-bold text-green-300">
                 +{sale.bonus_credits_percent}% BONUS
               </span>
             )}
-            <span className="font-mono-share text-[9px] sm:text-[10px] text-orange-200/70">
+            <span className="font-mono-share text-tiny sm:text-tiny text-orange-200/70">
               ends in <span className="text-orange-100 font-bold tabular-nums">{timeLeft}</span>
             </span>
           </div>
         </div>
 
-        <span className="hidden sm:inline-flex shrink-0 px-3 py-1.5 rounded-md bg-orange-500/30 border border-orange-400/50 font-orbitron text-[10px] tracking-wider text-orange-100 group-hover:bg-orange-500/50">
+        <span className="hidden sm:inline-flex shrink-0 px-3 py-1.5 rounded-md bg-orange-500/30 border border-orange-400/50 font-orbitron text-tiny tracking-wider text-orange-100 group-hover:bg-orange-500/50">
           OPEN STORE
         </span>
 

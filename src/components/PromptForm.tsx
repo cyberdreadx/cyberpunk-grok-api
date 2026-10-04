@@ -308,7 +308,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
       {needsImage && (
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <label className="font-mono-share text-[10px] tracking-wider text-muted-foreground flex items-center gap-2">
+            <label className="font-mono-share text-tiny tracking-wider text-muted-foreground flex items-center gap-2">
               <span className="text-primary/50">$</span>
               <Upload className="w-3 h-3" />
               source_image
@@ -317,7 +317,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
               <button
                 type="button"
                 onClick={() => { setImageSource("upload"); setImageUrl(""); }}
-                className={`font-mono-share text-[9px] px-2 py-0.5 rounded transition-colors ${imageSource === "upload"
+                className={`font-mono-share text-tiny px-2 py-0.5 rounded transition-colors ${imageSource === "upload"
                   ? "bg-primary/20 text-primary border border-primary/30"
                   : "text-muted-foreground hover:text-foreground border border-border/30"
                   }`}
@@ -328,7 +328,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
               <button
                 type="button"
                 onClick={() => { setImageSource("url"); clearUpload(); }}
-                className={`font-mono-share text-[9px] px-2 py-0.5 rounded transition-colors ${imageSource === "url"
+                className={`font-mono-share text-tiny px-2 py-0.5 rounded transition-colors ${imageSource === "url"
                   ? "bg-primary/20 text-primary border border-primary/30"
                   : "text-muted-foreground hover:text-foreground border border-border/30"
                   }`}
@@ -363,7 +363,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
                   className="w-full h-20 border border-dashed border-border rounded flex flex-col items-center justify-center gap-1 bg-input/50 hover:bg-input hover:border-primary/30 transition-colors cursor-pointer"
                 >
                   <ImagePlus className="w-5 h-5 text-muted-foreground" />
-                  <span className="font-mono-share text-[10px] text-muted-foreground">
+                  <span className="font-mono-share text-tiny text-muted-foreground">
                     Click to upload or paste (Ctrl+V) — HEIC auto-converts
                   </span>
                 </button>
@@ -376,7 +376,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
                 className="hidden"
               />
               {uploadError && (
-                <p className="mt-1 font-mono-share text-[10px] text-destructive/80">{uploadError}</p>
+                <p className="mt-1 font-mono-share text-tiny text-destructive/80">{uploadError}</p>
               )}
             </div>
           ) : (
@@ -393,11 +393,11 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
       {/* Extra images for multi-image editing (Grok edit-image only, up to 3 total) */}
       {mode === "edit-image" && hasImage && !hideExtraImages && (
         <div className="space-y-2">
-          <label className="font-mono-share text-[10px] tracking-wider text-muted-foreground flex items-center gap-2">
+          <label className="font-mono-share text-tiny tracking-wider text-muted-foreground flex items-center gap-2">
             <span className="text-primary/50">+</span>
             <ImagePlus className="w-3 h-3" />
             extra_images
-            <span className="text-muted-foreground/40 ml-auto">{extraImages.length}/2</span>
+            <span className="text-muted-foreground/60 ml-auto">{extraImages.length}/2</span>
           </label>
 
           <div className="flex gap-2 flex-wrap">
@@ -416,8 +416,8 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
               <button type="button"
                 onClick={() => extraFileRefs.current[extraImages.length]?.click()}
                 className="w-20 h-20 border border-dashed border-border rounded flex flex-col items-center justify-center gap-0.5 bg-input/30 hover:bg-input hover:border-primary/30 transition-colors cursor-pointer shrink-0">
-                <ImagePlus className="w-4 h-4 text-muted-foreground/50" />
-                <span className="font-mono-share text-[7px] text-muted-foreground/50">ADD</span>
+                <ImagePlus className="w-4 h-4 text-muted-foreground/70" />
+                <span className="font-mono-share text-micro text-muted-foreground/70">ADD</span>
               </button>
             )}
           </div>
@@ -430,7 +430,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
               className="hidden" />
           ))}
 
-          <p className="font-mono-share text-[8px] text-muted-foreground/40">
+          <p className="font-mono-share text-micro text-muted-foreground/60">
             Up to 3 images total — reference them by order in your prompt
           </p>
         </div>
@@ -444,10 +444,10 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
             <div className="w-2 h-2 rounded-full bg-neon-yellow/60" />
             <div className="w-2 h-2 rounded-full bg-primary/60" />
           </div>
-          <span className="font-mono-share text-[9px] text-muted-foreground/40 flex-1 text-center">
+          <span className="font-mono-share text-tiny text-muted-foreground/60 flex-1 text-center">
             prompt@gltch:~/{mode.replace(/-/g, "_")}
           </span>
-          <span className="font-mono-share text-[9px] text-muted-foreground/30">{prompt.length} chars</span>
+          <span className="font-mono-share text-tiny text-muted-foreground/60">{prompt.length} chars</span>
         </div>
 
         {/* Input area */}
@@ -462,7 +462,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
               onKeyDown={handleKeyDown}
               placeholder={placeholders[mode]}
               rows={3}
-              className="flex-1 bg-transparent border-0 font-jetbrains text-sm text-foreground placeholder:text-muted-foreground/30 focus:ring-0 focus:outline-none resize-none p-0 pt-1.5 shadow-none focus-visible:ring-0"
+              className="flex-1 bg-transparent border-0 font-jetbrains text-sm text-foreground placeholder:text-muted-foreground/60 focus:ring-0 focus:outline-none resize-none p-0 pt-1.5 shadow-none focus-visible:ring-0"
             />
           </div>
 
@@ -474,7 +474,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
                   key={s}
                   type="button"
                   onClick={() => setPrompt(s)}
-                  className="font-mono-share text-[9px] px-2 py-1 rounded border border-border/40 bg-card/50 text-muted-foreground/60 hover:border-primary/40 hover:text-primary/80 hover:bg-primary/5 transition-all duration-150"
+                  className="font-mono-share text-tiny px-2 py-1 rounded border border-border/40 bg-card/50 text-muted-foreground/60 hover:border-primary/40 hover:text-primary/80 hover:bg-primary/5 transition-all duration-150"
                 >
                   {s}
                 </button>
@@ -489,7 +489,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
               disabled={enhancing || !prompt.trim() || isLoading}
               size="sm"
               variant="ghost"
-              className="h-8 px-2.5 font-mono-share text-[10px] text-primary/70 hover:text-primary hover:bg-primary/10 disabled:opacity-30 gap-1.5 border border-primary/20 rounded"
+              className="h-8 px-2.5 font-mono-share text-tiny text-primary/70 hover:text-primary hover:bg-primary/10 disabled:opacity-30 gap-1.5 border border-primary/20 rounded"
               title="Rewrite your prompt with AI · costs 1 credit"
             >
               {enhancing ? (
@@ -505,13 +505,13 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
           {/* Action buttons */}
           <div className="flex items-center gap-2 mt-3 pt-2 border-t border-primary/10">
             {/* Status indicators */}
-            <div className="flex items-center gap-2 font-mono-share text-[9px] text-muted-foreground/40 flex-1 min-w-0">
+            <div className="flex items-center gap-2 font-mono-share text-tiny text-muted-foreground/60 flex-1 min-w-0">
               {needsImage && (
                 <span className={hasImage ? "text-primary/60" : "text-destructive/50"}>
                   {hasImage ? `[IMG_LOADED${extraImages.length > 0 ? ` +${extraImages.length}` : ""}]` : "[IMG_REQUIRED]"}
                 </span>
               )}
-              <span className="hidden sm:inline font-mono-share text-[8px] text-muted-foreground/20">Ctrl+Enter</span>
+              <span className="hidden sm:inline font-mono-share text-micro text-muted-foreground/60">Ctrl+Enter</span>
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
@@ -533,19 +533,19 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
                       return (
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <span className="inline-flex items-center gap-1 rounded-sm bg-primary-foreground/20 border border-primary-foreground/30 px-1.5 py-0.5 font-mono-share text-[10px] font-bold leading-none tabular-nums cursor-help">
+                            <span className="inline-flex items-center gap-1 rounded-sm bg-primary-foreground/20 border border-primary-foreground/30 px-1.5 py-0.5 font-mono-share text-tiny font-bold leading-none tabular-nums cursor-help">
                               {creditCost} cr
                               <Info className="w-2.5 h-2.5 opacity-70" />
                             </span>
                           </TooltipTrigger>
-                          <TooltipContent side="top" className="font-mono-share text-[11px] max-w-[200px] leading-snug p-3">
+                          <TooltipContent side="top" className="font-mono-share text-xs max-w-[200px] leading-snug p-3">
                             <div className="space-y-1">
                               {bd.lines.map((line, i) => (
                                 <div key={i} className={`tabular-nums ${i === bd.lines.length - 1 && bd.lines.length > 1 ? "text-primary font-bold border-t border-border/40 pt-1 mt-0.5" : "text-foreground/80"}`}>
                                   {line}
                                 </div>
                               ))}
-                              {bd.note && <div className="text-muted-foreground/60 text-[10px] pt-0.5">{bd.note}</div>}
+                              {bd.note && <div className="text-muted-foreground/60 text-tiny pt-0.5">{bd.note}</div>}
                             </div>
                           </TooltipContent>
                         </Tooltip>
@@ -555,7 +555,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
                 </TooltipProvider>
                 {/* Low-credits warning */}
                 {!isLoading && isLowCredits && (
-                  <div className="flex items-center gap-1.5 text-[9px] font-mono-share text-destructive/80 bg-destructive/10 border border-destructive/25 rounded px-2 py-1 w-full justify-between">
+                  <div className="flex items-center gap-1.5 text-tiny font-mono-share text-destructive/80 bg-destructive/10 border border-destructive/25 rounded px-2 py-1 w-full justify-between">
                     <span>⚠ {t("prompt.needMore", { count: creditCost! - totalCredits! })}</span>
                     {onOpenStore && (
                       <button
@@ -569,7 +569,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
                   </div>
                 )}
                 {!isLoading && !isLowCredits && (
-                  <span className="font-mono-share text-[8px] text-muted-foreground/35 pr-1">
+                  <span className="font-mono-share text-micro text-muted-foreground/60 pr-1">
                     {hasSubscription ? `⚡ ${t("prompt.priorityQueue")}` : t("prompt.subscribeFaster")}
                   </span>
                 )}
@@ -585,7 +585,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
       <div className="fixed left-0 right-0 z-40 sm:hidden px-3 pt-2 pb-2 animate-slide-up bg-card/95 backdrop-blur-md border-t border-primary/20" style={{ bottom: 'calc(56px + env(safe-area-inset-bottom, 0px))' }}>
         {/* Low-credits warning strip */}
         {!isLoading && isLowCredits && (
-          <div className="flex items-center justify-between font-mono-share text-[10px] text-destructive/90 bg-destructive/10 border border-destructive/25 rounded px-2.5 py-1.5 mb-1.5">
+          <div className="flex items-center justify-between font-mono-share text-tiny text-destructive/90 bg-destructive/10 border border-destructive/25 rounded px-2.5 py-1.5 mb-1.5">
             <span>⚠ Need {creditCost! - totalCredits!} more cr to generate</span>
             {onOpenStore && (
               <button

@@ -35,10 +35,10 @@ const InviteCredits: React.FC<Props> = ({ credits, loading = false, className = 
       className={`group inline-flex items-center gap-1 h-7 px-2 rounded-full border border-green-500/40 bg-green-950/30 hover:bg-green-900/40 hover:border-green-400/60 active:scale-[0.97] transition-all ${className}`}
     >
       <Gift className="w-3 h-3 text-green-400 shrink-0" />
-      <span className="font-orbitron text-[10px] tracking-wider text-green-300 leading-none whitespace-nowrap">
+      <span className="font-orbitron text-tiny tracking-wider text-green-300 leading-none whitespace-nowrap">
         +{INVITE_REWARD}
       </span>
-      <span className="hidden sm:inline font-orbitron text-[9px] tracking-wider text-green-400/80 leading-none">
+      <span className="hidden sm:inline font-orbitron text-tiny tracking-wider text-green-400/80 leading-none">
         INVITE
       </span>
     </Link>

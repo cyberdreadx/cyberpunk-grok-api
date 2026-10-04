@@ -31,7 +31,7 @@ export default function CreatorsDirectory() {
       <main className="min-h-screen px-4 sm:px-8 pt-14 pb-8 max-w-6xl mx-auto">
         <div className="flex items-end justify-between gap-3 mb-6">
           <div>
-            <div className="font-mono-share text-[10px] tracking-widest text-secondary">// FEATURED MODELS</div>
+            <div className="font-mono-share text-tiny tracking-widest text-secondary">// FEATURED MODELS</div>
             <h1 className="font-orbitron text-2xl sm:text-3xl">CREATORS</h1>
           </div>
           <Link to="/apply">
@@ -80,7 +80,7 @@ export default function CreatorsDirectory() {
                     <Button
                       size="sm"
                       variant="secondary"
-                      className="w-full font-orbitron text-[10px] tracking-wider h-8"
+                      className="w-full font-orbitron text-tiny tracking-wider h-8"
                     >
                       AI CHAT
                     </Button>

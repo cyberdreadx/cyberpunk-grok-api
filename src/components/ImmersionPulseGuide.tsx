@@ -25,7 +25,7 @@ const ImmersionPulseGuide: React.FC<ImmersionPulseGuideProps> = ({ hz }) => {
 
   return (
     <div className="space-y-2 rounded border border-border/40 bg-card/30 px-2 py-2">
-      <div className="flex flex-wrap items-center gap-2 text-[9px] font-mono-share">
+      <div className="flex flex-wrap items-center gap-2 text-tiny font-mono-share">
         <span
           className={`inline-flex items-center rounded border px-1.5 py-0.5 font-orbitron tracking-wide ${zone.badgeClass}`}
         >
@@ -57,7 +57,7 @@ const ImmersionPulseGuide: React.FC<ImmersionPulseGuideProps> = ({ hz }) => {
       </div>
 
       <div
-        className="grid text-[7px] font-mono-share uppercase tracking-wider text-muted-foreground/55"
+        className="grid text-micro font-mono-share uppercase tracking-wider text-muted-foreground/55"
         style={{ gridTemplateColumns: `${w1}fr ${w2}fr ${w3}fr ${w4}fr` }}
       >
         {ZONE_LABELS.map((label) => (
@@ -67,10 +67,10 @@ const ImmersionPulseGuide: React.FC<ImmersionPulseGuideProps> = ({ hz }) => {
         ))}
       </div>
 
-      <p className="text-[8px] leading-snug text-muted-foreground/75 border-t border-border/20 pt-1.5">
+      <p className="text-micro leading-snug text-muted-foreground/75 border-t border-border/20 pt-1.5">
         {zone.note}
       </p>
-      <p className="text-[7px] text-muted-foreground/45 leading-snug">
+      <p className="text-micro text-muted-foreground/45 leading-snug">
         CSS animation uses <span className="font-mono-share text-muted-foreground/60">duration ≈ 1/f</span> (not lab-grade photic timing).{" "}
         Range <span className="font-mono-share">{PULSE_HZ_MIN}–{PULSE_HZ_MAX} Hz</span>.
       </p>

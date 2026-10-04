@@ -68,7 +68,7 @@ const RunpodStatusDot: React.FC = () => {
         className={`w-2 h-2 rounded-full ${data.status === "red" || data.status === "yellow" ? "animate-pulse" : ""}`}
         style={{ backgroundColor: color, boxShadow: `0 0 5px ${color}` }}
       />
-      <span className="font-mono-share text-[10px] text-muted-foreground/50">GPU</span>
+      <span className="font-mono-share text-tiny text-muted-foreground/70">GPU</span>
     </div>
   );
 };

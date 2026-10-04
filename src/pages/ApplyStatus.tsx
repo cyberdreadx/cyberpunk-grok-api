@@ -38,7 +38,7 @@ export default function ApplyStatus() {
   return (
     <CyberLayout>
       <main className="min-h-screen px-4 sm:px-8 py-10 max-w-2xl mx-auto">
-        <div className="font-mono-share text-[10px] tracking-widest text-secondary mb-2">// CREATOR PROGRAM</div>
+        <div className="font-mono-share text-tiny tracking-widest text-secondary mb-2">// CREATOR PROGRAM</div>
         <h1 className="font-orbitron text-2xl sm:text-3xl mb-6">APPLICATION STATUS</h1>
 
         {authLoading || app === undefined ? (
@@ -64,17 +64,17 @@ export default function ApplyStatus() {
                 <m.Icon className={`w-7 h-7 ${m.color}`} />
                 <div>
                   <div className={`font-orbitron text-lg ${m.color}`}>{m.label}</div>
-                  <div className="font-mono-share text-[10px] text-muted-foreground">
+                  <div className="font-mono-share text-tiny text-muted-foreground">
                     Submitted {new Date(app.created_at).toLocaleDateString()}
                     {app.reviewed_at && ` · Reviewed ${new Date(app.reviewed_at).toLocaleDateString()}`}
                   </div>
                 </div>
               </div>
-              <p className="font-mono-share text-[12px] text-foreground/80 leading-relaxed">{m.blurb}</p>
+              <p className="font-mono-share text-xs text-foreground/80 leading-relaxed">{m.blurb}</p>
               {app.admin_notes && (
                 <div className="border-t border-border/40 pt-3">
-                  <div className="font-mono-share text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Admin notes</div>
-                  <p className="font-mono-share text-[12px] text-foreground/90 whitespace-pre-wrap">{app.admin_notes}</p>
+                  <div className="font-mono-share text-tiny uppercase tracking-wider text-muted-foreground mb-1">Admin notes</div>
+                  <p className="font-mono-share text-xs text-foreground/90 whitespace-pre-wrap">{app.admin_notes}</p>
                 </div>
               )}
               <div className="flex flex-wrap gap-2 pt-1">

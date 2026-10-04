@@ -223,7 +223,7 @@ const SimpleMode: React.FC<SimpleModeProps> = ({
                 <Icon className="w-4 h-4" />
                 {/* Phones got three unlabelled icons. They now get a short label under
                     the icon; the full label returns from sm: up. */}
-                <span className="sm:hidden text-[11px] leading-none">{t(tab.shortKey, { defaultValue: t(tab.labelKey) })}</span>
+                <span className="sm:hidden text-xs leading-none">{t(tab.shortKey, { defaultValue: t(tab.labelKey) })}</span>
                 <span className="hidden sm:inline">{t(tab.labelKey)}</span>
               </button>
             );
@@ -281,7 +281,7 @@ const SimpleMode: React.FC<SimpleModeProps> = ({
                   <p className="font-mono-share text-sm text-foreground/70">
                     {t("simple.dropImage")}
                   </p>
-                  <p className="font-mono-share text-[10px] text-muted-foreground/40 mt-1">
+                  <p className="font-mono-share text-tiny text-muted-foreground/60 mt-1">
                     {t("simple.fileSupport")}
                   </p>
                 </div>
@@ -316,7 +316,7 @@ const SimpleMode: React.FC<SimpleModeProps> = ({
                 : t("simple.placeholderCreate")
           }
           rows={3}
-          className={`w-full bg-card/60 border border-border/50 rounded-lg px-4 py-3 text-sm font-mono-share text-foreground placeholder:text-muted-foreground/30 resize-none outline-none focus:border-primary/50 transition-colors ${isTourActive && tourStep === 2 ? "relative z-50 ring-2 ring-primary/50 ring-offset-2 ring-offset-background" : ""}`}
+          className={`w-full bg-card/60 border border-border/50 rounded-lg px-4 py-3 text-sm font-mono-share text-foreground placeholder:text-muted-foreground/60 resize-none outline-none focus:border-primary/50 transition-colors ${isTourActive && tourStep === 2 ? "relative z-50 ring-2 ring-primary/50 ring-offset-2 ring-offset-background" : ""}`}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey && canGenerate) {
               e.preventDefault();
@@ -338,7 +338,7 @@ const SimpleMode: React.FC<SimpleModeProps> = ({
                   setPrompt(label);
                   if (tourStep === 2) advanceTour();
                 }}
-                className="px-2.5 py-1.5 rounded-full border border-border/40 bg-card/30 font-mono-share text-[10px] text-muted-foreground/60 hover:text-foreground hover:border-primary/30 hover:bg-primary/5 transition-all"
+                className="px-2.5 py-1.5 rounded-full border border-border/40 bg-card/30 font-mono-share text-tiny text-muted-foreground/60 hover:text-foreground hover:border-primary/30 hover:bg-primary/5 transition-all"
               >
                 {label}
               </button>
@@ -357,7 +357,7 @@ const SimpleMode: React.FC<SimpleModeProps> = ({
             w-full flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-lg font-orbitron text-sm font-bold tracking-wider transition-all duration-200
             ${canGenerate && !insufficientCredits
               ? "bg-primary/20 border border-primary/50 text-primary hover:bg-primary/30 hover:border-primary hover:shadow-glow-live"
-              : "bg-card/30 border border-border/30 text-muted-foreground/30 cursor-not-allowed"
+              : "bg-card/30 border border-border/30 text-muted-foreground/60 cursor-not-allowed"
             }
             ${isTourActive && tourStep === 3 ? "relative z-50 ring-2 ring-primary/50 ring-offset-2 ring-offset-background" : ""}
           `}
@@ -383,7 +383,7 @@ const SimpleMode: React.FC<SimpleModeProps> = ({
 
       {/* Insufficient credits warning */}
       {insufficientCredits && (
-        <p className="text-center font-mono-share text-[10px] text-destructive/70">
+        <p className="text-center font-mono-share text-tiny text-destructive/70">
           {t("simple.insufficientCredits", { cost: creditCost, balance: totalCredits })}
         </p>
       )}
@@ -398,7 +398,7 @@ const SimpleMode: React.FC<SimpleModeProps> = ({
             onModeChange("edit-image" as GrokMode);
             setTourStep(0);
           }}
-          className="mx-auto flex items-center gap-1 font-mono-share text-[9px] text-muted-foreground/30 hover:text-primary/60 transition-colors"
+          className="mx-auto flex items-center gap-1 font-mono-share text-tiny text-muted-foreground/60 hover:text-primary/60 transition-colors"
         >
           <HelpCircle className="w-3 h-3" />
           {t("simple.restartTour")}
@@ -441,7 +441,7 @@ const TourTooltip: React.FC<TourTooltipProps> = ({ step, onNext, onDismiss, step
               }`}
             />
           ))}
-          <span className="ml-auto font-mono-share text-[8px] text-muted-foreground/40">
+          <span className="ml-auto font-mono-share text-micro text-muted-foreground/60">
             {stepNum + 1}/{totalSteps}
           </span>
         </div>
@@ -450,7 +450,7 @@ const TourTooltip: React.FC<TourTooltipProps> = ({ step, onNext, onDismiss, step
         <h4 className="font-orbitron text-xs font-bold text-primary tracking-wide mb-1 relative z-10">
           {t(step.titleKey)}
         </h4>
-        <p className="font-mono-share text-[11px] text-foreground/70 leading-relaxed relative z-10">
+        <p className="font-mono-share text-xs text-foreground/70 leading-relaxed relative z-10">
           {t(step.descKey)}
         </p>
 
@@ -458,13 +458,13 @@ const TourTooltip: React.FC<TourTooltipProps> = ({ step, onNext, onDismiss, step
         <div className="flex items-center justify-between mt-3 relative z-10">
           <button
             onClick={onDismiss}
-            className="font-mono-share text-[9px] text-muted-foreground/50 hover:text-foreground transition-colors"
+            className="font-mono-share text-tiny text-muted-foreground/70 hover:text-foreground transition-colors"
           >
             {t("simple.tourSkip")}
           </button>
           <button
             onClick={onNext}
-            className="flex items-center gap-1 font-mono-share text-[10px] font-bold text-primary hover:text-primary/80 transition-colors"
+            className="flex items-center gap-1 font-mono-share text-tiny font-bold text-primary hover:text-primary/80 transition-colors"
           >
             {isLast ? t("simple.tourFinish") : t("simple.tourNext")}
             {!isLast && <ChevronRight className="w-3 h-3" />}

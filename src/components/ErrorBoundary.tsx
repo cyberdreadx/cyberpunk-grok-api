@@ -68,14 +68,14 @@ export class ErrorBoundary extends React.Component<Props, State> {
               className="font-orbitron text-xl tracking-widest text-destructive"
               glitchIntensity="medium"
             />
-            <p className="font-mono-share text-[10px] text-muted-foreground/50 tracking-wider">
+            <p className="font-mono-share text-tiny text-muted-foreground/70 tracking-wider">
               <span className="text-destructive/40">$</span> process exited with fatal exception
             </p>
           </div>
 
           {/* Error details */}
           <div className="border border-destructive/20 rounded bg-card/60 px-4 py-3 text-left">
-            <p className="font-mono-share text-[10px] text-muted-foreground/40 mb-1 tracking-wider">ERROR_MSG</p>
+            <p className="font-mono-share text-tiny text-muted-foreground/60 mb-1 tracking-wider">ERROR_MSG</p>
             <p className="font-mono-share text-xs text-destructive/80 break-all leading-relaxed">
               {msg.length > 200 ? msg.slice(0, 200) + "…" : msg}
             </p>
@@ -99,7 +99,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
             </button>
           </div>
 
-          <p className="font-mono-share text-[9px] text-muted-foreground/30 tracking-widest">
+          <p className="font-mono-share text-tiny text-muted-foreground/60 tracking-widest">
             If this keeps happening, try clearing your browser cache.
           </p>
         </div>

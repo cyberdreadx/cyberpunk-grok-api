@@ -84,7 +84,7 @@ const CommentThread: React.FC<CommentThreadProps> = ({ postId, onCountChange }) 
         <button onClick={() => navigate(`/profile/${comment.username}`)} className="shrink-0 mt-0.5">
           <Avatar className="w-5 h-5 border border-primary/10">
             {comment.avatarUrl && <AvatarImage src={comment.avatarUrl} alt={comment.username} />}
-            <AvatarFallback className="bg-primary/5 text-primary font-orbitron text-[7px]">
+            <AvatarFallback className="bg-primary/5 text-primary font-orbitron text-micro">
               {comment.username.slice(0, 2).toUpperCase()}
             </AvatarFallback>
           </Avatar>
@@ -93,11 +93,11 @@ const CommentThread: React.FC<CommentThreadProps> = ({ postId, onCountChange }) 
           <div className="flex items-center gap-2">
             <button
               onClick={() => navigate(`/profile/${comment.username}`)}
-              className="font-orbitron text-[9px] text-foreground hover:text-primary transition-colors"
+              className="font-orbitron text-tiny text-foreground hover:text-primary transition-colors"
             >
               @{comment.username}
             </button>
-            <span className="font-mono-share text-[8px] text-muted-foreground">
+            <span className="font-mono-share text-micro text-muted-foreground">
               {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
             </span>
           </div>
@@ -105,14 +105,14 @@ const CommentThread: React.FC<CommentThreadProps> = ({ postId, onCountChange }) 
           <div className="flex items-center gap-3 mt-1">
             <button
               onClick={() => setReplyTo(comment.id)}
-              className="font-mono-share text-[8px] text-muted-foreground hover:text-primary transition-colors flex items-center gap-1"
+              className="font-mono-share text-micro text-muted-foreground hover:text-primary transition-colors flex items-center gap-1"
             >
               <CornerDownRight className="w-2.5 h-2.5" /> REPLY
             </button>
             {user?.id === comment.userId && (
               <button
                 onClick={() => handleDelete(comment.id)}
-                className="font-mono-share text-[8px] text-muted-foreground/40 hover:text-destructive transition-colors"
+                className="font-mono-share text-micro text-muted-foreground/60 hover:text-destructive transition-colors"
               >
                 <Trash2 className="w-2.5 h-2.5" />
               </button>
@@ -135,7 +135,7 @@ const CommentThread: React.FC<CommentThreadProps> = ({ postId, onCountChange }) 
           <>
             {topLevel.map((c) => renderComment(c))}
             {comments.length === 0 && (
-              <p className="font-mono-share text-[10px] text-muted-foreground text-center py-2">No comments yet</p>
+              <p className="font-mono-share text-tiny text-muted-foreground text-center py-2">No comments yet</p>
             )}
           </>
         )}
@@ -146,7 +146,7 @@ const CommentThread: React.FC<CommentThreadProps> = ({ postId, onCountChange }) 
         <div className="flex items-center gap-2">
           <div className="flex-1 relative">
             {replyTo && (
-              <div className="absolute -top-5 left-0 font-mono-share text-[8px] text-primary flex items-center gap-1">
+              <div className="absolute -top-5 left-0 font-mono-share text-micro text-primary flex items-center gap-1">
                 <CornerDownRight className="w-2 h-2" /> Replying...
                 <button onClick={() => setReplyTo(null)} className="text-muted-foreground hover:text-foreground ml-1">✕</button>
               </div>

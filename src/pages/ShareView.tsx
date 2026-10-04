@@ -126,7 +126,7 @@ export default function ShareView() {
               <RedditIcon className="w-3 h-3 text-orange-400" />
             </button>
             <Link to={homeUrl}>
-              <Button size="sm" className="font-orbitron text-[10px] tracking-wider gap-1.5">
+              <Button size="sm" className="font-orbitron text-tiny tracking-wider gap-1.5">
                 <Sparkles className="w-3 h-3" />
                 TRY IT FREE
               </Button>
@@ -161,14 +161,14 @@ export default function ShareView() {
         {data.prompt && (
           <div className="mt-4 p-4 rounded-lg border border-border/30 bg-card/50">
             <div className="flex items-center justify-between mb-2">
-              <div className="font-orbitron text-[10px] text-muted-foreground/60 tracking-wider">
+              <div className="font-orbitron text-tiny text-muted-foreground/60 tracking-wider">
                 PROMPT
               </div>
               <Link to={tryPromptUrl}>
                 <Button
                   size="sm"
                   variant="outline"
-                  className="font-orbitron text-[8px] tracking-wider gap-1 border-secondary/40 text-secondary hover:bg-secondary/10"
+                  className="font-orbitron text-micro tracking-wider gap-1 border-secondary/40 text-secondary hover:bg-secondary/10"
                 >
                   <Wand2 className="w-3 h-3" />
                   TRY THIS PROMPT
@@ -196,15 +196,15 @@ export default function ShareView() {
             <div className="flex flex-wrap justify-center gap-3">
               <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border/30 bg-card/50">
                 <Sparkles className="w-3 h-3 text-primary" />
-                <span className="font-mono-share text-[10px] text-muted-foreground">AI Images</span>
+                <span className="font-mono-share text-tiny text-muted-foreground">AI Images</span>
               </div>
               <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border/30 bg-card/50">
                 <Zap className="w-3 h-3 text-secondary" />
-                <span className="font-mono-share text-[10px] text-muted-foreground">AI Videos</span>
+                <span className="font-mono-share text-tiny text-muted-foreground">AI Videos</span>
               </div>
               <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border/30 bg-card/50">
                 <Wand2 className="w-3 h-3 text-pink-400" />
-                <span className="font-mono-share text-[10px] text-muted-foreground">Image Editing</span>
+                <span className="font-mono-share text-tiny text-muted-foreground">Image Editing</span>
               </div>
             </div>
 
@@ -227,20 +227,20 @@ export default function ShareView() {
 
         {/* Re-share bar */}
         <div className="mt-4 flex items-center justify-center gap-3">
-          <span className="font-mono-share text-[9px] text-muted-foreground/40">SHARE</span>
+          <span className="font-mono-share text-tiny text-muted-foreground/60">SHARE</span>
           <button
             onClick={handleShareTwitter}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/10 bg-black/30 hover:bg-black/50 transition-colors"
           >
             <XIcon className="w-3 h-3 text-white" />
-            <span className="font-mono-share text-[9px] text-white/70">Post on X</span>
+            <span className="font-mono-share text-tiny text-white/70">Post on X</span>
           </button>
           <button
             onClick={handleShareReddit}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-orange-500/20 bg-orange-500/10 hover:bg-orange-500/20 transition-colors"
           >
             <RedditIcon className="w-3 h-3 text-orange-400" />
-            <span className="font-mono-share text-[9px] text-orange-400/70">Reddit</span>
+            <span className="font-mono-share text-tiny text-orange-400/70">Reddit</span>
           </button>
         </div>
       </div>

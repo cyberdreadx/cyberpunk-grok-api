@@ -505,7 +505,7 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
                 }`}>
                 <Heart className={`w-6 h-6 ${liked ? "fill-current" : ""}`} />
               </button>
-              <span className="text-white/60 text-[10px] font-mono-share">{likeCount}</span>
+              <span className="text-white/60 text-tiny font-mono-share">{likeCount}</span>
             </div>
           </div>
 
@@ -533,7 +533,7 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
               </span>
             </div>
             <button onClick={() => { setShowViewers(false); setPaused(false); }}
-              className="font-mono-share text-[10px] text-muted-foreground hover:text-foreground px-2 py-1">
+              className="font-mono-share text-tiny text-muted-foreground hover:text-foreground px-2 py-1">
               CLOSE
             </button>
           </div>
@@ -554,13 +554,13 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
                 >
                   <Avatar className="w-8 h-8 border border-primary/10">
                     {v.avatarUrl && <AvatarImage src={v.avatarUrl} alt={v.username} />}
-                    <AvatarFallback className="bg-primary/10 text-primary font-orbitron text-[9px]">
+                    <AvatarFallback className="bg-primary/10 text-primary font-orbitron text-tiny">
                       {v.username.slice(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
                     <span className="font-orbitron text-xs text-foreground truncate block">@{v.username}</span>
-                    <span className="font-mono-share text-[9px] text-muted-foreground">
+                    <span className="font-mono-share text-tiny text-muted-foreground">
                       {new Date(v.viewedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                     </span>
                   </div>

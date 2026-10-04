@@ -277,7 +277,7 @@ const DirectMessages: React.FC = () => {
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
-          <span className="font-orbitron text-[11px] tracking-widest text-primary flex-1 truncate">
+          <span className="font-orbitron text-xs tracking-widest text-primary flex-1 truncate">
             {active ? `@${active.otherUsername}` : "MESSAGES"}
           </span>
           {active ? (
@@ -300,14 +300,14 @@ const DirectMessages: React.FC = () => {
       {!activeId && (
         <div className="flex-1 overflow-y-auto">
           {loading ? (
-            <div className="p-6 text-center font-mono-share text-[11px] text-muted-foreground/60">loading…</div>
+            <div className="p-6 text-center font-mono-share text-xs text-muted-foreground/60">loading…</div>
           ) : threads.length === 0 ? (
             <div className="p-10 text-center space-y-2">
-              <MessageSquare className="w-6 h-6 mx-auto text-muted-foreground/30" />
-              <p className="font-mono-share text-[11px] text-muted-foreground/60">
+              <MessageSquare className="w-6 h-6 mx-auto text-muted-foreground/60" />
+              <p className="font-mono-share text-xs text-muted-foreground/60">
                 No conversations yet.
               </p>
-              <p className="font-mono-share text-[10px] text-muted-foreground/40">
+              <p className="font-mono-share text-tiny text-muted-foreground/60">
                 Open someone's profile and hit MESSAGE to start one.
               </p>
             </div>
@@ -326,19 +326,19 @@ const DirectMessages: React.FC = () => {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="font-orbitron text-[11px] tracking-wider text-foreground truncate">
+                    <span className="font-orbitron text-xs tracking-wider text-foreground truncate">
                       @{t.otherUsername}
                     </span>
-                    <span className="font-mono-share text-[9px] text-muted-foreground/50 shrink-0">
+                    <span className="font-mono-share text-tiny text-muted-foreground/70 shrink-0">
                       {t.lastMessageAt ? formatDistanceToNow(new Date(t.lastMessageAt), { addSuffix: true }) : ""}
                     </span>
                   </div>
                   <div className="flex items-center justify-between gap-2">
-                    <span className={`font-mono-share text-[10px] truncate ${t.unread > 0 ? "text-foreground/80" : "text-muted-foreground/50"}`}>
+                    <span className={`font-mono-share text-tiny truncate ${t.unread > 0 ? "text-foreground/80" : "text-muted-foreground/70"}`}>
                       {t.lastSenderId && t.lastSenderId !== t.otherId ? "You: " : ""}{t.lastMessage || "…"}
                     </span>
                     {t.unread > 0 && (
-                      <span className="shrink-0 min-w-[16px] h-4 px-1 rounded-full bg-primary text-background font-mono-share text-[9px] leading-4 text-center">
+                      <span className="shrink-0 min-w-[16px] h-4 px-1 rounded-full bg-primary text-background font-mono-share text-tiny leading-4 text-center">
                         {t.unread > 9 ? "9+" : t.unread}
                       </span>
                     )}
@@ -357,14 +357,14 @@ const DirectMessages: React.FC = () => {
             {messages.map((m) => (
               <div key={m.id} className={`flex ${m.mine ? "justify-end" : "justify-start"}`}>
                 <div
-                  className={`max-w-[78%] px-3 py-2 rounded-lg font-mono-share text-[12px] leading-relaxed whitespace-pre-wrap break-words ${
+                  className={`max-w-[78%] px-3 py-2 rounded-lg font-mono-share text-xs leading-relaxed whitespace-pre-wrap break-words ${
                     m.mine
                       ? "bg-primary/15 border border-primary/30 text-foreground"
                       : "bg-card border border-border/50 text-foreground/90"
                   }`}
                 >
                   {renderWithLinks(m.text)}
-                  <div className="mt-1 font-mono-share text-[8px] text-muted-foreground/40">
+                  <div className="mt-1 font-mono-share text-micro text-muted-foreground/60">
                     {formatDistanceToNow(new Date(m.createdAt), { addSuffix: true })}
                   </div>
                 </div>
@@ -384,7 +384,7 @@ const DirectMessages: React.FC = () => {
                 }}
                 rows={1}
                 placeholder="Message…"
-                className="flex-1 resize-none bg-card/60 border border-border/50 rounded px-3 py-2 font-mono-share text-[12px] text-foreground placeholder:text-muted-foreground/40 outline-none focus:border-primary/50 max-h-32"
+                className="flex-1 resize-none bg-card/60 border border-border/50 rounded px-3 py-2 font-mono-share text-xs text-foreground placeholder:text-muted-foreground/60 outline-none focus:border-primary/50 max-h-32"
               />
               <button
                 type="button"

@@ -443,7 +443,7 @@ export default function ComfyPanel({
   const inputClass =
     "w-full bg-black/60 border border-cyan-500/30 rounded px-3 py-2 text-sm font-mono text-cyan-100 placeholder-cyan-800 focus:outline-none focus:border-cyan-400/60";
   const labelClass =
-    "block text-[10px] font-mono text-cyan-400/70 mb-1 uppercase tracking-wider";
+    "block text-tiny font-mono text-cyan-400/70 mb-1 uppercase tracking-wider";
   const toggleBaseClass =
     "w-9 h-5 bg-black/60 border border-cyan-500/30 rounded-full peer peer-checked:bg-purple-600/60 peer-checked:border-purple-400/60 relative after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:bg-gray-400 after:rounded-full after:transition-all peer-checked:after:translate-x-4 peer-checked:after:bg-white";
 
@@ -472,7 +472,7 @@ export default function ComfyPanel({
             </span>
           )}
           {activeCount > 0 && (
-            <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-purple-500/80 text-[10px] font-mono font-bold text-white">
+            <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-purple-500/80 text-tiny font-mono font-bold text-white">
               {activeCount}
             </span>
           )}
@@ -514,7 +514,7 @@ export default function ComfyPanel({
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
-                <div className="mt-1 text-[10px] font-mono text-cyan-400/50 truncate">
+                <div className="mt-1 text-tiny font-mono text-cyan-400/50 truncate">
                   {inputImageName}
                 </div>
               </div>
@@ -554,7 +554,7 @@ export default function ComfyPanel({
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
-                  <div className="mt-1 text-[10px] font-mono text-cyan-400/50 truncate">
+                  <div className="mt-1 text-tiny font-mono text-cyan-400/50 truncate">
                     {inputImageName2}
                   </div>
                 </div>
@@ -692,20 +692,20 @@ export default function ComfyPanel({
           >
             <Play className="w-4 h-4" />
             {activeCount > 0 ? `GENERATE (${activeCount} running)` : "GENERATE"}
-            <span className="text-[10px] opacity-70 ml-1">({currentCost} cr)</span>
+            <span className="text-tiny opacity-70 ml-1">({currentCost} cr)</span>
           </button>
 
           {/* ─── Job Queue ─── */}
           {jobs.length > 0 && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-mono text-purple-400/70 uppercase tracking-wider">
+                <span className="text-tiny font-mono text-purple-400/70 uppercase tracking-wider">
                   Jobs ({jobs.length})
                 </span>
                 {jobs.some((j) => j.status === "done" || j.status === "error") && (
                   <button
                     onClick={clearFinished}
-                    className="flex items-center gap-1 text-[10px] font-mono text-purple-400/50 hover:text-purple-300 transition-colors"
+                    className="flex items-center gap-1 text-tiny font-mono text-purple-400/50 hover:text-purple-300 transition-colors"
                   >
                     <Trash2 className="w-3 h-3" />
                     Clear finished
@@ -777,7 +777,7 @@ function JobCard({
             {isActive && (
               <div className="w-3 h-3 rounded-full border-2 border-cyan-400/30 border-t-cyan-400 animate-spin shrink-0" />
             )}
-            <span className={`text-[10px] font-mono font-bold ${statusColor}`}>
+            <span className={`text-tiny font-mono font-bold ${statusColor}`}>
               {statusLabel}
             </span>
           </div>
@@ -787,7 +787,7 @@ function JobCard({
           {job.seed !== null && (
             <button
               onClick={onReuseSeed}
-              className="text-[9px] font-mono text-purple-400/40 hover:text-purple-300 transition-colors"
+              className="text-tiny font-mono text-purple-400/40 hover:text-purple-300 transition-colors"
             >
               seed: {job.seed}
             </button>
@@ -817,7 +817,7 @@ function JobCard({
 
       {/* Error */}
       {job.status === "error" && job.error && (
-        <div className="p-2 bg-red-500/10 border border-red-500/20 rounded text-red-300 text-[10px] font-mono break-all">
+        <div className="p-2 bg-red-500/10 border border-red-500/20 rounded text-red-300 text-tiny font-mono break-all">
           {job.error}
         </div>
       )}

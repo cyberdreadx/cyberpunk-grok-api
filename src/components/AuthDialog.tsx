@@ -201,7 +201,7 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
             </DialogContent>
           </Dialog>
         )}
-        <span className="font-mono-share text-[10px] text-primary/70 hidden sm:inline truncate max-w-[120px]">
+        <span className="font-mono-share text-tiny text-primary/70 hidden sm:inline truncate max-w-[120px]">
           {userEmail}
         </span>
         <KarmaChip />
@@ -212,7 +212,7 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
               <Button
                 variant="ghost"
                 size="sm"
-                className="font-mono-share text-xs gap-1 text-muted-foreground/40 hover:text-destructive"
+                className="font-mono-share text-xs gap-1 text-muted-foreground/60 hover:text-destructive"
                 title="Account settings"
               >
                 <Trash2 className="w-3 h-3" />
@@ -246,7 +246,7 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
         >
           <LogIn className="w-3 h-3" />
           <span>{t("auth.login").toUpperCase()}</span>
-          <span className="font-mono-share text-[8px] text-primary/80 bg-primary/10 border border-primary/25 rounded px-1 py-0 leading-4 hidden sm:inline">
+          <span className="font-mono-share text-micro text-primary/80 bg-primary/10 border border-primary/25 rounded px-1 py-0 leading-4 hidden sm:inline">
             10 FREE / DAY
           </span>
         </Button>
@@ -287,8 +287,8 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
                   <div className="flex items-center gap-2 bg-primary/10 border border-primary/25 rounded-md px-3 py-2">
                     <span className="text-base">⚡</span>
                     <div>
-                      <p className="font-orbitron text-[10px] tracking-wider text-primary">{t("auth.freeCreditsDaily")}</p>
-                      <p className="font-mono-share text-[10px] text-muted-foreground/70 leading-snug">
+                      <p className="font-orbitron text-tiny tracking-wider text-primary">{t("auth.freeCreditsDaily")}</p>
+                      <p className="font-mono-share text-tiny text-muted-foreground/70 leading-snug">
                         {t("auth.freeOnLogin")}
                       </p>
                     </div>
@@ -302,10 +302,10 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
 
             <Tabs value={tab} onValueChange={(v) => setTab(v as "signin" | "signup")} className="mt-2">
               <TabsList className="grid w-full grid-cols-2 bg-input">
-                <TabsTrigger value="signin" className="font-orbitron text-[10px] tracking-wider">
+                <TabsTrigger value="signin" className="font-orbitron text-tiny tracking-wider">
                   SIGN_IN
                 </TabsTrigger>
-                <TabsTrigger value="signup" className="font-orbitron text-[10px] tracking-wider">
+                <TabsTrigger value="signup" className="font-orbitron text-tiny tracking-wider">
                   REGISTER
                 </TabsTrigger>
               </TabsList>
@@ -325,7 +325,7 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
                   <button
                     type="button"
                     onClick={() => setResetEmail(email || "")}
-                    className="font-mono-share text-[10px] text-muted-foreground/60 hover:text-secondary transition-colors"
+                    className="font-mono-share text-tiny text-muted-foreground/60 hover:text-secondary transition-colors"
                   >
                     Forgot password?
                   </button>
@@ -342,7 +342,7 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
                         signup was being told something that never arrived. The
                         +5 first-purchase bonus is the reward that still exists
                         (webhook.ts, referral purchase reward). */}
-                    <p className="font-mono-share text-[10px] text-green-400">
+                    <p className="font-mono-share text-tiny text-green-400">
                       Invited by a friend — you'll get <span className="font-bold">+5 bonus credits</span> on your first purchase.
                     </p>
                   </div>
@@ -359,7 +359,7 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
                 />
                 {/* Self-hosted CAPTCHA challenge */}
                 <div className="space-y-1.5 pt-1">
-                  <label className="font-mono-share text-[10px] text-muted-foreground/60 uppercase tracking-wider flex items-center gap-1">
+                  <label className="font-mono-share text-tiny text-muted-foreground/60 uppercase tracking-wider flex items-center gap-1">
                     <ShieldCheck className="w-3 h-3" /> Human Check
                   </label>
                   <div className="flex items-center gap-2">
@@ -403,7 +403,7 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
             )}
 
             <div className="border-t border-border pt-3 mt-2">
-              <p className="text-[10px] font-mono-share text-muted-foreground/60 leading-relaxed">
+              <p className="text-tiny font-mono-share text-muted-foreground/60 leading-relaxed">
                 {t("auth.noAccountNeeded")}
               </p>
             </div>
@@ -437,7 +437,7 @@ function AuthForm({
   return (
     <div className="space-y-3">
       <div className="space-y-1.5">
-        <label className="font-mono-share text-[10px] text-muted-foreground/60 uppercase tracking-wider flex items-center gap-1">
+        <label className="font-mono-share text-tiny text-muted-foreground/60 uppercase tracking-wider flex items-center gap-1">
           <Mail className="w-3 h-3" /> Email
         </label>
         <Input
@@ -450,7 +450,7 @@ function AuthForm({
         />
       </div>
       <div className="space-y-1.5">
-        <label className="font-mono-share text-[10px] text-muted-foreground/60 uppercase tracking-wider flex items-center gap-1">
+        <label className="font-mono-share text-tiny text-muted-foreground/60 uppercase tracking-wider flex items-center gap-1">
           <Lock className="w-3 h-3" /> Password
         </label>
         <Input
@@ -652,7 +652,7 @@ function VerificationForm({
             aria-label={`Verification code digit ${i + 1}`}
             placeholder="·"
             className="w-10 h-12 text-center text-lg font-mono-share bg-input border border-border rounded
-                       text-primary placeholder:text-muted-foreground/30 focus:border-primary focus:ring-1
+                       text-primary placeholder:text-muted-foreground/60 focus:border-primary focus:ring-1
                        focus:ring-primary/50 outline-none transition-colors disabled:opacity-50"
           />
         ))}
@@ -669,13 +669,13 @@ function VerificationForm({
         <div className={`${statusConfig.bg} border ${statusConfig.border} rounded-lg px-3 py-2.5 space-y-1.5`}>
           <div className={`flex items-center gap-2 ${statusConfig.color}`}>
             {statusConfig.icon}
-            <span className="font-orbitron text-[10px] tracking-wider uppercase">{statusMessage.title}</span>
+            <span className="font-orbitron text-tiny tracking-wider uppercase">{statusMessage.title}</span>
           </div>
-          <p className="font-mono-share text-[11px] text-muted-foreground leading-relaxed pl-5.5">
+          <p className="font-mono-share text-xs text-muted-foreground leading-relaxed pl-5.5">
             {statusMessage.hint}
           </p>
           {error && status !== "sent" && (
-            <p className="font-mono-share text-[10px] text-muted-foreground/50 pl-5.5 italic">
+            <p className="font-mono-share text-tiny text-muted-foreground/70 pl-5.5 italic">
               {error}
             </p>
           )}
@@ -711,14 +711,14 @@ function VerificationForm({
       <div className="border-t border-border pt-3">
         <div className="space-y-1.5">
           <div className="flex items-start gap-1.5">
-            <Info className="w-3 h-3 text-muted-foreground/40 mt-0.5 shrink-0" />
-            <p className="text-[10px] font-mono-share text-muted-foreground/60 leading-relaxed">
+            <Info className="w-3 h-3 text-muted-foreground/60 mt-0.5 shrink-0" />
+            <p className="text-tiny font-mono-share text-muted-foreground/60 leading-relaxed">
               Codes expire in 30 minutes. Only the most recent code works — older codes are invalidated when you resend.
             </p>
           </div>
           <div className="flex items-start gap-1.5">
-            <Mail className="w-3 h-3 text-muted-foreground/40 mt-0.5 shrink-0" />
-            <p className="text-[10px] font-mono-share text-muted-foreground/60 leading-relaxed">
+            <Mail className="w-3 h-3 text-muted-foreground/60 mt-0.5 shrink-0" />
+            <p className="text-tiny font-mono-share text-muted-foreground/60 leading-relaxed">
               Not seeing the email? Check spam/junk. The sender is <span className="text-muted-foreground/80">noreply@grokrunner.gltch.app</span>.
             </p>
           </div>
@@ -823,7 +823,7 @@ function ResetPasswordForm({
       {step === "email" ? (
         <div className="space-y-3">
           <div className="space-y-1.5">
-            <label className="font-mono-share text-[10px] text-muted-foreground/60 uppercase tracking-wider flex items-center gap-1">
+            <label className="font-mono-share text-tiny text-muted-foreground/60 uppercase tracking-wider flex items-center gap-1">
               <Mail className="w-3 h-3" /> Email
             </label>
             <Input
@@ -861,14 +861,14 @@ function ResetPasswordForm({
                 disabled={loading}
                 placeholder="·"
                 className="w-10 h-12 text-center text-lg font-mono-share bg-input border border-border rounded
-                           text-secondary placeholder:text-muted-foreground/30 focus:border-secondary focus:ring-1
+                           text-secondary placeholder:text-muted-foreground/60 focus:border-secondary focus:ring-1
                            focus:ring-secondary/50 outline-none transition-colors disabled:opacity-50"
               />
             ))}
           </div>
           {/* New password */}
           <div className="space-y-1.5">
-            <label className="font-mono-share text-[10px] text-muted-foreground/60 uppercase tracking-wider flex items-center gap-1">
+            <label className="font-mono-share text-tiny text-muted-foreground/60 uppercase tracking-wider flex items-center gap-1">
               <Lock className="w-3 h-3" /> New Password
             </label>
             <Input
@@ -966,7 +966,7 @@ function DeleteAccountForm({ onDelete }: { onDelete: (password: string) => Promi
 
       <div className="space-y-3">
         <div className="space-y-1.5">
-          <label className="font-mono-share text-[10px] text-muted-foreground/60 uppercase tracking-wider flex items-center gap-1">
+          <label className="font-mono-share text-tiny text-muted-foreground/60 uppercase tracking-wider flex items-center gap-1">
             <Lock className="w-3 h-3" /> Confirm Password
           </label>
           <Input
@@ -978,7 +978,7 @@ function DeleteAccountForm({ onDelete }: { onDelete: (password: string) => Promi
           />
         </div>
         <div className="space-y-1.5">
-          <label className="font-mono-share text-[10px] text-muted-foreground/60 uppercase tracking-wider">
+          <label className="font-mono-share text-tiny text-muted-foreground/60 uppercase tracking-wider">
             Type <span className="text-destructive">DELETE</span> to confirm
           </label>
           <Input
@@ -1074,7 +1074,7 @@ function TwoFactorForm({
           onChange={(e) => setRemember(e.target.checked)}
           className="accent-primary"
         />
-        <span className="font-mono-share text-[11px] text-muted-foreground">
+        <span className="font-mono-share text-xs text-muted-foreground">
           Remember this device for 30 days
         </span>
       </label>
@@ -1121,7 +1121,7 @@ function KarmaChip() {
         <Button
           variant="ghost"
           size="sm"
-          className={`font-mono-share text-[10px] gap-1 px-2 border ${
+          className={`font-mono-share text-tiny gap-1 px-2 border ${
             unlocked
               ? "text-secondary border-secondary/40 hover:bg-secondary/10"
               : "text-muted-foreground border-border hover:bg-muted/20"

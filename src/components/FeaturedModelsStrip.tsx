@@ -33,13 +33,13 @@ export default function FeaturedModelsStrip() {
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
-        <span className="font-orbitron text-[11px] tracking-widest text-secondary">FEATURED MODELS</span>
-        <span className="font-mono-share text-[8px] px-1 py-px rounded-sm tracking-widest text-emerald-300 border border-emerald-400/40 bg-emerald-400/10">
+        <span className="font-orbitron text-xs tracking-widest text-secondary">FEATURED MODELS</span>
+        <span className="font-mono-share text-micro px-1 py-px rounded-sm tracking-widest text-emerald-300 border border-emerald-400/40 bg-emerald-400/10">
           NEW
         </span>
         <button
           onClick={() => navigate("/creators")}
-          className="ml-auto font-mono-share text-[9px] text-muted-foreground hover:text-secondary transition-colors"
+          className="ml-auto font-mono-share text-tiny text-muted-foreground hover:text-secondary transition-colors"
         >
           VIEW ALL →
         </button>
@@ -65,17 +65,17 @@ export default function FeaturedModelsStrip() {
                       {initial}
                     </div>
                   )}
-                  <span className="absolute top-1 left-1 font-mono-share text-[7px] px-1 py-px rounded-sm tracking-widest text-emerald-300 border border-emerald-400/40 bg-black/60">
+                  <span className="absolute top-1 left-1 font-mono-share text-micro px-1 py-px rounded-sm tracking-widest text-emerald-300 border border-emerald-400/40 bg-black/60">
                     NEW
                   </span>
                 </div>
-                <div className="font-mono-share text-[10px] text-foreground/90 truncate mt-1">{name}</div>
+                <div className="font-mono-share text-tiny text-foreground/90 truncate mt-1">{name}</div>
               </button>
               {m.persona_chat_character_id && (
                 <button
                   type="button"
                   onClick={() => navigate(`/characters?chat=${encodeURIComponent(m.persona_chat_character_id!)}`)}
-                  className="flex items-center justify-center gap-1 px-2 py-1 rounded font-orbitron text-[9px] tracking-wider border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                  className="flex items-center justify-center gap-1 px-2 py-1 rounded font-orbitron text-tiny tracking-wider border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
                 >
                   <MessageCircle className="w-3 h-3" /> AI CHAT
                 </button>

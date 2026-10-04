@@ -92,8 +92,8 @@ const GrokOrb = forwardRef<HTMLDivElement, GrokOrbProps>(({ isGenerating, classN
 
       <div className="absolute bottom-2 left-0 right-0 text-center">
         <span
-          className={`font-mono-share text-[9px] tracking-widest transition-all duration-500 ${
-            isGenerating ? "neon-text-magenta animate-flicker" : "text-muted-foreground/40"
+          className={`font-mono-share text-tiny tracking-widest transition-all duration-500 ${
+            isGenerating ? "neon-text-magenta animate-flicker" : "text-muted-foreground/60"
           }`}
         >
           {isGenerating ? "◉ NEURAL_PROCESSING" : "◎ GLTCH_STANDBY"}

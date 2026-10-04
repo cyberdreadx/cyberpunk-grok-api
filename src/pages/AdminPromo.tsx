@@ -188,7 +188,7 @@ export default function AdminPromo() {
     <div className="min-h-[100dvh] bg-background text-foreground">
       <header className="border-b border-border/30 bg-card/40 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-5 py-4 flex items-center gap-3 flex-wrap">
-          <Link to="/admin" className="flex items-center gap-1.5 font-mono text-[10px] tracking-widest text-muted-foreground hover:text-primary">
+          <Link to="/admin" className="flex items-center gap-1.5 font-mono text-tiny tracking-widest text-muted-foreground hover:text-primary">
             <ArrowLeft className="w-3.5 h-3.5" /> ADMIN
           </Link>
           <span className="text-border/60">/</span>
@@ -197,13 +197,13 @@ export default function AdminPromo() {
             href="/promo"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1 font-mono text-[10px] tracking-widest text-muted-foreground hover:text-primary transition-colors"
+            className="flex items-center gap-1 font-mono text-tiny tracking-widest text-muted-foreground hover:text-primary transition-colors"
             title="Open the page claimants see"
           >
             PUBLIC PAGE <ExternalLink className="w-3 h-3" />
           </a>
           {data && (
-            <span className="ml-auto font-mono text-[11px] text-muted-foreground">
+            <span className="ml-auto font-mono text-xs text-muted-foreground">
               {data.approvedCount}/{data.config.maxApproved} paid · {data.slotsRemaining} left ·{" "}
               {data.config.creditAmount} cr each
             </span>
@@ -214,7 +214,7 @@ export default function AdminPromo() {
       <main className="max-w-4xl mx-auto px-5 py-6 space-y-4">
         {draft && (
           <details className="rounded border border-border/40 bg-card/30" open={data?.slotsRemaining === 0}>
-            <summary className="cursor-pointer select-none px-4 py-2.5 font-mono text-[11px] tracking-widest text-primary">
+            <summary className="cursor-pointer select-none px-4 py-2.5 font-mono text-xs tracking-widest text-primary">
               PROMO_SETTINGS
               {!draft.enabled && <span className="ml-2 text-destructive">· OFF</span>}
               {draft.requireCode && <span className="ml-2 text-amber-400">· code required</span>}
@@ -228,7 +228,7 @@ export default function AdminPromo() {
                   ["minRenders", "Min renders", "Anti-farm"],
                 ] as const).map(([key, label, hint]) => (
                   <label key={key} className="block">
-                    <span className="font-mono text-[9px] tracking-widest text-muted-foreground">
+                    <span className="font-mono text-tiny tracking-widest text-muted-foreground">
                       {label.toUpperCase()}
                     </span>
                     <input
@@ -239,13 +239,13 @@ export default function AdminPromo() {
                       }
                       className="mt-1 w-full h-8 rounded border border-border/40 bg-input/50 px-2 font-mono text-xs"
                     />
-                    <span className="font-mono text-[8px] text-muted-foreground/50">{hint}</span>
+                    <span className="font-mono text-micro text-muted-foreground/70">{hint}</span>
                   </label>
                 ))}
               </div>
 
               <label className="block">
-                <span className="font-mono text-[9px] tracking-widest text-muted-foreground">
+                <span className="font-mono text-tiny tracking-widest text-muted-foreground">
                   ACCEPTED LINK HOSTS
                 </span>
                 <input
@@ -256,13 +256,13 @@ export default function AdminPromo() {
                   placeholder="antireddit.com, www.antireddit.com"
                   className="mt-1 w-full h-8 rounded border border-border/40 bg-input/50 px-2 font-mono text-xs"
                 />
-                <span className="font-mono text-[8px] text-muted-foreground/50">
+                <span className="font-mono text-micro text-muted-foreground/70">
                   Comma-separated. A claim link must point at one of these, or it's rejected before review.
                 </span>
               </label>
 
               <div className="flex flex-wrap items-center gap-4">
-                <label className="flex items-center gap-2 font-mono text-[10px] text-muted-foreground">
+                <label className="flex items-center gap-2 font-mono text-tiny text-muted-foreground">
                   <input
                     type="checkbox"
                     checked={draft.enabled}
@@ -270,21 +270,21 @@ export default function AdminPromo() {
                   />
                   PROMO OPEN
                 </label>
-                <label className="flex items-center gap-2 font-mono text-[10px] text-muted-foreground">
+                <label className="flex items-center gap-2 font-mono text-tiny text-muted-foreground">
                   <input
                     type="checkbox"
                     checked={draft.requireCode}
                     onChange={(e) => setDraft({ ...draft, requireCode: e.target.checked })}
                   />
                   REQUIRE INVITE CODE
-                  <span className="text-[8px] text-muted-foreground/50">
+                  <span className="text-micro text-muted-foreground/70">
                     (off = self-serve, no codes to hand out)
                   </span>
                 </label>
                 <button
                   onClick={() => saveConfig(draft)}
                   disabled={savingCfg}
-                  className="ml-auto rounded border border-primary/40 bg-primary/10 px-4 py-1.5 font-mono text-[10px] tracking-widest text-primary hover:bg-primary/20 disabled:opacity-50"
+                  className="ml-auto rounded border border-primary/40 bg-primary/10 px-4 py-1.5 font-mono text-tiny tracking-widest text-primary hover:bg-primary/20 disabled:opacity-50"
                 >
                   {savingCfg ? "SAVING…" : "SAVE SETTINGS"}
                 </button>
@@ -298,7 +298,7 @@ export default function AdminPromo() {
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`px-3 py-1.5 rounded-lg font-mono text-[11px] tracking-wider border transition-colors ${tab === t
+              className={`px-3 py-1.5 rounded-lg font-mono text-xs tracking-wider border transition-colors ${tab === t
                 ? "bg-primary/20 border-primary/40 text-primary"
                 : "bg-muted/30 border-border/40 text-muted-foreground hover:border-primary/20"
                 }`}
@@ -311,14 +311,14 @@ export default function AdminPromo() {
         {data && (
           <section className="border border-border/40 rounded-lg p-4 space-y-3">
             <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="font-orbitron text-[11px] tracking-wider text-primary/80">INVITE_CODES</h2>
-              <span className="font-mono text-[10px] text-muted-foreground">
+              <h2 className="font-orbitron text-xs tracking-wider text-primary/80">INVITE_CODES</h2>
+              <span className="font-mono text-tiny text-muted-foreground">
                 {data.codes.filter((c) => !c.usedAt).length} unused of {data.codes.length}
               </span>
               <button
                 onClick={mintCodes}
                 disabled={minting}
-                className="ml-auto flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-primary/40 text-primary hover:bg-primary/10 font-mono text-[11px] disabled:opacity-40 transition-colors"
+                className="ml-auto flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-primary/40 text-primary hover:bg-primary/10 font-mono text-xs disabled:opacity-40 transition-colors"
               >
                 {minting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
                 GENERATE 10
@@ -328,7 +328,7 @@ export default function AdminPromo() {
                   `${PUBLIC_URL}\n\n` + data.codes.filter((c) => !c.usedAt && c.code).map((c) => c.code).join("\n"),
                   "all",
                 )}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-border/50 text-muted-foreground hover:text-primary hover:border-primary/40 font-mono text-[11px] transition-colors"
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-border/50 text-muted-foreground hover:text-primary hover:border-primary/40 font-mono text-xs transition-colors"
               >
                 {copied === "all" ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
                 COPY UNUSED
@@ -336,13 +336,13 @@ export default function AdminPromo() {
             </div>
 
             <div className="flex items-center gap-2 flex-wrap pb-1">
-              <span className="font-mono text-[10px] text-muted-foreground/70">Send with each code:</span>
-              <code className="font-mono text-[10px] text-primary/80 bg-muted/40 px-2 py-1 rounded truncate max-w-full">
+              <span className="font-mono text-tiny text-muted-foreground/70">Send with each code:</span>
+              <code className="font-mono text-tiny text-primary/80 bg-muted/40 px-2 py-1 rounded truncate max-w-full">
                 {PUBLIC_URL}
               </code>
               <button
                 onClick={() => copy(PUBLIC_URL, "link")}
-                className="flex items-center gap-1.5 px-2 py-1 rounded border border-border/50 text-muted-foreground hover:text-primary hover:border-primary/40 font-mono text-[10px] transition-colors"
+                className="flex items-center gap-1.5 px-2 py-1 rounded border border-border/50 text-muted-foreground hover:text-primary hover:border-primary/40 font-mono text-tiny transition-colors"
               >
                 {copied === "link" ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
                 COPY LINK
@@ -356,14 +356,14 @@ export default function AdminPromo() {
                   onClick={() => c.code && !c.usedAt && copy(c.code, c.id)}
                   disabled={!c.code || !!c.usedAt}
                   title={c.usedAt ? `Used by ${c.usedByEmail || "someone"}` : "Click to copy"}
-                  className={`flex items-center justify-between gap-2 px-2.5 py-1.5 rounded border font-mono text-[11px] text-left transition-colors ${c.usedAt
-                    ? "border-border/30 bg-muted/20 text-muted-foreground/50 line-through"
+                  className={`flex items-center justify-between gap-2 px-2.5 py-1.5 rounded border font-mono text-xs text-left transition-colors ${c.usedAt
+                    ? "border-border/30 bg-muted/20 text-muted-foreground/70 line-through"
                     : "border-primary/25 hover:border-primary/60 text-foreground"
                     }`}
                 >
                   <span className="truncate">{c.code || "(hash only — cannot display)"}</span>
                   {c.usedAt
-                    ? <span className="text-[9px] shrink-0 no-underline">{(c.usedByEmail || "used").slice(0, 14)}</span>
+                    ? <span className="text-tiny shrink-0 no-underline">{(c.usedByEmail || "used").slice(0, 14)}</span>
                     : copied === c.id
                       ? <Check className="w-3 h-3 text-primary shrink-0" />
                       : <Copy className="w-3 h-3 opacity-30 shrink-0" />}
@@ -391,9 +391,9 @@ export default function AdminPromo() {
                 >
                   {c.postUrl} <ExternalLink className="w-3 h-3 shrink-0" />
                 </a>
-                <p className="font-mono text-[11px] text-muted-foreground break-all">{c.email}</p>
+                <p className="font-mono text-xs text-muted-foreground break-all">{c.email}</p>
               </div>
-              <span className={`font-mono text-[10px] tracking-wider px-2 py-0.5 rounded shrink-0 ${c.status === "approved" ? "bg-green-500/15 text-green-400"
+              <span className={`font-mono text-tiny tracking-wider px-2 py-0.5 rounded shrink-0 ${c.status === "approved" ? "bg-green-500/15 text-green-400"
                 : c.status === "rejected" ? "bg-destructive/15 text-destructive"
                   : "bg-primary/15 text-primary"
                 }`}>
@@ -401,7 +401,7 @@ export default function AdminPromo() {
               </span>
             </div>
 
-            <div className="flex gap-4 flex-wrap font-mono text-[11px]">
+            <div className="flex gap-4 flex-wrap font-mono text-xs">
               <span className={c.meetsAge ? "text-foreground/70" : "text-yellow-400"}>
                 {c.meetsAge ? "✓" : "✗"} {c.accountAgeDays}d old
                 <span className="text-muted-foreground"> (need {data.config.minAccountAgeDays})</span>
@@ -417,7 +417,7 @@ export default function AdminPromo() {
             </div>
 
             {c.rejectReason && (
-              <p className="font-mono text-[11px] text-muted-foreground">reason: {c.rejectReason}</p>
+              <p className="font-mono text-xs text-muted-foreground">reason: {c.rejectReason}</p>
             )}
 
             {c.status === "pending" && (
@@ -425,7 +425,7 @@ export default function AdminPromo() {
                 <button
                   onClick={() => decide(c, "approve")}
                   disabled={busy === c.id || c.alreadyPaid || data.slotsRemaining <= 0}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-mono text-[11px] border border-green-500/40 text-green-400 hover:bg-green-500/10 disabled:opacity-40 transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-mono text-xs border border-green-500/40 text-green-400 hover:bg-green-500/10 disabled:opacity-40 transition-colors"
                 >
                   {busy === c.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
                   APPROVE +{data.config.creditAmount}
@@ -433,7 +433,7 @@ export default function AdminPromo() {
                 <button
                   onClick={() => decide(c, "reject")}
                   disabled={busy === c.id}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-mono text-[11px] border border-destructive/40 text-destructive hover:bg-destructive/10 disabled:opacity-40 transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-mono text-xs border border-destructive/40 text-destructive hover:bg-destructive/10 disabled:opacity-40 transition-colors"
                 >
                   <X className="w-3 h-3" /> REJECT
                 </button>

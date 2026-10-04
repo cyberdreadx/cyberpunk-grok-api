@@ -77,11 +77,11 @@ const MobileCreditsPill: React.FC<MobileCreditsPillProps> = ({ onOpenStore, inli
         className="group inline-flex items-center gap-1.5 h-7 ps-2.5 pe-2 rounded-full border border-primary/40 bg-card/70 backdrop-blur-md hover:bg-card/90 hover:border-primary/60 active:scale-[0.97] transition-all"
       >
         <Coins className="w-3 h-3 text-primary drop-shadow-glow-focus shrink-0" />
-        <span className="font-orbitron text-[10px] tracking-wider text-primary leading-none">
+        <span className="font-orbitron text-tiny tracking-wider text-primary leading-none">
           {label}
         </span>
         {byok && (
-          <span className="font-orbitron text-[8px] tracking-wider text-secondary/90 leading-none px-1 py-0.5 rounded bg-secondary/10 border border-secondary/30">
+          <span className="font-orbitron text-micro tracking-wider text-secondary/90 leading-none px-1 py-0.5 rounded bg-secondary/10 border border-secondary/30">
             BYOK
           </span>
         )}
@@ -102,7 +102,7 @@ const MobileCreditsPill: React.FC<MobileCreditsPillProps> = ({ onOpenStore, inli
   const noticeBody = (
     <>
       <div className="flex items-start justify-between gap-2 mb-2">
-        <h4 className="font-orbitron text-[10px] tracking-wider text-primary">
+        <h4 className="font-orbitron text-tiny tracking-wider text-primary">
           {byok ? "BYOK MODE ACTIVE" : "CREDITS MODE"}
         </h4>
         <button
@@ -114,7 +114,7 @@ const MobileCreditsPill: React.FC<MobileCreditsPillProps> = ({ onOpenStore, inli
         </button>
       </div>
       {byok ? (
-        <p className="font-mono-share text-[11px] leading-relaxed text-foreground/80">
+        <p className="font-mono-share text-xs leading-relaxed text-foreground/80">
           Generations run on your own xAI API key and are billed by xAI —
           they don't consume Lovable credits.
           <br />
@@ -124,7 +124,7 @@ const MobileCreditsPill: React.FC<MobileCreditsPillProps> = ({ onOpenStore, inli
           generator. Tap the coin badge anytime to open the store.
         </p>
       ) : (
-        <p className="font-mono-share text-[11px] leading-relaxed text-foreground/80">
+        <p className="font-mono-share text-xs leading-relaxed text-foreground/80">
           You have <span className="text-primary">{label}</span> credits.
           Each generation deducts from daily → subscription → pack credits.
           <br />

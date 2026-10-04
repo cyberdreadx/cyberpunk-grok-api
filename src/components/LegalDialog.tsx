@@ -24,7 +24,7 @@ export function TosContent() {
       <p className="font-mono-share text-xs text-primary/60 border border-primary/20 rounded p-3 bg-primary/5">
         <span className="text-primary">$</span> cat /sys/legal/terms_of_service.dat
         <br />
-        <span className="text-muted-foreground/40">
+        <span className="text-muted-foreground/60">
           {`// Last updated: 2026.03.16 // Protocol v${APP_VERSION}`}
         </span>
       </p>
@@ -389,7 +389,7 @@ export function TosContent() {
         </p>
       </section>
 
-      <p className="font-mono-share text-[10px] text-muted-foreground/30 pt-2 border-t border-border/30">
+      <p className="font-mono-share text-tiny text-muted-foreground/60 pt-2 border-t border-border/30">
         {"EOF // end_of_neural_contract_v3.dat"}
       </p>
     </div>
@@ -403,7 +403,7 @@ export function PrivacyContent() {
       <p className="font-mono-share text-xs text-secondary/60 border border-secondary/20 rounded p-3 bg-secondary/5">
         <span className="text-secondary">$</span> cat /sys/legal/privacy_protocol.dat
         <br />
-        <span className="text-muted-foreground/40">
+        <span className="text-muted-foreground/60">
           {`// Last updated: 2026.04.20 // Protocol v${APP_VERSION} // Encryption: AES-256`}
         </span>
       </p>
@@ -691,7 +691,7 @@ export function PrivacyContent() {
         </p>
       </section>
 
-      <p className="font-mono-share text-[10px] text-muted-foreground/30 pt-2 border-t border-border/30">
+      <p className="font-mono-share text-tiny text-muted-foreground/60 pt-2 border-t border-border/30">
         {"EOF // end_of_privacy_protocol.dat"}
       </p>
     </div>
@@ -720,7 +720,7 @@ export default function LegalDialog({
             <Icon className="w-5 h-5" />
             {isTos ? "TERMS_OF_SERVICE" : "PRIVACY_PROTOCOL"}
           </DialogTitle>
-          <DialogDescription className="font-mono-share text-[10px] text-muted-foreground/50">
+          <DialogDescription className="font-mono-share text-tiny text-muted-foreground/70">
             {isTos
               ? "// neural_contract v2.0 -- read before you jack in"
               : "// data_handling_manifest -- your privacy matters to us"}

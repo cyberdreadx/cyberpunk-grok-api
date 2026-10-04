@@ -236,7 +236,7 @@ export default function ApplyPage() {
         {/* Hero */}
         <section className="relative px-4 sm:px-8 pt-10 pb-12 max-w-6xl mx-auto">
           <div className="space-y-4">
-            <div className="inline-block px-2 py-1 border border-secondary/40 rounded font-mono-share text-[10px] tracking-widest text-secondary">
+            <div className="inline-block px-2 py-1 border border-secondary/40 rounded font-mono-share text-tiny tracking-widest text-secondary">
               GLTCH // CREATOR PROGRAM
             </div>
             <h1 className="font-orbitron text-3xl sm:text-5xl tracking-tight">
@@ -269,7 +269,7 @@ export default function ApplyPage() {
             ].map((s) => (
               <div key={s.v} className="border border-border/40 bg-card/40 backdrop-blur-sm rounded-lg p-3">
                 <div className="font-orbitron text-lg sm:text-2xl text-secondary">{s.k}</div>
-                <div className="font-mono-share text-[10px] uppercase tracking-wider text-muted-foreground">{s.v}</div>
+                <div className="font-mono-share text-tiny uppercase tracking-wider text-muted-foreground">{s.v}</div>
               </div>
             ))}
           </div>
@@ -288,7 +288,7 @@ export default function ApplyPage() {
               <div key={t} className="border border-border/40 bg-card/30 rounded-lg p-4 space-y-2">
                 <Icon className="w-5 h-5 text-secondary" />
                 <div className="font-orbitron text-xs tracking-wider">{t}</div>
-                <div className="font-mono-share text-[11px] text-muted-foreground leading-relaxed">{d}</div>
+                <div className="font-mono-share text-xs text-muted-foreground leading-relaxed">{d}</div>
               </div>
             ))}
           </div>
@@ -306,7 +306,7 @@ export default function ApplyPage() {
             ].map((s, idx) => (
               <li key={s} className="border border-border/40 rounded-lg p-4 bg-card/30">
                 <div className="font-orbitron text-secondary text-2xl">0{idx + 1}</div>
-                <div className="font-mono-share text-[12px] text-foreground mt-1">{s}</div>
+                <div className="font-mono-share text-xs text-foreground mt-1">{s}</div>
               </li>
             ))}
           </ol>
@@ -317,20 +317,20 @@ export default function ApplyPage() {
           <h2 className="font-orbitron text-xs tracking-widest text-secondary/80 mb-4">// EARNINGS CALCULATOR</h2>
           <div className="border border-border/40 rounded-lg p-5 bg-card/40 space-y-4">
             <div>
-              <Label className="font-mono-share text-[11px]">Monthly subscribers: <span className="text-secondary">{subs}</span></Label>
+              <Label className="font-mono-share text-xs">Monthly subscribers: <span className="text-secondary">{subs}</span></Label>
               <input type="range" min={0} max={1000} value={subs} onChange={(e) => setSubs(+e.target.value)} className="w-full accent-[hsl(var(--secondary))]" />
             </div>
             <div>
-              <Label className="font-mono-share text-[11px]">PPV unlocks / month: <span className="text-secondary">{ppv}</span></Label>
+              <Label className="font-mono-share text-xs">PPV unlocks / month: <span className="text-secondary">{ppv}</span></Label>
               <input type="range" min={0} max={500} value={ppv} onChange={(e) => setPpv(+e.target.value)} className="w-full accent-[hsl(var(--secondary))]" />
             </div>
             <div className="pt-2 border-t border-border/40 flex justify-between font-mono-share text-sm">
               <div>
-                <div className="text-[10px] uppercase text-muted-foreground tracking-wider">Gross</div>
+                <div className="text-tiny uppercase text-muted-foreground tracking-wider">Gross</div>
                 <div className="text-foreground">${projected.gross.toFixed(0)}</div>
               </div>
               <div className="text-right">
-                <div className="text-[10px] uppercase text-muted-foreground tracking-wider">You keep (75%)</div>
+                <div className="text-tiny uppercase text-muted-foreground tracking-wider">You keep (75%)</div>
                 <div className="text-secondary text-xl font-orbitron">${projected.creatorCut.toFixed(0)}/mo</div>
               </div>
             </div>
@@ -340,7 +340,7 @@ export default function ApplyPage() {
         {/* Application form */}
         <section id="apply" className="px-4 sm:px-8 py-12 max-w-2xl mx-auto">
           <h2 className="font-orbitron text-xl sm:text-2xl mb-2">APPLY</h2>
-          <p className="font-mono-share text-[11px] text-muted-foreground mb-6">
+          <p className="font-mono-share text-xs text-muted-foreground mb-6">
             Takes ~3 minutes. Admins review within 48h.
           </p>
 
@@ -348,7 +348,7 @@ export default function ApplyPage() {
             <div className="border border-secondary/40 bg-secondary/5 rounded-lg p-6 text-center space-y-3">
               <Check className="w-10 h-10 text-secondary mx-auto" />
               <h3 className="font-orbitron text-lg">APPLICATION RECEIVED</h3>
-              <p className="font-mono-share text-[12px] text-muted-foreground">
+              <p className="font-mono-share text-xs text-muted-foreground">
                 We'll email <span className="text-foreground">{form.email}</span> with the next steps within 48 hours. If approved, you'll be invited to complete ID verification and set up your monetization.
               </p>
               <div className="flex flex-wrap gap-2 justify-center">
@@ -360,7 +360,7 @@ export default function ApplyPage() {
             <>
             {/* Live preview — visible on every step */}
             <div className="mb-5">
-              <div className="font-orbitron text-[10px] tracking-widest text-secondary/80 mb-2">
+              <div className="font-orbitron text-tiny tracking-widest text-secondary/80 mb-2">
                 // LIVE PREVIEW · /CREATORS CARD
               </div>
               <div className="border border-dashed border-border/40 rounded-lg p-3 bg-background/40">
@@ -374,7 +374,7 @@ export default function ApplyPage() {
                       niche: form.niche,
                     }}
                   />
-                  <div className="font-mono-share text-[10px] text-muted-foreground/80 leading-relaxed flex flex-col justify-center">
+                  <div className="font-mono-share text-tiny text-muted-foreground/80 leading-relaxed flex flex-col justify-center">
                     <p>Updates live as you fill the form. This is exactly how subscribers will discover you.</p>
                     {photosDone.length === 0 && (
                       <p className="mt-1 text-amber-400/80">No photo yet — initial placeholder shown.</p>
@@ -395,31 +395,31 @@ export default function ApplyPage() {
                   </div>
                 ))}
               </div>
-              <div className="font-mono-share text-[10px] tracking-widest text-muted-foreground">
+              <div className="font-mono-share text-tiny tracking-widest text-muted-foreground">
                 STEP {step + 1} / {STEPS.length} — {STEPS[step]}
               </div>
 
               {step === 0 && (
                 <div className="space-y-3">
                   <div>
-                    <Label className="font-mono-share text-[11px]">Email *</Label>
+                    <Label className="font-mono-share text-xs">Email *</Label>
                     <Input type="email" value={form.email} onChange={(e) => update("email", e.target.value)} placeholder="you@example.com" />
                   </div>
                   <div>
-                    <Label className="font-mono-share text-[11px]">Handle * (letters/numbers/underscore, 3–24)</Label>
+                    <Label className="font-mono-share text-xs">Handle * (letters/numbers/underscore, 3–24)</Label>
                     <Input value={form.handle} onChange={(e) => update("handle", e.target.value)} placeholder="luna_void" />
                   </div>
                   <div>
-                    <Label className="font-mono-share text-[11px]">Display name *</Label>
+                    <Label className="font-mono-share text-xs">Display name *</Label>
                     <Input value={form.display_name} onChange={(e) => update("display_name", e.target.value)} placeholder="Luna Void" />
                   </div>
                   <div>
-                    <Label className="font-mono-share text-[11px]">Country</Label>
+                    <Label className="font-mono-share text-xs">Country</Label>
                     <Input value={form.country} onChange={(e) => update("country", e.target.value)} placeholder="US" />
                   </div>
                   <label className="flex items-start gap-2 pt-1">
                     <Checkbox checked={form.age_confirmed} onCheckedChange={(v) => update("age_confirmed", !!v)} />
-                    <span className="font-mono-share text-[11px] text-muted-foreground leading-relaxed">
+                    <span className="font-mono-share text-xs text-muted-foreground leading-relaxed">
                       I confirm I am 18+ and will pass ID verification before going live.
                     </span>
                   </label>
@@ -428,12 +428,12 @@ export default function ApplyPage() {
 
               {step === 1 && (
                 <div className="space-y-3">
-                  <p className="font-mono-share text-[11px] text-muted-foreground">
+                  <p className="font-mono-share text-xs text-muted-foreground">
                     Add at least one social so we can verify it's really you. Public profiles only.
                   </p>
                   {(["instagram", "x", "tiktok", "onlyfans", "other"] as const).map((k) => (
                     <div key={k}>
-                      <Label className="font-mono-share text-[11px] uppercase">{k}</Label>
+                      <Label className="font-mono-share text-xs uppercase">{k}</Label>
                       <Input value={form.socials[k]} onChange={(e) => updateSocial(k, e.target.value)} placeholder={`https://...`} />
                     </div>
                   ))}
@@ -443,7 +443,7 @@ export default function ApplyPage() {
               {step === 2 && (
                 <div className="space-y-3">
                   <div>
-                    <Label className="font-mono-share text-[11px]">Pitch your persona * (min 30 chars)</Label>
+                    <Label className="font-mono-share text-xs">Pitch your persona * (min 30 chars)</Label>
                     <Textarea
                       rows={5}
                       value={form.pitch}
@@ -452,11 +452,11 @@ export default function ApplyPage() {
                     />
                   </div>
                   <div>
-                    <Label className="font-mono-share text-[11px]">Niche / category</Label>
+                    <Label className="font-mono-share text-xs">Niche / category</Label>
                     <Input value={form.niche} onChange={(e) => update("niche", e.target.value)} placeholder="cyberpunk, goth, gamer girl…" />
                   </div>
                   <div>
-                    <Label className="font-mono-share text-[11px]">Languages spoken</Label>
+                    <Label className="font-mono-share text-xs">Languages spoken</Label>
                     <Input value={form.languages} onChange={(e) => update("languages", e.target.value)} placeholder="English, Spanish" />
                   </div>
                 </div>
@@ -464,11 +464,11 @@ export default function ApplyPage() {
 
               {step === 3 && (
                 <div className="space-y-3">
-                  <p className="font-mono-share text-[11px] text-muted-foreground leading-relaxed">
+                  <p className="font-mono-share text-xs text-muted-foreground leading-relaxed">
                     Upload {MIN_PHOTOS_RECOMMENDED}–{MAX_PHOTOS} reference photos so we can confirm identity and build your AI persona. Clear face shots, varied angles. PNG/JPEG/WebP, max 8MB each.
                   </p>
                   {!user && (
-                    <div className="flex items-start gap-2 border border-amber-400/40 bg-amber-400/5 rounded p-2 font-mono-share text-[10px] text-amber-300">
+                    <div className="flex items-start gap-2 border border-amber-400/40 bg-amber-400/5 rounded p-2 font-mono-share text-tiny text-amber-300">
                       <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
                       Sign in to upload — uploads are tied to your account.
                     </div>
@@ -491,7 +491,7 @@ export default function ApplyPage() {
                     <div className="font-orbitron text-xs">
                       {photos.length >= MAX_PHOTOS ? "PHOTO LIMIT REACHED" : "DROP PHOTOS OR CLICK TO BROWSE"}
                     </div>
-                    <div className="font-mono-share text-[10px] text-muted-foreground mt-1">
+                    <div className="font-mono-share text-tiny text-muted-foreground mt-1">
                       {photos.length} / {MAX_PHOTOS} uploaded
                     </div>
                     <input
@@ -518,13 +518,13 @@ export default function ApplyPage() {
                           {p.status === "uploading" && (
                             <div className="absolute inset-0 bg-background/70 backdrop-blur-sm flex flex-col items-center justify-center gap-1">
                               <Loader2 className="w-4 h-4 animate-spin text-secondary" />
-                              <div className="font-mono-share text-[9px] text-secondary">{Math.round(p.progress)}%</div>
+                              <div className="font-mono-share text-tiny text-secondary">{Math.round(p.progress)}%</div>
                             </div>
                           )}
                           {p.status === "done" && primaryPhoto?.id === p.id && (
                             <div className="absolute top-1 left-1 bg-secondary rounded px-1.5 py-0.5 flex items-center gap-1">
                               <Star className="w-2.5 h-2.5 text-background fill-background" />
-                              <span className="font-mono-share text-[8px] tracking-widest text-background">PRIMARY</span>
+                              <span className="font-mono-share text-micro tracking-widest text-background">PRIMARY</span>
                             </div>
                           )}
                           {p.status === "done" && primaryPhoto?.id !== p.id && (
@@ -535,10 +535,10 @@ export default function ApplyPage() {
                           {p.status === "error" && (
                             <div className="absolute inset-0 bg-destructive/80 flex flex-col items-center justify-center gap-1 p-1 text-center">
                               <AlertCircle className="w-4 h-4 text-background" />
-                              <div className="font-mono-share text-[8px] text-background line-clamp-2">{p.error}</div>
+                              <div className="font-mono-share text-micro text-background line-clamp-2">{p.error}</div>
                               <button
                                 onClick={(e) => { e.stopPropagation(); retryPhoto(p.id); }}
-                                className="font-mono-share text-[9px] underline text-background"
+                                className="font-mono-share text-tiny underline text-background"
                               >
                                 Retry
                               </button>
@@ -588,7 +588,7 @@ export default function ApplyPage() {
                     </div>
                   )}
 
-                  <div className="flex items-center justify-between font-mono-share text-[10px]">
+                  <div className="flex items-center justify-between font-mono-share text-tiny">
                     <span className={photosDone.length >= MIN_PHOTOS_RECOMMENDED ? "text-green-400" : "text-muted-foreground"}>
                       {photosDone.length} uploaded · {MIN_PHOTOS_RECOMMENDED} recommended
                     </span>
@@ -599,7 +599,7 @@ export default function ApplyPage() {
 
               {step === 4 && (
                 <div className="space-y-3">
-                  <Label className="font-mono-share text-[11px]">Preferred payout method</Label>
+                  <Label className="font-mono-share text-xs">Preferred payout method</Label>
                   <div className="grid sm:grid-cols-2 gap-2">
                     {(["stripe", "xrge"] as const).map((p) => (
                       <button
@@ -609,7 +609,7 @@ export default function ApplyPage() {
                         className={`text-left p-3 rounded-lg border ${form.payout_pref === p ? "border-secondary bg-secondary/10" : "border-border/40 bg-card/30"}`}
                       >
                         <div className="font-orbitron text-xs">{p === "stripe" ? "STRIPE (USD)" : "XRGE (CRYPTO)"}</div>
-                        <div className="font-mono-share text-[10px] text-muted-foreground mt-1">
+                        <div className="font-mono-share text-tiny text-muted-foreground mt-1">
                           {p === "stripe" ? "Min $25 · manual review · 1099-K" : "Min $1 · instant to in-app bank"}
                         </div>
                       </button>
@@ -619,7 +619,7 @@ export default function ApplyPage() {
               )}
 
               {step === 5 && (
-                <div className="space-y-4 font-mono-share text-[11px] text-muted-foreground">
+                <div className="space-y-4 font-mono-share text-xs text-muted-foreground">
                   <p>Review and submit. By submitting you agree to the creator terms, content rules, and acknowledge that approval requires ID + age verification.</p>
                   <div className="border border-border/40 rounded p-3 space-y-1 text-foreground">
                     <div><span className="text-muted-foreground">Handle:</span> @{form.handle}</div>

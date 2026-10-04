@@ -153,7 +153,7 @@ export default function ApiKeysPanel({ triggerClassName }: { triggerClassName?: 
 
         {/* API docs link */}
         <div className="pt-2 border-t border-primary/10">
-          <p className="text-[10px] text-muted-foreground font-mono">
+          <p className="text-tiny text-muted-foreground font-mono">
             Use your key with <code className="text-primary">X-API-Key</code> header.
             POST to <code className="text-primary">/api/v1/generate</code> with {`{prompt, model?, n?}`}
           </p>

@@ -253,7 +253,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
         <button onClick={() => navigate(`/profile/${post.username}`)} className="shrink-0">
           <Avatar className="w-8 h-8 border border-primary/20">
             {post.avatarUrl && <AvatarImage src={post.avatarUrl} alt={post.username} />}
-            <AvatarFallback className="bg-primary/10 text-primary font-orbitron text-[10px]">
+            <AvatarFallback className="bg-primary/10 text-primary font-orbitron text-tiny">
               {post.username.slice(0, 2).toUpperCase()}
             </AvatarFallback>
           </Avatar>
@@ -268,11 +268,11 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
               {post.authorVerified && <VerifiedBadge size="xs" />}
             </span>
           </button>
-          <span className="font-mono-share text-[9px] text-muted-foreground">{timeAgo}</span>
+          <span className="font-mono-share text-tiny text-muted-foreground">{timeAgo}</span>
         </div>
         {isLocked && (
           <span
-            className="flex items-center gap-1 text-amber-300 font-mono-share text-[9px] px-1.5 py-0.5 rounded border border-amber-400/50 bg-amber-400/10"
+            className="flex items-center gap-1 text-amber-300 font-mono-share text-tiny px-1.5 py-0.5 rounded border border-amber-400/50 bg-amber-400/10"
             title="This post is locked — unlock to view full content"
           >
             <Lock className="w-3 h-3" />
@@ -284,7 +284,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
         )}
         {post.isOwner && ((post.lockCost || 0) > 0 || (post.lockPriceCents || 0) > 0 || !!(post.lockXrgeAmount && parseFloat(post.lockXrgeAmount) > 0)) && (
           <span
-            className="flex items-center gap-1 text-amber-400 font-mono-share text-[9px] px-1.5 py-0.5 rounded border border-amber-400/40 bg-amber-400/5"
+            className="flex items-center gap-1 text-amber-400 font-mono-share text-tiny px-1.5 py-0.5 rounded border border-amber-400/40 bg-amber-400/5"
             title="Other viewers see a blurred preview and must unlock to view. You always see your own post unblurred."
           >
             <Lock className="w-3 h-3" />
@@ -295,7 +295,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
           </span>
         )}
         {post.isMature && (
-          <span className="flex items-center gap-1 text-amber-300/80 font-mono-share text-[9px] px-1.5 py-0.5 rounded border border-amber-300/30">
+          <span className="flex items-center gap-1 text-amber-300/80 font-mono-share text-tiny px-1.5 py-0.5 rounded border border-amber-300/30">
             18+
           </span>
         )}
@@ -390,7 +390,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
               <Lock className="w-8 h-8 text-amber-400/60" />
               <p className="font-mono-share text-xs text-muted-foreground text-center">This content is locked by the creator</p>
               {post.previewText && post.previewImageUrl && (
-                <p className="font-mono-share text-[10px] text-white/50 italic text-center max-w-xs">{post.previewText}</p>
+                <p className="font-mono-share text-tiny text-white/50 italic text-center max-w-xs">{post.previewText}</p>
               )}
               <div className="flex gap-2 flex-wrap justify-center">
                 {(post.lockCost || 0) > 0 && (
@@ -399,7 +399,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
                     variant="outline"
                     onClick={handleUnlockCredits}
                     disabled={unlocking}
-                    className="font-mono-share text-[10px] border-amber-400/30 text-amber-400 hover:bg-amber-400/10"
+                    className="font-mono-share text-tiny border-amber-400/30 text-amber-400 hover:bg-amber-400/10"
                   >
                     <Coins className="w-3 h-3 mr-1" />
                     Unlock · {post.lockCost} credits
@@ -411,7 +411,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
                     variant="outline"
                     onClick={handleUnlockStripe}
                     disabled={unlocking}
-                    className="font-mono-share text-[10px] border-green-400/30 text-green-400 hover:bg-green-400/10"
+                    className="font-mono-share text-tiny border-green-400/30 text-green-400 hover:bg-green-400/10"
                   >
                     <CreditCard className="w-3 h-3 mr-1" />
                     Unlock · ${((post.lockPriceCents || 0) / 100).toFixed(2)}
@@ -423,7 +423,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
                     variant="outline"
                     onClick={() => setXrgeUnlockOpen(true)}
                     disabled={unlocking}
-                    className="font-mono-share text-[10px] border-secondary/30 text-secondary hover:bg-secondary/10"
+                    className="font-mono-share text-tiny border-secondary/30 text-secondary hover:bg-secondary/10"
                   >
                     <Zap className="w-3 h-3 mr-1" />
                     Unlock · {post.lockXrgeAmount} XRGE
@@ -455,10 +455,10 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
                   <div className="bg-black/70 rounded-full p-2 border border-amber-400/40">
                     <EyeOff className="w-5 h-5 text-amber-300" />
                   </div>
-                  <span className="font-mono-share text-[10px] tracking-widest text-amber-300/90">MATURE CONTENT</span>
+                  <span className="font-mono-share text-tiny tracking-widest text-amber-300/90">MATURE CONTENT</span>
                   <button
                     onClick={() => setMatureRevealed(true)}
-                    className="font-mono-share text-[10px] px-3 py-1 rounded border border-amber-400/40 text-amber-300 hover:bg-amber-400/10 transition-colors"
+                    className="font-mono-share text-tiny px-3 py-1 rounded border border-amber-400/40 text-amber-300 hover:bg-amber-400/10 transition-colors"
                   >
                     REVEAL
                   </button>
@@ -477,7 +477,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
                 onError={previewMedia.onError}
               />
               <div className="absolute inset-0 flex items-center justify-center bg-background/20">
-                <p className="font-mono-share text-[10px] text-muted-foreground tracking-widest">SIGN IN TO VIEW</p>
+                <p className="font-mono-share text-tiny text-muted-foreground tracking-widest">SIGN IN TO VIEW</p>
               </div>
             </div>
           )}
@@ -514,18 +514,18 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
           </div>
           <button
             onClick={() => setShowComments(!showComments)}
-            className="flex items-center gap-1.5 font-mono-share text-[10px] text-muted-foreground hover:text-primary transition-colors ml-3"
+            className="flex items-center gap-1.5 font-mono-share text-tiny text-muted-foreground hover:text-primary transition-colors ml-3"
           >
             <MessageCircle className="w-4 h-4" />
             {commentCount > 0 && commentCount}
           </button>
-          <span className="flex items-center gap-1 font-mono-share text-[10px] text-muted-foreground/50 ml-2">
+          <span className="flex items-center gap-1 font-mono-share text-tiny text-muted-foreground/70 ml-2">
             <Eye className="w-3.5 h-3.5" />
             {post.viewCount || 0}
           </span>
 
           {flagCount > 0 && (
-            <span className="flex items-center gap-1 font-mono-share text-[10px] text-muted-foreground/40 ml-auto" title="Reports">
+            <span className="flex items-center gap-1 font-mono-share text-tiny text-muted-foreground/60 ml-auto" title="Reports">
               <Flag className="w-3.5 h-3.5" />
               {flagCount}
             </span>

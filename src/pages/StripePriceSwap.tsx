@@ -255,7 +255,7 @@ export default function StripePriceSwap() {
                       <div className="text-muted-foreground truncate max-w-[200px]" title={cur?.value || ""}>
                         {cur?.value || <span className="text-red-400">unset</span>}
                       </div>
-                      <div className="text-[11px] mt-0.5">{fmt(cur?.info)}</div>
+                      <div className="text-xs mt-0.5">{fmt(cur?.info)}</div>
                     </td>
                     <td className="p-2">
                       <input
@@ -266,7 +266,7 @@ export default function StripePriceSwap() {
                         className="w-full bg-background border border-border rounded px-2 py-1 text-xs font-mono focus:border-cyan-500 outline-none"
                       />
                     </td>
-                    <td className={`p-2 text-[11px] ${cls}`}>
+                    <td className={`p-2 text-xs ${cls}`}>
                       {newPreview ? fmt(newPreview) : <span className="text-muted-foreground">—</span>}
                     </td>
                     <td className="p-2">
@@ -274,7 +274,7 @@ export default function StripePriceSwap() {
                         <button
                           onClick={() => testCheckout(k, draftVal.trim())}
                           disabled={busy}
-                          className="px-2 py-1 text-[11px] border border-green-500/50 text-green-400 rounded hover:bg-green-500/10 disabled:opacity-50"
+                          className="px-2 py-1 text-xs border border-green-500/50 text-green-400 rounded hover:bg-green-500/10 disabled:opacity-50"
                         >
                           test ↗
                         </button>
@@ -293,15 +293,15 @@ export default function StripePriceSwap() {
               <h2 className="text-cyan-400 text-sm">▌ env export (paste into Vercel)</h2>
               <button
                 onClick={() => navigator.clipboard.writeText(envExport)}
-                className="px-2 py-1 text-[11px] border border-border rounded hover:bg-accent"
+                className="px-2 py-1 text-xs border border-border rounded hover:bg-accent"
               >
                 copy
               </button>
             </div>
-            <pre className="text-[11px] bg-background border border-border rounded p-3 overflow-x-auto whitespace-pre">
+            <pre className="text-xs bg-background border border-border rounded p-3 overflow-x-auto whitespace-pre">
 {envExport}
             </pre>
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               Note: existing subscribers stay on their old price until they cancel/resubscribe.
             </p>
           </div>

@@ -192,7 +192,7 @@ const XrgePaymentDialog: React.FC<XrgePaymentDialogProps> = ({
             <Button
               onClick={handleClose}
               variant="outline"
-              className="font-orbitron text-[10px] tracking-wider"
+              className="font-orbitron text-tiny tracking-wider"
             >
               CLOSE
             </Button>
@@ -206,13 +206,13 @@ const XrgePaymentDialog: React.FC<XrgePaymentDialogProps> = ({
             {order.flashSale && (
               <div className="rounded-lg border border-orange-500/40 bg-orange-500/10 p-2.5 flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-orange-400 animate-pulse" />
-                <span className="font-orbitron text-[9px] tracking-wider text-orange-300">⚡ FLASH SALE — {order.flashSale.discountPercent}% OFF</span>
+                <span className="font-orbitron text-tiny tracking-wider text-orange-300">⚡ FLASH SALE — {order.flashSale.discountPercent}% OFF</span>
                 {(order.flashBonusCredits || 0) > 0 && (
-                  <span className="font-mono-share text-[9px] text-green-400">+{order.flashBonusCredits} bonus</span>
+                  <span className="font-mono-share text-tiny text-green-400">+{order.flashBonusCredits} bonus</span>
                 )}
               </div>
             )}
-            <ol className="list-decimal list-inside space-y-1 rounded border border-border/40 bg-card/40 px-3 py-2 font-mono-share text-[9px] text-muted-foreground leading-relaxed">
+            <ol className="list-decimal list-inside space-y-1 rounded border border-border/40 bg-card/40 px-3 py-2 font-mono-share text-tiny text-muted-foreground leading-relaxed">
               <li>
                 Need XRGE first?{" "}
                 <button
@@ -239,13 +239,13 @@ const XrgePaymentDialog: React.FC<XrgePaymentDialogProps> = ({
             {/* Package info with bonus */}
             <div className="border border-secondary/30 rounded-lg p-3 bg-secondary/5">
               <div className="flex items-center justify-between mb-1">
-                <span className="font-orbitron text-[10px] tracking-wider text-muted-foreground">
+                <span className="font-orbitron text-tiny tracking-wider text-muted-foreground">
                   {order.packageName} PACK
                 </span>
                 <div className="flex items-center gap-1">
                   <Clock className="w-3 h-3 text-muted-foreground" />
                   <span
-                    className={`font-mono-share text-[10px] ${
+                    className={`font-mono-share text-tiny ${
                       timeLeft === "EXPIRED" ? "text-destructive" : "text-muted-foreground"
                     }`}
                   >
@@ -261,7 +261,7 @@ const XrgePaymentDialog: React.FC<XrgePaymentDialogProps> = ({
               </div>
               <div className="flex items-center gap-1 mt-1">
                 <Gift className="w-3 h-3 text-green-400" />
-                <span className="font-mono-share text-[10px] text-green-400">
+                <span className="font-mono-share text-tiny text-green-400">
                   +{order.bonusCredits} bonus ({order.bonusPercent}%{order.loyaltyTierName ? ` · ${order.loyaltyTierName} tier` : ""})
                 </span>
               </div>
@@ -269,7 +269,7 @@ const XrgePaymentDialog: React.FC<XrgePaymentDialogProps> = ({
 
             {/* Send amount */}
             <div>
-              <label className="font-orbitron text-[9px] tracking-widest text-muted-foreground block mb-1.5">
+              <label className="font-orbitron text-tiny tracking-widest text-muted-foreground block mb-1.5">
                 SEND_EXACTLY
               </label>
               <div className="flex items-center gap-2">
@@ -293,11 +293,11 @@ const XrgePaymentDialog: React.FC<XrgePaymentDialogProps> = ({
 
             {/* Deposit address */}
             <div>
-              <label className="font-orbitron text-[9px] tracking-widest text-muted-foreground block mb-1.5">
+              <label className="font-orbitron text-tiny tracking-widest text-muted-foreground block mb-1.5">
                 TO_ADDRESS ({XRGE_CHAIN_NAME} · chain {XRGE_CHAIN_ID})
               </label>
               <div className="flex items-center gap-2">
-                <div className="flex-1 border border-primary/40 rounded bg-card/60 px-3 py-2 font-mono-share text-[11px] text-foreground/80 break-all select-all">
+                <div className="flex-1 border border-primary/40 rounded bg-card/60 px-3 py-2 font-mono-share text-xs text-foreground/80 break-all select-all">
                   {order.depositAddress}
                 </div>
                 <Button
@@ -318,7 +318,7 @@ const XrgePaymentDialog: React.FC<XrgePaymentDialogProps> = ({
                   href={basescanAddressUrl(order.depositAddress)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 font-mono-share text-[8px] text-primary/70 hover:text-primary"
+                  className="inline-flex items-center gap-1 font-mono-share text-micro text-primary/70 hover:text-primary"
                 >
                   View on Basescan
                   <ExternalLink className="w-3 h-3" />
@@ -330,7 +330,7 @@ const XrgePaymentDialog: React.FC<XrgePaymentDialogProps> = ({
               type="button"
               variant="secondary"
               onClick={copyPaymentBlock}
-              className="w-full font-mono-share text-[10px] gap-2 border border-pink-500/30 bg-pink-500/10 hover:bg-pink-500/20"
+              className="w-full font-mono-share text-tiny gap-2 border border-pink-500/30 bg-pink-500/10 hover:bg-pink-500/20"
             >
               {copied === "all" ? (
                 <>
@@ -348,7 +348,7 @@ const XrgePaymentDialog: React.FC<XrgePaymentDialogProps> = ({
             {/* Warning */}
             <div className="flex items-start gap-2 border border-yellow-600/30 rounded p-2 bg-yellow-600/5">
               <AlertTriangle className="w-4 h-4 text-yellow-500 mt-0.5 shrink-0" />
-              <p className="font-mono-share text-[9px] text-yellow-500/80 leading-relaxed">
+              <p className="font-mono-share text-tiny text-yellow-500/80 leading-relaxed">
                 Send <span className="font-bold text-yellow-500">XRGE tokens on Base chain only</span>.
                 Sending any other token or using the wrong chain will result in permanent loss.
               </p>
@@ -356,7 +356,7 @@ const XrgePaymentDialog: React.FC<XrgePaymentDialogProps> = ({
 
             {/* Transaction hash input */}
             <div>
-              <label className="font-orbitron text-[9px] tracking-widest text-muted-foreground block mb-1.5">
+              <label className="font-orbitron text-tiny tracking-widest text-muted-foreground block mb-1.5">
                 TRANSACTION_HASH
               </label>
               <Input
@@ -366,7 +366,7 @@ const XrgePaymentDialog: React.FC<XrgePaymentDialogProps> = ({
                 className="font-mono-share text-xs"
                 disabled={step === "verifying"}
               />
-              <p className="font-mono-share text-[8px] text-muted-foreground/50 mt-1">
+              <p className="font-mono-share text-micro text-muted-foreground/70 mt-1">
                 After sending, paste the transaction hash here
               </p>
             </div>
@@ -375,7 +375,7 @@ const XrgePaymentDialog: React.FC<XrgePaymentDialogProps> = ({
             {error && (
               <div className="flex items-start gap-2 border border-destructive/30 rounded p-2 bg-destructive/5">
                 <AlertTriangle className="w-3 h-3 text-destructive mt-0.5 shrink-0" />
-                <p className="font-mono-share text-[10px] text-destructive">{error}</p>
+                <p className="font-mono-share text-tiny text-destructive">{error}</p>
               </div>
             )}
 
@@ -387,7 +387,7 @@ const XrgePaymentDialog: React.FC<XrgePaymentDialogProps> = ({
                 step === "verifying" ||
                 timeLeft === "EXPIRED"
               }
-              className="w-full font-orbitron text-[10px] tracking-wider bg-secondary text-secondary-foreground hover:bg-secondary/80 gap-2"
+              className="w-full font-orbitron text-tiny tracking-wider bg-secondary text-secondary-foreground hover:bg-secondary/80 gap-2"
             >
               {step === "verifying" ? (
                 <>
@@ -405,7 +405,7 @@ const XrgePaymentDialog: React.FC<XrgePaymentDialogProps> = ({
                 href={`https://basescan.org/tx/${txHash.trim()}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-1 font-mono-share text-[9px] text-primary/60 hover:text-primary transition-colors"
+                className="flex items-center justify-center gap-1 font-mono-share text-tiny text-primary/60 hover:text-primary transition-colors"
               >
                 View on Basescan
                 <ExternalLink className="w-3 h-3" />
@@ -434,7 +434,7 @@ const XrgePaymentDialog: React.FC<XrgePaymentDialogProps> = ({
               {bonusAdded > 0 && (
                 <div className="flex items-center justify-center gap-1">
                   <Gift className="w-3 h-3 text-green-400" />
-                  <span className="font-mono-share text-[10px] text-green-400">
+                  <span className="font-mono-share text-tiny text-green-400">
                     Including {bonusAdded} bonus credits!
                   </span>
                 </div>
@@ -442,7 +442,7 @@ const XrgePaymentDialog: React.FC<XrgePaymentDialogProps> = ({
             </div>
             <Button
               onClick={handleClose}
-              className="font-orbitron text-[10px] tracking-wider bg-primary text-primary-foreground hover:bg-primary/80"
+              className="font-orbitron text-tiny tracking-wider bg-primary text-primary-foreground hover:bg-primary/80"
             >
               CLOSE
             </Button>

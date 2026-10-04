@@ -170,8 +170,8 @@ export default function ReferralPage() {
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium text-foreground">{tier.label}</p>
                       <div className="flex gap-3 mt-0.5">
-                        <span className="text-[10px] text-muted-foreground">You: <span className="text-primary">{tier.you}</span></span>
-                        <span className="text-[10px] text-muted-foreground">Friend: <span className="text-secondary">{tier.friend}</span></span>
+                        <span className="text-tiny text-muted-foreground">You: <span className="text-primary">{tier.you}</span></span>
+                        <span className="text-tiny text-muted-foreground">Friend: <span className="text-secondary">{tier.friend}</span></span>
                       </div>
                     </div>
                   </div>
@@ -196,7 +196,7 @@ export default function ReferralPage() {
                   <span className="text-foreground">Free Months Earned</span>
                   <span className="text-green-400">{stats?.freeMonthsEarned ?? 0}</span>
                 </div>
-                <p className="text-[10px] text-muted-foreground/70 pt-1 leading-snug">
+                <p className="text-tiny text-muted-foreground/70 pt-1 leading-snug">
                   Free months are auto-applied as account credit toward your next subscription renewal.
                 </p>
               </div>
@@ -232,7 +232,7 @@ export default function ReferralPage() {
                     <div key={i} className="flex items-center gap-2 py-2 border-b border-border last:border-0">
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-medium text-foreground truncate">{r.name}</p>
-                        <p className="text-[10px] text-muted-foreground">
+                        <p className="text-tiny text-muted-foreground">
                           {new Date(r.joinedAt).toLocaleDateString()}
                         </p>
                       </div>
@@ -264,14 +264,14 @@ function StatCard({ icon: Icon, label, value, color }: { icon: any; label: strin
     <Card className="p-3 text-center border-border bg-card">
       <Icon className={`w-5 h-5 mx-auto mb-1 ${color}`} />
       <div className="text-lg font-bold text-foreground font-[Orbitron]">{value}</div>
-      <div className="text-[10px] text-muted-foreground uppercase tracking-wider">{label}</div>
+      <div className="text-tiny text-muted-foreground uppercase tracking-wider">{label}</div>
     </Card>
   );
 }
 
 function Badgelet({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <span className={`text-[9px] font-mono tracking-wider border rounded px-1.5 py-0.5 ${className || ""}`}>
+    <span className={`text-tiny font-mono tracking-wider border rounded px-1.5 py-0.5 ${className || ""}`}>
       {children}
     </span>
   );

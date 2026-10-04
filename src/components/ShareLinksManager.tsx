@@ -93,13 +93,13 @@ export default function ShareLinksManager({
           </DialogTitle>
         </DialogHeader>
 
-        <p className="font-mono-share text-[10px] text-muted-foreground">
+        <p className="font-mono-share text-tiny text-muted-foreground">
           Every public /s/ link you've created, on any device. Revoking one
           permanently deletes the page and its media file from our servers.
         </p>
 
         <div className="flex items-center justify-between gap-2">
-          <Button variant="outline" size="sm" onClick={load} disabled={loading} className="font-mono-share text-[10px] h-7 gap-1.5">
+          <Button variant="outline" size="sm" onClick={load} disabled={loading} className="font-mono-share text-tiny h-7 gap-1.5">
             {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
             REFRESH
           </Button>
@@ -109,7 +109,7 @@ export default function ShareLinksManager({
               size="sm"
               onClick={revokeAll}
               disabled={revoking !== null}
-              className="font-mono-share text-[10px] h-7 gap-1.5"
+              className="font-mono-share text-tiny h-7 gap-1.5"
             >
               {revoking === "all" ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
               REVOKE ALL ({shares.length})
@@ -118,11 +118,11 @@ export default function ShareLinksManager({
         </div>
 
         {shares === null ? (
-          <p className="font-mono-share text-[11px] text-muted-foreground/60 py-4 text-center">
+          <p className="font-mono-share text-xs text-muted-foreground/60 py-4 text-center">
             {loading ? "Loading…" : "Could not load."}
           </p>
         ) : shares.length === 0 ? (
-          <p className="font-mono-share text-[11px] text-muted-foreground/60 py-4 text-center">
+          <p className="font-mono-share text-xs text-muted-foreground/60 py-4 text-center">
             No active share links. 🎉
           </p>
         ) : (
@@ -130,8 +130,8 @@ export default function ShareLinksManager({
             {shares.map((s) => (
               <div key={s.shareId} className="flex items-center gap-2 border border-border/30 rounded-md px-2.5 py-1.5">
                 <div className="flex-1 min-w-0">
-                  <div className="font-mono-share text-[11px] text-foreground truncate">/s/{s.shareId}</div>
-                  <div className="font-mono-share text-[9px] text-muted-foreground">
+                  <div className="font-mono-share text-xs text-foreground truncate">/s/{s.shareId}</div>
+                  <div className="font-mono-share text-tiny text-muted-foreground">
                     {s.mediaType.toUpperCase()} · {fmtDate(s.createdAt)}
                   </div>
                 </div>
@@ -156,7 +156,7 @@ export default function ShareLinksManager({
                   size="sm"
                   onClick={() => revokeOne(s.shareId)}
                   disabled={revoking !== null}
-                  className="h-7 px-2 text-destructive hover:bg-destructive/10 font-mono-share text-[9px] gap-1"
+                  className="h-7 px-2 text-destructive hover:bg-destructive/10 font-mono-share text-tiny gap-1"
                 >
                   {revoking === s.shareId ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
                   REVOKE

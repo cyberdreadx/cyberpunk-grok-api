@@ -93,7 +93,7 @@ function ElapsedTimer({ startTime }: { startTime: number }) {
     const iv = setInterval(() => setElapsed(Math.floor((Date.now() - startTime) / 1000)), 1000);
     return () => clearInterval(iv);
   }, [startTime]);
-  return <span className="font-mono-share text-[9px] text-muted-foreground/50 tabular-nums">{elapsed}s</span>;
+  return <span className="font-mono-share text-tiny text-muted-foreground/70 tabular-nums">{elapsed}s</span>;
 }
 
 export default function Characters() {
@@ -767,7 +767,7 @@ export default function Characters() {
           </h1>
           {view === "gallery" && (
             <button onClick={() => openCreator()}
-              className="ml-auto flex items-center gap-1.5 px-3 py-1.5 bg-secondary/20 border border-secondary/40 rounded font-mono-share text-[10px] text-secondary hover:bg-secondary/30 transition-colors">
+              className="ml-auto flex items-center gap-1.5 px-3 py-1.5 bg-secondary/20 border border-secondary/40 rounded font-mono-share text-tiny text-secondary hover:bg-secondary/30 transition-colors">
               <Plus className="w-3 h-3" /> NEW
             </button>
           )}
@@ -775,13 +775,13 @@ export default function Characters() {
             <div className="ml-auto flex items-center gap-2">
               {confirmClear ? (
                 <div className="flex items-center gap-1.5 animate-in fade-in">
-                  <span className="font-mono-share text-[9px] text-red-400">Delete all messages?</span>
+                  <span className="font-mono-share text-tiny text-red-400">Delete all messages?</span>
                   <button onClick={handleClearChat}
-                    className="px-2 py-1 bg-red-500/20 border border-red-500/50 rounded font-mono-share text-[9px] text-red-400 hover:bg-red-500/30 transition-colors">
+                    className="px-2 py-1 bg-red-500/20 border border-red-500/50 rounded font-mono-share text-tiny text-red-400 hover:bg-red-500/30 transition-colors">
                     YES
                   </button>
                   <button onClick={() => setConfirmClear(false)}
-                    className="px-2 py-1 bg-card/60 border border-border rounded font-mono-share text-[9px] text-muted-foreground hover:text-foreground transition-colors">
+                    className="px-2 py-1 bg-card/60 border border-border rounded font-mono-share text-tiny text-muted-foreground hover:text-foreground transition-colors">
                     NO
                   </button>
                 </div>
@@ -808,7 +808,7 @@ export default function Characters() {
                 <button
                   key={tab.id}
                   onClick={() => setGalleryTab(tab.id)}
-                  className={`px-3 py-2 font-orbitron text-[10px] tracking-wider transition-colors border-b-2 -mb-[1px] ${
+                  className={`px-3 py-2 font-orbitron text-tiny tracking-wider transition-colors border-b-2 -mb-[1px] ${
                     galleryTab === tab.id
                       ? "text-secondary border-secondary"
                       : "text-muted-foreground/60 border-transparent hover:text-foreground"
@@ -840,12 +840,12 @@ export default function Characters() {
                         <img src={c.portrait_url} alt={c.name} className="w-full aspect-[3/4] object-cover" />
                       ) : (
                         <div className="w-full aspect-[3/4] bg-gradient-to-br from-purple-900/30 to-cyan-900/30 flex items-center justify-center">
-                          <MessageSquare className="w-10 h-10 text-muted-foreground/30" />
+                          <MessageSquare className="w-10 h-10 text-muted-foreground/60" />
                         </div>
                       )}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
                       {c.is_public && (
-                        <span className="absolute top-2 left-2 px-1.5 py-0.5 rounded-full bg-cyan-500/20 border border-cyan-400/40 font-mono-share text-[8px] text-cyan-300 uppercase tracking-wider">
+                        <span className="absolute top-2 left-2 px-1.5 py-0.5 rounded-full bg-cyan-500/20 border border-cyan-400/40 font-mono-share text-micro text-cyan-300 uppercase tracking-wider">
                           public
                         </span>
                       )}
@@ -853,7 +853,7 @@ export default function Characters() {
                         <h3 className="font-orbitron text-xs tracking-wider text-foreground truncate">{c.name}</h3>
                         <div className="flex flex-wrap gap-1 mt-1">
                           {(c.traits || []).slice(0, 3).map(t => (
-                            <span key={t} className="px-1.5 py-0.5 bg-secondary/20 border border-secondary/30 rounded-full font-mono-share text-[7px] text-secondary/80">
+                            <span key={t} className="px-1.5 py-0.5 bg-secondary/20 border border-secondary/30 rounded-full font-mono-share text-micro text-secondary/80">
                               {t}
                             </span>
                           ))}
@@ -863,11 +863,11 @@ export default function Characters() {
                         {confirmDeleteId === c.id ? (
                           <>
                             <button onClick={(e) => { e.stopPropagation(); handleDelete(c.id); }}
-                              className="px-2 py-1 bg-red-500/30 rounded border border-red-500/50 font-mono-share text-[9px] text-red-400 hover:bg-red-500/40 transition-colors">
+                              className="px-2 py-1 bg-red-500/30 rounded border border-red-500/50 font-mono-share text-tiny text-red-400 hover:bg-red-500/40 transition-colors">
                               DELETE
                             </button>
                             <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(null); }}
-                              className="px-2 py-1 bg-black/70 rounded border border-border font-mono-share text-[9px] text-muted-foreground hover:text-foreground transition-colors">
+                              className="px-2 py-1 bg-black/70 rounded border border-border font-mono-share text-tiny text-muted-foreground hover:text-foreground transition-colors">
                               CANCEL
                             </button>
                           </>
@@ -897,7 +897,7 @@ export default function Characters() {
                 <div className="text-center py-20 space-y-2">
                   <Sparkles className="w-12 h-12 mx-auto text-secondary/30" />
                   <p className="font-mono-share text-sm text-muted-foreground">No public characters yet</p>
-                  <p className="font-mono-share text-[10px] text-muted-foreground/60">Be the first — toggle "Allow others to chat" when creating one.</p>
+                  <p className="font-mono-share text-tiny text-muted-foreground/60">Be the first — toggle "Allow others to chat" when creating one.</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -908,18 +908,18 @@ export default function Characters() {
                         <img src={c.portrait_url} alt={c.name} className="w-full aspect-[3/4] object-cover" />
                       ) : (
                         <div className="w-full aspect-[3/4] bg-gradient-to-br from-cyan-900/30 to-purple-900/30 flex items-center justify-center">
-                          <MessageSquare className="w-10 h-10 text-muted-foreground/30" />
+                          <MessageSquare className="w-10 h-10 text-muted-foreground/60" />
                         </div>
                       )}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
                       <div className="absolute bottom-0 left-0 right-0 p-3">
                         <h3 className="font-orbitron text-xs tracking-wider text-foreground truncate">{c.name}</h3>
                         {c.author_username && (
-                          <p className="font-mono-share text-[8px] text-cyan-300/70 truncate">by @{c.author_username}</p>
+                          <p className="font-mono-share text-micro text-cyan-300/70 truncate">by @{c.author_username}</p>
                         )}
                         <div className="flex flex-wrap gap-1 mt-1">
                           {(c.traits || []).slice(0, 3).map(t => (
-                            <span key={t} className="px-1.5 py-0.5 bg-secondary/20 border border-secondary/30 rounded-full font-mono-share text-[7px] text-secondary/80">
+                            <span key={t} className="px-1.5 py-0.5 bg-secondary/20 border border-secondary/30 rounded-full font-mono-share text-micro text-secondary/80">
                               {t}
                             </span>
                           ))}
@@ -949,8 +949,8 @@ export default function Characters() {
               ) : (
                 <button onClick={() => portraitRef.current?.click()}
                   className="w-32 h-32 mx-auto rounded-full border-2 border-dashed border-border hover:border-secondary/40 flex flex-col items-center justify-center gap-1 transition-colors">
-                  <Image className="w-6 h-6 text-muted-foreground/40" />
-                  <span className="font-mono-share text-[8px] text-muted-foreground/40">PORTRAIT</span>
+                  <Image className="w-6 h-6 text-muted-foreground/60" />
+                  <span className="font-mono-share text-micro text-muted-foreground/60">PORTRAIT</span>
                 </button>
               )}
               <input ref={portraitRef} type="file" accept="image/*,.heic,.heif,.hif,.mov,video/quicktime" onChange={handlePortrait} className="hidden" />
@@ -958,7 +958,7 @@ export default function Characters() {
 
             {/* Name */}
             <div>
-              <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">NAME</label>
+              <label className="font-mono-share text-tiny text-muted-foreground/70 mb-1 block">NAME</label>
               <input type="text" value={name} onChange={e => setName(e.target.value)} maxLength={100}
                 placeholder="e.g. Luna, Kai, Sasha..."
                 className="w-full bg-card/60 border border-border rounded px-3 py-2 text-sm font-mono-share text-foreground placeholder-muted-foreground/40" />
@@ -966,7 +966,7 @@ export default function Characters() {
 
             {/* Personality */}
             <div>
-              <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">PERSONALITY</label>
+              <label className="font-mono-share text-tiny text-muted-foreground/70 mb-1 block">PERSONALITY</label>
               <textarea value={personality} onChange={e => setPersonality(e.target.value)} maxLength={2000} rows={4}
                 placeholder="Describe their personality, backstory, how they talk..."
                 className="w-full bg-card/60 border border-border rounded px-3 py-2 text-sm font-mono-share text-foreground placeholder-muted-foreground/40 resize-none" />
@@ -974,11 +974,11 @@ export default function Characters() {
 
             {/* Traits */}
             <div>
-              <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">TRAITS</label>
+              <label className="font-mono-share text-tiny text-muted-foreground/70 mb-1 block">TRAITS</label>
               <div className="flex flex-wrap gap-1.5">
                 {TRAIT_OPTIONS.map(t => (
                   <button key={t} onClick={() => toggleTrait(t)}
-                    className={`px-2.5 py-1 rounded-full font-mono-share text-[9px] border transition-all ${traits.includes(t)
+                    className={`px-2.5 py-1 rounded-full font-mono-share text-tiny border transition-all ${traits.includes(t)
                       ? "bg-secondary/20 border-secondary/50 text-secondary"
                       : "bg-card/40 border-border text-muted-foreground/60 hover:border-muted-foreground/40"
                       }`}>
@@ -990,7 +990,7 @@ export default function Characters() {
 
             {/* AI Backend selector */}
             <div>
-              <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">AI BACKEND</label>
+              <label className="font-mono-share text-tiny text-muted-foreground/70 mb-1 block">AI BACKEND</label>
               <div className="grid grid-cols-2 gap-2">
                 {[
                   { v: "deepseek", label: "DEEPSEEK", hint: "uncensored · richer roleplay" },
@@ -1006,8 +1006,8 @@ export default function Characters() {
                         : "bg-card/40 border-border text-muted-foreground/70 hover:border-muted-foreground/40"
                     }`}
                   >
-                    <div className="font-orbitron text-[10px] tracking-wider">{opt.label}</div>
-                    <div className="font-mono-share text-[9px] opacity-70 mt-0.5">{opt.hint}</div>
+                    <div className="font-orbitron text-tiny tracking-wider">{opt.label}</div>
+                    <div className="font-mono-share text-tiny opacity-70 mt-0.5">{opt.hint}</div>
                   </button>
                 ))}
               </div>
@@ -1022,8 +1022,8 @@ export default function Characters() {
                 className="mt-0.5 w-4 h-4 accent-cyan-400"
               />
               <div className="flex-1">
-                <div className="font-orbitron text-[10px] tracking-wider text-foreground">ALLOW OTHERS TO CHAT</div>
-                <p className="font-mono-share text-[9px] text-muted-foreground/70 mt-0.5">
+                <div className="font-orbitron text-tiny tracking-wider text-foreground">ALLOW OTHERS TO CHAT</div>
+                <p className="font-mono-share text-tiny text-muted-foreground/70 mt-0.5">
                   Publish this character so other users can find them in the Public tab and start their own conversations. Their chat history stays on their own device — your character data (personality, portrait, traits) becomes visible.
                 </p>
               </div>
@@ -1051,7 +1051,7 @@ export default function Characters() {
               )}
               <div>
                 <h3 className="font-orbitron text-xs tracking-wider">{activeChar.name}</h3>
-                <p className="font-mono-share text-[8px] text-muted-foreground/60">AI companion</p>
+                <p className="font-mono-share text-micro text-muted-foreground/60">AI companion</p>
               </div>
             </div>
 
@@ -1059,7 +1059,7 @@ export default function Characters() {
             <div className="flex-1 overflow-y-auto space-y-3 pb-3 min-h-0">
               {messages.length === 0 && (
                 <div className="text-center py-10">
-                  <p className="font-mono-share text-xs text-muted-foreground/50">Say hello to {activeChar.name}</p>
+                  <p className="font-mono-share text-xs text-muted-foreground/70">Say hello to {activeChar.name}</p>
                 </div>
               )}
               {messages.map((msg, i) => {
@@ -1080,14 +1080,14 @@ export default function Characters() {
                         <div className={`absolute ${msg.role === "user" ? "right-0" : "left-0"} -top-8 flex items-center gap-1 bg-card/95 border border-border rounded-md px-1.5 py-1 shadow-lg z-10 animate-in fade-in slide-in-from-bottom-1 duration-150`}>
                           <button
                             onClick={(e) => { e.stopPropagation(); handleDeleteMessage(i); }}
-                            className="flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-mono-share text-red-400 hover:bg-red-500/20 transition-colors"
+                            className="flex items-center gap-1 px-2 py-0.5 rounded text-tiny font-mono-share text-red-400 hover:bg-red-500/20 transition-colors"
                           >
                             <Trash2 className="w-3 h-3" /> DEL
                           </button>
                           {msg.mediaUrl && (
                             <button
                               onClick={(e) => { e.stopPropagation(); handleSaveMedia(msg); }}
-                              className="flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-mono-share text-secondary hover:bg-secondary/20 transition-colors"
+                              className="flex items-center gap-1 px-2 py-0.5 rounded text-tiny font-mono-share text-secondary hover:bg-secondary/20 transition-colors"
                             >
                               <Download className="w-3 h-3" /> SAVE
                             </button>
@@ -1109,11 +1109,11 @@ export default function Characters() {
                             <div className="absolute inset-0 border-2 border-secondary/20 rounded-full" />
                             <div className="absolute inset-0 border-2 border-secondary border-t-transparent rounded-full animate-spin" />
                           </div>
-                          <span className="font-mono-share text-[10px] text-secondary/70">{genPhase}</span>
+                          <span className="font-mono-share text-tiny text-secondary/70">{genPhase}</span>
                           <ElapsedTimer startTime={msg.timestamp} />
                         </div>
                       ) : msg.content ? (
-                        <p className="font-mono-share text-[11px] leading-relaxed whitespace-pre-wrap">
+                        <p className="font-mono-share text-xs leading-relaxed whitespace-pre-wrap">
                           {msg.content
                             .replace(/\[(attached image|attached video)\]/gi, "")
                             .replace(/\[MEDIA_IMAGE\].*?\[\/MEDIA_IMAGE\]/gs, "")
@@ -1145,7 +1145,7 @@ export default function Characters() {
             {pendingImage && (
               <div className="flex items-center gap-2 px-2 py-1.5 bg-card/40 border border-border rounded-t-lg shrink-0">
                 <img src={pendingImage} alt="Attached" className="w-12 h-12 rounded object-cover border border-secondary/30" />
-                <span className="font-mono-share text-[9px] text-muted-foreground flex-1">Reference image attached</span>
+                <span className="font-mono-share text-tiny text-muted-foreground flex-1">Reference image attached</span>
                 <button onClick={() => setPendingImage(null)} className="p-1 hover:text-red-400 transition-colors">
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -1157,15 +1157,15 @@ export default function Characters() {
               <div className="shrink-0 px-2 py-2 space-y-1.5 border-b border-border/60">
                 <div className="flex items-center gap-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-secondary" />
-                  <span className="font-mono-share text-[9px] text-secondary/70">Flux 2 Klein Edit + LoRA</span>
+                  <span className="font-mono-share text-tiny text-secondary/70">Flux 2 Klein Edit + LoRA</span>
                 </div>
                 <div>
-                  <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">LoRA (optional)</label>
+                  <label className="font-mono-share text-tiny text-muted-foreground/70 mb-1 block">LoRA (optional)</label>
                   <select value={editLora} onChange={(e) => {
                     if (isNsfwLora(e.target.value) && !comfyModels.xrgeHolder && e.target.value !== "none") return;
                     setEditLora(e.target.value);
                   }}
-                    className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-[10px] font-mono-share text-foreground">
+                    className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-tiny font-mono-share text-foreground">
                     <option value="none">None</option>
                     {comfyModels.editLoras.map((l) => (
                       <option key={l} value={l}
@@ -1177,7 +1177,7 @@ export default function Characters() {
                   </select>
                   {editLora !== "none" && (
                     <div className="mt-1.5">
-                      <label className="font-mono-share text-[8px] text-muted-foreground/60 flex items-center justify-between">
+                      <label className="font-mono-share text-micro text-muted-foreground/60 flex items-center justify-between">
                         <span>STRENGTH</span>
                         <span>{editLoraStrength.toFixed(1)}</span>
                       </label>
@@ -1187,7 +1187,7 @@ export default function Characters() {
                     </div>
                   )}
                   {!comfyModels.xrgeHolder && comfyModels.editLoras.some(isNsfwLora) && (
-                    <p className="font-mono-share text-[8px] text-pink-400/60 mt-1">
+                    <p className="font-mono-share text-micro text-pink-400/60 mt-1">
                       🔒 NSFW LoRAs unlocked for <span className="text-pink-400">$XRGE</span> holders
                     </p>
                   )}
@@ -1197,17 +1197,17 @@ export default function Characters() {
 
             {/* Negative prompt */}
             <div className="shrink-0 px-2 py-2 border-b border-border/60">
-              <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Negative prompt (optional)</label>
+              <label className="font-mono-share text-tiny text-muted-foreground/70 mb-1 block">Negative prompt (optional)</label>
               <input
                 type="text"
                 value={negPrompt}
                 onChange={(e) => setNegPrompt(e.target.value)}
                 placeholder="ugly, blurry, watermark..."
-                className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-[10px] font-mono-share text-foreground placeholder:text-muted-foreground/30"
+                className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-tiny font-mono-share text-foreground placeholder:text-muted-foreground/60"
               />
               {negPrompt && (
                 <button onClick={() => setNegPrompt("")}
-                  className="mt-1 font-mono-share text-[8px] text-muted-foreground/50 hover:text-red-400 transition-colors">
+                  className="mt-1 font-mono-share text-micro text-muted-foreground/70 hover:text-red-400 transition-colors">
                   clear
                 </button>
               )}

@@ -72,16 +72,16 @@ export default function EarnCreditsCard({ user, onCreditsRefresh }: Props) {
         <Zap className="w-4 h-4" />
         Earn Credits
       </div>
-      <p className="text-[10px] text-muted-foreground leading-snug">
+      <p className="text-tiny text-muted-foreground leading-snug">
         Post content, get real engagement. Likes, upvotes &amp; comments you{" "}
         <span className="text-primary">receive</span> become credits — {status.qualifiedKarma} engagement karma so far.
       </p>
 
       {status.eligibilityReason === "verify_email" && (
-        <p className="text-[10px] text-yellow-400">Verify your email to start earning.</p>
+        <p className="text-tiny text-yellow-400">Verify your email to start earning.</p>
       )}
       {status.eligibilityReason === "account_too_new" && (
-        <p className="text-[10px] text-yellow-400">Earning unlocks 3 days after signup.</p>
+        <p className="text-tiny text-yellow-400">Earning unlocks 3 days after signup.</p>
       )}
 
       {/* Weekly engagement payout */}
@@ -89,7 +89,7 @@ export default function EarnCreditsCard({ user, onCreditsRefresh }: Props) {
         size="sm"
         onClick={() => claim({ action: "claim_weekly" }, "weekly", status.weekly.available)}
         disabled={!weeklyClaimable || claiming !== null}
-        className="w-full h-8 text-[11px] bg-primary/20 border border-primary/40 text-primary hover:bg-primary/30 disabled:opacity-50"
+        className="w-full h-8 text-xs bg-primary/20 border border-primary/40 text-primary hover:bg-primary/30 disabled:opacity-50"
       >
         {claiming === "weekly" ? (
           <Loader2 className="w-3 h-3 animate-spin mr-1" />
@@ -112,7 +112,7 @@ export default function EarnCreditsCard({ user, onCreditsRefresh }: Props) {
           size="sm"
           onClick={() => claim({ action: "claim_milestone", threshold: m.threshold }, `ms_${m.threshold}`, m.credits)}
           disabled={!status.eligible || claiming !== null}
-          className="w-full h-8 text-[11px] bg-secondary/20 border border-secondary/40 text-secondary-foreground hover:bg-secondary/30 disabled:opacity-50"
+          className="w-full h-8 text-xs bg-secondary/20 border border-secondary/40 text-secondary-foreground hover:bg-secondary/30 disabled:opacity-50"
         >
           {claiming === `ms_${m.threshold}` ? (
             <Loader2 className="w-3 h-3 animate-spin mr-1" />
@@ -123,7 +123,7 @@ export default function EarnCreditsCard({ user, onCreditsRefresh }: Props) {
         </Button>
       ))}
       {claimableMilestones.length === 0 && nextMilestone && (
-        <p className="text-[10px] text-muted-foreground">
+        <p className="text-tiny text-muted-foreground">
           <Trophy className="w-3 h-3 inline mr-1" />
           Next milestone: {nextMilestone.threshold} karma → +{nextMilestone.credits} ⚡
           ({status.qualifiedKarma}/{nextMilestone.threshold})

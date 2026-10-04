@@ -68,21 +68,21 @@ export default function CreatorPersonaChatPanel() {
         <MessageSquare className="w-4 h-4 text-secondary" />
         <h3 className="font-orbitron text-xs tracking-wider text-foreground">CREATOR PERSONA CHAT</h3>
       </div>
-      <p className="font-mono-share text-[10px] text-muted-foreground leading-relaxed">
+      <p className="font-mono-share text-tiny text-muted-foreground leading-relaxed">
         Link one published character as your official AI persona. Fans see a chat button on your profile and in the creators directory.
         First 3 messages per day with your persona are free for each fan; then 1 credit per reply (discounts apply).
       </p>
 
       {loading ? (
-        <p className="font-mono-share text-[10px] text-muted-foreground">Loading…</p>
+        <p className="font-mono-share text-tiny text-muted-foreground">Loading…</p>
       ) : published.length === 0 ? (
-        <p className="font-mono-share text-[10px] text-amber-400/90">
+        <p className="font-mono-share text-tiny text-amber-400/90">
           Publish a character under Characters → enable “Public”, then return here to link it.
         </p>
       ) : (
         <>
           <div className="space-y-1">
-            <Label className="font-mono-share text-[9px] text-muted-foreground">Official persona</Label>
+            <Label className="font-mono-share text-tiny text-muted-foreground">Official persona</Label>
             <select
               className="w-full h-9 rounded-md border border-border bg-background px-2 font-mono-share text-xs"
               value={officialId || ""}
@@ -108,8 +108,8 @@ export default function CreatorPersonaChatPanel() {
           </div>
           <div className="flex items-center justify-between gap-3 pt-1">
             <div>
-              <div className="font-mono-share text-[10px] text-foreground">Fan chat enabled</div>
-              <div className="font-mono-share text-[9px] text-muted-foreground">Show chat on profile &amp; /creators</div>
+              <div className="font-mono-share text-tiny text-foreground">Fan chat enabled</div>
+              <div className="font-mono-share text-tiny text-muted-foreground">Show chat on profile &amp; /creators</div>
             </div>
             <Switch
               checked={enabled}
@@ -120,7 +120,7 @@ export default function CreatorPersonaChatPanel() {
               }}
             />
           </div>
-          <Button variant="outline" size="sm" className="font-mono-share text-[10px] h-8" asChild>
+          <Button variant="outline" size="sm" className="font-mono-share text-tiny h-8" asChild>
             <a href="/characters">Edit characters</a>
           </Button>
         </>

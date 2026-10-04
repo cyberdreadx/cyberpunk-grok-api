@@ -65,7 +65,7 @@ export default function AgeGateDialog() {
                 <button
                   type="button"
                   onClick={() => setLangOpen(!langOpen)}
-                  className="flex items-center gap-1 px-2 py-1 rounded border border-border/40 bg-background/60 hover:bg-background/80 text-[11px] font-mono-share text-muted-foreground hover:text-foreground transition-colors"
+                  className="flex items-center gap-1 px-2 py-1 rounded border border-border/40 bg-background/60 hover:bg-background/80 text-xs font-mono-share text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <Globe className="w-3 h-3" />
                   <span>{currentLang.flag}</span>
@@ -78,7 +78,7 @@ export default function AgeGateDialog() {
                         key={lang.code}
                         type="button"
                         onClick={() => { i18n.changeLanguage(lang.code); setLangOpen(false); }}
-                        className={`w-full text-left px-3 py-1.5 text-[11px] font-mono-share hover:bg-secondary/10 transition-colors flex items-center gap-2 ${
+                        className={`w-full text-left px-3 py-1.5 text-xs font-mono-share hover:bg-secondary/10 transition-colors flex items-center gap-2 ${
                           lang.code === currentLang.code ? "text-secondary bg-secondary/5" : "text-muted-foreground"
                         }`}
                       >
@@ -100,7 +100,7 @@ export default function AgeGateDialog() {
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-3 text-center" asChild>
               <div>
-                <p className="font-mono-share text-[10px] text-primary/50 animate-flicker">
+                <p className="font-mono-share text-tiny text-primary/50 animate-flicker">
                   {!isStudio && t("ageGate.subtitle")}
                 </p>
                 <p className="font-rajdhani text-sm text-foreground/70 leading-relaxed">
@@ -123,7 +123,7 @@ export default function AgeGateDialog() {
                       onChange={(e) => setAgeChecked(e.target.checked)}
                       className="mt-0.5 w-4 h-4 rounded border-2 border-secondary/40 bg-background accent-secondary cursor-pointer"
                     />
-                    <span className="font-mono-share text-[11px] text-muted-foreground group-hover:text-foreground/80 transition-colors leading-snug">
+                    <span className="font-mono-share text-xs text-muted-foreground group-hover:text-foreground/80 transition-colors leading-snug">
                       {t("ageGate.ageCheck", { age: AGE }).split(AGE).map((part, i, arr) =>
                         i < arr.length - 1 ? (
                           <span key={i}>{part}<span className="text-secondary font-bold">{AGE}</span></span>
@@ -139,7 +139,7 @@ export default function AgeGateDialog() {
                       onChange={(e) => setTosChecked(e.target.checked)}
                       className="mt-0.5 w-4 h-4 rounded border-2 border-primary/40 bg-background accent-primary cursor-pointer"
                     />
-                    <span className="font-mono-share text-[11px] text-muted-foreground group-hover:text-foreground/80 transition-colors leading-snug">
+                    <span className="font-mono-share text-xs text-muted-foreground group-hover:text-foreground/80 transition-colors leading-snug">
                       {t("ageGate.tosCheck")}{" "}
                       <button
                         type="button"
@@ -159,7 +159,7 @@ export default function AgeGateDialog() {
                       onChange={(e) => setPrivacyChecked(e.target.checked)}
                       className="mt-0.5 w-4 h-4 rounded border-2 border-secondary/40 bg-background accent-secondary cursor-pointer"
                     />
-                    <span className="font-mono-share text-[11px] text-muted-foreground group-hover:text-foreground/80 transition-colors leading-snug">
+                    <span className="font-mono-share text-xs text-muted-foreground group-hover:text-foreground/80 transition-colors leading-snug">
                       {t("ageGate.privacyCheck")}{" "}
                       <button
                         type="button"
@@ -174,7 +174,7 @@ export default function AgeGateDialog() {
                 </div>
 
                 {!isStudio && (
-                <div className="font-mono-share text-[9px] text-muted-foreground/30 border border-border/30 rounded p-2 bg-background/50 mt-2">
+                <div className="font-mono-share text-tiny text-muted-foreground/60 border border-border/30 rounded p-2 bg-background/50 mt-2">
                   <div>{">"} {t("ageGate.terminalAge")}</div>
                   <div>{">"} {t("ageGate.terminalTos")}</div>
                   <div>{">"} {allChecked ? t("ageGate.terminalReady") : t("ageGate.terminalWaiting")}</div>
@@ -190,7 +190,7 @@ export default function AgeGateDialog() {
               className={`w-full font-orbitron text-xs tracking-wider transition-all ${
                 allChecked
                   ? "bg-primary/20 border border-primary/50 text-primary hover:bg-primary/30"
-                  : "bg-muted/20 border border-border/30 text-muted-foreground/30 cursor-not-allowed"
+                  : "bg-muted/20 border border-border/30 text-muted-foreground/60 cursor-not-allowed"
               }`}
             >
               {allChecked ? t("ageGate.confirm", { context: studioCtx }) : t("ageGate.confirmDisabled", { context: studioCtx })}

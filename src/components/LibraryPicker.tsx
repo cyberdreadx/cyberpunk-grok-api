@@ -103,7 +103,7 @@ const LibraryPicker: React.FC<LibraryPickerProps> = ({
       key={id}
       type="button"
       onClick={() => setFilter(id)}
-      className={`flex items-center gap-1 shrink-0 px-2.5 py-1 rounded-full font-mono-share text-[10px] tracking-wider border transition-colors ${
+      className={`flex items-center gap-1 shrink-0 px-2.5 py-1 rounded-full font-mono-share text-tiny tracking-wider border transition-colors ${
         filter === id
           ? "border-primary/60 bg-primary/15 text-primary"
           : "border-border/40 text-muted-foreground hover:text-foreground hover:border-border"

@@ -39,7 +39,7 @@ const ModeSelector: React.FC<ModeSelectorProps> = ({ activeMode, onModeChange, i
               `}
             >
               <Icon className={`w-3.5 h-3.5 ${isActive ? "text-primary" : "text-muted-foreground/60"}`} />
-              <span className={`font-orbitron text-[9px] tracking-wider ${isActive ? "text-primary" : "text-foreground/70"}`}>
+              <span className={`font-orbitron text-tiny tracking-wider ${isActive ? "text-primary" : "text-foreground/70"}`}>
                 {t(mode.labelKey)}
               </span>
             </button>
@@ -51,7 +51,7 @@ const ModeSelector: React.FC<ModeSelectorProps> = ({ activeMode, onModeChange, i
             className="flex items-center gap-1.5 px-3 py-2 rounded border whitespace-nowrap transition-all duration-200 shrink-0 border-secondary/30 bg-card/50 active:bg-secondary/10"
           >
             <Users className="w-3.5 h-3.5 text-secondary/70" />
-            <span className="font-orbitron text-[9px] tracking-wider text-secondary/80">{t("modes.chars")}</span>
+            <span className="font-orbitron text-tiny tracking-wider text-secondary/80">{t("modes.chars")}</span>
           </a>
         )}
         <Link
@@ -60,7 +60,7 @@ const ModeSelector: React.FC<ModeSelectorProps> = ({ activeMode, onModeChange, i
           title="Hacker terminal mode"
         >
           <TerminalSquare className="w-3.5 h-3.5 text-primary" />
-          <span className="font-orbitron text-[9px] tracking-wider text-primary">TERMINAL</span>
+          <span className="font-orbitron text-tiny tracking-wider text-primary">TERMINAL</span>
         </Link>
       </div>
 
@@ -89,28 +89,28 @@ const ModeSelector: React.FC<ModeSelectorProps> = ({ activeMode, onModeChange, i
               />
 
               {/* Index number */}
-              <span className={`absolute top-2 right-2 font-mono-share text-[8px] ${isActive ? "text-primary/40" : "text-muted-foreground/15"}`}>
+              <span className={`absolute top-2 right-2 font-mono-share text-micro ${isActive ? "text-primary/40" : "text-muted-foreground/15"}`}>
                 {mode.shortcut}
               </span>
 
               <div className="flex items-center gap-2 mb-1.5">
-                <span className={`font-mono-share text-[10px] ${isActive ? "text-primary/60" : "text-muted-foreground/20"}`}>
+                <span className={`font-mono-share text-tiny ${isActive ? "text-primary/60" : "text-muted-foreground/60"}`}>
                   {isActive ? "▸" : "$"}
                 </span>
                 <Icon
                   className={`w-4 h-4 transition-colors ${
-                    isActive ? "text-primary" : "text-muted-foreground/50 group-hover:text-primary/60"
+                    isActive ? "text-primary" : "text-muted-foreground/70 group-hover:text-primary/60"
                   }`}
                 />
               </div>
               <div
-                className={`font-orbitron text-[10px] font-bold tracking-wider ${
+                className={`font-orbitron text-tiny font-bold tracking-wider ${
                   isActive ? "neon-text-cyan" : "text-foreground/80"
                 }`}
               >
                 {t(mode.labelKey)}
               </div>
-              <div className="font-mono-share text-[9px] text-muted-foreground/40 mt-0.5">
+              <div className="font-mono-share text-tiny text-muted-foreground/60 mt-0.5">
                 {t(mode.descKey)}
               </div>
             </button>
@@ -123,15 +123,15 @@ const ModeSelector: React.FC<ModeSelectorProps> = ({ activeMode, onModeChange, i
             className="relative group p-3 border rounded transition-all duration-300 text-left overflow-hidden border-border/40 hover:border-secondary/30 bg-card/30 hover:bg-card/60"
           >
             <div className="absolute top-0 left-0 right-0 h-[2px] bg-transparent group-hover:bg-secondary/30 transition-all" />
-            <span className="absolute top-2 right-2 font-mono-share text-[8px] text-muted-foreground/15">05</span>
+            <span className="absolute top-2 right-2 font-mono-share text-micro text-muted-foreground/15">05</span>
             <div className="flex items-center gap-2 mb-1.5">
-              <span className="font-mono-share text-[10px] text-muted-foreground/20">$</span>
-              <Users className="w-4 h-4 transition-colors text-muted-foreground/50 group-hover:text-secondary/70" />
+              <span className="font-mono-share text-tiny text-muted-foreground/60">$</span>
+              <Users className="w-4 h-4 transition-colors text-muted-foreground/70 group-hover:text-secondary/70" />
             </div>
-            <div className="font-orbitron text-[10px] font-bold tracking-wider text-foreground/80 group-hover:text-secondary transition-colors">
+            <div className="font-orbitron text-tiny font-bold tracking-wider text-foreground/80 group-hover:text-secondary transition-colors">
               {t("modes.characters")}
             </div>
-            <div className="font-mono-share text-[9px] text-muted-foreground/40 mt-0.5">
+            <div className="font-mono-share text-tiny text-muted-foreground/60 mt-0.5">
               {t("modes.descCharacters")}
             </div>
           </Link>
@@ -143,15 +143,15 @@ const ModeSelector: React.FC<ModeSelectorProps> = ({ activeMode, onModeChange, i
           title="Hacker terminal — type commands"
         >
           <div className="absolute top-0 left-0 right-0 h-[2px] bg-primary/60 group-hover:bg-primary transition-all" />
-          <span className="absolute top-2 right-2 font-mono-share text-[8px] text-primary/40">06</span>
+          <span className="absolute top-2 right-2 font-mono-share text-micro text-primary/40">06</span>
           <div className="flex items-center gap-2 mb-1.5">
-            <span className="font-mono-share text-[10px] text-primary/60">▸</span>
+            <span className="font-mono-share text-tiny text-primary/60">▸</span>
             <TerminalSquare className="w-4 h-4 text-primary transition-colors" />
           </div>
-          <div className="font-orbitron text-[10px] font-bold tracking-wider neon-text-cyan">
+          <div className="font-orbitron text-tiny font-bold tracking-wider neon-text-cyan">
             TERMINAL
           </div>
-          <div className="font-mono-share text-[9px] text-primary/50 mt-0.5">
+          <div className="font-mono-share text-tiny text-primary/50 mt-0.5">
             Hacker shell
           </div>
         </Link>

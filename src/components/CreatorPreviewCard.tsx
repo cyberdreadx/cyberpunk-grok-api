@@ -31,10 +31,10 @@ export default function CreatorPreviewCard({ data, pendingBadge = false, classNa
             loading="lazy"
           />
         ) : (
-          <span className="font-orbitron text-3xl text-muted-foreground/40">{initial}</span>
+          <span className="font-orbitron text-3xl text-muted-foreground/60">{initial}</span>
         )}
         {pendingBadge && (
-          <span className="absolute top-1 left-1 font-mono-share text-[8px] tracking-widest px-1.5 py-0.5 rounded bg-background/70 text-secondary border border-secondary/40">
+          <span className="absolute top-1 left-1 font-mono-share text-micro tracking-widest px-1.5 py-0.5 rounded bg-background/70 text-secondary border border-secondary/40">
             VERIFIED SOON
           </span>
         )}
@@ -49,12 +49,12 @@ export default function CreatorPreviewCard({ data, pendingBadge = false, classNa
           )}
         </div>
         {(data.username || pendingBadge) && (
-          <div className="font-mono-share text-[10px] text-muted-foreground truncate">
+          <div className="font-mono-share text-tiny text-muted-foreground truncate">
             @{data.username || "handle"}
           </div>
         )}
         {data.niche && (
-          <div className="font-mono-share text-[9px] text-secondary/70 truncate">{data.niche}</div>
+          <div className="font-mono-share text-tiny text-secondary/70 truncate">{data.niche}</div>
         )}
       </div>
     </div>

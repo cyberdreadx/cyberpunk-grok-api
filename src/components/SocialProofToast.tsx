@@ -80,7 +80,7 @@ export default function SocialProofToast() {
           )}
         </div>
         <div className="min-w-0">
-          <p className="font-mono-share text-[11px] text-foreground/90 truncate">
+          <p className="font-mono-share text-xs text-foreground/90 truncate">
             <span className="font-bold text-primary">{data.name}</span>
             {" won "}
             <span className={`font-bold ${isJackpot ? "text-yellow-400" : "neon-text-cyan"}`}>
@@ -88,7 +88,7 @@ export default function SocialProofToast() {
             </span>
             {isJackpot && " 🎉"}
           </p>
-          <p className="font-mono-share text-[9px] text-muted-foreground/50">
+          <p className="font-mono-share text-tiny text-muted-foreground/70">
             {data.time} • Daily Spin
           </p>
         </div>

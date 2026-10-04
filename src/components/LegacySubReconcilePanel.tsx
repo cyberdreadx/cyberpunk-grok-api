@@ -119,9 +119,9 @@ export default function LegacySubReconcilePanel() {
       <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
         <div className="flex items-center gap-2 mb-1">
           <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
-          <h3 className="font-orbitron text-[11px] tracking-wider text-amber-300">LEGACY SUBSCRIPTION RECONCILER</h3>
+          <h3 className="font-orbitron text-xs tracking-wider text-amber-300">LEGACY SUBSCRIPTION RECONCILER</h3>
         </div>
-        <p className="font-mono-share text-[10px] text-muted-foreground/80 leading-snug">
+        <p className="font-mono-share text-tiny text-muted-foreground/80 leading-snug">
           Scans paid Stripe invoices on price IDs NOT in the current <code>STRIPE_PRICE_SUB_*</code> env map.
           For each, computes owed credits ({summary?.creditsPerDollar || 13}/$ fallback or
           <code> STRIPE_LEGACY_PRICE_CREDITS</code> override) and shows what's still missing in
@@ -131,26 +131,26 @@ export default function LegacySubReconcilePanel() {
 
       <div className="flex flex-wrap items-end gap-2">
         <div className="flex flex-col gap-1">
-          <label className="font-mono-share text-[9px] uppercase text-muted-foreground/60">Since</label>
+          <label className="font-mono-share text-tiny uppercase text-muted-foreground/60">Since</label>
           <Input
             type="date"
             value={since}
             onChange={e => setSince(e.target.value)}
-            className="h-8 w-40 font-mono-share text-[11px]"
+            className="h-8 w-40 font-mono-share text-xs"
           />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="font-mono-share text-[9px] uppercase text-muted-foreground/60">Limit</label>
+          <label className="font-mono-share text-tiny uppercase text-muted-foreground/60">Limit</label>
           <Input
             type="number"
             min={10}
             max={500}
             value={limit}
             onChange={e => setLimit(Math.min(500, parseInt(e.target.value) || 200))}
-            className="h-8 w-24 font-mono-share text-[11px]"
+            className="h-8 w-24 font-mono-share text-xs"
           />
         </div>
-        <Button onClick={scan} disabled={scanning} size="sm" variant="outline" className="font-orbitron text-[10px] gap-1.5">
+        <Button onClick={scan} disabled={scanning} size="sm" variant="outline" className="font-orbitron text-tiny gap-1.5">
           {scanning ? <Loader2 className="w-3 h-3 animate-spin" /> : <Search className="w-3 h-3" />}
           SCAN
         </Button>
@@ -158,7 +158,7 @@ export default function LegacySubReconcilePanel() {
           onClick={apply}
           disabled={applying || selected.size === 0}
           size="sm"
-          className="font-orbitron text-[10px] gap-1.5 bg-green-600 hover:bg-green-500 text-white"
+          className="font-orbitron text-tiny gap-1.5 bg-green-600 hover:bg-green-500 text-white"
         >
           {applying ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />}
           GRANT {selectedCredits} CREDITS ({selected.size})
@@ -177,7 +177,7 @@ export default function LegacySubReconcilePanel() {
       {rows.length > 0 && (
         <div className="rounded-lg border border-border/30 overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full font-mono-share text-[10px]">
+            <table className="w-full font-mono-share text-tiny">
               <thead className="bg-card/40 border-b border-border/30">
                 <tr className="text-left text-muted-foreground/60">
                   <th className="px-2 py-1.5 w-8"></th>
@@ -202,23 +202,23 @@ export default function LegacySubReconcilePanel() {
                         onChange={() => toggle(r.invoiceId)}
                       />
                     </td>
-                    <td className="px-2 py-1.5 font-mono text-[9px] text-muted-foreground">{r.invoiceId.slice(0, 14)}…</td>
+                    <td className="px-2 py-1.5 font-mono text-tiny text-muted-foreground">{r.invoiceId.slice(0, 14)}…</td>
                     <td className="px-2 py-1.5">{fmtDate(r.createdAt)}</td>
                     <td className="px-2 py-1.5">{fmtMoney(r.amountPaidCents)}</td>
                     <td className="px-2 py-1.5">{r.owed}</td>
                     <td className="px-2 py-1.5 text-muted-foreground/60">{r.alreadyCredited}</td>
-                    <td className={`px-2 py-1.5 font-bold ${r.missing > 0 ? "text-primary" : "text-muted-foreground/40"}`}>{r.missing}</td>
+                    <td className={`px-2 py-1.5 font-bold ${r.missing > 0 ? "text-primary" : "text-muted-foreground/60"}`}>{r.missing}</td>
                     <td className="px-2 py-1.5">
                       {r.userEmail ? (
                         <span className={r.userId ? "text-foreground" : "text-amber-400"}>{r.userEmail}</span>
                       ) : (
-                        <span className="text-muted-foreground/40">{r.customerId?.slice(0, 12) || "?"}</span>
+                        <span className="text-muted-foreground/60">{r.customerId?.slice(0, 12) || "?"}</span>
                       )}
                     </td>
                     <td className="px-2 py-1.5">
                       {r.status === "ready" && <span className="text-green-400">READY</span>}
                       {r.status === "no_user" && <span className="text-amber-400 inline-flex items-center gap-1"><UserX className="w-2.5 h-2.5" />NO USER</span>}
-                      {r.status === "fully_credited" && <span className="text-muted-foreground/40 inline-flex items-center gap-1"><CheckCircle2 className="w-2.5 h-2.5" />DONE</span>}
+                      {r.status === "fully_credited" && <span className="text-muted-foreground/60 inline-flex items-center gap-1"><CheckCircle2 className="w-2.5 h-2.5" />DONE</span>}
                     </td>
                   </tr>
                 ))}
@@ -230,8 +230,8 @@ export default function LegacySubReconcilePanel() {
 
       {!scanning && rows.length === 0 && summary && (
         <div className="rounded-lg border border-border/30 bg-card/20 p-6 text-center">
-          <RefreshCw className="w-6 h-6 mx-auto mb-2 text-muted-foreground/40" />
-          <p className="font-mono-share text-[11px] text-muted-foreground/60">No legacy invoices found in this range.</p>
+          <RefreshCw className="w-6 h-6 mx-auto mb-2 text-muted-foreground/60" />
+          <p className="font-mono-share text-xs text-muted-foreground/60">No legacy invoices found in this range.</p>
         </div>
       )}
     </div>
@@ -241,7 +241,7 @@ export default function LegacySubReconcilePanel() {
 function Stat({ label, value, accent }: { label: string; value: number; accent?: string }) {
   return (
     <div className="rounded-md border border-border/30 bg-card/30 px-3 py-2">
-      <div className="font-mono-share text-[8px] uppercase tracking-wider text-muted-foreground/50">{label}</div>
+      <div className="font-mono-share text-micro uppercase tracking-wider text-muted-foreground/70">{label}</div>
       <div className={`font-orbitron text-base ${accent || "text-foreground"}`}>{value.toLocaleString()}</div>
     </div>
   );

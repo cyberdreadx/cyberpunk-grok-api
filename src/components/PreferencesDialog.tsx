@@ -171,7 +171,7 @@ const PreferencesDialog: React.FC<PreferencesDialogProps> = ({ open, onOpenChang
             <SettingsIcon className="w-4 h-4 text-primary" />
             PREFERENCES
           </DialogTitle>
-          <DialogDescription className="font-mono-share text-[10px] text-muted-foreground/70">
+          <DialogDescription className="font-mono-share text-tiny text-muted-foreground/70">
             Account-wide settings. Render-specific options live in render_config.
           </DialogDescription>
         </DialogHeader>
@@ -180,33 +180,33 @@ const PreferencesDialog: React.FC<PreferencesDialogProps> = ({ open, onOpenChang
           {/* Account — username + password (logged in only) */}
           {user && (
             <section className="space-y-3">
-              <label className="font-orbitron text-[10px] tracking-wider text-muted-foreground flex items-center gap-1.5">
+              <label className="font-orbitron text-tiny tracking-wider text-muted-foreground flex items-center gap-1.5">
                 <User className="w-3 h-3" />
                 ACCOUNT
               </label>
 
               {/* Email (read-only) */}
-              <div className="flex items-center justify-between gap-2 text-[11px] font-mono-share">
+              <div className="flex items-center justify-between gap-2 text-xs font-mono-share">
                 <span className="text-muted-foreground/60">EMAIL</span>
                 <span className="text-foreground/80 truncate">{user.email}</span>
               </div>
 
               {/* Username */}
               <div className="space-y-1.5">
-                <span className="font-mono-share text-[9px] text-muted-foreground/60">USERNAME</span>
+                <span className="font-mono-share text-tiny text-muted-foreground/60">USERNAME</span>
                 <div className="flex gap-2">
                   <input
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     placeholder="username"
                     autoComplete="username"
-                    className="flex-1 bg-card/60 border border-border rounded px-2 py-1.5 text-[11px] font-mono-share text-foreground"
+                    className="flex-1 bg-card/60 border border-border rounded px-2 py-1.5 text-xs font-mono-share text-foreground"
                   />
                   <button
                     type="button"
                     onClick={saveUsername}
                     disabled={usernameSaving}
-                    className="px-3 py-1.5 rounded text-[10px] font-mono-share border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 transition-colors disabled:opacity-50"
+                    className="px-3 py-1.5 rounded text-tiny font-mono-share border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 transition-colors disabled:opacity-50"
                   >
                     {usernameSaving ? "…" : "SAVE"}
                   </button>
@@ -215,7 +215,7 @@ const PreferencesDialog: React.FC<PreferencesDialogProps> = ({ open, onOpenChang
 
               {/* Change password */}
               <div className="space-y-1.5">
-                <span className="font-mono-share text-[9px] text-muted-foreground/60 flex items-center gap-1">
+                <span className="font-mono-share text-tiny text-muted-foreground/60 flex items-center gap-1">
                   <KeyRound className="w-3 h-3" /> CHANGE PASSWORD
                 </span>
                 <input
@@ -224,7 +224,7 @@ const PreferencesDialog: React.FC<PreferencesDialogProps> = ({ open, onOpenChang
                   value={curPw}
                   onChange={(e) => setCurPw(e.target.value)}
                   placeholder="Current password"
-                  className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-[11px] font-mono-share text-foreground"
+                  className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-xs font-mono-share text-foreground"
                 />
                 <input
                   type="password"
@@ -232,7 +232,7 @@ const PreferencesDialog: React.FC<PreferencesDialogProps> = ({ open, onOpenChang
                   value={newPw}
                   onChange={(e) => setNewPw(e.target.value)}
                   placeholder="New password (min 6)"
-                  className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-[11px] font-mono-share text-foreground"
+                  className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-xs font-mono-share text-foreground"
                 />
                 <input
                   type="password"
@@ -240,13 +240,13 @@ const PreferencesDialog: React.FC<PreferencesDialogProps> = ({ open, onOpenChang
                   value={confirmPw}
                   onChange={(e) => setConfirmPw(e.target.value)}
                   placeholder="Confirm new password"
-                  className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-[11px] font-mono-share text-foreground"
+                  className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-xs font-mono-share text-foreground"
                 />
                 <button
                   type="button"
                   onClick={savePassword}
                   disabled={pwSaving || !curPw || !newPw}
-                  className="w-full px-3 py-1.5 rounded text-[10px] font-mono-share border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 transition-colors disabled:opacity-50"
+                  className="w-full px-3 py-1.5 rounded text-tiny font-mono-share border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 transition-colors disabled:opacity-50"
                 >
                   {pwSaving ? "SAVING…" : "UPDATE PASSWORD"}
                 </button>
@@ -257,18 +257,18 @@ const PreferencesDialog: React.FC<PreferencesDialogProps> = ({ open, onOpenChang
           {/* Discord link */}
           {user && (
             <section className="space-y-2 pt-4 border-t border-border/30">
-              <label className="font-orbitron text-[10px] tracking-wider text-muted-foreground flex items-center gap-1.5">
+              <label className="font-orbitron text-tiny tracking-wider text-muted-foreground flex items-center gap-1.5">
                 <MessageSquare className="w-3 h-3" />
                 LINK DISCORD
               </label>
               {discordLinked ? (
-                <div className="flex items-center justify-between gap-2 text-[11px] font-mono-share">
+                <div className="flex items-center justify-between gap-2 text-xs font-mono-share">
                   <span className="text-green-400/80">Linked{discordId ? ` · ${discordId}` : ""}</span>
-                  <span className="text-muted-foreground/50 text-[9px]">Use /generate in the bot's DMs</span>
+                  <span className="text-muted-foreground/70 text-tiny">Use /generate in the bot's DMs</span>
                 </div>
               ) : (
                 <>
-                  <p className="font-mono-share text-[9px] text-muted-foreground/60">
+                  <p className="font-mono-share text-tiny text-muted-foreground/60">
                     Run <span className="text-primary/80">/link</span> in the GltchRunner Discord bot, then paste the code here to use your credits from Discord DMs.
                   </p>
                   <div className="flex items-center gap-2">
@@ -277,13 +277,13 @@ const PreferencesDialog: React.FC<PreferencesDialogProps> = ({ open, onOpenChang
                       value={discordCode}
                       onChange={(e) => setDiscordCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12))}
                       placeholder="LINK CODE"
-                      className="flex-1 bg-card/60 border border-border rounded px-2 py-1.5 text-[11px] font-mono-share tracking-widest text-foreground placeholder-muted-foreground/40"
+                      className="flex-1 bg-card/60 border border-border rounded px-2 py-1.5 text-xs font-mono-share tracking-widest text-foreground placeholder-muted-foreground/40"
                     />
                     <button
                       type="button"
                       onClick={linkDiscord}
                       disabled={discordLinking || !discordCode.trim()}
-                      className="px-3 py-1.5 rounded text-[10px] font-mono-share border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 transition-colors disabled:opacity-50 whitespace-nowrap"
+                      className="px-3 py-1.5 rounded text-tiny font-mono-share border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 transition-colors disabled:opacity-50 whitespace-nowrap"
                     >
                       {discordLinking ? "LINKING…" : "LINK"}
                     </button>
@@ -298,7 +298,7 @@ const PreferencesDialog: React.FC<PreferencesDialogProps> = ({ open, onOpenChang
 
           {/* Language */}
           <section className="space-y-2 pt-4 border-t border-border/30">
-            <label className="font-orbitron text-[10px] tracking-wider text-muted-foreground flex items-center gap-1.5">
+            <label className="font-orbitron text-tiny tracking-wider text-muted-foreground flex items-center gap-1.5">
               <Globe className="w-3 h-3" />
               {t("settings.language").toUpperCase()}
             </label>
@@ -327,7 +327,7 @@ const PreferencesDialog: React.FC<PreferencesDialogProps> = ({ open, onOpenChang
 
           {/* Mature content filter */}
           <section className="space-y-2 pt-4 border-t border-border/30">
-            <label className="font-orbitron text-[10px] tracking-wider text-muted-foreground flex items-center gap-1.5">
+            <label className="font-orbitron text-tiny tracking-wider text-muted-foreground flex items-center gap-1.5">
               <EyeOff className="w-3 h-3" />
               MATURE_CONTENT_FILTER
             </label>
@@ -341,7 +341,7 @@ const PreferencesDialog: React.FC<PreferencesDialogProps> = ({ open, onOpenChang
                 setMatureFilter(!matureFilter);
               }}
               disabled={!nsfwUnlocked}
-              className={`w-full flex items-center justify-between px-3 py-2 rounded-md border transition-colors font-mono-share text-[11px] ${
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-md border transition-colors font-mono-share text-xs ${
                 matureFilter
                   ? "border-amber-400/40 bg-amber-400/5 text-amber-300"
                   : "border-border/40 bg-card/40 text-muted-foreground hover:text-foreground"
@@ -349,14 +349,14 @@ const PreferencesDialog: React.FC<PreferencesDialogProps> = ({ open, onOpenChang
             >
               <span>{!nsfwUnlocked ? "Hide 18+ content (members only)" : matureFilter ? "Hide 18+ content" : "Showing 18+ content"}</span>
               <span
-                className={`text-[9px] px-1.5 py-0.5 rounded ${
+                className={`text-tiny px-1.5 py-0.5 rounded ${
                   matureFilter ? "bg-amber-400/20" : "bg-muted/40"
                 }`}
               >
                 {matureFilter ? "ON" : "OFF"}
               </span>
             </button>
-            <p className="font-mono-share text-[9px] text-muted-foreground/60 leading-relaxed">
+            <p className="font-mono-share text-tiny text-muted-foreground/60 leading-relaxed">
               On by default. The feed filters 18+ posts out server-side, so they're never
               downloaded. Stories and creator cards blur theirs until you tap REVEAL.
               {!nsfwUnlocked && " Viewing 18+ content requires any credit pack or subscription."}
@@ -366,19 +366,19 @@ const PreferencesDialog: React.FC<PreferencesDialogProps> = ({ open, onOpenChang
           {/* Admin-only: Immersion */}
           {isAdmin && (
             <section className="pt-4 border-t border-red-500/20">
-              <label className="font-orbitron text-[10px] tracking-wider text-red-400 flex items-center gap-2 mb-3">
+              <label className="font-orbitron text-tiny tracking-wider text-red-400 flex items-center gap-2 mb-3">
                 <Zap className="w-4 h-4" />
                 IMMERSION CONTROL
-                <span className="text-[9px] text-red-500/50 font-mono-share">(GLOBAL — ALL USERS)</span>
+                <span className="text-tiny text-red-500/50 font-mono-share">(GLOBAL — ALL USERS)</span>
               </label>
-              <p className="font-mono-share text-[8px] text-muted-foreground/70 mb-3 leading-relaxed">
+              <p className="font-mono-share text-micro text-muted-foreground/70 mb-3 leading-relaxed">
                 Saves to the server. Everyone loads these values; sliders debounce ~650ms before POST.
               </p>
 
               <div className="space-y-5">
                 {/* Flicker */}
                 <div>
-                  <div className="flex justify-between text-[10px] mb-1 text-muted-foreground gap-2">
+                  <div className="flex justify-between text-tiny mb-1 text-muted-foreground gap-2">
                     <span>FLICKER DEPTH (0–1)</span>
                     <span className="font-mono-share text-red-400 shrink-0">{immersion.flicker.toFixed(3)}</span>
                   </div>
@@ -395,7 +395,7 @@ const PreferencesDialog: React.FC<PreferencesDialogProps> = ({ open, onOpenChang
 
                 {/* Pulse */}
                 <div>
-                  <div className="flex justify-between text-[10px] mb-1 text-muted-foreground gap-2">
+                  <div className="flex justify-between text-tiny mb-1 text-muted-foreground gap-2">
                     <span>PULSE RATE (Hz)</span>
                     <span className="font-mono-share text-red-400 shrink-0">{immersion.pulseHz.toFixed(3)} Hz</span>
                   </div>
@@ -413,7 +413,7 @@ const PreferencesDialog: React.FC<PreferencesDialogProps> = ({ open, onOpenChang
 
                 {/* Red Shift */}
                 <div>
-                  <div className="flex justify-between text-[10px] mb-1 text-muted-foreground">
+                  <div className="flex justify-between text-tiny mb-1 text-muted-foreground">
                     <span>RED SHIFT (hue)</span>
                     <span className="font-mono-share text-red-400">{immersion.redShift.toFixed(1)}</span>
                   </div>
@@ -430,7 +430,7 @@ const PreferencesDialog: React.FC<PreferencesDialogProps> = ({ open, onOpenChang
 
                 {/* Glow */}
                 <div>
-                  <div className="flex justify-between text-[10px] mb-1 text-muted-foreground">
+                  <div className="flex justify-between text-tiny mb-1 text-muted-foreground">
                     <span>GLOW / BRIGHTNESS BIAS</span>
                     <span className="font-mono-share text-red-400">{immersion.glow.toFixed(3)}</span>
                   </div>
@@ -447,7 +447,7 @@ const PreferencesDialog: React.FC<PreferencesDialogProps> = ({ open, onOpenChang
 
                 {/* Scanline */}
                 <div>
-                  <div className="flex justify-between text-[10px] mb-1 text-muted-foreground">
+                  <div className="flex justify-between text-tiny mb-1 text-muted-foreground">
                     <span>SCANLINE WEIGHT</span>
                     <span className="font-mono-share text-red-400">{immersion.scanline.toFixed(3)}</span>
                   </div>
@@ -464,7 +464,7 @@ const PreferencesDialog: React.FC<PreferencesDialogProps> = ({ open, onOpenChang
 
                 {/* Vignette */}
                 <div>
-                  <div className="flex justify-between text-[10px] mb-1 text-muted-foreground">
+                  <div className="flex justify-between text-tiny mb-1 text-muted-foreground">
                     <span>VIGNETTE</span>
                     <span className="font-mono-share text-red-400">{immersion.vignette.toFixed(3)}</span>
                   </div>

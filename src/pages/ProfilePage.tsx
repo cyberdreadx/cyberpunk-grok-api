@@ -327,7 +327,7 @@ const ProfilePage: React.FC = () => {
               {editing ? (
                 <div className="space-y-3">
                   <div>
-                    <label className="font-mono-share text-[10px] text-muted-foreground">USERNAME</label>
+                    <label className="font-mono-share text-tiny text-muted-foreground">USERNAME</label>
                     <Input
                       value={editUsername}
                       onChange={(e) => setEditUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))}
@@ -336,7 +336,7 @@ const ProfilePage: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="font-mono-share text-[10px] text-muted-foreground">BIO</label>
+                    <label className="font-mono-share text-tiny text-muted-foreground">BIO</label>
                     <Textarea
                       value={editBio}
                       onChange={(e) => setEditBio(e.target.value)}
@@ -344,10 +344,10 @@ const ProfilePage: React.FC = () => {
                       rows={3}
                       className="font-mono-share text-sm bg-input/50 resize-none"
                     />
-                    <span className="font-mono-share text-[9px] text-muted-foreground">{editBio.length}/300</span>
+                    <span className="font-mono-share text-tiny text-muted-foreground">{editBio.length}/300</span>
                   </div>
                   <div>
-                    <label className="font-mono-share text-[10px] text-muted-foreground flex items-center gap-1">
+                    <label className="font-mono-share text-tiny text-muted-foreground flex items-center gap-1">
                       <Wallet className="w-3 h-3" /> WALLET_ADDRESS (Base chain)
                     </label>
                     {/* Read-only: the same column feeds holder tiers, so it can only
@@ -361,20 +361,20 @@ const ProfilePage: React.FC = () => {
                       maxLength={42}
                       className="h-8 font-mono-share text-xs bg-input/50 read-only:opacity-70 read-only:cursor-not-allowed"
                     />
-                    <span className="font-mono-share text-[8px] text-muted-foreground/50">
+                    <span className="font-mono-share text-micro text-muted-foreground/70">
                       {editWallet
                         ? "Receives instant XRGE payouts from locked content · clear this field to unbind"
                         : "Connect & verify in the $XRGE bank to set a payout wallet"}
                     </span>
                   </div>
                   <div>
-                    <label className="font-mono-share text-[10px] text-muted-foreground flex items-center gap-1">
+                    <label className="font-mono-share text-tiny text-muted-foreground flex items-center gap-1">
                       <LinkIcon className="w-3 h-3" /> SOCIAL LINKS
                     </label>
                     <div className="space-y-1.5 mt-1">
                       {SOCIAL_KEYS.map((k) => (
                         <div key={k} className="flex items-center gap-2">
-                          <span className="font-mono-share text-[9px] text-muted-foreground w-16 shrink-0">{SOCIAL_META[k].label}</span>
+                          <span className="font-mono-share text-tiny text-muted-foreground w-16 shrink-0">{SOCIAL_META[k].label}</span>
                           <Input
                             value={editSocials[k] || ""}
                             onChange={(e) => setEditSocials((s) => ({ ...s, [k]: e.target.value }))}
@@ -387,10 +387,10 @@ const ProfilePage: React.FC = () => {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <Button size="sm" onClick={handleSave} disabled={saving} className="font-mono-share text-[10px]">
+                    <Button size="sm" onClick={handleSave} disabled={saving} className="font-mono-share text-tiny">
                       <Check className="w-3 h-3 mr-1" /> {saving ? "SAVING..." : "SAVE"}
                     </Button>
-                    <Button size="sm" variant="ghost" onClick={() => setEditing(false)} className="font-mono-share text-[10px]">
+                    <Button size="sm" variant="ghost" onClick={() => setEditing(false)} className="font-mono-share text-tiny">
                       <X className="w-3 h-3 mr-1" /> CANCEL
                     </Button>
                   </div>
@@ -415,7 +415,7 @@ const ProfilePage: React.FC = () => {
                       />
                     )}
                     {profile.isBanned && (
-                      <span className="px-1.5 py-0.5 bg-destructive/20 text-destructive font-mono-share text-[9px] rounded tracking-wider" title={profile.banReason || undefined}>
+                      <span className="px-1.5 py-0.5 bg-destructive/20 text-destructive font-mono-share text-tiny rounded tracking-wider" title={profile.banReason || undefined}>
                         BANNED
                       </span>
                     )}
@@ -434,7 +434,7 @@ const ProfilePage: React.FC = () => {
                           href={normalizeUrl(profile.socials![k])}
                           target="_blank"
                           rel="noopener noreferrer nofollow"
-                          className="inline-flex items-center gap-1 px-2 py-1 rounded-full border border-border/50 bg-card/40 hover:border-primary/60 hover:text-primary transition-colors font-mono-share text-[10px] text-muted-foreground"
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded-full border border-border/50 bg-card/40 hover:border-primary/60 hover:text-primary transition-colors font-mono-share text-tiny text-muted-foreground"
                         >
                           {k === "instagram" ? <Instagram className="w-3 h-3" /> : <LinkIcon className="w-3 h-3" />}
                           {SOCIAL_META[k].label}
@@ -445,14 +445,14 @@ const ProfilePage: React.FC = () => {
                   {!editing && profile.walletTruncated && (
                     <div className="flex items-center gap-1 mt-1.5">
                       <Wallet className="w-3 h-3 text-primary/50" />
-                      <span className="font-mono-share text-[10px] text-primary/60">{profile.walletTruncated}</span>
-                      <span className="font-mono-share text-[8px] text-muted-foreground/40">BASE</span>
+                      <span className="font-mono-share text-tiny text-primary/60">{profile.walletTruncated}</span>
+                      <span className="font-mono-share text-micro text-muted-foreground/60">BASE</span>
                     </div>
                   )}
                   {profile.isOwn && !profile.verified && (
                     <button
                       onClick={() => setVerifyOpen(true)}
-                      className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-primary/40 bg-primary/10 hover:bg-primary/20 hover:border-primary/70 transition-colors font-mono-share text-[10px] text-primary tracking-widest shadow-glow-live"
+                      className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-primary/40 bg-primary/10 hover:bg-primary/20 hover:border-primary/70 transition-colors font-mono-share text-tiny text-primary tracking-widest shadow-glow-live"
                     >
                       <BadgeCheck className="w-3 h-3" /> GET VERIFIED
                     </button>
@@ -469,7 +469,7 @@ const ProfilePage: React.FC = () => {
                   variant={profile.isFollowing ? "outline" : "default"}
                   onClick={handleFollow}
                   disabled={followLoading}
-                  className="font-mono-share text-[10px]"
+                  className="font-mono-share text-tiny"
                 >
                   {profile.isFollowing ? (
                     <><UserMinus className="w-3 h-3 mr-1" /> UNFOLLOW</>
@@ -481,7 +481,7 @@ const ProfilePage: React.FC = () => {
                   <Button
                     size="sm"
                     variant="outline"
-                    className="font-mono-share text-[10px]"
+                    className="font-mono-share text-tiny"
                     onClick={() => startDm()}
                     disabled={dmLoading}
                   >
@@ -492,7 +492,7 @@ const ProfilePage: React.FC = () => {
                   <Button
                     size="sm"
                     variant="secondary"
-                    className="font-mono-share text-[10px]"
+                    className="font-mono-share text-tiny"
                     onClick={() => navigate(`/characters?chat=${encodeURIComponent(profile.personaChatCharacterId!)}`)}
                   >
                     <MessageSquare className="w-3 h-3 mr-1" /> AI CHAT
@@ -503,7 +503,7 @@ const ProfilePage: React.FC = () => {
                     size="sm"
                     variant="destructive"
                     disabled={banLoading}
-                    className="font-mono-share text-[10px]"
+                    className="font-mono-share text-tiny"
                     onClick={async () => {
                       const duration = prompt("Ban duration (1h, 24h, 7d, 30d, or leave empty for permanent):", "24h");
                       if (duration === null) return;
@@ -545,7 +545,7 @@ const ProfilePage: React.FC = () => {
             ].map((s) => (
               <div key={s.label} className="text-center">
                 <div className="font-orbitron text-sm text-foreground">{s.value}</div>
-                <div className="font-mono-share text-[9px] text-muted-foreground">{s.label}</div>
+                <div className="font-mono-share text-tiny text-muted-foreground">{s.label}</div>
               </div>
             ))}
           </div>
@@ -563,8 +563,8 @@ const ProfilePage: React.FC = () => {
               {profile.avatarUrl && <img src={profile.avatarUrl} alt="persona" className="w-full h-full object-cover" />}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="font-orbitron text-[11px] text-foreground tracking-wider">PERSONA PHOTO</div>
-              <div className="font-mono-share text-[9px] text-muted-foreground">Admin: replace this creator's chat character photo</div>
+              <div className="font-orbitron text-xs text-foreground tracking-wider">PERSONA PHOTO</div>
+              <div className="font-mono-share text-tiny text-muted-foreground">Admin: replace this creator's chat character photo</div>
             </div>
             <input
               ref={personaPhotoInputRef}
@@ -578,7 +578,7 @@ const ProfilePage: React.FC = () => {
               variant="outline"
               onClick={() => personaPhotoInputRef.current?.click()}
               disabled={personaPhotoUploading}
-              className="font-mono-share text-[10px] gap-1.5 h-8 shrink-0"
+              className="font-mono-share text-tiny gap-1.5 h-8 shrink-0"
             >
               {personaPhotoUploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Camera className="w-3 h-3" />}
               {personaPhotoUploading ? "UPLOADING…" : "CHANGE PHOTO"}

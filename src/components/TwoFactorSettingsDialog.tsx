@@ -59,7 +59,7 @@ export default function TwoFactorSettingsDialog() {
         <Button
           variant="ghost"
           size="sm"
-          className={`font-mono-share text-[10px] gap-1 px-2 border ${
+          className={`font-mono-share text-tiny gap-1 px-2 border ${
             enabled
               ? "text-primary border-primary/40 hover:bg-primary/10"
               : "text-destructive border-destructive/40 hover:bg-destructive/10"
@@ -83,7 +83,7 @@ export default function TwoFactorSettingsDialog() {
 
         {!emailVerified && (
           <div className="bg-amber-500/10 border border-amber-500/30 rounded px-3 py-2">
-            <p className="font-mono-share text-[11px] text-amber-400">
+            <p className="font-mono-share text-xs text-amber-400">
               Verify your email first so we can deliver login codes.
             </p>
           </div>
@@ -91,10 +91,10 @@ export default function TwoFactorSettingsDialog() {
 
         <div className="flex items-center justify-between border border-border rounded-md p-3 bg-input/40">
           <div className="space-y-0.5">
-            <p className="font-orbitron text-[11px] tracking-wider text-foreground">
+            <p className="font-orbitron text-xs tracking-wider text-foreground">
               EMAIL 2FA
             </p>
-            <p className="font-mono-share text-[10px] text-muted-foreground">
+            <p className="font-mono-share text-tiny text-muted-foreground">
               {enabled ? "Active — codes sent on new devices" : "Disabled"}
             </p>
           </div>
@@ -114,7 +114,7 @@ export default function TwoFactorSettingsDialog() {
           </div>
         )}
 
-        <p className="font-mono-share text-[10px] text-muted-foreground/60 leading-relaxed">
+        <p className="font-mono-share text-tiny text-muted-foreground/60 leading-relaxed">
           Disabling 2FA also revokes all trusted devices, requiring a fresh sign-in if
           you re-enable it later.
         </p>

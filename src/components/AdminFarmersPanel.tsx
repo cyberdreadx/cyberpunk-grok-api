@@ -72,7 +72,7 @@ const fmtDate = (iso: string | null) => (iso ? new Date(iso).toISOString().slice
 const fmt$ = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 
 const Flag: React.FC<{ label: string; severe?: boolean }> = ({ label, severe }) => (
-  <span className={`inline-flex items-center gap-1 font-mono-share text-[9px] px-1.5 py-0.5 rounded border ${
+  <span className={`inline-flex items-center gap-1 font-mono-share text-tiny px-1.5 py-0.5 rounded border ${
     severe
       ? "border-destructive/50 text-destructive bg-destructive/10"
       : "border-amber-400/40 text-amber-300 bg-amber-400/10"
@@ -84,13 +84,13 @@ const Flag: React.FC<{ label: string; severe?: boolean }> = ({ label, severe }) 
 
 const SectionCard: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
   <div className="border border-border/30 rounded-lg bg-card/60 p-3 min-w-0">
-    <div className="font-mono-share text-[9px] text-muted-foreground tracking-widest mb-2">{title}</div>
+    <div className="font-mono-share text-tiny text-muted-foreground tracking-widest mb-2">{title}</div>
     {children}
   </div>
 );
 
 const UserLine: React.FC<{ email: string; username: string | null; same_fp?: boolean; suffix?: string }> = ({ email, username, same_fp, suffix }) => (
-  <div className="flex items-center gap-1.5 font-mono-share text-[10px] truncate">
+  <div className="flex items-center gap-1.5 font-mono-share text-tiny truncate">
     {username ? (
       <a href={`/profile/${username}`} target="_blank" rel="noopener noreferrer" className="text-foreground hover:text-primary underline decoration-border/50 underline-offset-2 truncate">
         {username}
@@ -132,13 +132,13 @@ function DetailView({ s, d }: { s: Suspect; d: FarmerDetail }) {
       <div className="flex flex-wrap gap-1.5">
         {flags.length > 0
           ? flags.map((f) => <Flag key={f.label} label={f.label} severe={f.severe} />)
-          : <span className="font-mono-share text-[10px] text-muted-foreground">No automatic red flags — review sources below.</span>}
+          : <span className="font-mono-share text-tiny text-muted-foreground">No automatic red flags — review sources below.</span>}
       </div>
 
       <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-3">
         {/* Where the excess came from */}
         <SectionCard title="EXCESS_ATTRIBUTION">
-          <div className="font-mono-share text-[10px] space-y-1">
+          <div className="font-mono-share text-tiny space-y-1">
             <div className="flex justify-between"><span className="text-muted-foreground">Missions ({d.missions.claims} claims / {d.missions.days} days)</span><span className="text-foreground">{d.missions.credits.toLocaleString()}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">One-time bonuses ({d.oneTimeClaims.length})</span><span className="text-foreground">{oneTimeTotal.toLocaleString()}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Referral rewards ({refRewarded} × 10)</span><span className="text-foreground">{refBonusEst.toLocaleString()}</span></div>
@@ -149,7 +149,7 @@ function DetailView({ s, d }: { s: Suspect; d: FarmerDetail }) {
             </div>
             <div className="flex justify-between"><span className="text-muted-foreground/70">of total excess</span><span className="text-secondary font-bold">{s.excess.toLocaleString()}</span></div>
           </div>
-          <p className="font-mono-share text-[9px] text-muted-foreground/60 mt-2 leading-relaxed">
+          <p className="font-mono-share text-tiny text-muted-foreground/60 mt-2 leading-relaxed">
             Spins aren't logged per-event, so honest daily spinners show unattributed credits.
             Spin streak: {d.user.spin_streak} · last spin {d.user.last_free_spin ? fmtAge(d.user.last_free_spin) + " ago" : "never"}.
           </p>
@@ -157,7 +157,7 @@ function DetailView({ s, d }: { s: Suspect; d: FarmerDetail }) {
 
         {/* Activity */}
         <SectionCard title="ACTIVITY">
-          <div className="font-mono-share text-[10px] space-y-1">
+          <div className="font-mono-share text-tiny space-y-1">
             <div className="flex justify-between"><span className="text-muted-foreground">Generations (lifetime)</span><span className="text-foreground">{d.activity.generations.toLocaleString()}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Credits spent (lifetime)</span><span className="text-foreground">{d.activity.spent.toLocaleString()}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Generations (7d)</span><span className="text-foreground">{d.activity.generations_7d.toLocaleString()}</span></div>
@@ -173,9 +173,9 @@ function DetailView({ s, d }: { s: Suspect; d: FarmerDetail }) {
         {/* Purchases */}
         <SectionCard title={`PURCHASES (last ${d.purchases.length})`}>
           {d.purchases.length === 0 ? (
-            <div className="font-mono-share text-[10px] text-destructive">No transactions ever.</div>
+            <div className="font-mono-share text-tiny text-destructive">No transactions ever.</div>
           ) : (
-            <div className="font-mono-share text-[10px] space-y-1 max-h-40 overflow-y-auto">
+            <div className="font-mono-share text-tiny space-y-1 max-h-40 overflow-y-auto">
               {d.purchases.map((t, i) => (
                 <div key={i} className="flex justify-between gap-2">
                   <span className="text-muted-foreground truncate">{fmtDate(t.created_at)} {t.package} · {t.payment_method}</span>
@@ -191,9 +191,9 @@ function DetailView({ s, d }: { s: Suspect; d: FarmerDetail }) {
         {/* Fingerprint cluster */}
         <SectionCard title={`DEVICE_CLUSTER (${d.fpCluster.length} other account${d.fpCluster.length === 1 ? "" : "s"})`}>
           {!d.user.device_fingerprint ? (
-            <div className="font-mono-share text-[10px] text-amber-300">No fingerprint recorded — likely scripted signup.</div>
+            <div className="font-mono-share text-tiny text-amber-300">No fingerprint recorded — likely scripted signup.</div>
           ) : d.fpCluster.length === 0 ? (
-            <div className="font-mono-share text-[10px] text-muted-foreground">No other accounts on this device.</div>
+            <div className="font-mono-share text-tiny text-muted-foreground">No other accounts on this device.</div>
           ) : (
             <div className="space-y-1 max-h-40 overflow-y-auto">
               {d.fpCluster.map((c) => (
@@ -207,12 +207,12 @@ function DetailView({ s, d }: { s: Suspect; d: FarmerDetail }) {
         <SectionCard title={`REFERRALS (${d.referees.length} referred)`}>
           {d.referrer && (
             <div className="mb-2">
-              <div className="font-mono-share text-[9px] text-muted-foreground/70 mb-0.5">REFERRED BY</div>
+              <div className="font-mono-share text-tiny text-muted-foreground/70 mb-0.5">REFERRED BY</div>
               <UserLine email={d.referrer.email} username={d.referrer.username} same_fp={d.referrer.same_fp} />
             </div>
           )}
           {d.referees.length === 0 ? (
-            <div className="font-mono-share text-[10px] text-muted-foreground">Referred nobody.</div>
+            <div className="font-mono-share text-tiny text-muted-foreground">Referred nobody.</div>
           ) : (
             <div className="space-y-1 max-h-40 overflow-y-auto">
               {d.referees.map((r, i) => (
@@ -226,7 +226,7 @@ function DetailView({ s, d }: { s: Suspect; d: FarmerDetail }) {
         {/* Unlock income */}
         <SectionCard title={`UNLOCK_INCOME (${feedGross + storyGross} cr gross)`}>
           {d.feedUnlockers.length === 0 && d.storyUnlockers.length === 0 ? (
-            <div className="font-mono-share text-[10px] text-muted-foreground">Nobody unlocked their content.</div>
+            <div className="font-mono-share text-tiny text-muted-foreground">Nobody unlocked their content.</div>
           ) : (
             <div className="space-y-1 max-h-40 overflow-y-auto">
               {d.feedUnlockers.map((u) => (
@@ -345,20 +345,20 @@ const AdminFarmersPanel: React.FC = () => {
           CREDIT_FARMERS
         </h2>
         <div className="flex items-center gap-2">
-          <label className="font-mono-share text-[10px] text-muted-foreground flex items-center gap-1.5">
+          <label className="font-mono-share text-tiny text-muted-foreground flex items-center gap-1.5">
             MIN_EXCESS
             <input
               type="number"
               min={1}
               value={minExcess}
               onChange={(e) => setMinExcess(Math.max(1, parseInt(e.target.value, 10) || 1))}
-              className="w-20 bg-card/60 border border-border/40 rounded px-2 py-1 font-mono-share text-[11px] text-foreground focus:border-primary/50 focus:outline-none"
+              className="w-20 bg-card/60 border border-border/40 rounded px-2 py-1 font-mono-share text-xs text-foreground focus:border-primary/50 focus:outline-none"
             />
           </label>
           <button
             onClick={load}
             disabled={loading}
-            className="font-mono-share text-[10px] px-2 py-1 rounded border border-border/40 text-muted-foreground hover:text-primary hover:border-primary/40 inline-flex items-center gap-1"
+            className="font-mono-share text-tiny px-2 py-1 rounded border border-border/40 text-muted-foreground hover:text-primary hover:border-primary/40 inline-flex items-center gap-1"
           >
             {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
             REFRESH
@@ -366,7 +366,7 @@ const AdminFarmersPanel: React.FC = () => {
         </div>
       </div>
 
-      <p className="font-mono-share text-[10px] text-muted-foreground/70 leading-relaxed">
+      <p className="font-mono-share text-tiny text-muted-foreground/70 leading-relaxed">
         EXCESS = current balance − credits ever purchased (Stripe/XRGE) − admin grants. Click a row
         for the evidence drilldown: where the free credits came from, other accounts on the same
         device, and whether their referrals or unlock "customers" are their own alts. Creators
@@ -374,7 +374,7 @@ const AdminFarmersPanel: React.FC = () => {
       </p>
 
       {err && (
-        <div className="border border-destructive/40 bg-destructive/10 rounded p-3 font-mono-share text-[11px] text-destructive">
+        <div className="border border-destructive/40 bg-destructive/10 rounded p-3 font-mono-share text-xs text-destructive">
           {err}
         </div>
       )}
@@ -382,14 +382,14 @@ const AdminFarmersPanel: React.FC = () => {
       {/* Summary cards */}
       <div className="grid grid-cols-2 gap-3">
         <div className="border border-border/30 rounded-lg bg-card/40 p-3">
-          <div className="font-mono-share text-[9px] text-muted-foreground tracking-widest">SUSPECTS</div>
+          <div className="font-mono-share text-tiny text-muted-foreground tracking-widest">SUSPECTS</div>
           <div className="font-orbitron text-2xl text-primary mt-1">{loading ? "…" : suspects.length}</div>
-          <div className="font-mono-share text-[10px] text-muted-foreground/70 mt-0.5">excess ≥ {minExcess} credits</div>
+          <div className="font-mono-share text-tiny text-muted-foreground/70 mt-0.5">excess ≥ {minExcess} credits</div>
         </div>
         <div className="border border-border/30 rounded-lg bg-card/40 p-3">
-          <div className="font-mono-share text-[9px] text-muted-foreground tracking-widest">UNPAID_CREDITS_HELD</div>
+          <div className="font-mono-share text-tiny text-muted-foreground tracking-widest">UNPAID_CREDITS_HELD</div>
           <div className="font-orbitron text-2xl text-secondary mt-1">{loading ? "…" : totalExcess.toLocaleString()}</div>
-          <div className="font-mono-share text-[10px] text-muted-foreground/70 mt-0.5">across unbanned suspects</div>
+          <div className="font-mono-share text-tiny text-muted-foreground/70 mt-0.5">across unbanned suspects</div>
         </div>
       </div>
 
@@ -397,7 +397,7 @@ const AdminFarmersPanel: React.FC = () => {
       <div className="border border-border/30 rounded-lg bg-card/40 overflow-x-auto">
         <table className="w-full text-left">
           <thead>
-            <tr className="border-b border-border/30 font-mono-share text-[9px] text-muted-foreground tracking-widest">
+            <tr className="border-b border-border/30 font-mono-share text-tiny text-muted-foreground tracking-widest">
               <th className="px-2 py-2 w-6"></th>
               <th className="px-3 py-2">USER</th>
               <th className="px-3 py-2 text-right">AGE</th>
@@ -417,7 +417,7 @@ const AdminFarmersPanel: React.FC = () => {
               <Fragment key={s.id}>
                 <tr
                   onClick={() => toggleDetail(s)}
-                  className={`border-b border-border/10 font-mono-share text-[11px] cursor-pointer hover:bg-card/60 ${s.banned ? "opacity-40" : ""} ${expandedId === s.id ? "bg-card/60" : ""}`}
+                  className={`border-b border-border/10 font-mono-share text-xs cursor-pointer hover:bg-card/60 ${s.banned ? "opacity-40" : ""} ${expandedId === s.id ? "bg-card/60" : ""}`}
                 >
                   <td className="px-2 py-2 text-muted-foreground">
                     {expandedId === s.id ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
@@ -440,12 +440,12 @@ const AdminFarmersPanel: React.FC = () => {
                         <span className="text-muted-foreground truncate">no profile</span>
                       )}
                       {s.subscription_tier && (
-                        <span className="text-[9px] px-1 py-0.5 rounded border border-primary/30 text-primary/70 shrink-0">
+                        <span className="text-tiny px-1 py-0.5 rounded border border-primary/30 text-primary/70 shrink-0">
                           {s.subscription_tier.toUpperCase()}
                         </span>
                       )}
                     </div>
-                    <div className="text-[10px] text-muted-foreground truncate">{s.email}</div>
+                    <div className="text-tiny text-muted-foreground truncate">{s.email}</div>
                   </td>
                   <td className="px-3 py-2 text-right text-muted-foreground">{fmtAge(s.created_at)}</td>
                   <td className="px-3 py-2 text-right text-foreground">{s.balance.toLocaleString()}</td>
@@ -463,7 +463,7 @@ const AdminFarmersPanel: React.FC = () => {
                       <button
                         onClick={() => handleUnban(s)}
                         disabled={banningId === s.id}
-                        className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded border border-border/40 text-muted-foreground hover:text-foreground"
+                        className="inline-flex items-center gap-1 text-tiny px-2 py-1 rounded border border-border/40 text-muted-foreground hover:text-foreground"
                       >
                         {banningId === s.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <ShieldCheck className="w-3 h-3" />}
                         UNBAN
@@ -472,7 +472,7 @@ const AdminFarmersPanel: React.FC = () => {
                       <button
                         onClick={() => handleBan(s)}
                         disabled={banningId === s.id}
-                        className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded border border-destructive/40 text-destructive hover:bg-destructive/10"
+                        className="inline-flex items-center gap-1 text-tiny px-2 py-1 rounded border border-destructive/40 text-destructive hover:bg-destructive/10"
                       >
                         {banningId === s.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Ban className="w-3 h-3" />}
                         BAN
@@ -484,7 +484,7 @@ const AdminFarmersPanel: React.FC = () => {
                   <tr className="border-b border-border/20">
                     <td colSpan={12} className="p-0">
                       {detailLoading === s.id || !details[s.id] ? (
-                        <div className="p-4 flex items-center gap-2 font-mono-share text-[10px] text-muted-foreground">
+                        <div className="p-4 flex items-center gap-2 font-mono-share text-tiny text-muted-foreground">
                           <Loader2 className="w-3 h-3 animate-spin" /> Pulling evidence…
                         </div>
                       ) : (
@@ -497,7 +497,7 @@ const AdminFarmersPanel: React.FC = () => {
             ))}
             {!loading && suspects.length === 0 && (
               <tr>
-                <td colSpan={12} className="px-3 py-6 text-center font-mono-share text-[11px] text-muted-foreground">
+                <td colSpan={12} className="px-3 py-6 text-center font-mono-share text-xs text-muted-foreground">
                   No users with excess ≥ {minExcess} credits.
                 </td>
               </tr>

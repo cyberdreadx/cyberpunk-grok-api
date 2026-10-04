@@ -89,7 +89,7 @@ const CyberLayout: React.FC<CyberLayoutProps> = ({ children }) => {
           // GLTCH Studio: a plain header, not a terminal window.
           <div className="font-display font-bold text-sm text-foreground flex-1 pb-1.5">GLTCH Studio</div>
         ) : (
-          <div className="font-mono-share text-[10px] text-muted-foreground/50 flex-1 text-center pb-1">
+          <div className="font-mono-share text-tiny text-muted-foreground/70 flex-1 text-center pb-1">
             gltch@gltch:~/neural-render — bash
           </div>
         )}
@@ -99,7 +99,7 @@ const CyberLayout: React.FC<CyberLayoutProps> = ({ children }) => {
         <div className="pb-0.5 shrink-0">
           <NotificationBell isAuthenticated={isAuthenticated} />
         </div>
-        {!isStudio && (<div className="font-mono-share text-[10px] text-muted-foreground/30 pb-1 hidden sm:block">
+        {!isStudio && (<div className="font-mono-share text-tiny text-muted-foreground/60 pb-1 hidden sm:block">
           PID:4F7A
         </div>)}
       </div>

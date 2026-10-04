@@ -172,17 +172,17 @@ const EarningsPanel: React.FC = () => {
           <div className="flex items-start gap-2">
             <ShieldAlert className="w-4 h-4 text-primary shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
-              <p className="font-orbitron text-[11px] text-primary">
+              <p className="font-orbitron text-xs text-primary">
                 {verificationStatus === "pending" ? "VERIFICATION IN PROGRESS" :
                  verificationStatus === "lapsed" ? "VERIFICATION LAPSED" :
                  "GET VERIFIED TO MONETIZE"}
               </p>
-              <p className="font-mono-share text-[10px] text-muted-foreground mt-0.5">
+              <p className="font-mono-share text-tiny text-muted-foreground mt-0.5">
                 Identity verification is required to set prices on posts/stories or request payouts.
               </p>
             </div>
           </div>
-          <Button onClick={() => setVerifyOpen(true)} size="sm" className="w-full font-mono-share text-[10px]">
+          <Button onClick={() => setVerifyOpen(true)} size="sm" className="w-full font-mono-share text-tiny">
             <BadgeCheck className="w-3.5 h-3.5 mr-2" />
             {verificationStatus === "pending" ? "CONTINUE VERIFICATION" :
              verificationStatus === "lapsed" ? "RE-ACTIVATE" :
@@ -226,12 +226,12 @@ const EarningsPanel: React.FC = () => {
           <div className="flex items-start gap-2">
             <ShieldAlert className="w-4 h-4 text-primary shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
-              <p className="font-orbitron text-[11px] text-primary">
+              <p className="font-orbitron text-xs text-primary">
                 {verificationStatus === "pending" ? "VERIFICATION IN PROGRESS" :
                  verificationStatus === "lapsed" ? "VERIFICATION LAPSED" :
                  "GET VERIFIED TO MONETIZE"}
               </p>
-              <p className="font-mono-share text-[10px] text-muted-foreground mt-0.5">
+              <p className="font-mono-share text-tiny text-muted-foreground mt-0.5">
                 {verificationStatus === "pending"
                   ? "Finish payment + ID check to enable payouts and priced posts."
                   : verificationStatus === "lapsed"
@@ -243,7 +243,7 @@ const EarningsPanel: React.FC = () => {
           <Button
             onClick={() => setVerifyOpen(true)}
             size="sm"
-            className="w-full font-mono-share text-[10px]"
+            className="w-full font-mono-share text-tiny"
           >
             <BadgeCheck className="w-3.5 h-3.5 mr-2" />
             {verificationStatus === "pending" ? "CONTINUE VERIFICATION" :
@@ -260,26 +260,26 @@ const EarningsPanel: React.FC = () => {
         <div className="bg-background/50 rounded-md p-3 border border-border/30">
           <div className="flex items-center gap-1.5 mb-1">
             <Coins className="w-3 h-3 text-primary" />
-            <span className="font-mono-share text-[9px] text-muted-foreground">CREDITS EARNED</span>
+            <span className="font-mono-share text-tiny text-muted-foreground">CREDITS EARNED</span>
           </div>
           <div className="font-orbitron text-lg text-foreground">{s.creatorShareCredits}</div>
-          <div className="font-mono-share text-[9px] text-muted-foreground">{s.postUnlocks + s.storyUnlocks} unlocks</div>
+          <div className="font-mono-share text-tiny text-muted-foreground">{s.postUnlocks + s.storyUnlocks} unlocks</div>
         </div>
 
         {/* Cash balance — withdrawable */}
         <div className="bg-background/50 rounded-md p-3 border border-border/30">
           <div className="flex items-center gap-1.5 mb-1">
             <Wallet className="w-3 h-3 text-green-400" />
-            <span className="font-mono-share text-[9px] text-muted-foreground">CASH BALANCE</span>
+            <span className="font-mono-share text-tiny text-muted-foreground">CASH BALANCE</span>
           </div>
           <div className="font-orbitron text-lg text-green-400">{fmtCents(s.cashBalanceCents)}</div>
-          <div className="font-mono-share text-[9px] text-muted-foreground">available to withdraw</div>
+          <div className="font-mono-share text-tiny text-muted-foreground">available to withdraw</div>
         </div>
 
         <div className="bg-background/50 rounded-md p-3 border border-border/30">
           <div className="flex items-center gap-1.5 mb-1">
             <Heart className="w-3 h-3 text-pink-400" />
-            <span className="font-mono-share text-[9px] text-muted-foreground">CHARITY DONATED</span>
+            <span className="font-mono-share text-tiny text-muted-foreground">CHARITY DONATED</span>
           </div>
           <div className="font-orbitron text-sm text-pink-400">
             {s.charityCredits > 0 && `${s.charityCredits} cr`}
@@ -287,15 +287,15 @@ const EarningsPanel: React.FC = () => {
             {s.charityCents > 0 && fmtCents(s.charityCents)}
             {s.charityCredits === 0 && s.charityCents === 0 && "0"}
           </div>
-          <div className="font-mono-share text-[9px] text-muted-foreground">5% to reforestation & orphans</div>
+          <div className="font-mono-share text-tiny text-muted-foreground">5% to reforestation & orphans</div>
         </div>
 
         <div className="bg-background/50 rounded-md p-3 border border-border/30">
           <div className="flex items-center gap-1.5 mb-1">
             <DollarSign className="w-3 h-3 text-primary" />
-            <span className="font-mono-share text-[9px] text-muted-foreground">TOTAL EARNED</span>
+            <span className="font-mono-share text-tiny text-muted-foreground">TOTAL EARNED</span>
           </div>
-          <div className="font-mono-share text-[10px] text-foreground space-y-0.5">
+          <div className="font-mono-share text-tiny text-foreground space-y-0.5">
             <div>{fmtCents(s.creatorShareCents)} cash</div>
             <div>{s.creatorShareCredits} credits</div>
           </div>
@@ -307,13 +307,13 @@ const EarningsPanel: React.FC = () => {
         <div className="bg-background/50 rounded-md p-3 border border-border/30">
           <div className="flex items-center gap-1.5 mb-1">
             <Zap className="w-3 h-3 text-secondary" />
-            <span className="font-mono-share text-[9px] text-muted-foreground tracking-widest">XRGE EARNINGS</span>
+            <span className="font-mono-share text-tiny text-muted-foreground tracking-widest">XRGE EARNINGS</span>
           </div>
           <div className="flex items-baseline gap-2">
             <span className="font-orbitron text-lg text-secondary">{s.creatorShareXrge.toFixed(2)}</span>
-            <span className="font-mono-share text-[10px] text-muted-foreground">XRGE (80% of {s.totalXrgeEarned.toFixed(2)})</span>
+            <span className="font-mono-share text-tiny text-muted-foreground">XRGE (80% of {s.totalXrgeEarned.toFixed(2)})</span>
           </div>
-          <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5">
+          <div className="font-mono-share text-tiny text-muted-foreground mt-0.5">
             {s.xrgeUnlocks} unlock{s.xrgeUnlocks !== 1 ? "s" : ""} · instant to your bank
           </div>
         </div>
@@ -324,13 +324,13 @@ const EarningsPanel: React.FC = () => {
         <div className="bg-background/50 rounded-md p-3 border border-border/30">
           <div className="flex items-center gap-1.5 mb-1">
             <DollarSign className="w-3 h-3 text-green-400" />
-            <span className="font-mono-share text-[9px] text-muted-foreground tracking-widest">CHAT EARNINGS</span>
+            <span className="font-mono-share text-tiny text-muted-foreground tracking-widest">CHAT EARNINGS</span>
           </div>
           <div className="flex items-baseline gap-2">
             <span className="font-orbitron text-lg text-green-400">{fmtCents(s.chatEarningsCents)}</span>
-            <span className="font-mono-share text-[10px] text-muted-foreground">75% of fan spend</span>
+            <span className="font-mono-share text-tiny text-muted-foreground">75% of fan spend</span>
           </div>
-          <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5">
+          <div className="font-mono-share text-tiny text-muted-foreground mt-0.5">
             {s.chatMessages} paid message{s.chatMessages !== 1 ? "s" : ""} · {s.chatMedia} photo/video{s.chatMedia !== 1 ? "s" : ""} sent
           </div>
         </div>
@@ -348,13 +348,13 @@ const EarningsPanel: React.FC = () => {
         </Button>
       )}
       {s.cashBalanceCents >= 100 && !hasPending && !isVerified && (
-        <p className="font-mono-share text-[10px] text-muted-foreground text-center italic">
+        <p className="font-mono-share text-tiny text-muted-foreground text-center italic">
           Get verified to withdraw your ${(s.cashBalanceCents / 100).toFixed(2)}.
         </p>
       )}
 
       {s.cashBalanceCents > 0 && s.cashBalanceCents < 100 && (
-        <p className="font-mono-share text-[9px] text-muted-foreground text-center">
+        <p className="font-mono-share text-tiny text-muted-foreground text-center">
           Min. withdrawal: $1.00 (XRGE instant) — you need {fmtCents(100 - s.cashBalanceCents)} more
         </p>
       )}
@@ -362,16 +362,16 @@ const EarningsPanel: React.FC = () => {
       {/* Withdraw form */}
       {showWithdraw && (
         <div className="bg-background/50 border border-border/30 rounded-md p-3 space-y-3">
-          <h3 className="font-mono-share text-[10px] text-muted-foreground tracking-widest">WITHDRAW FUNDS</h3>
+          <h3 className="font-mono-share text-tiny text-muted-foreground tracking-widest">WITHDRAW FUNDS</h3>
 
           <div>
-            <label className="font-mono-share text-[9px] text-muted-foreground">PAYOUT METHOD</label>
+            <label className="font-mono-share text-tiny text-muted-foreground">PAYOUT METHOD</label>
             <div className="flex flex-wrap gap-2 mt-1">
               {(["xrge", "stripe", "paypal", "bank", "crypto"] as const).map((m) => (
                 <button
                   key={m}
                   onClick={() => setWithdrawMethod(m)}
-                  className={`px-3 py-1.5 rounded text-[10px] font-mono-share border transition-colors flex items-center gap-1 ${
+                  className={`px-3 py-1.5 rounded text-tiny font-mono-share border transition-colors flex items-center gap-1 ${
                     withdrawMethod === m
                       ? "border-primary bg-primary/10 text-primary"
                       : "border-border/30 text-muted-foreground hover:border-primary/30"
@@ -384,17 +384,17 @@ const EarningsPanel: React.FC = () => {
               ))}
             </div>
             {withdrawMethod === "xrge" && (
-              <p className="font-mono-share text-[8px] text-primary/70 mt-1">
+              <p className="font-mono-share text-micro text-primary/70 mt-1">
                 ⚡ Instant — converts cash to XRGE at live rate, credited to your XRGE bank. Min $1.00
               </p>
             )}
             {withdrawMethod === "stripe" && (
-              <p className="font-mono-share text-[8px] text-primary/70 mt-1">
+              <p className="font-mono-share text-micro text-primary/70 mt-1">
                 ⚡ Instant payout to your bank via Stripe. Min $5.00
               </p>
             )}
             {!["xrge", "stripe"].includes(withdrawMethod) && (
-              <p className="font-mono-share text-[8px] text-muted-foreground mt-1">
+              <p className="font-mono-share text-micro text-muted-foreground mt-1">
                 Manual review — processed within 48h. Min $25.00
               </p>
             )}
@@ -402,12 +402,12 @@ const EarningsPanel: React.FC = () => {
 
           {withdrawMethod === "stripe" && !connect?.payoutsEnabled ? (
             <div className="bg-primary/5 border border-primary/30 rounded-md p-3 space-y-2">
-              <p className="font-mono-share text-[10px] text-muted-foreground">
+              <p className="font-mono-share text-tiny text-muted-foreground">
                 {connect?.enabled
                   ? "Finish your Stripe onboarding to enable instant bank payouts."
                   : "Connect your bank with Stripe to enable instant payouts straight to your account."}
               </p>
-              <Button size="sm" onClick={handleConnectOnboard} disabled={connecting} className="w-full font-mono-share text-[10px]">
+              <Button size="sm" onClick={handleConnectOnboard} disabled={connecting} className="w-full font-mono-share text-tiny">
                 <Landmark className="w-3.5 h-3.5 mr-2" />
                 {connecting ? "OPENING STRIPE..." : connect?.enabled ? "FINISH STRIPE SETUP" : "SET UP BANK PAYOUTS"}
               </Button>
@@ -415,7 +415,7 @@ const EarningsPanel: React.FC = () => {
           ) : (
             <>
               <div>
-                <label className="font-mono-share text-[9px] text-muted-foreground">AMOUNT (USD)</label>
+                <label className="font-mono-share text-tiny text-muted-foreground">AMOUNT (USD)</label>
                 <Input
                   type="number"
                   min={0.01}
@@ -430,7 +430,7 @@ const EarningsPanel: React.FC = () => {
 
               {needsDetails && (
                 <div>
-                  <label className="font-mono-share text-[9px] text-muted-foreground">
+                  <label className="font-mono-share text-tiny text-muted-foreground">
                     {withdrawMethod === "paypal" ? "PAYPAL EMAIL" : withdrawMethod === "bank" ? "BANK DETAILS" : "WALLET ADDRESS"}
                   </label>
                   <Input
@@ -445,10 +445,10 @@ const EarningsPanel: React.FC = () => {
               )}
 
               <div className="flex gap-2">
-                <Button size="sm" onClick={handleWithdraw} disabled={submitting} className="font-mono-share text-[10px]">
+                <Button size="sm" onClick={handleWithdraw} disabled={submitting} className="font-mono-share text-tiny">
                   {submitting ? "PROCESSING..." : withdrawMethod === "xrge" ? "⚡ INSTANT PAYOUT" : withdrawMethod === "stripe" ? "⚡ SEND TO BANK" : "SUBMIT REQUEST"}
                 </Button>
-                <Button size="sm" variant="ghost" onClick={() => setShowWithdraw(false)} className="font-mono-share text-[10px]">
+                <Button size="sm" variant="ghost" onClick={() => setShowWithdraw(false)} className="font-mono-share text-tiny">
                   CANCEL
                 </Button>
               </div>
@@ -460,12 +460,12 @@ const EarningsPanel: React.FC = () => {
       {/* Payout history */}
       {payoutData && payoutData.requests.length > 0 && (
         <div>
-          <h3 className="font-mono-share text-[9px] text-muted-foreground mb-2 tracking-widest">PAYOUT HISTORY</h3>
+          <h3 className="font-mono-share text-tiny text-muted-foreground mb-2 tracking-widest">PAYOUT HISTORY</h3>
           <div className="space-y-1.5 max-h-32 overflow-y-auto">
             {payoutData.requests.map((r) => (
-              <div key={r.id} className="flex items-center justify-between text-[10px] font-mono-share py-1 px-2 bg-background/30 rounded">
+              <div key={r.id} className="flex items-center justify-between text-tiny font-mono-share py-1 px-2 bg-background/30 rounded">
                 <div className="flex items-center gap-2">
-                  <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold ${STATUS_COLORS[r.status] || ""}`}>
+                  <span className={`px-1.5 py-0.5 rounded text-micro font-bold ${STATUS_COLORS[r.status] || ""}`}>
                     {r.status.toUpperCase()}
                   </span>
                   <span className="text-foreground">{fmtCents(r.amount_cents)}</span>
@@ -481,7 +481,7 @@ const EarningsPanel: React.FC = () => {
       {/* Recent sales */}
       {data.recent.length > 0 && (
         <div>
-          <h3 className="font-mono-share text-[9px] text-muted-foreground mb-2 tracking-widest">RECENT SALES</h3>
+          <h3 className="font-mono-share text-tiny text-muted-foreground mb-2 tracking-widest">RECENT SALES</h3>
           <div className="space-y-1.5 max-h-48 overflow-y-auto">
             {data.recent.map((tx, i) => {
               const chatLabel =
@@ -493,9 +493,9 @@ const EarningsPanel: React.FC = () => {
                   ? "bg-primary/20 text-primary"
                   : "bg-accent/20 text-accent-foreground";
               return (
-                <div key={i} className="flex items-center justify-between text-[10px] font-mono-share py-1 px-2 bg-background/30 rounded">
+                <div key={i} className="flex items-center justify-between text-tiny font-mono-share py-1 px-2 bg-background/30 rounded">
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold ${badgeClass}`}>
+                    <span className={`px-1.5 py-0.5 rounded text-micro font-bold ${badgeClass}`}>
                       {tx.type === "chat" ? chatLabel : tx.type.toUpperCase()}
                     </span>
                     <span className="text-muted-foreground truncate">{tx.buyerName}</span>

@@ -71,7 +71,7 @@ const StepRow: React.FC<{
           {description}
         </p>
         {meta && (
-          <p className="font-mono-share text-[10px] text-muted-foreground/80 mt-1">
+          <p className="font-mono-share text-tiny text-muted-foreground/80 mt-1">
             {meta}
           </p>
         )}
@@ -109,7 +109,7 @@ const StatusBadge: React.FC<{ status: VerificationStatus["status"] }> = ({ statu
   const { label, cls, Icon } = map[status];
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-orbitron text-[11px] uppercase tracking-widest ${cls}`}
+      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-orbitron text-xs uppercase tracking-widest ${cls}`}
     >
       <Icon className="h-3.5 w-3.5" />
       {label}
@@ -425,7 +425,7 @@ const VerificationStatusPage: React.FC = () => {
                 </Button>
               )}
 
-              <p className="font-mono-share text-[10px] text-muted-foreground text-center">
+              <p className="font-mono-share text-tiny text-muted-foreground text-center">
                 Verification is revoked immediately if the subscription lapses.
               </p>
             </div>
@@ -435,10 +435,10 @@ const VerificationStatusPage: React.FC = () => {
         {/* Debug / IDs */}
         {status && (status.sessionId || status.subscriptionId) && (
           <div className="mt-4 rounded-lg border border-border/60 bg-card/30 p-4">
-            <div className="font-orbitron text-[10px] uppercase tracking-widest text-muted-foreground mb-2">
+            <div className="font-orbitron text-tiny uppercase tracking-widest text-muted-foreground mb-2">
               REFERENCE
             </div>
-            <dl className="space-y-1 font-mono-share text-[11px] text-muted-foreground">
+            <dl className="space-y-1 font-mono-share text-xs text-muted-foreground">
               {status.subscriptionId && (
                 <div className="flex justify-between gap-3">
                   <dt>Subscription</dt>

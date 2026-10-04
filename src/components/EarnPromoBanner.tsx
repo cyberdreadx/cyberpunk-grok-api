@@ -152,7 +152,7 @@ export default function EarnPromoBanner({ variant = "strip", className = "" }: P
         type="button"
         onClick={() => { snooze(); setHidden(true); }}
         aria-label="Dismiss"
-        className="absolute top-2 right-2 p-1 rounded text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+        className="absolute top-2 right-2 p-1 rounded text-muted-foreground/70 hover:text-muted-foreground transition-colors"
       >
         <X className="w-3.5 h-3.5" />
       </button>
@@ -164,7 +164,7 @@ export default function EarnPromoBanner({ variant = "strip", className = "" }: P
         <div className="min-w-0 flex-1 space-y-2">
           <div>
             <p className={`font-orbitron text-xs sm:text-sm tracking-wide ${accent}`}>{pitch.headline}</p>
-            <p className="font-mono-share text-[10px] sm:text-[11px] text-muted-foreground/80 leading-relaxed mt-0.5">
+            <p className="font-mono-share text-tiny sm:text-xs text-muted-foreground/80 leading-relaxed mt-0.5">
               {pitch.sub}
             </p>
           </div>
@@ -174,7 +174,7 @@ export default function EarnPromoBanner({ variant = "strip", className = "" }: P
               <button
                 type="button"
                 onClick={copy}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded border border-border/60 bg-background/40 font-mono-share text-[10px] text-foreground/80 hover:border-foreground/30 transition-colors max-w-full"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded border border-border/60 bg-background/40 font-mono-share text-tiny text-foreground/80 hover:border-foreground/30 transition-colors max-w-full"
               >
                 {copied ? <Check className="w-3 h-3 text-green-400 shrink-0" /> : <Copy className="w-3 h-3 shrink-0" />}
                 <span className="truncate">{copied ? "COPIED" : status.link.replace(/^https?:\/\//, "")}</span>
@@ -183,7 +183,7 @@ export default function EarnPromoBanner({ variant = "strip", className = "" }: P
             <button
               type="button"
               onClick={pitch.onCta}
-              className={`px-3 py-1.5 rounded font-orbitron text-[10px] tracking-widest transition-colors ${
+              className={`px-3 py-1.5 rounded font-orbitron text-tiny tracking-widest transition-colors ${
                 pitch.tone === "cash"
                   ? "bg-green-500/20 text-green-300 hover:bg-green-500/30 border border-green-500/40"
                   : "bg-primary/20 text-primary hover:bg-primary/30 border border-primary/40"

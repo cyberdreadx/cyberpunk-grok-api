@@ -42,7 +42,7 @@ const DataRain: React.FC<DataRainProps> = ({ intensity = 20 }) => {
       {drops.map((drop) => (
         <div
           key={drop.id}
-          className="absolute top-0 font-mono-share text-[10px] leading-tight"
+          className="absolute top-0 font-mono-share text-tiny leading-tight"
           style={{
             left: `${drop.x}%`,
             opacity: drop.opacity,

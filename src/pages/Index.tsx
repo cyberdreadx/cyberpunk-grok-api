@@ -1119,7 +1119,7 @@ const Index = () => {
             key={m}
             onClick={() => switchCreateMode(m)}
             aria-pressed={createMode === m}
-            className={`px-4 py-1 rounded-full font-mono-share text-[11px] tracking-wider transition-colors ${createMode === m
+            className={`px-4 py-1 rounded-full font-mono-share text-xs tracking-wider transition-colors ${createMode === m
               ? "bg-primary/20 text-primary"
               : "text-muted-foreground hover:text-foreground"
               }`}
@@ -1186,10 +1186,10 @@ const Index = () => {
               className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary/10 border border-secondary/30 hover:bg-secondary/20 transition-colors"
             >
               <AlertCircle className="w-3 h-3 text-secondary shrink-0" />
-              <span className="font-mono-share text-[10px] text-secondary">
+              <span className="font-mono-share text-tiny text-secondary">
                 {t("header.verifyEmailNotice")}
               </span>
-              <span className="font-mono-share text-[10px] text-secondary/80 underline underline-offset-2">
+              <span className="font-mono-share text-tiny text-secondary/80 underline underline-offset-2">
                 {t("header.verifyNow")}
               </span>
             </button>
@@ -1233,13 +1233,13 @@ const Index = () => {
             <span className="font-mono-share text-primary/40 text-xs">❯</span>
             <GlitchText
               text="SELECT_MODE"
-              className="font-orbitron text-[10px] tracking-widest text-muted-foreground"
+              className="font-orbitron text-tiny tracking-widest text-muted-foreground"
               glitchIntensity="low"
             />
             <div className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
             <Link
               to="/"
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-secondary/30 hover:border-secondary/60 bg-secondary/5 hover:bg-secondary/10 transition-all font-mono-share text-[10px] text-secondary/80 hover:text-secondary tracking-wider"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-secondary/30 hover:border-secondary/60 bg-secondary/5 hover:bg-secondary/10 transition-all font-mono-share text-tiny text-secondary/80 hover:text-secondary tracking-wider"
               title="Browse community feed"
             >
               <Rss className="w-3 h-3" />
@@ -1265,7 +1265,7 @@ const Index = () => {
               <span className="font-orbitron text-sm sm:text-base font-bold text-foreground tracking-wide leading-tight">
                 Describe what you want to create
               </span>
-              <span className="font-mono-share text-[10px] text-muted-foreground/50 hidden sm:inline">
+              <span className="font-mono-share text-tiny text-muted-foreground/70 hidden sm:inline">
                 — images, video, edits
               </span>
             </div>
@@ -1292,7 +1292,7 @@ const Index = () => {
             />
 
             {/* 3-step flow guide */}
-            <div className="flex items-center gap-0 font-mono-share text-[9px] select-none overflow-x-auto">
+            <div className="flex items-center gap-0 font-mono-share text-tiny select-none overflow-x-auto">
               {[
                 { n: "1", label: "Mode" },
                 { n: "2", label: "Prompt" },
@@ -1304,7 +1304,7 @@ const Index = () => {
                     : i === 1 ? "bg-primary/5 border border-primary/15 text-primary/50"
                     : "bg-secondary/5 border border-secondary/20 text-secondary/70"
                   }`}>
-                    <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold shrink-0 ${
+                    <span className={`w-4 h-4 rounded-full flex items-center justify-center text-micro font-bold shrink-0 ${
                       i === 0 ? "bg-primary/20 text-primary"
                       : i === 1 ? "bg-primary/10 text-primary/60"
                       : "bg-secondary/20 text-secondary"
@@ -1321,13 +1321,13 @@ const Index = () => {
             {/* Engine + mode settings (collapsible) */}
             <Collapsible defaultOpen={false} className="rounded-md overflow-hidden">
               <CollapsibleTrigger className="flex items-center gap-2 w-full group py-1.5">
-                <span className="font-mono-share text-primary/40 text-[9px] group-data-[state=open]:text-primary/60">▸</span>
+                <span className="font-mono-share text-primary/40 text-tiny group-data-[state=open]:text-primary/60">▸</span>
                 <Zap className="w-3 h-3 text-muted-foreground group-hover:text-primary transition-colors group-data-[state=open]:text-primary" />
-                <span className="font-mono-share text-[10px] tracking-widest text-muted-foreground group-hover:text-primary transition-colors group-data-[state=open]:text-primary">
+                <span className="font-mono-share text-tiny tracking-widest text-muted-foreground group-hover:text-primary transition-colors group-data-[state=open]:text-primary">
                   ENGINE_CONFIG
                 </span>
                 <div className="h-px flex-1 bg-primary/10" />
-                <span className="font-mono-share text-[9px] text-muted-foreground/30">
+                <span className="font-mono-share text-tiny text-muted-foreground/60">
                   {mode === "edit-image" ? editEngine : mode === "text-to-image" ? genEngine : mode === "text-to-video" ? renderEngine : animateEngine}
                 </span>
               </CollapsibleTrigger>
@@ -1336,7 +1336,7 @@ const Index = () => {
             {/* Engine selector — shows in edit-image mode */}
             {mode === "edit-image" && (
               <div className="space-y-2">
-                <label className="font-orbitron text-[10px] tracking-wider text-muted-foreground flex items-center gap-1.5">
+                <label className="font-orbitron text-tiny tracking-wider text-muted-foreground flex items-center gap-1.5">
                   <Zap className="w-3 h-3" />
                   ENGINE
                 </label>
@@ -1352,26 +1352,26 @@ const Index = () => {
                       }
                     `}
                   >
-                    <div className={`font-orbitron text-[11px] flex items-center gap-1.5 ${editEngine === "gltch" ? "text-secondary" : "text-foreground"}`}>
+                    <div className={`font-orbitron text-xs flex items-center gap-1.5 ${editEngine === "gltch" ? "text-secondary" : "text-foreground"}`}>
                       GLTCH
-                      <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-red-400/80 border-red-500/30 bg-red-500/10">RAW</span>
+                      <span className="font-mono-share text-micro px-1 py-px border rounded-sm tracking-widest text-red-400/80 border-red-500/30 bg-red-500/10">RAW</span>
                     </div>
-                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
+                    <div className="font-mono-share text-tiny text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>Edit + LoRA</span>
-                      <span className={editEngine === "gltch" ? "text-secondary/70" : "text-muted-foreground/50"}>
+                      <span className={editEngine === "gltch" ? "text-secondary/70" : "text-muted-foreground/70"}>
                         3 cr
                       </span>
                     </div>
                   </button>
                   <button type="button" onClick={() => { setEditEngine("grok"); setApiMode("byok"); }}
                     className={`p-2.5 border rounded text-left transition-all duration-200 ${editEngine === "grok" ? "border-primary neon-border bg-primary/5" : "border-border bg-card/30 hover:border-primary/40"}`}>
-                    <div className={`font-orbitron text-[11px] flex items-center gap-1.5 ${editEngine === "grok" ? "text-primary" : "text-foreground"}`}>
+                    <div className={`font-orbitron text-xs flex items-center gap-1.5 ${editEngine === "grok" ? "text-primary" : "text-foreground"}`}>
                       GROK
-                      <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-primary/80 border-primary/30 bg-primary/10">BYOK</span>
+                      <span className="font-mono-share text-micro px-1 py-px border rounded-sm tracking-widest text-primary/80 border-primary/30 bg-primary/10">BYOK</span>
                     </div>
-                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
+                    <div className="font-mono-share text-tiny text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>xAI · your key</span>
-                      <span className={editEngine === "grok" ? "text-primary/70" : "text-muted-foreground/50"}>free</span>
+                      <span className={editEngine === "grok" ? "text-primary/70" : "text-muted-foreground/70"}>free</span>
                     </div>
                   </button>
                 </div>
@@ -1381,12 +1381,12 @@ const Index = () => {
                   <>
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-secondary/5 border border-secondary/20 rounded">
                       <div className="w-1.5 h-1.5 rounded-full bg-secondary" />
-                      <span className="font-mono-share text-[9px] text-secondary/70">
+                      <span className="font-mono-share text-tiny text-secondary/70">
                         2 cr/edit — Flux 2 Klein Edit + LoRA
                       </span>
                     </div>
                     <div>
-                      <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">OUTPUT SIZE</label>
+                      <label className="font-mono-share text-tiny text-muted-foreground/70 mb-1 block">OUTPUT SIZE</label>
                       <div className="grid grid-cols-4 gap-1">
                         {([
                           [0, 0, "AUTO"],
@@ -1400,7 +1400,7 @@ const Index = () => {
                         ] as [number, number, string][]).map(([w, h, label]) => (
                           <button key={`qe-${w}x${h}`} type="button"
                             onClick={() => { setComfyWidth(w); setComfyHeight(h); }}
-                            className={`px-1.5 py-1 rounded text-center font-mono-share text-[9px] border transition-all
+                            className={`px-1.5 py-1 rounded text-center font-mono-share text-tiny border transition-all
                               ${comfyWidth === w && comfyHeight === h
                                 ? "border-purple-500 bg-purple-500/10 text-purple-400"
                                 : "border-border bg-card/30 text-muted-foreground hover:border-purple-500/40"
@@ -1410,11 +1410,11 @@ const Index = () => {
                           </button>
                         ))}
                       </div>
-                      <p className="font-mono-share text-[8px] text-muted-foreground/50 mt-1">AUTO = match input image</p>
+                      <p className="font-mono-share text-micro text-muted-foreground/70 mt-1">AUTO = match input image</p>
                     </div>
                     
                     <div>
-                      <label className="font-mono-share text-[9px] text-muted-foreground mb-1 block">SECOND IMAGE (OPTIONAL)</label>
+                      <label className="font-mono-share text-tiny text-muted-foreground mb-1 block">SECOND IMAGE (OPTIONAL)</label>
                       {gltchImage2 ? (
                         <div className="relative">
                           <img
@@ -1452,13 +1452,13 @@ const Index = () => {
 
                     {comfyModels.editLoras.length > 0 && (
                       <div>
-                        <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">LoRA (optional)</label>
+                        <label className="font-mono-share text-tiny text-muted-foreground/70 mb-1 block">LoRA (optional)</label>
                         <select value={editLora} onChange={(e) => {
                           const meta = EDIT_LORA_META[e.target.value];
                           if (meta?.nsfw && !comfyModels.xrgeHolder && e.target.value !== "none") return;
                           setEditLora(e.target.value);
                         }}
-                          className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-[10px] font-mono-share text-foreground">
+                          className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-tiny font-mono-share text-foreground">
                           <option value="none">None</option>
                           {comfyModels.editLoras.map((l) => {
                             const meta = EDIT_LORA_META[l];
@@ -1472,13 +1472,13 @@ const Index = () => {
                           })}
                         </select>
                         {editLora !== "none" && LORA_CREDITS[editLora] && (
-                          <div className="font-mono-share text-[8px] text-muted-foreground/50 mt-1">
+                          <div className="font-mono-share text-micro text-muted-foreground/70 mt-1">
                             {LORA_CREDITS[editLora]}
                           </div>
                         )}
                         {editLora !== "none" && (
                           <div className="mt-1.5">
-                            <label className="font-mono-share text-[8px] text-muted-foreground/60 flex items-center justify-between">
+                            <label className="font-mono-share text-micro text-muted-foreground/60 flex items-center justify-between">
                               <span>STRENGTH</span>
                               <span>{editLoraStrength.toFixed(1)}</span>
                             </label>
@@ -1488,12 +1488,12 @@ const Index = () => {
                           </div>
                         )}
                         {!comfyModels.xrgeHolder && comfyModels.editLoras.some((l) => EDIT_LORA_META[l]?.nsfw) && (
-                          <div className="font-mono-share text-[8px] text-pink-400/60 mt-1 space-y-1">
+                          <div className="font-mono-share text-micro text-pink-400/60 mt-1 space-y-1">
                             <p>🔒 NSFW LoRAs require unlock</p>
                             <button
                               onClick={() => creditsHook.purchaseLoraUnlock()}
                               disabled={creditsHook.purchasing}
-                              className="px-2 py-1 rounded text-[9px] font-mono-share bg-pink-500/20 border border-pink-500/40 text-pink-300 hover:bg-pink-500/30 transition-colors disabled:opacity-50"
+                              className="px-2 py-1 rounded text-tiny font-mono-share bg-pink-500/20 border border-pink-500/40 text-pink-300 hover:bg-pink-500/30 transition-colors disabled:opacity-50"
                             >
                               {creditsHook.purchasing ? "..." : "UNLOCK ALL LORAS — $30"}
                             </button>
@@ -1509,49 +1509,49 @@ const Index = () => {
             {/* Engine selector — GENERATE mode */}
             {mode === "text-to-image" && (
               <div className="space-y-2">
-                <label className="font-orbitron text-[10px] tracking-wider text-muted-foreground flex items-center gap-1.5">
+                <label className="font-orbitron text-tiny tracking-wider text-muted-foreground flex items-center gap-1.5">
                   <Zap className="w-3 h-3" />
                   ENGINE
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   <button type="button" onClick={() => setGenEngine("gltch")}
                     className={`p-2.5 border rounded text-left transition-all duration-200 ${genEngine === "gltch" ? "border-secondary neon-border bg-secondary/5" : "border-border bg-card/30 hover:border-secondary/40"}`}>
-                    <div className={`font-orbitron text-[11px] flex items-center gap-1.5 ${genEngine === "gltch" ? "text-secondary" : "text-foreground"}`}>
+                    <div className={`font-orbitron text-xs flex items-center gap-1.5 ${genEngine === "gltch" ? "text-secondary" : "text-foreground"}`}>
                       GLTCH
-                      <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-red-400/80 border-red-500/30 bg-red-500/10">RAW</span>
+                      <span className="font-mono-share text-micro px-1 py-px border rounded-sm tracking-widest text-red-400/80 border-red-500/30 bg-red-500/10">RAW</span>
                     </div>
-                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
+                    <div className="font-mono-share text-tiny text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>Z-Image Turbo</span>
-                      <span className={genEngine === "gltch" ? "text-secondary/70" : "text-muted-foreground/50"}>3 cr</span>
+                      <span className={genEngine === "gltch" ? "text-secondary/70" : "text-muted-foreground/70"}>3 cr</span>
                     </div>
                   </button>
                   <button type="button" onClick={() => setGenEngine("krea2")}
                     className={`p-2.5 border rounded text-left transition-all duration-200 ${genEngine === "krea2" ? "border-cyan-400 bg-cyan-400/5 shadow-glow-focus" : "border-border bg-card/30 hover:border-cyan-400/40"}`}>
-                    <div className={`font-orbitron text-[11px] flex items-center gap-1.5 ${genEngine === "krea2" ? "text-cyan-300" : "text-foreground"}`}>
+                    <div className={`font-orbitron text-xs flex items-center gap-1.5 ${genEngine === "krea2" ? "text-cyan-300" : "text-foreground"}`}>
                       KREA 2
-                      <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-cyan-300/80 border-cyan-400/30 bg-cyan-400/10">NEW</span>
+                      <span className="font-mono-share text-micro px-1 py-px border rounded-sm tracking-widest text-cyan-300/80 border-cyan-400/30 bg-cyan-400/10">NEW</span>
                     </div>
-                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
+                    <div className="font-mono-share text-tiny text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>Krea 2 Turbo</span>
-                      <span className={genEngine === "krea2" ? "text-cyan-300/70" : "text-muted-foreground/50"}>3 cr</span>
+                      <span className={genEngine === "krea2" ? "text-cyan-300/70" : "text-muted-foreground/70"}>3 cr</span>
                     </div>
                   </button>
                   <button type="button" onClick={() => { setGenEngine("grok"); setApiMode("byok"); }}
                     className={`p-2.5 border rounded text-left transition-all duration-200 ${genEngine === "grok" ? "border-primary neon-border bg-primary/5" : "border-border bg-card/30 hover:border-primary/40"}`}>
-                    <div className={`font-orbitron text-[11px] flex items-center gap-1.5 ${genEngine === "grok" ? "text-primary" : "text-foreground"}`}>
+                    <div className={`font-orbitron text-xs flex items-center gap-1.5 ${genEngine === "grok" ? "text-primary" : "text-foreground"}`}>
                       GROK
-                      <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-primary/80 border-primary/30 bg-primary/10">BYOK</span>
+                      <span className="font-mono-share text-micro px-1 py-px border rounded-sm tracking-widest text-primary/80 border-primary/30 bg-primary/10">BYOK</span>
                     </div>
-                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
+                    <div className="font-mono-share text-tiny text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>xAI · your key</span>
-                      <span className={genEngine === "grok" ? "text-primary/70" : "text-muted-foreground/50"}>free</span>
+                      <span className={genEngine === "grok" ? "text-primary/70" : "text-muted-foreground/70"}>free</span>
                     </div>
                   </button>
                   {isAdmin && (
                     <button type="button" onClick={() => setGenEngine("comfy")}
                       className={`p-2.5 border rounded text-left transition-all duration-200 ${genEngine === "comfy" ? "border-purple-500 bg-purple-500/5 shadow-glow-focus" : "border-border bg-card/30 hover:border-purple-500/40"}`}>
-                      <div className={`font-orbitron text-[11px] ${genEngine === "comfy" ? "text-purple-400" : "text-foreground"}`}>COMFY</div>
-                      <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5">Admin</div>
+                      <div className={`font-orbitron text-xs ${genEngine === "comfy" ? "text-purple-400" : "text-foreground"}`}>COMFY</div>
+                      <div className="font-mono-share text-tiny text-muted-foreground mt-0.5">Admin</div>
                     </button>
                   )}
                 </div>
@@ -1564,14 +1564,14 @@ const Index = () => {
                     composition sideways or wastes the latent). */}
                 {(genEngine === "gltch" || genEngine === "krea2") && (
                   <div>
-                    <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">OUTPUT SIZE</label>
+                    <label className="font-mono-share text-tiny text-muted-foreground/70 mb-1 block">OUTPUT SIZE</label>
                     <div className="grid grid-cols-4 gap-1">
                       {ZIMAGE_ORDER.map((label) => {
                         const [w, h] = ZIMAGE_SIZES[label];
                         return (
                         <button key={`zi-${w}x${h}`} type="button"
                           onClick={() => { setZimageWidth(w); setZimageHeight(h); }}
-                          className={`px-1.5 py-1 rounded text-center font-mono-share text-[9px] border transition-all
+                          className={`px-1.5 py-1 rounded text-center font-mono-share text-tiny border transition-all
                             ${zimageWidth === w && zimageHeight === h
                               ? "border-secondary bg-secondary/10 text-secondary"
                               : "border-border bg-card/30 text-muted-foreground hover:border-secondary/40"
@@ -1582,7 +1582,7 @@ const Index = () => {
                         );
                       })}
                     </div>
-                    <p className="font-mono-share text-[8px] text-muted-foreground/50 mt-1">
+                    <p className="font-mono-share text-micro text-muted-foreground/70 mt-1">
                       {zimageWidth}×{zimageHeight} — 3 cr at any size
                     </p>
                   </div>
@@ -1590,14 +1590,14 @@ const Index = () => {
 
                 {genEngine === "krea2" && comfyModels.krea2Loras.length > 0 && (
                   <div>
-                    <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">STYLE (OPTIONAL)</label>
+                    <label className="font-mono-share text-tiny text-muted-foreground/70 mb-1 block">STYLE (OPTIONAL)</label>
                     <select value={krea2Lora}
                       onChange={(e) => {
                         const meta = KREA2_LORA_META[e.target.value];
                         if (meta?.nsfw && !comfyModels.xrgeHolder) return;
                         setKrea2Lora(e.target.value);
                       }}
-                      className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-[10px] font-mono-share text-foreground">
+                      className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-tiny font-mono-share text-foreground">
                       <option value="none">None</option>
                       {comfyModels.krea2Loras.map((l) => {
                         const meta = KREA2_LORA_META[l];
@@ -1612,7 +1612,7 @@ const Index = () => {
                     </select>
                     {krea2Lora !== "none" && (
                       <div className="mt-1.5">
-                        <label className="font-mono-share text-[8px] text-muted-foreground/60 flex items-center justify-between">
+                        <label className="font-mono-share text-micro text-muted-foreground/60 flex items-center justify-between">
                           <span>STRENGTH</span>
                           <span>{krea2LoraStrength.toFixed(1)}</span>
                         </label>
@@ -1629,39 +1629,39 @@ const Index = () => {
             {/* Engine selector — RENDER (text-to-video) mode */}
             {mode === "text-to-video" && (
               <div className="space-y-2">
-                <label className="font-orbitron text-[10px] tracking-wider text-muted-foreground flex items-center gap-1.5">
+                <label className="font-orbitron text-tiny tracking-wider text-muted-foreground flex items-center gap-1.5">
                   <Zap className="w-3 h-3" />
                   ENGINE
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   <button type="button" onClick={() => setRenderEngine("comfy")}
                     className={`p-2.5 border rounded text-left transition-all duration-200 ${renderEngine === "comfy" ? "border-purple-500 bg-purple-500/5 shadow-glow-focus" : "border-border bg-card/30 hover:border-purple-500/40"}`}>
-                    <div className={`font-orbitron text-[11px] ${renderEngine === "comfy" ? "text-purple-400" : "text-foreground"}`}>COMFY</div>
-                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
+                    <div className={`font-orbitron text-xs ${renderEngine === "comfy" ? "text-purple-400" : "text-foreground"}`}>COMFY</div>
+                    <div className="font-mono-share text-tiny text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>WAN Video</span>
-                      <span className={renderEngine === "comfy" ? "text-purple-400/70" : "text-muted-foreground/50"}>15 cr</span>
+                      <span className={renderEngine === "comfy" ? "text-purple-400/70" : "text-muted-foreground/70"}>15 cr</span>
                     </div>
                   </button>
                   <button type="button" onClick={() => { setRenderEngine("grok"); setApiMode("byok"); }}
                     className={`p-2.5 border rounded text-left transition-all duration-200 ${renderEngine === "grok" ? "border-primary neon-border bg-primary/5" : "border-border bg-card/30 hover:border-primary/40"}`}>
-                    <div className={`font-orbitron text-[11px] flex items-center gap-1.5 ${renderEngine === "grok" ? "text-primary" : "text-foreground"}`}>
+                    <div className={`font-orbitron text-xs flex items-center gap-1.5 ${renderEngine === "grok" ? "text-primary" : "text-foreground"}`}>
                       GROK
-                      <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-primary/80 border-primary/30 bg-primary/10">BYOK</span>
+                      <span className="font-mono-share text-micro px-1 py-px border rounded-sm tracking-widest text-primary/80 border-primary/30 bg-primary/10">BYOK</span>
                     </div>
-                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
+                    <div className="font-mono-share text-tiny text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>xAI · your key</span>
-                      <span className={renderEngine === "grok" ? "text-primary/70" : "text-muted-foreground/50"}>free</span>
+                      <span className={renderEngine === "grok" ? "text-primary/70" : "text-muted-foreground/70"}>free</span>
                     </div>
                   </button>
                   <button type="button" onClick={() => setRenderEngine("ltx")}
                     className={`p-2.5 border rounded text-left transition-all duration-200 ${renderEngine === "ltx" ? "border-amber-400 bg-amber-400/5 shadow-glow-focus" : "border-border bg-card/30 hover:border-amber-400/40"}`}>
-                    <div className={`font-orbitron text-[11px] flex items-center gap-1.5 ${renderEngine === "ltx" ? "text-amber-300" : "text-foreground"}`}>
+                    <div className={`font-orbitron text-xs flex items-center gap-1.5 ${renderEngine === "ltx" ? "text-amber-300" : "text-foreground"}`}>
                       LTX
-                      <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-amber-300/90 border-amber-400/40 bg-amber-400/10">NEW</span>
+                      <span className="font-mono-share text-micro px-1 py-px border rounded-sm tracking-widest text-amber-300/90 border-amber-400/40 bg-amber-400/10">NEW</span>
                     </div>
-                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
+                    <div className="font-mono-share text-tiny text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>LTX-2.3 • with sound</span>
-                      <span className={renderEngine === "ltx" ? "text-amber-300/70" : "text-muted-foreground/50"}>7 cr/s</span>
+                      <span className={renderEngine === "ltx" ? "text-amber-300/70" : "text-muted-foreground/70"}>7 cr/s</span>
                     </div>
                   </button>
                 </div>
@@ -1671,30 +1671,30 @@ const Index = () => {
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-500/5 border border-purple-500/20 rounded">
                       <div className="w-1.5 h-1.5 rounded-full bg-purple-400" />
-                      <span className="font-mono-share text-[9px] text-purple-400/70">
+                      <span className="font-mono-share text-tiny text-purple-400/70">
                         WAN 2.2 advanced mode — heavier post-processing
                       </span>
                     </div>
                     <div>
-                      <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">
+                      <label className="font-mono-share text-tiny text-muted-foreground/70 mb-1 block">
                         Aspect
-                        <span className="text-muted-foreground/40 ml-1.5">{renderW}×{renderH}</span>
+                        <span className="text-muted-foreground/60 ml-1.5">{renderW}×{renderH}</span>
                       </label>
                       <div className="flex flex-wrap gap-1.5">
                         {(Object.keys(RENDER_SIZES) as RenderAspect[]).map((a) => (
                           <button key={`ra-${a}`} type="button" onClick={() => setRenderAspect(a)}
-                            className={`px-2 py-1 rounded text-[9px] font-mono-share transition-all ${renderAspect === a ? "bg-purple-500/20 border-purple-500/50 text-purple-300 border" : "bg-card/30 border border-border text-muted-foreground hover:border-purple-500/30"}`}>
+                            className={`px-2 py-1 rounded text-tiny font-mono-share transition-all ${renderAspect === a ? "bg-purple-500/20 border-purple-500/50 text-purple-300 border" : "bg-card/30 border border-border text-muted-foreground hover:border-purple-500/30"}`}>
                             {a}
                           </button>
                         ))}
                       </div>
                     </div>
                     <div>
-                      <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Duration</label>
+                      <label className="font-mono-share text-tiny text-muted-foreground/70 mb-1 block">Duration</label>
                       <div className="flex flex-wrap gap-1.5">
                         {[{ label: "~2s", value: 33 }, { label: "~3s", value: 49 }, { label: "~5s", value: 81 }, { label: "~7s", value: 113 }, { label: "~10s", value: 161 }, { label: "~15s", value: 241 }].map((p) => (
                           <button key={p.value} type="button" onClick={() => setComfyFrameCount(p.value)}
-                            className={`px-2 py-1 rounded text-[9px] font-mono-share transition-all ${comfyFrameCount === p.value ? "bg-purple-500/20 border-purple-500/50 text-purple-300 border" : "bg-card/30 border border-border text-muted-foreground hover:border-purple-500/30"}`}>
+                            className={`px-2 py-1 rounded text-tiny font-mono-share transition-all ${comfyFrameCount === p.value ? "bg-purple-500/20 border-purple-500/50 text-purple-300 border" : "bg-card/30 border border-border text-muted-foreground hover:border-purple-500/30"}`}>
                             {p.label}
                           </button>
                         ))}
@@ -1702,13 +1702,13 @@ const Index = () => {
                     </div>
                     {comfyModels.videoLoras.length > 0 && (
                       <div>
-                        <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Video LoRA (optional)</label>
+                        <label className="font-mono-share text-tiny text-muted-foreground/70 mb-1 block">Video LoRA (optional)</label>
                         <select value={comfyVideoLora} onChange={(e) => {
                           const entry = comfyModels.videoLoras.find(v => v.name === e.target.value);
                           if (entry?.nsfw && !comfyModels.xrgeHolder) return;
                           setComfyVideoLora(e.target.value);
                         }}
-                          className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-[10px] font-mono-share text-foreground">
+                          className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-tiny font-mono-share text-foreground">
                           <option value="none">None</option>
                           {comfyModels.videoLoras.map((entry) => (
                             <option key={entry.name} value={entry.name}
@@ -1719,12 +1719,12 @@ const Index = () => {
                           ))}
                         </select>
                         {!comfyModels.xrgeHolder && comfyModels.videoLoras.some(v => v.nsfw) && (
-                          <div className="mt-1 font-mono-share text-[8px] text-pink-400/70 space-y-1">
+                          <div className="mt-1 font-mono-share text-micro text-pink-400/70 space-y-1">
                             <p>🔒 NSFW LoRAs require unlock</p>
                             <button
                               onClick={() => creditsHook.purchaseLoraUnlock()}
                               disabled={creditsHook.purchasing}
-                              className="px-2 py-1 rounded text-[9px] font-mono-share bg-pink-500/20 border border-pink-500/40 text-pink-300 hover:bg-pink-500/30 transition-colors disabled:opacity-50"
+                              className="px-2 py-1 rounded text-tiny font-mono-share bg-pink-500/20 border border-pink-500/40 text-pink-300 hover:bg-pink-500/30 transition-colors disabled:opacity-50"
                             >
                               {creditsHook.purchasing ? "..." : "UNLOCK ALL LORAS — $30"}
                             </button>
@@ -1736,24 +1736,24 @@ const Index = () => {
                           return (
                             <div className="mt-1.5 space-y-1.5">
                               <div>
-                                <label className="font-mono-share text-[9px] text-muted-foreground/70">Strength: {comfyVideoLoraStrength.toFixed(2)}</label>
+                                <label className="font-mono-share text-tiny text-muted-foreground/70">Strength: {comfyVideoLoraStrength.toFixed(2)}</label>
                                 <input type="range" min={0} max={2} step={0.05} value={comfyVideoLoraStrength}
                                   onChange={(e) => setComfyVideoLoraStrength(Number(e.target.value))}
                                   className="w-full accent-purple-500 mt-0.5" />
                               </div>
                               {isPaired ? (
                                 <div className="flex items-center gap-2 px-2 py-1 bg-purple-500/5 border border-purple-500/20 rounded">
-                                  <span className="font-mono-share text-[9px] text-purple-400/70">
+                                  <span className="font-mono-share text-tiny text-purple-400/70">
                                     Auto-paired: high + low noise files detected
                                   </span>
                                 </div>
                               ) : (
                                 <div>
-                                  <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Apply to pass</label>
+                                  <label className="font-mono-share text-tiny text-muted-foreground/70 mb-1 block">Apply to pass</label>
                                   <div className="flex gap-1.5">
                                     {(["high", "low", "both"] as const).map((p) => (
                                       <button key={p} type="button" onClick={() => setComfyVideoLoraPass(p)}
-                                        className={`px-2 py-1 rounded text-[9px] font-mono-share transition-all ${comfyVideoLoraPass === p ? "bg-purple-500/20 border-purple-500/50 text-purple-300 border" : "bg-card/30 border border-border text-muted-foreground hover:border-purple-500/30"}`}>
+                                        className={`px-2 py-1 rounded text-tiny font-mono-share transition-all ${comfyVideoLoraPass === p ? "bg-purple-500/20 border-purple-500/50 text-purple-300 border" : "bg-card/30 border border-border text-muted-foreground hover:border-purple-500/30"}`}>
                                         {p === "high" ? "High Noise" : p === "low" ? "Low Noise" : "Both"}
                                       </button>
                                     ))}
@@ -1767,7 +1767,7 @@ const Index = () => {
                     )}
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-500/5 border border-purple-500/20 rounded">
                       <Film className="w-3 h-3 text-purple-400/70" />
-                      <span className="font-mono-share text-[9px] text-purple-400/70">
+                      <span className="font-mono-share text-tiny text-purple-400/70">
                         Auto-generates start frame, then animates — 15 cr flat
                       </span>
                     </div>
@@ -1779,18 +1779,18 @@ const Index = () => {
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-400/5 border border-amber-400/20 rounded">
                       <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                      <span className="font-mono-share text-[9px] text-amber-300/70">
+                      <span className="font-mono-share text-tiny text-amber-300/70">
                         LTX-2.3 — native sound · {Math.max(1, Math.round(comfyFrameCount / 24))}s · 7 cr/s
                       </span>
                     </div>
                     <div>
-                      <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">
+                      <label className="font-mono-share text-tiny text-muted-foreground/70 mb-1 block">
                         Aspect
                         {/* The x2 spatial tail doubles what LTX delivers, so label the
                             delivered size. The factor comes from the server — the tail is
                             an env switch, and a hardcoded 2 would go stale the moment it
                             was turned off. */}
-                        <span className="text-muted-foreground/40 ml-1.5">
+                        <span className="text-muted-foreground/60 ml-1.5">
                           {renderW * comfyModels.ltxUpscaleFactor}×{renderH * comfyModels.ltxUpscaleFactor}
                         </span>
                         {comfyModels.ltxUpscaleFactor > 1 && (
@@ -1800,18 +1800,18 @@ const Index = () => {
                       <div className="flex flex-wrap gap-1.5">
                         {(Object.keys(RENDER_SIZES) as RenderAspect[]).map((a) => (
                           <button key={`ral-${a}`} type="button" onClick={() => setRenderAspect(a)}
-                            className={`px-2 py-1 rounded text-[9px] font-mono-share transition-all ${renderAspect === a ? "bg-amber-400/20 border-amber-400/50 text-amber-300 border" : "bg-card/30 border border-border text-muted-foreground hover:border-amber-400/30"}`}>
+                            className={`px-2 py-1 rounded text-tiny font-mono-share transition-all ${renderAspect === a ? "bg-amber-400/20 border-amber-400/50 text-amber-300 border" : "bg-card/30 border border-border text-muted-foreground hover:border-amber-400/30"}`}>
                             {a}
                           </button>
                         ))}
                       </div>
                     </div>
                     <div>
-                      <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Duration</label>
+                      <label className="font-mono-share text-tiny text-muted-foreground/70 mb-1 block">Duration</label>
                       <div className="flex flex-wrap gap-1.5">
                         {[{ label: "~2s", value: 49 }, { label: "~3s", value: 73 }, { label: "~5s", value: 121 }, { label: "~7s", value: 169 }, { label: "~10s", value: 257 }, { label: "~15s", value: 361 }].map((p) => (
                           <button key={p.value} type="button" onClick={() => setComfyFrameCount(p.value)}
-                            className={`px-2 py-1 rounded text-[9px] font-mono-share transition-all ${comfyFrameCount === p.value ? "bg-amber-400/20 border-amber-400/50 text-amber-300 border" : "bg-card/30 border border-border text-muted-foreground hover:border-amber-400/30"}`}>
+                            className={`px-2 py-1 rounded text-tiny font-mono-share transition-all ${comfyFrameCount === p.value ? "bg-amber-400/20 border-amber-400/50 text-amber-300 border" : "bg-card/30 border border-border text-muted-foreground hover:border-amber-400/30"}`}>
                             {p.label}
                           </button>
                         ))}
@@ -1825,39 +1825,39 @@ const Index = () => {
             {/* Engine selector — ANIMATE (image-to-video) mode */}
             {mode === "image-to-video" && (
               <div className="space-y-2">
-                <label className="font-orbitron text-[10px] tracking-wider text-muted-foreground flex items-center gap-1.5">
+                <label className="font-orbitron text-tiny tracking-wider text-muted-foreground flex items-center gap-1.5">
                   <Zap className="w-3 h-3" />
                   ENGINE
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   <button type="button" onClick={() => { setAnimateEngine("gltch"); }}
                     className={`p-2.5 border rounded text-left transition-all duration-200 ${animateEngine === "gltch" ? "border-secondary neon-border bg-secondary/5" : "border-border bg-card/30 hover:border-secondary/40"}`}>
-                    <div className={`font-orbitron text-[11px] ${animateEngine === "gltch" ? "text-secondary" : "text-foreground"}`}>GLTCH</div>
-                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
+                    <div className={`font-orbitron text-xs ${animateEngine === "gltch" ? "text-secondary" : "text-foreground"}`}>GLTCH</div>
+                    <div className="font-mono-share text-tiny text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>WAN 2.2 I2V / T2V</span>
-                      <span className={animateEngine === "gltch" ? "text-secondary/70" : "text-muted-foreground/50"}>15 cr</span>
+                      <span className={animateEngine === "gltch" ? "text-secondary/70" : "text-muted-foreground/70"}>15 cr</span>
                     </div>
                   </button>
                   <button type="button" onClick={() => { setAnimateEngine("grok"); setApiMode("byok"); }}
                     className={`p-2.5 border rounded text-left transition-all duration-200 ${animateEngine === "grok" ? "border-primary neon-border bg-primary/5" : "border-border bg-card/30 hover:border-primary/40"}`}>
-                    <div className={`font-orbitron text-[11px] flex items-center gap-1.5 ${animateEngine === "grok" ? "text-primary" : "text-foreground"}`}>
+                    <div className={`font-orbitron text-xs flex items-center gap-1.5 ${animateEngine === "grok" ? "text-primary" : "text-foreground"}`}>
                       GROK
-                      <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-primary/80 border-primary/30 bg-primary/10">BYOK</span>
+                      <span className="font-mono-share text-micro px-1 py-px border rounded-sm tracking-widest text-primary/80 border-primary/30 bg-primary/10">BYOK</span>
                     </div>
-                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
+                    <div className="font-mono-share text-tiny text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>xAI · your key</span>
-                      <span className={animateEngine === "grok" ? "text-primary/70" : "text-muted-foreground/50"}>free</span>
+                      <span className={animateEngine === "grok" ? "text-primary/70" : "text-muted-foreground/70"}>free</span>
                     </div>
                   </button>
                   <button type="button" onClick={() => { setAnimateEngine("ltx"); }}
                     className={`p-2.5 border rounded text-left transition-all duration-200 ${animateEngine === "ltx" ? "border-amber-400 bg-amber-400/5 shadow-glow-focus" : "border-border bg-card/30 hover:border-amber-400/40"}`}>
-                    <div className={`font-orbitron text-[11px] flex items-center gap-1.5 ${animateEngine === "ltx" ? "text-amber-300" : "text-foreground"}`}>
+                    <div className={`font-orbitron text-xs flex items-center gap-1.5 ${animateEngine === "ltx" ? "text-amber-300" : "text-foreground"}`}>
                       LTX
-                      <span className="font-mono-share text-[7px] px-1 py-px border rounded-sm tracking-widest text-amber-300/90 border-amber-400/40 bg-amber-400/10">NEW</span>
+                      <span className="font-mono-share text-micro px-1 py-px border rounded-sm tracking-widest text-amber-300/90 border-amber-400/40 bg-amber-400/10">NEW</span>
                     </div>
-                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5 flex items-center justify-between">
+                    <div className="font-mono-share text-tiny text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>LTX-2.3 • with sound</span>
-                      <span className={animateEngine === "ltx" ? "text-amber-300/70" : "text-muted-foreground/50"}>7 cr/s</span>
+                      <span className={animateEngine === "ltx" ? "text-amber-300/70" : "text-muted-foreground/70"}>7 cr/s</span>
                     </div>
                   </button>
                 </div>
@@ -1867,16 +1867,16 @@ const Index = () => {
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-secondary/5 border border-secondary/20 rounded">
                       <div className="w-1.5 h-1.5 rounded-full bg-secondary" />
-                      <span className="font-mono-share text-[9px] text-secondary/70">
+                      <span className="font-mono-share text-tiny text-secondary/70">
                         Native WAN baseline — simpler, cheaper, and more reliable
                       </span>
                     </div>
                     <div>
-                      <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Duration</label>
+                      <label className="font-mono-share text-tiny text-muted-foreground/70 mb-1 block">Duration</label>
                       <div className="flex flex-wrap gap-1.5">
                         {[{ label: "~2s", value: 33 }, { label: "~3s", value: 49 }, { label: "~5s", value: 81 }, { label: "~7s", value: 113 }, { label: "~10s", value: 161 }, { label: "~15s", value: 241 }].map((p) => (
                           <button key={p.value} type="button" onClick={() => setComfyFrameCount(p.value)}
-                            className={`px-2 py-1 rounded text-[9px] font-mono-share transition-all ${comfyFrameCount === p.value ? "bg-secondary/20 border-secondary/50 text-secondary border" : "bg-card/30 border border-border text-muted-foreground hover:border-secondary/30"}`}>
+                            className={`px-2 py-1 rounded text-tiny font-mono-share transition-all ${comfyFrameCount === p.value ? "bg-secondary/20 border-secondary/50 text-secondary border" : "bg-card/30 border border-border text-muted-foreground hover:border-secondary/30"}`}>
                             {p.label}
                           </button>
                         ))}
@@ -1886,13 +1886,13 @@ const Index = () => {
                     
                     {comfyModels.videoLoras.length > 0 && (
                       <div>
-                        <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Video LoRA (optional)</label>
+                        <label className="font-mono-share text-tiny text-muted-foreground/70 mb-1 block">Video LoRA (optional)</label>
                         <select value={comfyVideoLora} onChange={(e) => {
                           const entry = comfyModels.videoLoras.find(v => v.name === e.target.value);
                           if (entry?.nsfw && !comfyModels.xrgeHolder) return;
                           setComfyVideoLora(e.target.value);
                         }}
-                          className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-[10px] font-mono-share text-foreground">
+                          className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-tiny font-mono-share text-foreground">
                           <option value="none">None</option>
                           {comfyModels.videoLoras.map((entry) => (
                             <option key={entry.name} value={entry.name}
@@ -1903,12 +1903,12 @@ const Index = () => {
                           ))}
                         </select>
                         {!comfyModels.xrgeHolder && comfyModels.videoLoras.some(v => v.nsfw) && (
-                          <div className="mt-1 font-mono-share text-[8px] text-pink-400/70 space-y-1">
+                          <div className="mt-1 font-mono-share text-micro text-pink-400/70 space-y-1">
                             <p>🔒 NSFW LoRAs require unlock</p>
                             <button
                               onClick={() => creditsHook.purchaseLoraUnlock()}
                               disabled={creditsHook.purchasing}
-                              className="px-2 py-1 rounded text-[9px] font-mono-share bg-pink-500/20 border border-pink-500/40 text-pink-300 hover:bg-pink-500/30 transition-colors disabled:opacity-50"
+                              className="px-2 py-1 rounded text-tiny font-mono-share bg-pink-500/20 border border-pink-500/40 text-pink-300 hover:bg-pink-500/30 transition-colors disabled:opacity-50"
                             >
                               {creditsHook.purchasing ? "..." : "UNLOCK ALL LORAS — $30"}
                             </button>
@@ -1920,18 +1920,18 @@ const Index = () => {
                           return (
                             <div className="mt-1.5 space-y-1.5">
                               <div>
-                                <label className="font-mono-share text-[9px] text-muted-foreground/70">Strength: {comfyVideoLoraStrength.toFixed(2)}</label>
+                                <label className="font-mono-share text-tiny text-muted-foreground/70">Strength: {comfyVideoLoraStrength.toFixed(2)}</label>
                                 <input type="range" min={0} max={2} step={0.05} value={comfyVideoLoraStrength}
                                   onChange={(e) => setComfyVideoLoraStrength(Number(e.target.value))}
                                   className="w-full accent-secondary mt-0.5" />
                               </div>
                               {!isPaired && (
                                 <div>
-                                  <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Apply to pass</label>
+                                  <label className="font-mono-share text-tiny text-muted-foreground/70 mb-1 block">Apply to pass</label>
                                   <div className="flex gap-1.5">
                                     {(["high", "low", "both"] as const).map((p) => (
                                       <button key={p} type="button" onClick={() => setComfyVideoLoraPass(p)}
-                                        className={`px-2 py-1 rounded text-[9px] font-mono-share transition-all ${comfyVideoLoraPass === p ? "bg-secondary/20 border-secondary/50 text-secondary border" : "bg-card/30 border border-border text-muted-foreground hover:border-secondary/30"}`}>
+                                        className={`px-2 py-1 rounded text-tiny font-mono-share transition-all ${comfyVideoLoraPass === p ? "bg-secondary/20 border-secondary/50 text-secondary border" : "bg-card/30 border border-border text-muted-foreground hover:border-secondary/30"}`}>
                                         {p === "high" ? "High Noise" : p === "low" ? "Low Noise" : "Both"}
                                       </button>
                                     ))}
@@ -1951,16 +1951,16 @@ const Index = () => {
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-400/5 border border-amber-400/20 rounded">
                       <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                      <span className="font-mono-share text-[9px] text-amber-300/70">
+                      <span className="font-mono-share text-tiny text-amber-300/70">
                         LTX-2.3 — native sound · {Math.max(1, Math.round(comfyFrameCount / 24))}s · 7 cr/s
                       </span>
                     </div>
                     <div>
-                      <label className="font-mono-share text-[9px] text-muted-foreground/70 mb-1 block">Duration</label>
+                      <label className="font-mono-share text-tiny text-muted-foreground/70 mb-1 block">Duration</label>
                       <div className="flex flex-wrap gap-1.5">
                         {[{ label: "~2s", value: 49 }, { label: "~3s", value: 73 }, { label: "~5s", value: 121 }, { label: "~7s", value: 169 }, { label: "~10s", value: 257 }, { label: "~15s", value: 361 }].map((p) => (
                           <button key={p.value} type="button" onClick={() => setComfyFrameCount(p.value)}
-                            className={`px-2 py-1 rounded text-[9px] font-mono-share transition-all ${comfyFrameCount === p.value ? "bg-amber-400/20 border-amber-400/50 text-amber-300 border" : "bg-card/30 border border-border text-muted-foreground hover:border-amber-400/30"}`}>
+                            className={`px-2 py-1 rounded text-tiny font-mono-share transition-all ${comfyFrameCount === p.value ? "bg-amber-400/20 border-amber-400/50 text-amber-300 border" : "bg-card/30 border border-border text-muted-foreground hover:border-amber-400/30"}`}>
                             {p.label}
                           </button>
                         ))}
@@ -1980,19 +1980,19 @@ const Index = () => {
               (mode === "image-to-video" && (animateEngine === "gltch" || animateEngine === "comfy"))
             ) && (
                 <div className="flex items-center gap-2">
-                  <label className="font-mono-share text-[9px] text-muted-foreground/70 whitespace-nowrap">SEED</label>
+                  <label className="font-mono-share text-tiny text-muted-foreground/70 whitespace-nowrap">SEED</label>
                   <input
                     type="text"
                     value={globalSeed}
                     onChange={(e) => setGlobalSeed(e.target.value.replace(/[^0-9]/g, ""))}
                     placeholder="random"
-                    className="flex-1 bg-card/60 border border-border rounded px-2 py-1 text-[10px] font-mono-share text-foreground placeholder-muted-foreground/40 max-w-[140px]"
+                    className="flex-1 bg-card/60 border border-border rounded px-2 py-1 text-tiny font-mono-share text-foreground placeholder-muted-foreground/40 max-w-[140px]"
                   />
                   {globalSeed && (
                     <button
                       type="button"
                       onClick={() => setGlobalSeed("")}
-                      className="font-mono-share text-[8px] text-muted-foreground/50 hover:text-foreground transition-colors"
+                      className="font-mono-share text-micro text-muted-foreground/70 hover:text-foreground transition-colors"
                     >
                       CLEAR
                     </button>
@@ -2007,15 +2007,15 @@ const Index = () => {
             ) && (
                 <div className="mt-2 space-y-1">
                   <div className="flex items-center justify-between">
-                    <label className="font-mono-share text-[9px] text-muted-foreground/70 flex items-center gap-1.5">
+                    <label className="font-mono-share text-tiny text-muted-foreground/70 flex items-center gap-1.5">
                       <Film className="w-3 h-3 opacity-70" />
                       AMBIENT_SOUND
-                      <span className="text-muted-foreground/40">MMAudio</span>
+                      <span className="text-muted-foreground/60">MMAudio</span>
                     </label>
                     <button
                       type="button"
                       onClick={() => setComfyAudioMode(comfyAudioMode === "ambient" ? "none" : "ambient")}
-                      className={`flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono-share transition-all border ${comfyAudioMode === "ambient" ? "bg-purple-500/20 border-purple-500/50 text-purple-300" : "bg-card/30 border-border text-muted-foreground hover:border-purple-500/30"}`}
+                      className={`flex items-center gap-1 px-2 py-1 rounded text-tiny font-mono-share transition-all border ${comfyAudioMode === "ambient" ? "bg-purple-500/20 border-purple-500/50 text-purple-300" : "bg-card/30 border-border text-muted-foreground hover:border-purple-500/30"}`}
                     >
                       {comfyAudioMode === "ambient" ? <ToggleRight className="w-3.5 h-3.5" /> : <ToggleLeft className="w-3.5 h-3.5" />}
                       {comfyAudioMode === "ambient" ? "ON" : "OFF"}
@@ -2028,9 +2028,9 @@ const Index = () => {
                         value={comfyAudioPrompt}
                         onChange={(e) => setComfyAudioPrompt(e.target.value)}
                         placeholder="Sound description (defaults to your prompt)"
-                        className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-[10px] font-mono-share text-foreground placeholder-muted-foreground/40"
+                        className="w-full bg-card/60 border border-border rounded px-2 py-1.5 text-tiny font-mono-share text-foreground placeholder-muted-foreground/40"
                       />
-                      <p className="font-mono-share text-[8px] text-muted-foreground/50">
+                      <p className="font-mono-share text-micro text-muted-foreground/70">
                         Synced ambient sound / SFX generated from the video — not spoken dialogue. Adds a little render time.
                       </p>
                     </>
@@ -2043,7 +2043,7 @@ const Index = () => {
               <div className="space-y-1">
                 <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/5 border border-primary/20 rounded">
                   <Key className="w-3 h-3 text-primary/70" />
-                  <span className="font-mono-share text-[9px] text-primary/70">
+                  <span className="font-mono-share text-tiny text-primary/70">
                     Grok runs on your own xAI key — billed by xAI, 0 credits.
                   </span>
                 </div>
@@ -2056,11 +2056,11 @@ const Index = () => {
               || genEngine === "comfy" || genEngine === "gltch"
               || renderEngine === "comfy" || animateEngine === "comfy" || animateEngine === "gltch") && (
               <div className="mt-2 space-y-1">
-                <label className="font-mono-share text-[9px] text-muted-foreground/60 flex items-center justify-between">
+                <label className="font-mono-share text-tiny text-muted-foreground/60 flex items-center justify-between">
                   <span>NEGATIVE_PROMPT</span>
                   {negPrompt && (
                     <button onClick={() => setNegPrompt("")}
-                      className="font-mono-share text-[8px] text-muted-foreground/50 hover:text-red-400 transition-colors">
+                      className="font-mono-share text-micro text-muted-foreground/70 hover:text-red-400 transition-colors">
                       CLEAR
                     </button>
                   )}
@@ -2070,7 +2070,7 @@ const Index = () => {
                   value={negPrompt}
                   onChange={(e) => setNegPrompt(e.target.value)}
                   placeholder="ugly, blurry, watermark... (leave empty for defaults)"
-                  className="w-full bg-card/60 border border-border/50 rounded px-2.5 py-1.5 text-[10px] font-mono-share text-foreground/80 placeholder:text-muted-foreground/25 outline-none focus:border-primary/50 transition-colors"
+                  className="w-full bg-card/60 border border-border/50 rounded px-2.5 py-1.5 text-tiny font-mono-share text-foreground/80 placeholder:text-muted-foreground/60 outline-none focus:border-primary/50 transition-colors"
                 />
               </div>
             )}
@@ -2103,11 +2103,11 @@ const Index = () => {
             {/* Target folder selector */}
             {foldersHook.folders.length > 0 && (
               <div className="flex items-center gap-2 mt-2">
-                <span className="font-mono-share text-[9px] text-muted-foreground/40 tracking-wider">SAVE_TO:</span>
+                <span className="font-mono-share text-tiny text-muted-foreground/60 tracking-wider">SAVE_TO:</span>
                 <select
                   value={targetFolderId || ""}
                   onChange={(e) => setTargetFolderId(e.target.value || null)}
-                  className="bg-card/60 border border-border/50 rounded px-2 py-1 text-[10px] font-mono-share text-foreground/70 outline-none focus:border-primary/50 transition-colors cursor-pointer min-w-[100px]"
+                  className="bg-card/60 border border-border/50 rounded px-2 py-1 text-tiny font-mono-share text-foreground/70 outline-none focus:border-primary/50 transition-colors cursor-pointer min-w-[100px]"
                 >
                   <option value="">UNFILED</option>
                   {foldersHook.folders.filter(f => !f.hidden).map(f => (
@@ -2145,7 +2145,7 @@ const Index = () => {
         {error && (
           <div className="border border-destructive/50 rounded overflow-hidden animate-slide-up">
             <div className="flex items-center gap-2 px-4 py-1.5 bg-destructive/10 border-b border-destructive/20">
-              <span className="font-mono-share text-[10px] text-destructive">stderr</span>
+              <span className="font-mono-share text-tiny text-destructive">stderr</span>
             </div>
             <div className="p-4">
               <p className="font-mono-share text-sm text-destructive/80">
@@ -2167,18 +2167,18 @@ const Index = () => {
           <section className="animate-slide-up space-y-2">
             <div className="flex items-center justify-between">
               <CollapsibleTrigger className="flex items-center gap-2 group cursor-pointer">
-                <span className="font-mono-share text-purple-400/40 text-[9px] group-data-[state=open]:text-purple-400/60">▸</span>
-                <span className="font-orbitron text-[10px] tracking-widest text-purple-400/80">
+                <span className="font-mono-share text-purple-400/40 text-tiny group-data-[state=open]:text-purple-400/60">▸</span>
+                <span className="font-orbitron text-tiny tracking-widest text-purple-400/80">
                   COMFY_QUEUE
                 </span>
-                <span className="font-mono-share text-[9px] text-muted-foreground/50">
+                <span className="font-mono-share text-tiny text-muted-foreground/70">
                   [{comfyJobs.filter(j => j.status === "submitting" || j.status === "generating").length} active]
                 </span>
               </CollapsibleTrigger>
               {comfyJobs.some(j => j.status === "done" || j.status === "error") && (
                 <button
                   onClick={clearFinishedComfyJobs}
-                  className="font-mono-share text-[9px] text-muted-foreground/50 hover:text-purple-400 transition-colors"
+                  className="font-mono-share text-tiny text-muted-foreground/70 hover:text-purple-400 transition-colors"
                 >
                   CLEAR FINISHED
                 </button>
@@ -2208,14 +2208,14 @@ const Index = () => {
                     {!isActive ? (
                       <button
                         onClick={() => dismissComfyJob(job.id)}
-                        className="absolute top-2 right-2 p-0.5 rounded hover:bg-background/50 transition-colors text-muted-foreground/40 hover:text-foreground"
+                        className="absolute top-2 right-2 p-0.5 rounded hover:bg-background/50 transition-colors text-muted-foreground/60 hover:text-foreground"
                       >
                         <X className="w-3.5 h-3.5" />
                       </button>
                     ) : job.status !== "cancelling" && (
                       <button
                         onClick={() => cancelComfyJob(job.id)}
-                        className="absolute top-2 right-2 px-1.5 py-0.5 rounded text-[8px] font-orbitron tracking-wider border border-red-500/30 text-red-400/70 hover:bg-red-500/10 hover:text-red-400 transition-colors"
+                        className="absolute top-2 right-2 px-1.5 py-0.5 rounded text-micro font-orbitron tracking-wider border border-red-500/30 text-red-400/70 hover:bg-red-500/10 hover:text-red-400 transition-colors"
                       >
                         CANCEL
                       </button>
@@ -2248,13 +2248,13 @@ const Index = () => {
                       {isDone && <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />}
                       {isError && <AlertCircle className="w-3.5 h-3.5 text-red-400" />}
 
-                      <span className={`font-orbitron text-[9px] tracking-widest uppercase ${isActive ? "text-cyan-400" : isDone ? "text-green-400" : "text-red-400"
+                      <span className={`font-orbitron text-tiny tracking-widest uppercase ${isActive ? "text-cyan-400" : isDone ? "text-green-400" : "text-red-400"
                         }`}>
                         {job.status === "submitting" ? "SUBMITTING" : (job.status ?? "unknown").toUpperCase()}
                       </span>
 
                       {/* Timer */}
-                      <span className={`font-mono-share text-xs tabular-nums ml-auto ${isActive ? "text-purple-300" : "text-muted-foreground/50"
+                      <span className={`font-mono-share text-xs tabular-nums ml-auto ${isActive ? "text-purple-300" : "text-muted-foreground/70"
                         }`}>
                         {mins}:{secs}
                       </span>
@@ -2262,7 +2262,7 @@ const Index = () => {
 
                     {/* Phase */}
                     {isActive && job.phase && (
-                      <div className="font-mono-share text-[10px] text-purple-300/80 mb-1 animate-flicker">
+                      <div className="font-mono-share text-tiny text-purple-300/80 mb-1 animate-flicker">
                         {job.phase}
                       </div>
                     )}
@@ -2275,17 +2275,17 @@ const Index = () => {
                     )}
 
                     {/* Prompt preview */}
-                    <div className="font-mono-share text-[10px] text-muted-foreground/60 truncate">
+                    <div className="font-mono-share text-tiny text-muted-foreground/60 truncate">
                       {job.prompt}
                     </div>
 
                     {/* Workflow badge + seed */}
                     <div className="flex items-center gap-2 mt-1">
-                      <span className="font-mono-share text-[8px] text-purple-400/50 uppercase bg-purple-500/10 px-1.5 py-0.5 rounded">
+                      <span className="font-mono-share text-micro text-purple-400/50 uppercase bg-purple-500/10 px-1.5 py-0.5 rounded">
                         {job.workflowType}
                       </span>
                       {job.seed && (
-                        <span className="font-mono-share text-[8px] text-muted-foreground/40">
+                        <span className="font-mono-share text-micro text-muted-foreground/60">
                           seed: {job.seed}
                         </span>
                       )}
@@ -2293,14 +2293,14 @@ const Index = () => {
 
                     {/* Error message */}
                     {isError && job.error && (
-                      <div className="font-mono-share text-[9px] text-red-400/80 mt-1.5 line-clamp-2">
+                      <div className="font-mono-share text-tiny text-red-400/80 mt-1.5 line-clamp-2">
                         {job.error}
                       </div>
                     )}
 
                     {/* Hint text for active */}
                     {isActive && (
-                      <div className="font-mono-share text-[8px] text-muted-foreground/30 mt-1">
+                      <div className="font-mono-share text-micro text-muted-foreground/60 mt-1">
                         {job.elapsed > 120 ? "Complex renders can take 3-5 min" : job.elapsed > 30 ? "GPU is working hard..." : "Processing..."}
                       </div>
                     )}
@@ -2325,15 +2325,15 @@ const Index = () => {
                   {[0,1,2,3,4].map(i => (
                     <div key={i} className={`w-1.5 h-1.5 rounded-full ${i < 4 ? "bg-primary/40" : "bg-primary"}`} />
                   ))}
-                  <span className="ml-auto font-mono-share text-[8px] text-muted-foreground/40">5/5</span>
+                  <span className="ml-auto font-mono-share text-micro text-muted-foreground/60">5/5</span>
                 </div>
                 <h4 className="font-orbitron text-xs font-bold text-primary tracking-wide mb-1">
                   🎉 5. Your result is ready!
                 </h4>
-                <p className="font-mono-share text-[11px] text-foreground/70 leading-relaxed mb-1">
+                <p className="font-mono-share text-xs text-foreground/70 leading-relaxed mb-1">
                   Here's what you can do with it:
                 </p>
-                <ul className="font-mono-share text-[10px] text-foreground/60 leading-relaxed space-y-1 ml-1">
+                <ul className="font-mono-share text-tiny text-foreground/60 leading-relaxed space-y-1 ml-1">
                   <li className="flex items-start gap-1.5">
                     <span className="text-primary/60 mt-px">▸</span>
                     <span><span className="text-foreground/80 font-bold">Download</span> — click the image, then hit the download icon</span>
@@ -2354,7 +2354,7 @@ const Index = () => {
                 <div className="flex items-center justify-end mt-3">
                   <button
                     onClick={() => setShowResultsTip(false)}
-                    className="font-mono-share text-[10px] font-bold text-primary hover:text-primary/80 transition-colors"
+                    className="font-mono-share text-tiny font-bold text-primary hover:text-primary/80 transition-colors"
                   >
                     GOT IT ✓
                   </button>
@@ -2363,20 +2363,20 @@ const Index = () => {
             </div>
           )}
           <CollapsibleTrigger className="flex items-center gap-2 mb-4 w-full group cursor-pointer">
-            <span className="font-mono-share text-secondary/40 text-[9px] group-data-[state=open]:text-secondary/60">▸</span>
+            <span className="font-mono-share text-secondary/40 text-tiny group-data-[state=open]:text-secondary/60">▸</span>
             <GlitchText
               text="OUTPUT_STREAM"
-              className="font-orbitron text-[10px] tracking-widest text-muted-foreground"
+              className="font-orbitron text-tiny tracking-widest text-muted-foreground"
               glitchIntensity="low"
             />
             {results.length > 0 && (
-              <span className="font-mono-share text-[9px] text-muted-foreground/40">[{results.length}]</span>
+              <span className="font-mono-share text-tiny text-muted-foreground/60">[{results.length}]</span>
             )}
             <div className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
             <Link
               to="/library"
               onClick={(e) => e.stopPropagation()}
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded border border-primary/20 hover:border-primary/50 bg-primary/5 hover:bg-primary/10 transition-all font-mono-share text-[10px] text-primary/70 hover:text-primary tracking-wider"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded border border-primary/20 hover:border-primary/50 bg-primary/5 hover:bg-primary/10 transition-all font-mono-share text-tiny text-primary/70 hover:text-primary tracking-wider"
             >
               <Image className="w-3 h-3" />
               FULL LIBRARY
@@ -2411,14 +2411,14 @@ const Index = () => {
           {results.length > 0 && !creditsHook.hasSubscription && creditsHook.enabled && (
             <div className="mt-4 flex items-center justify-between gap-3 px-4 py-3 rounded border border-secondary/25 bg-secondary/5">
               <div className="space-y-0.5 min-w-0">
-                <p className="font-orbitron text-[11px] text-secondary font-bold tracking-wider">WANT MORE?</p>
-                <p className="font-mono-share text-[10px] text-muted-foreground/70 leading-relaxed">
+                <p className="font-orbitron text-xs text-secondary font-bold tracking-wider">WANT MORE?</p>
+                <p className="font-mono-share text-tiny text-muted-foreground/70 leading-relaxed">
                   Faster renders · Priority queue · Unlimited credits from $9.99/mo
                 </p>
               </div>
               <button
                 onClick={() => setStoreOpen(true)}
-                className="shrink-0 font-orbitron text-[10px] font-bold px-4 py-2 rounded border border-secondary/50 bg-secondary/10 text-secondary hover:bg-secondary/20 hover:border-secondary transition-all tracking-wider whitespace-nowrap"
+                className="shrink-0 font-orbitron text-tiny font-bold px-4 py-2 rounded border border-secondary/50 bg-secondary/10 text-secondary hover:bg-secondary/20 hover:border-secondary transition-all tracking-wider whitespace-nowrap"
               >
                 GET CREDITS →
               </button>
@@ -2440,7 +2440,7 @@ const Index = () => {
             {visibleAnnouncements.map(a => (
               <div
                 key={a.id}
-                className={`flex items-center justify-between gap-3 px-4 py-2.5 rounded border font-mono-share text-[10px] ${a.type === "warning"
+                className={`flex items-center justify-between gap-3 px-4 py-2.5 rounded border font-mono-share text-tiny ${a.type === "warning"
                   ? "bg-amber-500/5 border-amber-500/30 text-amber-300"
                   : a.type === "success"
                     ? "bg-green-500/5 border-green-500/30 text-green-300"
@@ -2567,7 +2567,7 @@ const Index = () => {
               <PopoverContent align="end" className="w-60 p-3 space-y-3">
                 {/* Simple / Advanced toggle */}
                 <div className="flex items-center justify-between gap-2">
-                  <span className="font-mono-share text-[10px] text-muted-foreground/70 uppercase tracking-wider">
+                  <span className="font-mono-share text-tiny text-muted-foreground/70 uppercase tracking-wider">
                     {t("header.mode", "Mode")}
                   </span>
                   <button
@@ -2581,7 +2581,7 @@ const Index = () => {
                         setMode("edit-image");
                       }
                     }}
-                    className={`flex items-center gap-1 px-2 py-1 text-[10px] font-mono-share transition-colors rounded border ${
+                    className={`flex items-center gap-1 px-2 py-1 text-tiny font-mono-share transition-colors rounded border ${
                       simpleMode
                         ? "border-primary/30 bg-primary/10 text-primary"
                         : "border-border/50 bg-card/40 text-muted-foreground/60 hover:text-muted-foreground"
@@ -2597,7 +2597,7 @@ const Index = () => {
                 {/* Daily Missions */}
                 {auth.isAuthenticated && (
                   <div className="flex items-center justify-between gap-2">
-                    <span className="font-mono-share text-[10px] text-muted-foreground/70 uppercase tracking-wider">
+                    <span className="font-mono-share text-tiny text-muted-foreground/70 uppercase tracking-wider">
                       {t("header.missions", "Missions")}
                     </span>
                     <DailyMissionsDialog
@@ -2614,7 +2614,7 @@ const Index = () => {
 
                 {/* Theme */}
                 <div className="flex items-center justify-between gap-2">
-                  <span className="font-mono-share text-[10px] text-muted-foreground/70 uppercase tracking-wider">
+                  <span className="font-mono-share text-tiny text-muted-foreground/70 uppercase tracking-wider">
                     {t("header.theme", "Theme")}
                   </span>
                   <ThemePicker />
@@ -2623,12 +2623,12 @@ const Index = () => {
                 {/* Admin: test credit spending toggle */}
                 {isAdmin && (
                   <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/30">
-                    <span className="font-mono-share text-[10px] text-muted-foreground/70 uppercase tracking-wider">
+                    <span className="font-mono-share text-tiny text-muted-foreground/70 uppercase tracking-wider">
                       Admin
                     </span>
                     <button
                       onClick={() => setAdminTestCredits(prev => !prev)}
-                      className={`px-2 py-1 rounded text-[10px] font-mono border transition-colors ${
+                      className={`px-2 py-1 rounded text-tiny font-mono border transition-colors ${
                         adminTestCredits
                           ? "border-yellow-500/60 bg-yellow-500/20 text-yellow-300"
                           : "border-white/10 bg-white/5 text-white/40 hover:text-white/60"
@@ -2647,8 +2647,8 @@ const Index = () => {
         {/* Value prop strip */}
         <Collapsible defaultOpen={false}>
           <CollapsibleTrigger className="flex items-center gap-2 w-full group py-1">
-            <span className="font-mono-share text-primary/40 text-[9px] group-data-[state=open]:text-primary/60">▸</span>
-            <span className="font-mono-share text-[9px] tracking-widest text-muted-foreground/40 group-hover:text-muted-foreground/60 transition-colors">STATUS</span>
+            <span className="font-mono-share text-primary/40 text-tiny group-data-[state=open]:text-primary/60">▸</span>
+            <span className="font-mono-share text-tiny tracking-widest text-muted-foreground/60 group-hover:text-muted-foreground/60 transition-colors">STATUS</span>
             <div className="h-px flex-1 bg-primary/5" />
           </CollapsibleTrigger>
           <CollapsibleContent>
@@ -2659,7 +2659,7 @@ const Index = () => {
                 { icon: "🎬", label: t("header.valueMedia") },
                 { icon: "💳", label: t("header.valuePayPerCredit") },
               ].map(({ icon, label }) => (
-                <span key={label} className="flex items-center gap-1 font-mono-share text-[10px] text-muted-foreground/50">
+                <span key={label} className="flex items-center gap-1 font-mono-share text-tiny text-muted-foreground/70">
                   <span className="text-primary/60">{icon}</span>
                   {label}
                 </span>
@@ -2672,20 +2672,20 @@ const Index = () => {
         <Collapsible defaultOpen={false}>
         <footer className="text-center py-4 border-t border-border/30 overflow-hidden">
           <CollapsibleTrigger className="flex items-center gap-2 w-full justify-center group cursor-pointer py-1">
-            <span className="font-mono-share text-primary/30 text-[9px] group-data-[state=open]:text-primary/50">▸</span>
-            <span className="font-mono-share text-[9px] tracking-widest text-muted-foreground/30 group-hover:text-muted-foreground/50 transition-colors">
+            <span className="font-mono-share text-primary/30 text-tiny group-data-[state=open]:text-primary/50">▸</span>
+            <span className="font-mono-share text-tiny tracking-widest text-muted-foreground/60 group-hover:text-muted-foreground/70 transition-colors">
               SYSTEM_INFO v{APP_VERSION}
             </span>
           </CollapsibleTrigger>
           <CollapsibleContent className="space-y-3 mt-2 animate-slide-up">
-          <p className="font-mono-share text-[10px] text-muted-foreground/40 animate-flicker">
+          <p className="font-mono-share text-tiny text-muted-foreground/60 animate-flicker">
             <span className="text-primary/30">$</span>{" "}
             echo "POWERED BY xAI // {effectiveApiMode === "credits" ? "CREDIT-BASED" : "CLIENT-SIDE"} RENDERING"
           </p>
-          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 font-mono-share text-[10px] px-4">
+          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 font-mono-share text-tiny px-4">
             <button
               onClick={() => setGuideOpen(true)}
-              className="flex items-center gap-1 text-muted-foreground/40 hover:text-primary transition-colors"
+              className="flex items-center gap-1 text-muted-foreground/60 hover:text-primary transition-colors"
             >
               <HelpCircle className="w-3 h-3" />
               GUIDE
@@ -2693,7 +2693,7 @@ const Index = () => {
             <span className="text-border/50">|</span>
             <button
               onClick={() => setChangelogOpen(true)}
-              className="flex items-center gap-1 text-muted-foreground/40 hover:text-accent transition-colors"
+              className="flex items-center gap-1 text-muted-foreground/60 hover:text-accent transition-colors"
             >
               <Zap className="w-3 h-3" />
               CHANGELOG
@@ -2701,7 +2701,7 @@ const Index = () => {
             <span className="text-border/50">|</span>
             <button
               onClick={() => setTosOpen(true)}
-              className="flex items-center gap-1 text-muted-foreground/40 hover:text-primary transition-colors"
+              className="flex items-center gap-1 text-muted-foreground/60 hover:text-primary transition-colors"
             >
               <Shield className="w-3 h-3" />
               TERMS
@@ -2709,7 +2709,7 @@ const Index = () => {
             <span className="text-border/50">|</span>
             <button
               onClick={() => setPrivacyOpen(true)}
-              className="flex items-center gap-1 text-muted-foreground/40 hover:text-secondary transition-colors"
+              className="flex items-center gap-1 text-muted-foreground/60 hover:text-secondary transition-colors"
             >
               <Eye className="w-3 h-3" />
               PRIVACY
@@ -2719,7 +2719,7 @@ const Index = () => {
               href="https://discord.gg/Ge9AxRgCmM"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1 text-muted-foreground/40 hover:text-accent transition-colors"
+              className="flex items-center gap-1 text-muted-foreground/60 hover:text-accent transition-colors"
             >
               <MessageCircle className="w-3 h-3" />
               DISCORD
@@ -2729,15 +2729,15 @@ const Index = () => {
               href="https://dexscreener.com/base/0xa36f942a5ee23030ac66fb0677540365c0939e662df33f729c5fa5a301eea6d2"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1 text-muted-foreground/40 hover:text-green-400 transition-colors"
+              className="flex items-center gap-1 text-muted-foreground/60 hover:text-green-400 transition-colors"
             >
-              <span className="text-[8px] font-bold leading-none border border-current rounded-sm px-0.5">$</span>
+              <span className="text-micro font-bold leading-none border border-current rounded-sm px-0.5">$</span>
               GLTCHRUN
             </a>
             <span className="text-border/50">|</span>
             <Link
               to="/library"
-              className="flex items-center gap-1 text-muted-foreground/40 hover:text-cyan-400 transition-colors"
+              className="flex items-center gap-1 text-muted-foreground/60 hover:text-cyan-400 transition-colors"
             >
               <Image className="w-3 h-3" />
               LIBRARY
@@ -2747,7 +2747,7 @@ const Index = () => {
                 <span className="text-border/50">|</span>
                 <Link
                   to="/characters"
-                  className="flex items-center gap-1 text-muted-foreground/40 hover:text-purple-400 transition-colors"
+                  className="flex items-center gap-1 text-muted-foreground/60 hover:text-purple-400 transition-colors"
                 >
                   <Users className="w-3 h-3" />
                   CHARACTERS
@@ -2755,7 +2755,7 @@ const Index = () => {
                 <span className="text-border/50">|</span>
                 <Link
                   to="/verification"
-                  className="flex items-center gap-1 text-muted-foreground/40 hover:text-primary transition-colors"
+                  className="flex items-center gap-1 text-muted-foreground/60 hover:text-primary transition-colors"
                 >
                   <BadgeCheck className="w-3 h-3" />
                   VERIFICATION
@@ -2767,13 +2767,13 @@ const Index = () => {
                 <span className="text-border/50">|</span>
                 <Link
                   to="/docs"
-                  className="flex items-center gap-1 text-muted-foreground/40 hover:text-cyan-400 transition-colors"
+                  className="flex items-center gap-1 text-muted-foreground/60 hover:text-cyan-400 transition-colors"
                 >
                   <Code className="w-3 h-3" />
                   API DOCS
                 </Link>
                 <span className="text-border/50">|</span>
-                <ApiKeysPanel triggerClassName="flex items-center gap-1 text-muted-foreground/40 hover:text-primary transition-colors" />
+                <ApiKeysPanel triggerClassName="flex items-center gap-1 text-muted-foreground/60 hover:text-primary transition-colors" />
               </>
             )}
             {auth.user?.is_admin && (
@@ -2781,7 +2781,7 @@ const Index = () => {
                 <span className="text-border/50">|</span>
                 <Link
                   to="/admin"
-                  className="flex items-center gap-1 text-muted-foreground/40 hover:text-primary transition-colors"
+                  className="flex items-center gap-1 text-muted-foreground/60 hover:text-primary transition-colors"
                 >
                   <Server className="w-3 h-3" />
                   ADMIN

@@ -18,6 +18,16 @@ export default {
         "glow-live": "var(--glow-live)",
         "glow-ambient": "var(--glow-ambient)",
       },
+      /*
+       * The bottom of the type scale. The app had nine ad-hoc sizes, 1,346 uses at
+       * 10px or below and 148 at 6-8px — unreadable on a phone. These two named
+       * steps set the floor, with Tailwind's own xs (12px) above them. Font size
+       * only: no line-height, so tight layouts keep their spacing.
+       */
+      fontSize: {
+        micro: "10px",
+        tiny: "11px",
+      },
       fontFamily: {
         // Every family reads a role variable defined in index.css, so an edition
         // can remap all of them at once. Defaults reproduce Runner exactly.

@@ -46,8 +46,8 @@ const GalleryChunkLoader: React.FC = () => {
         </div>
 
         <div className="flex flex-col items-center gap-1.5 text-center px-4">
-          <span className="font-orbitron text-[10px] tracking-widest text-primary">LOADING_OUTPUT_MODULE</span>
-          <span className="font-mono-share text-[10px] text-primary/60">Bundling gallery and asset pipeline…</span>
+          <span className="font-orbitron text-tiny tracking-widest text-primary">LOADING_OUTPUT_MODULE</span>
+          <span className="font-mono-share text-tiny text-primary/60">Bundling gallery and asset pipeline…</span>
         </div>
       </div>
     </div>

@@ -399,7 +399,7 @@ function TagBadge({ type }: { type: "new" | "fix" | "improve" }) {
         improve: "bg-purple-500/20 text-purple-300 border-purple-500/30",
     };
     return (
-        <span className={`text-[8px] font-orbitron tracking-wider px-1.5 py-0.5 rounded border ${styles[type] ?? ""}`}>
+        <span className={`text-micro font-orbitron tracking-wider px-1.5 py-0.5 rounded border ${styles[type] ?? ""}`}>
             {(type ?? "").toUpperCase()}
         </span>
     );
@@ -434,7 +434,7 @@ export default function ChangelogDialog({
                                         v{entry.version}
                                     </div>
                                     <div className="h-px flex-1 bg-border/30" />
-                                    <div className="font-mono-share text-[9px] text-muted-foreground/40">
+                                    <div className="font-mono-share text-tiny text-muted-foreground/60">
                                         {entry.date}
                                     </div>
                                 </div>
@@ -475,7 +475,7 @@ function ChangelogHeader() {
                 <Zap className="w-5 h-5" />
                 {t("changelog.title")}
             </DialogTitle>
-            <p className="font-mono-share text-[10px] text-muted-foreground/50 tracking-wider mt-1">
+            <p className="font-mono-share text-tiny text-muted-foreground/70 tracking-wider mt-1">
                 {t("changelog.subtitle")}
             </p>
         </DialogHeader>
@@ -486,7 +486,7 @@ function ChangelogFooter() {
     const { t } = useTranslation();
     return (
         <div className="px-6 py-3 border-t border-border/30 bg-muted/20">
-            <p className="font-mono-share text-[9px] text-muted-foreground/30 text-center tracking-wider">
+            <p className="font-mono-share text-tiny text-muted-foreground/60 text-center tracking-wider">
                 {t("changelog.footer")}
             </p>
         </div>

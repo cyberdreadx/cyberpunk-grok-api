@@ -71,7 +71,7 @@ const NotificationEmailPrefs: React.FC = () => {
 
   return (
     <section className="space-y-2 pt-4 border-t border-border/30">
-      <label className="font-orbitron text-[10px] tracking-wider text-muted-foreground flex items-center gap-1.5">
+      <label className="font-orbitron text-tiny tracking-wider text-muted-foreground flex items-center gap-1.5">
         <Mail className="w-3 h-3" />
         EMAIL NOTIFICATIONS
       </label>
@@ -80,11 +80,11 @@ const NotificationEmailPrefs: React.FC = () => {
         type="button"
         onClick={() => save({ emailEnabled: !prefs.emailEnabled })}
         disabled={saving}
-        className="w-full flex items-center justify-between gap-2 px-2 py-1.5 rounded border border-border/50 bg-card/40 text-[11px] font-mono-share disabled:opacity-60"
+        className="w-full flex items-center justify-between gap-2 px-2 py-1.5 rounded border border-border/50 bg-card/40 text-xs font-mono-share disabled:opacity-60"
       >
         <span className="text-foreground/80">Send me notification emails</span>
         <span
-          className={`px-2 py-0.5 rounded text-[9px] tracking-widest border ${
+          className={`px-2 py-0.5 rounded text-tiny tracking-widest border ${
             prefs.emailEnabled
               ? "border-primary/40 bg-primary/10 text-primary"
               : "border-border text-muted-foreground"
@@ -102,7 +102,7 @@ const NotificationEmailPrefs: React.FC = () => {
               type="button"
               onClick={() => save({ types: { [type]: !prefs.types[type] } })}
               disabled={saving}
-              className="w-full flex items-center justify-between gap-2 px-2 py-1 text-[10px] font-mono-share text-muted-foreground hover:text-foreground transition-colors disabled:opacity-60"
+              className="w-full flex items-center justify-between gap-2 px-2 py-1 text-tiny font-mono-share text-muted-foreground hover:text-foreground transition-colors disabled:opacity-60"
             >
               <span>{LABELS[type] || type}</span>
               <span
@@ -121,7 +121,7 @@ const NotificationEmailPrefs: React.FC = () => {
         </div>
       )}
 
-      <p className="font-mono-share text-[9px] text-muted-foreground/50 leading-relaxed">
+      <p className="font-mono-share text-tiny text-muted-foreground/70 leading-relaxed">
         Account and security emails (verification, 2FA, receipts) are always sent.
       </p>
     </section>

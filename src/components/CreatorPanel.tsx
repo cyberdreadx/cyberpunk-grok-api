@@ -79,7 +79,7 @@ const CreatorPanel: React.FC<Props> = ({ creator, onClose }) => {
               <div className="font-orbitron text-sm tracking-wider text-foreground truncate">
                 @{creator.username}
               </div>
-              <div className="font-mono-share text-[10px] text-muted-foreground">
+              <div className="font-mono-share text-tiny text-muted-foreground">
                 {creator.postCount} posts
               </div>
             </div>
@@ -88,7 +88,7 @@ const CreatorPanel: React.FC<Props> = ({ creator, onClose }) => {
             size="sm"
             variant="ghost"
             onClick={() => navigate(`/profile/${creator.username}`)}
-            className="font-mono-share text-[10px] gap-1 shrink-0"
+            className="font-mono-share text-tiny gap-1 shrink-0"
           >
             <ExternalLink className="w-3 h-3" /> PROFILE
           </Button>

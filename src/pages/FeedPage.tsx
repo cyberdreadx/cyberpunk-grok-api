@@ -309,12 +309,12 @@ const FeedPage: React.FC = () => {
         <ShieldAlert className="w-5 h-5 text-destructive shrink-0" />
         <h2 className="font-orbitron text-xs tracking-wider text-destructive">COMMUNITY GUIDELINES</h2>
       </div>
-      <p className="font-mono-share text-[10px] text-muted-foreground leading-relaxed">
+      <p className="font-mono-share text-tiny text-muted-foreground leading-relaxed">
         By posting, you agree to follow these rules. Violations will result in content removal and account bans.
       </p>
       <ul className="space-y-1.5">
         {FEED_RULES.map((rule, i) => (
-          <li key={i} className="font-mono-share text-[10px] text-foreground/80 flex items-start gap-2">
+          <li key={i} className="font-mono-share text-tiny text-foreground/80 flex items-start gap-2">
             <span className="text-destructive mt-0.5 shrink-0">▸</span>
             {rule}
           </li>
@@ -324,7 +324,7 @@ const FeedPage: React.FC = () => {
         size="sm"
         variant="destructive"
         onClick={() => { ackRules(); setShowRules(false); }}
-        className="font-mono-share text-[10px] w-full"
+        className="font-mono-share text-tiny w-full"
       >
         I UNDERSTAND — CONTINUE
       </Button>
@@ -340,30 +340,30 @@ const FeedPage: React.FC = () => {
     <div className="space-y-2">
       <div className="flex items-center gap-2">
         <Switch checked={lockEnabled} onCheckedChange={setLockEnabled} />
-        <span className="font-mono-share text-[10px] text-muted-foreground flex items-center gap-1">
+        <span className="font-mono-share text-tiny text-muted-foreground flex items-center gap-1">
           <Lock className="w-3 h-3" /> Lock this post
         </span>
       </div>
       <div className="flex items-center gap-2">
         <Switch checked={matureFlag} onCheckedChange={setMatureFlag} />
-        <span className={`font-mono-share text-[10px] flex items-center gap-1 ${matureFlag ? "text-amber-300" : "text-muted-foreground"}`}>
+        <span className={`font-mono-share text-tiny flex items-center gap-1 ${matureFlag ? "text-amber-300" : "text-muted-foreground"}`}>
           <ShieldAlert className="w-3 h-3" /> Mark as 18+ / mature
         </span>
       </div>
       {lockEnabled && (
         <div className="flex gap-2 flex-wrap">
           <div className="flex-1 min-w-[80px]">
-            <label className="font-mono-share text-[9px] text-muted-foreground block mb-1">Credits</label>
+            <label className="font-mono-share text-tiny text-muted-foreground block mb-1">Credits</label>
             <Input type="number" min="0" max="100" placeholder="e.g. 5" value={lockCredits}
               onChange={(e) => setLockCredits(e.target.value)} className="font-mono-share text-xs h-8" />
           </div>
           <div className="flex-1 min-w-[80px]">
-            <label className="font-mono-share text-[9px] text-muted-foreground block mb-1">USD ($)</label>
+            <label className="font-mono-share text-tiny text-muted-foreground block mb-1">USD ($)</label>
             <Input type="number" min="0" max="100" step="0.01" placeholder="e.g. 2.99" value={lockPrice}
               onChange={(e) => setLockPrice(e.target.value)} className="font-mono-share text-xs h-8" />
           </div>
           <div className="flex-1 min-w-[80px]">
-            <label className="font-mono-share text-[9px] text-muted-foreground flex items-center gap-1 block mb-1">
+            <label className="font-mono-share text-tiny text-muted-foreground flex items-center gap-1 block mb-1">
               <Zap className="w-3 h-3 text-secondary" /> XRGE
             </label>
             <Input type="number" min="0" step="0.01" placeholder="e.g. 100" value={lockXrge}
@@ -395,14 +395,14 @@ const FeedPage: React.FC = () => {
             {pickedMedia.type === "video"
               ? <Film className="w-2.5 h-2.5 text-white" />
               : <ImageIcon className="w-2.5 h-2.5 text-white" />}
-            <span className="font-mono-share text-[8px] text-white tracking-wider">ATTACHED</span>
+            <span className="font-mono-share text-micro text-white tracking-wider">ATTACHED</span>
           </div>
         </div>
       ) : (
         <button
           type="button"
           onClick={() => setLibraryPickerOpen(true)}
-          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-border/40 bg-card/40 text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors font-mono-share text-[10px] tracking-wider"
+          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-border/40 bg-card/40 text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors font-mono-share text-tiny tracking-wider"
         >
           <FolderOpen className="w-3.5 h-3.5" /> ADD FROM LIBRARY
         </button>
@@ -424,7 +424,7 @@ const FeedPage: React.FC = () => {
           <AlertDialogTitle className="font-orbitron text-sm tracking-widest text-primary">
             POST TO FEED?
           </AlertDialogTitle>
-          <AlertDialogDescription className="font-mono-share text-[11px] text-muted-foreground space-y-2">
+          <AlertDialogDescription className="font-mono-share text-xs text-muted-foreground space-y-2">
             <span className="block">Your post will be visible to the community. Please review the details below before publishing.</span>
             {newText.trim() && (
               <span className="block bg-input/30 border border-border/30 rounded p-2 text-foreground/80 max-h-24 overflow-y-auto">
@@ -455,7 +455,7 @@ const FeedPage: React.FC = () => {
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={posting} className="font-mono-share text-[11px]">
+          <AlertDialogCancel disabled={posting} className="font-mono-share text-xs">
             CANCEL
           </AlertDialogCancel>
           <AlertDialogAction
@@ -464,7 +464,7 @@ const FeedPage: React.FC = () => {
               e.preventDefault(); // keep dialog open until submit resolves
               if (!posting) submitPost();
             }}
-            className="font-mono-share text-[11px] bg-primary text-primary-foreground hover:bg-primary/90"
+            className="font-mono-share text-xs bg-primary text-primary-foreground hover:bg-primary/90"
           >
             {posting ? (
               <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> POSTING…</>
@@ -492,7 +492,7 @@ const FeedPage: React.FC = () => {
             }
             setReelsOpen(true);
           }}
-          className={`flex items-center gap-1 px-3 py-1 rounded-full font-mono-share text-[10px] font-bold transition-colors border border-accent/60 bg-accent/15 text-accent shadow-glow-focus hover:bg-accent/25`}
+          className={`flex items-center gap-1 px-3 py-1 rounded-full font-mono-share text-tiny font-bold transition-colors border border-accent/60 bg-accent/15 text-accent shadow-glow-focus hover:bg-accent/25`}
           title="Vertical video reels — most recent"
         >
           <Film className="w-3 h-3" /> REELS
@@ -527,7 +527,7 @@ const FeedPage: React.FC = () => {
                 : "Posts marked 18+ are filtered out. Change it here or in Settings.",
             });
           }}
-          className={`flex items-center gap-1 px-2.5 py-1 rounded-full font-mono-share text-[10px] transition-colors border ${
+          className={`flex items-center gap-1 px-2.5 py-1 rounded-full font-mono-share text-tiny transition-colors border ${
             !nsfwAllowed
               ? `${baseInactive} opacity-70`
               : matureFilter
@@ -548,7 +548,7 @@ const FeedPage: React.FC = () => {
         </button>
         <button
           onClick={() => { setFilter("all"); setLoading(true); }}
-          className={`flex items-center gap-1 px-2.5 py-1 rounded-full font-mono-share text-[10px] transition-colors border ${
+          className={`flex items-center gap-1 px-2.5 py-1 rounded-full font-mono-share text-tiny transition-colors border ${
             filter === "all" ? "border-primary/50 bg-primary/10 text-primary" : baseInactive
           }`}
         >
@@ -556,7 +556,7 @@ const FeedPage: React.FC = () => {
         </button>
         <button
           onClick={() => { setFilter("trending"); setLoading(true); }}
-          className={`flex items-center gap-1 px-2.5 py-1 rounded-full font-mono-share text-[10px] transition-colors border ${
+          className={`flex items-center gap-1 px-2.5 py-1 rounded-full font-mono-share text-tiny transition-colors border ${
             filter === "trending"
               ? "border-secondary/50 bg-secondary/10 text-secondary shadow-glow-focus"
               : baseInactive
@@ -566,7 +566,7 @@ const FeedPage: React.FC = () => {
         </button>
         <button
           onClick={() => { if (requireAuth()) { setFilter("following"); setLoading(true); } }}
-          className={`flex items-center gap-1 px-2.5 py-1 rounded-full font-mono-share text-[10px] transition-colors border ${
+          className={`flex items-center gap-1 px-2.5 py-1 rounded-full font-mono-share text-tiny transition-colors border ${
             filter === "following" ? "border-primary/50 bg-primary/10 text-primary" : baseInactive
           }`}
         >
@@ -588,7 +588,7 @@ const FeedPage: React.FC = () => {
           <button
             onClick={() => switchLane("media")}
             aria-pressed={lane === "media"}
-            className={`flex items-center gap-1 px-2.5 py-0.5 rounded-full font-mono-share text-[10px] transition-colors ${
+            className={`flex items-center gap-1 px-2.5 py-0.5 rounded-full font-mono-share text-tiny transition-colors ${
               lane === "media"
                 ? "bg-primary/15 text-primary shadow-glow-focus"
                 : "text-muted-foreground hover:text-foreground"
@@ -600,7 +600,7 @@ const FeedPage: React.FC = () => {
           <button
             onClick={() => switchLane("text")}
             aria-pressed={lane === "text"}
-            className={`flex items-center gap-1 px-2.5 py-0.5 rounded-full font-mono-share text-[10px] transition-colors ${
+            className={`flex items-center gap-1 px-2.5 py-0.5 rounded-full font-mono-share text-tiny transition-colors ${
               lane === "text"
                 ? "bg-secondary/20 text-secondary shadow-glow-focus"
                 : "text-muted-foreground hover:text-foreground"
@@ -619,7 +619,7 @@ const FeedPage: React.FC = () => {
     <div className="flex flex-wrap items-center gap-1 p-1 rounded-lg border border-border/40 bg-card/40 w-fit max-w-[min(100%,28rem)]">
       <button
         type="button"
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md font-orbitron text-[10px] tracking-widest bg-primary/15 text-primary border border-primary/40 shadow-glow-focus"
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md font-orbitron text-tiny tracking-widest bg-primary/15 text-primary border border-primary/40 shadow-glow-focus"
         aria-current="page"
       >
         <Rss className="w-3.5 h-3.5" /> FEED
@@ -627,23 +627,23 @@ const FeedPage: React.FC = () => {
       <button
         type="button"
         onClick={() => navigate("/create")}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md font-orbitron text-[10px] tracking-widest text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md font-orbitron text-tiny tracking-widest text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
       >
         <Sparkles className="w-3.5 h-3.5" /> CREATE
       </button>
       <button
         type="button"
         onClick={() => navigate("/creators")}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md font-orbitron text-[10px] tracking-widest text-muted-foreground hover:text-secondary hover:bg-secondary/10 transition-colors"
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md font-orbitron text-tiny tracking-widest text-muted-foreground hover:text-secondary hover:bg-secondary/10 transition-colors"
         title="Featured models directory"
       >
         <Users className="w-3.5 h-3.5" /> MODELS
-        <span className="font-mono-share text-[7px] px-1 rounded-sm tracking-widest text-emerald-300 border border-emerald-400/40 bg-emerald-400/10">NEW</span>
+        <span className="font-mono-share text-micro px-1 rounded-sm tracking-widest text-emerald-300 border border-emerald-400/40 bg-emerald-400/10">NEW</span>
       </button>
       <button
         type="button"
         onClick={() => navigate("/characters")}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md font-orbitron text-[10px] tracking-widest text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md font-orbitron text-tiny tracking-widest text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
         title="Chat with model AI personas"
       >
         <MessageCircle className="w-3.5 h-3.5" /> PERSONAS
@@ -652,7 +652,7 @@ const FeedPage: React.FC = () => {
         <button
           type="button"
           onClick={() => navigate("/chat")}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md font-orbitron text-[10px] tracking-widest text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md font-orbitron text-tiny tracking-widest text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
           title="Community chatroom"
         >
           <MessagesSquare className="w-3.5 h-3.5" /> CHAT
@@ -661,7 +661,7 @@ const FeedPage: React.FC = () => {
       <button
         type="button"
         onClick={() => navigate("/apply")}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md font-orbitron text-[10px] tracking-widest text-muted-foreground hover:text-amber-300 hover:bg-amber-400/10 transition-colors"
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md font-orbitron text-tiny tracking-widest text-muted-foreground hover:text-amber-300 hover:bg-amber-400/10 transition-colors"
         title="Apply to the creator program"
       >
         <Star className="w-3.5 h-3.5" /> APPLY
@@ -676,7 +676,7 @@ const FeedPage: React.FC = () => {
     <button
       type="button"
       onClick={() => setNavOpen(true)}
-      className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-primary/40 bg-primary/10 text-primary font-orbitron text-[10px] tracking-widest hover:bg-primary/20 transition-colors shadow-glow-focus"
+      className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-primary/40 bg-primary/10 text-primary font-orbitron text-tiny tracking-widest hover:bg-primary/20 transition-colors shadow-glow-focus"
       aria-label="Open navigation menu"
     >
       <Menu className="w-4 h-4" />
@@ -707,7 +707,7 @@ const FeedPage: React.FC = () => {
         <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
           {/* Pages */}
           <div className="space-y-2">
-            <div className="px-2 font-mono-share text-[9px] tracking-[0.2em] text-muted-foreground/70">
+            <div className="px-2 font-mono-share text-tiny tracking-[0.2em] text-muted-foreground/70">
               ── PAGES ──
             </div>
             <div className="flex flex-col gap-1">
@@ -778,7 +778,7 @@ const FeedPage: React.FC = () => {
           {/* Earn — mirrors GlobalNavMenu, which this drawer replaces on /feed. */}
           {isAuthenticated && (
             <div className="space-y-2">
-              <div className="px-2 font-mono-share text-[9px] tracking-[0.2em] text-muted-foreground/70">
+              <div className="px-2 font-mono-share text-tiny tracking-[0.2em] text-muted-foreground/70">
                 ── EARN ──
               </div>
               <div className="flex flex-col gap-1">
@@ -797,7 +797,7 @@ const FeedPage: React.FC = () => {
                   <span className="flex items-center gap-3">
                     <DollarSign className="w-4 h-4" /> AMBASSADOR
                   </span>
-                  <span className="font-mono-share text-[9px] text-green-400/80 tracking-normal">20% CASH</span>
+                  <span className="font-mono-share text-tiny text-green-400/80 tracking-normal">20% CASH</span>
                 </button>
               </div>
             </div>
@@ -805,7 +805,7 @@ const FeedPage: React.FC = () => {
 
           {/* Filters */}
           <div className="space-y-2">
-            <div className="px-2 font-mono-share text-[9px] tracking-[0.2em] text-muted-foreground/70">
+            <div className="px-2 font-mono-share text-tiny tracking-[0.2em] text-muted-foreground/70">
               ── FEED FILTER ──
             </div>
             <div className="flex flex-col gap-1">
@@ -916,7 +916,7 @@ const FeedPage: React.FC = () => {
           <p className="font-orbitron text-xs tracking-widest text-foreground mb-1">
             NOTHING HERE YET
           </p>
-          <p className="font-mono-share text-[11px] text-muted-foreground mb-4">
+          <p className="font-mono-share text-xs text-muted-foreground mb-4">
             {filter === "following"
               ? "Nobody you follow has posted text yet."
               : "Text posts are prompts, questions, wins, rants — no media needed."}
@@ -925,7 +925,7 @@ const FeedPage: React.FC = () => {
             <Button
               size="sm"
               onClick={() => setShowCompose(true)}
-              className="font-mono-share text-[10px]"
+              className="font-mono-share text-tiny"
             >
               <PenLine className="w-3 h-3 mr-1" /> WRITE THE FIRST ONE
             </Button>
@@ -1036,7 +1036,7 @@ const FeedPage: React.FC = () => {
                 </div>
                 {!loadingMore && !nextCursor && posts.length > 0 && (
                   <div className="py-6 text-center">
-                    <p className="font-mono-share text-[10px] tracking-widest text-muted-foreground/70">
+                    <p className="font-mono-share text-tiny tracking-widest text-muted-foreground/70">
                       ── YOU'RE ALL CAUGHT UP ──
                     </p>
                   </div>
@@ -1095,8 +1095,8 @@ const FeedPage: React.FC = () => {
               {attachControls}
               {lockControls}
               <div className="flex items-center justify-between">
-                <span className="font-mono-share text-[9px] text-muted-foreground">{newText.length}/2000</span>
-                <Button size="sm" onClick={handlePost} disabled={posting || (!newText.trim() && !pickedMedia)} className="font-mono-share text-[10px]">
+                <span className="font-mono-share text-tiny text-muted-foreground">{newText.length}/2000</span>
+                <Button size="sm" onClick={handlePost} disabled={posting || (!newText.trim() && !pickedMedia)} className="font-mono-share text-tiny">
                   {posting ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Send className="w-3 h-3 mr-1" />}
                   POST
                 </Button>
@@ -1153,7 +1153,7 @@ const FeedPage: React.FC = () => {
           {isAuthenticated && (
             <button
               onClick={() => navigate("/profile")}
-              className="font-mono-share text-[10px] text-primary hover:text-primary/80 transition-colors"
+              className="font-mono-share text-tiny text-primary hover:text-primary/80 transition-colors"
             >
               MY PROFILE →
             </button>
@@ -1183,8 +1183,8 @@ const FeedPage: React.FC = () => {
             {attachControls}
             {lockControls}
             <div className="flex items-center justify-between">
-              <span className="font-mono-share text-[9px] text-muted-foreground">{newText.length}/2000</span>
-              <Button size="sm" onClick={handlePost} disabled={posting || (!newText.trim() && !pickedMedia)} className="font-mono-share text-[10px]">
+              <span className="font-mono-share text-tiny text-muted-foreground">{newText.length}/2000</span>
+              <Button size="sm" onClick={handlePost} disabled={posting || (!newText.trim() && !pickedMedia)} className="font-mono-share text-tiny">
                 {posting ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Send className="w-3 h-3 mr-1" />}
                 POST
               </Button>
@@ -1223,7 +1223,7 @@ const FeedPage: React.FC = () => {
             </div>
             {!loadingMore && !nextCursor && posts.length > 0 && (
               <div className="py-8 text-center">
-                <p className="font-mono-share text-[10px] tracking-widest text-muted-foreground/70">
+                <p className="font-mono-share text-tiny tracking-widest text-muted-foreground/70">
                   ── YOU'RE ALL CAUGHT UP ──
                 </p>
               </div>

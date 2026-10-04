@@ -145,7 +145,7 @@ const SupportBotDialog: React.FC<Props> = ({ open, onOpenChange, username, onRef
                       {p.label(u)}
                     </div>
                     {p.hint && (
-                      <div className="font-mono-share text-[10px] text-muted-foreground/60 mt-0.5">
+                      <div className="font-mono-share text-tiny text-muted-foreground/60 mt-0.5">
                         {p.hint}
                       </div>
                     )}
@@ -153,7 +153,7 @@ const SupportBotDialog: React.FC<Props> = ({ open, onOpenChange, username, onRef
                 </button>
               );
             })}
-            <p className="font-mono-share text-[10px] text-muted-foreground/40 text-center pt-2">
+            <p className="font-mono-share text-tiny text-muted-foreground/60 text-center pt-2">
               Custom messages disabled to prevent abuse. For anything outside these options, open a ticket in our{" "}
               <a href="https://discord.gg/CNpWqkFA65" target="_blank" rel="noopener noreferrer" className="text-primary/70 underline">Discord</a>
               {" "}or email <a href="mailto:gltch.app@proton.me" className="text-primary/70 underline">gltch.app@proton.me</a>.
@@ -182,13 +182,13 @@ const SupportBotDialog: React.FC<Props> = ({ open, onOpenChange, username, onRef
             <div className="flex justify-end gap-2">
               <button
                 onClick={reset}
-                className="px-3 py-1.5 rounded-md border border-border/50 bg-card/40 hover:border-primary/50 hover:bg-primary/5 font-mono-share text-[11px] text-foreground/80 transition-all"
+                className="px-3 py-1.5 rounded-md border border-border/50 bg-card/40 hover:border-primary/50 hover:bg-primary/5 font-mono-share text-xs text-foreground/80 transition-all"
               >
                 ← Back to options
               </button>
               <button
                 onClick={() => onOpenChange(false)}
-                className="px-3 py-1.5 rounded-md border border-primary/40 bg-primary/10 hover:bg-primary/20 font-mono-share text-[11px] text-primary transition-all"
+                className="px-3 py-1.5 rounded-md border border-primary/40 bg-primary/10 hover:bg-primary/20 font-mono-share text-xs text-primary transition-all"
               >
                 Done
               </button>

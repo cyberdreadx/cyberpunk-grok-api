@@ -170,8 +170,8 @@ function PromptCard({
               @{post.username}
             </button>
             {post.authorVerified && <VerifiedBadge className="w-3.5 h-3.5" />}
-            <span className="text-muted-foreground/50 text-[10px]">·</span>
-            <span className="text-[10px] text-muted-foreground font-mono-share">
+            <span className="text-muted-foreground/70 text-tiny">·</span>
+            <span className="text-tiny text-muted-foreground font-mono-share">
               {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
             </span>
           </div>
@@ -179,13 +179,13 @@ function PromptCard({
             <h3 className="font-orbitron text-sm text-primary mt-1 tracking-wide">{post.title}</h3>
           )}
           <div className="flex flex-wrap gap-1.5 mt-1.5">
-            <span className="text-[9px] px-1.5 py-0.5 rounded border border-secondary/30 bg-secondary/10 text-secondary font-mono-share">
+            <span className="text-tiny px-1.5 py-0.5 rounded border border-secondary/30 bg-secondary/10 text-secondary font-mono-share">
               {modeLabel(post.mode)}
             </span>
             {post.tags.map((tag) => (
               <span
                 key={tag}
-                className="text-[9px] px-1.5 py-0.5 rounded border border-border/40 text-muted-foreground font-mono-share"
+                className="text-tiny px-1.5 py-0.5 rounded border border-border/40 text-muted-foreground font-mono-share"
               >
                 #{tag}
               </span>
@@ -218,13 +218,13 @@ function PromptCard({
 
       <div className="rounded-md border border-border/30 bg-background/40 p-3">
         <div className="flex items-center justify-between gap-2 mb-1.5">
-          <span className="font-orbitron text-[9px] text-muted-foreground tracking-widest">PROMPT</span>
+          <span className="font-orbitron text-tiny text-muted-foreground tracking-widest">PROMPT</span>
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="sm" className="h-7 px-2 text-[10px]" onClick={handleCopy}>
+            <Button variant="ghost" size="sm" className="h-7 px-2 text-tiny" onClick={handleCopy}>
               {copied ? <Check className="w-3 h-3 mr-1" /> : <Copy className="w-3 h-3 mr-1" />}
               COPY
             </Button>
-            <Button variant="ghost" size="sm" className="h-7 px-2 text-[10px] text-primary" onClick={handleTry}>
+            <Button variant="ghost" size="sm" className="h-7 px-2 text-tiny text-primary" onClick={handleTry}>
               <Wand2 className="w-3 h-3 mr-1" />
               TRY
             </Button>
@@ -238,14 +238,14 @@ function PromptCard({
           <button
             type="button"
             onClick={() => setExpanded((v) => !v)}
-            className="text-[10px] text-primary mt-1 hover:underline font-mono-share"
+            className="text-tiny text-primary mt-1 hover:underline font-mono-share"
           >
             {expanded ? "Show less" : "Show full prompt"}
           </button>
         )}
         {post.negativePrompt && expanded && (
           <div className="mt-3 pt-3 border-t border-border/20">
-            <span className="font-orbitron text-[9px] text-muted-foreground tracking-widest">NEGATIVE</span>
+            <span className="font-orbitron text-tiny text-muted-foreground tracking-widest">NEGATIVE</span>
             <p className="font-rajdhani text-xs text-muted-foreground mt-1 whitespace-pre-wrap">
               {post.negativePrompt}
             </p>
@@ -415,7 +415,7 @@ export default function PromptsPage() {
           </div>
           <Button
             size="sm"
-            className="font-orbitron text-[10px] tracking-widest"
+            className="font-orbitron text-tiny tracking-widest"
             onClick={() => (showForm ? setShowForm(false) : requireAuth() && setShowForm(true))}
           >
             {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
@@ -484,7 +484,7 @@ export default function PromptsPage() {
               key={id}
               type="button"
               onClick={() => setSort(id)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-orbitron text-[10px] tracking-widest border transition-colors ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-orbitron text-tiny tracking-widest border transition-colors ${
                 sort === id
                   ? "border-primary/50 bg-primary/15 text-primary"
                   : "border-border/40 text-muted-foreground hover:text-foreground"
@@ -526,7 +526,7 @@ export default function PromptsPage() {
             {cursor && (
               <Button
                 variant="outline"
-                className="w-full font-orbitron text-[10px] tracking-widest"
+                className="w-full font-orbitron text-tiny tracking-widest"
                 onClick={() => fetchPrompts(sort, cursor, true)}
                 disabled={loadingMore}
               >

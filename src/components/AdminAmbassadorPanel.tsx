@@ -77,10 +77,10 @@ function Stat({ icon, label, value, sub, tone = "neutral" }: {
     <div className="holo-card p-3 sm:p-4 space-y-1.5 min-w-0 overflow-hidden" data-numeric>
       <div className="flex items-center gap-2 text-muted-foreground/70">
         <span className={`inline-flex items-center justify-center w-6 h-6 rounded-md shrink-0 ${toneMap[tone]}`}>{icon}</span>
-        <span className="font-mono-share text-[10px] tracking-wider uppercase truncate">{label}</span>
+        <span className="font-mono-share text-tiny tracking-wider uppercase truncate">{label}</span>
       </div>
       <div className="font-orbitron text-xl sm:text-2xl font-bold tracking-wide truncate">{value}</div>
-      {sub && <div className="font-mono-share text-[10px] text-muted-foreground/60 truncate">{sub}</div>}
+      {sub && <div className="font-mono-share text-tiny text-muted-foreground/60 truncate">{sub}</div>}
     </div>
   );
 }
@@ -139,13 +139,13 @@ export default function AdminAmbassadorPanel() {
           <Award className="w-4 h-4 text-primary" /> AMBASSADOR_PROGRAM
         </h2>
         <div className="flex gap-2">
-          <Button size="sm" variant="outline" className="h-8 text-[10px] gap-1"
+          <Button size="sm" variant="outline" className="h-8 text-tiny gap-1"
             onClick={() => act("release", { action: "ambassador-release" }, "Release job run")}
             disabled={busy === "release"}>
             {busy === "release" ? <Loader2 className="w-3 h-3 animate-spin" /> : <Clock className="w-3 h-3" />}
             RELEASE_NOW
           </Button>
-          <Button size="sm" variant="outline" className="h-8 text-[10px] gap-1" onClick={load}>
+          <Button size="sm" variant="outline" className="h-8 text-tiny gap-1" onClick={load}>
             <RefreshCw className="w-3 h-3" /> REFRESH
           </Button>
         </div>
@@ -177,11 +177,11 @@ export default function AdminAmbassadorPanel() {
       {/* ── Applications ─────────────────────────────────────────────── */}
       <div className="holo-card p-3 sm:p-4 space-y-3">
         <div className="flex items-center justify-between gap-2 flex-wrap">
-          <h3 className="font-mono-share text-[11px] tracking-widest text-muted-foreground">APPLICATIONS</h3>
+          <h3 className="font-mono-share text-xs tracking-widest text-muted-foreground">APPLICATIONS</h3>
           <div className="flex gap-1">
             {(["pending", "approved", "rejected"] as const).map((s) => (
               <button key={s} onClick={() => setAppStatus(s)}
-                className={`px-2 py-1 rounded text-[10px] font-mono-share uppercase tracking-wider transition-colors ${
+                className={`px-2 py-1 rounded text-tiny font-mono-share uppercase tracking-wider transition-colors ${
                   appStatus === s ? "bg-primary/20 text-primary" : "text-muted-foreground/60 hover:text-muted-foreground"
                 }`}>
                 {s}
@@ -206,16 +206,16 @@ export default function AdminAmbassadorPanel() {
                     <div className="min-w-0">
                       <p className="text-sm font-semibold truncate">
                         {a.display_name || a.username}
-                        {a.country && <span className="ml-2 text-[10px] text-muted-foreground">{a.country}</span>}
+                        {a.country && <span className="ml-2 text-tiny text-muted-foreground">{a.country}</span>}
                       </p>
-                      <p className="text-[10px] text-muted-foreground font-mono-share truncate">{a.email}</p>
+                      <p className="text-tiny text-muted-foreground font-mono-share truncate">{a.email}</p>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className="text-[10px] text-muted-foreground font-mono-share">
+                      <p className="text-tiny text-muted-foreground font-mono-share">
                         {new Date(a.created_at).toLocaleDateString()}
                       </p>
                       {a.audience_size != null && (
-                        <p className="text-[10px] text-muted-foreground font-mono-share">
+                        <p className="text-tiny text-muted-foreground font-mono-share">
                           {a.audience_size.toLocaleString()} audience
                         </p>
                       )}
@@ -223,7 +223,7 @@ export default function AdminAmbassadorPanel() {
                   </div>
 
                   {/* The decision signals. */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px] font-mono-share">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-tiny font-mono-share">
                     <Signal label="EVER PAID" value={fmt$(a.spent_cents)} bad={a.spent_cents === 0} />
                     <Signal label="REFERRALS" value={String(a.existing_referrals)} />
                     <Signal label="CONVERTED" value={String(a.existing_conversions)}
@@ -232,20 +232,20 @@ export default function AdminAmbassadorPanel() {
                   </div>
 
                   {suspicious && (
-                    <p className="text-[10px] text-destructive flex items-center gap-1">
+                    <p className="text-tiny text-destructive flex items-center gap-1">
                       <AlertTriangle className="w-3 h-3 shrink-0" />
                       Matches the farming pattern — high signups with no sales, or an account cluster.
                     </p>
                   )}
 
-                  {a.channels && <p className="text-[11px] text-muted-foreground">Posts on: {a.channels}</p>}
-                  <p className="text-[11px] leading-relaxed whitespace-pre-wrap">{a.pitch}</p>
+                  {a.channels && <p className="text-xs text-muted-foreground">Posts on: {a.channels}</p>}
+                  <p className="text-xs leading-relaxed whitespace-pre-wrap">{a.pitch}</p>
 
                   {Object.keys(a.socials || {}).length > 0 && (
                     <div className="flex flex-wrap gap-2">
                       {Object.entries(a.socials).map(([k, v]) => (
                         <a key={k} href={v} target="_blank" rel="noopener noreferrer"
-                          className="text-[10px] text-primary hover:underline flex items-center gap-1 font-mono-share">
+                          className="text-tiny text-primary hover:underline flex items-center gap-1 font-mono-share">
                           {k} <ExternalLink className="w-2.5 h-2.5" />
                         </a>
                       ))}
@@ -255,20 +255,20 @@ export default function AdminAmbassadorPanel() {
                   {a.status === "pending" && (
                     <div className="flex items-end gap-2 flex-wrap pt-1">
                       <div className="flex-1 min-w-[140px]">
-                        <label className="text-[9px] text-muted-foreground uppercase tracking-wide">Code</label>
+                        <label className="text-tiny text-muted-foreground uppercase tracking-wide">Code</label>
                         <Input value={reviewCode[a.id] ?? a.requested_code ?? ""}
                           onChange={(e) => setReviewCode({ ...reviewCode, [a.id]: e.target.value.toUpperCase() })}
                           placeholder="auto" className="h-8 text-xs font-mono bg-muted border-border" />
                       </div>
                       <div className="flex-1 min-w-[140px]">
-                        <label className="text-[9px] text-muted-foreground uppercase tracking-wide">
+                        <label className="text-tiny text-muted-foreground uppercase tracking-wide">
                           Note (shown to applicant)
                         </label>
                         <Input value={reviewNote[a.id] ?? ""}
                           onChange={(e) => setReviewNote({ ...reviewNote, [a.id]: e.target.value })}
                           placeholder="optional" className="h-8 text-xs bg-muted border-border" />
                       </div>
-                      <Button size="sm" className="h-8 text-[10px] gap-1 bg-secondary text-secondary-foreground"
+                      <Button size="sm" className="h-8 text-tiny gap-1 bg-secondary text-secondary-foreground"
                         disabled={busy === a.id}
                         onClick={() => act(a.id, {
                           action: "ambassador-review", id: a.id, decision: "approve",
@@ -278,7 +278,7 @@ export default function AdminAmbassadorPanel() {
                         {busy === a.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
                         APPROVE
                       </Button>
-                      <Button size="sm" variant="outline" className="h-8 text-[10px] gap-1 border-destructive/40 text-destructive"
+                      <Button size="sm" variant="outline" className="h-8 text-tiny gap-1 border-destructive/40 text-destructive"
                         disabled={busy === a.id}
                         onClick={() => act(a.id, {
                           action: "ambassador-review", id: a.id, decision: "reject",
@@ -297,12 +297,12 @@ export default function AdminAmbassadorPanel() {
 
       {/* ── Roster ───────────────────────────────────────────────────── */}
       <div className="holo-card p-3 sm:p-4 space-y-3">
-        <h3 className="font-mono-share text-[11px] tracking-widest text-muted-foreground">ROSTER</h3>
+        <h3 className="font-mono-share text-xs tracking-widest text-muted-foreground">ROSTER</h3>
         {roster.length === 0 ? (
           <p className="text-xs text-muted-foreground/60 py-6 text-center font-mono-share">NO AMBASSADORS YET</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-[11px] font-mono-share">
+            <table className="w-full text-xs font-mono-share">
               <thead>
                 <tr className="text-muted-foreground/60 text-left border-b border-border/60">
                   <th className="py-2 pr-3">CODE</th>
@@ -321,11 +321,11 @@ export default function AdminAmbassadorPanel() {
                 {roster.map((r) => (
                   <tr key={r.id} className="border-b border-border/30 last:border-0">
                     <td className="py-2 pr-3">
-                      <span className={`font-bold ${r.status === "active" ? "text-primary" : "text-muted-foreground/50"}`}>
+                      <span className={`font-bold ${r.status === "active" ? "text-primary" : "text-muted-foreground/70"}`}>
                         {r.code}
                       </span>
                       {r.status !== "active" && (
-                        <span className="ml-1 text-[9px] uppercase text-amber-400">{r.status}</span>
+                        <span className="ml-1 text-tiny uppercase text-amber-400">{r.status}</span>
                       )}
                     </td>
                     <td className="py-2 pr-3 truncate max-w-[140px]">{r.display_name || r.username}</td>
@@ -380,9 +380,9 @@ export default function AdminAmbassadorPanel() {
       {/* ── Recent commission ────────────────────────────────────────── */}
       {data.recentCommissions.length > 0 && (
         <div className="holo-card p-3 sm:p-4 space-y-3">
-          <h3 className="font-mono-share text-[11px] tracking-widest text-muted-foreground">RECENT_COMMISSION</h3>
+          <h3 className="font-mono-share text-xs tracking-widest text-muted-foreground">RECENT_COMMISSION</h3>
           <div className="overflow-x-auto">
-            <table className="w-full text-[11px] font-mono-share">
+            <table className="w-full text-xs font-mono-share">
               <thead>
                 <tr className="text-muted-foreground/60 text-left border-b border-border/60">
                   <th className="py-2 pr-3">WHEN</th>
@@ -428,7 +428,7 @@ export default function AdminAmbassadorPanel() {
 function Signal({ label, value, bad }: { label: string; value: string; bad?: boolean }) {
   return (
     <div className={`rounded px-2 py-1 ${bad ? "bg-destructive/15 text-destructive" : "bg-muted/40 text-muted-foreground"}`}>
-      <div className="text-[9px] opacity-70 tracking-wider">{label}</div>
+      <div className="text-tiny opacity-70 tracking-wider">{label}</div>
       <div className="font-bold">{value}</div>
     </div>
   );

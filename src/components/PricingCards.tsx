@@ -88,7 +88,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
             "Manage" button shows up). Routes to Stripe Customer Portal. */}
         {onManageSubscription && (
           <div className="mb-3 flex items-center justify-between gap-2 rounded-md border border-amber-500/30 bg-amber-500/5 px-3 py-2">
-            <span className="font-mono-share text-[10px] text-amber-300/90">
+            <span className="font-mono-share text-tiny text-amber-300/90">
               {currentTier
                 ? `Active sub: ${currentTier.toUpperCase()} — manage or cancel anytime`
                 : "Already subscribed? Manage or cancel below."}
@@ -98,7 +98,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
               disabled={purchasing}
               variant="outline"
               size="sm"
-              className="rounded-md font-orbitron text-[9px] tracking-wider border-amber-500/50 text-amber-300 hover:bg-amber-500/10"
+              className="rounded-md font-orbitron text-tiny tracking-wider border-amber-500/50 text-amber-300 hover:bg-amber-500/10"
             >
               Manage / Cancel
             </Button>
@@ -109,7 +109,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
         <div className="flex items-center justify-center gap-1 mb-4">
           <button
             onClick={() => setBillingInterval("month")}
-            className={`font-orbitron text-[9px] tracking-wider px-3 py-1.5 rounded-l border transition-all ${
+            className={`font-orbitron text-tiny tracking-wider px-3 py-1.5 rounded-l border transition-all ${
               billingInterval === "month"
                 ? "bg-primary text-primary-foreground border-primary"
                 : "bg-card/40 text-muted-foreground border-border hover:bg-primary/10"
@@ -119,14 +119,14 @@ const PricingCards: React.FC<PricingCardsProps> = ({
           </button>
           <button
             onClick={() => setBillingInterval("year")}
-            className={`font-orbitron text-[9px] tracking-wider px-3 py-1.5 rounded-r border transition-all relative ${
+            className={`font-orbitron text-tiny tracking-wider px-3 py-1.5 rounded-r border transition-all relative ${
               billingInterval === "year"
                 ? "bg-secondary text-secondary-foreground border-secondary"
                 : "bg-card/40 text-muted-foreground border-border hover:bg-secondary/10"
             }`}
           >
             {t("pricing.yearly")}
-            <span className="absolute -top-2 -right-2 bg-green-500 text-white font-mono text-[7px] px-1.5 py-0.5 rounded-full leading-none">
+            <span className="absolute -top-2 -right-2 bg-green-500 text-white font-mono text-micro px-1.5 py-0.5 rounded-full leading-none">
               -12%
             </span>
           </button>
@@ -145,12 +145,12 @@ const PricingCards: React.FC<PricingCardsProps> = ({
                 } ${isActive ? "ring-2 ring-primary/45 ring-offset-2 ring-offset-background" : ""}`}
               >
                 {tier.popular && !isActive && (
-                  <div className="border-b border-secondary/50 bg-secondary/85 py-1.5 text-center font-orbitron text-[8px] tracking-[0.18em] text-secondary-foreground">
+                  <div className="border-b border-secondary/50 bg-secondary/85 py-1.5 text-center font-orbitron text-micro tracking-[0.18em] text-secondary-foreground">
                     {t("pricing.bestValue")}
                   </div>
                 )}
                 {isActive && (
-                  <div className="border-b border-primary/40 bg-primary/20 py-1.5 text-center font-orbitron text-[8px] tracking-[0.18em] text-primary">
+                  <div className="border-b border-primary/40 bg-primary/20 py-1.5 text-center font-orbitron text-micro tracking-[0.18em] text-primary">
                     {t("pricing.activePlan")}
                   </div>
                 )}
@@ -165,13 +165,13 @@ const PricingCards: React.FC<PricingCardsProps> = ({
                     <p className="font-orbitron text-lg font-bold tabular-nums leading-none text-foreground sm:text-xl break-words">
                       ${(tier.priceCents / 100).toFixed(2)}
                     </p>
-                    <p className="font-mono-share text-[10px] uppercase tracking-wide text-muted-foreground">
+                    <p className="font-mono-share text-tiny uppercase tracking-wide text-muted-foreground">
                       {tier.interval === "year" ? t("pricing.perYear") : t("pricing.perMonth")}
                     </p>
                   </div>
 
                   {tier.interval === "year" && tier.monthlyEquivalentCents && (
-                    <p className="font-mono-share text-[10px] text-green-400 mb-2">
+                    <p className="font-mono-share text-tiny text-green-400 mb-2">
                       ${(tier.monthlyEquivalentCents / 100).toFixed(2)}/mo &mdash; {t("pricing.savePercent", { percent: tier.savingsPercent })}
                     </p>
                   )}
@@ -184,7 +184,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
                     </span>
                   </div>
 
-                  <p className="mb-4 flex-1 font-mono-share text-[10px] leading-snug text-muted-foreground/75">
+                  <p className="mb-4 flex-1 font-mono-share text-tiny leading-snug text-muted-foreground/75">
                     {t("pricing.creditsPerk", { defaultValue: "Bonus credits added every month · better value per dollar than any pack · never expire" })}
                   </p>
 
@@ -199,7 +199,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
                           onClick={() => { Promise.resolve(onManageSubscription?.()).catch(() => {}); }}
                           disabled={purchasing}
                           variant="outline"
-                          className="w-full rounded-md font-orbitron text-[10px] tracking-wider gap-1 border-primary/50 text-primary"
+                          className="w-full rounded-md font-orbitron text-tiny tracking-wider gap-1 border-primary/50 text-primary"
                         >
                           {t("pricing.managePlan")}
                         </Button>
@@ -210,7 +210,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
                         <Button
                           disabled
                           variant="outline"
-                          className="w-full rounded-md font-orbitron text-[10px] tracking-wider gap-1 opacity-40 cursor-not-allowed"
+                          className="w-full rounded-md font-orbitron text-tiny tracking-wider gap-1 opacity-40 cursor-not-allowed"
                         >
                           {t("pricing.currentPlanHigher")}
                         </Button>
@@ -221,7 +221,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
                         <Button
                           onClick={() => safeSubscribe(tier.id)}
                           disabled={purchasing}
-                          className="w-full rounded-md font-orbitron text-[10px] tracking-wider gap-1 bg-green-600 text-white hover:bg-green-500"
+                          className="w-full rounded-md font-orbitron text-tiny tracking-wider gap-1 bg-green-600 text-white hover:bg-green-500"
                         >
                           {purchasing ? (
                             <Loader2 className="w-3 h-3 animate-spin" />
@@ -238,7 +238,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
                       <Button
                         onClick={() => safeSubscribe(tier.id)}
                         disabled={purchasing}
-                        className={`w-full rounded-md font-orbitron text-[10px] tracking-wider gap-1 ${
+                        className={`w-full rounded-md font-orbitron text-tiny tracking-wider gap-1 ${
                           tier.popular
                             ? "bg-secondary text-secondary-foreground hover:bg-secondary/80"
                             : "bg-primary text-primary-foreground hover:bg-primary/80"
@@ -275,7 +275,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
           <>
             <div className="flex items-center gap-2 my-3">
               <Sparkles className="w-3 h-3 text-secondary/60" />
-              <h4 className="font-orbitron text-[10px] tracking-widest text-muted-foreground/60">
+              <h4 className="font-orbitron text-tiny tracking-widest text-muted-foreground/60">
                 {t("pricing.bulkPacks")}
               </h4>
               <div className="h-px flex-1 bg-border/20" />
@@ -296,7 +296,7 @@ const PricingCards: React.FC<PricingCardsProps> = ({
          */}
         {bestPlan && (
           <div className="mt-4 rounded-lg border border-primary/30 bg-primary/[0.05] p-3">
-            <p className="font-mono-share text-[11px] leading-relaxed text-muted-foreground">
+            <p className="font-mono-share text-xs leading-relaxed text-muted-foreground">
               {t("pricing.planBeatsPacks", {
                 plan: bestPlan.name,
                 planRate: bestPlanRate.toFixed(1),
@@ -366,7 +366,7 @@ function PackCard({
       }`}
     >
       {onFlash && (
-        <div className="border-b border-orange-500/60 bg-gradient-to-r from-orange-600/40 via-pink-500/40 to-orange-600/40 py-1.5 px-2 flex items-center justify-center gap-1.5 font-orbitron text-[8px] tracking-[0.18em] text-orange-100">
+        <div className="border-b border-orange-500/60 bg-gradient-to-r from-orange-600/40 via-pink-500/40 to-orange-600/40 py-1.5 px-2 flex items-center justify-center gap-1.5 font-orbitron text-micro tracking-[0.18em] text-orange-100">
           <Flame className="w-3 h-3" />
           FLASH SALE
           {flashSale!.discount_percent > 0 && <span className="text-yellow-200">{flashSale!.discount_percent}% OFF</span>}
@@ -374,12 +374,12 @@ function PackCard({
         </div>
       )}
       {pkg.popular && !onFlash && (
-        <div className="border-b border-secondary/50 bg-secondary/85 py-1.5 text-center font-orbitron text-[8px] tracking-[0.18em] text-secondary-foreground">
+        <div className="border-b border-secondary/50 bg-secondary/85 py-1.5 text-center font-orbitron text-micro tracking-[0.18em] text-secondary-foreground">
           {t("pricing.popular")}
         </div>
       )}
       {isBulk && !pkg.popular && !onFlash && (
-        <div className="border-b border-primary/40 bg-primary/20 py-1.5 text-center font-orbitron text-[8px] tracking-[0.18em] text-primary">
+        <div className="border-b border-primary/40 bg-primary/20 py-1.5 text-center font-orbitron text-micro tracking-[0.18em] text-primary">
           {t("pricing.bulk")}
         </div>
       )}
@@ -391,7 +391,7 @@ function PackCard({
           <p className="font-orbitron text-xl font-bold tabular-nums leading-none text-foreground sm:text-2xl break-words">
             ${(pkg.priceCents / 100).toFixed(2)}
           </p>
-          <p className="font-mono-share text-[10px] uppercase tracking-wide text-muted-foreground">
+          <p className="font-mono-share text-tiny uppercase tracking-wide text-muted-foreground">
             {t("pricing.oneTime")} · {(pkg.priceCents / pkg.credits).toFixed(1)}¢ {t("pricing.perCredit")}
           </p>
         </div>
@@ -402,14 +402,14 @@ function PackCard({
             {totalCredits.toLocaleString()} {t("pricing.creditsLabel")}
           </span>
           {bonusCredits > 0 && (
-            <span className="font-mono-share text-[8px] text-green-400 bg-green-400/10 px-1 py-0.5 rounded">
+            <span className="font-mono-share text-micro text-green-400 bg-green-400/10 px-1 py-0.5 rounded">
               +{bonusCredits} sub bonus
             </span>
           )}
         </div>
 
         {/* Single value line — what the credits make + the never-expire reassurance. */}
-        <p className="mb-3 flex-1 font-mono-share text-[10px] leading-snug text-muted-foreground/80">
+        <p className="mb-3 flex-1 font-mono-share text-tiny leading-snug text-muted-foreground/80">
           {t("pricing.makeEstimate", { edits, videos })} · {t("pricing.neverExpires")}
           {discountPct > 0 && (
             <span className="text-green-400/80"> ({t("pricing.withSubDiscount", { percent: discountPct })})</span>
@@ -420,7 +420,7 @@ function PackCard({
           <Button
             onClick={() => { Promise.resolve(onPurchase(pkg.id)).catch(() => {}); }}
             disabled={purchasing}
-            className={`w-full rounded-md font-orbitron text-[10px] tracking-wider gap-1 ${
+            className={`w-full rounded-md font-orbitron text-tiny tracking-wider gap-1 ${
               pkg.popular
                 ? "bg-secondary text-secondary-foreground hover:bg-secondary/80"
                 : "bg-primary text-primary-foreground hover:bg-primary/80"
@@ -438,7 +438,7 @@ function PackCard({
             <button
               type="button"
               onClick={() => setShowCrypto(true)}
-              className="w-full flex items-center justify-center gap-1 py-1 font-mono-share text-[9px] tracking-wider text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+              className="w-full flex items-center justify-center gap-1 py-1 font-mono-share text-tiny tracking-wider text-muted-foreground/60 hover:text-muted-foreground transition-colors"
             >
               <ChevronDown className="w-3 h-3" />
               {t("pricing.otherWaysToPay")}
@@ -453,10 +453,10 @@ function PackCard({
                 className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-md border border-[#c44b8b]/50 bg-gradient-to-r from-[#8b2fc0]/10 via-[#c44b8b]/10 to-[#e8445a]/10 hover:from-[#8b2fc0]/20 hover:via-[#c44b8b]/20 hover:to-[#e8445a]/20 hover:border-[#c44b8b]/70 transition-all disabled:opacity-50"
               >
                 <img src="/xrge-logo.png" alt="" className="w-5 h-5 rounded-full" />
-                <span className="font-orbitron text-[10px] tracking-wider text-white/90">{t("pricing.payWithXrge")}</span>
-                <span className="text-green-400 font-mono-share text-[8px] font-bold bg-green-400/10 px-1.5 py-0.5 rounded-full leading-none">{t("pricing.bonusPercent", { percent: 30 })}</span>
+                <span className="font-orbitron text-tiny tracking-wider text-white/90">{t("pricing.payWithXrge")}</span>
+                <span className="text-green-400 font-mono-share text-micro font-bold bg-green-400/10 px-1.5 py-0.5 rounded-full leading-none">{t("pricing.bonusPercent", { percent: 30 })}</span>
               </button>
-              <p className="font-mono-share text-[8px] text-center text-muted-foreground/55 leading-tight">
+              <p className="font-mono-share text-micro text-center text-muted-foreground/55 leading-tight">
                 {t("pricing.baseChain")}
               </p>
             </div>

@@ -127,19 +127,19 @@ const XrgeUnlockDialog: React.FC<XrgeUnlockDialogProps> = ({
             <p className="font-mono-share text-xs text-muted-foreground text-center">
               Content unlocked. 80% sent to creator, 20% platform fee.
             </p>
-            <Button onClick={handleClose} className="font-orbitron text-[10px] tracking-wider bg-primary text-primary-foreground hover:bg-primary/80">
+            <Button onClick={handleClose} className="font-orbitron text-tiny tracking-wider bg-primary text-primary-foreground hover:bg-primary/80">
               CLOSE
             </Button>
           </div>
         ) : (
           <div className="space-y-4">
-            <p className="font-mono-share text-[10px] text-muted-foreground leading-relaxed">
+            <p className="font-mono-share text-tiny text-muted-foreground leading-relaxed">
               Send XRGE to the platform wallet. 80% goes to the creator's XRGE bank instantly — no waiting for withdrawal review.
             </p>
 
             {/* Amount */}
             <div>
-              <label className="font-orbitron text-[9px] tracking-widest text-muted-foreground block mb-1.5">
+              <label className="font-orbitron text-tiny tracking-widest text-muted-foreground block mb-1.5">
                 SEND_EXACTLY
               </label>
               <div className="flex items-center gap-2">
@@ -154,12 +154,12 @@ const XrgeUnlockDialog: React.FC<XrgeUnlockDialogProps> = ({
 
             {/* Deposit address */}
             <div>
-              <label className="font-orbitron text-[9px] tracking-widest text-muted-foreground block mb-1.5">
+              <label className="font-orbitron text-tiny tracking-widest text-muted-foreground block mb-1.5">
                 TO_ADDRESS ({XRGE_CHAIN_NAME} · chain {XRGE_CHAIN_ID})
               </label>
               {depositAddress ? (
                 <div className="flex items-center gap-2">
-                  <div className="flex-1 border border-primary/40 rounded bg-card/60 px-3 py-2 font-mono-share text-[11px] text-foreground/80 break-all select-all">
+                  <div className="flex-1 border border-primary/40 rounded bg-card/60 px-3 py-2 font-mono-share text-xs text-foreground/80 break-all select-all">
                     {depositAddress}
                   </div>
                   <Button variant="outline" size="sm" onClick={() => copyToClipboard(depositAddress, "address")} className="border-primary/30 px-2">
@@ -177,7 +177,7 @@ const XrgeUnlockDialog: React.FC<XrgeUnlockDialogProps> = ({
                   href={basescanAddressUrl(depositAddress)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 font-mono-share text-[8px] text-primary/70 hover:text-primary mt-1"
+                  className="inline-flex items-center gap-1 font-mono-share text-micro text-primary/70 hover:text-primary mt-1"
                 >
                   View on Basescan <ExternalLink className="w-3 h-3" />
                 </a>
@@ -188,7 +188,7 @@ const XrgeUnlockDialog: React.FC<XrgeUnlockDialogProps> = ({
               type="button"
               variant="secondary"
               onClick={copyPaymentBlock}
-              className="w-full font-mono-share text-[10px] gap-2 border border-pink-500/30 bg-pink-500/10 hover:bg-pink-500/20"
+              className="w-full font-mono-share text-tiny gap-2 border border-pink-500/30 bg-pink-500/10 hover:bg-pink-500/20"
             >
               {copied === "all" ? (
                 <><CheckCircle2 className="w-4 h-4 text-green-400" /> COPIED</>
@@ -200,7 +200,7 @@ const XrgeUnlockDialog: React.FC<XrgeUnlockDialogProps> = ({
             {/* Warning */}
             <div className="flex items-start gap-2 border border-yellow-600/30 rounded p-2 bg-yellow-600/5">
               <AlertTriangle className="w-4 h-4 text-yellow-500 mt-0.5 shrink-0" />
-              <p className="font-mono-share text-[9px] text-yellow-500/80 leading-relaxed">
+              <p className="font-mono-share text-tiny text-yellow-500/80 leading-relaxed">
                 Send <span className="font-bold text-yellow-500">XRGE tokens on Base chain only</span>.
                 Wrong token or chain = permanent loss.
               </p>
@@ -208,7 +208,7 @@ const XrgeUnlockDialog: React.FC<XrgeUnlockDialogProps> = ({
 
             {/* Tx hash */}
             <div>
-              <label className="font-orbitron text-[9px] tracking-widest text-muted-foreground block mb-1.5">
+              <label className="font-orbitron text-tiny tracking-widest text-muted-foreground block mb-1.5">
                 TRANSACTION_HASH
               </label>
               <Input
@@ -223,14 +223,14 @@ const XrgeUnlockDialog: React.FC<XrgeUnlockDialogProps> = ({
             {error && (
               <div className="flex items-start gap-2 border border-destructive/30 rounded p-2 bg-destructive/5">
                 <AlertTriangle className="w-3 h-3 text-destructive mt-0.5 shrink-0" />
-                <p className="font-mono-share text-[10px] text-destructive">{error}</p>
+                <p className="font-mono-share text-tiny text-destructive">{error}</p>
               </div>
             )}
 
             <Button
               onClick={handleVerify}
               disabled={!txHash.trim() || verifying || !depositAddress}
-              className="w-full font-orbitron text-[10px] tracking-wider bg-secondary text-secondary-foreground hover:bg-secondary/80 gap-2"
+              className="w-full font-orbitron text-tiny tracking-wider bg-secondary text-secondary-foreground hover:bg-secondary/80 gap-2"
             >
               {verifying ? (
                 <><Loader2 className="w-3 h-3 animate-spin" /> VERIFYING ON-CHAIN...</>
@@ -244,7 +244,7 @@ const XrgeUnlockDialog: React.FC<XrgeUnlockDialogProps> = ({
                 href={`https://basescan.org/tx/${txHash.trim()}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-1 font-mono-share text-[9px] text-primary/60 hover:text-primary"
+                className="flex items-center justify-center gap-1 font-mono-share text-tiny text-primary/60 hover:text-primary"
               >
                 View on Basescan <ExternalLink className="w-3 h-3" />
               </a>
@@ -254,7 +254,7 @@ const XrgeUnlockDialog: React.FC<XrgeUnlockDialogProps> = ({
               href={XRGE_DEXSCREENER_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-center gap-1 font-mono-share text-[8px] text-muted-foreground/50 hover:text-primary"
+              className="flex items-center justify-center gap-1 font-mono-share text-micro text-muted-foreground/70 hover:text-primary"
             >
               Get $XRGE on DexScreener <ExternalLink className="w-3 h-3" />
             </a>

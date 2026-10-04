@@ -156,20 +156,20 @@ export default function AdminUserPanel({ userId }: { userId: string }) {
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <ShieldAlert className="w-3.5 h-3.5 text-primary" />
-          <span className="font-orbitron text-[10px] tracking-widest text-primary">ADMIN_INSPECTOR</span>
+          <span className="font-orbitron text-tiny tracking-widest text-primary">ADMIN_INSPECTOR</span>
         </div>
-        <Button variant="outline" size="sm" onClick={load} disabled={loading} className="font-mono-share text-[10px] gap-1.5 h-7">
+        <Button variant="outline" size="sm" onClick={load} disabled={loading} className="font-mono-share text-tiny gap-1.5 h-7">
           {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
           REFRESH
         </Button>
       </div>
 
       {!data ? (
-        <p className="font-mono-share text-[11px] text-muted-foreground/60">{loading ? "Loading…" : "No data."}</p>
+        <p className="font-mono-share text-xs text-muted-foreground/60">{loading ? "Loading…" : "No data."}</p>
       ) : (
         <>
           {/* Email + tier */}
-          <div className="font-mono-share text-[11px] text-muted-foreground space-y-0.5">
+          <div className="font-mono-share text-xs text-muted-foreground space-y-0.5">
             <div>EMAIL: <span className="text-foreground">{data.user.email}</span></div>
             <div>
               TIER: <span className="text-foreground">{data.user.subscription_tier || "free"}</span>
@@ -185,7 +185,7 @@ export default function AdminUserPanel({ userId }: { userId: string }) {
                   size="sm"
                   onClick={handleUnban}
                   disabled={unbanning}
-                  className="font-mono-share text-[9px] h-6 px-2 gap-1 border-green-500/40 text-green-400 hover:bg-green-500/10"
+                  className="font-mono-share text-tiny h-6 px-2 gap-1 border-green-500/40 text-green-400 hover:bg-green-500/10"
                 >
                   {unbanning ? <Loader2 className="w-3 h-3 animate-spin" /> : <ShieldCheck className="w-3 h-3" />}
                   UNBAN
@@ -206,20 +206,20 @@ export default function AdminUserPanel({ userId }: { userId: string }) {
                   <Coins className="w-3 h-3 text-primary/60" />
                   {c.value ?? 0}
                 </div>
-                <div className="font-mono-share text-[9px] text-muted-foreground">{c.label}</div>
+                <div className="font-mono-share text-tiny text-muted-foreground">{c.label}</div>
               </div>
             ))}
           </div>
 
           {/* Spend */}
-          <div className="font-mono-share text-[11px] text-muted-foreground border-t border-border/30 pt-2">
+          <div className="font-mono-share text-xs text-muted-foreground border-t border-border/30 pt-2">
             LIFETIME: <span className="text-foreground">{fmtUsd(data.totalSpentCents)}</span>
             <span className="ml-3">PURCHASES: <span className="text-foreground">{data.totalPurchases}</span></span>
           </div>
 
           {/* Grant credits */}
           <div className="border-t border-border/30 pt-3 space-y-2">
-            <div className="font-mono-share text-[10px] text-muted-foreground tracking-wider">GRANT_CREDITS</div>
+            <div className="font-mono-share text-tiny text-muted-foreground tracking-wider">GRANT_CREDITS</div>
             <div className="flex gap-2">
               <Input
                 type="number"
@@ -238,7 +238,7 @@ export default function AdminUserPanel({ userId }: { userId: string }) {
                 <option value="pack">PACK</option>
                 <option value="sub">SUB</option>
               </select>
-              <Button size="sm" onClick={handleGrant} disabled={granting || !grantAmount} className="font-mono-share text-[10px] h-8 gap-1">
+              <Button size="sm" onClick={handleGrant} disabled={granting || !grantAmount} className="font-mono-share text-tiny h-8 gap-1">
                 {granting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
                 GRANT
               </Button>
@@ -248,7 +248,7 @@ export default function AdminUserPanel({ userId }: { userId: string }) {
               size="sm"
               onClick={handleZero}
               disabled={zeroing}
-              className="font-mono-share text-[10px] h-8 gap-1 w-full"
+              className="font-mono-share text-tiny h-8 gap-1 w-full"
             >
               {zeroing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Ban className="w-3 h-3" />}
               ZERO_ALL_CREDITS
@@ -258,7 +258,7 @@ export default function AdminUserPanel({ userId }: { userId: string }) {
               size="sm"
               onClick={handlePurgeStorage}
               disabled={purging}
-              className="font-mono-share text-[10px] h-8 gap-1 w-full border-destructive/40 text-destructive hover:bg-destructive/10"
+              className="font-mono-share text-tiny h-8 gap-1 w-full border-destructive/40 text-destructive hover:bg-destructive/10"
             >
               {purging ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
               PURGE_CLOUD_MEDIA
@@ -267,14 +267,14 @@ export default function AdminUserPanel({ userId }: { userId: string }) {
 
           {/* Purchase history */}
           <div className="border-t border-border/30 pt-3 space-y-2">
-            <div className="flex items-center gap-1.5 font-mono-share text-[10px] text-muted-foreground tracking-wider">
+            <div className="flex items-center gap-1.5 font-mono-share text-tiny text-muted-foreground tracking-wider">
               <Receipt className="w-3 h-3" /> PURCHASE_HISTORY ({data.transactions.length})
             </div>
             {data.transactions.length === 0 ? (
-              <p className="font-mono-share text-[10px] text-muted-foreground/60">No transactions.</p>
+              <p className="font-mono-share text-tiny text-muted-foreground/60">No transactions.</p>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-[10px] font-mono-share">
+                <table className="w-full text-tiny font-mono-share">
                   <thead className="text-muted-foreground/70">
                     <tr>
                       <th className="text-left py-1 pr-2 font-normal">WHEN</th>

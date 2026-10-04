@@ -84,7 +84,7 @@ const PostToFeedDialog: React.FC<PostToFeedDialogProps> = ({
               rows={3}
               className="resize-none border-border/50 bg-muted/20 text-sm"
             />
-            <div className="text-[10px] text-muted-foreground/60 text-right">{caption.length}/2000</div>
+            <div className="text-tiny text-muted-foreground/60 text-right">{caption.length}/2000</div>
           </div>
 
           {/* Mature toggle */}
@@ -95,7 +95,7 @@ const PostToFeedDialog: React.FC<PostToFeedDialogProps> = ({
                 <Label htmlFor="ptf-mature" className="text-xs font-medium cursor-pointer">
                   Mature content
                 </Label>
-                <p className="text-[10px] text-muted-foreground">Blur preview for sensitive viewers.</p>
+                <p className="text-tiny text-muted-foreground">Blur preview for sensitive viewers.</p>
               </div>
             </div>
             <Switch id="ptf-mature" checked={isMature} onCheckedChange={setIsMature} />
@@ -110,7 +110,7 @@ const PostToFeedDialog: React.FC<PostToFeedDialogProps> = ({
                   <Label htmlFor="ptf-lock" className="text-xs font-medium cursor-pointer">
                     Lock post (paywall)
                   </Label>
-                  <p className="text-[10px] text-muted-foreground">Charge to view. Verification required.</p>
+                  <p className="text-tiny text-muted-foreground">Charge to view. Verification required.</p>
                 </div>
               </div>
               <Switch id="ptf-lock" checked={enableLock} onCheckedChange={setEnableLock} />
@@ -119,7 +119,7 @@ const PostToFeedDialog: React.FC<PostToFeedDialogProps> = ({
             {enableLock && (
               <div className="grid grid-cols-3 gap-2 pt-1">
                 <div className="space-y-1">
-                  <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Credits</Label>
+                  <Label className="text-tiny uppercase tracking-wider text-muted-foreground">Credits</Label>
                   <Input
                     type="number"
                     min={0}
@@ -130,7 +130,7 @@ const PostToFeedDialog: React.FC<PostToFeedDialogProps> = ({
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">USD</Label>
+                  <Label className="text-tiny uppercase tracking-wider text-muted-foreground">USD</Label>
                   <Input
                     type="number"
                     min={0}
@@ -142,7 +142,7 @@ const PostToFeedDialog: React.FC<PostToFeedDialogProps> = ({
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">XRGE</Label>
+                  <Label className="text-tiny uppercase tracking-wider text-muted-foreground">XRGE</Label>
                   <Input
                     type="number"
                     min={0}

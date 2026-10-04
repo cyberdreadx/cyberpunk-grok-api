@@ -38,7 +38,7 @@ const LegalPage: React.FC<Props> = ({ type }) => {
         <div className="max-w-3xl mx-auto px-5 py-4 flex items-center gap-3">
           <Link
             to="/"
-            className="flex items-center gap-1.5 font-mono-share text-[10px] tracking-widest text-muted-foreground hover:text-primary transition-colors"
+            className="flex items-center gap-1.5 font-mono-share text-tiny tracking-widest text-muted-foreground hover:text-primary transition-colors"
           >
             <ArrowLeft className="w-3.5 h-3.5" /> BACK
           </Link>
@@ -57,7 +57,7 @@ const LegalPage: React.FC<Props> = ({ type }) => {
       <main className="max-w-3xl mx-auto px-5 py-8">
         {isTos ? <TosContent /> : <PrivacyContent />}
 
-        <nav className="mt-10 pt-6 border-t border-border/30 flex flex-wrap gap-x-5 gap-y-2 font-mono-share text-[11px]">
+        <nav className="mt-10 pt-6 border-t border-border/30 flex flex-wrap gap-x-5 gap-y-2 font-mono-share text-xs">
           <Link
             to={isTos ? "/privacy" : "/terms"}
             className="text-muted-foreground hover:text-primary transition-colors"

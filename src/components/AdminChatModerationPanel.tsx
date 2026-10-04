@@ -113,7 +113,7 @@ const AdminChatModerationPanel: React.FC = () => {
           <MessageSquare className="w-3.5 h-3.5" />
           CHAT_MODERATION
         </h2>
-        <button onClick={() => { loadMessages(); loadBans(); }} className="text-[10px] text-orange-400/70 hover:text-orange-300 flex items-center gap-1 font-mono-share">
+        <button onClick={() => { loadMessages(); loadBans(); }} className="text-tiny text-orange-400/70 hover:text-orange-300 flex items-center gap-1 font-mono-share">
           <RefreshCw className="w-3 h-3" /> REFRESH
         </button>
       </div>
@@ -125,7 +125,7 @@ const AdminChatModerationPanel: React.FC = () => {
             <button
               key={c}
               onClick={() => setChannel(c)}
-              className={`px-3 py-1 text-[10px] font-mono-share uppercase tracking-wider rounded border ${
+              className={`px-3 py-1 text-tiny font-mono-share uppercase tracking-wider rounded border ${
                 channel === c
                   ? "border-orange-400 text-orange-300 bg-orange-500/10"
                   : "border-border/50 text-muted-foreground hover:text-foreground"
@@ -138,7 +138,7 @@ const AdminChatModerationPanel: React.FC = () => {
             <button
               onClick={clearChannel}
               disabled={busy}
-              className="px-2 py-1 text-[10px] font-mono-share rounded bg-red-600/80 text-white hover:bg-red-500 disabled:opacity-50 flex items-center gap-1"
+              className="px-2 py-1 text-tiny font-mono-share rounded bg-red-600/80 text-white hover:bg-red-500 disabled:opacity-50 flex items-center gap-1"
             >
               <Trash2 className="w-3 h-3" /> CLEAR_CHANNEL
             </button>
@@ -154,7 +154,7 @@ const AdminChatModerationPanel: React.FC = () => {
           {messages.map((m) => (
             <div key={m.id} className="px-3 py-2 flex items-start gap-2 hover:bg-muted/20">
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 text-[10px] font-mono-share text-muted-foreground/70">
+                <div className="flex items-center gap-2 text-tiny font-mono-share text-muted-foreground/70">
                   <span className="text-orange-300">{m.username}</span>
                   <span>·</span>
                   <span>{fmtTime(m.ts)}</span>
@@ -166,13 +166,13 @@ const AdminChatModerationPanel: React.FC = () => {
                 <button
                   onClick={() => deleteMessage(m.id)}
                   disabled={busy}
-                  className="px-2 py-0.5 bg-red-600/80 text-white font-mono-share text-[9px] rounded hover:bg-red-500 disabled:opacity-50 flex items-center gap-1"
+                  className="px-2 py-0.5 bg-red-600/80 text-white font-mono-share text-tiny rounded hover:bg-red-500 disabled:opacity-50 flex items-center gap-1"
                 >
                   <Trash2 className="w-2.5 h-2.5" /> DEL
                 </button>
                 <button
                   onClick={() => quickBan(m.userId)}
-                  className="px-2 py-0.5 bg-orange-600/80 text-white font-mono-share text-[9px] rounded hover:bg-orange-500 flex items-center gap-1"
+                  className="px-2 py-0.5 bg-orange-600/80 text-white font-mono-share text-tiny rounded hover:bg-orange-500 flex items-center gap-1"
                 >
                   <Ban className="w-2.5 h-2.5" /> MUTE
                 </button>
@@ -183,7 +183,7 @@ const AdminChatModerationPanel: React.FC = () => {
 
         {/* Ban form */}
         <form id="chat-ban-form" onSubmit={banUser} className="border border-orange-500/30 rounded p-3 space-y-2 bg-card/40">
-          <div className="font-orbitron text-[10px] tracking-wider text-orange-300">MUTE_USER</div>
+          <div className="font-orbitron text-tiny tracking-wider text-orange-300">MUTE_USER</div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <input
               type="text"
@@ -219,14 +219,14 @@ const AdminChatModerationPanel: React.FC = () => {
               className="px-2 py-1.5 bg-background border border-border/50 rounded text-xs font-mono-share"
             />
           </div>
-          <button type="submit" disabled={busy} className="px-3 py-1.5 bg-orange-600 text-white font-mono-share text-[10px] rounded hover:bg-orange-500 disabled:opacity-50 flex items-center gap-1">
+          <button type="submit" disabled={busy} className="px-3 py-1.5 bg-orange-600 text-white font-mono-share text-tiny rounded hover:bg-orange-500 disabled:opacity-50 flex items-center gap-1">
             <Ban className="w-3 h-3" /> APPLY_MUTE
           </button>
         </form>
 
         {/* Active bans */}
         <div>
-          <div className="font-orbitron text-[10px] tracking-wider text-orange-300 mb-2">ACTIVE_MUTES ({bans.length})</div>
+          <div className="font-orbitron text-tiny tracking-wider text-orange-300 mb-2">ACTIVE_MUTES ({bans.length})</div>
           {bans.length === 0 && (
             <div className="text-xs text-muted-foreground/60 font-mono-share">No active mutes.</div>
           )}
@@ -234,7 +234,7 @@ const AdminChatModerationPanel: React.FC = () => {
             <div className="border border-border/30 rounded overflow-x-auto">
               <table className="w-full text-xs">
                 <thead className="bg-muted/30">
-                  <tr className="font-mono-share text-[10px] uppercase tracking-wider text-muted-foreground">
+                  <tr className="font-mono-share text-tiny uppercase tracking-wider text-muted-foreground">
                     <th className="px-2 py-1.5 text-left">User</th>
                     <th className="px-2 py-1.5 text-left">Channel</th>
                     <th className="px-2 py-1.5 text-left">Reason</th>
@@ -245,18 +245,18 @@ const AdminChatModerationPanel: React.FC = () => {
                 <tbody className="divide-y divide-border/20">
                   {bans.map((b) => (
                     <tr key={`${b.user_id}-${b.channel}`}>
-                      <td className="px-2 py-1.5 font-mono-share text-[10px]">
+                      <td className="px-2 py-1.5 font-mono-share text-tiny">
                         <div className="text-foreground">{b.username || "—"}</div>
-                        <div className="text-muted-foreground/50">{b.user_id.slice(0, 8)}…</div>
+                        <div className="text-muted-foreground/70">{b.user_id.slice(0, 8)}…</div>
                       </td>
-                      <td className="px-2 py-1.5 font-mono-share text-[10px] text-orange-300">{b.channel === "*" ? "ALL" : "#" + b.channel}</td>
-                      <td className="px-2 py-1.5 text-[10px] text-muted-foreground">{b.reason || "—"}</td>
-                      <td className="px-2 py-1.5 font-mono-share text-[10px] text-muted-foreground">{fmtUntil(b.until_ts ? Number(b.until_ts) : null)}</td>
+                      <td className="px-2 py-1.5 font-mono-share text-tiny text-orange-300">{b.channel === "*" ? "ALL" : "#" + b.channel}</td>
+                      <td className="px-2 py-1.5 text-tiny text-muted-foreground">{b.reason || "—"}</td>
+                      <td className="px-2 py-1.5 font-mono-share text-tiny text-muted-foreground">{fmtUntil(b.until_ts ? Number(b.until_ts) : null)}</td>
                       <td className="px-2 py-1.5">
                         <button
                           onClick={() => unban(b.user_id, b.channel)}
                           disabled={busy}
-                          className="px-2 py-0.5 bg-green-600/80 text-white font-mono-share text-[10px] rounded hover:bg-green-500 disabled:opacity-50 flex items-center gap-1"
+                          className="px-2 py-0.5 bg-green-600/80 text-white font-mono-share text-tiny rounded hover:bg-green-500 disabled:opacity-50 flex items-center gap-1"
                         >
                           <ShieldOff className="w-2.5 h-2.5" /> UNMUTE
                         </button>

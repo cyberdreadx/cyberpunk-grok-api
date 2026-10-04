@@ -28,7 +28,7 @@ const KarmaBadge: React.FC<KarmaBadgeProps> = ({ posting, onOpenStore, compact }
     return (
       <div
         className={`inline-flex items-center gap-1.5 px-2 py-1 rounded border border-primary/30 bg-primary/5 ${
-          compact ? "text-[10px]" : "text-[11px]"
+          compact ? "text-tiny" : "text-xs"
         } font-mono-share text-primary`}
       >
         <ShieldCheck className="w-3 h-3" />
@@ -54,11 +54,11 @@ const KarmaBadge: React.FC<KarmaBadgeProps> = ({ posting, onOpenStore, compact }
     <div className="rounded border border-border/50 bg-card/40 p-2.5 space-y-2">
       <div className="flex items-center gap-2">
         <Lock className="w-3.5 h-3.5 text-muted-foreground" />
-        <span className="font-mono-share text-[10px] uppercase tracking-wider text-muted-foreground">
+        <span className="font-mono-share text-tiny uppercase tracking-wider text-muted-foreground">
           Posting locked
         </span>
         <Sparkles className="w-3 h-3 text-secondary ml-auto" />
-        <span className="font-mono-share text-[11px] text-foreground/80">
+        <span className="font-mono-share text-xs text-foreground/80">
           {karma} <span className="text-muted-foreground/60">/ {karma_threshold} karma</span>
         </span>
       </div>
@@ -72,7 +72,7 @@ const KarmaBadge: React.FC<KarmaBadgeProps> = ({ posting, onOpenStore, compact }
       </div>
 
       {!compact && (
-        <p className="font-mono-share text-[10px] text-muted-foreground leading-relaxed">
+        <p className="font-mono-share text-tiny text-muted-foreground leading-relaxed">
           Earn karma by upvoting, commenting, and receiving upvotes on the feed.
           {remaining > 0 && <> Need <span className="text-foreground/80">{remaining}</span> more.</>}
           {!email_verified && <> Verify your email to count.</>}
@@ -88,7 +88,7 @@ const KarmaBadge: React.FC<KarmaBadgeProps> = ({ posting, onOpenStore, compact }
           size="sm"
           variant="outline"
           onClick={onOpenStore}
-          className="w-full h-7 font-mono-share text-[10px] border-primary/30 hover:bg-primary/5 hover:text-primary gap-1.5"
+          className="w-full h-7 font-mono-share text-tiny border-primary/30 hover:bg-primary/5 hover:text-primary gap-1.5"
         >
           <ShoppingCart className="w-3 h-3" />
           Or unlock instantly with a credit purchase

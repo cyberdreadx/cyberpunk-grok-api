@@ -182,7 +182,7 @@ const TextPostCard: React.FC<Props> = ({ post, onUpdate }) => {
         >
           <Avatar className="w-10 h-10 border border-border/40">
             {post.avatarUrl && <AvatarImage src={post.avatarUrl} alt={post.username} />}
-            <AvatarFallback className="text-[10px] font-mono-share bg-muted">{initials}</AvatarFallback>
+            <AvatarFallback className="text-tiny font-mono-share bg-muted">{initials}</AvatarFallback>
           </Avatar>
         </button>
         {showComments && commentCount > 0 && (
@@ -200,12 +200,12 @@ const TextPostCard: React.FC<Props> = ({ post, onUpdate }) => {
             @{post.username}
           </button>
           {post.authorVerified && <VerifiedBadge size="xs" />}
-          <span className="text-muted-foreground/50 text-xs">·</span>
-          <span className="font-mono-share text-[11px] text-muted-foreground shrink-0">
+          <span className="text-muted-foreground/70 text-xs">·</span>
+          <span className="font-mono-share text-xs text-muted-foreground shrink-0">
             {timeAgo(post.createdAt)}
           </span>
           {post.isMature && (
-            <span className="ml-1 px-1 rounded-sm font-mono-share text-[8px] tracking-wider text-amber-300 border border-amber-400/40 bg-amber-400/10 shrink-0">
+            <span className="ml-1 px-1 rounded-sm font-mono-share text-micro tracking-wider text-amber-300 border border-amber-400/40 bg-amber-400/10 shrink-0">
               18+
             </span>
           )}
@@ -251,7 +251,7 @@ const TextPostCard: React.FC<Props> = ({ post, onUpdate }) => {
             <p className="font-mono-share text-[13px] text-muted-foreground italic leading-relaxed break-words">
               {body || "Locked post"}
             </p>
-            <div className="mt-2 flex items-center gap-1.5 font-mono-share text-[10px] tracking-wider text-amber-300">
+            <div className="mt-2 flex items-center gap-1.5 font-mono-share text-tiny tracking-wider text-amber-300">
               <Lock className="w-3 h-3" />
               UNLOCK ·
               {(post.lockCost || 0) > 0 && <span>{post.lockCost} CR</span>}
@@ -265,7 +265,7 @@ const TextPostCard: React.FC<Props> = ({ post, onUpdate }) => {
             className="mt-1.5 w-full rounded-lg border border-amber-400/30 bg-amber-400/5 p-4 flex items-center justify-center gap-2 hover:bg-amber-400/10 transition-colors"
           >
             <ShieldAlert className="w-3.5 h-3.5 text-amber-300" />
-            <span className="font-mono-share text-[11px] tracking-wider text-amber-200">
+            <span className="font-mono-share text-xs tracking-wider text-amber-200">
               18+ — TAP TO REVEAL
             </span>
           </button>
@@ -295,7 +295,7 @@ const TextPostCard: React.FC<Props> = ({ post, onUpdate }) => {
               aria-label="Like"
             >
               <Heart className={`w-[18px] h-[18px] transition-transform group-active:scale-90 ${liked ? "fill-current" : ""}`} />
-              {score !== 0 && <span className="font-mono-share text-[11px]">{score}</span>}
+              {score !== 0 && <span className="font-mono-share text-xs">{score}</span>}
             </button>
 
             <button
@@ -307,7 +307,7 @@ const TextPostCard: React.FC<Props> = ({ post, onUpdate }) => {
               aria-label="Replies"
             >
               <MessageCircle className="w-[18px] h-[18px]" />
-              {commentCount > 0 && <span className="font-mono-share text-[11px]">{commentCount}</span>}
+              {commentCount > 0 && <span className="font-mono-share text-xs">{commentCount}</span>}
             </button>
 
             <button
@@ -319,7 +319,7 @@ const TextPostCard: React.FC<Props> = ({ post, onUpdate }) => {
             </button>
 
             {(post.viewCount ?? 0) > 0 && (
-              <span className="ml-auto flex items-center gap-1 font-mono-share text-[10px] text-muted-foreground/50">
+              <span className="ml-auto flex items-center gap-1 font-mono-share text-tiny text-muted-foreground/70">
                 <Eye className="w-3.5 h-3.5" />
                 {post.viewCount}
               </span>

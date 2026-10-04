@@ -32,7 +32,7 @@ const NavPill: React.FC<{
       onClick={() => navigate(to)}
       aria-current={isActive ? "page" : undefined}
       title={title}
-      className={`hidden sm:flex relative items-center gap-1.5 px-3 py-1.5 rounded-md border font-orbitron text-[10px] tracking-widest transition-colors ${
+      className={`hidden sm:flex relative items-center gap-1.5 px-3 py-1.5 rounded-md border font-orbitron text-tiny tracking-widest transition-colors ${
         isActive
           ? "border-primary/40 bg-primary/15 text-primary"
           : "border-border/40 text-muted-foreground hover:text-primary hover:bg-primary/5 hover:border-primary/30"
@@ -42,7 +42,7 @@ const NavPill: React.FC<{
       {label}
       {unread > 0 && (
         <span
-          className="absolute -top-1 -right-1 min-w-[14px] h-[14px] px-1 rounded-full bg-primary text-background font-mono-share text-[8px] leading-[14px] text-center shadow-glow-focus"
+          className="absolute -top-1 -right-1 min-w-[14px] h-[14px] px-1 rounded-full bg-primary text-background font-mono-share text-micro leading-[14px] text-center shadow-glow-focus"
           aria-label={`${unread} unread`}
         >
           {unread > 9 ? "9+" : unread}

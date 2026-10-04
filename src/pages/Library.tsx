@@ -177,7 +177,7 @@ const Library: React.FC = () => {
                   className="font-orbitron text-lg sm:text-xl tracking-widest text-primary"
                   glitchIntensity="low"
                 />
-                <p className="font-mono-share text-[10px] text-muted-foreground/50 mt-0.5">
+                <p className="font-mono-share text-tiny text-muted-foreground/70 mt-0.5">
                   <span className="text-primary/30">$</span> ls -la ~/output/ — {t("library.assetsIndexed", { count: totalImages + totalVideos })}
                 </p>
               </div>
@@ -188,17 +188,17 @@ const Library: React.FC = () => {
           <div className="flex items-center gap-4 flex-wrap">
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-border/40 bg-card/40">
               <Image className="w-3.5 h-3.5 text-primary/60" />
-              <span className="font-mono-share text-[11px] text-foreground/70">{totalImages}</span>
-              <span className="font-mono-share text-[9px] text-muted-foreground/40">{t("library.images").toUpperCase()}</span>
+              <span className="font-mono-share text-xs text-foreground/70">{totalImages}</span>
+              <span className="font-mono-share text-tiny text-muted-foreground/60">{t("library.images").toUpperCase()}</span>
             </div>
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-border/40 bg-card/40">
               <Film className="w-3.5 h-3.5 text-secondary/60" />
-              <span className="font-mono-share text-[11px] text-foreground/70">{totalVideos}</span>
-              <span className="font-mono-share text-[9px] text-muted-foreground/40">{t("library.videos").toUpperCase()}</span>
+              <span className="font-mono-share text-xs text-foreground/70">{totalVideos}</span>
+              <span className="font-mono-share text-tiny text-muted-foreground/60">{t("library.videos").toUpperCase()}</span>
             </div>
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-border/40 bg-card/40">
-              <span className="font-mono-share text-[11px] text-foreground/70">{totalFolders}</span>
-              <span className="font-mono-share text-[9px] text-muted-foreground/40">{t("library.folders").toUpperCase()}</span>
+              <span className="font-mono-share text-xs text-foreground/70">{totalFolders}</span>
+              <span className="font-mono-share text-tiny text-muted-foreground/60">{t("library.folders").toUpperCase()}</span>
             </div>
             {auth.isAuthenticated && (
               <button
@@ -206,7 +206,7 @@ const Library: React.FC = () => {
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-border/40 bg-card/40 hover:border-primary/40 hover:bg-primary/5 transition-all"
               >
                 <Link2 className="w-3.5 h-3.5 text-primary/60" />
-                <span className="font-mono-share text-[9px] text-muted-foreground/60">SHARE_LINKS</span>
+                <span className="font-mono-share text-tiny text-muted-foreground/60">SHARE_LINKS</span>
               </button>
             )}
           </div>

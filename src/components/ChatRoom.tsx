@@ -269,7 +269,7 @@ const ChatRoom: React.FC = () => {
                     ? "bg-primary/10 border-primary/40 text-foreground"
                     : "bg-muted/30 border-border/60"
               }`}>
-                <div className="flex items-center gap-2 text-[10px] uppercase tracking-wider opacity-80 mb-0.5">
+                <div className="flex items-center gap-2 text-tiny uppercase tracking-wider opacity-80 mb-0.5">
                   {isBot ? (
                     <span className="text-accent font-bold">◆ {m.username} <span className="opacity-60">/ai</span></span>
                   ) : (
@@ -303,11 +303,11 @@ const ChatRoom: React.FC = () => {
                 <div className="whitespace-pre-wrap break-words">{renderWithLinks(cleanText)}</div>
                 {promptMatch && (
                   <div className="mt-2 rounded-md border border-primary/40 bg-primary/5 p-2">
-                    <div className="text-[10px] uppercase tracking-wider text-primary/80 mb-1">prompt</div>
+                    <div className="text-tiny uppercase tracking-wider text-primary/80 mb-1">prompt</div>
                     <div className="text-xs italic text-foreground/90 mb-2 whitespace-pre-wrap break-words">{promptMatch[1].trim()}</div>
                     <button
                       onClick={() => navigate(`/create?prompt=${encodeURIComponent(promptMatch[1].trim())}`)}
-                      className="text-[11px] uppercase tracking-wider px-2 py-1 rounded border border-primary/60 text-primary bg-primary/10 hover:bg-primary/20"
+                      className="text-xs uppercase tracking-wider px-2 py-1 rounded border border-primary/60 text-primary bg-primary/10 hover:bg-primary/20"
                     >
                       ▶ Use prompt
                     </button>
@@ -324,7 +324,7 @@ const ChatRoom: React.FC = () => {
         <div className="border-t border-border/60 bg-background/80 backdrop-blur px-3 py-2"
              style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 8px)" }}>
           {replyTo && (
-            <div className="flex items-center gap-2 mb-2 px-2 py-1 rounded border border-primary/30 bg-primary/5 text-[11px]">
+            <div className="flex items-center gap-2 mb-2 px-2 py-1 rounded border border-primary/30 bg-primary/5 text-xs">
               <Reply className="w-3 h-3 text-primary shrink-0" />
               <span className="text-muted-foreground">{t("chat.replyingTo")}</span>
               <span className="text-primary font-medium">@{replyTo}</span>
@@ -362,8 +362,8 @@ const ChatRoom: React.FC = () => {
             </button>
           </div>
           <div className="flex items-center justify-between mt-1">
-            <div className="text-[10px] text-accent/70">tip: type <span className="text-accent font-bold">@gltch</span> for AI help</div>
-            <div className="text-[10px] text-muted-foreground/70">
+            <div className="text-tiny text-accent/70">tip: type <span className="text-accent font-bold">@gltch</span> for AI help</div>
+            <div className="text-tiny text-muted-foreground/70">
               {t("chat.footer", { count: text.length })}
             </div>
           </div>

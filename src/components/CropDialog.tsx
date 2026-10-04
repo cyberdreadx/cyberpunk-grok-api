@@ -71,7 +71,7 @@ export default function CropDialog({ open, imageUrl, aspect = 1, onClose, onCrop
           />
         </div>
         <div className="flex items-center gap-2">
-          <span className="font-mono-share text-[10px] text-muted-foreground w-10">ZOOM</span>
+          <span className="font-mono-share text-tiny text-muted-foreground w-10">ZOOM</span>
           <input
             type="range"
             min={1}

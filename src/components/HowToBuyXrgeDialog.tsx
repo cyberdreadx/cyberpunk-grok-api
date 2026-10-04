@@ -36,12 +36,12 @@ interface Props {
 
 const Step: React.FC<{ n: number; title: string; children: React.ReactNode }> = ({ n, title, children }) => (
   <div className="flex gap-3">
-    <div className="shrink-0 w-6 h-6 rounded-full border border-primary/40 bg-primary/10 grid place-items-center font-orbitron text-[10px] text-primary">
+    <div className="shrink-0 w-6 h-6 rounded-full border border-primary/40 bg-primary/10 grid place-items-center font-orbitron text-tiny text-primary">
       {n}
     </div>
     <div className="min-w-0 flex-1 space-y-1">
-      <p className="font-orbitron text-[11px] tracking-wider text-foreground">{title}</p>
-      <div className="font-mono-share text-[10px] text-muted-foreground/80 leading-relaxed space-y-1">
+      <p className="font-orbitron text-xs tracking-wider text-foreground">{title}</p>
+      <div className="font-mono-share text-tiny text-muted-foreground/80 leading-relaxed space-y-1">
         {children}
       </div>
     </div>
@@ -79,7 +79,7 @@ const HowToBuyXrgeDialog: React.FC<Props> = ({ open, onClose, onUseCard }) => {
         </DialogHeader>
 
         <div className="space-y-4">
-          <p className="font-mono-share text-[10px] text-muted-foreground/70 leading-relaxed">
+          <p className="font-mono-share text-tiny text-muted-foreground/70 leading-relaxed">
             Never bought crypto before? This takes about ten minutes end to end. You
             only have to do the setup once — after that, topping up is two taps.
           </p>
@@ -88,7 +88,7 @@ const HowToBuyXrgeDialog: React.FC<Props> = ({ open, onClose, onUseCard }) => {
               footnote nobody reads after they've already sent. */}
           <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 flex gap-2.5">
             <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-            <div className="font-mono-share text-[10px] text-amber-200/90 leading-relaxed space-y-1">
+            <div className="font-mono-share text-tiny text-amber-200/90 leading-relaxed space-y-1">
               <p className="text-amber-300">Everything must happen on {XRGE_CHAIN_NAME}.</p>
               <p>
                 {XRGE_CHAIN_NAME} is a network, like choosing between two postal
@@ -137,7 +137,7 @@ const HowToBuyXrgeDialog: React.FC<Props> = ({ open, onClose, onUseCard }) => {
                 onClick={copyContract}
                 className="mt-1 w-full flex items-center gap-2 rounded border border-border/40 bg-input/50 px-2 py-1.5 text-left hover:border-primary/40 transition-colors"
               >
-                <span className="flex-1 truncate font-mono-share text-[9px] text-foreground/80">
+                <span className="flex-1 truncate font-mono-share text-tiny text-foreground/80">
                   {XRGE_CONTRACT}
                 </span>
                 {copied
@@ -171,7 +171,7 @@ const HowToBuyXrgeDialog: React.FC<Props> = ({ open, onClose, onUseCard }) => {
           {/* Crypto is a discount path, not the only path. Saying so costs one line
               and saves the users who would otherwise just leave. */}
           <div className="rounded-lg border border-border/40 bg-card/40 p-3 space-y-2">
-            <p className="font-mono-share text-[10px] text-muted-foreground/80 leading-relaxed">
+            <p className="font-mono-share text-tiny text-muted-foreground/80 leading-relaxed">
               Don't want to deal with any of this? Card checkout takes thirty seconds
               and gets you the same credits. XRGE is only worth it if you want the
               holder discounts and daily credit bonuses.
@@ -180,7 +180,7 @@ const HowToBuyXrgeDialog: React.FC<Props> = ({ open, onClose, onUseCard }) => {
               <Button
                 onClick={() => { onClose(); onUseCard(); }}
                 variant="outline"
-                className="w-full font-orbitron text-[10px] tracking-wider border-primary/30 hover:bg-primary/10"
+                className="w-full font-orbitron text-tiny tracking-wider border-primary/30 hover:bg-primary/10"
               >
                 <CreditCard className="w-3.5 h-3.5 mr-2" />
                 PAY BY CARD INSTEAD

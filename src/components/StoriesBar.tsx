@@ -121,7 +121,7 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUserId, isAdmin }) => {
                 </div>
               </div>
             </div>
-            <span className="font-mono-share text-[10px] text-muted-foreground/60 truncate max-w-[64px]">
+            <span className="font-mono-share text-tiny text-muted-foreground/60 truncate max-w-[64px]">
               @{name}
             </span>
           </button>
@@ -234,8 +234,8 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUserId, isAdmin }) => {
               )}
             </div>
             <span
-              className={`font-mono-share text-[10px] truncate max-w-[64px] transition-colors ${
-                u.hasUnviewed ? "text-foreground/80" : "text-muted-foreground/50"
+              className={`font-mono-share text-tiny truncate max-w-[64px] transition-colors ${
+                u.hasUnviewed ? "text-foreground/80" : "text-muted-foreground/70"
               }`}
             >
               {u.username}

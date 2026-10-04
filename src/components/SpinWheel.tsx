@@ -36,10 +36,10 @@ const StreakBadge: React.FC<{ streak: number; minPrize: number }> = ({ streak, m
     <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-primary/20 bg-primary/5">
       <span className="text-sm">{tier}</span>
       <div className="text-left">
-        <p className="font-orbitron text-[9px] tracking-wider text-primary">
+        <p className="font-orbitron text-tiny tracking-wider text-primary">
           {streak}-DAY STREAK
         </p>
-        <p className="font-mono-share text-[8px] text-muted-foreground/60">
+        <p className="font-mono-share text-micro text-muted-foreground/60">
           Min prize: <span className="text-primary font-bold">{minPrize} credit{minPrize !== 1 ? "s" : ""}</span>
         </p>
       </div>
@@ -208,15 +208,15 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ onCreditsRefresh }) => {
           </p>
           {/* Streak info in result */}
           {result.streak && result.streak > 0 && (
-            <p className="font-mono-share text-[10px] text-primary/80 mt-1.5">
+            <p className="font-mono-share text-tiny text-primary/80 mt-1.5">
               🔥 {result.streak}-day streak • min {result.minPrize} credit{(result.minPrize ?? 1) !== 1 ? "s" : ""}
             </p>
           )}
-          <p className="font-mono-share text-[10px] text-muted-foreground/60 mt-0.5">
+          <p className="font-mono-share text-tiny text-muted-foreground/60 mt-0.5">
             Added to your balance
           </p>
           {result.potContribution ? (
-            <p className="font-mono-share text-[10px] text-fuchsia-400/90 mt-1.5">
+            <p className="font-mono-share text-tiny text-fuchsia-400/90 mt-1.5">
               💧 +{result.potContribution} credit dropped into the Community Pot
             </p>
           ) : null}
@@ -234,8 +234,8 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ onCreditsRefresh }) => {
       {/* Header + Streak */}
       <div className="text-center flex flex-col items-center gap-2">
         <div>
-          <p className="font-orbitron text-[10px] tracking-[0.2em] text-primary/80 uppercase">Daily Reward</p>
-          <p className="font-mono-share text-[9px] text-muted-foreground/50 mt-0.5">Spin to win free credits!</p>
+          <p className="font-orbitron text-tiny tracking-[0.2em] text-primary/80 uppercase">Daily Reward</p>
+          <p className="font-mono-share text-tiny text-muted-foreground/70 mt-0.5">Spin to win free credits!</p>
         </div>
         <StreakBadge streak={streak} minPrize={nextMinPrize} />
       </div>
@@ -324,10 +324,10 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ onCreditsRefresh }) => {
       <div className="flex flex-col items-center gap-2 w-full max-w-[260px]">
         {maintenance ? (
           <div className="w-full text-center px-3 py-2 rounded-md border border-yellow-500/30 bg-yellow-500/5">
-            <p className="font-orbitron text-[10px] tracking-widest text-yellow-400 uppercase">
+            <p className="font-orbitron text-tiny tracking-widest text-yellow-400 uppercase">
               ⚠ Down for maintenance
             </p>
-            <p className="font-mono-share text-[9px] text-muted-foreground mt-1">
+            <p className="font-mono-share text-tiny text-muted-foreground mt-1">
               {maintenanceMsg || "Free spins are temporarily paused."}
             </p>
           </div>
@@ -342,11 +342,11 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ onCreditsRefresh }) => {
           </Button>
         ) : (
           <div className="text-center py-1">
-            <p className="font-mono-share text-[10px] text-muted-foreground/60">
+            <p className="font-mono-share text-tiny text-muted-foreground/60">
               Next free spin: <span className="text-primary font-bold">{countdown || "..."}</span>
             </p>
             {streak > 0 && (
-              <p className="font-mono-share text-[8px] text-muted-foreground/40 mt-0.5">
+              <p className="font-mono-share text-micro text-muted-foreground/60 mt-0.5">
                 ⚠️ Spin within 48h to keep your streak!
               </p>
             )}
@@ -363,7 +363,7 @@ const SpinWheel: React.FC<SpinWheelProps> = ({ onCreditsRefresh }) => {
           Extra Spin — 10 Credits
         </Button>
 
-        <p className="font-mono-share text-[8px] text-muted-foreground/30 text-center mt-1">
+        <p className="font-mono-share text-micro text-muted-foreground/60 text-center mt-1">
           Win 1–25 credits per spin • Streak boosts minimum prize
         </p>
       </div>

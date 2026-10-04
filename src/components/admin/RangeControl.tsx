@@ -81,7 +81,7 @@ export default function RangeControl({
   );
 
   const pill = (active: boolean) =>
-    `px-2 py-1 font-mono-share text-[10px] tracking-wider rounded transition-colors ${
+    `px-2 py-1 font-mono-share text-tiny tracking-wider rounded transition-colors ${
       active
         ? "bg-primary/20 text-primary border border-primary/40"
         : "text-muted-foreground/60 border border-transparent hover:text-foreground hover:bg-primary/5"
@@ -90,7 +90,7 @@ export default function RangeControl({
   return (
     <div className={`flex flex-wrap items-center gap-1.5 ${className}`}>
       {!compact && (
-        <CalendarRange className="w-3.5 h-3.5 text-muted-foreground/50 shrink-0" />
+        <CalendarRange className="w-3.5 h-3.5 text-muted-foreground/70 shrink-0" />
       )}
       <div className="flex items-center gap-0.5 rounded border border-border/30 bg-card/40 p-0.5">
         {RANGE_PRESETS.map((p) => (

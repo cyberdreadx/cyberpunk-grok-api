@@ -48,7 +48,7 @@ const HudOverlay: React.FC = () => {
   return (
     <div className="cyber-hud-overlay pointer-events-none fixed inset-0 z-30 hidden md:block" aria-hidden>
       {/* Top-left HUD */}
-      <div className="fixed left-4 z-30 font-mono-share text-[9px] text-primary/20 space-y-1 hidden md:block" style={{ top: 'calc(env(safe-area-inset-top, 0px) + 44px)' }}>
+      <div className="fixed left-4 z-30 font-mono-share text-tiny text-primary/20 space-y-1 hidden md:block" style={{ top: 'calc(env(safe-area-inset-top, 0px) + 44px)' }}>
         <div>[SYS] {statusMessages[currentStatus]}</div>
         <div className="text-muted-foreground/15">PID: 0x4F7A // {time}</div>
         <div className="text-muted-foreground/10 mt-2">
@@ -57,20 +57,20 @@ const HudOverlay: React.FC = () => {
       </div>
 
       {/* Top-right HUD */}
-      <div className="fixed right-4 z-30 font-mono-share text-[9px] text-right hidden md:block" style={{ top: 'calc(env(safe-area-inset-top, 0px) + 44px)' }}>
+      <div className="fixed right-4 z-30 font-mono-share text-tiny text-right hidden md:block" style={{ top: 'calc(env(safe-area-inset-top, 0px) + 44px)' }}>
         <div className="text-secondary/20">◆ xAI GATEWAY</div>
         <div className="text-muted-foreground/15">PROTO: HTTPS/3</div>
       </div>
 
       {/* Bottom-left coordinates */}
-      <div className="fixed bottom-4 left-4 z-30 font-mono-share text-[8px] text-muted-foreground/10 hidden md:block">
+      <div className="fixed bottom-4 left-4 z-30 font-mono-share text-micro text-muted-foreground/10 hidden md:block">
         <div>LAT: 37.7749°N</div>
         <div>LNG: 122.4194°W</div>
         <div>ALT: CLASSIFIED</div>
       </div>
 
       {/* Bottom-right version */}
-      <div className="fixed bottom-4 right-4 z-30 font-mono-share text-[8px] text-muted-foreground/10 hidden md:block text-right">
+      <div className="fixed bottom-4 right-4 z-30 font-mono-share text-micro text-muted-foreground/10 hidden md:block text-right">
         <div>BUILD: {APP_VERSION}-CYBER</div>
         <div>KERNEL: GLTCH-NN</div>
         <div className="text-primary/15 mt-1">{time}</div>

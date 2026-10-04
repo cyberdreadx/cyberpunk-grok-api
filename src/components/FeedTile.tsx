@@ -194,12 +194,12 @@ const FeedTile: React.FC<Props> = ({ post, onOpen, forceBlur, currentUserId }) =
           )
         ) : post.text ? (
           <div className="absolute inset-0 p-3 flex items-center justify-center">
-            <p className={`font-mono-share text-[11px] text-foreground/80 line-clamp-6 text-center leading-snug ${forceBlur || isMatureBlur ? "blur-sm select-none" : ""}`}>
+            <p className={`font-mono-share text-xs text-foreground/80 line-clamp-6 text-center leading-snug ${forceBlur || isMatureBlur ? "blur-sm select-none" : ""}`}>
               {post.text}
             </p>
           </div>
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center text-muted-foreground/40">
+          <div className="absolute inset-0 flex items-center justify-center text-muted-foreground/60">
             <ImageIcon className="w-8 h-8" />
           </div>
         )}
@@ -216,7 +216,7 @@ const FeedTile: React.FC<Props> = ({ post, onOpen, forceBlur, currentUserId }) =
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="bg-black/60 backdrop-blur-sm rounded-full px-2 py-1 border border-amber-400/50 flex items-center gap-1">
               <ShieldAlert className="w-3 h-3 text-amber-300" />
-              <span className="font-mono-share text-[9px] text-amber-200 tracking-wider">18+</span>
+              <span className="font-mono-share text-tiny text-amber-200 tracking-wider">18+</span>
             </div>
           </div>
         )}
@@ -232,7 +232,7 @@ const FeedTile: React.FC<Props> = ({ post, onOpen, forceBlur, currentUserId }) =
         {/* Owner-only LOCKED · price badge */}
         {isOwner && ((post.lockCost || 0) > 0 || (post.lockPriceCents || 0) > 0 || xrge > 0) && (
           <div
-            className="absolute top-2 left-2 flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-sm border border-amber-400/50 font-mono-share text-[9px] text-amber-300 tracking-wider"
+            className="absolute top-2 left-2 flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-sm border border-amber-400/50 font-mono-share text-tiny text-amber-300 tracking-wider"
             title="Locked for other viewers — they see a blurred preview and must unlock."
           >
             <Lock className="w-2.5 h-2.5" />
@@ -243,7 +243,7 @@ const FeedTile: React.FC<Props> = ({ post, onOpen, forceBlur, currentUserId }) =
           </div>
         )}
 
-        <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-black/60 backdrop-blur-sm font-mono-share text-[9px] text-white/90">
+        <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-black/60 backdrop-blur-sm font-mono-share text-tiny text-white/90">
           {timeAgo(post.createdAt)}
         </div>
       </div>
@@ -252,14 +252,14 @@ const FeedTile: React.FC<Props> = ({ post, onOpen, forceBlur, currentUserId }) =
       <div className="flex items-center gap-2 p-2 bg-card/80 border-t border-border/30">
         <Avatar className="w-7 h-7 shrink-0">
           {post.avatarUrl && <AvatarImage src={post.avatarUrl} alt={post.username} />}
-          <AvatarFallback className="text-[9px] font-mono-share bg-muted">{initials}</AvatarFallback>
+          <AvatarFallback className="text-tiny font-mono-share bg-muted">{initials}</AvatarFallback>
         </Avatar>
         <div className="min-w-0 flex-1">
-          <div className="font-mono-share text-[11px] text-foreground truncate flex items-center gap-1">
+          <div className="font-mono-share text-xs text-foreground truncate flex items-center gap-1">
             <span className="truncate">@{post.username}</span>
             {post.authorVerified && <VerifiedBadge size="xs" />}
           </div>
-          <div className="font-mono-share text-[9px] text-muted-foreground flex items-center gap-2">
+          <div className="font-mono-share text-tiny text-muted-foreground flex items-center gap-2">
             <span className="flex items-center gap-0.5"><Heart className="w-2.5 h-2.5" />{post.score ?? 0}</span>
             <span className="flex items-center gap-0.5"><MessageSquare className="w-2.5 h-2.5" />{post.commentCount ?? 0}</span>
           </div>

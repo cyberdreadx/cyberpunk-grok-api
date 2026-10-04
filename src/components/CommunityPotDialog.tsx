@@ -106,7 +106,7 @@ export const CommunityPotDialog: React.FC<{ open: boolean; onClose: () => void }
             <Heart className="w-4 h-4 text-fuchsia-400" />
             <h2 className="font-orbitron text-sm tracking-[0.2em] text-primary">COMMUNITY POT</h2>
           </div>
-          <p className="font-mono-share text-[10px] text-muted-foreground/70 mt-1">
+          <p className="font-mono-share text-tiny text-muted-foreground/70 mt-1">
             Shared credits anyone verified can claim once per day. Donate to keep it alive.
           </p>
         </div>
@@ -125,15 +125,15 @@ export const CommunityPotDialog: React.FC<{ open: boolean; onClose: () => void }
                     <div className="font-orbitron text-3xl text-foreground tabular-nums">
                       {data.balance.toLocaleString()}
                     </div>
-                    <div className="font-mono-share text-[9px] text-muted-foreground/70 uppercase tracking-wider">
+                    <div className="font-mono-share text-tiny text-muted-foreground/70 uppercase tracking-wider">
                       credits in pot
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="font-mono-share text-[10px] text-cyan-300">
+                    <div className="font-mono-share text-tiny text-cyan-300">
                       +{data.totalDonated.toLocaleString()} donated
                     </div>
-                    <div className="font-mono-share text-[10px] text-fuchsia-300">
+                    <div className="font-mono-share text-tiny text-fuchsia-300">
                       −{data.totalClaimed.toLocaleString()} claimed
                     </div>
                   </div>
@@ -166,7 +166,7 @@ export const CommunityPotDialog: React.FC<{ open: boolean; onClose: () => void }
                       : "UNAVAILABLE"}
                 </button>
                 {data.claim.reason && (
-                  <p className="text-[10px] text-muted-foreground/70 text-center">{data.claim.reason}</p>
+                  <p className="text-tiny text-muted-foreground/70 text-center">{data.claim.reason}</p>
                 )}
               </div>
 
@@ -176,7 +176,7 @@ export const CommunityPotDialog: React.FC<{ open: boolean; onClose: () => void }
                   <div className="font-orbitron text-xs tracking-wider text-fuchsia-300">
                     DONATE TO POT
                   </div>
-                  <span className="font-mono-share text-[10px] text-muted-foreground/70">
+                  <span className="font-mono-share text-tiny text-muted-foreground/70">
                     your balance: {totalUserCredits.toLocaleString()}
                   </span>
                 </div>
@@ -186,7 +186,7 @@ export const CommunityPotDialog: React.FC<{ open: boolean; onClose: () => void }
                       key={amt}
                       onClick={() => donate(amt)}
                       disabled={busy || totalUserCredits < amt}
-                      className="py-2 rounded border border-fuchsia-400/40 text-fuchsia-200 font-orbitron text-[11px] hover:bg-fuchsia-500/15 disabled:opacity-30 disabled:cursor-not-allowed transition"
+                      className="py-2 rounded border border-fuchsia-400/40 text-fuchsia-200 font-orbitron text-xs hover:bg-fuchsia-500/15 disabled:opacity-30 disabled:cursor-not-allowed transition"
                     >
                       +{amt}
                     </button>
@@ -205,12 +205,12 @@ export const CommunityPotDialog: React.FC<{ open: boolean; onClose: () => void }
                   <button
                     onClick={() => donate(parseInt(customAmount, 10))}
                     disabled={busy || !customAmount || totalUserCredits < parseInt(customAmount, 10)}
-                    className="px-3 rounded bg-fuchsia-500/20 border border-fuchsia-400/50 text-fuchsia-200 font-orbitron text-[11px] hover:bg-fuchsia-500/30 disabled:opacity-30 disabled:cursor-not-allowed"
+                    className="px-3 rounded bg-fuchsia-500/20 border border-fuchsia-400/50 text-fuchsia-200 font-orbitron text-xs hover:bg-fuchsia-500/30 disabled:opacity-30 disabled:cursor-not-allowed"
                   >
                     GIVE
                   </button>
                 </div>
-                <p className="text-[10px] text-muted-foreground/60">
+                <p className="text-tiny text-muted-foreground/60">
                   Pulled from your pack credits first, then sub credits. Non-refundable.
                 </p>
               </div>
@@ -222,7 +222,7 @@ export const CommunityPotDialog: React.FC<{ open: boolean; onClose: () => void }
                     <Trophy className="w-3.5 h-3.5 text-amber-400" />
                     <span className="font-orbitron text-xs tracking-wider text-foreground">PATRONS</span>
                   </div>
-                  <div className="flex gap-1 text-[10px]">
+                  <div className="flex gap-1 text-tiny">
                     {(["today", "alltime"] as const).map((t) => (
                       <button
                         key={t}
@@ -239,7 +239,7 @@ export const CommunityPotDialog: React.FC<{ open: boolean; onClose: () => void }
                   </div>
                 </div>
                 {donors.length === 0 ? (
-                  <p className="text-[11px] text-muted-foreground/60 text-center py-4">
+                  <p className="text-xs text-muted-foreground/60 text-center py-4">
                     No donations yet. Be the first patron 💜
                   </p>
                 ) : (
@@ -247,10 +247,10 @@ export const CommunityPotDialog: React.FC<{ open: boolean; onClose: () => void }
                     {donors.map((d, i) => (
                       <li
                         key={`${d.username}-${i}`}
-                        className="flex items-center justify-between text-[12px] font-mono-share"
+                        className="flex items-center justify-between text-xs font-mono-share"
                       >
                         <span className="flex items-center gap-2">
-                          <span className={`w-5 text-center ${i === 0 ? "text-amber-400" : i === 1 ? "text-zinc-300" : i === 2 ? "text-orange-400" : "text-muted-foreground/50"}`}>
+                          <span className={`w-5 text-center ${i === 0 ? "text-amber-400" : i === 1 ? "text-zinc-300" : i === 2 ? "text-orange-400" : "text-muted-foreground/70"}`}>
                             {i + 1}
                           </span>
                           <span className="text-foreground/90">@{d.username}</span>

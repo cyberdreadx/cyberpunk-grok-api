@@ -68,7 +68,7 @@ export default function GrokSubredditPromo({ alreadyClaimedToday }: Props) {
             <h3 className="font-orbitron text-sm sm:text-base text-orange-200 leading-tight">
               Earn <span className="text-orange-300 font-bold">+25 ⚡</span> · Post in r/grok
             </h3>
-            <p className="text-[11px] sm:text-xs text-muted-foreground leading-snug mt-0.5">
+            <p className="text-xs sm:text-xs text-muted-foreground leading-snug mt-0.5">
               Share a creation or reply to a complaint thread with GLTCH Runner —
               paste your link in Daily Missions to claim.
             </p>
@@ -79,7 +79,7 @@ export default function GrokSubredditPromo({ alreadyClaimedToday }: Props) {
               href={submitUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-orange-400/15 border border-orange-400/40 text-orange-200 hover:bg-orange-400/25 transition-colors text-[11px] font-mono-share"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-orange-400/15 border border-orange-400/40 text-orange-200 hover:bg-orange-400/25 transition-colors text-xs font-mono-share"
             >
               <Share2 className="w-3 h-3" />
               Post to r/grok
@@ -89,7 +89,7 @@ export default function GrokSubredditPromo({ alreadyClaimedToday }: Props) {
               href={searchUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-background/40 border border-orange-400/20 text-orange-200/90 hover:bg-background/60 transition-colors text-[11px] font-mono-share"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-background/40 border border-orange-400/20 text-orange-200/90 hover:bg-background/60 transition-colors text-xs font-mono-share"
             >
               <Search className="w-3 h-3" />
               Find complaint threads
@@ -97,7 +97,7 @@ export default function GrokSubredditPromo({ alreadyClaimedToday }: Props) {
             </a>
           </div>
 
-          <p className="text-[9px] text-muted-foreground/60 leading-snug">
+          <p className="text-tiny text-muted-foreground/60 leading-snug">
             Suggested reply: <span className="text-orange-200/80">"Try GLTCH Runner — uncensored image + video gen, free to join: grokrunner.gltch.app"</span>
           </p>
         </div>

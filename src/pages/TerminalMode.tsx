@@ -582,7 +582,7 @@ const TerminalMode: React.FC = () => {
             <span className="h-2.5 w-2.5 rounded-full bg-destructive/80" />
             <span className="h-2.5 w-2.5 rounded-full bg-yellow-500/80" />
             <span className="h-2.5 w-2.5 rounded-full bg-green-500/80" />
-            <span className="ml-3 font-mono-share text-[10px] tracking-widest text-primary/80">
+            <span className="ml-3 font-mono-share text-tiny tracking-widest text-primary/80">
               GLTCH // TERMINAL — {auth.user?.email || "guest"}@local
             </span>
           </div>
@@ -596,7 +596,7 @@ const TerminalMode: React.FC = () => {
             </button>
             <Link
               to="/create"
-              className="flex items-center gap-1 font-mono-share text-[10px] text-primary/60 hover:text-primary"
+              className="flex items-center gap-1 font-mono-share text-tiny text-primary/60 hover:text-primary"
             >
               <ArrowLeft className="h-3 w-3" /> EXIT
             </Link>
@@ -613,13 +613,13 @@ const TerminalMode: React.FC = () => {
             <TerminalLine key={l.id} line={l} />
           ))}
           {busy && (
-            <div className="font-mono-share text-[12px] text-primary/70">
+            <div className="font-mono-share text-xs text-primary/70">
               <span className="animate-pulse">▌ working…</span>
             </div>
           )}
 
           {/* Active prompt */}
-          <div className="mt-1 flex items-center gap-2 font-mono-share text-[12px] text-primary">
+          <div className="mt-1 flex items-center gap-2 font-mono-share text-xs text-primary">
             <span className="text-secondary">{PROMPT_USER(auth.user?.email)}@gltch</span>
             <span className="text-muted-foreground">:~$</span>
             <input
@@ -639,7 +639,7 @@ const TerminalMode: React.FC = () => {
         </div>
 
         {/* Footer hint strip */}
-        <div className="mt-2 flex flex-wrap items-center gap-3 px-1 font-mono-share text-[9px] text-primary/40">
+        <div className="mt-2 flex flex-wrap items-center gap-3 px-1 font-mono-share text-tiny text-primary/40">
           <span>↑↓ history</span>
           <span>TAB complete</span>
           <span>CTRL+L clear</span>
@@ -668,7 +668,7 @@ const TerminalLine: React.FC<{ line: Line }> = ({ line }) => {
               : "text-foreground/80";
 
   return (
-    <div className={`whitespace-pre-wrap break-words font-mono-share text-[12px] leading-relaxed ${color}`}>
+    <div className={`whitespace-pre-wrap break-words font-mono-share text-xs leading-relaxed ${color}`}>
       {line.url ? (
         <a href={line.url} target="_blank" rel="noopener noreferrer" className="underline decoration-dotted hover:text-primary">
           {line.text}

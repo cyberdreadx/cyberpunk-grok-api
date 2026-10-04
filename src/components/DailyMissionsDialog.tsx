@@ -152,12 +152,12 @@ export default function DailyMissionsDialog({ status, loading, claiming, onClaim
                   return (
                     <div key={i} className="flex flex-col items-center gap-1">
                       <div
-                        className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold border-2 transition-all ${
+                        className={`w-8 h-8 rounded-full flex items-center justify-center text-tiny font-bold border-2 transition-all ${
                           isCompleted
                             ? "bg-primary/20 border-primary text-primary"
                             : isCurrent
                             ?"bg-secondary/20 border-secondary text-secondary"
-                            : "bg-muted/30 border-muted-foreground/20 text-muted-foreground/40"
+                            : "bg-muted/30 border-muted-foreground/20 text-muted-foreground/60"
                         }`}
                       >
                         {isCompleted ? (
@@ -168,7 +168,7 @@ export default function DailyMissionsDialog({ status, loading, claiming, onClaim
                           dayNum
                         )}
                       </div>
-                      <span className="text-[8px] text-muted-foreground/50">
+                      <span className="text-micro text-muted-foreground/70">
                         {isBonus ? "BONUS" : `D${dayNum}`}
                       </span>
                     </div>
@@ -225,11 +225,11 @@ export default function DailyMissionsDialog({ status, loading, claiming, onClaim
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-semibold">{meta.label}</div>
-                        <div className="text-[10px] text-muted-foreground">{meta.desc}</div>
+                        <div className="text-tiny text-muted-foreground">{meta.desc}</div>
                       </div>
                       <div className="shrink-0">
                         {claimed ? (
-                          <span className="text-[10px] text-primary font-bold">✓ DONE</span>
+                          <span className="text-tiny text-primary font-bold">✓ DONE</span>
                         ) : meta.needsUrl ? (
                           <Button
                             size="sm"
@@ -239,7 +239,7 @@ export default function DailyMissionsDialog({ status, loading, claiming, onClaim
                               setProofUrl("");
                             }}
                             disabled={claiming}
-                            className="text-[10px] h-7 px-2 border-primary/30 text-primary hover:bg-primary/10"
+                            className="text-tiny h-7 px-2 border-primary/30 text-primary hover:bg-primary/10"
                           >
                             {isOpenProof ? <X className="w-3 h-3" /> : `+${reward} ⚡`}
                           </Button>
@@ -249,7 +249,7 @@ export default function DailyMissionsDialog({ status, loading, claiming, onClaim
                             variant="outline"
                             onClick={() => handleClaim(m)}
                             disabled={claiming}
-                            className="text-[10px] h-7 px-2 border-primary/30 text-primary hover:bg-primary/10"
+                            className="text-tiny h-7 px-2 border-primary/30 text-primary hover:bg-primary/10"
                           >
                             {claiming ? <Loader2 className="w-3 h-3 animate-spin" /> : `+${reward} ⚡`}
                           </Button>
@@ -261,7 +261,7 @@ export default function DailyMissionsDialog({ status, loading, claiming, onClaim
                     {isOpenProof && intent && !claimed && (
                       <div className="px-3 pb-3 space-y-2 border-t border-muted-foreground/10 pt-2">
                         <div className="flex items-center justify-between gap-2">
-                          <p className="text-[10px] text-muted-foreground leading-snug flex-1">
+                          <p className="text-tiny text-muted-foreground leading-snug flex-1">
                             1. Post about GLTCH Runner, with a link to it. 2. Copy your post URL.
                             3. Paste it below — we check the post actually links to us.
                           </p>
@@ -269,14 +269,14 @@ export default function DailyMissionsDialog({ status, loading, claiming, onClaim
                             href={intent.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="shrink-0 inline-flex items-center gap-1 text-[10px] text-secondary hover:text-secondary/80 underline"
+                            className="shrink-0 inline-flex items-center gap-1 text-tiny text-secondary hover:text-secondary/80 underline"
                           >
                             {intent.label}
                             <ExternalLink className="w-3 h-3" />
                           </a>
                         </div>
                         {intent.usingPrefill && (
-                          <p className="text-[9px] text-primary/70 leading-snug">
+                          <p className="text-tiny text-primary/70 leading-snug">
                             ✨ Pre-filled with your latest feed post — most authentic posts get the most upvotes.
                           </p>
                         )}
@@ -289,14 +289,14 @@ export default function DailyMissionsDialog({ status, loading, claiming, onClaim
                                 ? "https://x.com/you/status/..."
                                 : "https://x.com/you/status/..."
                             }
-                            className="h-8 text-[11px] bg-background/50 border-muted-foreground/20"
+                            className="h-8 text-xs bg-background/50 border-muted-foreground/20"
                             disabled={claiming}
                           />
                           <Button
                             size="sm"
                             onClick={() => handleClaim(m, proofUrl)}
                             disabled={claiming || !proofUrl.trim()}
-                            className="h-8 text-[10px] bg-primary/20 border border-primary/40 text-primary hover:bg-primary/30 shrink-0"
+                            className="h-8 text-tiny bg-primary/20 border border-primary/40 text-primary hover:bg-primary/30 shrink-0"
                           >
                             {claiming ? <Loader2 className="w-3 h-3 animate-spin" /> : "Claim"}
                           </Button>
@@ -309,7 +309,7 @@ export default function DailyMissionsDialog({ status, loading, claiming, onClaim
             </div>
 
             {/* Footer info */}
-            <p className="text-[9px] text-muted-foreground/40 text-center">
+            <p className="text-tiny text-muted-foreground/60 text-center">
               Missions reset daily at midnight UTC. Complete all 7 days for a {streakBonus} ⚡ streak bonus. Missing a day resets your streak.
             </p>
           </div>

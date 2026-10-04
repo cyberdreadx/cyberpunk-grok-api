@@ -99,15 +99,15 @@ const FeatureExplainer: React.FC<FeatureExplainerProps> = ({ feature, open: cont
               <div key={i} className={`flex gap-3 p-2.5 rounded-md border ${bg}`}>
                 <Icon className={`w-4 h-4 mt-0.5 shrink-0 ${tone}`} />
                 <div className="min-w-0">
-                  <div className="font-mono-share text-[11px] font-semibold text-foreground">{p.title}</div>
-                  <div className="font-mono-share text-[10px] text-muted-foreground leading-relaxed mt-0.5">{p.body}</div>
+                  <div className="font-mono-share text-xs font-semibold text-foreground">{p.title}</div>
+                  <div className="font-mono-share text-tiny text-muted-foreground leading-relaxed mt-0.5">{p.body}</div>
                 </div>
               </div>
             );
           })}
         </div>
         <DialogFooter>
-          <Button onClick={handleClose} className="w-full font-mono-share text-[10px]">
+          <Button onClick={handleClose} className="w-full font-mono-share text-tiny">
             GOT IT — DON'T SHOW AGAIN
           </Button>
         </DialogFooter>

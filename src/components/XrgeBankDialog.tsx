@@ -351,7 +351,7 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
               <button
                 key={t.id}
                 onClick={() => { setTab(t.id); setError(null); }}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-md text-[10px] font-orbitron tracking-wider transition-all ${
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-md text-tiny font-orbitron tracking-wider transition-all ${
                   tab === t.id
                     ? "bg-pink-500/20 text-pink-300 border border-pink-500/30"
                     : "text-muted-foreground/60 hover:text-muted-foreground border border-transparent"
@@ -371,7 +371,7 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                 <p className="font-mono-share text-xs text-destructive leading-relaxed">{error}</p>
                 <button
                   onClick={() => fetchBalance()}
-                  className="font-mono-share text-[11px] uppercase tracking-wider text-destructive/80 hover:text-destructive underline underline-offset-2"
+                  className="font-mono-share text-xs uppercase tracking-wider text-destructive/80 hover:text-destructive underline underline-offset-2"
                 >
                   Try again
                 </button>
@@ -404,11 +404,11 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                   {/* Balance card */}
                   <div className="relative rounded-xl border border-pink-500/25 bg-gradient-to-br from-pink-950/30 to-violet-950/20 p-4 overflow-hidden">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-pink-500/5 rounded-full -translate-y-12 translate-x-12" />
-                    <p className="font-mono-share text-[10px] text-muted-foreground/60 uppercase tracking-wider">Bank Balance</p>
+                    <p className="font-mono-share text-tiny text-muted-foreground/60 uppercase tracking-wider">Bank Balance</p>
                     <p className="font-orbitron text-2xl font-black bg-gradient-to-r from-pink-300 to-violet-300 bg-clip-text text-transparent mt-1">
                       {data.bankBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })} <span className="text-sm">XRGE</span>
                     </p>
-                    <p className="font-mono-share text-[10px] text-muted-foreground/50 mt-1">
+                    <p className="font-mono-share text-tiny text-muted-foreground/70 mt-1">
                       ≈ ${(data.bankBalance * data.xrgeUsdRate).toFixed(2)} USD
                     </p>
                   </div>
@@ -427,7 +427,7 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
 
                     {data.nextTier && (
                       <div className="mt-3 space-y-1.5">
-                        <div className="flex justify-between font-mono-share text-[9px] text-current/60">
+                        <div className="flex justify-between font-mono-share text-tiny text-current/60">
                           <span>Progress to {data.nextTier.name}</span>
                           <span>{data.nextTier.spendRemaining.toLocaleString()} XRGE to go</span>
                         </div>
@@ -440,7 +440,7 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                       </div>
                     )}
 
-                    <p className="font-mono-share text-[9px] text-current/50 mt-2">
+                    <p className="font-mono-share text-tiny text-current/50 mt-2">
                       Lifetime: {data.lifetimeSpend.toLocaleString(undefined, { maximumFractionDigits: 0 })} XRGE spent
                     </p>
                   </div>
@@ -459,10 +459,10 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                         <div className="flex justify-center mb-1">
                           {TIER_ICONS[tier.id]}
                         </div>
-                        <p className="font-orbitron text-[8px] tracking-wider font-bold">{tier.name}</p>
-                        <p className="font-mono-share text-[10px] font-bold mt-0.5">+{tier.bonusPercent}%</p>
+                        <p className="font-orbitron text-micro tracking-wider font-bold">{tier.name}</p>
+                        <p className="font-mono-share text-tiny font-bold mt-0.5">+{tier.bonusPercent}%</p>
                         {tier.minSpend > 0 && (
-                          <p className="font-mono-share text-[7px] text-muted-foreground/40 mt-0.5">
+                          <p className="font-mono-share text-micro text-muted-foreground/60 mt-0.5">
                             ≥{tier.minSpend >= 1_000_000_000 ? `${(tier.minSpend / 1_000_000_000).toFixed(0)}B` : tier.minSpend >= 1_000_000 ? `${(tier.minSpend / 1_000_000).toFixed(0)}M` : `${(tier.minSpend / 1000).toFixed(0)}K`}
                           </p>
                         )}
@@ -473,11 +473,11 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                   {/* Recent transactions */}
                   {data.transactions.length > 0 && (
                     <div className="space-y-2">
-                      <p className="font-orbitron text-[10px] tracking-wider text-muted-foreground/60">RECENT_TRANSACTIONS</p>
+                      <p className="font-orbitron text-tiny tracking-wider text-muted-foreground/60">RECENT_TRANSACTIONS</p>
                       <div className="space-y-1 max-h-48 overflow-y-auto scrollbar-cyber">
                         {data.transactions.map(tx => (
                           <div key={tx.id} className="flex items-center gap-2 px-3 py-2 rounded border border-border/20 bg-card/20">
-                            <span className={`font-orbitron text-[8px] tracking-wider px-1.5 py-0.5 rounded ${
+                            <span className={`font-orbitron text-micro tracking-wider px-1.5 py-0.5 rounded ${
                               tx.type === "deposit" ? "bg-green-500/10 text-green-400" :
                               tx.type === "purchase" ? "bg-pink-500/10 text-pink-400" :
                               tx.type === "withdrawal" ? "bg-orange-500/10 text-orange-400" :
@@ -491,7 +491,7 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                               {tx.type === "deposit" || tx.type === "refund" ? "+" : "-"}
                               {tx.amount.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                             </span>
-                            <span className="ml-auto font-mono-share text-[9px] text-muted-foreground/40">
+                            <span className="ml-auto font-mono-share text-tiny text-muted-foreground/60">
                               {new Date(tx.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
                             </span>
                             {tx.txHash && (
@@ -499,7 +499,7 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                                 href={basescanTxUrl(tx.txHash)}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-muted-foreground/30 hover:text-pink-400 transition-colors"
+                                className="text-muted-foreground/60 hover:text-pink-400 transition-colors"
                               >
                                 <ExternalLink className="w-3 h-3" />
                               </a>
@@ -521,7 +521,7 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                       <div className="rounded-lg border border-violet-500/25 bg-gradient-to-br from-violet-950/30 to-pink-950/20 p-4 space-y-3">
                         <div className="flex items-center gap-2">
                           <Diamond className="w-4 h-4 text-violet-300" />
-                          <span className="font-orbitron text-[11px] tracking-wider bg-gradient-to-r from-violet-300 to-pink-300 bg-clip-text text-transparent font-bold">
+                          <span className="font-orbitron text-xs tracking-wider bg-gradient-to-r from-violet-300 to-pink-300 bg-clip-text text-transparent font-bold">
                             HOLDER_PROTOCOL
                           </span>
                           {data.holder.tier !== "none" && (
@@ -535,7 +535,7 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                             </span>
                           )}
                         </div>
-                        <p className="font-mono-share text-[10px] text-muted-foreground/70 leading-relaxed">
+                        <p className="font-mono-share text-tiny text-muted-foreground/70 leading-relaxed">
                           Hold $XRGE in your wallet or bank to unlock recurring perks. Tier perks
                           compound the longer you hold continuously — sells reset your streak.
                         </p>
@@ -543,28 +543,28 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                         {/* Total held card */}
                         <div className="grid grid-cols-2 gap-2 pt-1">
                           <div className="rounded border border-violet-500/20 bg-violet-500/5 p-2.5">
-                            <p className="font-mono-share text-[8px] text-muted-foreground/50 uppercase tracking-wider">Wallet</p>
+                            <p className="font-mono-share text-micro text-muted-foreground/70 uppercase tracking-wider">Wallet</p>
                             <p className="font-mono-share text-xs text-foreground font-bold mt-0.5">
                               {data.holder.walletBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                             </p>
-                            <p className="font-mono-share text-[8px] text-muted-foreground/40">XRGE on-chain</p>
+                            <p className="font-mono-share text-micro text-muted-foreground/60">XRGE on-chain</p>
                           </div>
                           <div className="rounded border border-pink-500/20 bg-pink-500/5 p-2.5">
-                            <p className="font-mono-share text-[8px] text-muted-foreground/50 uppercase tracking-wider">Bank</p>
+                            <p className="font-mono-share text-micro text-muted-foreground/70 uppercase tracking-wider">Bank</p>
                             <p className="font-mono-share text-xs text-foreground font-bold mt-0.5">
                               {data.holder.bankBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                             </p>
-                            <p className="font-mono-share text-[8px] text-muted-foreground/40">XRGE custodial</p>
+                            <p className="font-mono-share text-micro text-muted-foreground/60">XRGE custodial</p>
                           </div>
                         </div>
 
                         <div className="flex items-baseline gap-2 pt-1 border-t border-violet-500/15">
-                          <span className="font-mono-share text-[9px] text-muted-foreground/50 uppercase tracking-wider">Total Held</span>
+                          <span className="font-mono-share text-tiny text-muted-foreground/70 uppercase tracking-wider">Total Held</span>
                           <span className="font-orbitron text-base font-black bg-gradient-to-r from-violet-300 to-pink-300 bg-clip-text text-transparent ml-auto">
                             {data.holder.totalHeld.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                            <span className="text-[10px] ml-1">XRGE</span>
+                            <span className="text-tiny ml-1">XRGE</span>
                           </span>
-                          <span className="font-mono-share text-[9px] text-muted-foreground/40">
+                          <span className="font-mono-share text-tiny text-muted-foreground/60">
                             ≈ ${(data.holder.totalHeld * data.xrgeUsdRate).toFixed(2)}
                           </span>
                         </div>
@@ -575,33 +575,33 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                         <div className="rounded-lg border border-pink-500/25 bg-pink-500/5 p-3 space-y-2">
                           <div className="flex items-center gap-2">
                             <Sparkles className="w-3.5 h-3.5 text-pink-300" />
-                            <span className="font-orbitron text-[10px] tracking-wider text-pink-300">ACTIVE_PERKS</span>
-                            <span className="ml-auto font-mono-share text-[9px] text-muted-foreground/50">
+                            <span className="font-orbitron text-tiny tracking-wider text-pink-300">ACTIVE_PERKS</span>
+                            <span className="ml-auto font-mono-share text-tiny text-muted-foreground/70">
                               ×{data.holder.streakBonus.multiplier.toFixed(2)} streak multiplier
                             </span>
                           </div>
                           <div className="grid grid-cols-2 gap-2">
                             <div className="rounded border border-border/30 bg-card/30 px-2.5 py-2">
-                              <p className="font-mono-share text-[8px] text-muted-foreground/50 uppercase">Gen Discount</p>
+                              <p className="font-mono-share text-micro text-muted-foreground/70 uppercase">Gen Discount</p>
                               <p className="font-mono-share text-base text-green-400 font-bold mt-0.5">
                                 {data.holder.effectiveDiscount}%
                               </p>
-                              <p className="font-mono-share text-[8px] text-muted-foreground/40">
+                              <p className="font-mono-share text-micro text-muted-foreground/60">
                                 base {data.holder.discountPercent}% × {data.holder.streakBonus.multiplier.toFixed(2)}
                               </p>
                             </div>
                             <div className="rounded border border-border/30 bg-card/30 px-2.5 py-2">
-                              <p className="font-mono-share text-[8px] text-muted-foreground/50 uppercase">Daily Credits</p>
+                              <p className="font-mono-share text-micro text-muted-foreground/70 uppercase">Daily Credits</p>
                               <p className="font-mono-share text-base text-green-400 font-bold mt-0.5">
                                 +{data.holder.effectiveDailyBonus}
                               </p>
-                              <p className="font-mono-share text-[8px] text-muted-foreground/40">
+                              <p className="font-mono-share text-micro text-muted-foreground/60">
                                 on top of standard 10/day
                               </p>
                             </div>
                           </div>
                           {data.holder.description && (
-                            <p className="font-mono-share text-[9px] text-pink-200/70 leading-relaxed pt-1 border-t border-pink-500/15">
+                            <p className="font-mono-share text-tiny text-pink-200/70 leading-relaxed pt-1 border-t border-pink-500/15">
                               {data.holder.description}
                             </p>
                           )}
@@ -612,8 +612,8 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                       {data.holder.tier !== "none" && (
                         <div className="rounded-lg border border-orange-500/25 bg-gradient-to-r from-orange-950/20 to-amber-950/10 p-3">
                           <div className="flex items-center gap-2">
-                            <Flame className={`w-4 h-4 ${data.holder.streakDays >= 30 ? "text-orange-400 drop-shadow-glow-focus" : "text-muted-foreground/40"}`} />
-                            <span className="font-orbitron text-[10px] tracking-wider text-orange-300">
+                            <Flame className={`w-4 h-4 ${data.holder.streakDays >= 30 ? "text-orange-400 drop-shadow-glow-focus" : "text-muted-foreground/60"}`} />
+                            <span className="font-orbitron text-tiny tracking-wider text-orange-300">
                               {data.holder.streakBonus.label.toUpperCase()}
                             </span>
                             <span className="ml-auto font-mono-share text-xs text-orange-300 font-bold">
@@ -629,11 +629,11 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                                   className={`rounded border px-2 py-1.5 transition-all ${
                                     reached
                                       ? "border-orange-500/40 bg-orange-500/10 text-orange-300"
-                                      : "border-border/20 bg-card/20 text-muted-foreground/40"
+                                      : "border-border/20 bg-card/20 text-muted-foreground/60"
                                   }`}
                                 >
-                                  <p className="font-orbitron text-[9px] tracking-wider font-bold">{b.days}d</p>
-                                  <p className="font-mono-share text-[8px]">×{b.multiplier.toFixed(2)}</p>
+                                  <p className="font-orbitron text-tiny tracking-wider font-bold">{b.days}d</p>
+                                  <p className="font-mono-share text-micro">×{b.multiplier.toFixed(2)}</p>
                                 </div>
                               );
                             })}
@@ -643,7 +643,7 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
 
                       {/* Tier ladder */}
                       <div className="space-y-1.5">
-                        <p className="font-orbitron text-[10px] tracking-wider text-muted-foreground/60">TIER_LADDER</p>
+                        <p className="font-orbitron text-tiny tracking-wider text-muted-foreground/60">TIER_LADDER</p>
                         <div className="space-y-1">
                           {data.holder.allTiers
                             .filter(t => t.id !== "none")
@@ -663,15 +663,15 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                                 >
                                   <HolderBadge tier={t.id} tierName={t.name} size="xs" showStreak={false} />
                                   <div className="flex-1 min-w-0">
-                                    <p className="font-mono-share text-[9px] text-foreground/70 truncate">
+                                    <p className="font-mono-share text-tiny text-foreground/70 truncate">
                                       ≥ {t.minHeld >= 1_000_000 ? `${t.minHeld / 1_000_000}M` : t.minHeld.toLocaleString()} XRGE
                                     </p>
-                                    <p className="font-mono-share text-[8px] text-muted-foreground/50">
+                                    <p className="font-mono-share text-micro text-muted-foreground/70">
                                       +{t.discountPercent}% discount{t.dailyCreditBonus > 0 && ` · +${t.dailyCreditBonus} daily`}
                                     </p>
                                   </div>
                                   {isCurrent && (
-                                    <span className="font-orbitron text-[8px] tracking-wider text-pink-300">YOU</span>
+                                    <span className="font-orbitron text-micro tracking-wider text-pink-300">YOU</span>
                                   )}
                                 </div>
                               );
@@ -682,7 +682,7 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                       {/* Progress to next tier */}
                       {data.holder.nextTier && (
                         <div className="rounded-lg border border-border/30 bg-card/30 p-3 space-y-1.5">
-                          <div className="flex justify-between font-mono-share text-[9px]">
+                          <div className="flex justify-between font-mono-share text-tiny">
                             <span className="text-muted-foreground/60">Progress to {data.holder.nextTier.name}</span>
                             <span className="text-foreground/80">
                               {data.holder.nextTier.xrgeRemaining.toLocaleString(undefined, { maximumFractionDigits: 0 })} XRGE to go
@@ -703,15 +703,15 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                       <div className="rounded-lg border border-cyan-500/20 bg-cyan-500/5 p-3 space-y-2">
                         <div className="flex items-center gap-2">
                           <Wallet className="w-3.5 h-3.5 text-cyan-300" />
-                          <span className="font-orbitron text-[10px] tracking-wider text-cyan-300">WALLET_BINDING</span>
+                          <span className="font-orbitron text-tiny tracking-wider text-cyan-300">WALLET_BINDING</span>
                         </div>
                         {data.holder.walletAddress ? (
                           <div className="space-y-2">
-                            <p className="font-mono-share text-[10px] text-muted-foreground/70 leading-relaxed">
+                            <p className="font-mono-share text-tiny text-muted-foreground/70 leading-relaxed">
                               Bound wallet — on-chain XRGE here counts toward your tier daily.
                             </p>
                             <div className="flex items-center gap-2">
-                              <div className="flex-1 bg-input/60 border border-border/30 rounded px-3 py-2 font-mono-share text-[10px] text-foreground/80 truncate select-all">
+                              <div className="flex-1 bg-input/60 border border-border/30 rounded px-3 py-2 font-mono-share text-tiny text-foreground/80 truncate select-all">
                                 {data.holder.walletAddress}
                               </div>
                               <Button
@@ -728,34 +728,34 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                                 href={basescanAddressUrl(data.holder.walletAddress)}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 font-mono-share text-[9px] text-cyan-400/70 hover:text-cyan-400"
+                                className="inline-flex items-center gap-1 font-mono-share text-tiny text-cyan-400/70 hover:text-cyan-400"
                               >
                                 View on BaseScan <ExternalLink className="w-2.5 h-2.5" />
                               </a>
                               <button
                                 onClick={handleUnbindWallet}
                                 disabled={bindingWallet}
-                                className="inline-flex items-center gap-1 font-mono-share text-[9px] text-destructive/70 hover:text-destructive disabled:opacity-50"
+                                className="inline-flex items-center gap-1 font-mono-share text-tiny text-destructive/70 hover:text-destructive disabled:opacity-50"
                               >
                                 <Trash2 className="w-2.5 h-2.5" /> Unbind
                               </button>
                             </div>
                             {data.holder.lastSnapshotAt && (
-                              <p className="font-mono-share text-[8px] text-muted-foreground/40">
+                              <p className="font-mono-share text-micro text-muted-foreground/60">
                                 Last snapshot: {new Date(data.holder.lastSnapshotAt).toLocaleString()}
                               </p>
                             )}
                           </div>
                         ) : (
                           <div className="space-y-2">
-                            <p className="font-mono-share text-[10px] text-muted-foreground/70 leading-relaxed">
+                            <p className="font-mono-share text-tiny text-muted-foreground/70 leading-relaxed">
                               Connect your Base wallet to count on-chain XRGE toward your holder tier.
                               You'll sign a short message to prove the wallet is yours — it's free,
                               moves no tokens, and grants no spending approval.
                             </p>
                             {walletResult && (
                               <div className="rounded border border-green-500/30 bg-green-500/10 p-2">
-                                <p className="font-mono-share text-[9px] text-green-300">
+                                <p className="font-mono-share text-tiny text-green-300">
                                   Wallet verified · {walletResult.snapshot
                                     ? `Snapshot: ${walletResult.snapshot.totalHeld.toLocaleString(undefined, { maximumFractionDigits: 0 })} XRGE held → ${walletResult.snapshot.tierName} tier`
                                     : "Snapshot pending — check back in a moment"}
@@ -779,7 +779,7 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                                 browser rather than failing at the click. */}
                             {!hasInjectedWallet() && (
                               <div className="rounded border border-amber-500/30 bg-amber-500/10 p-2 space-y-1.5">
-                                <p className="font-mono-share text-[9px] text-amber-300/90 leading-relaxed">
+                                <p className="font-mono-share text-tiny text-amber-300/90 leading-relaxed">
                                   {isMobile()
                                     ? "No wallet detected in this browser. Open GLTCH inside your wallet app to verify."
                                     : "No wallet detected. Install MetaMask, Coinbase Wallet, or Rabby to verify."}
@@ -788,13 +788,13 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                                   <div className="flex gap-2">
                                     <a
                                       href={walletDeepLink("metamask")}
-                                      className="flex-1 text-center font-mono-share text-[9px] text-amber-300 border border-amber-500/30 rounded px-2 py-1 hover:bg-amber-500/10"
+                                      className="flex-1 text-center font-mono-share text-tiny text-amber-300 border border-amber-500/30 rounded px-2 py-1 hover:bg-amber-500/10"
                                     >
                                       MetaMask
                                     </a>
                                     <a
                                       href={walletDeepLink("coinbase")}
-                                      className="flex-1 text-center font-mono-share text-[9px] text-amber-300 border border-amber-500/30 rounded px-2 py-1 hover:bg-amber-500/10"
+                                      className="flex-1 text-center font-mono-share text-tiny text-amber-300 border border-amber-500/30 rounded px-2 py-1 hover:bg-amber-500/10"
                                     >
                                       Coinbase
                                     </a>
@@ -806,13 +806,13 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                         )}
                       </div>
 
-                      <p className="font-mono-share text-[8px] text-muted-foreground/40 leading-relaxed text-center">
+                      <p className="font-mono-share text-micro text-muted-foreground/60 leading-relaxed text-center">
                         Snapshots run daily at 03:10 UTC · holder tiers refresh after each snapshot ·
                         only your latest snapshot counts toward perks
                       </p>
                     </>
                   ) : (
-                    <div className="text-center py-12 text-muted-foreground/50 font-mono-share text-[10px]">
+                    <div className="text-center py-12 text-muted-foreground/70 font-mono-share text-tiny">
                       Holder data unavailable
                     </div>
                   )}
@@ -823,17 +823,17 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
               {tab === "deposit" && (
                 <div className="mt-4 space-y-4">
                   <div className="rounded-lg border border-pink-500/20 bg-pink-500/5 p-4 space-y-3">
-                    <p className="font-orbitron text-[10px] tracking-wider text-pink-300">
+                    <p className="font-orbitron text-tiny tracking-wider text-pink-300">
                       DEPOSIT XRGE TO YOUR BANK
                     </p>
-                    <p className="font-mono-share text-[10px] text-muted-foreground/70 leading-relaxed">
+                    <p className="font-mono-share text-tiny text-muted-foreground/70 leading-relaxed">
                       Send XRGE tokens to the deposit address below on {XRGE_CHAIN_NAME}, then paste your transaction hash to verify.
                     </p>
 
                     <div className="space-y-1.5">
-                      <p className="font-mono-share text-[9px] text-muted-foreground/50">Deposit Address ({XRGE_CHAIN_NAME})</p>
+                      <p className="font-mono-share text-tiny text-muted-foreground/70">Deposit Address ({XRGE_CHAIN_NAME})</p>
                       <div className="flex items-center gap-2">
-                        <div className="flex-1 bg-input/60 border border-border/30 rounded px-3 py-2 font-mono-share text-[10px] text-foreground/80 truncate select-all">
+                        <div className="flex-1 bg-input/60 border border-border/30 rounded px-3 py-2 font-mono-share text-tiny text-foreground/80 truncate select-all">
                           {data.depositAddress}
                         </div>
                         <Button
@@ -849,16 +849,16 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                         href={basescanAddressUrl(data.depositAddress)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 font-mono-share text-[9px] text-pink-400/60 hover:text-pink-400 transition-colors"
+                        className="inline-flex items-center gap-1 font-mono-share text-tiny text-pink-400/60 hover:text-pink-400 transition-colors"
                       >
                         View on BaseScan <ExternalLink className="w-2.5 h-2.5" />
                       </a>
                     </div>
 
                     <div className="space-y-1.5">
-                      <p className="font-mono-share text-[9px] text-muted-foreground/50">XRGE Contract</p>
+                      <p className="font-mono-share text-tiny text-muted-foreground/70">XRGE Contract</p>
                       <div className="flex items-center gap-2">
-                        <div className="flex-1 bg-input/60 border border-border/30 rounded px-3 py-2 font-mono-share text-[9px] text-foreground/60 truncate select-all">
+                        <div className="flex-1 bg-input/60 border border-border/30 rounded px-3 py-2 font-mono-share text-tiny text-foreground/60 truncate select-all">
                           {XRGE_CONTRACT}
                         </div>
                         <Button
@@ -876,7 +876,7 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                       <button
                         type="button"
                         onClick={() => setShowHowTo(true)}
-                        className="inline-flex items-center gap-1.5 font-mono-share text-[10px] text-pink-400 hover:text-pink-300 underline underline-offset-2 transition-colors"
+                        className="inline-flex items-center gap-1.5 font-mono-share text-tiny text-pink-400 hover:text-pink-300 underline underline-offset-2 transition-colors"
                       >
                         New to crypto? How to buy XRGE
                       </button>
@@ -884,7 +884,7 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                         href={XRGE_DEXSCREENER_URL}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 font-mono-share text-[10px] text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
+                        className="inline-flex items-center gap-1.5 font-mono-share text-tiny text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
                       >
                         DexScreener <ExternalLink className="w-3 h-3" />
                       </a>
@@ -898,21 +898,21 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                       <p className="font-mono-share text-sm text-green-300 font-bold">
                         +{depositResult.deposited.toLocaleString(undefined, { maximumFractionDigits: 2 })} XRGE
                       </p>
-                      <p className="font-mono-share text-[10px] text-muted-foreground/60">
+                      <p className="font-mono-share text-tiny text-muted-foreground/60">
                         New balance: {depositResult.newBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })} XRGE
                       </p>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => setDepositResult(null)}
-                        className="font-mono-share text-[10px] mt-2"
+                        className="font-mono-share text-tiny mt-2"
                       >
                         MAKE ANOTHER DEPOSIT
                       </Button>
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      <p className="font-mono-share text-[9px] text-muted-foreground/50">Transaction Hash</p>
+                      <p className="font-mono-share text-tiny text-muted-foreground/70">Transaction Hash</p>
                       <Input
                         value={depositTxHash}
                         onChange={e => setDepositTxHash(e.target.value)}
@@ -936,8 +936,8 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
               {tab === "buy" && (
                 <div className="mt-4 space-y-4">
                   <div className="flex items-center justify-between">
-                    <p className="font-orbitron text-[10px] tracking-wider text-pink-300">BUY CREDITS FROM BANK</p>
-                    <span className="font-mono-share text-[10px] text-muted-foreground/60">
+                    <p className="font-orbitron text-tiny tracking-wider text-pink-300">BUY CREDITS FROM BANK</p>
+                    <span className="font-mono-share text-tiny text-muted-foreground/60">
                       Balance: {data.bankBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })} XRGE
                     </span>
                   </div>
@@ -947,9 +947,9 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                     <div className="rounded-lg border border-orange-500/40 bg-orange-500/10 p-3 space-y-1 -slow">
                       <div className="flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full bg-orange-400 animate-pulse" />
-                        <span className="font-orbitron text-[10px] tracking-wider text-orange-300">⚡ FLASH SALE — {flashSale.title.toUpperCase()}</span>
+                        <span className="font-orbitron text-tiny tracking-wider text-orange-300">⚡ FLASH SALE — {flashSale.title.toUpperCase()}</span>
                       </div>
-                      <div className="flex flex-wrap gap-2 font-mono-share text-[9px] text-orange-200/80">
+                      <div className="flex flex-wrap gap-2 font-mono-share text-tiny text-orange-200/80">
                         <span>{flashSale.discount_percent}% OFF XRGE prices</span>
                         {flashSale.bonus_credits_percent > 0 && (
                           <span>+ {flashSale.bonus_credits_percent}% BONUS credits</span>
@@ -961,7 +961,7 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
 
                   <div className={`flex items-center gap-2 px-3 py-2 rounded border ${TIER_COLORS[data.loyaltyTier] || TIER_COLORS.bronze}`}>
                     {TIER_ICONS[data.loyaltyTier]}
-                    <span className="font-mono-share text-[10px]">
+                    <span className="font-mono-share text-tiny">
                       {data.loyaltyTierName} tier → <span className="font-bold">+{data.bonusPercent}% bonus credits</span> on every purchase
                     </span>
                   </div>
@@ -974,18 +974,18 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                         +{purchaseResult.totalCredits} credits
                       </p>
                       {purchaseResult.bonusCredits > 0 && (
-                        <p className="font-mono-share text-[10px] text-green-400/70">
+                        <p className="font-mono-share text-tiny text-green-400/70">
                           Includes {purchaseResult.bonusCredits} bonus credits ({data.bonusPercent}% loyalty bonus)
                         </p>
                       )}
-                      <p className="font-mono-share text-[10px] text-muted-foreground/60">
+                      <p className="font-mono-share text-tiny text-muted-foreground/60">
                         Spent: {purchaseResult.xrgeSpent.toLocaleString(undefined, { maximumFractionDigits: 2 })} XRGE
                       </p>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => setPurchaseResult(null)}
-                        className="font-mono-share text-[10px] mt-2"
+                        className="font-mono-share text-tiny mt-2"
                       >
                         BUY MORE
                       </Button>
@@ -1003,18 +1003,18 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                           >
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
-                                <span className="font-orbitron text-[10px] tracking-wider text-foreground/80">{pkg.name}</span>
-                                <span className="font-mono-share text-[9px] text-muted-foreground/40">{pkg.price}</span>
+                                <span className="font-orbitron text-tiny tracking-wider text-foreground/80">{pkg.name}</span>
+                                <span className="font-mono-share text-tiny text-muted-foreground/60">{pkg.price}</span>
                               </div>
                               <div className="flex items-center gap-1 mt-0.5">
                                 <span className="font-mono-share text-xs text-foreground font-bold">{pkg.credits}</span>
                                 {bonusCredits > 0 && (
-                                  <span className="font-mono-share text-[10px] text-green-400 font-bold">+{bonusCredits}</span>
+                                  <span className="font-mono-share text-tiny text-green-400 font-bold">+{bonusCredits}</span>
                                 )}
-                                <span className="font-mono-share text-[9px] text-muted-foreground/40">credits</span>
+                                <span className="font-mono-share text-tiny text-muted-foreground/60">credits</span>
                               </div>
                             </div>
-                            <div className="shrink-0 font-orbitron text-[9px] tracking-wider text-pink-400 group-hover:text-pink-300 transition-colors">
+                            <div className="shrink-0 font-orbitron text-tiny tracking-wider text-pink-400 group-hover:text-pink-300 transition-colors">
                               {purchasing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "BUY →"}
                             </div>
                           </button>
@@ -1029,14 +1029,14 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
               {tab === "withdraw" && (
                 <div className="mt-4 space-y-4">
                   <div className="rounded-lg border border-orange-500/20 bg-orange-500/5 p-4 space-y-2">
-                    <p className="font-orbitron text-[10px] tracking-wider text-orange-300">
+                    <p className="font-orbitron text-tiny tracking-wider text-orange-300">
                       WITHDRAW XRGE
                     </p>
-                    <p className="font-mono-share text-[10px] text-muted-foreground/70 leading-relaxed">
+                    <p className="font-mono-share text-tiny text-muted-foreground/70 leading-relaxed">
                       Withdraw XRGE from your bank to any {XRGE_CHAIN_NAME} wallet. Minimum: 100 XRGE.
                       Withdrawals are processed within 24 hours.
                     </p>
-                    <p className="font-mono-share text-[10px] text-muted-foreground/50">
+                    <p className="font-mono-share text-tiny text-muted-foreground/70">
                       Available: <span className="text-foreground font-bold">{data.bankBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span> XRGE
                     </p>
                   </div>
@@ -1044,17 +1044,17 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                   {/* Pending withdrawals */}
                   {data.pendingWithdrawals.length > 0 && (
                     <div className="space-y-2">
-                      <p className="font-orbitron text-[9px] tracking-wider text-orange-300/60">PENDING</p>
+                      <p className="font-orbitron text-tiny tracking-wider text-orange-300/60">PENDING</p>
                       {data.pendingWithdrawals.map(w => (
                         <div key={w.id} className="flex items-center gap-2 px-3 py-2 rounded border border-orange-500/20 bg-orange-500/5">
                           <Clock className="w-3 h-3 text-orange-400 animate-pulse" />
                           <span className="font-mono-share text-xs text-orange-300 font-bold">
                             {w.amount.toLocaleString()} XRGE
                           </span>
-                          <span className="font-mono-share text-[9px] text-muted-foreground/40 truncate">
+                          <span className="font-mono-share text-tiny text-muted-foreground/60 truncate">
                             → {w.toAddress.slice(0, 8)}...{w.toAddress.slice(-6)}
                           </span>
-                          <span className="ml-auto font-orbitron text-[7px] tracking-wider text-orange-400/60 uppercase">
+                          <span className="ml-auto font-orbitron text-micro tracking-wider text-orange-400/60 uppercase">
                             {w.status}
                           </span>
                         </div>
@@ -1069,14 +1069,14 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                       <p className="font-mono-share text-sm text-green-300 font-bold">
                         {withdrawResult.amount.toLocaleString()} XRGE
                       </p>
-                      <p className="font-mono-share text-[10px] text-muted-foreground/60">
+                      <p className="font-mono-share text-tiny text-muted-foreground/60">
                         Will be processed within 24 hours.
                       </p>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => setWithdrawResult(null)}
-                        className="font-mono-share text-[10px] mt-2"
+                        className="font-mono-share text-tiny mt-2"
                       >
                         OK
                       </Button>
@@ -1084,7 +1084,7 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                   ) : (
                     <div className="space-y-3">
                       <div className="space-y-1.5">
-                        <p className="font-mono-share text-[9px] text-muted-foreground/50">Amount (XRGE)</p>
+                        <p className="font-mono-share text-tiny text-muted-foreground/70">Amount (XRGE)</p>
                         <Input
                           type="number"
                           value={withdrawAmount}
@@ -1095,7 +1095,7 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <p className="font-mono-share text-[9px] text-muted-foreground/50">Destination Address ({XRGE_CHAIN_NAME})</p>
+                        <p className="font-mono-share text-tiny text-muted-foreground/70">Destination Address ({XRGE_CHAIN_NAME})</p>
                         <Input
                           value={withdrawAddress}
                           onChange={e => setWithdrawAddress(e.target.value)}
@@ -1121,7 +1121,7 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
           {/* Rate info footer */}
           {data && (
             <div className="border-t border-border/20 pt-3 mt-4">
-              <p className="font-mono-share text-[9px] text-muted-foreground/40 leading-relaxed">
+              <p className="font-mono-share text-tiny text-muted-foreground/60 leading-relaxed">
                 XRGE rate: ${data.xrgeUsdRate.toFixed(6)}/token · {XRGE_CHAIN_NAME} network ·{" "}
                 <a href={XRGE_DEXSCREENER_URL} target="_blank" rel="noopener noreferrer" className="text-pink-400/60 hover:text-pink-400 underline">
                   DexScreener

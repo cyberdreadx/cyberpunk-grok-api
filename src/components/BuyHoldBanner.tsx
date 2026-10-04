@@ -58,14 +58,14 @@ const BuyHoldBanner: React.FC = () => {
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="font-orbitron uppercase tracking-widest text-[11px] sm:text-xs text-primary">
+              <h2 className="font-orbitron uppercase tracking-widest text-xs sm:text-xs text-primary">
                 Buy &amp; Hold Program
               </h2>
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-secondary/40 bg-secondary/10 text-[8px] sm:text-[9px] font-mono-share uppercase tracking-wider text-secondary">
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-secondary/40 bg-secondary/10 text-micro sm:text-tiny font-mono-share uppercase tracking-wider text-secondary">
                 <Flame className="w-2.5 h-2.5" /> Streak ×2
               </span>
             </div>
-            <p className="mt-1 text-[11px] sm:text-xs text-foreground/80 font-mono-share leading-relaxed">
+            <p className="mt-1 text-xs sm:text-xs text-foreground/80 font-mono-share leading-relaxed">
               Hold <span className="text-primary font-bold">XRGE</span> to unlock up to{" "}
               <span className="text-secondary font-bold">+25% gen discount</span>,{" "}
               <span className="text-secondary font-bold">+10 daily credits</span>, NSFW LoRAs and GLTCH PRO. Continuous holders earn streak multipliers up to ×2.
@@ -76,14 +76,14 @@ const BuyHoldBanner: React.FC = () => {
                 href={XRGE_DEXSCREENER_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-[10px] sm:text-[11px] font-orbitron uppercase tracking-wider shadow-glow-live"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors text-tiny sm:text-xs font-orbitron uppercase tracking-wider shadow-glow-live"
               >
                 Buy XRGE
                 <ExternalLink className="w-3 h-3" />
               </a>
               <button
                 onClick={() => setLearnOpen(true)}
-                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md border border-border/60 bg-card/40 hover:bg-card/70 transition-colors text-[10px] sm:text-[11px] font-orbitron uppercase tracking-wider text-foreground/80"
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md border border-border/60 bg-card/40 hover:bg-card/70 transition-colors text-tiny sm:text-xs font-orbitron uppercase tracking-wider text-foreground/80"
               >
                 <BookOpen className="w-3 h-3" />
                 Learn more

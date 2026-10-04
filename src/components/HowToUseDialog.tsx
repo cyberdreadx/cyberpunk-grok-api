@@ -337,7 +337,7 @@ export default function HowToUseDialog({ open, onOpenChange }: HowToUseDialogPro
         </div>
 
         <div className="border-t border-border/30 px-6 py-4 flex items-center justify-between bg-card/80">
-          <div className="font-mono-share text-[10px] text-muted-foreground/40">
+          <div className="font-mono-share text-tiny text-muted-foreground/60">
             {step + 1} / {steps.length}
           </div>
           <div className="flex items-center gap-2">

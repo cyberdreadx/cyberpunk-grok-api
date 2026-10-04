@@ -75,7 +75,7 @@ export default function PurgeLogPanel() {
         <div className="flex items-center justify-between gap-2 flex-wrap mb-3">
           <div className="flex items-center gap-2">
             <Trash2 className="w-3.5 h-3.5 text-secondary" />
-            <span className="font-orbitron text-[10px] tracking-wider text-muted-foreground">
+            <span className="font-orbitron text-tiny tracking-wider text-muted-foreground">
               MEDIA_PURGE_AUDIT · LAST_30_DAYS
             </span>
           </div>
@@ -93,7 +93,7 @@ export default function PurgeLogPanel() {
 
         {/* Per-kind totals */}
         {totals.length === 0 ? (
-          <p className="font-mono-share text-[11px] text-muted-foreground/60">No purge activity in the last 30 days.</p>
+          <p className="font-mono-share text-xs text-muted-foreground/60">No purge activity in the last 30 days.</p>
         ) : (
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {totals.map((t) => {
@@ -112,12 +112,12 @@ export default function PurgeLogPanel() {
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="font-orbitron text-[10px] text-foreground tracking-wider">
+                    <span className="font-orbitron text-tiny text-foreground tracking-wider">
                       {KIND_LABELS[t.kind] || t.kind.toUpperCase()}
                     </span>
                     {hasErrors && <AlertTriangle className="w-3 h-3 text-amber-400" />}
                   </div>
-                  <div className="mt-1.5 font-mono-share text-[10px] text-muted-foreground space-y-0.5">
+                  <div className="mt-1.5 font-mono-share text-tiny text-muted-foreground space-y-0.5">
                     <div>Runs: <span className="text-foreground">{t.runs}</span></div>
                     <div>
                       Deleted: <span className="text-foreground">{deleted}</span>
@@ -127,7 +127,7 @@ export default function PurgeLogPanel() {
                     {hasErrors && (
                       <div className="text-amber-400">Errors: {t.errors}</div>
                     )}
-                    <div className="text-muted-foreground/50">Last: {fmtDate(t.last_run_at)}</div>
+                    <div className="text-muted-foreground/70">Last: {fmtDate(t.last_run_at)}</div>
                   </div>
                 </button>
               );
@@ -138,7 +138,7 @@ export default function PurgeLogPanel() {
         {kindFilter && (
           <button
             onClick={() => setKindFilter("")}
-            className="mt-3 font-mono-share text-[10px] text-primary/70 hover:text-primary"
+            className="mt-3 font-mono-share text-tiny text-primary/70 hover:text-primary"
           >
             ✕ CLEAR_FILTER ({KIND_LABELS[kindFilter] || kindFilter})
           </button>
@@ -174,10 +174,10 @@ export default function PurgeLogPanel() {
                     <td className="px-3 py-2">
                       <span className="text-foreground">{KIND_LABELS[r.kind] || r.kind}</span>
                       {r.notes?.dryRun && (
-                        <span className="ml-1 text-amber-400/80 text-[9px]">[DRY]</span>
+                        <span className="ml-1 text-amber-400/80 text-tiny">[DRY]</span>
                       )}
                       {r.notes?.aborted && (
-                        <span className="ml-1 inline-flex items-center gap-0.5 text-destructive text-[9px]">
+                        <span className="ml-1 inline-flex items-center gap-0.5 text-destructive text-tiny">
                           <ShieldX className="w-2.5 h-2.5" />ABORTED
                         </span>
                       )}
@@ -186,13 +186,13 @@ export default function PurgeLogPanel() {
                     <td className="px-3 py-2 text-muted-foreground/70 truncate max-w-[180px]">{r.target_email || "—"}</td>
                     <td className="px-3 py-2 text-right">
                       <span className="text-foreground">{r.blobs_deleted}</span>
-                      <span className="text-muted-foreground/50"> / {r.blobs_found}</span>
+                      <span className="text-muted-foreground/70"> / {r.blobs_found}</span>
                     </td>
                     <td className="px-3 py-2 text-right">
                       <span className="text-foreground">{r.r2_deleted}</span>
-                      <span className="text-muted-foreground/50"> / {r.r2_found}</span>
+                      <span className="text-muted-foreground/70"> / {r.r2_found}</span>
                     </td>
-                    <td className={`px-3 py-2 text-right ${r.errors > 0 ? "text-amber-400" : "text-muted-foreground/40"}`}>
+                    <td className={`px-3 py-2 text-right ${r.errors > 0 ? "text-amber-400" : "text-muted-foreground/60"}`}>
                       {r.errors}
                     </td>
                   </tr>

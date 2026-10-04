@@ -187,10 +187,10 @@ function KpiCard({ icon, label, value, sub, accent = "primary" }: {
     <div className="holo-card p-3 sm:p-4 space-y-1.5 min-w-0 overflow-hidden" data-numeric>
       <div className="flex items-center gap-2 text-muted-foreground/70">
         <span className={`inline-flex items-center justify-center w-6 h-6 rounded-md shrink-0 ${chipMap[accent]}`}>{icon}</span>
-        <span className="font-mono-share text-[10px] tracking-wider uppercase truncate">{label}</span>
+        <span className="font-mono-share text-tiny tracking-wider uppercase truncate">{label}</span>
       </div>
       <div className="font-orbitron text-xl sm:text-2xl font-bold tracking-wide truncate">{value}</div>
-      {sub && <div className="font-mono-share text-[10px] text-muted-foreground/60 truncate">{sub}</div>}
+      {sub && <div className="font-mono-share text-tiny text-muted-foreground/60 truncate">{sub}</div>}
     </div>
   );
 }
@@ -208,7 +208,7 @@ function CyberTooltip({ active, payload, label }: any) {
   const isMoney = String(rows[0]?.dataKey ?? "").endsWith("_cents");
   return (
     <div className="bg-card/95 border border-border/50 rounded px-3 py-2 shadow-xl backdrop-blur-sm">
-      <p className="font-mono-share text-[10px] text-primary/70 mb-1">{label}</p>
+      <p className="font-mono-share text-tiny text-primary/70 mb-1">{label}</p>
       {rows.map((p: any, i: number) => (
         <p key={i} className="font-mono-share text-xs" style={{ color: p.color }}>
           {p.name}: {typeof p.value === "number" && String(p.dataKey ?? "").endsWith("_cents")
@@ -217,7 +217,7 @@ function CyberTooltip({ active, payload, label }: any) {
         </p>
       ))}
       {rows.length > 1 && (
-        <p className="font-mono-share text-[10px] text-muted-foreground/70 mt-1 pt-1 border-t border-border/30">
+        <p className="font-mono-share text-tiny text-muted-foreground/70 mt-1 pt-1 border-t border-border/30">
           total: {isMoney ? fmt$(total) : total.toLocaleString()}
         </p>
       )}
@@ -235,7 +235,7 @@ function ChartToggle({ active, onClick, title, children }: {
       onClick={onClick}
       title={title}
       aria-pressed={active}
-      className={`px-2 py-1 font-mono-share text-[10px] tracking-wider rounded border transition-colors ${
+      className={`px-2 py-1 font-mono-share text-tiny tracking-wider rounded border transition-colors ${
         active
           ? "bg-primary/20 text-primary border-primary/40"
           : "text-muted-foreground/60 border-border/30 hover:text-foreground hover:bg-primary/5"
@@ -326,7 +326,7 @@ function WorkerStatusPanel() {
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2">
           <Cpu className="w-3.5 h-3.5 text-cyan-400" />
-          <span className="font-orbitron text-[10px] tracking-wider text-muted-foreground">RUNPOD_WORKERS</span>
+          <span className="font-orbitron text-tiny tracking-wider text-muted-foreground">RUNPOD_WORKERS</span>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={handlePurge} disabled={purging}
@@ -343,7 +343,7 @@ function WorkerStatusPanel() {
       </div>
 
       {purgeResult && (
-        <div className={`font-mono-share text-[10px] px-2 py-1 rounded ${purgeResult.startsWith("Failed") ? "bg-destructive/10 text-destructive" : "bg-green-500/10 text-green-400"}`}>
+        <div className={`font-mono-share text-tiny px-2 py-1 rounded ${purgeResult.startsWith("Failed") ? "bg-destructive/10 text-destructive" : "bg-green-500/10 text-green-400"}`}>
           {purgeResult}
         </div>
       )}
@@ -362,32 +362,32 @@ function WorkerStatusPanel() {
             return (
               <div key={ep.endpoint} className={`border rounded-lg p-3 space-y-2 ${healthy ? "border-cyan-500/20 bg-cyan-500/5" : "border-red-500/20 bg-red-500/5"}`}>
                 <div className="flex items-center justify-between">
-                  <span className="font-orbitron text-[9px] tracking-wider text-primary">{ep.name}</span>
-                  <span className={`font-mono-share text-[8px] px-1.5 py-0.5 rounded ${healthy ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
+                  <span className="font-orbitron text-tiny tracking-wider text-primary">{ep.name}</span>
+                  <span className={`font-mono-share text-micro px-1.5 py-0.5 rounded ${healthy ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
                     {healthy ? "ONLINE" : "ERROR"}
                   </span>
                 </div>
-                <div className="font-mono-share text-[9px] text-muted-foreground/50 truncate">{ep.endpoint}</div>
+                <div className="font-mono-share text-tiny text-muted-foreground/70 truncate">{ep.endpoint}</div>
 
                 {healthy && (
                   <>
                     <div className="grid grid-cols-2 gap-1.5">
                       <div className="bg-background/30 rounded px-2 py-1">
-                        <div className="font-mono-share text-[8px] text-muted-foreground/50">WORKERS</div>
+                        <div className="font-mono-share text-micro text-muted-foreground/70">WORKERS</div>
                         <div className="font-orbitron text-sm text-foreground">{totalWorkers}</div>
                       </div>
                       <div className="bg-background/30 rounded px-2 py-1">
-                        <div className="font-mono-share text-[8px] text-muted-foreground/50">IN_QUEUE</div>
+                        <div className="font-mono-share text-micro text-muted-foreground/70">IN_QUEUE</div>
                         <div className="font-orbitron text-sm text-yellow-400">{j.inQueue || 0}</div>
                       </div>
                     </div>
-                    <div className="flex flex-wrap gap-x-3 gap-y-1 font-mono-share text-[9px]">
+                    <div className="flex flex-wrap gap-x-3 gap-y-1 font-mono-share text-tiny">
                       <span className="text-green-400">idle: {w.idle || 0}</span>
                       <span className="text-cyan-400">running: {w.running || 0}</span>
                       <span className="text-yellow-400">init: {w.initializing || 0}</span>
                       <span className="text-orange-400">throttled: {w.throttled || 0}</span>
                     </div>
-                    <div className="flex flex-wrap gap-x-3 gap-y-1 font-mono-share text-[9px] text-muted-foreground/50">
+                    <div className="flex flex-wrap gap-x-3 gap-y-1 font-mono-share text-tiny text-muted-foreground/70">
                       <span>completed: {j.completed || 0}</span>
                       <span>failed: {j.failed || 0}</span>
                       <span>running: {j.inProgress || 0}</span>
@@ -397,7 +397,7 @@ function WorkerStatusPanel() {
                 )}
 
                 {ep.error && (
-                  <div className="font-mono-share text-[9px] text-red-400 break-all">{ep.error}</div>
+                  <div className="font-mono-share text-tiny text-red-400 break-all">{ep.error}</div>
                 )}
               </div>
             );
@@ -406,7 +406,7 @@ function WorkerStatusPanel() {
       )}
 
       {!data && !loading && (
-        <div className="font-mono-share text-xs text-muted-foreground/50 text-center py-4">
+        <div className="font-mono-share text-xs text-muted-foreground/70 text-center py-4">
           Click REFRESH to load worker status
         </div>
       )}
@@ -646,7 +646,7 @@ function AnnouncementPanel() {
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2">
           <Send className="w-3.5 h-3.5 text-primary" />
-          <span className="font-orbitron text-[10px] tracking-wider text-muted-foreground">MASS_ANNOUNCEMENT</span>
+          <span className="font-orbitron text-tiny tracking-wider text-muted-foreground">MASS_ANNOUNCEMENT</span>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={handleDryRun} disabled={dryRunning || sending}
@@ -681,7 +681,7 @@ function AnnouncementPanel() {
       </div>
 
       {/* Stats counter */}
-      <div className="flex items-center gap-4 font-mono-share text-[11px]">
+      <div className="flex items-center gap-4 font-mono-share text-xs">
         {statsLoading ? (
           <span className="text-muted-foreground flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Loading stats...</span>
         ) : stats ? (
@@ -699,7 +699,7 @@ function AnnouncementPanel() {
       {/* Campaign + Subject + Email Editor */}
       <div className="space-y-2">
         <div className="space-y-1">
-          <label className="font-mono-share text-[10px] text-muted-foreground/70">CAMPAIGN</label>
+          <label className="font-mono-share text-tiny text-muted-foreground/70">CAMPAIGN</label>
           <select
             value={campaign}
             onChange={(e) => {
@@ -717,12 +717,12 @@ function AnnouncementPanel() {
             <option value="announcement_v47">v4.7 — Coolest Updates Drop</option>
             <option value="announcement">Original "Massive Upgrade" announcement</option>
           </select>
-          <p className="font-mono-share text-[9px] text-muted-foreground/50">
+          <p className="font-mono-share text-tiny text-muted-foreground/70">
             Each campaign tracks its own send list. Use <span className="text-accent">QUEUE_VIA_CRON</span> for reliable delivery (recommended).
           </p>
         </div>
         <div className="space-y-1">
-          <label className="font-mono-share text-[10px] text-muted-foreground/70">SUBJECT LINE</label>
+          <label className="font-mono-share text-tiny text-muted-foreground/70">SUBJECT LINE</label>
           <input
             type="text"
             value={subject}
@@ -733,7 +733,7 @@ function AnnouncementPanel() {
         <div>
           <button
             onClick={() => setShowEditor(!showEditor)}
-            className="flex items-center gap-1.5 font-mono-share text-[10px] text-muted-foreground/70 hover:text-muted-foreground transition-colors"
+            className="flex items-center gap-1.5 font-mono-share text-tiny text-muted-foreground/70 hover:text-muted-foreground transition-colors"
           >
             <Edit className="w-3 h-3" />
             {showEditor ? "HIDE" : "EDIT"} EMAIL HTML
@@ -745,11 +745,11 @@ function AnnouncementPanel() {
                 value={htmlContent}
                 onChange={(e) => setHtmlContent(e.target.value)}
                 placeholder="Paste custom HTML here, or leave blank to use the campaign's default template..."
-                className="w-full h-48 bg-background/50 border border-primary/20 rounded px-2 py-1.5 font-mono text-[11px] text-foreground focus:outline-none focus:border-primary/50 resize-y"
+                className="w-full h-48 bg-background/50 border border-primary/20 rounded px-2 py-1.5 font-mono text-xs text-foreground focus:outline-none focus:border-primary/50 resize-y"
               />
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" onClick={() => setShowPreview(!showPreview)}
-                  className="font-mono-share text-[10px] gap-1 border-primary/20 hover:bg-primary/10">
+                  className="font-mono-share text-tiny gap-1 border-primary/20 hover:bg-primary/10">
                   <Eye className="w-3 h-3" />
                   {showPreview ? "HIDE" : "SHOW"} PREVIEW
                 </Button>
@@ -759,7 +759,7 @@ function AnnouncementPanel() {
                       .then((r) => setHtmlContent(r.html))
                       .catch(() => setHtmlContent("<!-- Failed to load default template -->"));
                   }}
-                    className="font-mono-share text-[10px] gap-1 border-primary/20 hover:bg-primary/10">
+                    className="font-mono-share text-tiny gap-1 border-primary/20 hover:bg-primary/10">
                     LOAD DEFAULT TEMPLATE
                   </Button>
                 )}
@@ -779,13 +779,13 @@ function AnnouncementPanel() {
         </div>
       </div>
 
-      <p className="font-mono-share text-[10px] text-muted-foreground/50">
+      <p className="font-mono-share text-tiny text-muted-foreground/70">
         Sends the announcement to all verified users who haven't received it yet. Edit the subject and HTML above before sending.
       </p>
 
       {progress && (
         <div className="space-y-1">
-          <div className="flex justify-between font-mono-share text-[10px]">
+          <div className="flex justify-between font-mono-share text-tiny">
             <span className="text-primary">{progress.sent} sent</span>
             {progress.failed > 0 && <span className="text-destructive">{progress.failed} failed</span>}
             <span className="text-muted-foreground">{progress.sent + progress.failed} / {progress.total}</span>
@@ -799,7 +799,7 @@ function AnnouncementPanel() {
       {result?.dryRun && (
         <div className="bg-primary/5 border border-primary/20 rounded p-3 space-y-2">
           <div className="font-mono-share text-xs text-primary">DRY RUN: {result.totalUsers} verified users would receive the email</div>
-          <div className="font-mono-share text-[9px] text-muted-foreground/60 max-h-32 overflow-y-auto">
+          <div className="font-mono-share text-tiny text-muted-foreground/60 max-h-32 overflow-y-auto">
             {result.emails?.slice(0, 20).join(", ")}{result.emails?.length > 20 ? ` ...and ${result.emails.length - 20} more` : ""}
           </div>
         </div>
@@ -843,28 +843,28 @@ function AnnouncementPanel() {
                     : <><Loader2 className="w-3 h-3 animate-spin text-accent" /><span className="text-accent">Live: campaign running on server</span></>
                 }
               </div>
-              <span className="text-muted-foreground/70 text-[10px]">
+              <span className="text-muted-foreground/70 text-tiny">
                 {bgRunning && !isComplete ? "auto-refreshing every 4s" : ""}
               </span>
             </div>
 
             <div className="grid grid-cols-3 gap-2 text-center">
               <div className="bg-background/40 rounded p-2 border border-border/30">
-                <div className="text-[9px] text-muted-foreground/60 uppercase tracking-wider">Sent</div>
+                <div className="text-tiny text-muted-foreground/60 uppercase tracking-wider">Sent</div>
                 <div className="text-lg font-bold text-secondary">{sentSoFar}</div>
               </div>
               <div className="bg-background/40 rounded p-2 border border-border/30">
-                <div className="text-[9px] text-muted-foreground/60 uppercase tracking-wider">Remaining</div>
+                <div className="text-tiny text-muted-foreground/60 uppercase tracking-wider">Remaining</div>
                 <div className="text-lg font-bold text-primary">{currentRemaining}</div>
               </div>
               <div className="bg-background/40 rounded p-2 border border-border/30">
-                <div className="text-[9px] text-muted-foreground/60 uppercase tracking-wider">Total</div>
+                <div className="text-tiny text-muted-foreground/60 uppercase tracking-wider">Total</div>
                 <div className="text-lg font-bold text-foreground">{baseline}</div>
               </div>
             </div>
 
             <div className="space-y-1">
-              <div className="flex justify-between text-[10px] text-muted-foreground/70">
+              <div className="flex justify-between text-tiny text-muted-foreground/70">
                 <span>{pct}% complete</span>
                 <span>elapsed {Math.floor(elapsedSec / 60)}m {elapsedSec % 60}s · ETA {etaLabel}</span>
               </div>
@@ -877,7 +877,7 @@ function AnnouncementPanel() {
               </div>
             </div>
 
-            <div className="text-muted-foreground/70 text-[10px]">
+            <div className="text-muted-foreground/70 text-tiny">
               {cancelled
                 ? `Cancel signal sent. The remaining ${currentRemaining} users will NOT be emailed. Hit RESUME to continue — already-sent users will be skipped automatically.`
                 : isComplete
@@ -889,7 +889,7 @@ function AnnouncementPanel() {
                 handoff failed — without this, the loop silently dies and
                 Refresh just returns the same 'remaining' count forever. */}
             {result.bgQueueError && !isComplete && (
-              <div className="bg-destructive/10 border border-destructive/30 rounded p-2 text-[10px] text-destructive">
+              <div className="bg-destructive/10 border border-destructive/30 rounded p-2 text-tiny text-destructive">
                 ⚠️ Background loop NOT queued: {result.bgQueueError}
                 <div className="text-destructive/70 mt-1">
                   Only the first batch sent. Check that <code>CRON_SECRET</code> is set in the server .env. Hit SEND_IN_BG again to retry.
@@ -1007,16 +1007,16 @@ function FlashSalesPanel() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="space-y-1">
-            <label className="font-mono-share text-[9px] text-muted-foreground/60">SALE TITLE</label>
+            <label className="font-mono-share text-tiny text-muted-foreground/60">SALE TITLE</label>
             <input
               value={title}
               onChange={e => setTitle(e.target.value)}
               placeholder="Weekend XRGE Blitz"
-              className="w-full px-3 py-2 rounded border border-border/30 bg-input/50 font-mono-share text-xs text-foreground placeholder:text-muted-foreground/40"
+              className="w-full px-3 py-2 rounded border border-border/30 bg-input/50 font-mono-share text-xs text-foreground placeholder:text-muted-foreground/60"
             />
           </div>
           <div className="space-y-1">
-            <label className="font-mono-share text-[9px] text-muted-foreground/60">DURATION (MINUTES)</label>
+            <label className="font-mono-share text-tiny text-muted-foreground/60">DURATION (MINUTES)</label>
             <input
               type="number"
               value={durationMinutes}
@@ -1026,7 +1026,7 @@ function FlashSalesPanel() {
             />
           </div>
           <div className="space-y-1">
-            <label className="font-mono-share text-[9px] text-muted-foreground/60">XRGE PRICE DISCOUNT %</label>
+            <label className="font-mono-share text-tiny text-muted-foreground/60">XRGE PRICE DISCOUNT %</label>
             <input
               type="number"
               value={discountPercent}
@@ -1034,10 +1034,10 @@ function FlashSalesPanel() {
               min="1" max="90"
               className="w-full px-3 py-2 rounded border border-border/30 bg-input/50 font-mono-share text-xs text-foreground"
             />
-            <p className="font-mono-share text-[8px] text-muted-foreground/40">Users pay less XRGE per package</p>
+            <p className="font-mono-share text-micro text-muted-foreground/60">Users pay less XRGE per package</p>
           </div>
           <div className="space-y-1">
-            <label className="font-mono-share text-[9px] text-muted-foreground/60">BONUS CREDITS %</label>
+            <label className="font-mono-share text-tiny text-muted-foreground/60">BONUS CREDITS %</label>
             <input
               type="number"
               value={bonusCreditsPercent}
@@ -1045,10 +1045,10 @@ function FlashSalesPanel() {
               min="0" max="500"
               className="w-full px-3 py-2 rounded border border-border/30 bg-input/50 font-mono-share text-xs text-foreground"
             />
-            <p className="font-mono-share text-[8px] text-muted-foreground/40">Extra credits on top of base (stacks with loyalty)</p>
+            <p className="font-mono-share text-micro text-muted-foreground/60">Extra credits on top of base (stacks with loyalty)</p>
           </div>
           <div className="space-y-1">
-            <label className="font-mono-share text-[9px] text-muted-foreground/60">MAX USES (BLANK = UNLIMITED)</label>
+            <label className="font-mono-share text-tiny text-muted-foreground/60">MAX USES (BLANK = UNLIMITED)</label>
             <input
               type="number"
               value={maxUses}
@@ -1074,11 +1074,11 @@ function FlashSalesPanel() {
         <div className="flex items-center gap-2">
           <Activity className="w-4 h-4 text-muted-foreground/60" />
           <span className="font-orbitron text-xs tracking-wider text-muted-foreground">ALL FLASH SALES</span>
-          <span className="font-mono-share text-[9px] text-muted-foreground/40">({sales.length})</span>
+          <span className="font-mono-share text-tiny text-muted-foreground/60">({sales.length})</span>
         </div>
 
         {sales.length === 0 ? (
-          <p className="font-mono-share text-xs text-muted-foreground/40 py-4 text-center">No flash sales created yet</p>
+          <p className="font-mono-share text-xs text-muted-foreground/60 py-4 text-center">No flash sales created yet</p>
         ) : (
           <div className="space-y-2">
             {sales.map(s => {
@@ -1097,7 +1097,7 @@ function FlashSalesPanel() {
                   <div className="flex items-center justify-between gap-2 flex-wrap">
                     <div className="flex items-center gap-2">
                       {active && <span className="w-2 h-2 rounded-full bg-orange-400 animate-pulse" />}
-                      <span className="font-orbitron text-[10px] tracking-wider text-foreground/80">{s.title}</span>
+                      <span className="font-orbitron text-tiny tracking-wider text-foreground/80">{s.title}</span>
                     </div>
                     {active && (
                       <Button
@@ -1105,14 +1105,14 @@ function FlashSalesPanel() {
                         size="sm"
                         onClick={() => handleEnd(s.id)}
                         disabled={ending === s.id}
-                        className="font-mono-share text-[9px] gap-1 border-destructive/30 text-destructive hover:bg-destructive/10 h-6 px-2"
+                        className="font-mono-share text-tiny gap-1 border-destructive/30 text-destructive hover:bg-destructive/10 h-6 px-2"
                       >
                         {ending === s.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Ban className="w-3 h-3" />}
                         END SALE
                       </Button>
                     )}
                   </div>
-                  <div className="flex flex-wrap gap-3 font-mono-share text-[9px] text-muted-foreground/60">
+                  <div className="flex flex-wrap gap-3 font-mono-share text-tiny text-muted-foreground/60">
                     <span>Discount: <span className="text-orange-400 font-bold">{s.discount_percent}%</span></span>
                     {s.bonus_credits_percent > 0 && (
                       <span>Bonus: <span className="text-green-400 font-bold">+{s.bonus_credits_percent}%</span></span>
@@ -1189,17 +1189,17 @@ function PayoutsPanel() {
             <div key={r.id} className="border border-border/30 rounded-lg bg-card/40 p-3 space-y-2">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div className="flex items-center gap-2">
-                  <span className={`font-orbitron text-[10px] font-bold ${STATUS_COLORS[r.status] || "text-muted-foreground"}`}>
+                  <span className={`font-orbitron text-tiny font-bold ${STATUS_COLORS[r.status] || "text-muted-foreground"}`}>
                     {r.status.toUpperCase()}
                   </span>
                   <span className="font-orbitron text-sm text-foreground">${(r.amount_cents / 100).toFixed(2)}</span>
-                  <span className="font-mono-share text-[9px] text-muted-foreground">via {r.method}</span>
+                  <span className="font-mono-share text-tiny text-muted-foreground">via {r.method}</span>
                 </div>
-                <span className="font-mono-share text-[9px] text-muted-foreground">
+                <span className="font-mono-share text-tiny text-muted-foreground">
                   {new Date(r.created_at).toLocaleDateString()}
                 </span>
               </div>
-              <div className="font-mono-share text-[10px] text-muted-foreground space-y-0.5">
+              <div className="font-mono-share text-tiny text-muted-foreground space-y-0.5">
                 <div>Creator: <span className="text-foreground">{r.username}</span> ({r.email})</div>
                 <div>Details: <span className="text-foreground">{r.payout_details}</span></div>
                 {r.admin_note && <div>Note: <span className="text-foreground">{r.admin_note}</span></div>}
@@ -1210,7 +1210,7 @@ function PayoutsPanel() {
                     size="sm"
                     onClick={() => handleAction(r.id, "approve")}
                     disabled={acting === r.id}
-                    className="font-mono-share text-[10px]"
+                    className="font-mono-share text-tiny"
                   >
                     APPROVE
                   </Button>
@@ -1219,7 +1219,7 @@ function PayoutsPanel() {
                     variant="destructive"
                     onClick={() => handleAction(r.id, "reject", "Rejected by admin")}
                     disabled={acting === r.id}
-                    className="font-mono-share text-[10px]"
+                    className="font-mono-share text-tiny"
                   >
                     REJECT
                   </Button>
@@ -1231,7 +1231,7 @@ function PayoutsPanel() {
                   variant="outline"
                   onClick={() => handleAction(r.id, "paid")}
                   disabled={acting === r.id}
-                  className="font-mono-share text-[10px] border-green-400/30 text-green-400"
+                  className="font-mono-share text-tiny border-green-400/30 text-green-400"
                 >
                   MARK AS PAID
                 </Button>
@@ -1700,7 +1700,7 @@ export default function Admin() {
     <div className="min-h-screen bg-background w-full overflow-x-hidden">
       {/* Partial-load warning: overview loaded but a secondary query failed */}
       {error && (
-        <div className="bg-amber-500/10 border-b border-amber-500/40 px-4 py-2 flex items-center gap-2 font-mono-share text-[11px] text-amber-300">
+        <div className="bg-amber-500/10 border-b border-amber-500/40 px-4 py-2 flex items-center gap-2 font-mono-share text-xs text-amber-300">
           <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
           <span className="truncate">PARTIAL_LOAD — some sections failed: {error}</span>
           <button onClick={fetchAll} className="ml-auto shrink-0 underline hover:text-amber-200">RETRY</button>
@@ -1721,7 +1721,7 @@ export default function Admin() {
             </h1>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <span className="font-mono-share text-[9px] text-muted-foreground/40 hidden md:inline">Admin</span>
+            <span className="font-mono-share text-tiny text-muted-foreground/60 hidden md:inline">Admin</span>
             <Button
               variant="outline"
               size="sm"
@@ -1745,7 +1745,7 @@ export default function Admin() {
               <button
                 key={group.id}
                 onClick={() => { if (!active) setActiveTab(group.tabs[0]); }}
-                className={`px-3.5 py-1.5 rounded-full font-orbitron text-[10px] tracking-widest whitespace-nowrap transition-all duration-200 hover-lift ${
+                className={`px-3.5 py-1.5 rounded-full font-orbitron text-tiny tracking-widest whitespace-nowrap transition-all duration-200 hover-lift ${
                   active
                     ? "bg-primary/15 text-primary shadow-glow-live"
                     : "text-muted-foreground/60 hover:text-muted-foreground shadow-[inset_0_0_0_1px_hsl(var(--border)/0.4)] hover:shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.3)]"
@@ -1763,10 +1763,10 @@ export default function Admin() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-1.5 px-3 py-2.5 font-orbitron text-[9px] sm:text-[10px] tracking-wider border-b-2 transition-all duration-200 whitespace-nowrap ${
+                className={`flex items-center gap-1.5 px-3 py-2.5 font-orbitron text-tiny sm:text-tiny tracking-wider border-b-2 transition-all duration-200 whitespace-nowrap ${
                   activeTab === tab.id
                     ? "border-primary text-primary bg-primary/5"
-                    : "border-transparent text-muted-foreground/50 hover:text-muted-foreground hover:bg-card/40"
+                    : "border-transparent text-muted-foreground/70 hover:text-muted-foreground hover:bg-card/40"
                 }`}
               >
                 {tab.icon}
@@ -1783,16 +1783,16 @@ export default function Admin() {
             as tabs, and nothing linked to them — /admin/stripe-prices and
             /admin/promo were both reachable only by typing the URL. */}
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-mono-share text-[9px] tracking-widest text-muted-foreground/50">TOOLS:</span>
+          <span className="font-mono-share text-tiny tracking-widest text-muted-foreground/70">TOOLS:</span>
           <Link
             to="/admin/promo"
-            className="px-2.5 py-1 rounded border border-cyan-500/30 bg-cyan-500/5 font-mono-share text-[10px] text-cyan-300/80 hover:border-cyan-500/60 hover:text-cyan-300 transition-colors"
+            className="px-2.5 py-1 rounded border border-cyan-500/30 bg-cyan-500/5 font-mono-share text-tiny text-cyan-300/80 hover:border-cyan-500/60 hover:text-cyan-300 transition-colors"
           >
             PROMO_REVIEW
           </Link>
           <Link
             to="/admin/stripe-prices"
-            className="px-2.5 py-1 rounded border border-border/50 bg-card/40 font-mono-share text-[10px] text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors"
+            className="px-2.5 py-1 rounded border border-border/50 bg-card/40 font-mono-share text-tiny text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors"
           >
             STRIPE_PRICES
           </Link>
@@ -1803,7 +1803,7 @@ export default function Admin() {
           <>
             <div className="flex items-center gap-2 flex-wrap">
               <RangeControl value={range} onChange={setRange} />
-              <span className="font-mono-share text-[10px] text-muted-foreground/50 ml-auto">
+              <span className="font-mono-share text-tiny text-muted-foreground/70 ml-auto">
                 every figure below covers the selected window
               </span>
             </div>
@@ -1829,7 +1829,7 @@ export default function Admin() {
               <KpiCard icon={<Gift className="w-4 h-4" />} label="ADMIN_GRANTS" value={o.revenue.grant_rows.toLocaleString()} sub={`${o.revenue.granted_credits.toLocaleString()} credits, $0 revenue`} />
             </section>
 
-            <p className="font-mono-share text-[10px] text-muted-foreground/50 leading-relaxed">
+            <p className="font-mono-share text-tiny text-muted-foreground/70 leading-relaxed">
               Revenue counts only rows where money moved — the {o.revenue.grant_rows.toLocaleString()} admin grants are
               excluded, as are refunded generations from credit totals. Cost is measured per job where RunPod reported an
               execution time and inferred from that mode's own observed average where it didn't. For fees, refunds and
@@ -1895,7 +1895,7 @@ export default function Admin() {
                   )}
                 </ComposedChart>
               </ResponsiveContainer>
-              <p className="font-mono-share text-[10px] text-muted-foreground/50 mt-2">
+              <p className="font-mono-share text-tiny text-muted-foreground/70 mt-2">
                 Bookings from our own ledger, grants excluded. Fees and refunds are not deducted here — see FINANCE.
               </p>
             </div>
@@ -1914,44 +1914,44 @@ export default function Admin() {
                       <thead>
                         <tr className="border-b border-border/20">
                           {["PACK", "TYPE", "COUNT", "REVENUE", "CREDITS", "¢/CR", "AVG"].map((h) => (
-                            <th key={h} className="px-2.5 py-2 text-left font-mono-share text-[9px] text-muted-foreground/50 tracking-wider">{h}</th>
+                            <th key={h} className="px-2.5 py-2 text-left font-mono-share text-tiny text-muted-foreground/70 tracking-wider">{h}</th>
                           ))}
                         </tr>
                       </thead>
                       <tbody>
                         {(revenueBreakdown.byPackWindow || revenueBreakdown.byPack30d || []).map((row: any, i: number) => (
                           <tr key={i} className="border-b border-border/10 hover:bg-primary/5 transition-colors">
-                            <td className="px-2.5 py-2 font-orbitron text-[10px] tracking-wider text-foreground/80">{row.package?.toUpperCase() || "--"}</td>
+                            <td className="px-2.5 py-2 font-orbitron text-tiny tracking-wider text-foreground/80">{row.package?.toUpperCase() || "--"}</td>
                             <td className="px-2.5 py-2">
-                              <span className={`font-orbitron text-[9px] tracking-wider px-2 py-0.5 rounded border ${
+                              <span className={`font-orbitron text-tiny tracking-wider px-2 py-0.5 rounded border ${
                                 row.type === "subscription" ? "bg-secondary/20 text-secondary border-secondary/30" : "bg-primary/20 text-primary border-primary/30"
                               }`}>{row.type?.toUpperCase()}</span>
                             </td>
                             <td className="px-2.5 py-2 font-mono-share text-xs font-bold" data-numeric>{row.count}</td>
                             <td className="px-2.5 py-2 font-mono-share text-xs text-secondary font-bold" data-numeric>{fmt$(row.total_cents)}</td>
                             <td className="px-2.5 py-2 font-mono-share text-xs text-primary" data-numeric>{row.total_credits?.toLocaleString()}</td>
-                            <td className="px-2.5 py-2 font-mono-share text-[10px] text-muted-foreground/70" data-numeric title="Cents of revenue per credit sold">
+                            <td className="px-2.5 py-2 font-mono-share text-tiny text-muted-foreground/70" data-numeric title="Cents of revenue per credit sold">
                               {row.cents_per_credit ? Number(row.cents_per_credit).toFixed(2) : "--"}
                             </td>
-                            <td className="px-2.5 py-2 font-mono-share text-[10px] text-muted-foreground/70" data-numeric title="Average order value">
+                            <td className="px-2.5 py-2 font-mono-share text-tiny text-muted-foreground/70" data-numeric title="Average order value">
                               {fmt$(row.avg_cents)}
                             </td>
                           </tr>
                         ))}
                         {(revenueBreakdown.byPackWindow || []).length === 0 && (
-                          <tr><td colSpan={7} className="px-2.5 py-6 text-center font-mono-share text-[10px] text-muted-foreground/40">no purchases in this window</td></tr>
+                          <tr><td colSpan={7} className="px-2.5 py-6 text-center font-mono-share text-tiny text-muted-foreground/60">no purchases in this window</td></tr>
                         )}
                       </tbody>
                     </table>
                   </div>
                   {(revenueBreakdown.grants || []).length > 0 && (
                     <div className="px-3 sm:px-4 py-3 border-t border-border/20">
-                      <h3 className="font-orbitron text-[9px] tracking-wider text-muted-foreground/50 mb-2">
+                      <h3 className="font-orbitron text-tiny tracking-wider text-muted-foreground/70 mb-2">
                         ADMIN_GRANTS — $0, excluded from every revenue figure above
                       </h3>
                       <div className="flex flex-wrap gap-2">
                         {(revenueBreakdown.grants || []).map((g: any, i: number) => (
-                          <span key={i} className="font-mono-share text-[10px] px-2 py-1 rounded border border-border/30 bg-muted/10 text-muted-foreground/70">
+                          <span key={i} className="font-mono-share text-tiny px-2 py-1 rounded border border-border/30 bg-muted/10 text-muted-foreground/70">
                             {g.package || "--"}: {g.count.toLocaleString()} rows // {g.credits.toLocaleString()} credits
                           </span>
                         ))}
@@ -1974,16 +1974,16 @@ export default function Admin() {
                       return (
                         <div key={i} className="space-y-1">
                           <div className="flex items-center justify-between">
-                            <span className={`font-mono-share text-[10px] font-bold px-2 py-0.5 rounded ${
+                            <span className={`font-mono-share text-tiny font-bold px-2 py-0.5 rounded ${
                               row.gateway === "stripe" ? "bg-indigo-500/20 text-indigo-400 border border-indigo-500/30"
                               : row.gateway === "paypal" ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
                               : row.gateway === "xrge" ? "bg-pink-500/20 text-pink-400 border border-pink-500/30"
                               : "bg-muted/20 text-muted-foreground"
                             }`}>{row.gateway === "xrge" ? "$XRGE" : row.gateway === "xrge-bank" ? "$XRGE_BANK" : row.gateway?.toUpperCase()}</span>
                             <div className="flex items-center gap-3">
-                              <span className="font-mono-share text-[10px] text-muted-foreground/60">{row.count} txns</span>
+                              <span className="font-mono-share text-tiny text-muted-foreground/60">{row.count} txns</span>
                               <span className="font-mono-share text-sm text-secondary font-bold">{fmt$(row.total_cents)}</span>
-                              <span className="font-mono-share text-[10px] text-muted-foreground/40">{pct}%</span>
+                              <span className="font-mono-share text-tiny text-muted-foreground/60">{pct}%</span>
                             </div>
                           </div>
                           <div className="w-full bg-border/20 rounded-full h-1.5 overflow-hidden">
@@ -2001,21 +2001,21 @@ export default function Admin() {
                       gateway rollup above collapses into a single "STRIPE" bar. */}
                   {(revenueBreakdown.byMethod || []).length > 0 && (
                     <div className="px-3 sm:px-4 py-3 border-t border-border/20">
-                      <h3 className="font-orbitron text-[9px] tracking-wider text-muted-foreground/50 mb-2">PAYMENT_METHOD_MIX (lifetime)</h3>
+                      <h3 className="font-orbitron text-tiny tracking-wider text-muted-foreground/70 mb-2">PAYMENT_METHOD_MIX (lifetime)</h3>
                       <div className="overflow-x-auto overscroll-x-contain">
                         <table className="w-full">
                           <thead><tr className="border-b border-border/20">
                             {["METHOD", "#", "REVENUE", `${winLabel}`].map((h) => (
-                              <th key={h} className="px-2 py-1 text-left font-mono-share text-[8px] text-muted-foreground/40 tracking-wider">{h}</th>
+                              <th key={h} className="px-2 py-1 text-left font-mono-share text-micro text-muted-foreground/60 tracking-wider">{h}</th>
                             ))}
                           </tr></thead>
                           <tbody>
                             {(revenueBreakdown.byMethod || []).slice(0, 12).map((m: any, i: number) => (
                               <tr key={i} className="border-b border-border/10">
-                                <td className="px-2 py-1 font-mono-share text-[10px] text-foreground/75">{m.method}</td>
-                                <td className="px-2 py-1 font-mono-share text-[10px] text-muted-foreground/70" data-numeric>{m.count.toLocaleString()}</td>
-                                <td className="px-2 py-1 font-mono-share text-[10px] text-secondary" data-numeric>{fmt$(m.total_cents)}</td>
-                                <td className="px-2 py-1 font-mono-share text-[10px] text-muted-foreground/60" data-numeric>{fmt$(m.window_cents)}</td>
+                                <td className="px-2 py-1 font-mono-share text-tiny text-foreground/75">{m.method}</td>
+                                <td className="px-2 py-1 font-mono-share text-tiny text-muted-foreground/70" data-numeric>{m.count.toLocaleString()}</td>
+                                <td className="px-2 py-1 font-mono-share text-tiny text-secondary" data-numeric>{fmt$(m.total_cents)}</td>
+                                <td className="px-2 py-1 font-mono-share text-tiny text-muted-foreground/60" data-numeric>{fmt$(m.window_cents)}</td>
                               </tr>
                             ))}
                           </tbody>
@@ -2024,21 +2024,21 @@ export default function Admin() {
                     </div>
                   )}
                   <div className="px-3 sm:px-4 py-3 border-t border-border/20">
-                    <h3 className="font-orbitron text-[9px] tracking-wider text-muted-foreground/50 mb-2">ALL_TIME_BY_PACK</h3>
+                    <h3 className="font-orbitron text-tiny tracking-wider text-muted-foreground/70 mb-2">ALL_TIME_BY_PACK</h3>
                     <div className="overflow-x-auto overscroll-x-contain">
                       <table className="w-full">
                         <thead><tr className="border-b border-border/20">
                           {["PACK", "TYPE", "#", "REVENUE"].map((h) => (
-                            <th key={h} className="px-2 py-1 text-left font-mono-share text-[8px] text-muted-foreground/40 tracking-wider">{h}</th>
+                            <th key={h} className="px-2 py-1 text-left font-mono-share text-micro text-muted-foreground/60 tracking-wider">{h}</th>
                           ))}
                         </tr></thead>
                         <tbody>
                           {(revenueBreakdown.byPack || []).map((row: any, i: number) => (
                             <tr key={i} className="border-b border-border/5">
-                              <td className="px-2 py-1 font-mono-share text-[10px] text-foreground/70">{row.package?.toUpperCase() || "--"}</td>
-                              <td className="px-2 py-1 font-mono-share text-[9px] text-muted-foreground/50">{row.type}</td>
-                              <td className="px-2 py-1 font-mono-share text-[10px]">{row.count}</td>
-                              <td className="px-2 py-1 font-mono-share text-[10px] text-secondary">{fmt$(row.total_cents)}</td>
+                              <td className="px-2 py-1 font-mono-share text-tiny text-foreground/70">{row.package?.toUpperCase() || "--"}</td>
+                              <td className="px-2 py-1 font-mono-share text-tiny text-muted-foreground/70">{row.type}</td>
+                              <td className="px-2 py-1 font-mono-share text-tiny">{row.count}</td>
+                              <td className="px-2 py-1 font-mono-share text-tiny text-secondary">{fmt$(row.total_cents)}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -2055,24 +2055,24 @@ export default function Admin() {
                   <Receipt className="w-3.5 h-3.5" />
                   TRANSACTION_LOG (last 100)
                 </h2>
-                <span className="font-mono-share text-[10px] text-muted-foreground/40">{transactions.length} records</span>
+                <span className="font-mono-share text-tiny text-muted-foreground/60">{transactions.length} records</span>
               </div>
               <div className="overflow-x-auto overscroll-x-contain">
                 <table className="w-full min-w-[560px]">
                   <thead><tr className="border-b border-border/20">
                     {["DATE", "USER", "TYPE", "PKG", "CR", "AMT", "VIA"].map((h) => (
-                      <th key={h} className="px-2.5 py-2 text-left font-mono-share text-[9px] text-muted-foreground/50 tracking-wider">{h}</th>
+                      <th key={h} className="px-2.5 py-2 text-left font-mono-share text-tiny text-muted-foreground/70 tracking-wider">{h}</th>
                     ))}
                   </tr></thead>
                   <tbody>
                     {transactions.map((tx, i) => (
                       <tr key={i} className="border-b border-border/10 hover:bg-primary/5 transition-colors">
-                        <td className="px-2.5 py-2 font-mono-share text-[10px] text-muted-foreground/60 whitespace-nowrap">
+                        <td className="px-2.5 py-2 font-mono-share text-tiny text-muted-foreground/60 whitespace-nowrap">
                           {new Date(tx.created_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                         </td>
                         <td className="px-2.5 py-2 font-mono-share text-xs text-foreground/80">{tx.email || "unknown"}</td>
                         <td className="px-2.5 py-2">
-                          <span className={`font-orbitron text-[9px] tracking-wider px-2 py-0.5 rounded border ${
+                          <span className={`font-orbitron text-tiny tracking-wider px-2 py-0.5 rounded border ${
                             tx.type === "subscription" ? "bg-secondary/20 text-secondary border-secondary/30" : "bg-primary/20 text-primary border-primary/30"
                           }`}>{tx.type?.toUpperCase() || "--"}</span>
                         </td>
@@ -2080,7 +2080,7 @@ export default function Admin() {
                         <td className="px-2.5 py-2 font-mono-share text-xs text-primary font-bold">{tx.credits}</td>
                         <td className="px-2.5 py-2 font-mono-share text-xs text-secondary">{fmt$(tx.amount_cents)}</td>
                         <td className="px-2.5 py-2">
-                          <span className={`font-mono-share text-[9px] px-2 py-0.5 rounded ${
+                          <span className={`font-mono-share text-tiny px-2 py-0.5 rounded ${
                             tx.gateway === "stripe" ? "bg-indigo-500/20 text-indigo-400 border border-indigo-500/30"
                             : tx.gateway === "paypal" ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
                             : tx.gateway === "xrge" ? "bg-pink-500/20 text-pink-400 border border-pink-500/30"
@@ -2090,7 +2090,7 @@ export default function Admin() {
                       </tr>
                     ))}
                     {transactions.length === 0 && (
-                      <tr><td colSpan={7} className="px-4 py-8 text-center font-mono-share text-xs text-muted-foreground/40">No transactions yet.</td></tr>
+                      <tr><td colSpan={7} className="px-4 py-8 text-center font-mono-share text-xs text-muted-foreground/60">No transactions yet.</td></tr>
                     )}
                   </tbody>
                 </table>
@@ -2136,7 +2136,7 @@ export default function Admin() {
                   )}
                 </ComposedChart>
               </ResponsiveContainer>
-              <p className="font-mono-share text-[10px] text-muted-foreground/50 mt-2">
+              <p className="font-mono-share text-tiny text-muted-foreground/70 mt-2">
                 Total users is a true running count from day zero, so a short window still shows the real headcount.
               </p>
             </div>
@@ -2149,17 +2149,17 @@ export default function Admin() {
               </h2>
               <div className="flex flex-wrap items-end gap-2">
                 <div className="flex-1 min-w-[180px]">
-                  <label className="font-mono-share text-[9px] text-muted-foreground/60 block mb-1">EMAIL</label>
+                  <label className="font-mono-share text-tiny text-muted-foreground/60 block mb-1">EMAIL</label>
                   <input type="email" value={grantEmail} onChange={e => setGrantEmail(e.target.value)} placeholder="user@example.com"
                     className="w-full bg-background/60 border border-border rounded px-2.5 py-1.5 font-mono-share text-xs text-foreground placeholder-muted-foreground/40" />
                 </div>
                 <div className="w-24">
-                  <label className="font-mono-share text-[9px] text-muted-foreground/60 block mb-1">AMOUNT</label>
+                  <label className="font-mono-share text-tiny text-muted-foreground/60 block mb-1">AMOUNT</label>
                   <input type="number" value={grantAmount} onChange={e => setGrantAmount(e.target.value)} placeholder="100" min="1" max="50000"
                     className="w-full bg-background/60 border border-border rounded px-2.5 py-1.5 font-mono-share text-xs text-foreground placeholder-muted-foreground/40" />
                 </div>
                 <div className="w-24">
-                  <label className="font-mono-share text-[9px] text-muted-foreground/60 block mb-1">TYPE</label>
+                  <label className="font-mono-share text-tiny text-muted-foreground/60 block mb-1">TYPE</label>
                   <select value={grantType} onChange={e => setGrantType(e.target.value as "pack" | "sub")}
                     className="w-full bg-background/60 border border-border rounded px-2.5 py-1.5 font-mono-share text-xs text-foreground">
                     <option value="pack">Pack</option>
@@ -2201,14 +2201,14 @@ export default function Admin() {
                 </Button>
               </div>
               {grantResult && (
-                <div className={`font-mono-share text-[10px] px-2 py-1.5 rounded ${grantResult.ok ? "bg-green-500/10 text-green-400" : "bg-destructive/10 text-destructive"}`}>
+                <div className={`font-mono-share text-tiny px-2 py-1.5 rounded ${grantResult.ok ? "bg-green-500/10 text-green-400" : "bg-destructive/10 text-destructive"}`}>
                   {grantResult.msg}
                 </div>
               )}
 
               {/* Bulk grant — every verified user */}
               <div className="border-t border-border/30 pt-3 mt-1 space-y-2">
-                <div className="font-mono-share text-[10px] uppercase tracking-wider text-secondary/70">
+                <div className="font-mono-share text-tiny uppercase tracking-wider text-secondary/70">
                   BULK_GRANT // EVERY VERIFIED USER
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -2238,7 +2238,7 @@ export default function Admin() {
                       +{amt} TO ALL
                     </Button>
                   ))}
-                  <span className="font-mono-share text-[9px] text-muted-foreground/50">
+                  <span className="font-mono-share text-tiny text-muted-foreground/70">
                     Capped at 1000 per user per call.
                   </span>
                 </div>
@@ -2251,22 +2251,22 @@ export default function Admin() {
                 <Zap className="w-3.5 h-3.5" />
                 FREE_CREDITS_SWITCH
               </h2>
-              <p className="font-mono-share text-[10px] text-muted-foreground/70 leading-relaxed">
+              <p className="font-mono-share text-tiny text-muted-foreground/70 leading-relaxed">
                 Toggle each free-credit source independently. Reddit posting reward is <span className="text-secondary">always on</span> and cannot be disabled here.
               </p>
               {fcLoading ? (
-                <div className="font-mono-share text-[10px] text-muted-foreground/60">Loading…</div>
+                <div className="font-mono-share text-tiny text-muted-foreground/60">Loading…</div>
               ) : !fcState ? (
                 <div className="space-y-2">
-                  <div className="font-mono-share text-[10px] text-destructive">{fcResult?.msg || "Failed to load free-credit state."}</div>
-                  <Button variant="outline" size="sm" onClick={fetchFreeCredits} className="font-mono-share text-[10px] h-7 px-2 gap-1">
+                  <div className="font-mono-share text-tiny text-destructive">{fcResult?.msg || "Failed to load free-credit state."}</div>
+                  <Button variant="outline" size="sm" onClick={fetchFreeCredits} className="font-mono-share text-tiny h-7 px-2 gap-1">
                     <RefreshCw className="w-3 h-3" /> RETRY
                   </Button>
                 </div>
               ) : (
                 <div className="space-y-3">
                   {fcState.envForcedDisabled && (
-                    <div className="font-mono-share text-[10px] px-2 py-1.5 rounded bg-destructive/10 border border-destructive/30 text-destructive">
+                    <div className="font-mono-share text-tiny px-2 py-1.5 rounded bg-destructive/10 border border-destructive/30 text-destructive">
                       ⚠ FREE_CREDITS_DISABLED env var is set — all sources are forced OFF and UI toggles are ignored. Unset it in the server .env to use these switches.
                     </div>
                   )}
@@ -2284,8 +2284,8 @@ export default function Admin() {
                       return (
                         <div key={row.key} className="flex items-center justify-between gap-3 border border-border/40 rounded px-3 py-2 bg-background/40">
                           <div className="flex-1 min-w-0">
-                            <div className="font-mono-share text-[11px] text-foreground truncate">{row.label}</div>
-                            <div className={`font-mono-share text-[9px] ${row.value ? "text-green-400" : "text-amber-400"}`}>
+                            <div className="font-mono-share text-xs text-foreground truncate">{row.label}</div>
+                            <div className={`font-mono-share text-tiny ${row.value ? "text-green-400" : "text-amber-400"}`}>
                               {row.value ? "● ENABLED" : "○ DISABLED"}
                               {row.locked && <span className="text-muted-foreground/60 ml-1">(locked)</span>}
                             </div>
@@ -2294,7 +2294,7 @@ export default function Admin() {
                             <Button
                               variant="outline" size="sm"
                               disabled={disabled || row.value}
-                              className="font-mono-share text-[10px] h-7 px-2 gap-1 border-green-500/40 hover:bg-green-500/10 text-green-400"
+                              className="font-mono-share text-tiny h-7 px-2 gap-1 border-green-500/40 hover:bg-green-500/10 text-green-400"
                               onClick={() => !row.locked && updateFreeCreditSource(row.key as any, true)}
                             >
                               {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : "ON"}
@@ -2302,7 +2302,7 @@ export default function Admin() {
                             <Button
                               variant="outline" size="sm"
                               disabled={disabled || !row.value}
-                              className="font-mono-share text-[10px] h-7 px-2 gap-1 border-amber-500/40 hover:bg-amber-500/10 text-amber-400"
+                              className="font-mono-share text-tiny h-7 px-2 gap-1 border-amber-500/40 hover:bg-amber-500/10 text-amber-400"
                               onClick={() => !row.locked && updateFreeCreditSource(row.key as any, false)}
                             >
                               {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : "OFF"}
@@ -2318,12 +2318,12 @@ export default function Admin() {
                       onClick={fetchFreeCredits}>
                       REFRESH
                     </Button>
-                    <p className="font-mono-share text-[9px] text-muted-foreground/50">
+                    <p className="font-mono-share text-tiny text-muted-foreground/70">
                       Per-source values override MASTER. Reddit posting is permanently on.
                     </p>
                   </div>
                   {fcResult && (
-                    <div className={`font-mono-share text-[10px] px-2 py-1.5 rounded ${fcResult.ok ? "bg-green-500/10 text-green-400" : "bg-destructive/10 text-destructive"}`}>
+                    <div className={`font-mono-share text-tiny px-2 py-1.5 rounded ${fcResult.ok ? "bg-green-500/10 text-green-400" : "bg-destructive/10 text-destructive"}`}>
                       {fcResult.msg}
                     </div>
                   )}
@@ -2340,18 +2340,18 @@ export default function Admin() {
               <div className="flex gap-1 flex-wrap">
                 {(["pending", "approved", "rejected"] as const).map((s) => (
                   <Button key={s} size="sm" variant={caStatus === s ? "default" : "outline"}
-                    className="font-mono-share text-[10px] h-7 px-2"
+                    className="font-mono-share text-tiny h-7 px-2"
                     onClick={() => setCaStatus(s)}>
                     {s.toUpperCase()}
                   </Button>
                 ))}
-                <Button size="sm" variant="ghost" className="font-mono-share text-[10px] h-7 px-2 ml-auto"
+                <Button size="sm" variant="ghost" className="font-mono-share text-tiny h-7 px-2 ml-auto"
                   onClick={() => fetchCreatorApps(caStatus)}>REFRESH</Button>
               </div>
               {caList === null ? (
-                <div className="font-mono-share text-[10px] text-muted-foreground/60">Loading…</div>
+                <div className="font-mono-share text-tiny text-muted-foreground/60">Loading…</div>
               ) : caList.length === 0 ? (
-                <div className="font-mono-share text-[10px] text-muted-foreground/60">No {caStatus} applications.</div>
+                <div className="font-mono-share text-tiny text-muted-foreground/60">No {caStatus} applications.</div>
               ) : (
                 <div className="space-y-2">
                   {caList.map((a) => (
@@ -2359,23 +2359,23 @@ export default function Admin() {
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0 flex-1">
                           <div className="font-orbitron text-xs">{a.display_name} <span className="text-muted-foreground/60">@{a.handle}</span></div>
-                          <div className="font-mono-share text-[10px] text-muted-foreground truncate">{a.email} · {a.country || "—"} · payout: {a.payout_pref}</div>
+                          <div className="font-mono-share text-tiny text-muted-foreground truncate">{a.email} · {a.country || "—"} · payout: {a.payout_pref}</div>
                         </div>
-                        <div className="font-mono-share text-[9px] text-muted-foreground/60 shrink-0">{new Date(a.created_at).toLocaleDateString()}</div>
+                        <div className="font-mono-share text-tiny text-muted-foreground/60 shrink-0">{new Date(a.created_at).toLocaleDateString()}</div>
                       </div>
                       {/* Details row */}
-                      <div className="flex flex-wrap gap-x-3 gap-y-1 font-mono-share text-[10px] text-muted-foreground">
-                        {a.niche && <span><span className="text-muted-foreground/50">niche:</span> {a.niche}</span>}
-                        {a.languages && <span><span className="text-muted-foreground/50">lang:</span> {a.languages}</span>}
+                      <div className="flex flex-wrap gap-x-3 gap-y-1 font-mono-share text-tiny text-muted-foreground">
+                        {a.niche && <span><span className="text-muted-foreground/70">niche:</span> {a.niche}</span>}
+                        {a.languages && <span><span className="text-muted-foreground/70">lang:</span> {a.languages}</span>}
                         <span className={a.age_confirmed ? "text-green-400/80" : "text-destructive"}>
                           {a.age_confirmed ? "✓ 18+ confirmed" : "✗ AGE NOT CONFIRMED"}
                         </span>
                       </div>
                       {/* Full pitch */}
-                      <p className="font-mono-share text-[11px] text-foreground/80 leading-relaxed whitespace-pre-wrap">{a.pitch}</p>
+                      <p className="font-mono-share text-xs text-foreground/80 leading-relaxed whitespace-pre-wrap">{a.pitch}</p>
                       {/* Socials */}
                       {a.socials && Object.values(a.socials).some(Boolean) && (
-                        <div className="font-mono-share text-[10px] text-secondary/80 flex flex-wrap gap-x-3 gap-y-1">
+                        <div className="font-mono-share text-tiny text-secondary/80 flex flex-wrap gap-x-3 gap-y-1">
                           {Object.entries(a.socials).filter(([, v]) => v).map(([k, v]) => (
                             <a key={k} href={String(v)} target="_blank" rel="noopener noreferrer" className="underline capitalize">{k}</a>
                           ))}
@@ -2384,7 +2384,7 @@ export default function Admin() {
                       {/* Uploaded sample media */}
                       {Array.isArray(a.sample_urls) && a.sample_urls.length > 0 && (
                         <div>
-                          <div className="font-mono-share text-[9px] text-muted-foreground/50 mb-1">SAMPLES ({a.sample_urls.length}) — tap to open full size</div>
+                          <div className="font-mono-share text-tiny text-muted-foreground/70 mb-1">SAMPLES ({a.sample_urls.length}) — tap to open full size</div>
                           <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
                             {a.sample_urls.map((url, i) => {
                               const isVid = /\.(mp4|webm|mov|m4v)(\?|$)/i.test(url);
@@ -2405,12 +2405,12 @@ export default function Admin() {
                       {caStatus === "pending" && (
                         <div className="flex gap-2 pt-1">
                           <Button size="sm" disabled={caBusy === a.id}
-                            className="font-mono-share text-[10px] h-7 px-3 bg-green-600 hover:bg-green-500"
+                            className="font-mono-share text-tiny h-7 px-3 bg-green-600 hover:bg-green-500"
                             onClick={() => reviewCreatorApp(a.id, "approve")}>
                             {caBusy === a.id ? <Loader2 className="w-3 h-3 animate-spin" /> : "APPROVE"}
                           </Button>
                           <Button size="sm" variant="outline" disabled={caBusy === a.id}
-                            className="font-mono-share text-[10px] h-7 px-3 border-destructive/40 text-destructive hover:bg-destructive/10"
+                            className="font-mono-share text-tiny h-7 px-3 border-destructive/40 text-destructive hover:bg-destructive/10"
                             onClick={() => reviewCreatorApp(a.id, "reject")}>
                             REJECT
                           </Button>
@@ -2430,7 +2430,7 @@ export default function Admin() {
               </h2>
               <div className="flex flex-wrap items-end gap-2">
                 <div className="flex-1 min-w-[180px]">
-                  <label className="font-mono-share text-[9px] text-muted-foreground/60 block mb-1">EMAIL</label>
+                  <label className="font-mono-share text-tiny text-muted-foreground/60 block mb-1">EMAIL</label>
                   <input type="email" value={modEmail} onChange={e => setModEmail(e.target.value)} placeholder="user@example.com"
                     className="w-full bg-background/60 border border-border rounded px-2.5 py-1.5 font-mono-share text-xs text-foreground placeholder-muted-foreground/40" />
                 </div>
@@ -2452,23 +2452,23 @@ export default function Admin() {
                 </Button>
               </div>
               {modResult && (
-                <div className={`font-mono-share text-[10px] px-2 py-1.5 rounded ${modResult.ok ? "bg-green-500/10 text-green-400" : "bg-destructive/10 text-destructive"}`}>
+                <div className={`font-mono-share text-tiny px-2 py-1.5 rounded ${modResult.ok ? "bg-green-500/10 text-green-400" : "bg-destructive/10 text-destructive"}`}>
                   {modResult.msg}
                 </div>
               )}
               {modsLoading ? (
                 <div className="text-muted-foreground/60 font-mono-share text-xs">Loading...</div>
               ) : mods.length === 0 ? (
-                <div className="text-muted-foreground/40 font-mono-share text-xs">No moderators assigned</div>
+                <div className="text-muted-foreground/60 font-mono-share text-xs">No moderators assigned</div>
               ) : (
                 <div className="space-y-1">
                   {mods.map((m: any) => (
                     <div key={m.user_id} className="flex items-center justify-between bg-background/40 rounded px-2.5 py-1.5">
                       <div>
                         <span className="font-mono-share text-xs text-foreground">{m.username || m.email}</span>
-                        {m.username && <span className="font-mono-share text-[9px] text-muted-foreground/50 ml-2">{m.email}</span>}
+                        {m.username && <span className="font-mono-share text-tiny text-muted-foreground/70 ml-2">{m.email}</span>}
                       </div>
-                      <Button variant="ghost" size="sm" className="h-6 px-2 text-destructive hover:bg-destructive/10 font-mono-share text-[10px]"
+                      <Button variant="ghost" size="sm" className="h-6 px-2 text-destructive hover:bg-destructive/10 font-mono-share text-tiny"
                         onClick={async () => {
                           setModAction(true);
                           try {
@@ -2491,7 +2491,7 @@ export default function Admin() {
                 <h2 className="font-orbitron text-xs tracking-wider text-primary/80 flex items-center gap-2 flex-wrap">
                   <Users className="w-3.5 h-3.5" />
                   TOP_OPERATORS ({winLabel})
-                  <span className="font-mono-share text-[9px] text-muted-foreground/50 tracking-normal normal-case">
+                  <span className="font-mono-share text-tiny text-muted-foreground/70 tracking-normal normal-case">
                     spend minus what their generations cost to serve
                   </span>
                 </h2>
@@ -2500,7 +2500,7 @@ export default function Admin() {
                 <table className="w-full min-w-[680px]">
                   <thead><tr className="border-b border-border/20">
                     {["OPERATOR", "TIER", "SPENT", "COST", "MARGIN", "GENS", "USED", "BAL", "LAST"].map((h) => (
-                      <th key={h} className="px-2.5 py-2 text-left font-mono-share text-[9px] text-muted-foreground/50 tracking-wider">{h}</th>
+                      <th key={h} className="px-2.5 py-2 text-left font-mono-share text-tiny text-muted-foreground/70 tracking-wider">{h}</th>
                     ))}
                   </tr></thead>
                   <tbody>
@@ -2509,11 +2509,11 @@ export default function Admin() {
                         <td className="px-2.5 py-2 font-mono-share text-xs text-foreground/80">{u.email}</td>
                         <td className="px-2.5 py-2">
                           {u.subscription_tier ? (
-                            <span className={`font-orbitron text-[9px] tracking-wider px-2 py-0.5 rounded border ${
+                            <span className={`font-orbitron text-tiny tracking-wider px-2 py-0.5 rounded border ${
                               u.subscription_cancel_at ? "bg-destructive/20 text-destructive border-destructive/30" : "bg-secondary/20 text-secondary border-secondary/30"
                             }`}>{(u.subscription_tier ?? "").toUpperCase()}{u.subscription_cancel_at && " (ending)"}</span>
                           ) : (
-                            <span className="font-mono-share text-[10px] text-muted-foreground/40">none</span>
+                            <span className="font-mono-share text-tiny text-muted-foreground/60">none</span>
                           )}
                         </td>
                         <td className="px-2.5 py-2 font-mono-share text-xs text-secondary" data-numeric>{fmt$(u.total_spent_cents)}</td>
@@ -2524,18 +2524,18 @@ export default function Admin() {
                         <td className="px-2.5 py-2 font-mono-share text-xs" data-numeric>{Number(u.total_generations || 0).toLocaleString()}</td>
                         <td className="px-2.5 py-2 font-mono-share text-xs" data-numeric>{Number(u.total_credits_used || 0).toLocaleString()}</td>
                         <td className="px-2.5 py-2 font-mono-share text-xs text-primary" data-numeric>{(u.sub_credits + u.pack_credits).toLocaleString()}</td>
-                        <td className="px-2.5 py-2 font-mono-share text-[10px] text-muted-foreground/50">
+                        <td className="px-2.5 py-2 font-mono-share text-tiny text-muted-foreground/70">
                           {u.last_generation ? new Date(u.last_generation).toLocaleDateString() : "never"}
                         </td>
                       </tr>
                     ))}
                     {topUsers.length === 0 && (
-                      <tr><td colSpan={9} className="px-4 py-8 text-center font-mono-share text-xs text-muted-foreground/40">No operator data in this window.</td></tr>
+                      <tr><td colSpan={9} className="px-4 py-8 text-center font-mono-share text-xs text-muted-foreground/60">No operator data in this window.</td></tr>
                     )}
                   </tbody>
                 </table>
               </div>
-              <p className="px-3 sm:px-4 py-3 border-t border-border/20 font-mono-share text-[10px] text-muted-foreground/50">
+              <p className="px-3 sm:px-4 py-3 border-t border-border/20 font-mono-share text-tiny text-muted-foreground/70">
                 SPENT is purchases inside the window, not lifetime — a negative margin here means that user cost more to
                 serve than they paid over this period, which for a subscriber on an annual plan is expected mid-term.
               </p>
@@ -2574,15 +2574,15 @@ export default function Admin() {
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-orbitron text-sm text-foreground">@{inspectData.user.username || "—"}</span>
-                          <span className="font-mono-share text-[10px] text-muted-foreground">{inspectData.user.email}</span>
+                          <span className="font-mono-share text-tiny text-muted-foreground">{inspectData.user.email}</span>
                           {inspectData.ban && (
-                            <span className="px-1.5 py-0.5 bg-destructive/20 text-destructive font-mono-share text-[9px] rounded">BANNED</span>
+                            <span className="px-1.5 py-0.5 bg-destructive/20 text-destructive font-mono-share text-tiny rounded">BANNED</span>
                           )}
                           {inspectData.user.verification_status === "verified" && (
-                            <span className="px-1.5 py-0.5 bg-primary/20 text-primary font-mono-share text-[9px] rounded">✓ VERIFIED</span>
+                            <span className="px-1.5 py-0.5 bg-primary/20 text-primary font-mono-share text-tiny rounded">✓ VERIFIED</span>
                           )}
                         </div>
-                        <div className="font-mono-share text-[10px] text-muted-foreground/60 flex gap-3 mt-1">
+                        <div className="font-mono-share text-tiny text-muted-foreground/60 flex gap-3 mt-1">
                           <span>Tier: {inspectData.user.subscription_tier || "free"}</span>
                           <span>Credits: {(inspectData.user.daily_credits || 0) + (inspectData.user.sub_credits || 0) + (inspectData.user.pack_credits || 0)}</span>
                           <span>Flags: <span className={inspectData.moderationFlags > 0 ? "text-destructive" : ""}>{inspectData.moderationFlags}</span></span>
@@ -2591,7 +2591,7 @@ export default function Admin() {
                       <div className="flex items-center gap-2 shrink-0">
                         {inspectData.user.verification_status === "verified" ? (
                           <button
-                            className="px-3 py-1 bg-muted text-muted-foreground font-mono-share text-[10px] rounded hover:bg-muted/80"
+                            className="px-3 py-1 bg-muted text-muted-foreground font-mono-share text-tiny rounded hover:bg-muted/80"
                             onClick={async () => {
                               if (!confirm(`Revoke verification for ${inspectData.user.email}?`)) return;
                               try {
@@ -2604,7 +2604,7 @@ export default function Admin() {
                           </button>
                         ) : (
                           <button
-                            className="px-3 py-1 bg-primary text-primary-foreground font-mono-share text-[10px] rounded hover:bg-primary/80"
+                            className="px-3 py-1 bg-primary text-primary-foreground font-mono-share text-tiny rounded hover:bg-primary/80"
                             onClick={async () => {
                               const days = prompt("Verification duration (days):", "365");
                               if (days === null) return;
@@ -2619,7 +2619,7 @@ export default function Admin() {
                         )}
                         {!inspectData.ban ? (
                           <button
-                            className="px-3 py-1 bg-destructive text-destructive-foreground font-mono-share text-[10px] rounded hover:bg-destructive/80 disabled:opacity-50"
+                            className="px-3 py-1 bg-destructive text-destructive-foreground font-mono-share text-tiny rounded hover:bg-destructive/80 disabled:opacity-50"
                             disabled={banning}
                             onClick={async () => {
                               const duration = prompt("Ban duration (1h, 24h, 7d, 30d, or empty for permanent):", "24h");
@@ -2640,7 +2640,7 @@ export default function Admin() {
                           </button>
                         ) : (
                           <button
-                            className="px-3 py-1 bg-green-600/80 text-white font-mono-share text-[10px] rounded hover:bg-green-500"
+                            className="px-3 py-1 bg-green-600/80 text-white font-mono-share text-tiny rounded hover:bg-green-500"
                             onClick={async () => {
                               try {
                                 await apiFetch("/admin", { method: "POST", body: { action: "unban-user", userId: inspectData.user.id } });
@@ -2661,7 +2661,7 @@ export default function Admin() {
                     <div className="flex gap-1 border-b border-border/20">
                       {(["prompts", "posts", "stories"] as const).map((t) => (
                         <button key={t} onClick={() => setInspectTab(t)}
-                          className={`px-3 py-1.5 font-mono-share text-[10px] tracking-wider border-b-2 transition-colors ${inspectTab === t ? "border-primary text-primary" : "border-transparent text-muted-foreground/50 hover:text-muted-foreground"}`}
+                          className={`px-3 py-1.5 font-mono-share text-tiny tracking-wider border-b-2 transition-colors ${inspectTab === t ? "border-primary text-primary" : "border-transparent text-muted-foreground/70 hover:text-muted-foreground"}`}
                         >
                           {t.toUpperCase()} ({t === "prompts" ? inspectData.prompts.length : t === "posts" ? inspectData.posts.length : inspectData.stories.length})
                         </button>
@@ -2672,17 +2672,17 @@ export default function Admin() {
                     {inspectTab === "prompts" && (
                       <div className="max-h-[400px] overflow-y-auto space-y-1">
                         {inspectData.prompts.length === 0 ? (
-                          <p className="font-mono-share text-xs text-muted-foreground/40 py-4 text-center">No prompts</p>
+                          <p className="font-mono-share text-xs text-muted-foreground/60 py-4 text-center">No prompts</p>
                         ) : inspectData.prompts.map((p: any, i: number) => (
                           <div key={i} className="flex gap-2 items-start py-1.5 px-2 rounded hover:bg-primary/5 border-b border-border/10">
-                            <span className={`font-mono-share text-[9px] px-1.5 py-0.5 rounded shrink-0 ${p.mode?.includes("moderation") ? "bg-destructive/20 text-destructive" : "bg-primary/10 text-primary/70"}`}>
+                            <span className={`font-mono-share text-tiny px-1.5 py-0.5 rounded shrink-0 ${p.mode?.includes("moderation") ? "bg-destructive/20 text-destructive" : "bg-primary/10 text-primary/70"}`}>
                               {p.mode?.toUpperCase()}
                             </span>
                             <span className="font-mono-share text-xs text-foreground/80 flex-1 break-all">{p.prompt || "—"}</span>
-                            <span className="font-mono-share text-[9px] text-muted-foreground/40 shrink-0">
+                            <span className="font-mono-share text-tiny text-muted-foreground/60 shrink-0">
                               {p.credits_used}cr {p.api_cost_cents ? `/ ${p.api_cost_cents}¢` : ""}
                             </span>
-                            <span className="font-mono-share text-[9px] text-muted-foreground/30 shrink-0">
+                            <span className="font-mono-share text-tiny text-muted-foreground/60 shrink-0">
                               {new Date(p.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                             </span>
                           </div>
@@ -2694,14 +2694,14 @@ export default function Admin() {
                     {inspectTab === "posts" && (
                       <div className="max-h-[400px] overflow-y-auto space-y-2">
                         {inspectData.posts.length === 0 ? (
-                          <p className="font-mono-share text-xs text-muted-foreground/40 py-4 text-center">No posts</p>
+                          <p className="font-mono-share text-xs text-muted-foreground/60 py-4 text-center">No posts</p>
                         ) : inspectData.posts.map((p: any) => (
                           <div key={p.id} className="p-2 rounded border border-border/20 hover:bg-primary/5 space-y-1">
                             <p className="font-mono-share text-xs text-foreground/80">{p.text || "—"}</p>
                             {p.image_url && (
                               <img src={p.image_url} alt="" className="w-24 h-24 object-cover rounded border border-border/20" />
                             )}
-                            <span className="font-mono-share text-[9px] text-muted-foreground/40 block">
+                            <span className="font-mono-share text-tiny text-muted-foreground/60 block">
                               {new Date(p.created_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                             </span>
                           </div>
@@ -2713,7 +2713,7 @@ export default function Admin() {
                     {inspectTab === "stories" && (
                       <div className="max-h-[400px] overflow-y-auto space-y-2">
                         {inspectData.stories.length === 0 ? (
-                          <p className="font-mono-share text-xs text-muted-foreground/40 py-4 text-center">No stories</p>
+                          <p className="font-mono-share text-xs text-muted-foreground/60 py-4 text-center">No stories</p>
                         ) : inspectData.stories.map((s: any) => (
                           <div key={s.id} className="p-2 rounded border border-border/20 hover:bg-primary/5 flex gap-3">
                             {s.media_type === "video" ? (
@@ -2723,7 +2723,7 @@ export default function Admin() {
                             )}
                             <div className="min-w-0 flex-1">
                               <p className="font-mono-share text-xs text-foreground/80">{s.caption || s.prompt || "—"}</p>
-                              <span className="font-mono-share text-[9px] text-muted-foreground/40">
+                              <span className="font-mono-share text-tiny text-muted-foreground/60">
                                 {new Date(s.created_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                                 {s.expires_at && new Date(s.expires_at) > new Date() && " · active"}
                               </span>
@@ -2763,7 +2763,7 @@ export default function Admin() {
                   <select
                     value={usageTopN}
                     onChange={(e) => setUsageTopN(Number(e.target.value))}
-                    className="bg-card/60 border border-border/30 rounded px-1.5 py-1 font-mono-share text-[10px] text-foreground/80"
+                    className="bg-card/60 border border-border/30 rounded px-1.5 py-1 font-mono-share text-tiny text-foreground/80"
                     title="How many modes to show before folding the rest into OTHER"
                   >
                     {[3, 4, 6, 8].map((n) => <option key={n} value={n}>TOP {n}</option>)}
@@ -2794,7 +2794,7 @@ export default function Admin() {
                 </BarChart>
               </ResponsiveContainer>
               {usagePivot.length === 0 && (
-                <p className="font-mono-share text-[10px] text-muted-foreground/40 text-center py-6">no generations in this window</p>
+                <p className="font-mono-share text-tiny text-muted-foreground/60 text-center py-6">no generations in this window</p>
               )}
             </div>
 
@@ -2811,7 +2811,7 @@ export default function Admin() {
                   <h2 className="font-orbitron text-xs tracking-wider text-primary/80 flex items-center gap-2 flex-wrap">
                     <BarChart3 className="w-3.5 h-3.5" />
                     UNIT_ECONOMICS ({winLabel})
-                    <span className="font-mono-share text-[9px] text-muted-foreground/50 tracking-normal normal-case">
+                    <span className="font-mono-share text-tiny text-muted-foreground/70 tracking-normal normal-case">
                       revenue attributed @ {centsPerCredit.toFixed(2)}¢/credit realized in this window
                     </span>
                   </h2>
@@ -2820,7 +2820,7 @@ export default function Admin() {
                   <table className="w-full min-w-[780px]">
                     <thead><tr className="border-b border-border/20">
                       {["MODE", "VENDOR", "GENS", "CREDITS", "AVG CR", "AVG TIME", "COST", "¢/GEN", "MEASURED", "EST. REV", "MARGIN"].map((h) => (
-                        <th key={h} className="px-2.5 py-2 text-left font-mono-share text-[9px] text-muted-foreground/50 tracking-wider">{h}</th>
+                        <th key={h} className="px-2.5 py-2 text-left font-mono-share text-tiny text-muted-foreground/70 tracking-wider">{h}</th>
                       ))}
                     </tr></thead>
                     <tbody>
@@ -2829,24 +2829,24 @@ export default function Admin() {
                         const marginPct = row.revenue_cents > 0 ? row.margin_pct : null;
                         return (
                           <tr key={i} className="border-b border-border/10 hover:bg-primary/5 transition-colors">
-                            <td className="px-2.5 py-2 font-orbitron text-[10px] tracking-wider text-foreground/80">
+                            <td className="px-2.5 py-2 font-orbitron text-tiny tracking-wider text-foreground/80">
                               {row.mode?.toUpperCase()}
                               {row.refunded > 0 && (
-                                <span className="ml-1.5 font-mono-share text-[8px] text-destructive/70" title={`${row.refunded} refunded, ${row.refunded_credits} credits returned — still cost GPU time`}>
+                                <span className="ml-1.5 font-mono-share text-micro text-destructive/70" title={`${row.refunded} refunded, ${row.refunded_credits} credits returned — still cost GPU time`}>
                                   ↩{row.refunded}
                                 </span>
                               )}
                             </td>
-                            <td className="px-2.5 py-2 font-mono-share text-[9px] text-muted-foreground/60">{row.provider}</td>
+                            <td className="px-2.5 py-2 font-mono-share text-tiny text-muted-foreground/60">{row.provider}</td>
                             <td className="px-2.5 py-2 font-mono-share text-xs" data-numeric>{row.generations.toLocaleString()}</td>
                             <td className="px-2.5 py-2 font-mono-share text-xs text-primary font-bold" data-numeric>{row.credits_used.toLocaleString()}</td>
                             <td className="px-2.5 py-2 font-mono-share text-xs" data-numeric>{avgCr}</td>
                             <td className="px-2.5 py-2 font-mono-share text-xs" data-numeric>{row.avg_exec_sec > 0 ? `${row.avg_exec_sec.toFixed(1)}s` : "—"}</td>
                             <td className="px-2.5 py-2 font-mono-share text-xs text-destructive" data-numeric>{fmt$(Math.round(row.blended_cost_cents))}</td>
                             <td className="px-2.5 py-2 font-mono-share text-xs text-destructive/70" data-numeric>{row.cost_per_generation.toFixed(2)}¢</td>
-                            <td className="px-2.5 py-2 font-mono-share text-[10px]" data-numeric
+                            <td className="px-2.5 py-2 font-mono-share text-tiny" data-numeric
                                 title={`${row.cost_tracked_count} of ${row.generations + row.refunded} rows carry a real cost; the rest use this mode's observed average`}>
-                              <span className={row.cost_coverage >= 0.8 ? "text-secondary" : row.cost_coverage >= 0.4 ? "text-amber-400" : "text-muted-foreground/50"}>
+                              <span className={row.cost_coverage >= 0.8 ? "text-secondary" : row.cost_coverage >= 0.4 ? "text-amber-400" : "text-muted-foreground/70"}>
                                 {fmtPct(row.cost_coverage)}
                               </span>
                             </td>
@@ -2860,7 +2860,7 @@ export default function Admin() {
                     </tbody>
                   </table>
                 </div>
-                <p className="px-3 sm:px-4 py-3 border-t border-border/20 font-mono-share text-[10px] text-muted-foreground/50 leading-relaxed">
+                <p className="px-3 sm:px-4 py-3 border-t border-border/20 font-mono-share text-tiny text-muted-foreground/70 leading-relaxed">
                   Refunded jobs are excluded from credits and revenue but kept in cost — the GPU still ran. MEASURED is the
                   share of rows carrying a real reported execution cost; the remainder is priced at that mode's own observed
                   average rather than dropped to zero.
@@ -2878,7 +2878,7 @@ export default function Admin() {
                 <ShieldX className="w-3.5 h-3.5" />
                 MODERATION_DEFENSE
               </h2>
-              <span className="font-mono-share text-[9px] text-red-400/60">
+              <span className="font-mono-share text-tiny text-red-400/60">
                 xAI charges for flagged requests — credits not refunded
               </span>
             </div>
@@ -2893,7 +2893,7 @@ export default function Admin() {
                   <table className="w-full min-w-[400px]">
                     <thead><tr className="border-b border-red-500/20">
                       {["USER", "FLAGS", "CREDITS", "LAST", ""].map((h) => (
-                        <th key={h} className="px-2.5 py-2 text-left font-mono-share text-[9px] text-red-400/50 tracking-wider">{h}</th>
+                        <th key={h} className="px-2.5 py-2 text-left font-mono-share text-tiny text-red-400/50 tracking-wider">{h}</th>
                       ))}
                     </tr></thead>
                     <tbody>
@@ -2907,15 +2907,15 @@ export default function Admin() {
                           >{off.email}</td>
                           <td className="px-2.5 py-2 font-mono-share text-xs text-red-400 font-bold">{off.block_count}</td>
                           <td className="px-2.5 py-2 font-mono-share text-xs text-red-400">{off.credits_burned}</td>
-                          <td className="px-2.5 py-2 font-mono-share text-[10px] text-muted-foreground/50">
+                          <td className="px-2.5 py-2 font-mono-share text-tiny text-muted-foreground/70">
                             {off.last_block ? new Date(off.last_block).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}
                           </td>
                           <td className="px-2.5 py-2">
                             {isBanned ? (
-                              <span className="font-mono-share text-[9px] text-red-400/60 tracking-wider">BANNED</span>
+                              <span className="font-mono-share text-tiny text-red-400/60 tracking-wider">BANNED</span>
                             ) : (
                               <button
-                                className="px-2 py-0.5 bg-red-600 text-white font-mono-share text-[10px] rounded hover:bg-red-500 disabled:opacity-50 flex items-center gap-1"
+                                className="px-2 py-0.5 bg-red-600 text-white font-mono-share text-tiny rounded hover:bg-red-500 disabled:opacity-50 flex items-center gap-1"
                                 disabled={banning}
                                 onClick={async () => {
                                   if (!confirm(`Ban ${off.email}? They will be blocked from all generation, feed posts, and stories.`)) return;
@@ -2944,7 +2944,7 @@ export default function Admin() {
 
               {/* ── BAN MANAGEMENT ── */}
               <div className="border-t border-red-500/20 pt-3 space-y-3">
-                <h3 className="font-orbitron text-[10px] tracking-wider text-red-400/80">BAN_MANAGEMENT</h3>
+                <h3 className="font-orbitron text-tiny tracking-wider text-red-400/80">BAN_MANAGEMENT</h3>
                 <div className="flex gap-2 flex-wrap">
                   <input
                     className="bg-background/50 border border-red-500/30 rounded px-2 py-1 font-mono-share text-xs text-foreground flex-1 min-w-[150px]"
@@ -2981,13 +2981,13 @@ export default function Admin() {
                 {bansLoading ? (
                   <p className="font-mono-share text-xs text-muted-foreground">Loading bans...</p>
                 ) : bans.length === 0 ? (
-                  <p className="font-mono-share text-xs text-muted-foreground/50">No banned users</p>
+                  <p className="font-mono-share text-xs text-muted-foreground/70">No banned users</p>
                 ) : (
                   <div className="overflow-x-auto overscroll-x-contain">
                     <table className="w-full min-w-[400px]">
                       <thead><tr className="border-b border-red-500/20">
                         {["EMAIL", "REASON", "EXPIRES", "DATE", ""].map((h) => (
-                          <th key={h} className="px-2.5 py-2 text-left font-mono-share text-[9px] text-red-400/50 tracking-wider">{h}</th>
+                          <th key={h} className="px-2.5 py-2 text-left font-mono-share text-tiny text-red-400/50 tracking-wider">{h}</th>
                         ))}
                       </tr></thead>
                       <tbody>
@@ -2997,17 +2997,17 @@ export default function Admin() {
                             <tr key={b.user_id} className={`border-b border-red-500/10 hover:bg-red-500/5 transition-colors ${expired ? "opacity-40" : ""}`}>
                               <td className="px-2.5 py-2 font-mono-share text-xs text-foreground/80">{b.email}</td>
                               <td className="px-2.5 py-2 font-mono-share text-xs text-red-400">{b.reason}</td>
-                              <td className="px-2.5 py-2 font-mono-share text-[10px] text-muted-foreground/50">
+                              <td className="px-2.5 py-2 font-mono-share text-tiny text-muted-foreground/70">
                                 {b.expires_at
                                   ? (expired ? "EXPIRED" : new Date(b.expires_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }))
                                   : "PERMANENT"}
                               </td>
-                              <td className="px-2.5 py-2 font-mono-share text-[10px] text-muted-foreground/50">
+                              <td className="px-2.5 py-2 font-mono-share text-tiny text-muted-foreground/70">
                                 {new Date(b.created_at).toLocaleString("en-US", { month: "short", day: "numeric" })}
                               </td>
                               <td className="px-2.5 py-2">
                                 <button
-                                  className="px-2 py-0.5 bg-green-600/80 text-white font-mono-share text-[10px] rounded hover:bg-green-500"
+                                  className="px-2 py-0.5 bg-green-600/80 text-white font-mono-share text-tiny rounded hover:bg-green-500"
                                   onClick={() => handleUnban(b.user_id)}
                                 >
                                   UNBAN
@@ -3039,7 +3039,7 @@ export default function Admin() {
                 <Share2 className="w-3.5 h-3.5" />
                 REFERRAL_PROGRAM
               </h2>
-              <span className="font-mono-share text-[9px] text-green-400/60">
+              <span className="font-mono-share text-tiny text-green-400/60">
                 {referralStats.conversionRate}% conversion rate
               </span>
             </div>
@@ -3056,7 +3056,7 @@ export default function Admin() {
                   <table className="w-full min-w-[460px]">
                     <thead><tr className="border-b border-green-500/20">
                       {["REFERRER", "REFERRED", "CONVERTED", "REVENUE", "REWARDS"].map((h) => (
-                        <th key={h} className="px-2.5 py-2 text-left font-mono-share text-[9px] text-green-400/50 tracking-wider">{h}</th>
+                        <th key={h} className="px-2.5 py-2 text-left font-mono-share text-tiny text-green-400/50 tracking-wider">{h}</th>
                       ))}
                     </tr></thead>
                     <tbody>
@@ -3075,12 +3075,12 @@ export default function Admin() {
               )}
               {referralStats.recentSignups && referralStats.recentSignups.length > 0 && (
                 <div>
-                  <h3 className="font-mono-share text-[10px] text-green-400/60 tracking-wider mb-1.5 mt-2">RECENT_REFERRED_SIGNUPS</h3>
+                  <h3 className="font-mono-share text-tiny text-green-400/60 tracking-wider mb-1.5 mt-2">RECENT_REFERRED_SIGNUPS</h3>
                   <div className="overflow-x-auto overscroll-x-contain">
                     <table className="w-full min-w-[560px]">
                       <thead><tr className="border-b border-green-500/20">
                         {["SIGNED UP", "REFERRED BY", "DATE", "STATUS", "SPENT"].map((h) => (
-                          <th key={h} className="px-2.5 py-2 text-left font-mono-share text-[9px] text-green-400/50 tracking-wider">{h}</th>
+                          <th key={h} className="px-2.5 py-2 text-left font-mono-share text-tiny text-green-400/50 tracking-wider">{h}</th>
                         ))}
                       </tr></thead>
                       <tbody>
@@ -3089,7 +3089,7 @@ export default function Admin() {
                             <td className="px-2.5 py-2 font-mono-share text-xs text-foreground/80">{r.referee_email}</td>
                             <td className="px-2.5 py-2 font-mono-share text-xs text-foreground/60">{r.referrer_email}</td>
                             <td className="px-2.5 py-2 font-mono-share text-xs text-green-400/70">{new Date(r.created_at).toLocaleDateString()}</td>
-                            <td className="px-2.5 py-2 font-mono-share text-[10px]">
+                            <td className="px-2.5 py-2 font-mono-share text-tiny">
                               {r.referee_purchased ? <span className="text-secondary">PURCHASED</span>
                                 : r.referee_verified ? <span className="text-green-400">VERIFIED</span>
                                 : <span className="text-foreground/40">UNVERIFIED</span>}
@@ -3191,25 +3191,25 @@ export default function Admin() {
                   <thead>
                     <tr className="border-b border-border/20">
                       {["TIME", "RECIPIENT", "TYPE", "STATUS", "RESEND_ID", "ERROR", ""].map((h) => (
-                        <th key={h} className="px-2.5 py-2 text-left font-mono-share text-[9px] text-muted-foreground/50 tracking-wider">{h}</th>
+                        <th key={h} className="px-2.5 py-2 text-left font-mono-share text-tiny text-muted-foreground/70 tracking-wider">{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {emailLogs.length === 0 && !emailLoading && (
-                      <tr><td colSpan={7} className="px-4 py-8 text-center font-mono-share text-xs text-muted-foreground/50">No email logs found</td></tr>
+                      <tr><td colSpan={7} className="px-4 py-8 text-center font-mono-share text-xs text-muted-foreground/70">No email logs found</td></tr>
                     )}
                     {emailLoading && (
                       <tr><td colSpan={7} className="px-4 py-8 text-center"><Loader2 className="w-4 h-4 animate-spin mx-auto text-primary" /></td></tr>
                     )}
                     {emailLogs.map((log: any, i: number) => (
                       <tr key={i} className="border-b border-border/10 hover:bg-primary/5 transition-colors">
-                        <td className="px-2.5 py-2 font-mono-share text-[10px] text-muted-foreground/60 whitespace-nowrap">
+                        <td className="px-2.5 py-2 font-mono-share text-tiny text-muted-foreground/60 whitespace-nowrap">
                           {new Date(log.created_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                         </td>
                         <td className="px-2.5 py-2 font-mono-share text-xs text-foreground/80 max-w-[180px] truncate">{log.recipient}</td>
                         <td className="px-2.5 py-2">
-                          <span className={`font-orbitron text-[9px] tracking-wider px-2 py-0.5 rounded border ${
+                          <span className={`font-orbitron text-tiny tracking-wider px-2 py-0.5 rounded border ${
                             log.email_type === "verification" ? "bg-primary/20 text-primary border-primary/30"
                             : log.email_type === "password_reset" ? "bg-secondary/20 text-secondary border-secondary/30"
                             : log.email_type === "daily_credits" ? "bg-green-500/20 text-green-400 border-green-500/30"
@@ -3217,7 +3217,7 @@ export default function Admin() {
                           }`}>{log.email_type?.toUpperCase()}</span>
                         </td>
                         <td className="px-2.5 py-2">
-                          <span className={`font-mono-share text-[10px] font-bold px-2 py-0.5 rounded ${
+                          <span className={`font-mono-share text-tiny font-bold px-2 py-0.5 rounded ${
                             log.status === "sent" || log.status === "delivered" ? "bg-green-500/20 text-green-400"
                             : log.status === "failed" ? "bg-destructive/20 text-destructive"
                             : log.status === "bounced" ? "bg-orange-500/20 text-orange-400"
@@ -3225,8 +3225,8 @@ export default function Admin() {
                             : "bg-muted/20 text-muted-foreground"
                           }`}>{log.status?.toUpperCase()}</span>
                         </td>
-                        <td className="px-2.5 py-2 font-mono-share text-[9px] text-muted-foreground/40 max-w-[120px] truncate">{log.resend_id || "—"}</td>
-                        <td className="px-2.5 py-2 font-mono-share text-[10px] text-destructive/80 max-w-[200px] truncate">{log.error_message || "—"}</td>
+                        <td className="px-2.5 py-2 font-mono-share text-tiny text-muted-foreground/60 max-w-[120px] truncate">{log.resend_id || "—"}</td>
+                        <td className="px-2.5 py-2 font-mono-share text-tiny text-destructive/80 max-w-[200px] truncate">{log.error_message || "—"}</td>
                         <td className="px-2.5 py-2 text-right">
                           {log.status !== "sent" && log.status !== "delivered" ? (
                             <button
@@ -3234,7 +3234,7 @@ export default function Admin() {
                                 { ids: [log.id] },
                                 `Delete this ${log.status} log row for ${log.recipient}?\n\nNext time you re-send "${log.email_type}" they will be retried.`,
                               )}
-                              className="font-mono-share text-[10px] text-destructive/70 hover:text-destructive hover:underline"
+                              className="font-mono-share text-tiny text-destructive/70 hover:text-destructive hover:underline"
                               title="Delete this failed log row"
                             >
                               DEL
@@ -3286,7 +3286,7 @@ export default function Admin() {
                   <section className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm p-3 sm:p-4">
                     <div className="flex items-center gap-2 mb-3">
                       <BarChart3 className="w-3.5 h-3.5 text-primary" />
-                      <span className="font-orbitron text-[10px] tracking-wider text-muted-foreground">API_VOLUME ({winLabel})</span>
+                      <span className="font-orbitron text-tiny tracking-wider text-muted-foreground">API_VOLUME ({winLabel})</span>
                     </div>
                     <ResponsiveContainer width="100%" height={240}>
                       <AreaChart data={apiAnalytics.dailyVolume.map((r: any) => ({ ...r, day: fmtBucket(r.day, apiAnalytics.range?.bucket || "day") }))}>
@@ -3307,15 +3307,15 @@ export default function Admin() {
                   <section className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm p-3 sm:p-4">
                     <div className="flex items-center gap-2 mb-3">
                       <Activity className="w-3.5 h-3.5 text-primary" />
-                      <span className="font-orbitron text-[10px] tracking-wider text-muted-foreground">USAGE_BY_ACTION (30D)</span>
+                      <span className="font-orbitron text-tiny tracking-wider text-muted-foreground">USAGE_BY_ACTION (30D)</span>
                     </div>
                     <div className="overflow-x-auto">
                       <table className="w-full text-left">
                         <thead>
                           <tr className="border-b border-border/20">
-                            <th className="px-2.5 py-1.5 font-orbitron text-[9px] tracking-wider text-muted-foreground/50">ACTION</th>
-                            <th className="px-2.5 py-1.5 font-orbitron text-[9px] tracking-wider text-muted-foreground/50 text-right">REQUESTS</th>
-                            <th className="px-2.5 py-1.5 font-orbitron text-[9px] tracking-wider text-muted-foreground/50 text-right">CREDITS</th>
+                            <th className="px-2.5 py-1.5 font-orbitron text-tiny tracking-wider text-muted-foreground/70">ACTION</th>
+                            <th className="px-2.5 py-1.5 font-orbitron text-tiny tracking-wider text-muted-foreground/70 text-right">REQUESTS</th>
+                            <th className="px-2.5 py-1.5 font-orbitron text-tiny tracking-wider text-muted-foreground/70 text-right">CREDITS</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -3337,7 +3337,7 @@ export default function Admin() {
                   <div className="flex items-center justify-between gap-2 mb-3">
                     <div className="flex items-center gap-2">
                       <Crown className="w-3.5 h-3.5 text-secondary" />
-                      <span className="font-orbitron text-[10px] tracking-wider text-muted-foreground">TOP_API_CONSUMERS</span>
+                      <span className="font-orbitron text-tiny tracking-wider text-muted-foreground">TOP_API_CONSUMERS</span>
                     </div>
                     <Button variant="outline" size="sm" onClick={fetchApiAnalytics} disabled={apiAnalyticsLoading}
                       className="font-mono-share text-xs gap-1.5">
@@ -3349,34 +3349,34 @@ export default function Admin() {
                     <table className="w-full text-left">
                       <thead>
                         <tr className="border-b border-border/20">
-                          <th className="px-2.5 py-1.5 font-orbitron text-[9px] tracking-wider text-muted-foreground/50">USER</th>
-                          <th className="px-2.5 py-1.5 font-orbitron text-[9px] tracking-wider text-muted-foreground/50">KEY</th>
-                          <th className="px-2.5 py-1.5 font-orbitron text-[9px] tracking-wider text-muted-foreground/50 text-right">{winLabel} REQ</th>
-                          <th className="px-2.5 py-1.5 font-orbitron text-[9px] tracking-wider text-muted-foreground/50 text-right">{winLabel} CREDITS</th>
-                          <th className="px-2.5 py-1.5 font-orbitron text-[9px] tracking-wider text-muted-foreground/50 text-right">LIFETIME</th>
-                          <th className="px-2.5 py-1.5 font-orbitron text-[9px] tracking-wider text-muted-foreground/50 text-right">LAST USED</th>
+                          <th className="px-2.5 py-1.5 font-orbitron text-tiny tracking-wider text-muted-foreground/70">USER</th>
+                          <th className="px-2.5 py-1.5 font-orbitron text-tiny tracking-wider text-muted-foreground/70">KEY</th>
+                          <th className="px-2.5 py-1.5 font-orbitron text-tiny tracking-wider text-muted-foreground/70 text-right">{winLabel} REQ</th>
+                          <th className="px-2.5 py-1.5 font-orbitron text-tiny tracking-wider text-muted-foreground/70 text-right">{winLabel} CREDITS</th>
+                          <th className="px-2.5 py-1.5 font-orbitron text-tiny tracking-wider text-muted-foreground/70 text-right">LIFETIME</th>
+                          <th className="px-2.5 py-1.5 font-orbitron text-tiny tracking-wider text-muted-foreground/70 text-right">LAST USED</th>
                         </tr>
                       </thead>
                       <tbody>
                         {(apiAnalytics.topConsumers || []).map((c: any, i: number) => (
                           <tr key={i} className="border-b border-border/10">
-                            <td className="px-2.5 py-2 font-mono-share text-[10px] text-foreground/80 max-w-[160px] truncate">{c.email}</td>
-                            <td className="px-2.5 py-2 font-mono-share text-[9px] text-muted-foreground/60">
+                            <td className="px-2.5 py-2 font-mono-share text-tiny text-foreground/80 max-w-[160px] truncate">{c.email}</td>
+                            <td className="px-2.5 py-2 font-mono-share text-tiny text-muted-foreground/60">
                               {c.key_prefix} <span className="text-primary/50">({c.key_name})</span>
                             </td>
                             <td className="px-2.5 py-2 font-mono-share text-xs text-right" data-numeric>{(c.window_requests || 0).toLocaleString()}</td>
                             <td className="px-2.5 py-2 font-mono-share text-xs text-right text-secondary" data-numeric>{(c.window_credits || 0).toLocaleString()}</td>
-                            <td className="px-2.5 py-2 font-mono-share text-[10px] text-right text-muted-foreground/60" data-numeric>
+                            <td className="px-2.5 py-2 font-mono-share text-tiny text-right text-muted-foreground/60" data-numeric>
                               {Number(c.total_credits || 0).toLocaleString()} cr
                             </td>
-                            <td className="px-2.5 py-2 font-mono-share text-[9px] text-muted-foreground/40 text-right">
+                            <td className="px-2.5 py-2 font-mono-share text-tiny text-muted-foreground/60 text-right">
                               {c.last_used_at ? new Date(c.last_used_at).toLocaleDateString() : "never"}
                             </td>
                           </tr>
                         ))}
                         {(!apiAnalytics.topConsumers || apiAnalytics.topConsumers.length === 0) && (
                           <tr>
-                            <td colSpan={6} className="px-2.5 py-4 text-center font-mono-share text-xs text-muted-foreground/40">
+                            <td colSpan={6} className="px-2.5 py-4 text-center font-mono-share text-xs text-muted-foreground/60">
                               No API keys created yet
                             </td>
                           </tr>
@@ -3405,8 +3405,8 @@ export default function Admin() {
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-2">
                 <Crown className="w-3.5 h-3.5 text-secondary" />
-                <span className="font-orbitron text-[10px] tracking-wider text-muted-foreground">SUBSCRIPTION_SYNC</span>
-                <span className="font-mono-share text-[9px] text-muted-foreground/40">
+                <span className="font-orbitron text-tiny tracking-wider text-muted-foreground">SUBSCRIPTION_SYNC</span>
+                <span className="font-mono-share text-tiny text-muted-foreground/60">
                   Pull cancellation status from Stripe for all active subscribers
                 </span>
               </div>
@@ -3427,7 +3427,7 @@ export default function Admin() {
                   <p className="font-mono-share text-xs text-destructive">{syncResult.error}</p>
                 ) : (
                   <>
-                    <div className="flex flex-wrap gap-3 font-mono-share text-[10px] text-muted-foreground/70">
+                    <div className="flex flex-wrap gap-3 font-mono-share text-tiny text-muted-foreground/70">
                       <span>Checked: <span className="text-foreground">{syncResult.total_checked}</span></span>
                       <span>Marked cancelling: <span className="text-destructive">{syncResult.marked_cancelling}</span></span>
                       <span>Cleared (reactivated): <span className="text-green-400">{syncResult.cleared}</span></span>
@@ -3436,16 +3436,16 @@ export default function Admin() {
                     {syncResult.details?.length > 0 && (
                       <div className="max-h-64 overflow-y-auto bg-input/30 rounded p-2 space-y-1.5">
                         {syncResult.details.map((d: any, i: number) => (
-                          <div key={i} className={`font-mono-share text-[9px] border-b border-border/10 pb-1 ${
+                          <div key={i} className={`font-mono-share text-tiny border-b border-border/10 pb-1 ${
                             d.action?.includes("error") ? "text-destructive" :
                             d.action?.includes("cancelling") ? "text-destructive/80" :
                             d.action?.includes("cleared") ? "text-green-400/80" :
                             "text-muted-foreground/60"
                           }`}>
                             <p className="font-bold">{d.email}: {d.action}{d.cancel_at ? ` (${new Date(d.cancel_at).toLocaleDateString()})` : ""}</p>
-                            {d.subs_found !== undefined && <p className="text-muted-foreground/40 ml-2">subs: {d.subs_found}</p>}
+                            {d.subs_found !== undefined && <p className="text-muted-foreground/60 ml-2">subs: {d.subs_found}</p>}
                             {d.statuses?.map((s: any, j: number) => (
-                              <p key={j} className="text-muted-foreground/40 ml-2">
+                              <p key={j} className="text-muted-foreground/60 ml-2">
                                 {s.id}: status={s.status}, cancel_at_end={String(s.cancel_at_period_end)}, cancel_at={s.cancel_at || "null"}, period_end={s.current_period_end}
                               </p>
                             ))}
@@ -3462,7 +3462,7 @@ export default function Admin() {
         )}
 
         <footer className="text-center py-4">
-          <p className="font-mono-share text-[10px] text-muted-foreground/30">
+          <p className="font-mono-share text-tiny text-muted-foreground/60">
             ADMIN_CONSOLE // real-time data from Neon Postgres
           </p>
         </footer>

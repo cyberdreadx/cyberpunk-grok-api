@@ -39,7 +39,7 @@ const fmtTime = (iso: string) => {
 const truncate = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1) + "…" : s);
 
 const KindBadge: React.FC<{ kind: string }> = ({ kind }) => (
-  <span className={`inline-flex items-center gap-1 font-mono-share text-[9px] px-1.5 py-0.5 rounded border ${
+  <span className={`inline-flex items-center gap-1 font-mono-share text-tiny px-1.5 py-0.5 rounded border ${
     kind === "video"
       ? "border-secondary/40 text-secondary bg-secondary/10"
       : "border-primary/40 text-primary bg-primary/10"
@@ -83,7 +83,7 @@ const MediaErrorsPanel: React.FC = () => {
               <button
                 key={r}
                 onClick={() => setDays(r)}
-                className={`font-mono-share text-[10px] px-2 py-1 rounded transition-colors ${
+                className={`font-mono-share text-tiny px-2 py-1 rounded transition-colors ${
                   days === r ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-foreground"
                 }`}
               >{r}d</button>
@@ -92,7 +92,7 @@ const MediaErrorsPanel: React.FC = () => {
           <button
             onClick={load}
             disabled={loading}
-            className="font-mono-share text-[10px] px-2 py-1 rounded border border-border/40 text-muted-foreground hover:text-primary hover:border-primary/40 inline-flex items-center gap-1"
+            className="font-mono-share text-tiny px-2 py-1 rounded border border-border/40 text-muted-foreground hover:text-primary hover:border-primary/40 inline-flex items-center gap-1"
           >
             {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
             REFRESH
@@ -101,35 +101,35 @@ const MediaErrorsPanel: React.FC = () => {
       </div>
 
       {err && (
-        <div className="border border-destructive/40 bg-destructive/10 rounded p-3 font-mono-share text-[11px] text-destructive">
+        <div className="border border-destructive/40 bg-destructive/10 rounded p-3 font-mono-share text-xs text-destructive">
           {err}
         </div>
       )}
       {data?.warning && (
-        <div className="border border-amber-400/30 bg-amber-400/10 rounded p-3 font-mono-share text-[11px] text-amber-300">
+        <div className="border border-amber-400/30 bg-amber-400/10 rounded p-3 font-mono-share text-xs text-amber-300">
           {data.warning}
         </div>
       )}
 
       {/* Total card */}
       <div className="border border-border/30 rounded-lg bg-card/40 p-3">
-        <div className="font-mono-share text-[9px] text-muted-foreground tracking-widest">TOTAL_FAILURES</div>
+        <div className="font-mono-share text-tiny text-muted-foreground tracking-widest">TOTAL_FAILURES</div>
         <div className="font-orbitron text-2xl text-primary mt-1">{data?.total ?? "—"}</div>
-        <div className="font-mono-share text-[10px] text-muted-foreground/70 mt-0.5">over last {days} day{days === 1 ? "" : "s"}</div>
+        <div className="font-mono-share text-tiny text-muted-foreground/70 mt-0.5">over last {days} day{days === 1 ? "" : "s"}</div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {/* By host */}
         <div className="border border-border/30 rounded-lg bg-card/40 p-3 min-w-0">
-          <div className="font-mono-share text-[10px] text-muted-foreground/80 mb-2 flex items-center gap-1">
+          <div className="font-mono-share text-tiny text-muted-foreground/80 mb-2 flex items-center gap-1">
             <Globe className="w-3 h-3" /> BY_HOST
           </div>
           {(!data || data.byHost.length === 0) ? (
-            <div className="font-mono-share text-[10px] text-muted-foreground/60">No data</div>
+            <div className="font-mono-share text-tiny text-muted-foreground/60">No data</div>
           ) : (
             <ul className="space-y-1">
               {data.byHost.map((r, i) => (
-                <li key={`${r.host}-${r.kind}-${i}`} className="flex items-center justify-between gap-2 font-mono-share text-[11px]">
+                <li key={`${r.host}-${r.kind}-${i}`} className="flex items-center justify-between gap-2 font-mono-share text-xs">
                   <span className="flex items-center gap-2 min-w-0">
                     <KindBadge kind={r.kind} />
                     <span className="text-foreground truncate">{r.host}</span>
@@ -143,13 +143,13 @@ const MediaErrorsPanel: React.FC = () => {
 
         {/* By ext */}
         <div className="border border-border/30 rounded-lg bg-card/40 p-3 min-w-0">
-          <div className="font-mono-share text-[10px] text-muted-foreground/80 mb-2">BY_EXTENSION</div>
+          <div className="font-mono-share text-tiny text-muted-foreground/80 mb-2">BY_EXTENSION</div>
           {(!data || data.byExt.length === 0) ? (
-            <div className="font-mono-share text-[10px] text-muted-foreground/60">No data</div>
+            <div className="font-mono-share text-tiny text-muted-foreground/60">No data</div>
           ) : (
             <ul className="space-y-1">
               {data.byExt.map((r, i) => (
-                <li key={`${r.ext}-${r.kind}-${i}`} className="flex items-center justify-between gap-2 font-mono-share text-[11px]">
+                <li key={`${r.ext}-${r.kind}-${i}`} className="flex items-center justify-between gap-2 font-mono-share text-xs">
                   <span className="flex items-center gap-2 min-w-0">
                     <KindBadge kind={r.kind} />
                     <span className="text-foreground">.{r.ext || "(none)"}</span>
@@ -164,9 +164,9 @@ const MediaErrorsPanel: React.FC = () => {
 
       {/* Top URLs */}
       <div className="border border-border/30 rounded-lg bg-card/40 p-3 min-w-0 overflow-hidden">
-        <div className="font-mono-share text-[10px] text-muted-foreground/80 mb-2">TOP_BROKEN_URLS</div>
+        <div className="font-mono-share text-tiny text-muted-foreground/80 mb-2">TOP_BROKEN_URLS</div>
         {(!data || data.topUrls.length === 0) ? (
-          <div className="font-mono-share text-[10px] text-muted-foreground/60">No data</div>
+          <div className="font-mono-share text-tiny text-muted-foreground/60">No data</div>
         ) : (
           <ul className="space-y-2">
             {data.topUrls.map((r) => (
@@ -174,15 +174,15 @@ const MediaErrorsPanel: React.FC = () => {
                 <div className="min-w-0 flex-1 space-y-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <KindBadge kind={r.kind} />
-                    <span className="font-mono-share text-[10px] text-muted-foreground">{r.host}</span>
-                    <span className="font-mono-share text-[10px] text-muted-foreground/60">last {fmtTime(r.last_seen)}</span>
+                    <span className="font-mono-share text-tiny text-muted-foreground">{r.host}</span>
+                    <span className="font-mono-share text-tiny text-muted-foreground/60">last {fmtTime(r.last_seen)}</span>
                   </div>
                   <a href={r.url} target="_blank" rel="noopener noreferrer"
-                     className="block font-mono-share text-[10px] text-primary/80 hover:text-primary break-all">
+                     className="block font-mono-share text-tiny text-primary/80 hover:text-primary break-all">
                     {truncate(r.url, 140)}
                   </a>
                 </div>
-                <span className="font-mono-share text-[11px] text-primary tabular-nums shrink-0 mt-0.5">×{r.count}</span>
+                <span className="font-mono-share text-xs text-primary tabular-nums shrink-0 mt-0.5">×{r.count}</span>
               </li>
             ))}
           </ul>
@@ -191,12 +191,12 @@ const MediaErrorsPanel: React.FC = () => {
 
       {/* Recent */}
       <details className="border border-border/30 rounded-lg bg-card/40 p-3">
-        <summary className="cursor-pointer font-mono-share text-[10px] text-muted-foreground/80">
+        <summary className="cursor-pointer font-mono-share text-tiny text-muted-foreground/80">
           RECENT_50 ({data?.recent?.length || 0})
         </summary>
         <ul className="mt-2 space-y-1.5 max-h-96 overflow-y-auto">
           {data?.recent.map((r) => (
-            <li key={r.id} className="font-mono-share text-[10px] text-muted-foreground flex items-start gap-2">
+            <li key={r.id} className="font-mono-share text-tiny text-muted-foreground flex items-start gap-2">
               <span className="text-muted-foreground/60 shrink-0">{fmtTime(r.created_at)}</span>
               <KindBadge kind={r.kind} />
               <span className="text-foreground/80 truncate">{r.host}</span>

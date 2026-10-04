@@ -212,7 +212,7 @@ export default function AmbassadorPage() {
             >
               <Share2 className="w-4 h-4" /> Share link
             </Button>
-            <p className="text-[10px] text-muted-foreground leading-relaxed">
+            <p className="text-tiny text-muted-foreground leading-relaxed">
               You earn <span className="text-primary font-bold">{amb.commissionPct}%</span> of everything your referred
               customers pay, for {amb.commissionMonths > 0 ? `${amb.commissionMonths} months each` : "as long as they stay"}.
               Commission is held {amb.holdDays} days before it becomes withdrawable, so refunds can settle first.
@@ -259,7 +259,7 @@ export default function AmbassadorPage() {
           <Card className="p-4 border-border bg-card space-y-2">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-foreground">Your customers</h2>
-              <Button size="sm" variant="ghost" className="h-7 text-[10px] gap-1" onClick={() => navigate("/profile")}>
+              <Button size="sm" variant="ghost" className="h-7 text-tiny gap-1" onClick={() => navigate("/profile")}>
                 <Send className="w-3 h-3" /> Withdraw
               </Button>
             </div>
@@ -274,16 +274,16 @@ export default function AmbassadorPage() {
                     <div className="min-w-0">
                       <p className="text-xs text-foreground truncate">
                         {r.name}
-                        {r.disqualified && <span className="ml-2 text-[9px] text-destructive uppercase">excluded</span>}
+                        {r.disqualified && <span className="ml-2 text-tiny text-destructive uppercase">excluded</span>}
                       </p>
-                      <p className="text-[10px] text-muted-foreground">
+                      <p className="text-tiny text-muted-foreground">
                         {new Date(r.joinedAt).toLocaleDateString()}
                         {r.commissionUntil && ` · earns until ${new Date(r.commissionUntil).toLocaleDateString()}`}
                       </p>
                     </div>
                     <div className="text-right shrink-0 pl-2">
                       <p className="text-xs font-mono text-primary">{money(r.commissionCents)}</p>
-                      <p className="text-[10px] text-muted-foreground font-mono">of {money(r.grossCents)}</p>
+                      <p className="text-tiny text-muted-foreground font-mono">of {money(r.grossCents)}</p>
                     </div>
                   </div>
                 ))}
@@ -308,7 +308,7 @@ export default function AmbassadorPage() {
               answer here.
             </p>
             {app.requestedCode && (
-              <p className="text-[10px] text-muted-foreground font-mono">Requested code: {app.requestedCode}</p>
+              <p className="text-tiny text-muted-foreground font-mono">Requested code: {app.requestedCode}</p>
             )}
           </Card>
         </Shell>
@@ -349,7 +349,7 @@ export default function AmbassadorPage() {
             referred customers pay — for 12 months per customer, renewable on review. Real money, withdrawable to your
             bank, PayPal or XRGE.
           </p>
-          <p className="text-[10px] text-muted-foreground leading-relaxed">
+          <p className="text-tiny text-muted-foreground leading-relaxed">
             Commission is held 30 days before it becomes withdrawable so refunds and chargebacks can settle. Signups that
             look like your own alt accounts don't earn.
           </p>
@@ -364,7 +364,7 @@ export default function AmbassadorPage() {
               placeholder="NEONKING" maxLength={24} className="font-mono text-xs bg-muted border-border" />
           </Field>
           {form.requestedCode && (
-            <p className="text-[10px] text-muted-foreground font-mono -mt-1">
+            <p className="text-tiny text-muted-foreground font-mono -mt-1">
               {BRAND.publicUrl}/r/{form.requestedCode}
             </p>
           )}
@@ -440,11 +440,11 @@ function Stat({ icon: Icon, label, value, accent, sub }: {
 }) {
   return (
     <Card className="p-3 border-border bg-card">
-      <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground uppercase tracking-wide">
+      <div className="flex items-center gap-1.5 text-tiny text-muted-foreground uppercase tracking-wide">
         <Icon className={`w-3 h-3 ${accent}`} /> {label}
       </div>
       <p className={`text-lg font-bold font-mono mt-1 ${accent}`}>{value}</p>
-      {sub && <p className="text-[9px] text-muted-foreground">{sub}</p>}
+      {sub && <p className="text-tiny text-muted-foreground">{sub}</p>}
     </Card>
   );
 }
@@ -454,7 +454,7 @@ function Mini({ icon: Icon, label, value }: { icon: any; label: string; value: s
     <Card className="p-2 border-border bg-card text-center">
       <Icon className="w-3 h-3 mx-auto text-muted-foreground" />
       <p className="text-sm font-bold font-mono text-foreground mt-1">{value}</p>
-      <p className="text-[9px] text-muted-foreground uppercase">{label}</p>
+      <p className="text-tiny text-muted-foreground uppercase">{label}</p>
     </Card>
   );
 }
@@ -462,9 +462,9 @@ function Mini({ icon: Icon, label, value }: { icon: any; label: string; value: s
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1">
-      <label className="text-[10px] text-muted-foreground uppercase tracking-wide">{label}</label>
+      <label className="text-tiny text-muted-foreground uppercase tracking-wide">{label}</label>
       {children}
-      {hint && <p className="text-[9px] text-muted-foreground">{hint}</p>}
+      {hint && <p className="text-tiny text-muted-foreground">{hint}</p>}
     </div>
   );
 }

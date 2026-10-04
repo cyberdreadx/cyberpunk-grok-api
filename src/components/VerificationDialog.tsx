@@ -107,7 +107,7 @@ const VerificationDialog: React.FC<Props> = ({ open, onOpenChange }) => {
               You're a verified creator. Monetization and payouts are enabled.
             </p>
             {status.renewsAt && (
-              <p className="font-mono-share text-[10px] text-muted-foreground">
+              <p className="font-mono-share text-tiny text-muted-foreground">
                 Subscription renews: {new Date(status.renewsAt).toLocaleDateString()}
               </p>
             )}
@@ -134,7 +134,7 @@ const VerificationDialog: React.FC<Props> = ({ open, onOpenChange }) => {
               {submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-2" /> : <ShieldCheck className="w-3.5 h-3.5 mr-2" />}
               START ID CHECK <ExternalLink className="w-3 h-3 ml-2" />
             </Button>
-            <p className="font-mono-share text-[10px] text-muted-foreground">
+            <p className="font-mono-share text-tiny text-muted-foreground">
               Opens Stripe's hosted verification flow in a new tab. You'll need a government ID + selfie.
             </p>
           </div>
@@ -158,7 +158,7 @@ const VerificationDialog: React.FC<Props> = ({ open, onOpenChange }) => {
               {submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-2" /> : <CreditCard className="w-3.5 h-3.5 mr-2" />}
               CONTINUE TO PAYMENT
             </Button>
-            <p className="font-mono-share text-[10px] text-muted-foreground text-center">
+            <p className="font-mono-share text-tiny text-muted-foreground text-center">
               Cancel anytime in the Stripe portal. Verification is revoked immediately if the subscription lapses.
             </p>
           </div>

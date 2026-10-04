@@ -41,19 +41,19 @@ export default function LtxLaunchBanner({ onClick }: LtxLaunchBannerProps) {
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-orbitron text-[10px] sm:text-xs tracking-widest text-amber-200 font-bold">
+            <span className="font-orbitron text-tiny sm:text-xs tracking-widest text-amber-200 font-bold">
               ✨ UPGRADED — LTX-2.3
             </span>
-            <span className="font-mono-share text-[10px] sm:text-xs text-amber-100/90 truncate">
+            <span className="font-mono-share text-tiny sm:text-xs text-amber-100/90 truncate">
               Sharper video, now up to 15 seconds
             </span>
           </div>
-          <div className="mt-0.5 font-mono-share text-[9px] sm:text-[10px] text-amber-200/70">
+          <div className="mt-0.5 font-mono-share text-tiny sm:text-tiny text-amber-200/70">
             Native HD up to 1664×960 · synced audio in one pass · pick 2–15s · 7 cr/s
           </div>
         </div>
 
-        <span className="hidden sm:inline-flex shrink-0 px-3 py-1.5 rounded-md bg-amber-500/30 border border-amber-400/50 font-orbitron text-[10px] tracking-wider text-amber-100 group-hover:bg-amber-500/50">
+        <span className="hidden sm:inline-flex shrink-0 px-3 py-1.5 rounded-md bg-amber-500/30 border border-amber-400/50 font-orbitron text-tiny tracking-wider text-amber-100 group-hover:bg-amber-500/50">
           TRY LTX
         </span>
 

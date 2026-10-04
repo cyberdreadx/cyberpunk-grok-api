@@ -198,7 +198,7 @@ export default function AdminInsightsPanel() {
             <Sparkles className="w-4 h-4 text-primary" />
             <h2 className="font-mono-share text-sm tracking-wider text-primary">AI_INSIGHTS</h2>
             {data?.generated_at && (
-              <span className="font-mono-share text-[10px] text-muted-foreground/70 flex items-center gap-1">
+              <span className="font-mono-share text-tiny text-muted-foreground/70 flex items-center gap-1">
                 <Clock className="w-3 h-3" />
                 {fmtAge(data.age_ms ?? (Date.now() - new Date(data.generated_at).getTime()))}
                 {stale && <span className="text-yellow-500/80 ml-1">(stale)</span>}
@@ -212,7 +212,7 @@ export default function AdminInsightsPanel() {
                 variant="outline"
                 disabled={streaming}
                 onClick={() => generate(true)}
-                className="font-mono-share text-[11px]"
+                className="font-mono-share text-xs"
               >
                 <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${streaming ? "animate-spin" : ""}`} />
                 REGENERATE
@@ -223,7 +223,7 @@ export default function AdminInsightsPanel() {
                 size="sm"
                 disabled={streaming || loading}
                 onClick={() => generate(false)}
-                className="font-mono-share text-[11px]"
+                className="font-mono-share text-xs"
               >
                 {streaming ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 mr-1.5" />}
                 GENERATE SUMMARY
@@ -232,7 +232,7 @@ export default function AdminInsightsPanel() {
           </div>
         </div>
 
-        <p className="font-mono-share text-[10px] text-muted-foreground/60 leading-relaxed">
+        <p className="font-mono-share text-tiny text-muted-foreground/60 leading-relaxed">
           AI-generated executive summary covering revenue, growth, creator economy, and generation costs.
           Cached for 1 hour — click REGENERATE to force a fresh pass.
         </p>
@@ -240,7 +240,7 @@ export default function AdminInsightsPanel() {
         {error && (
           <div className="border border-destructive/40 bg-destructive/10 rounded p-2 flex items-start gap-2">
             <AlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
-            <p className="font-mono-share text-[11px] text-destructive">{error}</p>
+            <p className="font-mono-share text-xs text-destructive">{error}</p>
           </div>
         )}
       </section>
@@ -260,7 +260,7 @@ export default function AdminInsightsPanel() {
           </div>
           <div className="space-y-1.5">
             {data.anomalies.items.slice(0, 6).map((a, i) => (
-              <div key={i} className="flex items-start gap-2 font-mono-share text-[11px]">
+              <div key={i} className="flex items-start gap-2 font-mono-share text-xs">
                 <span className="shrink-0">
                   {a.severity === "severe" ? "🔴" : "🟡"} {a.direction === "spike" ? "📈" : "📉"}
                 </span>
@@ -332,10 +332,10 @@ export default function AdminInsightsPanel() {
       {data?.topModes && data.topModes.length > 0 && (
         <div className="grid md:grid-cols-2 gap-3">
           <section className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm p-3">
-            <h3 className="font-mono-share text-[11px] tracking-wider text-muted-foreground mb-2">TOP MODES (30D)</h3>
+            <h3 className="font-mono-share text-xs tracking-wider text-muted-foreground mb-2">TOP MODES (30D)</h3>
             <div className="space-y-1">
               {data.topModes.map((m) => (
-                <div key={m.mode} className="flex items-center justify-between font-mono-share text-[11px]">
+                <div key={m.mode} className="flex items-center justify-between font-mono-share text-xs">
                   <span className="text-foreground/90 truncate">{m.mode}</span>
                   <span className="text-muted-foreground">{num(m.n)} • {num(m.credits)}c</span>
                 </div>
@@ -345,10 +345,10 @@ export default function AdminInsightsPanel() {
 
           {data.creator?.top && data.creator.top.length > 0 && (
             <section className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm p-3">
-              <h3 className="font-mono-share text-[11px] tracking-wider text-muted-foreground mb-2">TOP CREATORS</h3>
+              <h3 className="font-mono-share text-xs tracking-wider text-muted-foreground mb-2">TOP CREATORS</h3>
               <div className="space-y-1">
                 {data.creator.top.map((c, i) => (
-                  <div key={i} className="flex items-center justify-between font-mono-share text-[11px]">
+                  <div key={i} className="flex items-center justify-between font-mono-share text-xs">
                     <span className="text-foreground/90 truncate">{c.name}</span>
                     <span className="text-muted-foreground">{$(c.cents_earned)} • {num(c.credits_earned)}c</span>
                   </div>
@@ -371,9 +371,9 @@ export default function AdminInsightsPanel() {
 function Stat({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <div className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm p-3">
-      <div className="font-mono-share text-[10px] tracking-wider text-muted-foreground/70 mb-1">{label}</div>
+      <div className="font-mono-share text-tiny tracking-wider text-muted-foreground/70 mb-1">{label}</div>
       <div className="font-mono-share text-base text-foreground tabular-nums">{value}</div>
-      {sub && <div className="font-mono-share text-[10px] text-muted-foreground/60 mt-0.5">{sub}</div>}
+      {sub && <div className="font-mono-share text-tiny text-muted-foreground/60 mt-0.5">{sub}</div>}
     </div>
   );
 }

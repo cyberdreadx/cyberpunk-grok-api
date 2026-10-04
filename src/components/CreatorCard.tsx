@@ -157,12 +157,12 @@ const CreatorCard: React.FC<Props> = ({ creator, onOpen, active, forceBlur, curr
           )
         ) : creator.latestText ? (
           <div className="absolute inset-0 p-3 flex items-center justify-center">
-            <p className={`font-mono-share text-[11px] text-foreground/80 line-clamp-6 text-center leading-snug ${forceBlur || isMatureBlur ? "blur-sm select-none" : ""}`}>
+            <p className={`font-mono-share text-xs text-foreground/80 line-clamp-6 text-center leading-snug ${forceBlur || isMatureBlur ? "blur-sm select-none" : ""}`}>
               {creator.latestText}
             </p>
           </div>
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center text-muted-foreground/40">
+          <div className="absolute inset-0 flex items-center justify-center text-muted-foreground/60">
             <ImageIcon className="w-8 h-8" />
           </div>
         )}
@@ -179,7 +179,7 @@ const CreatorCard: React.FC<Props> = ({ creator, onOpen, active, forceBlur, curr
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="bg-black/60 backdrop-blur-sm rounded-full px-2 py-1 border border-amber-400/50 flex items-center gap-1">
               <ShieldAlert className="w-3 h-3 text-amber-300" />
-              <span className="font-mono-share text-[9px] text-amber-200 tracking-wider">18+</span>
+              <span className="font-mono-share text-tiny text-amber-200 tracking-wider">18+</span>
             </div>
           </div>
         )}
@@ -194,7 +194,7 @@ const CreatorCard: React.FC<Props> = ({ creator, onOpen, active, forceBlur, curr
         {/* Owner-only LOCKED · price badge so creator can verify locks at a glance */}
         {creator.isOwner && ((creator.lockCost || 0) > 0 || (creator.lockPriceCents || 0) > 0 || !!(creator.lockXrgeAmount && parseFloat(creator.lockXrgeAmount) > 0)) && (
           <div
-            className="absolute top-2 left-2 flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-sm border border-amber-400/50 font-mono-share text-[9px] text-amber-300 tracking-wider"
+            className="absolute top-2 left-2 flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-sm border border-amber-400/50 font-mono-share text-tiny text-amber-300 tracking-wider"
             title="Locked for other viewers — they see a blurred preview and must unlock."
           >
             <Lock className="w-2.5 h-2.5" />
@@ -206,7 +206,7 @@ const CreatorCard: React.FC<Props> = ({ creator, onOpen, active, forceBlur, curr
         )}
 
         {/* Time chip */}
-        <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-black/60 backdrop-blur-sm font-mono-share text-[9px] text-white/90">
+        <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-black/60 backdrop-blur-sm font-mono-share text-tiny text-white/90">
           {timeAgo(creator.latestAt)}
         </div>
       </div>
@@ -215,14 +215,14 @@ const CreatorCard: React.FC<Props> = ({ creator, onOpen, active, forceBlur, curr
       <div className="flex items-center gap-2 p-2 bg-card/80 border-t border-border/30">
         <Avatar className="w-7 h-7 shrink-0">
           {creator.avatarUrl && <AvatarImage src={creator.avatarUrl} alt={creator.username} />}
-          <AvatarFallback className="text-[9px] font-mono-share bg-muted">{initials}</AvatarFallback>
+          <AvatarFallback className="text-tiny font-mono-share bg-muted">{initials}</AvatarFallback>
         </Avatar>
         <div className="min-w-0 flex-1">
-          <div className="font-mono-share text-[11px] text-foreground truncate flex items-center gap-1">
+          <div className="font-mono-share text-xs text-foreground truncate flex items-center gap-1">
             <span className="truncate">@{creator.username}</span>
             {creator.verified && <VerifiedBadge size="xs" />}
           </div>
-          <div className="font-mono-share text-[9px] text-muted-foreground flex items-center gap-1">
+          <div className="font-mono-share text-tiny text-muted-foreground flex items-center gap-1">
             <MessageSquare className="w-2.5 h-2.5" />
             {creator.postCount} {creator.postCount === 1 ? "post" : "posts"}
           </div>

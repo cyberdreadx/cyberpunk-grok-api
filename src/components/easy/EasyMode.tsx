@@ -475,12 +475,12 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
     <div className="flex flex-col gap-1 p-2">
       <button
         onClick={newChat}
-        className="flex items-center gap-2 px-3 py-2 rounded-lg border border-primary/30 text-primary hover:bg-primary/10 font-mono text-[11px] tracking-wider transition-colors"
+        className="flex items-center gap-2 px-3 py-2 rounded-lg border border-primary/30 text-primary hover:bg-primary/10 font-mono text-xs tracking-wider transition-colors"
       >
         <MessageSquarePlus className="w-3.5 h-3.5" /> NEW CHAT
       </button>
       {store.threads.length === 0 && (
-        <p className="px-3 py-4 font-mono text-[11px] text-muted-foreground/60">No chats yet.</p>
+        <p className="px-3 py-4 font-mono text-xs text-muted-foreground/60">No chats yet.</p>
       )}
       {store.threads.map((t) => (
         <div
@@ -508,7 +508,7 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
                 onBlur={() => setRenamingId(null)}
                 onKeyDown={(e) => { if (e.key === "Escape") setRenamingId(null); }}
                 maxLength={120}
-                className="flex-1 min-w-0 bg-background/80 border border-primary/40 rounded px-2 py-1 font-mono text-[11px] text-foreground"
+                className="flex-1 min-w-0 bg-background/80 border border-primary/40 rounded px-2 py-1 font-mono text-xs text-foreground"
                 aria-label="Chat title"
               />
               {/* onMouseDown, because the input's onBlur would fire first and
@@ -522,7 +522,7 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
             <>
               <button
                 onClick={() => { store.selectThread(t.id); setSidebarOpen(false); }}
-                className={`flex-1 text-left px-3 py-2 font-mono text-[11px] truncate ${t.id === store.activeId ? "text-primary" : "text-muted-foreground"
+                className={`flex-1 text-left px-3 py-2 font-mono text-xs truncate ${t.id === store.activeId ? "text-primary" : "text-muted-foreground"
                   }`}
               >
                 {t.title || "Untitled"}
@@ -573,7 +573,7 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
         <button onClick={() => setSidebarOpen(true)} className="p-1.5 text-muted-foreground hover:text-primary" aria-label="Chats">
           <Menu className="w-4 h-4" />
         </button>
-        <span className="font-mono text-[11px] text-muted-foreground truncate">
+        <span className="font-mono text-xs text-muted-foreground truncate">
           {store.threads.find((t) => t.id === store.activeId)?.title || "New chat"}
         </span>
         <button onClick={newChat} className="ml-auto p-1.5 text-muted-foreground hover:text-primary" aria-label="New chat">
@@ -608,7 +608,7 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
             ) : (
               <div key={b.id} className="space-y-2">
                 {b.label && (
-                  <span className="font-mono text-[10px] tracking-widest text-muted-foreground">{b.label.toUpperCase()}</span>
+                  <span className="font-mono text-tiny tracking-widest text-muted-foreground">{b.label.toUpperCase()}</span>
                 )}
                 {b.status === "running" && (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground font-mono">
@@ -617,7 +617,7 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
                     {b.jobId && (
                       <button
                         onClick={() => void engines.cancelComfyJob(b.jobId)}
-                        className="ml-1 flex items-center gap-1 px-2 py-0.5 rounded-md border border-border/50 text-[11px] text-muted-foreground hover:text-destructive hover:border-destructive/40 transition-colors"
+                        className="ml-1 flex items-center gap-1 px-2 py-0.5 rounded-md border border-border/50 text-xs text-muted-foreground hover:text-destructive hover:border-destructive/40 transition-colors"
                         aria-label="Stop this generation"
                       >
                         <Square className="w-2.5 h-2.5 fill-current" /> Stop
@@ -644,7 +644,7 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
                       <button
                         onClick={() => void send(b.prompt)}
                         disabled={busy}
-                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-border/50 font-mono text-[11px] text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors disabled:opacity-40"
+                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-border/50 font-mono text-xs text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors disabled:opacity-40"
                       >
                         <RefreshCw className="w-3 h-3" /> Try again
                       </button>
@@ -652,13 +652,13 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
                         <>
                           <button
                             onClick={() => engines.onEditImage(b.assets[0].url)}
-                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-border/50 font-mono text-[11px] text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors"
+                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-border/50 font-mono text-xs text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors"
                           >
                             <Wand2 className="w-3 h-3" /> Edit in Classic
                           </button>
                           <button
                             onClick={() => engines.onAnimateImage(b.assets[0].url)}
-                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-border/50 font-mono text-[11px] text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors"
+                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-border/50 font-mono text-xs text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors"
                           >
                             <Video className="w-3 h-3" /> Make video
                           </button>
@@ -693,13 +693,13 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
           {optionsOpen && (
             <div className="border border-border/50 rounded-xl p-3 space-y-3 bg-muted/30">
               <div className="space-y-1.5">
-                <div className="font-mono text-[10px] tracking-widest text-muted-foreground">SHAPE</div>
+                <div className="font-mono text-tiny tracking-widest text-muted-foreground">SHAPE</div>
                 <div className="flex gap-1.5 flex-wrap">
                   {ASPECTS.map((a) => (
                     <button
                       key={a.id}
                       onClick={() => setAspect(a.id)}
-                      className={`px-2.5 py-1 rounded-lg border font-mono text-[11px] transition-colors ${aspect === a.id
+                      className={`px-2.5 py-1 rounded-lg border font-mono text-xs transition-colors ${aspect === a.id
                         ? "border-primary/50 text-primary bg-primary/10"
                         : "border-border/50 text-muted-foreground hover:border-primary/30"
                         }`}
@@ -710,13 +710,13 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
                 </div>
               </div>
               <div className="space-y-1.5">
-                <div className="font-mono text-[10px] tracking-widest text-muted-foreground">VIDEO LENGTH</div>
+                <div className="font-mono text-tiny tracking-widest text-muted-foreground">VIDEO LENGTH</div>
                 <div className="flex gap-1.5 flex-wrap">
                   {LENGTHS.map((l) => (
                     <button
                       key={l.id}
                       onClick={() => setLength(l.id)}
-                      className={`px-2.5 py-1 rounded-lg border font-mono text-[11px] transition-colors ${length === l.id
+                      className={`px-2.5 py-1 rounded-lg border font-mono text-xs transition-colors ${length === l.id
                         ? "border-primary/50 text-primary bg-primary/10"
                         : "border-border/50 text-muted-foreground hover:border-primary/30"
                         }`}
@@ -727,7 +727,7 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
                 </div>
               </div>
               <div className="space-y-1.5">
-                <div className="font-mono text-[10px] tracking-widest text-muted-foreground">VIDEO QUALITY</div>
+                <div className="font-mono text-tiny tracking-widest text-muted-foreground">VIDEO QUALITY</div>
                 <div className="flex gap-1.5 flex-wrap">
                   {VIDEO_QUALITY.map((q) => {
                     // Computed from the chosen length so the two prices are
@@ -746,16 +746,16 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
                           : "border-border/50 hover:border-primary/30"
                           }`}
                       >
-                        <div className={`font-mono text-[11px] ${videoQuality === q.id ? "text-primary" : "text-muted-foreground"}`}>
+                        <div className={`font-mono text-xs ${videoQuality === q.id ? "text-primary" : "text-muted-foreground"}`}>
                           {q.label} <span className="text-muted-foreground/60">· ~{cost} cr</span>
                         </div>
-                        <div className="font-mono text-[9px] text-muted-foreground/60">{q.blurb}</div>
+                        <div className="font-mono text-tiny text-muted-foreground/60">{q.blurb}</div>
                       </button>
                     );
                   })}
                 </div>
               </div>
-              <p className="font-mono text-[10px] text-muted-foreground/70">
+              <p className="font-mono text-tiny text-muted-foreground/70">
                 Everything else — models, LoRAs, seeds, steps — lives in Classic.
               </p>
             </div>
@@ -796,7 +796,7 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
           <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={() => setOptionsOpen((v) => !v)}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border font-mono text-[11px] transition-colors ${optionsOpen
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border font-mono text-xs transition-colors ${optionsOpen
                 ? "border-primary/50 text-primary bg-primary/10"
                 : "border-border/50 text-muted-foreground hover:text-primary hover:border-primary/40"
                 }`}
@@ -814,7 +814,7 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
             </button>
             <button
               onClick={toggleAssist}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border font-mono text-[11px] transition-colors ${assist
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border font-mono text-xs transition-colors ${assist
                 ? "border-primary/50 text-primary bg-primary/10"
                 : "border-border/50 text-muted-foreground hover:text-primary hover:border-primary/40"
                 }`}

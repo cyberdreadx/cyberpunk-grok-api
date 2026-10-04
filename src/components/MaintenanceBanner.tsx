@@ -71,7 +71,7 @@ const MaintenanceBanner: React.FC = () => {
     >
       <CheckCircle2 className="h-4 w-4 shrink-0 text-green-400" />
 
-      <p className="text-center text-[11px] leading-tight sm:text-xs">
+      <p className="text-center text-xs leading-tight sm:text-xs">
         <span className="font-orbitron tracking-widest uppercase text-green-300">
           All systems operational
         </span>

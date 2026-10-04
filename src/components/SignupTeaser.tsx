@@ -49,12 +49,12 @@ const SignupTeaser: React.FC<Props> = ({ variant = "desktop" }) => {
                 <div className="bg-black/60 backdrop-blur-sm rounded-full p-2 border border-primary/40">
                   <Lock className="w-4 h-4 text-primary" />
                 </div>
-                <span className="font-orbitron text-[8px] tracking-widest text-white/90">
+                <span className="font-orbitron text-micro tracking-widest text-white/90">
                   {s.label}
                 </span>
               </div>
               <div className="absolute bottom-1 left-1 right-1 text-center">
-                <span className="font-mono-share text-[8px] text-white/70 truncate block">
+                <span className="font-mono-share text-micro text-white/70 truncate block">
                   {s.user}
                 </span>
               </div>
@@ -70,7 +70,7 @@ const SignupTeaser: React.FC<Props> = ({ variant = "desktop" }) => {
               UNLOCK THE FEED
             </h3>
           </div>
-          <p className="font-mono-share text-[11px] sm:text-xs text-foreground/90 leading-relaxed">
+          <p className="font-mono-share text-xs sm:text-xs text-foreground/90 leading-relaxed">
             Join to unlock exclusive posts, follow creators, post your own
             generations, and earn credits daily.
           </p>
@@ -78,13 +78,13 @@ const SignupTeaser: React.FC<Props> = ({ variant = "desktop" }) => {
             <Button
               size="sm"
               onClick={() => navigate("/create?signup=1")}
-              className="font-mono-share text-[10px] tracking-wider"
+              className="font-mono-share text-tiny tracking-wider"
             >
               <Zap className="w-3 h-3 mr-1" /> SIGN UP FREE
             </Button>
             <button
               onClick={() => navigate("/create?signin=1")}
-              className="font-mono-share text-[10px] tracking-wider text-muted-foreground hover:text-primary transition-colors px-2 py-1"
+              className="font-mono-share text-tiny tracking-wider text-muted-foreground hover:text-primary transition-colors px-2 py-1"
             >
               Already have an account? Sign in
             </button>

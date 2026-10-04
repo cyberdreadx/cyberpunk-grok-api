@@ -40,11 +40,11 @@ const PromptHistory: React.FC<PromptHistoryProps> = ({ history, onSelect, onRemo
       <CollapsibleTrigger className="flex items-center gap-2 w-full group">
         <span className="font-mono-share text-secondary/40 text-xs group-data-[state=open]:text-secondary/60">❯</span>
         <History className="w-3.5 h-3.5 text-muted-foreground group-hover:text-secondary transition-colors group-data-[state=open]:text-secondary" />
-        <span className="font-mono-share text-[10px] tracking-widest text-muted-foreground group-hover:text-secondary transition-colors group-data-[state=open]:text-secondary">
+        <span className="font-mono-share text-tiny tracking-widest text-muted-foreground group-hover:text-secondary transition-colors group-data-[state=open]:text-secondary">
           history --list
         </span>
         <div className="h-px flex-1 bg-border/50" />
-        <span className="font-mono-share text-[9px] text-muted-foreground/30">
+        <span className="font-mono-share text-tiny text-muted-foreground/60">
           {history.length} entries
         </span>
       </CollapsibleTrigger>
@@ -65,7 +65,7 @@ const PromptHistory: React.FC<PromptHistoryProps> = ({ history, onSelect, onRemo
             variant="ghost"
             size="sm"
             onClick={onClear}
-            className="text-destructive hover:text-destructive/80 font-mono-share text-[10px] h-8 px-2"
+            className="text-destructive hover:text-destructive/80 font-mono-share text-tiny h-8 px-2"
           >
             <Trash2 className="w-3 h-3 mr-1" />
             PURGE
@@ -75,7 +75,7 @@ const PromptHistory: React.FC<PromptHistoryProps> = ({ history, onSelect, onRemo
         {/* Entries */}
         <div className="max-h-48 overflow-y-auto space-y-1 pr-1 scrollbar-thin">
           {filtered.length === 0 ? (
-            <p className="font-mono-share text-[10px] text-muted-foreground/50 text-center py-3">
+            <p className="font-mono-share text-tiny text-muted-foreground/70 text-center py-3">
               No matching prompts
             </p>
           ) : (
@@ -86,16 +86,16 @@ const PromptHistory: React.FC<PromptHistoryProps> = ({ history, onSelect, onRemo
                 onClick={() => onSelect(entry.prompt)}
                 className="w-full group/item flex items-start gap-2 p-2 rounded border border-transparent hover:border-secondary/30 hover:bg-secondary/5 transition-all text-left"
               >
-                <Clock className="w-3 h-3 mt-0.5 text-muted-foreground/40 shrink-0" />
+                <Clock className="w-3 h-3 mt-0.5 text-muted-foreground/60 shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="font-rajdhani text-sm text-foreground/80 truncate group-hover/item:text-foreground transition-colors">
                     {entry.prompt}
                   </p>
                   <div className="flex items-center gap-2 mt-0.5">
-                    <span className="font-mono-share text-[9px] text-muted-foreground/40">
+                    <span className="font-mono-share text-tiny text-muted-foreground/60">
                       {(entry.mode ?? "unknown").toUpperCase().replace(/-/g, "_")}
                     </span>
-                    <span className="font-mono-share text-[9px] text-muted-foreground/30">
+                    <span className="font-mono-share text-tiny text-muted-foreground/60">
                       {formatTime(entry.timestamp)}
                     </span>
                   </div>

@@ -20,7 +20,7 @@ const ThemePicker: React.FC = () => {
     <div className="relative">
       <button
         onClick={() => setOpen((p) => !p)}
-        className="flex items-center gap-1.5 px-2 py-1 font-mono-share text-[10px] text-muted-foreground/60 hover:text-primary transition-colors border border-border/30 rounded bg-card/40 hover:bg-card/80"
+        className="flex items-center gap-1.5 px-2 py-1 font-mono-share text-tiny text-muted-foreground/60 hover:text-primary transition-colors border border-border/30 rounded bg-card/40 hover:bg-card/80"
         title="Switch theme"
       >
         <Palette className="w-3 h-3" />
@@ -32,7 +32,7 @@ const ThemePicker: React.FC = () => {
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div className="absolute right-0 top-full mt-1 z-50 min-w-[200px] bg-card/95 backdrop-blur-md border border-border rounded-md shadow-glow-ambient overflow-hidden">
             <div className="px-3 py-2 border-b border-border/50">
-              <span className="font-mono-share text-[9px] text-muted-foreground/50">$ select --theme</span>
+              <span className="font-mono-share text-tiny text-muted-foreground/70">$ select --theme</span>
             </div>
             {THEMES.map((theme) => {
               const isActive = theme.id === activeId;
@@ -55,10 +55,10 @@ const ThemePicker: React.FC = () => {
                     }}
                   />
                   <div className="min-w-0">
-                    <div className="font-orbitron text-[10px] tracking-wider truncate">{theme.name}</div>
-                    <div className="font-mono-share text-[8px] text-muted-foreground/50 truncate">{theme.label}</div>
+                    <div className="font-orbitron text-tiny tracking-wider truncate">{theme.name}</div>
+                    <div className="font-mono-share text-micro text-muted-foreground/70 truncate">{theme.label}</div>
                   </div>
-                  {isActive && <span className="ml-auto font-mono-share text-[10px] text-primary/60 shrink-0">ACTIVE</span>}
+                  {isActive && <span className="ml-auto font-mono-share text-tiny text-primary/60 shrink-0">ACTIVE</span>}
                 </button>
               );
             })}

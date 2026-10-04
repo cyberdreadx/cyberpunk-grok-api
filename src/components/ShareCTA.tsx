@@ -75,7 +75,7 @@ const ShareCTA: React.FC<ShareCTAProps> = ({
     <div className="relative border border-secondary/30 bg-secondary/5 rounded-lg px-3 py-2.5 mt-3 animate-slide-up">
       <button
         onClick={handleDismiss}
-        className="absolute top-1.5 right-1.5 text-muted-foreground/30 hover:text-muted-foreground/60 transition-colors"
+        className="absolute top-1.5 right-1.5 text-muted-foreground/60 hover:text-muted-foreground/60 transition-colors"
       >
         <X className="w-3.5 h-3.5" />
       </button>
@@ -83,7 +83,7 @@ const ShareCTA: React.FC<ShareCTAProps> = ({
       <div className="flex items-center gap-2 pr-6">
         <Flame className="w-4 h-4 text-orange-400 shrink-0" />
         <div className="flex-1 min-w-0">
-          <p className="font-mono-share text-[10px] sm:text-[11px] text-foreground/80 leading-relaxed">
+          <p className="font-mono-share text-tiny sm:text-xs text-foreground/80 leading-relaxed">
             {lastShareUrl ? (
               <>Link ready! <span className="text-secondary">Share it:</span></>
             ) : (
@@ -100,7 +100,7 @@ const ShareCTA: React.FC<ShareCTAProps> = ({
               title="Post on X"
             >
               <XIcon className="w-3 h-3" />
-              <span className="font-orbitron text-[7px] tracking-wider">POST</span>
+              <span className="font-orbitron text-micro tracking-wider">POST</span>
             </button>
             <button
               onClick={() => openRedditShare(lastShareUrl)}
@@ -108,7 +108,7 @@ const ShareCTA: React.FC<ShareCTAProps> = ({
               title="Share on Reddit"
             >
               <RedditIcon className="w-3 h-3" />
-              <span className="font-orbitron text-[7px] tracking-wider">SHARE</span>
+              <span className="font-orbitron text-micro tracking-wider">SHARE</span>
             </button>
           </div>
         ) : (
@@ -120,12 +120,12 @@ const ShareCTA: React.FC<ShareCTAProps> = ({
             {isSharing ? (
               <>
                 <Loader2 className="w-3 h-3 animate-spin" />
-                <span className="font-orbitron text-[8px] tracking-wider">SHARING</span>
+                <span className="font-orbitron text-micro tracking-wider">SHARING</span>
               </>
             ) : (
               <>
                 <Share2 className="w-3 h-3" />
-                <span className="font-orbitron text-[8px] tracking-wider">SHARE</span>
+                <span className="font-orbitron text-micro tracking-wider">SHARE</span>
               </>
             )}
           </button>

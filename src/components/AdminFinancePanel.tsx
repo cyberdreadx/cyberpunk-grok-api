@@ -51,10 +51,10 @@ function Stat({ icon, label, value, sub, tone = "neutral" }: {
     <div className="holo-card p-3 sm:p-4 space-y-1.5 min-w-0 overflow-hidden" data-numeric>
       <div className="flex items-center gap-2 text-muted-foreground/70">
         <span className={`inline-flex items-center justify-center w-6 h-6 rounded-md shrink-0 ${toneMap[tone]}`}>{icon}</span>
-        <span className="font-mono-share text-[10px] tracking-wider uppercase truncate">{label}</span>
+        <span className="font-mono-share text-tiny tracking-wider uppercase truncate">{label}</span>
       </div>
       <div className="font-orbitron text-xl sm:text-2xl font-bold tracking-wide truncate">{value}</div>
-      {sub && <div className="font-mono-share text-[10px] text-muted-foreground/60 truncate">{sub}</div>}
+      {sub && <div className="font-mono-share text-tiny text-muted-foreground/60 truncate">{sub}</div>}
     </div>
   );
 }
@@ -79,7 +79,7 @@ function MoneyTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-card/95 border border-border/50 rounded px-3 py-2 shadow-xl backdrop-blur-sm">
-      <p className="font-mono-share text-[10px] text-primary/70 mb-1">{label}</p>
+      <p className="font-mono-share text-tiny text-primary/70 mb-1">{label}</p>
       {payload.map((p: any, i: number) => (
         <p key={i} className="font-mono-share text-xs" style={{ color: p.color }}>
           {p.name}: {fmt$(p.value)}
@@ -151,7 +151,7 @@ export default function AdminFinancePanel({ range, onRangeChange }: {
         <RangeControl value={range} onChange={onRangeChange} />
         <Button
           variant="outline" size="sm" onClick={() => load(true)} disabled={loading}
-          className="font-mono-share text-[10px] gap-1.5 ml-auto"
+          className="font-mono-share text-tiny gap-1.5 ml-auto"
           title="Bypass the 10-minute Stripe cache"
         >
           <RefreshCw className={`w-3 h-3 ${loading ? "animate-spin" : ""}`} />
@@ -162,7 +162,7 @@ export default function AdminFinancePanel({ range, onRangeChange }: {
       {stripeMissing && (
         <div className="border border-amber-500/40 bg-amber-500/10 rounded-lg px-4 py-3 flex items-center gap-2">
           <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
-          <span className="font-mono-share text-[11px] text-amber-300">
+          <span className="font-mono-share text-xs text-amber-300">
             Stripe unavailable — showing ledger figures only. Check STRIPE_SECRET_KEY.
           </span>
         </div>
@@ -208,7 +208,7 @@ export default function AdminFinancePanel({ range, onRangeChange }: {
               title="LEDGER_RECONCILIATION"
               icon={<AlertTriangle className="w-3.5 h-3.5" />}
               right={
-                <span className={`font-mono-share text-[10px] px-2 py-0.5 rounded border ${
+                <span className={`font-mono-share text-tiny px-2 py-0.5 rounded border ${
                   Math.abs(recon.driftPct) > 0.02
                     ? "border-destructive/40 bg-destructive/10 text-destructive"
                     : "border-secondary/40 bg-secondary/10 text-secondary"
@@ -217,7 +217,7 @@ export default function AdminFinancePanel({ range, onRangeChange }: {
                 </span>
               }
             >
-              <p className="font-mono-share text-[10px] text-muted-foreground/60 mb-3 leading-relaxed">
+              <p className="font-mono-share text-tiny text-muted-foreground/60 mb-3 leading-relaxed">
                 Stripe collected <strong className="text-foreground/80">{fmt$(recon.stripeGrossCents)}</strong> in
                 platform revenue{s.nonPlatformCents ? ` (${fmt$(s.nonPlatformCents)} of non-platform charges excluded)` : ""};
                 our transactions table booked{" "}
@@ -270,18 +270,18 @@ export default function AdminFinancePanel({ range, onRangeChange }: {
                   <thead>
                     <tr className="border-b border-border/20">
                       {["PLAN", "LIST_PRICE", "SUBS", "MRR", "SHARE"].map((h) => (
-                        <th key={h} className="px-2.5 py-2 text-left font-mono-share text-[9px] text-muted-foreground/50 tracking-wider">{h}</th>
+                        <th key={h} className="px-2.5 py-2 text-left font-mono-share text-tiny text-muted-foreground/70 tracking-wider">{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {mrr.byPrice.map((p: any) => (
                       <tr key={p.priceId} className="border-b border-border/10 hover:bg-primary/5 transition-colors">
-                        <td className="px-2.5 py-2 font-mono-share text-[10px] text-foreground/80">{p.nickname}</td>
-                        <td className="px-2.5 py-2 font-mono-share text-[10px] text-muted-foreground/70" data-numeric>{fmt$(p.unitAmount)}</td>
-                        <td className="px-2.5 py-2 font-mono-share text-[10px]" data-numeric>{p.count}</td>
-                        <td className="px-2.5 py-2 font-mono-share text-[10px] text-secondary" data-numeric>{fmt$(p.mrrCents)}</td>
-                        <td className="px-2.5 py-2 font-mono-share text-[10px] text-muted-foreground/70" data-numeric>
+                        <td className="px-2.5 py-2 font-mono-share text-tiny text-foreground/80">{p.nickname}</td>
+                        <td className="px-2.5 py-2 font-mono-share text-tiny text-muted-foreground/70" data-numeric>{fmt$(p.unitAmount)}</td>
+                        <td className="px-2.5 py-2 font-mono-share text-tiny" data-numeric>{p.count}</td>
+                        <td className="px-2.5 py-2 font-mono-share text-tiny text-secondary" data-numeric>{fmt$(p.mrrCents)}</td>
+                        <td className="px-2.5 py-2 font-mono-share text-tiny text-muted-foreground/70" data-numeric>
                           {mrr.mrrCents > 0 ? pct(p.mrrCents / mrr.mrrCents, 0) : "--"}
                         </td>
                       </tr>
@@ -289,7 +289,7 @@ export default function AdminFinancePanel({ range, onRangeChange }: {
                   </tbody>
                 </table>
               </div>
-              <p className="font-mono-share text-[10px] text-muted-foreground/50 mt-3">
+              <p className="font-mono-share text-tiny text-muted-foreground/70 mt-3">
                 Read live off Stripe subscription items, so yearly plans are normalized to monthly and
                 per-customer coupons are applied — neither of which the local subscription_tier string can express.
               </p>
@@ -305,7 +305,7 @@ export default function AdminFinancePanel({ range, onRangeChange }: {
           icon={<Server className="w-3.5 h-3.5" />}
           right={
             runpod.live ? (
-              <span className="font-mono-share text-[10px] text-muted-foreground/70">
+              <span className="font-mono-share text-tiny text-muted-foreground/70">
                 balance ${runpod.live.balanceUsd?.toFixed(2)} // ${runpod.live.spendPerHr?.toFixed(3)}/hr
               </span>
             ) : null
@@ -327,7 +327,7 @@ export default function AdminFinancePanel({ range, onRangeChange }: {
               tone={runpod.actual?.ratio && runpod.actual.ratio > 1.25 ? "bad" : "neutral"} />
           </section>
 
-          <p className="font-mono-share text-[10px] text-muted-foreground/60 mb-3 leading-relaxed">
+          <p className="font-mono-share text-tiny text-muted-foreground/60 mb-3 leading-relaxed">
             The estimate is execution time × one flat rate, which is the H200 price applied to every endpoint —
             several of which also schedule onto cheaper ADA workers. It also cannot see idle time, cold starts, or
             the GPU seconds erased when a job is refunded. Account-balance snapshots are the correction; a ratio
@@ -340,18 +340,18 @@ export default function AdminFinancePanel({ range, onRangeChange }: {
                 <thead>
                   <tr className="border-b border-border/20">
                     {["MODE", "JOBS", "AVG_SEC", "COST", "COST/JOB"].map((h) => (
-                      <th key={h} className="px-2.5 py-2 text-left font-mono-share text-[9px] text-muted-foreground/50 tracking-wider">{h}</th>
+                      <th key={h} className="px-2.5 py-2 text-left font-mono-share text-tiny text-muted-foreground/70 tracking-wider">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {runpod.perMode.map((m: any) => (
                     <tr key={m.mode} className="border-b border-border/10 hover:bg-primary/5 transition-colors">
-                      <td className="px-2.5 py-2 font-mono-share text-[10px] text-foreground/80">{m.mode}</td>
-                      <td className="px-2.5 py-2 font-mono-share text-[10px]" data-numeric>{m.jobs.toLocaleString()}</td>
-                      <td className="px-2.5 py-2 font-mono-share text-[10px] text-muted-foreground/70" data-numeric>{m.avgSec.toFixed(1)}s</td>
-                      <td className="px-2.5 py-2 font-mono-share text-[10px] text-destructive" data-numeric>{fmt$(m.cents)}</td>
-                      <td className="px-2.5 py-2 font-mono-share text-[10px] text-muted-foreground/70" data-numeric>
+                      <td className="px-2.5 py-2 font-mono-share text-tiny text-foreground/80">{m.mode}</td>
+                      <td className="px-2.5 py-2 font-mono-share text-tiny" data-numeric>{m.jobs.toLocaleString()}</td>
+                      <td className="px-2.5 py-2 font-mono-share text-tiny text-muted-foreground/70" data-numeric>{m.avgSec.toFixed(1)}s</td>
+                      <td className="px-2.5 py-2 font-mono-share text-tiny text-destructive" data-numeric>{fmt$(m.cents)}</td>
+                      <td className="px-2.5 py-2 font-mono-share text-tiny text-muted-foreground/70" data-numeric>
                         {m.jobs > 0 ? `${(m.cents / m.jobs).toFixed(2)}¢` : "--"}
                       </td>
                     </tr>

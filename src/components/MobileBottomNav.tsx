@@ -155,8 +155,8 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded hover:bg-primary/10 transition-colors"
               >
                 <ShoppingCart className="w-4 h-4 text-primary/60" />
-                <span className="font-mono-share text-[11px] text-foreground/80">CREDITS</span>
-                <span className="ml-auto font-orbitron text-[10px] tracking-wider text-primary">
+                <span className="font-mono-share text-xs text-foreground/80">CREDITS</span>
+                <span className="ml-auto font-orbitron text-tiny tracking-wider text-primary">
                   {creditsBadge}
                 </span>
               </button>
@@ -169,8 +169,8 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
               className="w-full flex items-center gap-3 px-3 py-2.5 rounded hover:bg-primary/10 transition-colors"
             >
               <Users className="w-4 h-4 text-secondary/80" />
-              <span className="font-mono-share text-[11px] text-foreground/80">FEATURED MODELS</span>
-              <span className="ml-auto font-mono-share text-[7px] px-1 py-px rounded-sm tracking-widest text-emerald-300 border border-emerald-400/40 bg-emerald-400/10">NEW</span>
+              <span className="font-mono-share text-xs text-foreground/80">FEATURED MODELS</span>
+              <span className="ml-auto font-mono-share text-micro px-1 py-px rounded-sm tracking-widest text-emerald-300 border border-emerald-400/40 bg-emerald-400/10">NEW</span>
             </button>
             <button
               onClick={() => {
@@ -180,7 +180,7 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
               className="w-full flex items-center gap-3 px-3 py-2.5 rounded hover:bg-primary/10 transition-colors"
             >
               <Star className="w-4 h-4 text-amber-400/80" />
-              <span className="font-mono-share text-[11px] text-foreground/80">CREATOR APPLY</span>
+              <span className="font-mono-share text-xs text-foreground/80">CREATOR APPLY</span>
             </button>
             {isAuthenticated && (
               <button
@@ -191,7 +191,7 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded hover:bg-primary/10 transition-colors"
               >
                 <ClipboardList className="w-4 h-4 text-primary/60" />
-                <span className="font-mono-share text-[11px] text-foreground/80">APPLICATION STATUS</span>
+                <span className="font-mono-share text-xs text-foreground/80">APPLICATION STATUS</span>
               </button>
             )}
             <button
@@ -203,7 +203,7 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
               className="w-full flex items-center gap-3 px-3 py-2.5 rounded hover:bg-primary/10 transition-colors"
             >
               <User className="w-4 h-4 text-primary/60" />
-              <span className="font-mono-share text-[11px] text-foreground/80">
+              <span className="font-mono-share text-xs text-foreground/80">
                 {isAuthenticated ? "PROFILE" : "SIGN IN"}
               </span>
             </button>
@@ -214,7 +214,7 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded hover:bg-primary/10 transition-colors"
               >
                 <BadgeCheck className="w-4 h-4 text-primary/60" />
-                <span className="font-mono-share text-[11px] text-foreground/80">VERIFICATION</span>
+                <span className="font-mono-share text-xs text-foreground/80">VERIFICATION</span>
               </button>
             )}
             {isAuthenticated && (
@@ -223,9 +223,9 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded hover:bg-primary/10 transition-colors"
               >
                 <MessageSquare className="w-4 h-4 text-primary/60" />
-                <span className="font-mono-share text-[11px] text-foreground/80 flex-1 text-left">CHAT ROOM</span>
+                <span className="font-mono-share text-xs text-foreground/80 flex-1 text-left">CHAT ROOM</span>
                 {chatUnread > 0 && (
-                  <span className="min-w-[16px] h-4 px-1 rounded-full bg-primary text-background font-mono-share text-[9px] leading-4 text-center">
+                  <span className="min-w-[16px] h-4 px-1 rounded-full bg-primary text-background font-mono-share text-tiny leading-4 text-center">
                     {chatUnread > 9 ? "9+" : chatUnread}
                   </span>
                 )}
@@ -237,7 +237,7 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded hover:bg-primary/10 transition-colors"
               >
                 <Heart className="w-4 h-4 text-primary/60" />
-                <span className="font-mono-share text-[11px] text-foreground/80">CHARACTER CHAT</span>
+                <span className="font-mono-share text-xs text-foreground/80">CHARACTER CHAT</span>
               </button>
             )}
             {isAuthenticated && (
@@ -246,8 +246,8 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded hover:bg-primary/10 transition-colors"
               >
                 <Gift className="w-4 h-4 text-fuchsia-400/80" />
-                <span className="font-mono-share text-[11px] text-foreground/80">COMMUNITY POT</span>
-                <span className="ml-auto font-orbitron text-[8px] tracking-wider text-fuchsia-300 border border-fuchsia-400/40 px-1.5 py-0.5 rounded">FREE</span>
+                <span className="font-mono-share text-xs text-foreground/80">COMMUNITY POT</span>
+                <span className="ml-auto font-orbitron text-micro tracking-wider text-fuchsia-300 border border-fuchsia-400/40 px-1.5 py-0.5 rounded">FREE</span>
               </button>
             )}
             <button
@@ -255,7 +255,7 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
               className="w-full flex items-center gap-3 px-3 py-2.5 rounded hover:bg-primary/10 transition-colors"
             >
               <SettingsIcon className="w-4 h-4 text-primary/60" />
-              <span className="font-mono-share text-[11px] text-foreground/80">SETTINGS</span>
+              <span className="font-mono-share text-xs text-foreground/80">SETTINGS</span>
             </button>
             <div className="h-px bg-border/30 my-1" />
             <button
@@ -263,29 +263,29 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
               className="w-full flex items-center gap-3 px-3 py-2.5 rounded hover:bg-primary/10 transition-colors"
             >
               <HelpCircle className="w-4 h-4 text-primary/60" />
-              <span className="font-mono-share text-[11px] text-foreground/80">HOW TO USE</span>
+              <span className="font-mono-share text-xs text-foreground/80">HOW TO USE</span>
             </button>
             <button
               onClick={() => { onOpenChangelog?.(); setMoreOpen(false); }}
               className="w-full flex items-center gap-3 px-3 py-2.5 rounded hover:bg-primary/10 transition-colors"
             >
               <ScrollText className="w-4 h-4 text-primary/60" />
-              <span className="font-mono-share text-[11px] text-foreground/80">CHANGELOG</span>
+              <span className="font-mono-share text-xs text-foreground/80">CHANGELOG</span>
             </button>
             <div className="h-px bg-border/30 my-1" />
             <button
               onClick={() => { onOpenTos?.(); setMoreOpen(false); }}
               className="w-full flex items-center gap-3 px-3 py-2.5 rounded hover:bg-muted/30 transition-colors"
             >
-              <FileText className="w-4 h-4 text-muted-foreground/40" />
-              <span className="font-mono-share text-[10px] text-muted-foreground/60">TERMS OF SERVICE</span>
+              <FileText className="w-4 h-4 text-muted-foreground/60" />
+              <span className="font-mono-share text-tiny text-muted-foreground/60">TERMS OF SERVICE</span>
             </button>
             <button
               onClick={() => { onOpenPrivacy?.(); setMoreOpen(false); }}
               className="w-full flex items-center gap-3 px-3 py-2.5 rounded hover:bg-muted/30 transition-colors"
             >
-              <Shield className="w-4 h-4 text-muted-foreground/40" />
-              <span className="font-mono-share text-[10px] text-muted-foreground/60">PRIVACY POLICY</span>
+              <Shield className="w-4 h-4 text-muted-foreground/60" />
+              <span className="font-mono-share text-tiny text-muted-foreground/60">PRIVACY POLICY</span>
             </button>
           </div>
         </div>
@@ -303,18 +303,18 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
                   className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-lg transition-all min-w-[56px] active:scale-95 ${
                     tab.active
                       ? "text-primary"
-                      : "text-muted-foreground/50 active:text-primary/70"
+                      : "text-muted-foreground/70 active:text-primary/70"
                   }`}
                 >
                   <div className="relative">
                     <Icon className={`w-5 h-5 ${tab.active ? "drop-shadow-glow-focus" : ""}`} />
                     {tab.badge && (
-                      <span className="absolute -top-2 -right-4 min-w-[1.75rem] rounded-full border border-primary/40 bg-card px-1 py-0.5 text-center font-orbitron text-[8px] leading-none text-primary shadow-glow-focus">
+                      <span className="absolute -top-2 -right-4 min-w-[1.75rem] rounded-full border border-primary/40 bg-card px-1 py-0.5 text-center font-orbitron text-micro leading-none text-primary shadow-glow-focus">
                         {tab.badge}
                       </span>
                     )}
                     {tab.newBadge && (
-                      <span className="absolute -top-2 -right-3 rounded-full border border-fuchsia-400/60 bg-card px-1 py-0.5 text-center font-orbitron text-[7px] leading-none text-fuchsia-300 shadow-glow-focus">
+                      <span className="absolute -top-2 -right-3 rounded-full border border-fuchsia-400/60 bg-card px-1 py-0.5 text-center font-orbitron text-micro leading-none text-fuchsia-300 shadow-glow-focus">
                         NEW
                       </span>
                     )}
@@ -323,7 +323,7 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
                     )}
                   </div>
                   <span className={`font-orbitron tracking-wider leading-none ${
-                    tab.active ? "text-[7px]" : "text-[6px]"
+                    tab.active ? "text-micro" : "text-micro"
                   }`}>
                     {tab.label}
                   </span>

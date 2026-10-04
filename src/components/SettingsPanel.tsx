@@ -131,11 +131,11 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
       <CollapsibleTrigger className="flex items-center gap-2 w-full group">
         <span className="font-mono-share text-primary/40 text-xs group-data-[state=open]:text-primary/60">▸</span>
         <Settings className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors group-data-[state=open]:text-primary" />
-        <span className="font-mono-share text-[10px] tracking-widest text-muted-foreground group-hover:text-primary transition-colors group-data-[state=open]:text-primary">
+        <span className="font-mono-share text-tiny tracking-widest text-muted-foreground group-hover:text-primary transition-colors group-data-[state=open]:text-primary">
           render_config
         </span>
         <div className="h-px flex-1 bg-primary/10" />
-        <span className="font-mono-share text-[9px] text-muted-foreground/30">
+        <span className="font-mono-share text-tiny text-muted-foreground/60">
           {summaryText}
         </span>
       </CollapsibleTrigger>
@@ -148,7 +148,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 comfy/WAN/LTX paths pass their own width & height. */}
             {showAspectRatio && (
             <div className="space-y-2">
-              <label className="font-orbitron text-[10px] tracking-wider text-muted-foreground flex items-center gap-1.5">
+              <label className="font-orbitron text-tiny tracking-wider text-muted-foreground flex items-center gap-1.5">
                 <Maximize className="w-3 h-3" />
                 ASPECT_RATIO
               </label>
@@ -169,7 +169,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
                     <div className={`font-mono-share text-xs ${videoSettings.aspectRatio === ar.value ? "text-primary" : "text-foreground"}`}>
                       {ar.label}
                     </div>
-                    <div className="font-orbitron text-[8px] text-muted-foreground mt-0.5">
+                    <div className="font-orbitron text-micro text-muted-foreground mt-0.5">
                       {ar.tag}
                     </div>
                   </button>
@@ -181,7 +181,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
             {/* Video Resolution */}
             {showResolution && (
             <div className="space-y-2">
-              <label className="font-orbitron text-[10px] tracking-wider text-muted-foreground flex items-center gap-1.5">
+              <label className="font-orbitron text-tiny tracking-wider text-muted-foreground flex items-center gap-1.5">
                 <Monitor className="w-3 h-3" />
                 RESOLUTION
               </label>
@@ -202,7 +202,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
                     <div className={`font-orbitron text-xs ${videoSettings.resolution === r.value ? "text-primary" : "text-foreground"}`}>
                       {r.label}
                     </div>
-                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5">
+                    <div className="font-mono-share text-tiny text-muted-foreground mt-0.5">
                       {r.desc}
                     </div>
                   </button>
@@ -214,15 +214,15 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
             {/* Video Duration — only shown for engines that use a per-second length (Grok/Seedance) */}
             {showDuration && (
             <div className="space-y-2">
-              <label className="font-orbitron text-[10px] tracking-wider text-muted-foreground flex items-center gap-1.5">
+              <label className="font-orbitron text-tiny tracking-wider text-muted-foreground flex items-center gap-1.5">
                 <Clock className="w-3 h-3" />
                 DURATION
-                <span className="font-mono-share text-[9px] text-muted-foreground/50 ml-auto">
+                <span className="font-mono-share text-tiny text-muted-foreground/70 ml-auto">
                   {videoSettings.duration}s
                 </span>
               </label>
               <div className="flex items-center gap-3">
-                <span className="font-mono-share text-[9px] text-muted-foreground">1s</span>
+                <span className="font-mono-share text-tiny text-muted-foreground">1s</span>
                 <input
                   type="range"
                   min={1}
@@ -232,7 +232,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
                   onChange={(e) => onVideoChange({ ...videoSettings, duration: Number(e.target.value) })}
                   className="flex-1 accent-[hsl(var(--primary))] h-1 bg-border rounded-full cursor-pointer"
                 />
-                <span className="font-mono-share text-[9px] text-muted-foreground">15s</span>
+                <span className="font-mono-share text-tiny text-muted-foreground">15s</span>
               </div>
             </div>
             )}
@@ -243,7 +243,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 inherit the source image; zimage and comfy use fixed sizes. */}
             {showAspectRatio && (
             <div className="space-y-2">
-              <label className="font-orbitron text-[10px] tracking-wider text-muted-foreground flex items-center gap-1.5">
+              <label className="font-orbitron text-tiny tracking-wider text-muted-foreground flex items-center gap-1.5">
                 <Maximize className="w-3 h-3" />
                 ASPECT_RATIO
               </label>
@@ -261,10 +261,10 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
                       }
                     `}
                   >
-                    <div className={`font-mono-share text-[10px] ${settings.aspectRatio === ar.value ? "text-primary" : "text-foreground"}`}>
+                    <div className={`font-mono-share text-tiny ${settings.aspectRatio === ar.value ? "text-primary" : "text-foreground"}`}>
                       {ar.label}
                     </div>
-                    <div className="font-orbitron text-[7px] text-muted-foreground mt-0.5">
+                    <div className="font-orbitron text-micro text-muted-foreground mt-0.5">
                       {ar.tag}
                     </div>
                   </button>
@@ -276,7 +276,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
             {/* Image Resolution */}
             {showResolution && (
             <div className="space-y-2">
-              <label className="font-orbitron text-[10px] tracking-wider text-muted-foreground flex items-center gap-1.5">
+              <label className="font-orbitron text-tiny tracking-wider text-muted-foreground flex items-center gap-1.5">
                 <Monitor className="w-3 h-3" />
                 RESOLUTION
               </label>
@@ -297,7 +297,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
                     <div className={`font-orbitron text-xs ${(settings.resolution || "1k") === r.value ? "text-primary" : "text-foreground"}`}>
                       {r.label}
                     </div>
-                    <div className="font-mono-share text-[9px] text-muted-foreground mt-0.5">
+                    <div className="font-mono-share text-tiny text-muted-foreground mt-0.5">
                       {r.desc}
                     </div>
                   </button>
@@ -310,15 +310,15 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 comfy image path renders exactly one. */}
             {showCount && (
             <div className="space-y-2">
-              <label className="font-orbitron text-[10px] tracking-wider text-muted-foreground flex items-center gap-1.5">
+              <label className="font-orbitron text-tiny tracking-wider text-muted-foreground flex items-center gap-1.5">
                 <Hash className="w-3 h-3" />
                 BATCH_COUNT
-                <span className="font-mono-share text-[9px] text-muted-foreground/50 ml-auto">
+                <span className="font-mono-share text-tiny text-muted-foreground/70 ml-auto">
                   ×{settings.count}
                 </span>
               </label>
               <div className="flex items-center gap-3">
-                <span className="font-mono-share text-[9px] text-muted-foreground">1</span>
+                <span className="font-mono-share text-tiny text-muted-foreground">1</span>
                 <input
                   type="range"
                   min={1}
@@ -328,7 +328,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
                   onChange={(e) => onChange({ ...settings, count: Number(e.target.value) as ImageCount })}
                   className="flex-1 accent-[hsl(var(--primary))] h-1 bg-border rounded-full cursor-pointer"
                 />
-                <span className="font-mono-share text-[9px] text-muted-foreground">10</span>
+                <span className="font-mono-share text-tiny text-muted-foreground">10</span>
               </div>
             </div>
             )}
