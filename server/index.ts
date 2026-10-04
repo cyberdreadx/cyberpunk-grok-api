@@ -226,6 +226,8 @@ function registerCron(_app: express.Express) {
     // Re-reads paid social proofs and reverses the deleted ones. Hourly: the
     // grace period is 36h, so there is nothing to gain from running it often.
     ["40 * * * *", "/api/cron-share-proof-recheck?quiet=1"],
+    // Retires expired credit lots. Daily is plenty: expiry is measured in months.
+    ["50 3 * * *", "/api/cron-credit-expiry"],
     ["10 3 * * *", "/api/cron-xrge-snapshot"],
     // Hourly so a day's GPU drawdown stays separable from a mid-day top-up.
     ["5 * * * *", "/api/cron-runpod-snapshot"],

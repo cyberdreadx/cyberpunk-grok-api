@@ -17,6 +17,7 @@ import { getUserFromRequest, ADMIN_EMAIL } from "../_lib/auth";
 import { applyCors } from "../_lib/cors";
 import { getPromoConfig, approvedCount, hashCode, PROMO_KEY } from "../_lib/promo";
 import { randomBytes } from "crypto";
+import { PROMO_CREDIT_DAYS } from "../_lib/credit-expiry";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   applyCors(req, res, "GET, POST, OPTIONS");
@@ -207,7 +208,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(409).json({ error: "Claim was already decided." });
     }
 
-    await sql`SELECT add_pack_credits(${claim.user_id}::uuid, ${cfg.creditAmount})`;
+    await sql`SELECT add_expiring_credits(${claim.user_id}::uuid, ${cfg.creditAmount}, 'promo', 'promo_code', ${PROMO_CREDIT_DAYS})`;
     await sql`
       INSERT INTO usage_log (user_id, mode, credits_used, prompt)
       VALUES (${claim.user_id}::uuid, 'promo-antifarm-grant', ${-cfg.creditAmount}, 'AntiReddit promo')

@@ -10,6 +10,7 @@ import { applyCors } from "./_lib/cors";
 import { getUserFromRequest, checkBan } from "./_lib/auth";
 import { getDb } from "./_lib/db";
 import { checkRateLimit } from "./_lib/ratelimit";
+import { PROMO_CREDIT_DAYS } from "./_lib/credit-expiry";
 
 // Tunables
 const DAILY_RATION = 10;       // credits granted per claim if pot has it
@@ -151,7 +152,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       `;
 
       // Grant credits to user (pack_credits — same as bulk grant)
-      await sql`SELECT add_pack_credits(${auth.userId}::uuid, ${grant})`;
+      await sql`SELECT add_expiring_credits(${auth.userId}::uuid, ${grant}, 'promo', 'community_pot', ${PROMO_CREDIT_DAYS})`;
 
       // Log to transactions if table exists (best-effort)
       try {

@@ -3,6 +3,7 @@ import { getDb } from "./_lib/db";
 import { getUserFromRequest, checkBan } from "./_lib/auth";
 import { checkRateLimit } from "./_lib/ratelimit";
 import { logCreditGrant } from "./_lib/credit-ledger";
+import { PROMO_CREDIT_DAYS } from "./_lib/credit-expiry";
 
 /**
  * /api/earn — engagement-based free credits (2026-07 earn-only overhaul).
@@ -134,7 +135,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         RETURNING id
       `;
       if (!inserted.length) return res.status(409).json({ error: "Already claimed" });
-      await sql`SELECT add_pack_credits(${auth.userId}::uuid, ${ms.credits})`;
+      await sql`SELECT add_expiring_credits(${auth.userId}::uuid, ${ms.credits}, 'promo', 'earn_milestone', ${PROMO_CREDIT_DAYS})`;
       await logCreditGrant(sql, auth.userId, ms.credits, "earn_milestone", key);
       return res.status(200).json({ credited: ms.credits, milestone: ms.threshold });
     }
@@ -152,7 +153,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         RETURNING id
       `;
       if (!inserted.length) return res.status(409).json({ error: "Already claimed this week" });
-      await sql`SELECT add_pack_credits(${auth.userId}::uuid, ${weeklyAvailable})`;
+      await sql`SELECT add_expiring_credits(${auth.userId}::uuid, ${weeklyAvailable}, 'promo', 'earn_weekly', ${PROMO_CREDIT_DAYS})`;
       await logCreditGrant(sql, auth.userId, weeklyAvailable, "earn_weekly", weeklyKey);
       return res.status(200).json({ credited: weeklyAvailable, week });
     }

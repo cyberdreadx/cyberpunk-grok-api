@@ -8,6 +8,7 @@ import { getDb } from "./_lib/db";
 import { getUserFromRequest } from "./_lib/auth";
 import { getXrgeConfig, verifyXrgeTransfer } from "./_lib/xrge";
 import { getTierForSpend, refreshLoyaltyTier } from "./v1/_lib/xrge-bank";
+import { PAID_CREDIT_DAYS } from "./_lib/credit-expiry";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS
@@ -113,6 +114,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         SET pack_credits = pack_credits + (SELECT credits FROM txn),
             updated_at = now()
         WHERE id = (SELECT user_id FROM txn)
+        RETURNING id
+      ), lot AS (
+        -- Bought after expiring credits shipped: 12 months, disclosed at checkout.
+        INSERT INTO credit_lots (user_id, kind, source, amount, remaining, expires_at)
+        SELECT txn.user_id, 'paid', 'xrge_onchain', txn.credits, txn.credits,
+               now() + make_interval(days => ${PAID_CREDIT_DAYS})
+        FROM txn WHERE txn.credits > 0 AND ${PAID_CREDIT_DAYS} > 0
         RETURNING id
       )
       SELECT

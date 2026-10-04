@@ -24,6 +24,7 @@ import { checkRateLimit } from "./_lib/ratelimit";
 import { isSourceDisabled, FREE_CREDITS_MAINTENANCE_MESSAGE } from "./_lib/freeCredits";
 import { isSubscriber, FREE_CREDITS_SUBSCRIBER_ONLY_MESSAGE } from "./_lib/subscriberGate";
 import { logCreditGrant } from "./_lib/credit-ledger";
+import { PROMO_CREDIT_DAYS, PAID_CREDIT_DAYS } from "./_lib/credit-expiry";
 
 /* ── Prize table ─────────────────────────────────────────────── */
 
@@ -222,12 +223,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const boostFactor = getStreakWeightBoost(streak);
   const prize = pickPrize(minCredits, boostFactor);
 
-  await sql`
-    UPDATE users SET
-      pack_credits = pack_credits + ${prize.credits},
-      updated_at   = now()
-    WHERE id = ${auth.userId}
-  `;
+  // A free spin is a pure giveaway and expires like any promo credit. A paid
+    // spin's prize partly returns credits the user just spent, so it does not.
+    if (paid) {
+      await sql`
+        UPDATE users SET
+          pack_credits = pack_credits + ${prize.credits},
+          updated_at   = now()
+        WHERE id = ${auth.userId}
+      `;
+    } else {
+      await sql`SELECT add_expiring_credits(${auth.userId}::uuid, ${prize.credits}, 'promo', 'free_spin', ${PROMO_CREDIT_DAYS})`;
+    }
 
   // Spin winnings were a grant path with no trail: the wheel paid into
   // pack_credits and recorded nothing, so farming through it could not be seen

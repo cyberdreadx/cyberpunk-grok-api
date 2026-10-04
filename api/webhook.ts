@@ -27,6 +27,7 @@ import {
 } from "./_lib/stripe-sub-prices";
 import { accrueCommission, clawbackCommission } from "./_lib/ambassador";
 import { getCombinedCreditDiscountPct } from "./_lib/discount";
+import { PROMO_CREDIT_DAYS, PAID_CREDIT_DAYS } from "./_lib/credit-expiry";
 
 // Vercel needs raw body for signature verification
 export const config = { api: { bodyParser: false } };
@@ -326,6 +327,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           WHERE id = ${userId}::uuid
             AND EXISTS (SELECT 1 FROM ins)
           RETURNING id
+        ), lot AS (
+          -- Bought after expiring credits shipped: 12 months, disclosed at checkout.
+          INSERT INTO credit_lots (user_id, kind, source, amount, remaining, expires_at)
+          SELECT ins.user_id, 'paid', 'stripe_pack', ins.credits, ins.credits,
+                 now() + make_interval(days => ${PAID_CREDIT_DAYS})
+          FROM ins WHERE ins.credits > 0 AND ${PAID_CREDIT_DAYS} > 0
+          RETURNING id
         )
         SELECT EXISTS(SELECT 1 FROM ins) AS inserted
       `;
@@ -599,8 +607,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             `;
 
             if ((cap?.rewarded || 0) < 50) {
-              await sql`SELECT add_pack_credits(${ref.referrer_id}::uuid, 10)`;
-              await sql`SELECT add_pack_credits(${buyerUserId}::uuid, 5)`;
+              await sql`SELECT add_expiring_credits(${ref.referrer_id}::uuid, 10, 'promo', 'referral_purchase', ${PROMO_CREDIT_DAYS})`;
+              await sql`SELECT add_expiring_credits(${buyerUserId}::uuid, 5, 'promo', 'referral_purchase', ${PROMO_CREDIT_DAYS})`;
               await sql`
                 UPDATE referrals
                 SET referrer_rewarded = true
@@ -610,7 +618,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             } else {
               console.log(`[referral] Referrer ${ref.referrer_id} hit 50-referral cap, purchase marked but no credits granted`);
               // Still give the buyer their 5 bonus
-              await sql`SELECT add_pack_credits(${buyerUserId}::uuid, 5)`;
+              await sql`SELECT add_expiring_credits(${buyerUserId}::uuid, 5, 'promo', 'referral_purchase', ${PROMO_CREDIT_DAYS})`;
               console.log(`[referral] Referrer ${ref.referrer_id} hit 50-cap, but buyer ${buyerUserId} still gets +5 bonus`);
             }
           }

@@ -12,6 +12,7 @@ import { getUserFromApiKey } from "../_lib/apikey-auth";
 import { getUserFromRequest } from "../_lib/auth";
 import { getXrgeConfig, centsToXrge } from "../_lib/xrge";
 import { getBankUser, getTierForSpend, refreshLoyaltyTier, CREDIT_PACKAGES } from "./_lib/xrge-bank";
+import { PAID_CREDIT_DAYS } from "../_lib/credit-expiry";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -96,6 +97,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         SELECT id, ${totalCredits}, ${priceCents}, ${packageId}, 'pack', 'xrge-bank'
         FROM deduct
         RETURNING user_id
+      ), lot AS (
+        -- Bought after expiring credits shipped: 12 months, disclosed at checkout.
+        INSERT INTO credit_lots (user_id, kind, source, amount, remaining, expires_at)
+        SELECT id, 'paid', 'xrge_bank', ${totalCredits}, ${totalCredits},
+               now() + make_interval(days => ${PAID_CREDIT_DAYS})
+        FROM deduct WHERE ${totalCredits} > 0 AND ${PAID_CREDIT_DAYS} > 0
+        RETURNING id
       )
       SELECT
         (SELECT xrge_bank_balance FROM deduct) AS new_balance,

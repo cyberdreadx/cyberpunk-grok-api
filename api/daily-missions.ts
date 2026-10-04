@@ -6,6 +6,7 @@ import { awardKarma } from "./_lib/karma";
 import { notify } from "./_lib/notify";
 import { isSourceDisabled, FREE_CREDITS_MAINTENANCE_MESSAGE } from "./_lib/freeCredits";
 import { isSubscriber, FREE_CREDITS_SUBSCRIBER_ONLY_MESSAGE } from "./_lib/subscriberGate";
+import { PROMO_CREDIT_DAYS, PAID_CREDIT_DAYS } from "./_lib/credit-expiry";
 
 /*
  * The Reddit missions are retired, not paused.
@@ -319,10 +320,7 @@ async function claimMission(sql: any, userId: string, mission: string, res: Verc
   `;
 
   // Award credits (add to pack_credits)
-  await sql`
-    UPDATE users SET pack_credits = pack_credits + ${creditAmount}, updated_at = now()
-    WHERE id = ${userId}
-  `;
+  await sql`SELECT add_expiring_credits(${userId}::uuid, ${creditAmount}, 'promo', ${'mission:' + mission}, ${PROMO_CREDIT_DAYS})`;
 
   /*
    * Move the streak here, in the same statement that stamps the day.
@@ -413,10 +411,7 @@ async function claimStreakBonus(sql: any, userId: string, res: VercelResponse) {
     return res.status(409).json({ error: "Streak bonus already claimed this cycle" });
   }
 
-  await sql`
-    UPDATE users SET pack_credits = pack_credits + ${STREAK_BONUS}, updated_at = now()
-    WHERE id = ${userId}
-  `;
+  await sql`SELECT add_expiring_credits(${userId}::uuid, ${STREAK_BONUS}, 'promo', 'streak_bonus', ${PROMO_CREDIT_DAYS})`;
 
   // Karma — completing a 7-day streak is a strong engagement signal
   await awardKarma(sql, userId, "streak_bonus", `streak_bonus:${today}:${userId}`);

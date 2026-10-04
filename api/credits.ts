@@ -42,8 +42,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const maintenanceMessage = !isSub
       ? FREE_CREDITS_SUBSCRIBER_ONLY_MESSAGE
       : adminPaused ? FREE_CREDITS_MAINTENANCE_MESSAGE : null;
+    /*
+     * What is due to expire, so it can be shown before it happens rather than
+     * discovered after. Only credits granted with a lot appear here — anything
+     * held before expiring credits shipped has no lot and never expires.
+     */
+    const expiringRows = (await sql`
+      SELECT kind, SUM(remaining)::int AS amount, MIN(expires_at) AS next_at
+      FROM credit_lots
+      WHERE user_id = ${auth.userId}::uuid AND remaining > 0 AND expires_at > now()
+      GROUP BY kind
+    `.catch(() => [])) as any[];
+    const [soonest] = (await sql`
+      SELECT remaining::int AS amount, expires_at FROM credit_lots
+      WHERE user_id = ${auth.userId}::uuid AND remaining > 0 AND expires_at > now()
+      ORDER BY expires_at LIMIT 1
+    `.catch(() => [])) as any[];
     return res.status(200).json({
       daily_credits: u.daily_credits,
+      expiring: {
+        promo: Number(expiringRows.find((r: any) => r.kind === "promo")?.amount ?? 0),
+        paid: Number(expiringRows.find((r: any) => r.kind === "paid")?.amount ?? 0),
+        next: soonest ? { amount: Number(soonest.amount), at: soonest.expires_at } : null,
+      },
       sub_credits: u.sub_credits,
       pack_credits: u.pack_credits,
       subscription_tier: u.subscription_tier,

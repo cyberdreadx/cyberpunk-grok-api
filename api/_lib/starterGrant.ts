@@ -27,6 +27,7 @@
 import { getFreeCreditsConfig } from "./freeCredits";
 import { logCreditGrant } from "./credit-ledger";
 import { canonicalEmail } from "./email-canonical";
+import { PROMO_CREDIT_DAYS } from "./credit-expiry";
 
 export interface StarterGrantResult {
   granted: boolean;
@@ -69,6 +70,13 @@ export async function grantStarterCredits(
         SET pack_credits = u.pack_credits + claim.credits, updated_at = now()
         FROM claim WHERE u.id = claim.user_id
         RETURNING u.id
+      ), lot AS (
+        -- The starter grant is a giveaway: it expires like any promo credit.
+        INSERT INTO credit_lots (user_id, kind, source, amount, remaining, expires_at)
+        SELECT claim.user_id, 'promo', 'starter_grant', claim.credits, claim.credits,
+               now() + make_interval(days => ${PROMO_CREDIT_DAYS})
+        FROM claim WHERE claim.credits > 0 AND ${PROMO_CREDIT_DAYS} > 0
+        RETURNING id
       )
       SELECT EXISTS(SELECT 1 FROM claim) AS granted
     `;

@@ -28,6 +28,7 @@
 
 import type { getDb } from "./db";
 import { logCreditGrant } from "./credit-ledger";
+import { PROMO_CREDIT_DAYS } from "./credit-expiry";
 
 export const REFERRAL_CONFIG_KEY = "referral_rewards";
 
@@ -174,8 +175,8 @@ export async function payActivation(
   }
 
   try {
-    await sql`SELECT add_pack_credits(${a.referrerId}::uuid, ${cfg.referrerCredits})`;
-    await sql`SELECT add_pack_credits(${a.refereeId}::uuid, ${cfg.refereeCredits})`;
+    await sql`SELECT add_expiring_credits(${a.referrerId}::uuid, ${cfg.referrerCredits}, 'promo', 'referral_activation', ${PROMO_CREDIT_DAYS})`;
+    await sql`SELECT add_expiring_credits(${a.refereeId}::uuid, ${cfg.refereeCredits}, 'promo', 'referral_activation', ${PROMO_CREDIT_DAYS})`;
     await logCreditGrant(sql, a.referrerId, cfg.referrerCredits, "referral_activation", a.id);
     await logCreditGrant(sql, a.refereeId, cfg.refereeCredits, "referral_activation_bonus", a.id);
     return true;

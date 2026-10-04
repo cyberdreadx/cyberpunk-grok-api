@@ -110,6 +110,10 @@
     {
       "path": "/api/cron-share-proof-recheck?quiet=1",
       "schedule": "40 * * * *"
+    },
+    {
+      "path": "/api/cron-credit-expiry",
+      "schedule": "50 3 * * *"
     }
   ],
   "headers": [
