@@ -74,7 +74,7 @@ const CyberLayout: React.FC<CyberLayoutProps> = ({ children }) => {
 
       {/* Terminal top bar — padded for iOS safe area (notch/Dynamic Island). No backdrop-blur (very expensive on mobile GPU). */}
       <div
-        className="cyber-terminal-bar fixed top-0 left-0 right-0 z-30 bg-card/95 border-b border-primary/20 flex items-end px-4 gap-3"
+        className={`cyber-terminal-bar fixed top-0 left-0 right-0 z-30 ${isStudio ? "bg-card" : "bg-card/95"} border-b border-primary/20 flex items-end px-4 gap-3`}
         style={{ paddingTop: 'env(safe-area-inset-top, 0px)', height: 'calc(env(safe-area-inset-top, 0px) + 28px)' }}
       >
         {!isStudio && (

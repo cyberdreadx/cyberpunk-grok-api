@@ -1,4 +1,5 @@
 import { useTabActive } from "@/hooks/useTabActive";
+import { isStudio } from "@/lib/edition";
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Send, Upload, Loader2, ImagePlus, Link, X, Sparkles, Info } from "lucide-react";
@@ -312,9 +313,9 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <label className="font-mono-share text-tiny tracking-wider text-muted-foreground flex items-center gap-2">
-              <span className="text-primary/50">$</span>
+              {!isStudio && <span className="text-primary/50">$</span>}
               <Upload className="w-3 h-3" />
-              source_image
+              {isStudio ? "Source image" : "source_image"}
             </label>
             <div className="flex gap-1">
               <button
@@ -440,15 +441,17 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
       )}
       {/* Terminal prompt block */}
       <div className="terminal-block rounded-md overflow-hidden">
-        {/* Terminal title bar */}
+        {/* Terminal title bar — Studio keeps only the character count */}
         <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/5 border-b border-primary/15">
+          {!isStudio && (
           <div className="flex items-center gap-1">
             <div className="w-2 h-2 rounded-full bg-destructive/60" />
             <div className="w-2 h-2 rounded-full bg-neon-yellow/60" />
             <div className="w-2 h-2 rounded-full bg-primary/60" />
           </div>
+          )}
           <span className="font-mono-share text-tiny text-muted-foreground/60 flex-1 text-center">
-            prompt@gltch:~/{mode.replace(/-/g, "_")}
+            {isStudio ? "" : <>prompt@gltch:~/{mode.replace(/-/g, "_")}</>}
           </span>
           <span className="font-mono-share text-tiny text-muted-foreground/60">{prompt.length} chars</span>
         </div>
@@ -456,9 +459,11 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
         {/* Input area */}
         <div className="relative p-3">
           <div className="flex items-start gap-2">
+            {!isStudio && (
             <span className="font-mono-share text-sm text-primary/70 mt-2 select-none shrink-0">
               {isLoading ? "⟳" : "❯"}
             </span>
+            )}
             <Textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}

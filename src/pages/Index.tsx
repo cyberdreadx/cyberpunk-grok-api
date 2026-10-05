@@ -214,7 +214,7 @@ const Index = () => {
     dismissComfyJob,
     cancelComfyJob,
     clearFinishedComfyJobs,
-    comfyModels,
+    comfyModels: rawComfyModels,
     fetchComfyModels,
     clearResults,
     deleteResult,
@@ -222,6 +222,23 @@ const Index = () => {
     addExternalResult,
     clearError,
   } = useGrokApi();
+
+  /* Adult LoRAs are unlocked by the XRGE holder program, which Studio does not
+     offer — so in Studio they would only ever show as locked explicit names
+     with an unlock button leading nowhere. Studio leaves them out entirely;
+     holders still have them on Runner. The NSFW base models are unaffected. */
+  const comfyModels = React.useMemo(
+    () =>
+      isStudio
+        ? {
+            ...rawComfyModels,
+            editLoras: rawComfyModels.editLoras.filter((l) => !EDIT_LORA_META[l]?.nsfw),
+            krea2Loras: rawComfyModels.krea2Loras.filter((l) => !KREA2_LORA_META[l]?.nsfw),
+            videoLoras: rawComfyModels.videoLoras.filter((v) => !v.nsfw),
+          }
+        : rawComfyModels,
+    [rawComfyModels],
+  );
 
   const galleryBusy = isLoading || comfyJobs.some(
     (j) => j.status === "submitting" || j.status === "generating",
@@ -1258,6 +1275,7 @@ const Index = () => {
               glitchIntensity="low"
             />
             <div className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
+            {!isStudio && (
             <Link
               to="/"
               className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-secondary/30 hover:border-secondary/60 bg-secondary/5 hover:bg-secondary/10 transition-all font-mono-share text-tiny text-secondary/80 hover:text-secondary tracking-wider"
@@ -1266,6 +1284,7 @@ const Index = () => {
               <Rss className="w-3 h-3" />
               FEED
             </Link>
+            )}
           </div>
           <ModeSelector activeMode={mode} onModeChange={(m) => { setMode(m); setActiveImageUrl(""); }} isAuthenticated={auth.isAuthenticated} />
         </section>
@@ -1277,11 +1296,13 @@ const Index = () => {
         >
           {/* Terminal title bar */}
           <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50 bg-card/60">
+            {!isStudio && (
             <div className="flex items-center gap-1.5">
               <div className="w-2 h-2 rounded-full bg-neon-red/60" />
               <div className="w-2 h-2 rounded-full bg-neon-yellow/60" />
               <div className="w-2 h-2 rounded-full bg-primary/60" />
             </div>
+            )}
             <div className="flex-1 flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2 ml-1">
               <span className="font-orbitron text-sm sm:text-base font-bold text-foreground tracking-wide leading-tight">
                 Describe what you want to create
@@ -1345,7 +1366,7 @@ const Index = () => {
                 <span className="font-mono-share text-primary/40 text-tiny group-data-[state=open]:text-primary/60">▸</span>
                 <Zap className="w-3 h-3 text-muted-foreground group-hover:text-primary transition-colors group-data-[state=open]:text-primary" />
                 <span className="font-mono-share text-tiny tracking-widest text-muted-foreground group-hover:text-primary transition-colors group-data-[state=open]:text-primary">
-                  ENGINE_CONFIG
+                  {isStudio ? "Engine settings" : "ENGINE_CONFIG"}
                 </span>
                 <div className="h-px flex-1 bg-primary/10" />
                 <span className="font-mono-share text-tiny text-muted-foreground/60">
@@ -1359,7 +1380,7 @@ const Index = () => {
               <div className="space-y-2">
                 <label className="font-orbitron text-tiny tracking-wider text-muted-foreground flex items-center gap-1.5">
                   <Zap className="w-3 h-3" />
-                  ENGINE
+                  {isStudio ? "Engine" : "ENGINE"}
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   <button
@@ -1407,7 +1428,7 @@ const Index = () => {
                       </span>
                     </div>
                     <div>
-                      <label className="font-mono-share text-tiny text-muted-foreground/70 mb-1 block">OUTPUT SIZE</label>
+                      <label className="font-mono-share text-tiny text-muted-foreground/70 mb-1 block">{isStudio ? "Output size" : "OUTPUT SIZE"}</label>
                       <div className="grid grid-cols-4 gap-1">
                         {([
                           [0, 0, "AUTO"],
@@ -1435,7 +1456,7 @@ const Index = () => {
                     </div>
                     
                     <div>
-                      <label className="font-mono-share text-tiny text-muted-foreground mb-1 block">SECOND IMAGE (OPTIONAL)</label>
+                      <label className="font-mono-share text-tiny text-muted-foreground mb-1 block">{isStudio ? "Second image (optional)" : "SECOND IMAGE (OPTIONAL)"}</label>
                       {gltchImage2 ? (
                         <div className="relative">
                           <img
@@ -1456,7 +1477,7 @@ const Index = () => {
                         <button
                           type="button"
                           onClick={() => gltchImage2Ref.current?.click()}
-                          className="w-full flex items-center justify-center gap-2 px-3 py-3 bg-black/60 border border-dashed border-purple-500/30 rounded text-xs font-mono-share text-purple-400/60 hover:border-purple-400/50 hover:text-purple-300 transition-colors"
+                          className={`w-full flex items-center justify-center gap-2 px-3 py-3 ${isStudio ? "bg-card/60" : "bg-black/60"} border border-dashed border-purple-500/30 rounded text-xs font-mono-share text-purple-400/60 hover:border-purple-400/50 hover:text-purple-300 transition-colors`}
                         >
                           <Upload className="w-3.5 h-3.5" />
                           Add reference image
@@ -1500,7 +1521,7 @@ const Index = () => {
                         {editLora !== "none" && (
                           <div className="mt-1.5">
                             <label className="font-mono-share text-micro text-muted-foreground/60 flex items-center justify-between">
-                              <span>STRENGTH</span>
+                              <span>{isStudio ? "Strength" : "STRENGTH"}</span>
                               <span>{editLoraStrength.toFixed(1)}</span>
                             </label>
                             <input type="range" min="0" max="2" step="0.1" value={editLoraStrength}
@@ -1532,7 +1553,7 @@ const Index = () => {
               <div className="space-y-2">
                 <label className="font-orbitron text-tiny tracking-wider text-muted-foreground flex items-center gap-1.5">
                   <Zap className="w-3 h-3" />
-                  ENGINE
+                  {isStudio ? "Engine" : "ENGINE"}
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   <button type="button" onClick={() => setGenEngine("gltch")}
@@ -1585,7 +1606,7 @@ const Index = () => {
                     composition sideways or wastes the latent). */}
                 {(genEngine === "gltch" || genEngine === "krea2") && (
                   <div>
-                    <label className="font-mono-share text-tiny text-muted-foreground/70 mb-1 block">OUTPUT SIZE</label>
+                    <label className="font-mono-share text-tiny text-muted-foreground/70 mb-1 block">{isStudio ? "Output size" : "OUTPUT SIZE"}</label>
                     <div className="grid grid-cols-4 gap-1">
                       {ZIMAGE_ORDER.map((label) => {
                         const [w, h] = ZIMAGE_SIZES[label];
@@ -1611,7 +1632,7 @@ const Index = () => {
 
                 {genEngine === "krea2" && comfyModels.krea2Loras.length > 0 && (
                   <div>
-                    <label className="font-mono-share text-tiny text-muted-foreground/70 mb-1 block">STYLE (OPTIONAL)</label>
+                    <label className="font-mono-share text-tiny text-muted-foreground/70 mb-1 block">{isStudio ? "Style (optional)" : "STYLE (OPTIONAL)"}</label>
                     <select value={krea2Lora}
                       onChange={(e) => {
                         const meta = KREA2_LORA_META[e.target.value];
@@ -1634,7 +1655,7 @@ const Index = () => {
                     {krea2Lora !== "none" && (
                       <div className="mt-1.5">
                         <label className="font-mono-share text-micro text-muted-foreground/60 flex items-center justify-between">
-                          <span>STRENGTH</span>
+                          <span>{isStudio ? "Strength" : "STRENGTH"}</span>
                           <span>{krea2LoraStrength.toFixed(1)}</span>
                         </label>
                         <input type="range" min="0" max="1.5" step="0.1" value={krea2LoraStrength}
@@ -1652,7 +1673,7 @@ const Index = () => {
               <div className="space-y-2">
                 <label className="font-orbitron text-tiny tracking-wider text-muted-foreground flex items-center gap-1.5">
                   <Zap className="w-3 h-3" />
-                  ENGINE
+                  {isStudio ? "Engine" : "ENGINE"}
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   <button type="button" onClick={() => setRenderEngine("comfy")}
@@ -1848,7 +1869,7 @@ const Index = () => {
               <div className="space-y-2">
                 <label className="font-orbitron text-tiny tracking-wider text-muted-foreground flex items-center gap-1.5">
                   <Zap className="w-3 h-3" />
-                  ENGINE
+                  {isStudio ? "Engine" : "ENGINE"}
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   <button type="button" onClick={() => { setAnimateEngine("gltch"); }}
@@ -2001,7 +2022,7 @@ const Index = () => {
               (mode === "image-to-video" && (animateEngine === "gltch" || animateEngine === "comfy"))
             ) && (
                 <div className="flex items-center gap-2">
-                  <label className="font-mono-share text-tiny text-muted-foreground/70 whitespace-nowrap">SEED</label>
+                  <label className="font-mono-share text-tiny text-muted-foreground/70 whitespace-nowrap">{isStudio ? "Seed" : "SEED"}</label>
                   <input
                     type="text"
                     value={globalSeed}
@@ -2078,7 +2099,7 @@ const Index = () => {
               || renderEngine === "comfy" || animateEngine === "comfy" || animateEngine === "gltch") && (
               <div className="mt-2 space-y-1">
                 <label className="font-mono-share text-tiny text-muted-foreground/60 flex items-center justify-between">
-                  <span>NEGATIVE_PROMPT</span>
+                  <span>{isStudio ? "Negative prompt" : "NEGATIVE_PROMPT"}</span>
                   {negPrompt && (
                     <button onClick={() => setNegPrompt("")}
                       className="font-mono-share text-micro text-muted-foreground/70 hover:text-red-400 transition-colors">
