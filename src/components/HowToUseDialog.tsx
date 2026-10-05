@@ -8,6 +8,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { isStudio } from "@/lib/edition";
 import {
   ChevronLeft,
   ChevronRight,
@@ -25,6 +26,7 @@ import {
   Flame,
   Cpu,
   Crown,
+  MessageCircle,
 } from "lucide-react";
 
 const HOLDER_TIP_OPTIN_KEY = "holder-tip-show";
@@ -48,14 +50,14 @@ export default function HowToUseDialog({ open, onOpenChange }: HowToUseDialogPro
     if (!open) setStep(0);
   }, [open]);
 
-  const steps = [
+  const allSteps = [
     {
       icon: <Sparkles className="w-8 h-8 text-primary" />,
-      title: t("howToUse.welcome.title", "Welcome to GLTCH Runner"),
+      title: isStudio ? t("howToUse.welcome.titleStudio", "Welcome to GLTCH Studio") : t("howToUse.welcome.title", "Welcome to GLTCH Runner"),
       subtitle: t("howToUse.welcome.subtitle", "AI image & video generation powered by xAI"),
       body: (
         <div className="space-y-3">
-          <p>{t("howToUse.welcome.body1", "GLTCH Runner lets you generate, edit, and animate images and video using cutting-edge AI models.")}</p>
+          <p>{isStudio ? t("howToUse.welcome.body1Studio", "GLTCH Studio lets you create, edit and animate images and video with AI.") : t("howToUse.welcome.body1", "GLTCH Runner lets you generate, edit, and animate images and video using cutting-edge AI models.")}</p>
           <p className="text-muted-foreground text-sm">
             {t("howToUse.welcome.body2", "This quick guide will walk you through the basics. You can revisit it anytime from the help menu.")}
           </p>
@@ -110,6 +112,29 @@ export default function HowToUseDialog({ open, onOpenChange }: HowToUseDialogPro
             <span className="shrink-0 w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold flex items-center justify-center">2</span>
             <p className="text-sm">{t("howToUse.gettingStarted.step2", "Pick a mode — Generate, Edit, or Animate — choose an engine (GLTCH is the default; GLTCH PRO is highest quality), and type a prompt.")}</p>
           </div>
+        </div>
+      ),
+    },
+    {
+      icon: <MessageCircle className="w-8 h-8 text-primary" />,
+      title: t("howToUse.easy.title", "Easy Mode"),
+      subtitle: t("howToUse.easy.subtitle", "Just chat — no settings"),
+      body: (
+        <div className="space-y-3">
+          <p className="text-sm">{t("howToUse.easy.intro", "Switch Create to Easy at the top of the page and it works like a chat. Say what you want and it picks the right tool for you.")}</p>
+          <div className="flex gap-3 items-start">
+            <span className="shrink-0 w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold flex items-center justify-center">1</span>
+            <p className="text-sm">{t("howToUse.easy.image", "Type a description and send it — you get an image (3 credits).")}</p>
+          </div>
+          <div className="flex gap-3 items-start">
+            <span className="shrink-0 w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold flex items-center justify-center">2</span>
+            <p className="text-sm">{t("howToUse.easy.edit", "Want changes? Just reply, like “make it night time”. Each reply edits the last image in the chat (3 credits). Attach your own photo to edit that instead.")}</p>
+          </div>
+          <div className="flex gap-3 items-start">
+            <span className="shrink-0 w-6 h-6 rounded-full bg-secondary/20 text-secondary text-xs font-bold flex items-center justify-center">3</span>
+            <p className="text-sm">{t("howToUse.easy.video", "Say “animate”, “video” or “make it move” to turn the last image into a clip. Pick Quick (15 credits, no sound) or Best (sharper, with sound, 7 credits per second), and a length of about 3, 5 or 7 seconds.")}</p>
+          </div>
+          <p className="text-xs text-muted-foreground/70">{t("howToUse.easy.tip", "Your chats are saved — open the chat list to return to one, rename it or delete it. Prompt assist turns your message into a detailed prompt first; it is off by default and costs 1 credit per message. Want every setting? Switch to Classic.")}</p>
         </div>
       ),
     },
@@ -244,6 +269,7 @@ export default function HowToUseDialog({ open, onOpenChange }: HowToUseDialogPro
     },
     {
       icon: <Diamond className="w-8 h-8 text-violet-300" />,
+      id: "holder",
       title: t("howToUse.holder.title", "Holder Program (optional)"),
       subtitle: t("howToUse.holder.subtitle", "Hold XRGE for permanent perks"),
       body: (
@@ -303,6 +329,8 @@ export default function HowToUseDialog({ open, onOpenChange }: HowToUseDialogPro
       ),
     },
   ];
+  // Studio leaves out the XRGE holder program, as it does everywhere else.
+  const steps = isStudio ? allSteps.filter((s) => (s as { id?: string }).id !== "holder") : allSteps;
 
   const current = steps[step];
   const isFirst = step === 0;
