@@ -8,6 +8,7 @@
  *
  * Hidden on sm+ (desktop has the inline header CreditDisplay).
  */
+import { useTabActive } from "@/hooks/useTabActive";
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Coins, Info, X, ShoppingCart } from "lucide-react";
@@ -26,6 +27,7 @@ interface MobileCreditsPillProps {
 }
 
 const MobileCreditsPill: React.FC<MobileCreditsPillProps> = ({ onOpenStore, inline = false }) => {
+  const tabActive = useTabActive();
   const { user, isAuthenticated } = useAuth();
   const { totalCredits, loading } = useCredits(user);
   const [byok, setByok] = useState(false);
@@ -199,6 +201,7 @@ const MobileCreditsPill: React.FC<MobileCreditsPillProps> = ({ onOpenStore, inli
     </>
   );
 
+  if (!tabActive) return null;
   return createPortal(node, document.body);
 };
 

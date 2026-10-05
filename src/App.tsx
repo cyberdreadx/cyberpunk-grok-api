@@ -4,7 +4,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import KeepAliveTabs from "@/components/KeepAliveTabs";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import ErrorBoundary from "@/components/ErrorBoundary";
@@ -49,6 +50,32 @@ const PageShell = ({ children }: { children: React.ReactNode }) => (
   </ErrorBoundary>
 );
 
+/** Redirect that keeps the query string, so /feed?post=<id> share links and
+ *  Studio's /create?action=edit still carry their parameters across. */
+const RedirectKeepingQuery = ({ to }: { to: string }) => {
+  const { search } = useLocation();
+  return <Navigate to={to + search} replace />;
+};
+
+/*
+ * The main tabs stay mounted between visits (see KeepAliveTabs), so scroll,
+ * loaded posts, a half-written prompt and a running generation survive a trip
+ * to another tab. Their <Route>s below render nothing; they exist so the router
+ * knows the paths and the catch-all does not claim them.
+ */
+const keptTabs = isStudio
+  ? [
+      { path: "/", element: <PageShell><Index /></PageShell> },
+      { path: "/library", element: <PageShell><Library /></PageShell> },
+      { path: "/profile", element: <PageShell><ProfilePage /></PageShell> },
+    ]
+  : [
+      { path: "/", element: <PageShell><FeedPage /></PageShell> },
+      { path: "/create", element: <PageShell><Index /></PageShell> },
+      { path: "/library", element: <PageShell><Library /></PageShell> },
+      { path: "/profile", element: <PageShell><ProfilePage /></PageShell> },
+    ];
+
 // Persist ?ref= before anything can navigate the query string away, and count
 // the click. Runs at module scope so it happens on the very first paint.
 captureRefFromUrl();
@@ -78,10 +105,10 @@ const App = () => (
              * old Runner link should land somewhere useful.
              */
             <>
-              <Route path="/" element={<PageShell><Index /></PageShell>} />
-              <Route path="/create" element={<Navigate to="/" replace />} />
-              <Route path="/library" element={<PageShell><Library /></PageShell>} />
-              <Route path="/profile" element={<PageShell><ProfilePage /></PageShell>} />
+              <Route path="/" element={null} />
+              <Route path="/create" element={<RedirectKeepingQuery to="/" />} />
+              <Route path="/library" element={null} />
+              <Route path="/profile" element={null} />
               <Route path="/s/:shareId" element={<PageShell><ShareView /></PageShell>} />
               <Route path="/terms" element={<PageShell><LegalPage type="tos" /></PageShell>} />
               <Route path="/privacy" element={<PageShell><LegalPage type="privacy" /></PageShell>} />
@@ -93,12 +120,12 @@ const App = () => (
             </>
           ) : (
             <>
-          <Route path="/" element={<PageShell><FeedPage /></PageShell>} />
-          <Route path="/create" element={<PageShell><Index /></PageShell>} />
+          <Route path="/" element={null} />
+          <Route path="/create" element={null} />
           <Route path="/index" element={<Navigate to="/create" replace />} />
           <Route path="/admin" element={<PageShell><Admin /></PageShell>} />
           <Route path="/characters" element={<PageShell><Characters /></PageShell>} />
-          <Route path="/library" element={<PageShell><Library /></PageShell>} />
+          <Route path="/library" element={null} />
           <Route path="/s/:shareId" element={<PageShell><ShareView /></PageShell>} />
           <Route path="/docs" element={<PageShell><ApiDocs /></PageShell>} />
           {/* The published gltch-runner-mcp README and the gltchrunner.com
@@ -106,8 +133,8 @@ const App = () => (
               those links hit the 404 catch-all. Keep both working — the npm
               package is already out there with this path baked in. */}
           <Route path="/api-docs" element={<PageShell><ApiDocs /></PageShell>} />
-          <Route path="/feed" element={<Navigate to="/" replace />} />
-          <Route path="/profile" element={<PageShell><ProfilePage /></PageShell>} />
+          <Route path="/feed" element={<RedirectKeepingQuery to="/" />} />
+          <Route path="/profile" element={null} />
           <Route path="/profile/:username" element={<PageShell><ProfilePage /></PageShell>} />
           {/* Terms and Privacy need real URLs, not just an in-app modal:
               payment processors, app stores and DMCA notices all need
@@ -133,6 +160,7 @@ const App = () => (
             </>
           )}
         </Routes>
+        <KeepAliveTabs tabs={keptTabs} />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

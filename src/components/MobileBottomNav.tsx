@@ -1,4 +1,5 @@
 import React, { useState, Suspense, useEffect } from "react";
+import { useTabActive } from "@/hooks/useTabActive";
 import { lazyWithRetry } from "@/lib/lazyWithRetry";
 import { createPortal } from "react-dom";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -33,6 +34,7 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   onOpenSettings,
   onOpenAuth,
 }) => {
+  const tabActive = useTabActive();
   const location = useLocation();
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -344,6 +346,7 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   );
 
   if (typeof document === "undefined") return null;
+  if (!tabActive) return null;
   return createPortal(node, document.body);
 };
 

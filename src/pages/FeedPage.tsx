@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -180,20 +180,24 @@ const FeedPage: React.FC = () => {
     fetchPosts();
   }, [authLoading, isAuthenticated, fetchPosts]);
 
-  // Open ReelViewer when arriving from a notification click
+  // Open ReelViewer when arriving from a notification click or a share link.
+  // The feed stays mounted between tabs, so this re-runs on every navigation
+  // to it, and clears ?post= so returning to the tab does not reopen the post.
+  const location = useLocation();
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || location.pathname !== "/") return;
     /*
      * Two ways in. The notification bell stashes the id and navigates here;
      * share links built by PostCard look like /feed?post=<id>, and nothing
      * read that parameter at all, so every shared post link just landed on
      * the feed.
      */
-    const fromUrl = new URLSearchParams(window.location.search).get("post");
+    const fromUrl = new URLSearchParams(location.search).get("post");
     const stashed = fromUrl || sessionStorage.getItem("openReelPostId");
     if (stashed) {
       sessionStorage.removeItem("openReelPostId");
       setReelTarget({ postId: stashed });
+      if (fromUrl) navigate("/", { replace: true });
     }
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail;
@@ -201,7 +205,7 @@ const FeedPage: React.FC = () => {
     };
     window.addEventListener("open-reel", handler);
     return () => window.removeEventListener("open-reel", handler);
-  }, [isAuthenticated]);
+  }, [isAuthenticated, location.key, location.pathname, location.search]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // IntersectionObserver for infinite scroll
   useEffect(() => {

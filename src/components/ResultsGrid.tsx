@@ -1,3 +1,4 @@
+import { useTabActive } from "@/hooks/useTabActive";
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { videoPosterUrl } from "@/lib/videoPoster";
 import { createPortal } from "react-dom";
@@ -741,7 +742,8 @@ function MoveToFolderMenu({
   }, [onClose]);
 
   // Mobile: portaled full-screen sheet — must not stay mounted under page content (blocks nav)
-  const mobileSheet = typeof document !== "undefined" ? createPortal(
+  const tabActive = useTabActive();
+  const mobileSheet = typeof document !== "undefined" && tabActive ? createPortal(
     <div className="sm:hidden fixed inset-0 z-[200]" onClick={onClose} role="presentation">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div

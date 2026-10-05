@@ -1,9 +1,11 @@
 import React, { useState } from "react";
+import { useTabActive } from "@/hooks/useTabActive";
 import { createPortal } from "react-dom";
 import { Download, X, Share, Plus, Smartphone } from "lucide-react";
 import { usePwaInstall } from "@/hooks/usePwaInstall";
 
 const PwaInstallBanner: React.FC = () => {
+  const tabActive = useTabActive();
   const { canPrompt, isIos, shouldShow, install, dismiss } = usePwaInstall();
   const [showIosGuide, setShowIosGuide] = useState(false);
 
@@ -146,6 +148,7 @@ const PwaInstallBanner: React.FC = () => {
   );
 
   if (typeof document === "undefined") return null;
+  if (!tabActive) return null;
   return createPortal(node, document.body);
 };
 

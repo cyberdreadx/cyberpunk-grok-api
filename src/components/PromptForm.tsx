@@ -1,3 +1,4 @@
+import { useTabActive } from "@/hooks/useTabActive";
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Send, Upload, Loader2, ImagePlus, Link, X, Sparkles, Info } from "lucide-react";
@@ -70,6 +71,8 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
   const { t } = useTranslation();
   const isLowCredits = creditCost != null && totalCredits != null && totalCredits < creditCost;
   const [prompt, setPrompt] = useState(initialPrompt || "");
+  // A Create tab kept alive behind the feed must not float its Generate button over it.
+  const tabActive = useTabActive();
   const [imageUrl, setImageUrl] = useState(initialImageUrl || "");
   const [imageSource, setImageSource] = useState<"url" | "upload">(initialImageUrl ? "url" : "upload");
   const [uploadPreview, setUploadPreview] = useState<string | null>(null);
@@ -581,7 +584,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
     </form>
 
     {/* Sticky mobile CTA — portaled above bottom nav, visible only when prompt has text */}
-    {typeof document !== "undefined" && prompt.trim() && createPortal(
+    {typeof document !== "undefined" && tabActive && prompt.trim() && createPortal(
       <div className="fixed left-0 right-0 z-40 sm:hidden px-3 pt-2 pb-2 animate-slide-up bg-card/95 backdrop-blur-md border-t border-primary/20" style={{ bottom: 'calc(56px + env(safe-area-inset-bottom, 0px))' }}>
         {/* Low-credits warning strip */}
         {!isLoading && isLowCredits && (

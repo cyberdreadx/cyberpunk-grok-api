@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect, Suspense } from "react";
 import { useTranslation } from "react-i18next";
 import { Terminal, Key, Coins, Shield, Eye, MessageCircle, HelpCircle, Server, Zap, Cpu, ChevronDown, Film, X, AlertCircle, CheckCircle2, Upload, Users, Image, Code, ToggleLeft, ToggleRight, Gift, Rss, BadgeCheck, MoreHorizontal, Star, LifeBuoy } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import CyberLayout from "@/components/CyberLayout";
 import EasyMode from "@/components/easy/EasyMode";
 import { resolveCreateMode, setCreateMode, type CreateMode } from "@/lib/createMode";
@@ -305,9 +305,15 @@ const Index = () => {
     setCreateMode(m);
   }, []);
 
-  // Pick up deep-link actions from URL params (Library edit/animate, shared prompts)
+  // Pick up deep-link actions from URL params (Library edit/animate, shared prompts).
+  // Create stays mounted between tabs, so this runs on every navigation to it,
+  // not only on first mount — otherwise a second "Edit" from Library did nothing.
+  const location = useLocation();
+  const navigate = useNavigate();
+  const createPath = isStudio ? "/" : "/create";
   React.useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
+    if (location.pathname !== createPath || !location.search) return;
+    const params = new URLSearchParams(location.search);
     const action = params.get("action");
     const sharedPrompt = params.get("prompt");
 
@@ -315,7 +321,7 @@ const Index = () => {
       setStoreOpen(true);
       params.delete("store");
       const qs = params.toString();
-      window.history.replaceState({}, "", "/create" + (qs ? `?${qs}` : ""));
+      navigate(createPath + (qs ? `?${qs}` : ""), { replace: true });
     }
 
     if (action === "edit") {
@@ -326,7 +332,7 @@ const Index = () => {
         setActivePrompt("");
         sessionStorage.removeItem("library-edit-image");
       }
-      window.history.replaceState({}, "", "/create");
+      navigate(createPath, { replace: true });
     } else if (action === "animate") {
       const url = sessionStorage.getItem("library-animate-image");
       if (url) {
@@ -335,13 +341,17 @@ const Index = () => {
         setActivePrompt("");
         sessionStorage.removeItem("library-animate-image");
       }
-      window.history.replaceState({}, "", "/create");
+      navigate(createPath, { replace: true });
     } else if (sharedPrompt) {
       setActivePrompt(sharedPrompt);
       setMode("text-to-image");
-      window.history.replaceState({}, "", "/create");
+      navigate(createPath, { replace: true });
     }
-  }, []);
+    // A deep link always lands on the parameter UI, as it does on a fresh load.
+    if (action === "edit" || action === "animate" || sharedPrompt) {
+      setCreateModeState(resolveCreateMode(location.search));
+    }
+  }, [location.key, location.pathname, location.search]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Engine selectors per mode — persisted per mode across sessions
   type EditEngine = "grok" | "gltch";
@@ -1230,6 +1240,8 @@ const Index = () => {
                 onModeChange={(m) => { setMode(m); setActiveImageUrl(""); }}
                 onImageUrlChange={setActiveImageUrl}
                 currentMode={mode}
+                initialPrompt={activePrompt}
+                initialImageUrl={activeImageUrl}
               />
             </div>
           </section>

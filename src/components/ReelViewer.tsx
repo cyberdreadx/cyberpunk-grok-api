@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
+import { useTabActive } from "@/hooks/useTabActive";
 import { createPortal } from "react-dom";
 import { X, ChevronUp, ChevronDown, Loader2 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
@@ -63,6 +64,7 @@ const getNearestSlideIndex = (container: HTMLDivElement, items: (HTMLDivElement 
  * cost stays flat as the feed grows.
  */
 const ReelViewer: React.FC<Props> = ({ open, onClose, initialPostId, userId, filter, mediaType }) => {
+  const tabActive = useTabActive();
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -297,6 +299,7 @@ const ReelViewer: React.FC<Props> = ({ open, onClose, initialPostId, userId, fil
     </div>
   );
 
+  if (!tabActive) return null;
   return createPortal(node, document.body);
 };
 

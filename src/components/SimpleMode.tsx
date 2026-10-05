@@ -12,6 +12,9 @@ interface SimpleModeProps {
   onModeChange: (mode: GrokMode) => void;
   onImageUrlChange: (url: string) => void;
   currentMode: GrokMode;
+  /** Set by deep links (Library edit/animate, shared prompts). */
+  initialPrompt?: string;
+  initialImageUrl?: string;
 }
 
 type SimpleTab = { id: GrokMode; labelKey: string; shortKey: string; icon: React.ElementType; descKey: string };
@@ -73,10 +76,16 @@ const SimpleMode: React.FC<SimpleModeProps> = ({
   onModeChange,
   onImageUrlChange,
   currentMode,
+  initialPrompt,
+  initialImageUrl,
 }) => {
   const { t } = useTranslation();
   const [prompt, setPrompt] = useState("");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  // Deep links hand over a prompt or an image; Advanced mode's form already
+  // took them, but Quick Create — the default — dropped both.
+  useEffect(() => { if (initialPrompt) setPrompt(initialPrompt); }, [initialPrompt]);
+  useEffect(() => { if (initialImageUrl) setImagePreview(initialImageUrl); }, [initialImageUrl]);
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
