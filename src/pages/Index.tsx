@@ -2485,8 +2485,8 @@ const Index = () => {
 
         <EarnPromoBanner className="mb-4" />
 
-        {/* Stories */}
-        <StoriesBar currentUserId={auth.user?.id} isAdmin={auth.user?.is_admin} />
+        {/* Stories — Runner only; Studio has no stories. */}
+        {!isStudio && <StoriesBar currentUserId={auth.user?.id} isAdmin={auth.user?.is_admin} />}
 
         {/* Header — minimal: orb (desktop) · title · status dot · primary actions · overflow menu */}
         <header className="text-center space-y-2 animate-slide-up">

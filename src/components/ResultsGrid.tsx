@@ -31,6 +31,7 @@ import { exportLibraryAsZip, getResultDataUrl } from "@/lib/storage";
 import type { FolderFilter } from "@/hooks/useFolders";
 import { useSwipe } from "@/hooks/useSwipe";
 import ShareCTA from "@/components/ShareCTA";
+import { isStudio } from "@/lib/edition";
 import PostToFeedDialog, { type PostToFeedValues } from "@/components/PostToFeedDialog";
 import { isPermanentPublicMediaUrl, uploadPublicMedia } from "@/lib/mediaUpload";
 import { BRAND } from "@/lib/brand";
@@ -2323,6 +2324,8 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
               >
                 {currentResult && sharingId === currentResult.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Link2 className="w-4 h-4" />}
               </Button>
+              {/* Studio has no stories or feed to post to. */}
+              {!isStudio && (<>
               <Button
                 size="icon"
                 variant="ghost"
@@ -2343,6 +2346,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
               >
                 {currentResult && feedPostingId === currentResult.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
               </Button>
+              </>)}
               <Button
                 size="icon"
                 variant="ghost"
@@ -2481,6 +2485,8 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
               >
                 {sharingId === result.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Link2 className="w-4 h-4" />}
               </Button>
+              {/* Studio has no stories or feed to post to. */}
+              {!isStudio && (<>
               <Button
                 size="icon"
                 variant="ghost"
@@ -2501,6 +2507,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
               >
                 {feedPostingId === result.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
               </Button>
+              </>)}
               <Button
                 size="icon"
                 variant="ghost"
@@ -2724,6 +2731,8 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
                   {sharingId === expandedResult.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Link2 className="w-3 h-3" />}
                   Share
                 </Button>
+                {/* Studio has no stories or feed to post to. */}
+                {!isStudio && (<>
                 <Button
                   size="sm"
                   variant="outline"
@@ -2744,6 +2753,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
                   {feedPostingId === expandedResult.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
                   Feed
                 </Button>
+                </>)}
                 <Button
                   size="sm"
                   variant="outline"
