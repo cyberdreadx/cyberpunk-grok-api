@@ -1,3 +1,4 @@
+import { isNativeApp } from "@/lib/nativeApp";
 import { useState, useEffect, useCallback } from "react";
 
 interface BeforeInstallPromptEvent extends Event {
@@ -79,7 +80,9 @@ export function usePwaInstall() {
   }, []);
 
   const canPrompt = deferredPrompt !== null;
-  const shouldShow = isMobile && !isInstalled && !dismissed && enoughVisits;
+  // Inside the GLTCH Studio iPhone app the site already IS the app; offering
+  // to "install it as an app" there makes no sense.
+  const shouldShow = isMobile && !isInstalled && !dismissed && enoughVisits && !isNativeApp();
 
   return { canPrompt, isIos, isMobile, isInstalled, shouldShow, install, dismiss };
 }

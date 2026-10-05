@@ -200,7 +200,7 @@
     "terminalWaiting": "awaiting_confirmation...",
     "title_studio": "Before you start",
     "description_studio": "You must be 18 or older to use GLTCH Studio.",
-    "warning_studio": "GLTCH Studio's AI can produce mature content, so it's for adults only.",
+    "warning_studio": "Please confirm your age and accept the terms to continue.",
     "confirm_studio": "Continue",
     "confirmDisabled_studio": "Tick all three to continue",
     "decline_studio": "Leave"

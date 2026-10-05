@@ -179,10 +179,16 @@
     "copied": "已复制"
   },
   "ageGate": {
+    "confirm_studio": "继续",
+    "confirmDisabled_studio": "勾选全部三项以继续",
+    "decline_studio": "离开",
+    "title_studio": "开始之前",
+    "description_studio": "您必须年满 18 岁才能使用 GLTCH Studio。",
     "title": "神经链路验证",
     "subtitle": "// 区域受限 // 需要认证 //",
     "description": "您必须年满 18 岁才能使用 GLTCH Runner。",
     "warning": "本网站包含成人内容。",
+    "warning_studio": "请确认你的年龄并接受条款以继续。",
     "ageCheck": "我已年满 {{age}} 岁。",
     "tosCheck": "我同意",
     "tosLink": "服务条款",

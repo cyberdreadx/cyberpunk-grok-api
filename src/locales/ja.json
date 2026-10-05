@@ -179,10 +179,16 @@
     "copied": "コピー済み"
   },
   "ageGate": {
+    "confirm_studio": "続ける",
+    "confirmDisabled_studio": "続行するには3つすべてにチェックしてください",
+    "decline_studio": "やめる",
+    "title_studio": "はじめる前に",
+    "description_studio": "GLTCH Studio のご利用は18歳以上に限られます。",
     "title": "ニューラルリンク認証",
     "subtitle": "// セクター制限 // 認証必須 //",
     "description": "GLTCH Runner のご利用は18歳以上に限られます。",
     "warning": "このサイトには成人向けコンテンツが含まれます。",
+    "warning_studio": "続行するには、年齢を確認し、利用規約に同意してください。",
     "ageCheck": "私は{{age}}歳以上です。",
     "tosCheck": "同意します:",
     "tosLink": "利用規約",

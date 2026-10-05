@@ -179,10 +179,16 @@
     "copied": "복사됨"
   },
   "ageGate": {
+    "confirm_studio": "계속",
+    "confirmDisabled_studio": "계속하려면 세 항목 모두 체크하세요",
+    "decline_studio": "나가기",
+    "title_studio": "시작하기 전에",
+    "description_studio": "GLTCH Studio를 이용하려면 만 18세 이상이어야 합니다.",
     "title": "뉴럴 링크 인증",
     "subtitle": "// 섹터_제한 // 인증_필요 //",
     "description": "GLTCH Runner을(를) 이용하려면 만 18세 이상이어야 합니다.",
     "warning": "이 사이트에는 성인용 콘텐츠가 포함되어 있습니다.",
+    "warning_studio": "계속하려면 나이를 확인하고 약관에 동의해 주세요.",
     "ageCheck": "저는 만 {{age}}세 이상입니다.",
     "tosCheck": "동의합니다:",
     "tosLink": "이용약관",

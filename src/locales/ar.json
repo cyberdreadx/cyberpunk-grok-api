@@ -179,10 +179,16 @@
     "copied": "تم النسخ"
   },
   "ageGate": {
+    "confirm_studio": "متابعة",
+    "confirmDisabled_studio": "حدّد الخيارات الثلاثة للمتابعة",
+    "decline_studio": "مغادرة",
+    "title_studio": "قبل أن تبدأ",
+    "description_studio": "يجب أن يكون عمرك 18 عامًا أو أكثر لاستخدام GLTCH Studio.",
     "title": "التحقق من الرابط العصبي",
     "subtitle": "// قطاع_محظور // مصادقة_مطلوبة //",
     "description": "يجب أن يكون عمرك 18 عامًا أو أكثر لاستخدام GLTCH Runner.",
     "warning": "يحتوي هذا الموقع على محتوى للبالغين.",
+    "warning_studio": "يرجى تأكيد عمرك والموافقة على الشروط للمتابعة.",
     "ageCheck": "عمري {{age}} عامًا أو أكثر.",
     "tosCheck": "أوافق على",
     "tosLink": "شروط الخدمة",

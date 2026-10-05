@@ -179,10 +179,16 @@
     "copied": "KOPIERT"
   },
   "ageGate": {
+    "confirm_studio": "Weiter",
+    "confirmDisabled_studio": "Alle drei ankreuzen, um fortzufahren",
+    "decline_studio": "Verlassen",
+    "title_studio": "Bevor du loslegst",
+    "description_studio": "Du musst 18 Jahre oder älter sein, um GLTCH Studio zu nutzen.",
     "title": "NEURALE VERBINDUNGSPRÜFUNG",
     "subtitle": "// SEKTOR_BESCHRÄNKT // AUTH_ERFORDERLICH //",
     "description": "Du musst 18 Jahre oder älter sein, um GLTCH Runner zu nutzen.",
     "warning": "Diese Website enthält Inhalte für Erwachsene.",
+    "warning_studio": "Bitte bestätige dein Alter und akzeptiere die Bedingungen, um fortzufahren.",
     "ageCheck": "Ich bin {{age}} Jahre oder älter.",
     "tosCheck": "Ich stimme den",
     "tosLink": "Nutzungsbedingungen",
