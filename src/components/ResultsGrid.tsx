@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Download, Maximize2, X, Trash2, ExternalLink, ChevronLeft, ChevronRight, Pencil, Film, Copy, Check, FolderPlus, FolderOpen, MoreVertical, FolderInput, Lock, LockOpen, ShieldCheck, Eye, EyeOff, ChevronDown, Send, Archive, Loader2, Link2, CheckSquare, Square, ListChecks, RotateCcw, XCircle, Search, CirclePlus, Lightbulb, Volume2, VolumeX, LayoutGrid } from "lucide-react";
 import { toast } from "sonner";
+import { isNativeApp, nativeSaveMedia } from "@/lib/nativeApp";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 
@@ -274,6 +275,14 @@ async function downloadMedia(url: string, type: "image" | "video"): Promise<bool
   const ext = type === "image" ? "png" : "mp4";
   const mime = type === "image" ? "image/png" : "video/mp4";
   const filename = `gltch-${type}-${Date.now()}.${ext}`;
+
+  // In the iPhone app a browser download goes nowhere; the app saves to Photos.
+  if (isNativeApp()) {
+    const r = await nativeSaveMedia(url, type);
+    if (r.ok) toast.success(type === "video" ? "Video saved to Photos" : "Image saved to Photos");
+    else if (r.error !== "cancelled") toast.error(r.error === "permission" ? "Allow Photos access in Settings to save" : "Couldn't save — try again");
+    return r.ok;
+  }
 
   if (isLocalUrl(url)) {
     const blob = await fetchBlob(url);
