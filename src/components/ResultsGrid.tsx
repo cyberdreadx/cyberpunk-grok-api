@@ -407,7 +407,7 @@ function FolderBar({
   };
 
   const currentFilterName = () => {
-    if (selectedFilter === "unfiled") return "UNFILED";
+    if (selectedFilter === "unfiled") return isStudio ? "Unfiled" : "UNFILED";
     if (selectedFilter === "all") return "ALL";
     if (selectedFilter === "__trash") return "TRASH";
     if (selectedFilter === "none") return "LOCKED";
@@ -538,7 +538,7 @@ function FolderBar({
 
         {mobileOpen && (
           <div className="mt-1 border border-border/50 rounded bg-card/80 backdrop-blur-sm py-1 space-y-0.5 animate-slide-up max-h-[50vh] overflow-y-auto">
-            {renderMobileRow("unfiled", "UNFILED", "__unfiled", true)}
+            {renderMobileRow("unfiled", isStudio ? "Unfiled" : "UNFILED", "__unfiled", true)}
             {visibleFolders.map((f) => renderMobileRow(f.id, (f.name ?? "").toUpperCase(), f.id, false, f))}
             {renderMobileRow("all", "ALL", "__total", true)}
             {/* Trash tab (mobile) */}
@@ -610,7 +610,7 @@ function FolderBar({
 
       {/* ── Desktop: Horizontal tab bar ── */}
       <div className="hidden sm:flex items-center gap-0.5 overflow-x-auto scrollbar-hide pb-px border-b border-border/50 -mb-px">
-        {renderDesktopBuiltIn("unfiled", "UNFILED", "__unfiled")}
+        {renderDesktopBuiltIn("unfiled", isStudio ? "Unfiled" : "UNFILED", "__unfiled")}
         {visibleFolders.map((folder) => {
           const hasPin = folderHasPin(folder.id);
           const isUnlocked = unlockedFolders.has(folder.id);
@@ -1623,15 +1623,16 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
         )}
         <div className="border border-dashed border-border rounded p-12 text-center">
           <div className="font-mono-share text-sm text-muted-foreground tracking-wider mb-2">
-            <span className="text-primary/40">$</span>{" "}
-            {selectedFilter === "none" ? "echo 'SELECT A FOLDER TO VIEW CONTENTS'" : "ls ./output/"}
+            {isStudio
+              ? (selectedFilter === "none" ? "Choose a folder" : "Nothing here yet")
+              : <><span className="text-primary/40">$</span>{" "}{selectedFilter === "none" ? "echo 'SELECT A FOLDER TO VIEW CONTENTS'" : "ls ./output/"}</>}
           </div>
           <div className="font-mono-share text-xs text-muted-foreground/60">
             {selectedFilter === "none"
-              ? "// choose a folder above to decrypt and display files"
+              ? (isStudio ? "Pick a folder above to see what's in it." : "// choose a folder above to decrypt and display files")
               : selectedFilter !== "all" && results.length > 0
                 ? "(no results in this folder)"
-                : "(empty) — submit a prompt to generate results"
+                : (isStudio ? "Your images and videos will appear here." : "(empty) — submit a prompt to generate results")
             }
           </div>
         </div>

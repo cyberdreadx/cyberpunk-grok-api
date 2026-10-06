@@ -2519,7 +2519,7 @@ const Index = () => {
           </div>
 
           <GlitchText
-            text={BRAND.nameHeader}
+            text={isStudio ? "GLTCH Studio" : BRAND.nameHeader}
             as="h1"
             className="font-orbitron text-2xl sm:text-3xl md:text-5xl font-black tracking-wider neon-text-cyan"
             glitchIntensity="medium"
@@ -2654,13 +2654,15 @@ const Index = () => {
                   </div>
                 )}
 
-                {/* Theme */}
+                {/* Theme — Runner only; Studio's look is fixed, so a picker there does nothing */}
+                {!isStudio && (
                 <div className="flex items-center justify-between gap-2">
                   <span className="font-mono-share text-tiny text-muted-foreground/70 uppercase tracking-wider">
                     {t("header.theme", "Theme")}
                   </span>
                   <ThemePicker />
                 </div>
+                )}
 
                 {/* Admin: test credit spending toggle */}
                 {isAdmin && (
