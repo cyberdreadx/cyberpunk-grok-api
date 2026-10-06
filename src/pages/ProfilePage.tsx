@@ -608,27 +608,9 @@ const ProfilePage: React.FC = () => {
         </div>
       </div>
       <VerificationDialog open={verifyOpen} onOpenChange={setVerifyOpen} />
-      <ProfileMobileChrome />
     </CyberLayout>
   );
 };
 
-const ProfileMobileChrome: React.FC = () => {
-  const { isAuthenticated } = useAuth();
-  const [storeOpen, setStoreOpen] = useState(false);
-  const [prefsOpen, setPrefsOpen] = useState(false);
-  return (
-    <>
-      <MobileCreditsPill onOpenStore={() => setStoreOpen(true)} />
-      <MobileBottomNav
-        isAuthenticated={isAuthenticated}
-        onOpenStore={() => setStoreOpen(true)}
-        onOpenSettings={() => setPrefsOpen(true)}
-      />
-      <StoreOverlay open={storeOpen} onOpenChange={setStoreOpen} />
-      <PreferencesDialog open={prefsOpen} onOpenChange={setPrefsOpen} />
-    </>
-  );
-};
 
 export default ProfilePage;

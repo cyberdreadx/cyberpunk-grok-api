@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&family=Share+Tech+Mono&family=Chakra+Petch:wght@400;500;600;700&family=Rajdhani:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -12,7 +12,11 @@
        reproduces Runner exactly: an undefined var() with no fallback discards
        the whole font-family declaration rather than falling through the list. */
     --font-display: 'Archivo', system-ui, -apple-system, sans-serif;
-    --font-ui-mono: 'Share Tech Mono', monospace;
+    /* UI text. Was Share Tech Mono, which put every label, button and paragraph
+       in a terminal font — the main reason the app read as cluttered. Chakra
+       Petch keeps the squared, technical feel but reads like an interface.
+       Real code (API keys, curl) uses --font-mono / font-jetbrains. */
+    --font-ui-mono: 'Chakra Petch', 'Share Tech Mono', system-ui, sans-serif;
     --font-rajdhani: 'Rajdhani', sans-serif;
     --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 
@@ -266,10 +270,6 @@
 
   html[data-cyber-theme="bare"] .cyber-gradient {
     background: hsl(var(--background)) !important;
-  }
-
-  html[data-cyber-theme="bare"] .cyber-main-padding {
-    padding-top: calc(env(safe-area-inset-top, 0px) + 12px) !important;
   }
 
   html[data-cyber-theme="bare"] .loader-scanline,

@@ -23,8 +23,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Send, Users, Globe, Loader2, Plus, X, Lock, Zap, ShieldAlert, Sparkles, Rss, Flame, Film, FolderOpen, ImageIcon, Star, Menu, Lightbulb, MessageCircle, MessagesSquare, Gift, DollarSign, LayoutGrid, AlignLeft, PenLine } from "lucide-react";
+import { Send, Users, Globe, Loader2, Plus, X, Lock, Zap, ShieldAlert, Sparkles, Rss, Flame, Film, FolderOpen, ImageIcon, Star, Menu, Lightbulb, MessageCircle, MessagesSquare, Gift, DollarSign, LayoutGrid, AlignLeft, PenLine, SlidersHorizontal } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import AppTopBar, { TOP_BAR_PX } from "@/components/AppTopBar";
 import { useToast } from "@/hooks/use-toast";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import DesktopChatLink, { DesktopMessagesLink } from "@/components/DesktopChatLink";
@@ -484,399 +486,122 @@ const FeedPage: React.FC = () => {
     </AlertDialog>
   );
 
-  const filterTabs = (variant: "mobile" | "desktop") => {
-    const baseInactive = variant === "mobile"
-      ? "border-white/10 bg-black/30 text-white/70 backdrop-blur-sm"
-      : "border-border/30 text-muted-foreground hover:text-foreground";
-    return (
-      <div className="flex gap-1.5 flex-wrap">
-        <button
-          onClick={() => {
-            if (!isAuthenticated) {
-              toast({ title: "Sign up to watch reels", description: "Create a free account to watch the video feed." });
-              navigate("/create?signup=1");
-              return;
-            }
-            setReelsOpen(true);
-          }}
-          className={`flex items-center gap-1 px-3 py-1 rounded-full font-mono-share text-tiny font-bold transition-colors border border-accent/60 bg-accent/15 text-accent shadow-glow-focus hover:bg-accent/25`}
-          title="Vertical video reels — most recent"
-        >
-          <Film className="w-3 h-3" /> REELS
-        </button>
-        {/* NSFW switch. Off is the default and means the server never sends
-            flagged posts, so this is a real filter rather than a blur. Lives
-            in the filter row instead of buried in Settings, since the feed is
-            where people notice they want it. */}
-        <button
-          onClick={() => {
-            if (!isAuthenticated) {
-              toast({ title: "Sign in to change this", description: "18+ content is for paying members." });
-              navigate("/create?signup=1");
-              return;
-            }
-            if (!nsfwAllowed) {
-              // Locked, so sell it rather than just refusing.
-              toast({
-                title: "18+ content is members-only",
-                description: "Any credit pack or subscription unlocks it.",
-              });
-              setStoreOpen(true);
-              return;
-            }
-            const showing = matureFilter; // about to turn NSFW ON
-            setMatureFilter(!matureFilter);
-            setLoading(true);
-            toast({
-              title: showing ? "NSFW content on" : "NSFW content hidden",
-              description: showing
-                ? "Posts marked 18+ will now appear in your feed."
-                : "Posts marked 18+ are filtered out. Change it here or in Settings.",
-            });
-          }}
-          className={`flex items-center gap-1 px-2.5 py-1 rounded-full font-mono-share text-tiny transition-colors border ${
-            !nsfwAllowed
-              ? `${baseInactive} opacity-70`
-              : matureFilter
-                ? `${baseInactive}`
-                : "border-amber-400/60 bg-amber-400/15 text-amber-300"
-          }`}
-          title={
-            !nsfwAllowed
-              ? "18+ content is members-only — tap to unlock"
-              : matureFilter
-                ? "18+ posts are hidden — tap to show"
-                : "18+ posts are showing — tap to hide"
-          }
-          aria-pressed={nsfwAllowed && !matureFilter}
-        >
-          {!nsfwAllowed ? <Lock className="w-3 h-3" /> : <ShieldAlert className="w-3 h-3" />}
-          NSFW {!nsfwAllowed ? "🔒" : matureFilter ? "OFF" : "ON"}
-        </button>
-        <button
-          onClick={() => { setFilter("all"); setLoading(true); }}
-          className={`flex items-center gap-1 px-2.5 py-1 rounded-full font-mono-share text-tiny transition-colors border ${
-            filter === "all" ? "border-primary/50 bg-primary/10 text-primary" : baseInactive
-          }`}
-        >
-          <Globe className="w-3 h-3" /> RECENT
-        </button>
-        <button
-          onClick={() => { setFilter("trending"); setLoading(true); }}
-          className={`flex items-center gap-1 px-2.5 py-1 rounded-full font-mono-share text-tiny transition-colors border ${
-            filter === "trending"
-              ? "border-secondary/50 bg-secondary/10 text-secondary shadow-glow-focus"
-              : baseInactive
-          }`}
-        >
-          <Flame className="w-3 h-3" /> TRENDING
-        </button>
-        <button
-          onClick={() => { if (requireAuth()) { setFilter("following"); setLoading(true); } }}
-          className={`flex items-center gap-1 px-2.5 py-1 rounded-full font-mono-share text-tiny transition-colors border ${
-            filter === "following" ? "border-primary/50 bg-primary/10 text-primary" : baseInactive
-          }`}
-        >
-          <Users className="w-3 h-3" /> FOLLOWING
-        </button>
-
-        {/* Content lane — orthogonal to the sort chips above, so it gets its
-            own segmented group rather than becoming a fourth peer of
-            RECENT/TRENDING/FOLLOWING. */}
-        <div
-          className="mx-0.5 self-stretch w-px bg-border/40 shrink-0"
-          aria-hidden
-        />
-        <div
-          className="flex items-center gap-0.5 p-0.5 rounded-full border border-border/30 bg-card/40 shrink-0"
-          role="group"
-          aria-label="Content type"
-        >
-          <button
-            onClick={() => switchLane("media")}
-            aria-pressed={lane === "media"}
-            className={`flex items-center gap-1 px-2.5 py-0.5 rounded-full font-mono-share text-tiny transition-colors ${
-              lane === "media"
-                ? "bg-primary/15 text-primary shadow-glow-focus"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-            title="Images and video"
-          >
-            <LayoutGrid className="w-3 h-3" /> MEDIA
-          </button>
-          <button
-            onClick={() => switchLane("text")}
-            aria-pressed={lane === "text"}
-            className={`flex items-center gap-1 px-2.5 py-0.5 rounded-full font-mono-share text-tiny transition-colors ${
-              lane === "text"
-                ? "bg-secondary/20 text-secondary shadow-glow-focus"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-            title="Text-only posts — discussion, no media"
-          >
-            <AlignLeft className="w-3 h-3" /> TEXT
-          </button>
-        </div>
-      </div>
-    );
+  /** The 18+ switch. Off (the default) means the server never sends flagged
+   *  posts. Locked accounts get the upsell rather than a dead switch. */
+  const toggleNsfw = () => {
+    if (!isAuthenticated) {
+      toast({ title: "Sign in to change this", description: "18+ content is for paying members." });
+      navigate("/create?signup=1");
+      return;
+    }
+    if (!nsfwAllowed) {
+      toast({ title: "18+ content is members-only", description: "Any credit pack or subscription unlocks it." });
+      setStoreOpen(true);
+      return;
+    }
+    const showing = matureFilter; // about to turn NSFW ON
+    setMatureFilter(!matureFilter);
+    setLoading(true);
+    toast({
+      title: showing ? "18+ posts on" : "18+ posts hidden",
+      description: showing ? "Posts marked 18+ will now appear in your feed." : "Posts marked 18+ are filtered out.",
+    });
   };
 
-  /** Top tab strip: Feed / Create / Featured directory / Creator apply (parity with /create page). */
-  const topTabs = (
-    <div className="flex flex-wrap items-center gap-1 p-1 rounded-lg border border-border/40 bg-card/40 w-fit max-w-[min(100%,28rem)]">
-      <button
-        type="button"
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md font-orbitron text-tiny tracking-widest bg-primary/15 text-primary border border-primary/40 shadow-glow-focus"
-        aria-current="page"
-      >
-        <Rss className="w-3.5 h-3.5" /> FEED
-      </button>
-      <button
-        type="button"
-        onClick={() => navigate("/create")}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md font-orbitron text-tiny tracking-widest text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
-      >
-        <Sparkles className="w-3.5 h-3.5" /> CREATE
-      </button>
-      <button
-        type="button"
-        onClick={() => navigate("/creators")}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md font-orbitron text-tiny tracking-widest text-muted-foreground hover:text-secondary hover:bg-secondary/10 transition-colors"
-        title="Featured models directory"
-      >
-        <Users className="w-3.5 h-3.5" /> MODELS
-        <span className="font-mono-share text-micro px-1 rounded-sm tracking-widest text-emerald-300 border border-emerald-400/40 bg-emerald-400/10">NEW</span>
-      </button>
-      <button
-        type="button"
-        onClick={() => navigate("/characters")}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md font-orbitron text-tiny tracking-widest text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
-        title="Chat with model AI personas"
-      >
-        <MessageCircle className="w-3.5 h-3.5" /> PERSONAS
-      </button>
-      {isAuthenticated && (
+  const openReels = () => {
+    if (!isAuthenticated) {
+      toast({ title: "Sign up to watch reels", description: "Create a free account to watch the video feed." });
+      navigate("/create?signup=1");
+      return;
+    }
+    setReelsOpen(true);
+  };
+
+  /*
+   * One row instead of two rows of six chips: the three ways to sort as tabs,
+   * then Reels and a Filters panel holding the settings people change rarely
+   * (18+, media vs text, the guidelines).
+   */
+  const feedControls = (
+    <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1" role="tablist" aria-label="Sort">
+        {([
+          ["all", "Latest"],
+          ["trending", "Trending"],
+          ["following", "Following"],
+        ] as const).map(([id, label]) => (
+          <button
+            key={id}
+            role="tab"
+            aria-selected={filter === id}
+            onClick={() => {
+              if (id === "following" && !requireAuth()) return;
+              setFilter(id); setLoading(true);
+            }}
+            className={`relative h-9 px-3 text-sm font-semibold transition-colors ${filter === id ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+          >
+            {label}
+            {filter === id && <span className="absolute inset-x-3 -bottom-px h-0.5 rounded-full bg-primary" />}
+          </button>
+        ))}
+      </div>
+      <div className="ms-auto flex items-center gap-1">
         <button
-          type="button"
-          onClick={() => navigate("/chat")}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md font-orbitron text-tiny tracking-widest text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
-          title="Community chatroom"
+          onClick={openReels}
+          className="h-8 px-3 rounded-full flex items-center gap-1.5 text-sm font-medium bg-accent/15 text-accent hover:bg-accent/25 transition-colors"
+          title="Watch videos full screen"
         >
-          <MessagesSquare className="w-3.5 h-3.5" /> CHAT
+          <Film className="w-4 h-4" /> Reels
         </button>
-      )}
-      <button
-        type="button"
-        onClick={() => navigate("/apply")}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md font-orbitron text-tiny tracking-widest text-muted-foreground hover:text-amber-300 hover:bg-amber-400/10 transition-colors"
-        title="Apply to the creator program"
-      >
-        <Star className="w-3.5 h-3.5" /> APPLY
-      </button>
-    </div>
-  );
-
-  const filterLabel = filter === "all" ? "ALL" : filter === "trending" ? "TRENDING" : "FOLLOWING";
-
-  /** Hamburger button that opens the side nav drawer. */
-  const navTrigger = (
-    <button
-      type="button"
-      onClick={() => setNavOpen(true)}
-      className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-primary/40 bg-primary/10 text-primary font-orbitron text-tiny tracking-widest hover:bg-primary/20 transition-colors shadow-glow-focus"
-      aria-label="Open navigation menu"
-    >
-      <Menu className="w-4 h-4" />
-      <span className="flex items-center gap-1.5">
-        <Rss className="w-3 h-3" /> FEED
-        <span className="text-muted-foreground/60">·</span>
-        <span className="text-muted-foreground">{filterLabel}</span>
-      </span>
-    </button>
-  );
-
-  /** Side drawer that holds the page tabs + filter tabs. */
-  const navDrawer = (
-    <Sheet open={navOpen} onOpenChange={setNavOpen}>
-      <SheetContent
-        side="left"
-        className="w-[85vw] max-w-xs bg-card/95 border-r border-primary/30 backdrop-blur-md p-0 flex flex-col"
-      >
-        <SheetHeader
-          className="px-5 py-4 border-b border-border/30"
-          style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 16px)" }}
-        >
-          <SheetTitle className="font-orbitron text-xs tracking-[0.25em] text-primary">
-            ▌ NAVIGATION
-          </SheetTitle>
-        </SheetHeader>
-
-        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
-          {/* Pages */}
-          <div className="space-y-2">
-            <div className="px-2 font-mono-share text-tiny tracking-[0.2em] text-muted-foreground/70">
-              ── PAGES ──
-            </div>
-            <div className="flex flex-col gap-1">
-              <button
-                type="button"
-                onClick={() => setNavOpen(false)}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-md font-orbitron text-xs tracking-widest bg-primary/15 text-primary border border-primary/40"
-                aria-current="page"
-              >
-                <Rss className="w-4 h-4" /> FEED
-              </button>
-              <button
-                type="button"
-                onClick={() => { setNavOpen(false); navigate("/create"); }}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-md font-orbitron text-xs tracking-widest text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
-              >
-                <Sparkles className="w-4 h-4" /> CREATE
-              </button>
-              <button
-                type="button"
-                onClick={() => { setNavOpen(false); navigate("/library"); }}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-md font-orbitron text-xs tracking-widest text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
-              >
-                <FolderOpen className="w-4 h-4" /> LIBRARY
-              </button>
-              <button
-                type="button"
-                onClick={() => { setNavOpen(false); navigate("/prompts"); }}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-md font-orbitron text-xs tracking-widest text-muted-foreground hover:text-secondary hover:bg-secondary/10 transition-colors"
-              >
-                <Lightbulb className="w-4 h-4" /> PROMPTS
-              </button>
-              <button
-                type="button"
-                onClick={() => { setNavOpen(false); navigate("/creators"); }}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-md font-orbitron text-xs tracking-widest text-muted-foreground hover:text-secondary hover:bg-secondary/10 transition-colors"
-              >
-                <Users className="w-4 h-4" /> MODELS
-              </button>
-              {isAuthenticated && (
-                <button
-                  type="button"
-                  onClick={() => { setNavOpen(false); navigate("/chat"); }}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-md font-orbitron text-xs tracking-widest text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
-                >
-                  <MessagesSquare className="w-4 h-4" /> CHAT
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={() => { setNavOpen(false); navigate("/apply"); }}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-md font-orbitron text-xs tracking-widest text-muted-foreground hover:text-amber-300 hover:bg-amber-400/10 transition-colors"
-              >
-                <Star className="w-4 h-4" /> APPLY
-              </button>
-              {isAuthenticated && (
-                <button
-                  type="button"
-                  onClick={() => { setNavOpen(false); navigate("/profile"); }}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-md font-orbitron text-xs tracking-widest text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
-                >
-                  <Star className="w-4 h-4" /> MY PROFILE
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Earn — mirrors GlobalNavMenu, which this drawer replaces on /feed. */}
-          {isAuthenticated && (
-            <div className="space-y-2">
-              <div className="px-2 font-mono-share text-tiny tracking-[0.2em] text-muted-foreground/70">
-                ── EARN ──
-              </div>
-              <div className="flex flex-col gap-1">
-                <button
-                  type="button"
-                  onClick={() => { setNavOpen(false); navigate("/referral"); }}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-md font-orbitron text-xs tracking-widest text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
-                >
-                  <Gift className="w-4 h-4" /> INVITE + EARN
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setNavOpen(false); navigate("/ambassador"); }}
-                  className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-md font-orbitron text-xs tracking-widest text-green-300 bg-green-500/10 border border-green-500/40 hover:bg-green-500/20 transition-colors"
-                >
-                  <span className="flex items-center gap-3">
-                    <DollarSign className="w-4 h-4" /> AMBASSADOR
-                  </span>
-                  <span className="font-mono-share text-tiny text-green-400/80 tracking-normal">20% CASH</span>
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Filters */}
-          <div className="space-y-2">
-            <div className="px-2 font-mono-share text-tiny tracking-[0.2em] text-muted-foreground/70">
-              ── FEED FILTER ──
-            </div>
-            <div className="flex flex-col gap-1">
-              <button
-                onClick={() => { setFilter("all"); setLoading(true); setNavOpen(false); }}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-md font-mono-share text-xs transition-colors border ${
-                  filter === "all"
-                    ? "border-primary/50 bg-primary/10 text-primary"
-                    : "border-border/30 text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <Globe className="w-4 h-4" /> ALL
-              </button>
-              <button
-                onClick={() => { setFilter("trending"); setLoading(true); setNavOpen(false); }}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-md font-mono-share text-xs transition-colors border ${
-                  filter === "trending"
-                    ? "border-secondary/50 bg-secondary/10 text-secondary"
-                    : "border-border/30 text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <Flame className="w-4 h-4" /> TRENDING
-              </button>
-              <button
-                onClick={() => {
-                  if (requireAuth()) { setFilter("following"); setLoading(true); setNavOpen(false); }
-                }}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-md font-mono-share text-xs transition-colors border ${
-                  filter === "following"
-                    ? "border-primary/50 bg-primary/10 text-primary"
-                    : "border-border/30 text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <Users className="w-4 h-4" /> FOLLOWING
-              </button>
-              <button
-                onClick={() => {
-                  setNavOpen(false);
-                  if (!isAuthenticated) {
-                    toast({ title: "Sign up to watch reels", description: "Create a free account to watch the video feed." });
-                    navigate("/create?signup=1");
-                    return;
-                  }
-                  setReelsOpen(true);
-                }}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-md font-mono-share text-xs transition-colors border border-accent/50 bg-accent/10 text-accent hover:bg-accent/20"
-              >
-                <Film className="w-4 h-4" /> REELS
-              </button>
-            </div>
-          </div>
-
-          {/* Community guidelines */}
-          <div>
+        <Popover>
+          <PopoverTrigger asChild>
             <button
-              onClick={() => { setNavOpen(false); setShowRules(true); }}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-md font-mono-share text-xs text-muted-foreground hover:text-foreground transition-colors w-full"
+              className="relative h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
+              aria-label="Filters"
             >
-              <ShieldAlert className="w-4 h-4" /> COMMUNITY GUIDELINES
+              <SlidersHorizontal className="w-4 h-4" />
+              {(lane === "text" || (nsfwAllowed && !matureFilter)) && <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-primary" />}
             </button>
-          </div>
-        </div>
-      </SheetContent>
-    </Sheet>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="z-[60] w-72 p-0">
+            <div className="p-3 space-y-3">
+              <div>
+                <div className="text-xs font-semibold text-muted-foreground mb-1.5">Show</div>
+                <div className="grid grid-cols-2 gap-1 p-1 rounded-lg bg-muted/40" role="group" aria-label="Content type">
+                  {([["media", "Images & video", LayoutGrid], ["text", "Text posts", AlignLeft]] as const).map(([id, label, Icon]) => (
+                    <button
+                      key={id}
+                      onClick={() => switchLane(id)}
+                      aria-pressed={lane === id}
+                      className={`h-8 rounded-md flex items-center justify-center gap-1.5 text-sm transition-colors ${lane === id ? "bg-card text-foreground font-medium shadow-sm" : "text-muted-foreground"}`}
+                    >
+                      <Icon className="w-3.5 h-3.5" /> {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-sm font-medium">18+ posts</div>
+                  <div className="text-xs text-muted-foreground">{!nsfwAllowed ? "Members only — any purchase unlocks" : matureFilter ? "Hidden" : "Showing"}</div>
+                </div>
+                {nsfwAllowed ? (
+                  <Switch checked={!matureFilter} onCheckedChange={toggleNsfw} aria-label="Show 18+ posts" />
+                ) : (
+                  <button onClick={toggleNsfw} className="h-8 px-3 rounded-full text-xs font-semibold bg-primary/15 text-primary flex items-center gap-1"><Lock className="w-3 h-3" /> Unlock</button>
+                )}
+              </div>
+            </div>
+            <button
+              onClick={() => setShowRules(true)}
+              className="w-full flex items-center gap-2 px-3 h-10 border-t border-border/40 text-sm text-muted-foreground hover:text-foreground"
+            >
+              <ShieldAlert className="w-4 h-4" /> Community guidelines
+            </button>
+          </PopoverContent>
+        </Popover>
+      </div>
+    </div>
   );
 
   /** Threads/X-style single column. Capped at a readable measure — full-width
@@ -985,22 +710,13 @@ const FeedPage: React.FC = () => {
           </div>
         )}
         <div className="min-h-[100dvh] w-full max-w-full overflow-x-hidden bg-background pb-24">
-          {/* Sticky header */}
+          <AppTopBar onOpenStore={() => setStoreOpen(true)} />
+          {/* Sort tabs + Reels + Filters, pinned under the app bar */}
           <div
-            className="sticky z-30 bg-background/85 backdrop-blur-md border-b border-border/30 px-3 py-2"
-            style={{ top: 0, paddingTop: "calc(env(safe-area-inset-top, 0px) + 8px)" }}
+            className="sticky z-20 bg-background/95 border-b border-border/40 px-2"
+            style={{ top: `calc(env(safe-area-inset-top, 0px) + ${TOP_BAR_PX}px)`, marginTop: `calc(env(safe-area-inset-top, 0px) + ${TOP_BAR_PX}px)` }}
           >
-            <div className="flex items-center justify-between gap-2 mobile-pill-clear">
-              {navTrigger}
-              <button
-                onClick={() => setShowRules(true)}
-                className="text-muted-foreground hover:text-foreground transition-colors p-1"
-                aria-label="View community guidelines"
-              >
-                <ShieldAlert className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="mt-2 overflow-x-auto">{filterTabs("mobile")}</div>
+            {feedControls}
           </div>
 
           {/* Signup teaser for logged-out users */}
@@ -1112,7 +828,6 @@ const FeedPage: React.FC = () => {
           </div>
         )}
 
-        <MobileCreditsPill onOpenStore={() => setStoreOpen(true)} />
         <MobileBottomNav isAuthenticated={isAuthenticated} onOpenStore={() => setStoreOpen(true)} onOpenSettings={() => setPrefsOpen(true)} />
         <StoreOverlay open={storeOpen} onOpenChange={setStoreOpen} />
         <PreferencesDialog open={prefsOpen} onOpenChange={setPrefsOpen} />
@@ -1141,32 +856,14 @@ const FeedPage: React.FC = () => {
             mediaType="video"
           />
         )}
-        {navDrawer}
       </>
     );
   }
 
   /* ───── DESKTOP GRID VIEW ───── */
   return (
-    <CyberLayout>
+    <CyberLayout ownBottomNav onOpenStore={() => setStoreOpen(true)}>
       <div className="max-w-7xl mx-auto px-4 py-6 space-y-4 pb-24">
-        {/* Top bar */}
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-2">
-            {navTrigger}
-            <DesktopChatLink />
-          <DesktopMessagesLink />
-          </div>
-          {isAuthenticated && (
-            <button
-              onClick={() => navigate("/profile")}
-              className="font-mono-share text-tiny text-primary hover:text-primary/80 transition-colors"
-            >
-              MY PROFILE →
-            </button>
-          )}
-        </div>
-
         {isAuthenticated && rulesBanner}
         {/* Stories run across the full width, above both columns. */}
         <StoriesBar currentUserId={user?.id} isAdmin={!!user?.is_admin} />
@@ -1213,7 +910,7 @@ const FeedPage: React.FC = () => {
           </aside>
 
           <main className="min-w-0 lg:order-1 space-y-4">
-            {filterTabs("desktop")}
+            <div className="border-b border-border/40">{feedControls}</div>
 
             {loading ? (
               lane === "text" ? textLaneSkeleton : skeletonGrid("grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4")
@@ -1251,7 +948,6 @@ const FeedPage: React.FC = () => {
         </div>
       </div>
 
-      <MobileCreditsPill onOpenStore={() => setStoreOpen(true)} />
       <MobileBottomNav isAuthenticated={isAuthenticated} onOpenStore={() => setStoreOpen(true)} onOpenSettings={() => setPrefsOpen(true)} />
       <StoreOverlay open={storeOpen} onOpenChange={setStoreOpen} />
       <PreferencesDialog open={prefsOpen} onOpenChange={setPrefsOpen} />
@@ -1280,7 +976,6 @@ const FeedPage: React.FC = () => {
           mediaType="video"
         />
       )}
-      {navDrawer}
     </CyberLayout>
   );
 };

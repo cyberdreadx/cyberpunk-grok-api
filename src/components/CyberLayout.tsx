@@ -1,16 +1,23 @@
 import React, { useEffect } from "react";
-import NotificationBell from "@/components/NotificationBell";
-import RunpodStatusDot from "@/components/RunpodStatusDot";
+import AppTopBar, { TOP_BAR_PX } from "@/components/AppTopBar";
+import MobileBottomNav from "@/components/MobileBottomNav";
 import { useAuth } from "@/hooks/useAuth";
 import { BARE_THEME_ID } from "@/lib/themes";
 import { applyImmersionToRoot, BARE_IMMERSION, DEFAULT_IMMERSION, fetchMasterImmersion } from "@/lib/immersion";
-import { isStudio } from "@/lib/edition";
 
 interface CyberLayoutProps {
   children: React.ReactNode;
+  /** Top bar title; defaults to the route's name. */
+  title?: string;
+  /** The page's own store, if it has one. */
+  onOpenStore?: () => void;
+  /** Pages that render their own MobileBottomNav (with page-specific
+   *  handlers) set this so it is not drawn twice. Everything else gets the
+   *  standard one, so no page is left without navigation on a phone. */
+  ownBottomNav?: boolean;
 }
 
-const CyberLayout: React.FC<CyberLayoutProps> = ({ children }) => {
+const CyberLayout: React.FC<CyberLayoutProps> = ({ children, title, onOpenStore, ownBottomNav }) => {
   const { isAuthenticated } = useAuth();
 
   useEffect(() => {
@@ -72,36 +79,8 @@ const CyberLayout: React.FC<CyberLayoutProps> = ({ children }) => {
         <div className="absolute bottom-0 right-0 h-full w-[1px] bg-gradient-to-t from-primary/40 to-transparent" />
       </div>
 
-      {/* Terminal top bar — padded for iOS safe area (notch/Dynamic Island). No backdrop-blur (very expensive on mobile GPU). */}
-      <div
-        className={`cyber-terminal-bar fixed top-0 left-0 right-0 z-30 ${isStudio ? "bg-card" : "bg-card/95"} border-b border-primary/20 flex items-end px-4 gap-3`}
-        style={{ paddingTop: 'env(safe-area-inset-top, 0px)', height: 'calc(env(safe-area-inset-top, 0px) + 28px)' }}
-      >
-        {!isStudio && (
-        <div className="flex items-center gap-1.5 pb-1">
-          <div className="w-2.5 h-2.5 rounded-full bg-destructive/70" />
-          <div className="w-2.5 h-2.5 rounded-full bg-neon-yellow/70" />
-          <div className="w-2.5 h-2.5 rounded-full bg-primary/70" />
-        </div>
-        )}
-        {isStudio ? (
-          // GLTCH Studio: a plain header, not a terminal window.
-          <div className="font-display font-bold text-sm text-foreground flex-1 pb-1.5">GLTCH Studio</div>
-        ) : (
-          <div className="font-mono-share text-tiny text-muted-foreground/70 flex-1 text-center pb-1">
-            gltch@gltch:~/neural-render — bash
-          </div>
-        )}
-        {!isStudio && (<div className="pb-1 shrink-0">
-          <RunpodStatusDot />
-        </div>)}
-        <div className="pb-0.5 shrink-0">
-          <NotificationBell isAuthenticated={isAuthenticated} />
-        </div>
-        {!isStudio && (<div className="font-mono-share text-tiny text-muted-foreground/60 pb-1 hidden sm:block">
-          PID:4F7A
-        </div>)}
-      </div>
+      {/* The app bar: title, back, credits, notifications. */}
+      <AppTopBar title={title} onOpenStore={onOpenStore} />
 
       {/* Horizontal scan line — desktop only (animation + layer cost) */}
       <div
@@ -119,11 +98,13 @@ const CyberLayout: React.FC<CyberLayoutProps> = ({ children }) => {
           such as MY PROFILE top-right, the credit toast bottom-left and the help
           button bottom-right. The component is kept if it ever finds a home. */}
 
-      {/* Main content — offset by terminal bar height + safe area */}
+      {/* Main content — offset by the app bar height + safe area */}
       <div
         className="cyber-main-padding relative z-20"
-        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 28px)' }}
+        style={{ paddingTop: `calc(env(safe-area-inset-top, 0px) + ${TOP_BAR_PX}px)` }}
       >{children}</div>
+
+      {!ownBottomNav && <MobileBottomNav isAuthenticated={isAuthenticated} />}
     </div>
   );
 };

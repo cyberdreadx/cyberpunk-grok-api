@@ -159,7 +159,7 @@ const Library: React.FC = () => {
   const totalFolders = foldersHook.folders.length;
 
   return (
-    <CyberLayout>
+    <CyberLayout ownBottomNav onOpenStore={() => setStoreOpen(true)}>
       <div className="max-w-6xl mx-auto px-4 py-6 sm:pb-8 space-y-6" style={{ paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 0px))' }}>
         {/* Header — collapses on scroll-down, snaps back on scroll-up */}
         <div className="space-y-4">
@@ -270,7 +270,6 @@ const Library: React.FC = () => {
         )}
       </div>
 
-      <MobileCreditsPill onOpenStore={() => setStoreOpen(true)} />
 
       {/* Mobile bottom navigation */}
       <MobileBottomNav

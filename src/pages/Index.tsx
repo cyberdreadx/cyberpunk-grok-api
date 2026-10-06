@@ -331,6 +331,15 @@ const Index = () => {
   React.useEffect(() => {
     if (location.pathname !== createPath || !location.search) return;
     const params = new URLSearchParams(location.search);
+    // Menu links from pages that don't host these dialogs themselves.
+    const open = params.get("open");
+    if (open === "guide" || open === "changelog") {
+      if (open === "guide") setGuideOpen(true); else setChangelogOpen(true);
+      params.delete("open");
+      const rest = params.toString();
+      navigate(createPath + (rest ? `?${rest}` : ""), { replace: true });
+      return;
+    }
     const action = params.get("action");
     const sharedPrompt = params.get("prompt");
 
@@ -1172,7 +1181,7 @@ const Index = () => {
      tree — which is left byte-identical below. */
   if (createMode === "easy") {
     return (
-      <CyberLayout>
+      <CyberLayout ownBottomNav onOpenStore={() => setStoreOpen(true)}>
         <div className="max-w-5xl mx-auto px-3 sm:px-4 pt-4">{modeToggle}</div>
         <div className="px-0 sm:px-4">
           <EasyMode
@@ -1194,14 +1203,13 @@ const Index = () => {
   }
 
   return (
-    <CyberLayout>
+    <CyberLayout ownBottomNav onOpenStore={() => setStoreOpen(true)}>
       <div className="max-w-5xl mx-auto px-3 sm:px-4 py-4 sm:py-8 pb-24 sm:pb-8 space-y-4 sm:space-y-6">
         {modeToggle}
 
         {/* Top tabs replaced by global hamburger MENU (GlobalNavMenu).
             Keep the inline credits pill so mobile users still see balance. */}
-        <div className="flex items-center justify-end sm:justify-start gap-2 flex-wrap pl-24 sm:pl-28">
-          <MobileCreditsPill inline onOpenStore={() => setStoreOpen(true)} />
+        <div className="flex items-center justify-end gap-2 flex-wrap">
           <button
             type="button"
             onClick={() => setSupportOpen(true)}

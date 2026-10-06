@@ -747,7 +747,7 @@ export default function Characters() {
   // ── Render ──
   return (
     <>
-    <CyberLayout>
+    <CyberLayout ownBottomNav onOpenStore={() => setStoreOpen(true)}>
       <div className="max-w-4xl mx-auto px-4 py-6 min-h-screen">
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
@@ -1239,7 +1239,6 @@ export default function Characters() {
         )}
       </div>
     </CyberLayout>
-    <MobileCreditsPill onOpenStore={() => setStoreOpen(true)} />
     <MobileBottomNav isAuthenticated={true} onOpenStore={() => setStoreOpen(true)} onOpenSettings={() => setPrefsOpen(true)} />
     <StoreOverlay open={storeOpen} onOpenChange={setStoreOpen} />
     <PreferencesDialog open={prefsOpen} onOpenChange={setPrefsOpen} />

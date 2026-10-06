@@ -4,7 +4,7 @@ import { lazyWithRetry } from "@/lib/lazyWithRetry";
 import { createPortal } from "react-dom";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Sparkles, Image, Users, ShoppingCart, MoreHorizontal, HelpCircle, FileText, Shield, ScrollText, Rss, User, Settings as SettingsIcon, BadgeCheck, MessageSquare, Heart, Gift, Star, ClipboardList, Mail } from "lucide-react";
+import { Sparkles, Image, Users, ShoppingCart, MoreHorizontal, HelpCircle, FileText, Shield, ScrollText, Rss, User, Settings as SettingsIcon, BadgeCheck, MessageSquare, Heart, Gift, Star, ClipboardList, Mail, Lightbulb, Ticket, Award, Code } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCredits } from "@/hooks/useCredits";
 import { useChatUnread } from "@/hooks/useChatUnread";
@@ -12,6 +12,8 @@ import { useDmUnread } from "@/hooks/useDmUnread";
 import { isStudio } from "@/lib/edition";
 
 const CommunityPotDialog = lazyWithRetry(() => import("@/components/CommunityPotDialog"), "community-pot-dialog");
+const StoreOverlay = lazyWithRetry(() => import("@/components/StoreOverlay"), "store-overlay");
+const PreferencesDialog = lazyWithRetry(() => import("@/components/PreferencesDialog"), "preferences-dialog");
 
 interface MobileBottomNavProps {
   isAuthenticated?: boolean;
@@ -44,6 +46,8 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   const { unread: dmUnread } = useDmUnread(!!isAuthenticated);
   const [moreOpen, setMoreOpen] = useState(false);
   const [potOpen, setPotOpen] = useState(false);
+  const [storeOpen, setStoreOpen] = useState(false);
+  const [prefsOpen, setPrefsOpen] = useState(false);
 
   // In Studio, create IS the home page and there is no feed.
   const isFeed = !isStudio && (location.pathname === "/" || location.pathname === "");
@@ -81,265 +85,150 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
       onClick: () => { if (!isAccount) navigate("/profile"); } },
   ];
 
+  // Every item works on every page: the page's own handler when it passed one,
+  // otherwise the nav's own store / settings, or a route that opens the thing.
+  const createPath = isStudio ? "/" : "/create";
+  const openStore = () => (onOpenStore ? onOpenStore() : setStoreOpen(true));
+  const openSettings = () => (onOpenSettings ? onOpenSettings() : setPrefsOpen(true));
+  const openGuide = () => (onOpenGuide ? onOpenGuide() : navigate(`${createPath}?open=guide`));
+  const openChangelog = () => (onOpenChangelog ? onOpenChangelog() : navigate(`${createPath}?open=changelog`));
+  const openAuth = () => (onOpenAuth ? onOpenAuth() : navigate(`${createPath}?signin=1`));
+
   const tabs: Array<{
     id: string; label: string; icon: any; active: boolean;
     onClick: () => void; badge?: string | null; newBadge?: boolean;
   }> = [
-    {
-      id: "feed",
-      label: "FEED",
-      icon: Rss,
-      active: isFeed,
-      onClick: () => { if (!isFeed) navigate("/"); setMoreOpen(false); },
-    },
-    {
-      id: "create",
-      label: t("modes.generate").toUpperCase(),
-      icon: Sparkles,
-      active: isCreate,
-      onClick: () => { if (!isCreate) navigate("/create"); setMoreOpen(false); },
-    },
-    {
-      id: "library",
-      label: t("nav.library").toUpperCase(),
-      icon: Image,
-      active: isLibrary,
-      onClick: () => { if (!isLibrary) navigate("/library"); setMoreOpen(false); },
-    },
-    // DMs take the primary slot over the public chatroom: they're personal and
-    // time-sensitive, whereas the lobby is browsable. A 7th tab won't fit —
-    // min-w-[56px] x 7 overflows a 390px viewport — so CHAT ROOM stays in the
-    // "more" sheet below, where it now carries its own unread badge.
-    ...(isAuthenticated ? [
-      {
-        id: "messages",
-        label: "MSGS",
-        icon: Mail,
-        active: isMessages,
-        badge: dmUnread > 0 ? (dmUnread > 9 ? "9+" : String(dmUnread)) : null,
-        newBadge: dmUnread === 0,
-        onClick: () => { if (!isMessages) navigate("/messages"); setMoreOpen(false); },
-      },
-    ] : []),
-    {
-      id: "store",
-      label: t("nav.store").toUpperCase(),
-      icon: ShoppingCart,
-      active: false,
-      badge: creditsBadge,
-      onClick: () => {
-        if (onOpenStore) onOpenStore();
-        else navigate("/create?store=1");
-        setMoreOpen(false);
-      },
-    },
-    {
-      id: "more",
-      label: t("nav.more").toUpperCase(),
-      icon: MoreHorizontal,
-      active: moreOpen,
-      onClick: () => setMoreOpen(!moreOpen),
-    },
+    { id: "feed", label: "Feed", icon: Rss, active: isFeed, onClick: () => { if (!isFeed) navigate("/"); setMoreOpen(false); } },
+    { id: "create", label: "Create", icon: Sparkles, active: isCreate, onClick: () => { if (!isCreate) navigate("/create"); setMoreOpen(false); } },
+    { id: "library", label: "Library", icon: Image, active: isLibrary, onClick: () => { if (!isLibrary) navigate("/library"); setMoreOpen(false); } },
+    isAuthenticated
+      ? {
+          id: "messages", label: "Inbox", icon: Mail, active: isMessages,
+          badge: dmUnread > 0 ? (dmUnread > 9 ? "9+" : String(dmUnread)) : null,
+          onClick: () => { if (!isMessages) navigate("/messages"); setMoreOpen(false); },
+        }
+      : { id: "signin", label: "Sign in", icon: User, active: false, onClick: () => { openAuth(); setMoreOpen(false); } },
+    { id: "more", label: "More", icon: MoreHorizontal, active: moreOpen, badge: chatUnread > 0 ? "•" : null, onClick: () => setMoreOpen(!moreOpen) },
+  ];
+
+  type Item = { label: string; icon: any; onClick: () => void; hint?: string; tone?: string; show?: boolean };
+  const go = (path: string) => () => navigate(path);
+  const sections: Array<{ title: string; items: Item[] }> = [
+    { title: "Account", items: [
+      { label: "Buy credits", icon: ShoppingCart, onClick: openStore, hint: creditsBadge ? `${creditsBadge} left` : undefined, show: isAuthenticated },
+      { label: isAuthenticated ? "Profile" : "Sign in", icon: User, onClick: isAuthenticated ? go("/profile") : openAuth },
+      { label: "Verification", icon: BadgeCheck, onClick: go("/verification"), show: isAuthenticated },
+      { label: "Settings", icon: SettingsIcon, onClick: openSettings },
+    ] },
+    { title: "Community", items: [
+      { label: "Featured models", icon: Users, onClick: go("/creators") },
+      { label: "Chat room", icon: MessageSquare, onClick: go("/chat"), hint: chatUnread > 0 ? (chatUnread > 9 ? "9+" : String(chatUnread)) : undefined, tone: "text-primary", show: isAuthenticated },
+      { label: "Characters", icon: Heart, onClick: go("/characters"), show: isAuthenticated },
+      { label: "Prompts", icon: Lightbulb, onClick: go("/prompts") },
+      { label: "Community pot", icon: Gift, onClick: () => setPotOpen(true), hint: "Free", tone: "text-fuchsia-300", show: isAuthenticated },
+    ] },
+    { title: "Earn", items: [
+      { label: "Invite friends", icon: Star, onClick: go("/referral"), show: isAuthenticated },
+      { label: "Redeem a code", icon: Ticket, onClick: go("/promo") },
+      { label: "Become a creator", icon: Star, onClick: go("/apply") },
+      { label: "Application status", icon: ClipboardList, onClick: go("/apply/status"), show: isAuthenticated },
+      { label: "Ambassadors", icon: Award, onClick: go("/ambassador") },
+    ] },
+    { title: "Help", items: [
+      { label: "How to use", icon: HelpCircle, onClick: openGuide },
+      { label: "What's new", icon: ScrollText, onClick: openChangelog },
+      { label: "API docs", icon: Code, onClick: go("/docs") },
+      { label: "Terms", icon: FileText, onClick: onOpenTos ?? go("/terms") },
+      { label: "Privacy", icon: Shield, onClick: onOpenPrivacy ?? go("/privacy") },
+    ] },
+    ...(user?.is_admin ? [{ title: "Admin", items: [{ label: "Admin", icon: Shield, onClick: go("/admin") }] }] : []),
   ];
 
   const node = (
     <>
       {moreOpen && (
-        <div className="fixed inset-0 z-40 sm:hidden" onClick={() => setMoreOpen(false)}>
+        <div className="fixed inset-0 z-40 sm:hidden bg-black/50" onClick={() => setMoreOpen(false)}>
           <div
-            className="absolute left-2 right-2 bg-card/95 backdrop-blur-md border border-border/60 rounded-lg shadow-[0_-4px_20px_rgba(0,0,0,0.4)] p-2 space-y-0.5 animate-slide-up"
-            style={{ bottom: 'calc(62px + env(safe-area-inset-bottom, 0px))' }}
+            className="absolute inset-x-0 bottom-0 max-h-[78vh] overflow-y-auto bg-card border-t border-border/60 rounded-t-2xl shadow-[0_-8px_30px_rgba(0,0,0,0.5)] animate-slide-up"
+            style={{ paddingBottom: "calc(64px + env(safe-area-inset-bottom, 0px))" }}
             onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-label="More"
           >
-            {isAuthenticated && (
-              <button
-                onClick={() => { onOpenStore?.(); setMoreOpen(false); }}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded hover:bg-primary/10 transition-colors"
-              >
-                <ShoppingCart className="w-4 h-4 text-primary/60" />
-                <span className="font-mono-share text-xs text-foreground/80">CREDITS</span>
-                <span className="ml-auto font-orbitron text-tiny tracking-wider text-primary">
-                  {creditsBadge}
-                </span>
-              </button>
-            )}
-            <button
-              onClick={() => {
-                navigate("/creators");
-                setMoreOpen(false);
-              }}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded hover:bg-primary/10 transition-colors"
-            >
-              <Users className="w-4 h-4 text-secondary/80" />
-              <span className="font-mono-share text-xs text-foreground/80">FEATURED MODELS</span>
-              <span className="ml-auto font-mono-share text-micro px-1 py-px rounded-sm tracking-widest text-emerald-300 border border-emerald-400/40 bg-emerald-400/10">NEW</span>
-            </button>
-            <button
-              onClick={() => {
-                navigate("/apply");
-                setMoreOpen(false);
-              }}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded hover:bg-primary/10 transition-colors"
-            >
-              <Star className="w-4 h-4 text-amber-400/80" />
-              <span className="font-mono-share text-xs text-foreground/80">CREATOR APPLY</span>
-            </button>
-            {isAuthenticated && (
-              <button
-                onClick={() => {
-                  navigate("/apply/status");
-                  setMoreOpen(false);
-                }}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded hover:bg-primary/10 transition-colors"
-              >
-                <ClipboardList className="w-4 h-4 text-primary/60" />
-                <span className="font-mono-share text-xs text-foreground/80">APPLICATION STATUS</span>
-              </button>
-            )}
-            <button
-              onClick={() => {
-                if (isAuthenticated) navigate("/profile");
-                else onOpenAuth?.();
-                setMoreOpen(false);
-              }}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded hover:bg-primary/10 transition-colors"
-            >
-              <User className="w-4 h-4 text-primary/60" />
-              <span className="font-mono-share text-xs text-foreground/80">
-                {isAuthenticated ? "PROFILE" : "SIGN IN"}
-              </span>
-            </button>
-            <div className="h-px bg-border/30 my-1" />
-            {isAuthenticated && (
-              <button
-                onClick={() => { navigate("/verification"); setMoreOpen(false); }}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded hover:bg-primary/10 transition-colors"
-              >
-                <BadgeCheck className="w-4 h-4 text-primary/60" />
-                <span className="font-mono-share text-xs text-foreground/80">VERIFICATION</span>
-              </button>
-            )}
-            {isAuthenticated && (
-              <button
-                onClick={() => { navigate("/chat"); setMoreOpen(false); }}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded hover:bg-primary/10 transition-colors"
-              >
-                <MessageSquare className="w-4 h-4 text-primary/60" />
-                <span className="font-mono-share text-xs text-foreground/80 flex-1 text-left">CHAT ROOM</span>
-                {chatUnread > 0 && (
-                  <span className="min-w-[16px] h-4 px-1 rounded-full bg-primary text-background font-mono-share text-tiny leading-4 text-center">
-                    {chatUnread > 9 ? "9+" : chatUnread}
-                  </span>
-                )}
-              </button>
-            )}
-            {isAuthenticated && (
-              <button
-                onClick={() => { navigate("/characters"); setMoreOpen(false); }}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded hover:bg-primary/10 transition-colors"
-              >
-                <Heart className="w-4 h-4 text-primary/60" />
-                <span className="font-mono-share text-xs text-foreground/80">CHARACTER CHAT</span>
-              </button>
-            )}
-            {isAuthenticated && (
-              <button
-                onClick={() => { setPotOpen(true); setMoreOpen(false); }}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded hover:bg-primary/10 transition-colors"
-              >
-                <Gift className="w-4 h-4 text-fuchsia-400/80" />
-                <span className="font-mono-share text-xs text-foreground/80">COMMUNITY POT</span>
-                <span className="ml-auto font-orbitron text-micro tracking-wider text-fuchsia-300 border border-fuchsia-400/40 px-1.5 py-0.5 rounded">FREE</span>
-              </button>
-            )}
-            <button
-              onClick={() => { onOpenSettings?.(); setMoreOpen(false); }}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded hover:bg-primary/10 transition-colors"
-            >
-              <SettingsIcon className="w-4 h-4 text-primary/60" />
-              <span className="font-mono-share text-xs text-foreground/80">SETTINGS</span>
-            </button>
-            <div className="h-px bg-border/30 my-1" />
-            <button
-              onClick={() => { onOpenGuide?.(); setMoreOpen(false); }}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded hover:bg-primary/10 transition-colors"
-            >
-              <HelpCircle className="w-4 h-4 text-primary/60" />
-              <span className="font-mono-share text-xs text-foreground/80">HOW TO USE</span>
-            </button>
-            <button
-              onClick={() => { onOpenChangelog?.(); setMoreOpen(false); }}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded hover:bg-primary/10 transition-colors"
-            >
-              <ScrollText className="w-4 h-4 text-primary/60" />
-              <span className="font-mono-share text-xs text-foreground/80">CHANGELOG</span>
-            </button>
-            <div className="h-px bg-border/30 my-1" />
-            <button
-              onClick={() => { onOpenTos?.(); setMoreOpen(false); }}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded hover:bg-muted/30 transition-colors"
-            >
-              <FileText className="w-4 h-4 text-muted-foreground/60" />
-              <span className="font-mono-share text-tiny text-muted-foreground/60">TERMS OF SERVICE</span>
-            </button>
-            <button
-              onClick={() => { onOpenPrivacy?.(); setMoreOpen(false); }}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded hover:bg-muted/30 transition-colors"
-            >
-              <Shield className="w-4 h-4 text-muted-foreground/60" />
-              <span className="font-mono-share text-tiny text-muted-foreground/60">PRIVACY POLICY</span>
-            </button>
+            <div className="mx-auto mt-2 mb-1 h-1 w-10 rounded-full bg-muted-foreground/30" aria-hidden />
+            {sections.map((sec) => {
+              const items = sec.items.filter((i) => i.show !== false);
+              if (!items.length) return null;
+              return (
+                <section key={sec.title} className="px-3 pt-3">
+                  <h3 className="px-2 pb-1 text-xs font-semibold text-muted-foreground">{sec.title}</h3>
+                  <div className="rounded-xl bg-muted/20 divide-y divide-border/30 overflow-hidden">
+                    {items.map((it) => {
+                      const Icon = it.icon;
+                      return (
+                        <button
+                          key={it.label}
+                          onClick={() => { setMoreOpen(false); it.onClick(); }}
+                          className="w-full flex items-center gap-3 px-3 h-12 text-left active:bg-primary/10 transition-colors"
+                        >
+                          <Icon className="w-[18px] h-[18px] text-muted-foreground shrink-0" />
+                          <span className="flex-1 text-[15px] text-foreground/90">{it.label}</span>
+                          {it.hint && <span className={`text-xs ${it.tone ?? "text-muted-foreground"}`}>{it.hint}</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+              );
+            })}
           </div>
         </div>
       )}
 
       <nav className="fixed bottom-0 left-0 right-0 z-50 sm:hidden">
-        <div className="bg-card/95 backdrop-blur-md border-t border-border/50 shadow-[0_-2px_20px_rgba(0,0,0,0.3)]">
-          <div className="flex items-center justify-around px-1 py-1">
+        <div className="bg-card/95 backdrop-blur-md border-t border-border/50">
+          <div className="flex items-stretch justify-around px-1">
             {(isStudio ? studioTabs : tabs).map((tab) => {
               const Icon = tab.icon;
               return (
                 <button
                   key={tab.id}
                   onClick={tab.onClick}
-                  className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-lg transition-all min-w-[56px] active:scale-95 ${
-                    tab.active
-                      ? "text-primary"
-                      : "text-muted-foreground/70 active:text-primary/70"
+                  aria-current={tab.active ? "page" : undefined}
+                  className={`flex-1 flex flex-col items-center justify-center gap-1 h-14 transition-colors active:scale-95 ${
+                    tab.active ? "text-primary" : "text-muted-foreground"
                   }`}
                 >
-                  <div className="relative">
-                    <Icon className={`w-5 h-5 ${tab.active ? "drop-shadow-glow-focus" : ""}`} />
+                  <span className="relative">
+                    <Icon className="w-[22px] h-[22px]" strokeWidth={tab.active ? 2.3 : 1.8} />
                     {tab.badge && (
-                      <span className="absolute -top-2 -right-4 min-w-[1.75rem] rounded-full border border-primary/40 bg-card px-1 py-0.5 text-center font-orbitron text-micro leading-none text-primary shadow-glow-focus">
+                      <span className="absolute -top-1.5 -end-2.5 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold leading-[18px] text-center">
                         {tab.badge}
                       </span>
                     )}
-                    {tab.newBadge && (
-                      <span className="absolute -top-2 -right-3 rounded-full border border-fuchsia-400/60 bg-card px-1 py-0.5 text-center font-orbitron text-micro leading-none text-fuchsia-300 shadow-glow-focus">
-                        NEW
-                      </span>
-                    )}
-                    {tab.active && (
-                      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary shadow-glow-focus" />
-                    )}
-                  </div>
-                  <span className={`font-orbitron tracking-wider leading-none ${
-                    tab.active ? "text-micro" : "text-micro"
-                  }`}>
-                    {tab.label}
                   </span>
+                  <span className={`text-[11px] leading-none ${tab.active ? "font-semibold" : "font-medium"}`}>{tab.label}</span>
                 </button>
               );
             })}
           </div>
-          <div className="h-[env(safe-area-inset-bottom,0px)] bg-card/95" />
+          <div className="h-[env(safe-area-inset-bottom,0px)]" />
         </div>
       </nav>
 
       {potOpen && (
         <Suspense fallback={null}>
           <CommunityPotDialog open={potOpen} onClose={() => setPotOpen(false)} />
+        </Suspense>
+      )}
+      {storeOpen && (
+        <Suspense fallback={null}>
+          <StoreOverlay open={storeOpen} onOpenChange={setStoreOpen} />
+        </Suspense>
+      )}
+      {prefsOpen && (
+        <Suspense fallback={null}>
+          <PreferencesDialog open={prefsOpen} onOpenChange={setPrefsOpen} />
         </Suspense>
       )}
     </>

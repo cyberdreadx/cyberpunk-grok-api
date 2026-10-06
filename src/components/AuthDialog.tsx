@@ -1,3 +1,4 @@
+import { useLocation } from "react-router-dom";
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { LogIn, UserPlus, LogOut, Mail, Lock, Loader2, ShieldCheck, ArrowLeft, RefreshCw, KeyRound, Trash2, AlertTriangle, CheckCircle2, Clock, AlertCircle, XCircle, Info, Sparkles } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -120,11 +121,14 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
   // "Deploy First Render" just dropped you on /create with no dialog and you
   // had to go find the sign-in button yourself — one ask on the landing page,
   // a second one after you'd already said yes.
+  // Keyed on the location: Create stays mounted between tabs, so a second
+  // "Sign in" tap arrives as navigation, not a fresh mount.
+  const location = useLocation();
   useEffect(() => {
     if (isAuthenticated) return;
     let want: "signin" | "signup" | null = null;
     try {
-      const q = new URLSearchParams(window.location.search);
+      const q = new URLSearchParams(location.search);
       if (q.get("signup") === "1") want = "signup";
       else if (q.get("signin") === "1") want = "signin";
     } catch { return; }
@@ -136,9 +140,9 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
       const url = new URL(window.location.href);
       url.searchParams.delete("signup");
       url.searchParams.delete("signin");
-      window.history.replaceState({}, "", url.pathname + url.search + url.hash);
+      window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
     } catch { /* non-fatal */ }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, location.key, location.search]);
 
   const handleSubmit = async (action: "signin" | "signup") => {
     setLoading(true);
