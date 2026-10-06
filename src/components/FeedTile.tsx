@@ -73,15 +73,17 @@ const FeedTile: React.FC<Props> = ({ post, onOpen, forceBlur, currentUserId }) =
   // frame, which is slow enough to time out — the tile then sits at opacity-0
   // and the grid looks like it has no thumbnails at all.
   //
-  // For images we still prefer the original, because the derived
-  // -preview.webp URL 404s on anything posted before that convention existed.
+  // Images now prefer the small preview too. Tiles used to load the original,
+  // to dodge 404s on a *derived* -preview URL — but the API sends an explicit
+  // previewImageUrl, and the originals run 0.2-5.7 MB against 9-57 KB for the
+  // preview: tens of times the data per tile, which is why tiles sat blank on
+  // phones. If a preview is missing, onError falls back to the original.
   const fullIsVideo = isVideoUrl(post.imageUrl || "");
+  const [previewBroken, setPreviewBroken] = useState(false);
   // When locked, the API already swaps imageUrl for the blurred preview.
   const previewImg = forceBlur
     ? post.previewImageUrl
-    : fullIsVideo
-      ? (post.previewImageUrl || post.imageUrl)
-      : (post.imageUrl || post.previewImageUrl);
+    : (!previewBroken && post.previewImageUrl) || post.imageUrl || post.previewImageUrl;
   const initials = (post.username || "?").slice(0, 2).toUpperCase();
   const isMatureBlur = !!post.isMature && matureFilter && !isLocked && !isOwner;
   const showLocked = isLocked || forceBlur;
@@ -189,7 +191,13 @@ const FeedTile: React.FC<Props> = ({ post, onOpen, forceBlur, currentUserId }) =
               decoding="async"
               className={`w-full h-full object-cover transition-[transform,opacity] duration-500 group-hover:scale-105 ${showBlur ? "blur-2xl scale-110" : ""} ${mediaLoaded ? "opacity-100" : "opacity-0"}`}
               onLoad={() => setMediaLoaded(true)}
-              onError={handleMediaError}
+              onError={() => {
+                if (!previewBroken && !forceBlur && post.previewImageUrl && post.imageUrl && previewImg === post.previewImageUrl) {
+                  setPreviewBroken(true); // preview missing: use the original
+                  return;
+                }
+                handleMediaError();
+              }}
             />
           )
         ) : post.text ? (

@@ -244,7 +244,14 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate, active = true, moun
             onError={mainMedia.onError}
           />
         ) : (
-          <img src={mainMedia.src} alt="" className={`relative z-[1] w-full h-full object-contain transition-[filter] duration-300 ${isMatureBlurred ? "blur-2xl scale-110" : ""}`} loading="lazy" decoding="async" onError={mainMedia.onError} />
+          <>
+            {/* The ~30 KB preview shows at once; the original (up to several MB)
+                paints over it when it arrives, instead of a black screen. */}
+            {post.previewImageUrl && (
+              <img src={previewMedia.src} alt="" aria-hidden className={`absolute inset-0 w-full h-full object-contain ${isMatureBlurred ? "blur-2xl scale-110" : ""}`} decoding="async" onError={previewMedia.onError} />
+            )}
+            <img src={mainMedia.src} alt="" className={`relative z-[1] w-full h-full object-contain transition-[filter] duration-300 ${isMatureBlurred ? "blur-2xl scale-110" : ""}`} loading={active ? "eager" : "lazy"} decoding="async" onError={mainMedia.onError} />
+          </>
         )
       ) : mountMedia && isTeaser && post.previewImageUrl ? (
         <img src={previewMedia.src} alt="" className="relative z-[1] w-full h-full object-contain blur-xl brightness-75 scale-105" loading="lazy" decoding="async" onError={previewMedia.onError} />
