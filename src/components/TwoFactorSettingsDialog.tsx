@@ -73,7 +73,7 @@ export default function TwoFactorSettingsDialog() {
       <DialogContent className="bg-card border-border sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="font-orbitron text-sm tracking-wider neon-text-cyan flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4" /> TWO_FACTOR_AUTH
+            <ShieldCheck className="w-4 h-4" /> Two factor auth
           </DialogTitle>
           <DialogDescription className="font-mono-share text-xs text-muted-foreground/80">
             Require a 6-digit email code on every new device. Trusted devices skip the
@@ -92,7 +92,7 @@ export default function TwoFactorSettingsDialog() {
         <div className="flex items-center justify-between border border-border rounded-md p-3 bg-input/40">
           <div className="space-y-0.5">
             <p className="font-orbitron text-xs tracking-wider text-foreground">
-              EMAIL 2FA
+              Email 2FA
             </p>
             <p className="font-mono-share text-tiny text-muted-foreground">
               {enabled ? "Active — codes sent on new devices" : "Disabled"}

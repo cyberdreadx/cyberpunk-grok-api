@@ -100,7 +100,7 @@ const ShareCTA: React.FC<ShareCTAProps> = ({
               title="Post on X"
             >
               <XIcon className="w-3 h-3" />
-              <span className="font-orbitron text-micro tracking-wider">POST</span>
+              <span className="font-orbitron text-micro tracking-wider">Post</span>
             </button>
             <button
               onClick={() => openRedditShare(lastShareUrl)}
@@ -108,7 +108,7 @@ const ShareCTA: React.FC<ShareCTAProps> = ({
               title="Share on Reddit"
             >
               <RedditIcon className="w-3 h-3" />
-              <span className="font-orbitron text-micro tracking-wider">SHARE</span>
+              <span className="font-orbitron text-micro tracking-wider">Share</span>
             </button>
           </div>
         ) : (
@@ -120,12 +120,12 @@ const ShareCTA: React.FC<ShareCTAProps> = ({
             {isSharing ? (
               <>
                 <Loader2 className="w-3 h-3 animate-spin" />
-                <span className="font-orbitron text-micro tracking-wider">SHARING</span>
+                <span className="font-orbitron text-micro tracking-wider">Sharing</span>
               </>
             ) : (
               <>
                 <Share2 className="w-3 h-3" />
-                <span className="font-orbitron text-micro tracking-wider">SHARE</span>
+                <span className="font-orbitron text-micro tracking-wider">Share</span>
               </>
             )}
           </button>

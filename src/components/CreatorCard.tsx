@@ -198,7 +198,7 @@ const CreatorCard: React.FC<Props> = ({ creator, onOpen, active, forceBlur, curr
             title="Locked for other viewers — they see a blurred preview and must unlock."
           >
             <Lock className="w-2.5 h-2.5" />
-            <span>LOCKED ·</span>
+            <span>Locked ·</span>
             {(creator.lockCost || 0) > 0 && <span>{creator.lockCost}c</span>}
             {(creator.lockPriceCents || 0) > 0 && <span>${((creator.lockPriceCents || 0) / 100).toFixed(2)}</span>}
             {!!(creator.lockXrgeAmount && parseFloat(creator.lockXrgeAmount) > 0) && <span>{creator.lockXrgeAmount} XRGE</span>}

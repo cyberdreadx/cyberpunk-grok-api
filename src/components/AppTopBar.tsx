@@ -47,7 +47,7 @@ const TITLES: Array<[string, string]> = isStudio
       ["/profile/:username", "Profile"],
       ["/messages", "Messages"],
       ["/characters", "Characters"],
-      ["/creators", "Models"],
+      ["/creators", "Featured models"],
       ["/prompts", "Prompts"],
       ["/referral", "Invite friends"],
       ["/promo", "Free credits"],
@@ -139,7 +139,7 @@ const AppTopBar: React.FC<Props> = ({ title, onOpenStore }) => {
               >
                 <Coins className="w-3.5 h-3.5" />
                 <span className="text-sm font-semibold tabular-nums leading-none">{credits}</span>
-                {byok && <span className="ms-0.5 text-[10px] font-semibold text-secondary leading-none">KEY</span>}
+                {byok && <span className="ms-0.5 text-[10px] font-semibold text-secondary leading-none">Key</span>}
               </button>
             )}
             <span className="w-9 h-9 flex items-center justify-center">

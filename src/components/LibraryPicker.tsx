@@ -128,7 +128,7 @@ const LibraryPicker: React.FC<LibraryPickerProps> = ({
         <div className="flex items-center justify-between px-4 py-3 border-b border-border/30">
           <div className="flex items-center gap-2">
             <FolderOpen className="w-4 h-4 text-primary" />
-            <span className="font-orbitron text-xs tracking-widest">PICK FROM LIBRARY</span>
+            <span className="font-orbitron text-xs tracking-widest">Pick from library</span>
           </div>
           <button
             type="button"

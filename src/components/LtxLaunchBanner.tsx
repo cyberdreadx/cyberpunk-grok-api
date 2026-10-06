@@ -54,7 +54,7 @@ export default function LtxLaunchBanner({ onClick }: LtxLaunchBannerProps) {
         </div>
 
         <span className="hidden sm:inline-flex shrink-0 px-3 py-1.5 rounded-md bg-amber-500/30 border border-amber-400/50 font-orbitron text-tiny tracking-wider text-amber-100 group-hover:bg-amber-500/50">
-          TRY LTX
+          Try LTX
         </span>
 
         <button

@@ -313,9 +313,8 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <label className="font-mono-share text-tiny tracking-wider text-muted-foreground flex items-center gap-2">
-              {!isStudio && <span className="text-primary/50">$</span>}
-              <Upload className="w-3 h-3" />
-              {isStudio ? "Source image" : "source_image"}
+                            <Upload className="w-3 h-3" />
+              {"Source image"}
             </label>
             <div className="flex gap-1">
               <button
@@ -327,7 +326,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
                   }`}
               >
                 <ImagePlus className="w-3 h-3 inline mr-1" />
-                UPLOAD
+                Upload
               </button>
               <button
                 type="button"
@@ -421,7 +420,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
                 onClick={() => extraFileRefs.current[extraImages.length]?.click()}
                 className="w-20 h-20 border border-dashed border-border rounded flex flex-col items-center justify-center gap-0.5 bg-input/30 hover:bg-input hover:border-primary/30 transition-colors cursor-pointer shrink-0">
                 <ImagePlus className="w-4 h-4 text-muted-foreground/70" />
-                <span className="font-mono-share text-micro text-muted-foreground/70">ADD</span>
+                <span className="font-mono-share text-micro text-muted-foreground/70">Add</span>
               </button>
             )}
           </div>
@@ -443,15 +442,8 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
       <div className="terminal-block rounded-md overflow-hidden">
         {/* Terminal title bar — Studio keeps only the character count */}
         <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/5 border-b border-primary/15">
-          {!isStudio && (
-          <div className="flex items-center gap-1">
-            <div className="w-2 h-2 rounded-full bg-destructive/60" />
-            <div className="w-2 h-2 rounded-full bg-neon-yellow/60" />
-            <div className="w-2 h-2 rounded-full bg-primary/60" />
-          </div>
-          )}
           <span className="font-mono-share text-tiny text-muted-foreground/60 flex-1 text-center">
-            {isStudio ? "" : <>prompt@gltch:~/{mode.replace(/-/g, "_")}</>}
+            
           </span>
           <span className="font-mono-share text-tiny text-muted-foreground/60">{prompt.length} chars</span>
         </div>
@@ -459,11 +451,6 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
         {/* Input area */}
         <div className="relative p-3">
           <div className="flex items-start gap-2">
-            {!isStudio && (
-            <span className="font-mono-share text-sm text-primary/70 mt-2 select-none shrink-0">
-              {isLoading ? "⟳" : "❯"}
-            </span>
-            )}
             <Textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}

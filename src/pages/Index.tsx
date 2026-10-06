@@ -1244,13 +1244,6 @@ const Index = () => {
           /* ── SIMPLE MODE ─────────────────────────────────────── */
           <section className="animate-slide-up border border-border rounded bg-card/40 backdrop-blur-sm overflow-hidden" style={{ animationDelay: "100ms" }}>
             <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50 bg-card/60">
-              {!isStudio && (
-              <div className="flex items-center gap-1.5">
-                <div className="w-2 h-2 rounded-full bg-neon-red/60" />
-                <div className="w-2 h-2 rounded-full bg-neon-yellow/60" />
-                <div className="w-2 h-2 rounded-full bg-primary/60" />
-              </div>
-              )}
               <span className="font-orbitron text-sm sm:text-base font-bold text-foreground tracking-wide leading-tight">
                 Quick Create
               </span>
@@ -1278,21 +1271,11 @@ const Index = () => {
           <div className="flex items-center gap-2 mb-3">
             <span className="font-mono-share text-primary/40 text-xs">❯</span>
             <GlitchText
-              text={isStudio ? "Choose a mode" : "SELECT_MODE"}
+              text={"Choose a mode"}
               className="font-orbitron text-tiny tracking-widest text-muted-foreground"
               glitchIntensity="low"
             />
             <div className="h-px flex-1 bg-gradient-to-r from-border to-transparent" />
-            {!isStudio && (
-            <Link
-              to="/"
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-secondary/30 hover:border-secondary/60 bg-secondary/5 hover:bg-secondary/10 transition-all font-mono-share text-tiny text-secondary/80 hover:text-secondary tracking-wider"
-              title="Browse community feed"
-            >
-              <Rss className="w-3 h-3" />
-              FEED
-            </Link>
-            )}
           </div>
           <ModeSelector activeMode={mode} onModeChange={(m) => { setMode(m); setActiveImageUrl(""); }} isAuthenticated={auth.isAuthenticated} />
         </section>
@@ -1304,13 +1287,6 @@ const Index = () => {
         >
           {/* Terminal title bar */}
           <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50 bg-card/60">
-            {!isStudio && (
-            <div className="flex items-center gap-1.5">
-              <div className="w-2 h-2 rounded-full bg-neon-red/60" />
-              <div className="w-2 h-2 rounded-full bg-neon-yellow/60" />
-              <div className="w-2 h-2 rounded-full bg-primary/60" />
-            </div>
-            )}
             <div className="flex-1 flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2 ml-1">
               <span className="font-orbitron text-sm sm:text-base font-bold text-foreground tracking-wide leading-tight">
                 Describe what you want to create
@@ -1374,7 +1350,7 @@ const Index = () => {
                 <span className="font-mono-share text-primary/40 text-tiny group-data-[state=open]:text-primary/60">▸</span>
                 <Zap className="w-3 h-3 text-muted-foreground group-hover:text-primary transition-colors group-data-[state=open]:text-primary" />
                 <span className="font-mono-share text-tiny tracking-widest text-muted-foreground group-hover:text-primary transition-colors group-data-[state=open]:text-primary">
-                  {isStudio ? "Engine settings" : "ENGINE_CONFIG"}
+                  {"Engine settings"}
                 </span>
                 <div className="h-px flex-1 bg-primary/10" />
                 <span className="font-mono-share text-tiny text-muted-foreground/60">
@@ -1388,7 +1364,7 @@ const Index = () => {
               <div className="space-y-2">
                 <label className="font-orbitron text-tiny tracking-wider text-muted-foreground flex items-center gap-1.5">
                   <Zap className="w-3 h-3" />
-                  {isStudio ? "Engine" : "ENGINE"}
+                  {"Engine"}
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   <button
@@ -1404,7 +1380,7 @@ const Index = () => {
                   >
                     <div className={`font-orbitron text-xs flex items-center gap-1.5 ${editEngine === "gltch" ? "text-secondary" : "text-foreground"}`}>
                       GLTCH
-                      <span className="font-mono-share text-micro px-1 py-px border rounded-sm tracking-widest text-red-400/80 border-red-500/30 bg-red-500/10">RAW</span>
+                      <span className="font-mono-share text-micro px-1 py-px border rounded-sm tracking-widest text-red-400/80 border-red-500/30 bg-red-500/10">Raw</span>
                     </div>
                     <div className="font-mono-share text-tiny text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>Edit + LoRA</span>
@@ -1436,7 +1412,7 @@ const Index = () => {
                       </span>
                     </div>
                     <div>
-                      <label className="font-mono-share text-tiny text-muted-foreground/70 mb-1 block">{isStudio ? "Output size" : "OUTPUT SIZE"}</label>
+                      <label className="font-mono-share text-tiny text-muted-foreground/70 mb-1 block">{"Output size"}</label>
                       <div className="grid grid-cols-4 gap-1">
                         {([
                           [0, 0, "AUTO"],
@@ -1464,7 +1440,7 @@ const Index = () => {
                     </div>
                     
                     <div>
-                      <label className="font-mono-share text-tiny text-muted-foreground mb-1 block">{isStudio ? "Second image (optional)" : "SECOND IMAGE (OPTIONAL)"}</label>
+                      <label className="font-mono-share text-tiny text-muted-foreground mb-1 block">{"Second image (optional)"}</label>
                       {gltchImage2 ? (
                         <div className="relative">
                           <img
@@ -1529,7 +1505,7 @@ const Index = () => {
                         {editLora !== "none" && (
                           <div className="mt-1.5">
                             <label className="font-mono-share text-micro text-muted-foreground/60 flex items-center justify-between">
-                              <span>{isStudio ? "Strength" : "STRENGTH"}</span>
+                              <span>{"Strength"}</span>
                               <span>{editLoraStrength.toFixed(1)}</span>
                             </label>
                             <input type="range" min="0" max="2" step="0.1" value={editLoraStrength}
@@ -1561,14 +1537,14 @@ const Index = () => {
               <div className="space-y-2">
                 <label className="font-orbitron text-tiny tracking-wider text-muted-foreground flex items-center gap-1.5">
                   <Zap className="w-3 h-3" />
-                  {isStudio ? "Engine" : "ENGINE"}
+                  {"Engine"}
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   <button type="button" onClick={() => setGenEngine("gltch")}
                     className={`p-2.5 border rounded text-left transition-all duration-200 ${genEngine === "gltch" ? "border-secondary neon-border bg-secondary/5" : "border-border bg-card/30 hover:border-secondary/40"}`}>
                     <div className={`font-orbitron text-xs flex items-center gap-1.5 ${genEngine === "gltch" ? "text-secondary" : "text-foreground"}`}>
                       GLTCH
-                      <span className="font-mono-share text-micro px-1 py-px border rounded-sm tracking-widest text-red-400/80 border-red-500/30 bg-red-500/10">RAW</span>
+                      <span className="font-mono-share text-micro px-1 py-px border rounded-sm tracking-widest text-red-400/80 border-red-500/30 bg-red-500/10">Raw</span>
                     </div>
                     <div className="font-mono-share text-tiny text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>Z-Image Turbo</span>
@@ -1579,7 +1555,7 @@ const Index = () => {
                     className={`p-2.5 border rounded text-left transition-all duration-200 ${genEngine === "krea2" ? "border-cyan-400 bg-cyan-400/5 shadow-glow-focus" : "border-border bg-card/30 hover:border-cyan-400/40"}`}>
                     <div className={`font-orbitron text-xs flex items-center gap-1.5 ${genEngine === "krea2" ? "text-cyan-300" : "text-foreground"}`}>
                       KREA 2
-                      <span className="font-mono-share text-micro px-1 py-px border rounded-sm tracking-widest text-cyan-300/80 border-cyan-400/30 bg-cyan-400/10">NEW</span>
+                      <span className="font-mono-share text-micro px-1 py-px border rounded-sm tracking-widest text-cyan-300/80 border-cyan-400/30 bg-cyan-400/10">New</span>
                     </div>
                     <div className="font-mono-share text-tiny text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>Krea 2 Turbo</span>
@@ -1600,7 +1576,7 @@ const Index = () => {
                   {isAdmin && (
                     <button type="button" onClick={() => setGenEngine("comfy")}
                       className={`p-2.5 border rounded text-left transition-all duration-200 ${genEngine === "comfy" ? "border-purple-500 bg-purple-500/5 shadow-glow-focus" : "border-border bg-card/30 hover:border-purple-500/40"}`}>
-                      <div className={`font-orbitron text-xs ${genEngine === "comfy" ? "text-purple-400" : "text-foreground"}`}>COMFY</div>
+                      <div className={`font-orbitron text-xs ${genEngine === "comfy" ? "text-purple-400" : "text-foreground"}`}>Comfy</div>
                       <div className="font-mono-share text-tiny text-muted-foreground mt-0.5">Admin</div>
                     </button>
                   )}
@@ -1614,7 +1590,7 @@ const Index = () => {
                     composition sideways or wastes the latent). */}
                 {(genEngine === "gltch" || genEngine === "krea2") && (
                   <div>
-                    <label className="font-mono-share text-tiny text-muted-foreground/70 mb-1 block">{isStudio ? "Output size" : "OUTPUT SIZE"}</label>
+                    <label className="font-mono-share text-tiny text-muted-foreground/70 mb-1 block">{"Output size"}</label>
                     <div className="grid grid-cols-4 gap-1">
                       {ZIMAGE_ORDER.map((label) => {
                         const [w, h] = ZIMAGE_SIZES[label];
@@ -1640,7 +1616,7 @@ const Index = () => {
 
                 {genEngine === "krea2" && comfyModels.krea2Loras.length > 0 && (
                   <div>
-                    <label className="font-mono-share text-tiny text-muted-foreground/70 mb-1 block">{isStudio ? "Style (optional)" : "STYLE (OPTIONAL)"}</label>
+                    <label className="font-mono-share text-tiny text-muted-foreground/70 mb-1 block">{"Style (optional)"}</label>
                     <select value={krea2Lora}
                       onChange={(e) => {
                         const meta = KREA2_LORA_META[e.target.value];
@@ -1663,7 +1639,7 @@ const Index = () => {
                     {krea2Lora !== "none" && (
                       <div className="mt-1.5">
                         <label className="font-mono-share text-micro text-muted-foreground/60 flex items-center justify-between">
-                          <span>{isStudio ? "Strength" : "STRENGTH"}</span>
+                          <span>{"Strength"}</span>
                           <span>{krea2LoraStrength.toFixed(1)}</span>
                         </label>
                         <input type="range" min="0" max="1.5" step="0.1" value={krea2LoraStrength}
@@ -1681,12 +1657,12 @@ const Index = () => {
               <div className="space-y-2">
                 <label className="font-orbitron text-tiny tracking-wider text-muted-foreground flex items-center gap-1.5">
                   <Zap className="w-3 h-3" />
-                  {isStudio ? "Engine" : "ENGINE"}
+                  {"Engine"}
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   <button type="button" onClick={() => setRenderEngine("comfy")}
                     className={`p-2.5 border rounded text-left transition-all duration-200 ${renderEngine === "comfy" ? "border-purple-500 bg-purple-500/5 shadow-glow-focus" : "border-border bg-card/30 hover:border-purple-500/40"}`}>
-                    <div className={`font-orbitron text-xs ${renderEngine === "comfy" ? "text-purple-400" : "text-foreground"}`}>COMFY</div>
+                    <div className={`font-orbitron text-xs ${renderEngine === "comfy" ? "text-purple-400" : "text-foreground"}`}>Comfy</div>
                     <div className="font-mono-share text-tiny text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>WAN Video</span>
                       <span className={renderEngine === "comfy" ? "text-purple-400/70" : "text-muted-foreground/70"}>15 cr</span>
@@ -1707,7 +1683,7 @@ const Index = () => {
                     className={`p-2.5 border rounded text-left transition-all duration-200 ${renderEngine === "ltx" ? "border-amber-400 bg-amber-400/5 shadow-glow-focus" : "border-border bg-card/30 hover:border-amber-400/40"}`}>
                     <div className={`font-orbitron text-xs flex items-center gap-1.5 ${renderEngine === "ltx" ? "text-amber-300" : "text-foreground"}`}>
                       LTX
-                      <span className="font-mono-share text-micro px-1 py-px border rounded-sm tracking-widest text-amber-300/90 border-amber-400/40 bg-amber-400/10">NEW</span>
+                      <span className="font-mono-share text-micro px-1 py-px border rounded-sm tracking-widest text-amber-300/90 border-amber-400/40 bg-amber-400/10">New</span>
                     </div>
                     <div className="font-mono-share text-tiny text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>LTX-2.3 • with sound</span>
@@ -1877,7 +1853,7 @@ const Index = () => {
               <div className="space-y-2">
                 <label className="font-orbitron text-tiny tracking-wider text-muted-foreground flex items-center gap-1.5">
                   <Zap className="w-3 h-3" />
-                  {isStudio ? "Engine" : "ENGINE"}
+                  {"Engine"}
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   <button type="button" onClick={() => { setAnimateEngine("gltch"); }}
@@ -1903,7 +1879,7 @@ const Index = () => {
                     className={`p-2.5 border rounded text-left transition-all duration-200 ${animateEngine === "ltx" ? "border-amber-400 bg-amber-400/5 shadow-glow-focus" : "border-border bg-card/30 hover:border-amber-400/40"}`}>
                     <div className={`font-orbitron text-xs flex items-center gap-1.5 ${animateEngine === "ltx" ? "text-amber-300" : "text-foreground"}`}>
                       LTX
-                      <span className="font-mono-share text-micro px-1 py-px border rounded-sm tracking-widest text-amber-300/90 border-amber-400/40 bg-amber-400/10">NEW</span>
+                      <span className="font-mono-share text-micro px-1 py-px border rounded-sm tracking-widest text-amber-300/90 border-amber-400/40 bg-amber-400/10">New</span>
                     </div>
                     <div className="font-mono-share text-tiny text-muted-foreground mt-0.5 flex items-center justify-between">
                       <span>LTX-2.3 • with sound</span>
@@ -2030,7 +2006,7 @@ const Index = () => {
               (mode === "image-to-video" && (animateEngine === "gltch" || animateEngine === "comfy"))
             ) && (
                 <div className="flex items-center gap-2">
-                  <label className="font-mono-share text-tiny text-muted-foreground/70 whitespace-nowrap">{isStudio ? "Seed" : "SEED"}</label>
+                  <label className="font-mono-share text-tiny text-muted-foreground/70 whitespace-nowrap">{"Seed"}</label>
                   <input
                     type="text"
                     value={globalSeed}
@@ -2044,7 +2020,7 @@ const Index = () => {
                       onClick={() => setGlobalSeed("")}
                       className="font-mono-share text-micro text-muted-foreground/70 hover:text-foreground transition-colors"
                     >
-                      CLEAR
+                      Clear
                     </button>
                   )}
                 </div>
@@ -2059,7 +2035,7 @@ const Index = () => {
                   <div className="flex items-center justify-between">
                     <label className="font-mono-share text-tiny text-muted-foreground/70 flex items-center gap-1.5">
                       <Film className="w-3 h-3 opacity-70" />
-                      AMBIENT_SOUND
+                      Ambient sound
                       <span className="text-muted-foreground/60">MMAudio</span>
                     </label>
                     <button
@@ -2107,11 +2083,11 @@ const Index = () => {
               || renderEngine === "comfy" || animateEngine === "comfy" || animateEngine === "gltch") && (
               <div className="mt-2 space-y-1">
                 <label className="font-mono-share text-tiny text-muted-foreground/60 flex items-center justify-between">
-                  <span>{isStudio ? "Negative prompt" : "NEGATIVE_PROMPT"}</span>
+                  <span>{"Negative prompt"}</span>
                   {negPrompt && (
                     <button onClick={() => setNegPrompt("")}
                       className="font-mono-share text-micro text-muted-foreground/70 hover:text-red-400 transition-colors">
-                      CLEAR
+                      Clear
                     </button>
                   )}
                 </label>
@@ -2153,13 +2129,13 @@ const Index = () => {
             {/* Target folder selector */}
             {foldersHook.folders.length > 0 && (
               <div className="flex items-center gap-2 mt-2">
-                <span className="font-mono-share text-tiny text-muted-foreground/60 tracking-wider">SAVE_TO:</span>
+                <span className="font-mono-share text-tiny text-muted-foreground/60 tracking-wider">Save to:</span>
                 <select
                   value={targetFolderId || ""}
                   onChange={(e) => setTargetFolderId(e.target.value || null)}
                   className="bg-card/60 border border-border/50 rounded px-2 py-1 text-tiny font-mono-share text-foreground/70 outline-none focus:border-primary/50 transition-colors cursor-pointer min-w-[100px]"
                 >
-                  <option value="">UNFILED</option>
+                  <option value="">Unfiled</option>
                   {foldersHook.folders.filter(f => !f.hidden).map(f => (
                     <option key={f.id} value={f.id}>{(f.name ?? "").toUpperCase()}</option>
                   ))}
@@ -2219,7 +2195,7 @@ const Index = () => {
               <CollapsibleTrigger className="flex items-center gap-2 group cursor-pointer">
                 <span className="font-mono-share text-purple-400/40 text-tiny group-data-[state=open]:text-purple-400/60">▸</span>
                 <span className="font-orbitron text-tiny tracking-widest text-purple-400/80">
-                  COMFY_QUEUE
+                  Comfy queue
                 </span>
                 <span className="font-mono-share text-tiny text-muted-foreground/70">
                   [{comfyJobs.filter(j => j.status === "submitting" || j.status === "generating").length} active]
@@ -2230,7 +2206,7 @@ const Index = () => {
                   onClick={clearFinishedComfyJobs}
                   className="font-mono-share text-tiny text-muted-foreground/70 hover:text-purple-400 transition-colors"
                 >
-                  CLEAR FINISHED
+                  Clear finished
                 </button>
               )}
             </div>
@@ -2267,7 +2243,7 @@ const Index = () => {
                         onClick={() => cancelComfyJob(job.id)}
                         className="absolute top-2 right-2 px-1.5 py-0.5 rounded text-micro font-orbitron tracking-wider border border-red-500/30 text-red-400/70 hover:bg-red-500/10 hover:text-red-400 transition-colors"
                       >
-                        CANCEL
+                        Cancel
                       </button>
                     )}
 
@@ -2415,7 +2391,7 @@ const Index = () => {
           <CollapsibleTrigger className="flex items-center gap-2 mb-4 w-full group cursor-pointer">
             <span className="font-mono-share text-secondary/40 text-tiny group-data-[state=open]:text-secondary/60">▸</span>
             <GlitchText
-              text={isStudio ? "Your creations" : "OUTPUT_STREAM"}
+              text={"Your creations"}
               className="font-orbitron text-tiny tracking-widest text-muted-foreground"
               glitchIntensity="low"
             />
@@ -2429,7 +2405,7 @@ const Index = () => {
               className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded border border-primary/20 hover:border-primary/50 bg-primary/5 hover:bg-primary/10 transition-all font-mono-share text-tiny text-primary/70 hover:text-primary tracking-wider"
             >
               <Image className="w-3 h-3" />
-              FULL LIBRARY
+              Full library
             </Link>
           </CollapsibleTrigger>
           <CollapsibleContent>
@@ -2461,7 +2437,7 @@ const Index = () => {
           {results.length > 0 && !creditsHook.hasSubscription && creditsHook.enabled && (
             <div className="mt-4 flex items-center justify-between gap-3 px-4 py-3 rounded border border-secondary/25 bg-secondary/5">
               <div className="space-y-0.5 min-w-0">
-                <p className="font-orbitron text-xs text-secondary font-bold tracking-wider">WANT MORE?</p>
+                <p className="font-orbitron text-xs text-secondary font-bold tracking-wider">Want more?</p>
                 <p className="font-mono-share text-tiny text-muted-foreground/70 leading-relaxed">
                   Faster renders · Priority queue · Unlimited credits from $9.99/mo
                 </p>
@@ -2700,7 +2676,7 @@ const Index = () => {
         <Collapsible defaultOpen={false}>
           <CollapsibleTrigger className="flex items-center gap-2 w-full group py-1">
             <span className="font-mono-share text-primary/40 text-tiny group-data-[state=open]:text-primary/60">▸</span>
-            <span className="font-mono-share text-tiny tracking-widest text-muted-foreground/60 group-hover:text-muted-foreground/60 transition-colors">STATUS</span>
+            <span className="font-mono-share text-tiny tracking-widest text-muted-foreground/60 group-hover:text-muted-foreground/60 transition-colors">Status</span>
             <div className="h-px flex-1 bg-primary/5" />
           </CollapsibleTrigger>
           <CollapsibleContent>
@@ -2740,7 +2716,7 @@ const Index = () => {
               className="flex items-center gap-1 text-muted-foreground/60 hover:text-primary transition-colors"
             >
               <HelpCircle className="w-3 h-3" />
-              GUIDE
+              Guide
             </button>
             <span className="text-border/50">|</span>
             <button
@@ -2748,7 +2724,7 @@ const Index = () => {
               className="flex items-center gap-1 text-muted-foreground/60 hover:text-accent transition-colors"
             >
               <Zap className="w-3 h-3" />
-              CHANGELOG
+              Changelog
             </button>
             <span className="text-border/50">|</span>
             <button
@@ -2756,7 +2732,7 @@ const Index = () => {
               className="flex items-center gap-1 text-muted-foreground/60 hover:text-primary transition-colors"
             >
               <Shield className="w-3 h-3" />
-              TERMS
+              Terms
             </button>
             <span className="text-border/50">|</span>
             <button
@@ -2764,7 +2740,7 @@ const Index = () => {
               className="flex items-center gap-1 text-muted-foreground/60 hover:text-secondary transition-colors"
             >
               <Eye className="w-3 h-3" />
-              PRIVACY
+              Privacy
             </button>
             <span className="text-border/50">|</span>
             <a
@@ -2792,7 +2768,7 @@ const Index = () => {
               className="flex items-center gap-1 text-muted-foreground/60 hover:text-cyan-400 transition-colors"
             >
               <Image className="w-3 h-3" />
-              LIBRARY
+              Library
             </Link>
             {auth.isAuthenticated && (
               <>
@@ -2802,7 +2778,7 @@ const Index = () => {
                   className="flex items-center gap-1 text-muted-foreground/60 hover:text-purple-400 transition-colors"
                 >
                   <Users className="w-3 h-3" />
-                  CHARACTERS
+                  Characters
                 </Link>
                 <span className="text-border/50">|</span>
                 <Link
@@ -2810,7 +2786,7 @@ const Index = () => {
                   className="flex items-center gap-1 text-muted-foreground/60 hover:text-primary transition-colors"
                 >
                   <BadgeCheck className="w-3 h-3" />
-                  VERIFICATION
+                  Verification
                 </Link>
               </>
             )}
@@ -2822,7 +2798,7 @@ const Index = () => {
                   className="flex items-center gap-1 text-muted-foreground/60 hover:text-cyan-400 transition-colors"
                 >
                   <Code className="w-3 h-3" />
-                  API DOCS
+                  API docs
                 </Link>
                 <span className="text-border/50">|</span>
                 <ApiKeysPanel triggerClassName="flex items-center gap-1 text-muted-foreground/60 hover:text-primary transition-colors" />
@@ -2836,7 +2812,7 @@ const Index = () => {
                   className="flex items-center gap-1 text-muted-foreground/60 hover:text-primary transition-colors"
                 >
                   <Server className="w-3 h-3" />
-                  ADMIN
+                  Admin
                 </Link>
               </>
             )}

@@ -207,7 +207,7 @@ function DetailView({ s, d }: { s: Suspect; d: FarmerDetail }) {
         <SectionCard title={`REFERRALS (${d.referees.length} referred)`}>
           {d.referrer && (
             <div className="mb-2">
-              <div className="font-mono-share text-tiny text-muted-foreground/70 mb-0.5">REFERRED BY</div>
+              <div className="font-mono-share text-tiny text-muted-foreground/70 mb-0.5">Referred by</div>
               <UserLine email={d.referrer.email} username={d.referrer.username} same_fp={d.referrer.same_fp} />
             </div>
           )}
@@ -342,11 +342,11 @@ const AdminFarmersPanel: React.FC = () => {
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h2 className="font-orbitron text-xs tracking-wider text-primary/80 flex items-center gap-2">
           <Tractor className="w-3.5 h-3.5" />
-          CREDIT_FARMERS
+          Credit farmers
         </h2>
         <div className="flex items-center gap-2">
           <label className="font-mono-share text-tiny text-muted-foreground flex items-center gap-1.5">
-            MIN_EXCESS
+            Min excess
             <input
               type="number"
               min={1}
@@ -382,12 +382,12 @@ const AdminFarmersPanel: React.FC = () => {
       {/* Summary cards */}
       <div className="grid grid-cols-2 gap-3">
         <div className="border border-border/30 rounded-lg bg-card/40 p-3">
-          <div className="font-mono-share text-tiny text-muted-foreground tracking-widest">SUSPECTS</div>
+          <div className="font-mono-share text-tiny text-muted-foreground tracking-widest">Suspects</div>
           <div className="font-orbitron text-2xl text-primary mt-1">{loading ? "…" : suspects.length}</div>
           <div className="font-mono-share text-tiny text-muted-foreground/70 mt-0.5">excess ≥ {minExcess} credits</div>
         </div>
         <div className="border border-border/30 rounded-lg bg-card/40 p-3">
-          <div className="font-mono-share text-tiny text-muted-foreground tracking-widest">UNPAID_CREDITS_HELD</div>
+          <div className="font-mono-share text-tiny text-muted-foreground tracking-widest">Unpaid credits held</div>
           <div className="font-orbitron text-2xl text-secondary mt-1">{loading ? "…" : totalExcess.toLocaleString()}</div>
           <div className="font-mono-share text-tiny text-muted-foreground/70 mt-0.5">across unbanned suspects</div>
         </div>
@@ -399,17 +399,17 @@ const AdminFarmersPanel: React.FC = () => {
           <thead>
             <tr className="border-b border-border/30 font-mono-share text-tiny text-muted-foreground tracking-widest">
               <th className="px-2 py-2 w-6"></th>
-              <th className="px-3 py-2">USER</th>
-              <th className="px-3 py-2 text-right">AGE</th>
-              <th className="px-3 py-2 text-right">BALANCE</th>
-              <th className="px-3 py-2 text-right">BOUGHT</th>
-              <th className="px-3 py-2 text-right">GRANTED</th>
-              <th className="px-3 py-2 text-right">PAID</th>
-              <th className="px-3 py-2 text-right">SPENT</th>
+              <th className="px-3 py-2">User</th>
+              <th className="px-3 py-2 text-right">Age</th>
+              <th className="px-3 py-2 text-right">Balance</th>
+              <th className="px-3 py-2 text-right">Bought</th>
+              <th className="px-3 py-2 text-right">Granted</th>
+              <th className="px-3 py-2 text-right">Paid</th>
+              <th className="px-3 py-2 text-right">Spent</th>
               <th className="px-3 py-2 text-right">FP×</th>
-              <th className="px-3 py-2 text-right">REFS</th>
-              <th className="px-3 py-2 text-right">EXCESS</th>
-              <th className="px-3 py-2 text-right">ACTION</th>
+              <th className="px-3 py-2 text-right">Refs</th>
+              <th className="px-3 py-2 text-right">Excess</th>
+              <th className="px-3 py-2 text-right">Action</th>
             </tr>
           </thead>
           <tbody>

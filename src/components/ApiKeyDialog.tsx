@@ -61,7 +61,7 @@ const ApiKeyDialog: React.FC<ApiKeyDialogProps> = ({ hasKey, onSave, onClear }) 
       <DialogContent className="bg-card border-border sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="font-orbitron text-sm tracking-wider neon-text-cyan">
-            XAI_CREDENTIALS
+            xAI credentials
           </DialogTitle>
           <DialogDescription className="font-rajdhani text-muted-foreground">
             Bring your own xAI API key for free, unlimited use. Your key is stored locally in your browser only.
@@ -123,7 +123,7 @@ const ApiKeyDialog: React.FC<ApiKeyDialogProps> = ({ hasKey, onSave, onClear }) 
               disabled={!key.trim()}
               className="flex-1 bg-primary text-primary-foreground hover:bg-primary/80 font-orbitron text-xs tracking-wider"
             >
-              AUTHENTICATE
+              Authenticate
             </Button>
             {hasKey && (
               <Button

@@ -150,7 +150,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
             <div className="space-y-2">
               <label className="font-orbitron text-tiny tracking-wider text-muted-foreground flex items-center gap-1.5">
                 <Maximize className="w-3 h-3" />
-                ASPECT_RATIO
+                Aspect ratio
               </label>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                 {videoAspectRatios.map((ar) => (
@@ -183,7 +183,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
             <div className="space-y-2">
               <label className="font-orbitron text-tiny tracking-wider text-muted-foreground flex items-center gap-1.5">
                 <Monitor className="w-3 h-3" />
-                RESOLUTION
+                Resolution
               </label>
               <div className="grid grid-cols-2 gap-2">
                 {videoResolutions.map((r) => (
@@ -216,7 +216,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
             <div className="space-y-2">
               <label className="font-orbitron text-tiny tracking-wider text-muted-foreground flex items-center gap-1.5">
                 <Clock className="w-3 h-3" />
-                DURATION
+                Duration
                 <span className="font-mono-share text-tiny text-muted-foreground/70 ml-auto">
                   {videoSettings.duration}s
                 </span>
@@ -245,7 +245,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
             <div className="space-y-2">
               <label className="font-orbitron text-tiny tracking-wider text-muted-foreground flex items-center gap-1.5">
                 <Maximize className="w-3 h-3" />
-                ASPECT_RATIO
+                Aspect ratio
               </label>
               <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
                 {aspectRatios.map((ar) => (
@@ -278,7 +278,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
             <div className="space-y-2">
               <label className="font-orbitron text-tiny tracking-wider text-muted-foreground flex items-center gap-1.5">
                 <Monitor className="w-3 h-3" />
-                RESOLUTION
+                Resolution
               </label>
               <div className="grid grid-cols-2 gap-2">
                 {imageResolutions.map((r) => (
@@ -312,7 +312,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
             <div className="space-y-2">
               <label className="font-orbitron text-tiny tracking-wider text-muted-foreground flex items-center gap-1.5">
                 <Hash className="w-3 h-3" />
-                BATCH_COUNT
+                Batch count
                 <span className="font-mono-share text-tiny text-muted-foreground/70 ml-auto">
                   ×{settings.count}
                 </span>

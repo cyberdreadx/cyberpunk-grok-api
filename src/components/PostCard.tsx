@@ -276,7 +276,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
             title="This post is locked — unlock to view full content"
           >
             <Lock className="w-3 h-3" />
-            <span>LOCKED ·</span>
+            <span>Locked ·</span>
             {(post.lockCost || 0) > 0 && <span>{post.lockCost}c</span>}
             {(post.lockPriceCents || 0) > 0 && <span>${((post.lockPriceCents || 0) / 100).toFixed(2)}</span>}
             {!!(post.lockXrgeAmount && parseFloat(post.lockXrgeAmount) > 0) && <span>{post.lockXrgeAmount} XRGE</span>}
@@ -455,12 +455,12 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
                   <div className="bg-black/70 rounded-full p-2 border border-amber-400/40">
                     <EyeOff className="w-5 h-5 text-amber-300" />
                   </div>
-                  <span className="font-mono-share text-tiny tracking-widest text-amber-300/90">MATURE CONTENT</span>
+                  <span className="font-mono-share text-tiny tracking-widest text-amber-300/90">Mature content</span>
                   <button
                     onClick={() => setMatureRevealed(true)}
                     className="font-mono-share text-tiny px-3 py-1 rounded border border-amber-400/40 text-amber-300 hover:bg-amber-400/10 transition-colors"
                   >
-                    REVEAL
+                    Reveal
                   </button>
                 </div>
               )}
@@ -477,7 +477,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
                 onError={previewMedia.onError}
               />
               <div className="absolute inset-0 flex items-center justify-center bg-background/20">
-                <p className="font-mono-share text-tiny text-muted-foreground tracking-widest">SIGN IN TO VIEW</p>
+                <p className="font-mono-share text-tiny text-muted-foreground tracking-widest">Sign in to view</p>
               </div>
             </div>
           )}

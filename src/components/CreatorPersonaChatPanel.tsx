@@ -66,7 +66,7 @@ export default function CreatorPersonaChatPanel() {
     <div className="border border-secondary/30 rounded-lg p-4 bg-card/40 space-y-3">
       <div className="flex items-center gap-2">
         <MessageSquare className="w-4 h-4 text-secondary" />
-        <h3 className="font-orbitron text-xs tracking-wider text-foreground">CREATOR PERSONA CHAT</h3>
+        <h3 className="font-orbitron text-xs tracking-wider text-foreground">Creator persona chat</h3>
       </div>
       <p className="font-mono-share text-tiny text-muted-foreground leading-relaxed">
         Link one published character as your official AI persona. Fans see a chat button on your profile and in the creators directory.

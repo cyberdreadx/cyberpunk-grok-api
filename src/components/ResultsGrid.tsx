@@ -204,7 +204,7 @@ function PinDialog({
               onClick={onCancel}
               className="px-4 py-1.5 text-tiny font-mono-share text-muted-foreground/60 hover:text-muted-foreground border border-border/50 rounded transition-colors"
             >
-              ABORT
+              Cancel
             </button>
           </div>
         </div>
@@ -407,10 +407,10 @@ function FolderBar({
   };
 
   const currentFilterName = () => {
-    if (selectedFilter === "unfiled") return isStudio ? "Unfiled" : "UNFILED";
+    if (selectedFilter === "unfiled") return "Unfiled";
     if (selectedFilter === "all") return "ALL";
-    if (selectedFilter === "__trash") return "TRASH";
-    if (selectedFilter === "none") return "LOCKED";
+    if (selectedFilter === "__trash") return "Trash";
+    if (selectedFilter === "none") return "Locked";
     return folders.find((f) => f.id === selectedFilter)?.name?.toUpperCase() || "ALL";
   };
 
@@ -463,22 +463,22 @@ function FolderBar({
             <DropdownMenuContent align="end" className="min-w-[140px] bg-card border-border">
               {hasPin ? (
                 <DropdownMenuItem className="text-xs min-h-[40px] py-2 font-mono-share text-secondary focus:bg-secondary/10 cursor-pointer" onSelect={() => onRemovePin(pinId)}>
-                  <LockOpen className="w-3 h-3 mr-1.5" /> REMOVE PIN
+                  <LockOpen className="w-3 h-3 mr-1.5" /> Remove PIN
                 </DropdownMenuItem>
               ) : (
                 <DropdownMenuItem className="text-xs min-h-[40px] py-2 font-mono-share text-primary focus:bg-primary/10 cursor-pointer" onSelect={() => onSetPin(pinId)}>
-                  <Lock className="w-3 h-3 mr-1.5" /> SET PIN
+                  <Lock className="w-3 h-3 mr-1.5" /> Set PIN
                 </DropdownMenuItem>
               )}
               {!isBuiltIn && onToggleFolderHidden && (
                 <DropdownMenuItem className="text-xs min-h-[40px] py-2 font-mono-share text-muted-foreground focus:bg-muted/50 cursor-pointer" onSelect={() => onToggleFolderHidden(id)}>
-                  <ShieldCheck className="w-3 h-3 mr-1.5" /> VAULT
+                  <ShieldCheck className="w-3 h-3 mr-1.5" /> Locked folder
                 </DropdownMenuItem>
               )}
               {!isBuiltIn && onDeleteFolder && (
                 <DropdownMenuItem className="text-xs min-h-[40px] py-2 font-mono-share text-destructive focus:bg-destructive/10 cursor-pointer"
                   onSelect={() => setDeleteConfirm({ id, name: folder?.name || label, count: resultCounts[id] ?? 0 })}>
-                  <Trash2 className="w-3 h-3 mr-1.5" /> DELETE
+                  <Trash2 className="w-3 h-3 mr-1.5" /> Delete
                 </DropdownMenuItem>
               )}
             </DropdownMenuContent>
@@ -511,10 +511,10 @@ function FolderBar({
           <DropdownMenuTrigger asChild><button className="p-0.5 text-muted-foreground/60 hover:text-muted-foreground transition-colors"><MoreVertical className="w-3 h-3" /></button></DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="min-w-[120px] bg-card border-border">
             {hasPin ? (<>
-              {isUnlocked && <DropdownMenuItem className="text-tiny py-1.5 font-mono-share cursor-pointer" onSelect={() => onLockFolder(pinId)}><Lock className="w-3 h-3 mr-1.5" /> LOCK</DropdownMenuItem>}
-              <DropdownMenuItem className="text-tiny py-1.5 font-mono-share text-secondary cursor-pointer" onSelect={() => onRemovePin(pinId)}><LockOpen className="w-3 h-3 mr-1.5" /> REMOVE PIN</DropdownMenuItem>
+              {isUnlocked && <DropdownMenuItem className="text-tiny py-1.5 font-mono-share cursor-pointer" onSelect={() => onLockFolder(pinId)}><Lock className="w-3 h-3 mr-1.5" /> Lock</DropdownMenuItem>}
+              <DropdownMenuItem className="text-tiny py-1.5 font-mono-share text-secondary cursor-pointer" onSelect={() => onRemovePin(pinId)}><LockOpen className="w-3 h-3 mr-1.5" /> Remove PIN</DropdownMenuItem>
             </>) : (
-              <DropdownMenuItem className="text-tiny py-1.5 font-mono-share text-primary cursor-pointer" onSelect={() => onSetPin(pinId)}><Lock className="w-3 h-3 mr-1.5" /> SET PIN</DropdownMenuItem>
+              <DropdownMenuItem className="text-tiny py-1.5 font-mono-share text-primary cursor-pointer" onSelect={() => onSetPin(pinId)}><Lock className="w-3 h-3 mr-1.5" /> Set PIN</DropdownMenuItem>
             )}
           </DropdownMenuContent>
         </DropdownMenu>
@@ -538,7 +538,7 @@ function FolderBar({
 
         {mobileOpen && (
           <div className="mt-1 border border-border/50 rounded bg-card/80 backdrop-blur-sm py-1 space-y-0.5 animate-slide-up max-h-[50vh] overflow-y-auto">
-            {renderMobileRow("unfiled", isStudio ? "Unfiled" : "UNFILED", "__unfiled", true)}
+            {renderMobileRow("unfiled", "Unfiled", "__unfiled", true)}
             {visibleFolders.map((f) => renderMobileRow(f.id, (f.name ?? "").toUpperCase(), f.id, false, f))}
             {renderMobileRow("all", "ALL", "__total", true)}
             {/* Trash tab (mobile) */}
@@ -547,7 +547,7 @@ function FolderBar({
               onClick={() => { onSelectFilter?.("__trash"); setMobileOpen(false); }}
             >
               <Trash2 className="w-3 h-3" />
-              <span className="font-mono-share text-tiny">TRASH</span>
+              <span className="font-mono-share text-tiny">Trash</span>
               <span className="font-mono-share text-tiny text-muted-foreground/60 ml-auto">{resultCounts.__trash ?? 0}</span>
             </button>
 
@@ -567,25 +567,25 @@ function FolderBar({
                   {vaultLocked ? (
                     <button className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-muted/30 transition-colors" onClick={() => { onRequestUnlock("__vault"); setMobileOpen(false); }}>
                       <Lock className="w-3 h-3 text-secondary" />
-                      <span className="font-mono-share text-tiny text-secondary">TAP TO UNLOCK</span>
+                      <span className="font-mono-share text-tiny text-secondary">Tap to unlock</span>
                     </button>
                   ) : (<>
                     {hiddenFolders.map((f) => (
                       <button key={f.id} className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-muted/30 transition-colors" onClick={() => onToggleFolderHidden?.(f.id)}>
                         <Eye className="w-3 h-3 text-muted-foreground/60" />
                         <span className="font-mono-share text-tiny text-muted-foreground/60">{(f.name ?? "").toUpperCase()}</span>
-                        <span className="font-mono-share text-micro text-muted-foreground/60 ml-auto">RESTORE</span>
+                        <span className="font-mono-share text-micro text-muted-foreground/60 ml-auto">Restore</span>
                       </button>
                     ))}
                     {vaultHasPin ? (
                       <button className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-muted/30 transition-colors" onClick={() => { onLockFolder("__vault"); setMobileOpen(false); }}>
                         <Lock className="w-3 h-3 text-muted-foreground/60" />
-                        <span className="font-mono-share text-tiny text-muted-foreground/60">LOCK VAULT</span>
+                        <span className="font-mono-share text-tiny text-muted-foreground/60">Lock folder</span>
                       </button>
                     ) : (
                       <button className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-muted/30 transition-colors" onClick={() => { onSetPin("__vault"); setMobileOpen(false); }}>
                         <Lock className="w-3 h-3 text-muted-foreground/60" />
-                        <span className="font-mono-share text-tiny text-muted-foreground/60">SET PIN</span>
+                        <span className="font-mono-share text-tiny text-muted-foreground/60">Set PIN</span>
                       </button>
                     )}
                   </>)}
@@ -600,7 +600,7 @@ function FolderBar({
                   placeholder="folder name..." className="w-full bg-input border border-primary/50 rounded px-2 py-1.5 text-xs font-mono-share outline-none text-primary placeholder:text-muted-foreground/60" />
               ) : (
                 <button className="w-full flex items-center gap-2 px-1 py-2 text-muted-foreground/70 hover:text-primary transition-colors" onClick={() => setIsCreating(true)}>
-                  <FolderPlus className="w-3.5 h-3.5" /><span className="font-mono-share text-tiny">NEW FOLDER</span>
+                  <FolderPlus className="w-3.5 h-3.5" /><span className="font-mono-share text-tiny">New folder</span>
                 </button>
               )}
             </div>
@@ -610,7 +610,7 @@ function FolderBar({
 
       {/* ── Desktop: Horizontal tab bar ── */}
       <div className="hidden sm:flex items-center gap-0.5 overflow-x-auto scrollbar-hide pb-px border-b border-border/50 -mb-px">
-        {renderDesktopBuiltIn("unfiled", isStudio ? "Unfiled" : "UNFILED", "__unfiled")}
+        {renderDesktopBuiltIn("unfiled", "Unfiled", "__unfiled")}
         {visibleFolders.map((folder) => {
           const hasPin = folderHasPin(folder.id);
           const isUnlocked = unlockedFolders.has(folder.id);
@@ -632,15 +632,15 @@ function FolderBar({
               <DropdownMenu>
                 <DropdownMenuTrigger asChild><button className="p-0.5 text-muted-foreground/60 hover:text-muted-foreground transition-colors"><MoreVertical className="w-3 h-3" /></button></DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="min-w-[120px] bg-card border-border">
-                  <DropdownMenuItem className="text-tiny py-1.5 font-mono-share cursor-pointer" onSelect={() => { setEditingId(folder.id); setEditingName(folder.name); }}><Pencil className="w-3 h-3 mr-1.5" /> RENAME</DropdownMenuItem>
+                  <DropdownMenuItem className="text-tiny py-1.5 font-mono-share cursor-pointer" onSelect={() => { setEditingId(folder.id); setEditingName(folder.name); }}><Pencil className="w-3 h-3 mr-1.5" /> Rename</DropdownMenuItem>
                   {hasPin ? (<>
-                    {isUnlocked && <DropdownMenuItem className="text-tiny py-1.5 font-mono-share cursor-pointer" onSelect={() => onLockFolder(folder.id)}><Lock className="w-3 h-3 mr-1.5" /> LOCK</DropdownMenuItem>}
-                    <DropdownMenuItem className="text-tiny py-1.5 font-mono-share text-secondary cursor-pointer" onSelect={() => onRemovePin(folder.id)}><LockOpen className="w-3 h-3 mr-1.5" /> REMOVE PIN</DropdownMenuItem>
+                    {isUnlocked && <DropdownMenuItem className="text-tiny py-1.5 font-mono-share cursor-pointer" onSelect={() => onLockFolder(folder.id)}><Lock className="w-3 h-3 mr-1.5" /> Lock</DropdownMenuItem>}
+                    <DropdownMenuItem className="text-tiny py-1.5 font-mono-share text-secondary cursor-pointer" onSelect={() => onRemovePin(folder.id)}><LockOpen className="w-3 h-3 mr-1.5" /> Remove PIN</DropdownMenuItem>
                   </>) : (
-                    <DropdownMenuItem className="text-tiny py-1.5 font-mono-share text-primary cursor-pointer" onSelect={() => onSetPin(folder.id)}><Lock className="w-3 h-3 mr-1.5" /> SET PIN</DropdownMenuItem>
+                    <DropdownMenuItem className="text-tiny py-1.5 font-mono-share text-primary cursor-pointer" onSelect={() => onSetPin(folder.id)}><Lock className="w-3 h-3 mr-1.5" /> Set PIN</DropdownMenuItem>
                   )}
-                  {onToggleFolderHidden && <DropdownMenuItem className="text-tiny py-1.5 font-mono-share text-muted-foreground cursor-pointer" onSelect={() => onToggleFolderHidden(folder.id)}><ShieldCheck className="w-3 h-3 mr-1.5" /> VAULT</DropdownMenuItem>}
-                  {onDeleteFolder && <DropdownMenuItem className="text-tiny py-1.5 font-mono-share text-destructive cursor-pointer" onSelect={() => setDeleteConfirm({ id: folder.id, name: folder.name, count: resultCounts[folder.id] ?? 0 })}><Trash2 className="w-3 h-3 mr-1.5" /> DELETE</DropdownMenuItem>}
+                  {onToggleFolderHidden && <DropdownMenuItem className="text-tiny py-1.5 font-mono-share text-muted-foreground cursor-pointer" onSelect={() => onToggleFolderHidden(folder.id)}><ShieldCheck className="w-3 h-3 mr-1.5" /> Locked folder</DropdownMenuItem>}
+                  {onDeleteFolder && <DropdownMenuItem className="text-tiny py-1.5 font-mono-share text-destructive cursor-pointer" onSelect={() => setDeleteConfirm({ id: folder.id, name: folder.name, count: resultCounts[folder.id] ?? 0 })}><Trash2 className="w-3 h-3 mr-1.5" /> Delete</DropdownMenuItem>}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -662,14 +662,14 @@ function FolderBar({
             <DropdownMenu>
               <DropdownMenuTrigger asChild><button className="px-2 py-1.5 flex items-center gap-1 text-muted-foreground/60 hover:text-muted-foreground/60 transition-colors" title="Vault"><ShieldCheck className="w-3 h-3" /><span className="text-micro font-mono-share opacity-50">{hiddenFolders.length}</span></button></DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="min-w-[140px] bg-card border-border">
-                <div className="px-3 py-1.5 text-tiny font-orbitron tracking-wider text-muted-foreground/60 border-b border-border/50 mb-1">VAULT</div>
+                <div className="px-3 py-1.5 text-tiny font-orbitron tracking-wider text-muted-foreground/60 border-b border-border/50 mb-1">Locked folder</div>
                 {hiddenFolders.map((f) => <DropdownMenuItem key={f.id} className="text-tiny py-1.5 font-mono-share text-muted-foreground cursor-pointer" onSelect={() => onToggleFolderHidden?.(f.id)}><Eye className="w-3 h-3 mr-1.5" /> {(f.name ?? "").toUpperCase()} — RESTORE</DropdownMenuItem>)}
                 <div className="border-t border-border/50 mt-1 pt-1">
                   {vaultHasPin ? (<>
-                    <DropdownMenuItem className="text-tiny py-1.5 font-mono-share cursor-pointer" onSelect={() => onLockFolder("__vault")}><Lock className="w-3 h-3 mr-1.5" /> LOCK VAULT</DropdownMenuItem>
-                    <DropdownMenuItem className="text-tiny py-1.5 font-mono-share text-secondary cursor-pointer" onSelect={() => onRemovePin("__vault")}><LockOpen className="w-3 h-3 mr-1.5" /> REMOVE PIN</DropdownMenuItem>
+                    <DropdownMenuItem className="text-tiny py-1.5 font-mono-share cursor-pointer" onSelect={() => onLockFolder("__vault")}><Lock className="w-3 h-3 mr-1.5" /> Lock folder</DropdownMenuItem>
+                    <DropdownMenuItem className="text-tiny py-1.5 font-mono-share text-secondary cursor-pointer" onSelect={() => onRemovePin("__vault")}><LockOpen className="w-3 h-3 mr-1.5" /> Remove PIN</DropdownMenuItem>
                   </>) : (
-                    <DropdownMenuItem className="text-tiny py-1.5 font-mono-share text-primary cursor-pointer" onSelect={() => onSetPin("__vault")}><Lock className="w-3 h-3 mr-1.5" /> SET PIN</DropdownMenuItem>
+                    <DropdownMenuItem className="text-tiny py-1.5 font-mono-share text-primary cursor-pointer" onSelect={() => onSetPin("__vault")}><Lock className="w-3 h-3 mr-1.5" /> Set PIN</DropdownMenuItem>
                   )}
                 </div>
               </DropdownMenuContent>
@@ -683,7 +683,7 @@ function FolderBar({
           onClick={() => onSelectFilter?.("__trash")}
         >
           <Trash2 className="w-3 h-3 inline-block mr-1 -mt-0.5" />
-          TRASH
+          Trash
           <span className="ml-1 text-muted-foreground/60">{resultCounts.__trash ?? 0}</span>
         </button>
         {isCreating ? (
@@ -700,7 +700,7 @@ function FolderBar({
       <AlertDialog open={!!deleteConfirm} onOpenChange={(open) => !open && setDeleteConfirm(null)}>
         <AlertDialogContent className="bg-card border-border sm:max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle className="font-orbitron text-sm tracking-wider text-destructive">DISMANTLE_FOLDER?</AlertDialogTitle>
+            <AlertDialogTitle className="font-orbitron text-sm tracking-wider text-destructive">Dismantle folder?</AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="font-mono-share text-xs text-muted-foreground space-y-2">
                 <p>This will permanently deallocate the folder <span className="text-foreground font-semibold">&quot;{deleteConfirm?.name}&quot;</span> from the grid.</p>
@@ -710,9 +710,9 @@ function FolderBar({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="font-orbitron text-tiny">CANCEL</AlertDialogCancel>
+            <AlertDialogCancel className="font-orbitron text-tiny">Cancel</AlertDialogCancel>
             <AlertDialogAction className="font-orbitron text-tiny bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={async () => { if (deleteConfirm && onDeleteFolder) { await onDeleteFolder(deleteConfirm.id); setDeleteConfirm(null); } }}>DISMANTLE</AlertDialogAction>
+              onClick={async () => { if (deleteConfirm && onDeleteFolder) { await onDeleteFolder(deleteConfirm.id); setDeleteConfirm(null); } }}>Delete folder</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -767,14 +767,14 @@ function MoveToFolderMenu({
           <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
         </div>
         <div className="px-4 py-2 text-tiny font-orbitron tracking-wider text-muted-foreground/70 border-b border-border/40">
-          MOVE_TO_FOLDER
+          Move to folder
         </div>
         <div className="overflow-y-auto max-h-[45vh] pb-3">
           <button
             className={`w-full text-left px-4 py-3.5 text-xs font-mono-share transition-colors flex items-center gap-2 ${!currentFolderId ? "text-primary bg-primary/10" : "text-muted-foreground"}`}
             onClick={() => { onMove(null); onClose(); }}
           >
-            UNFILED
+            Unfiled
           </button>
           {folders.filter((f) => !f.hidden).map((folder) => (
             <button
@@ -806,13 +806,13 @@ function MoveToFolderMenu({
       onMouseDown={(e) => e.stopPropagation()}
     >
       <div className="px-3 py-1.5 text-tiny font-orbitron tracking-wider text-muted-foreground/70 border-b border-border/50 mb-1 sticky top-0 bg-card z-10">
-        MOVE_TO
+        Move to
       </div>
       <button
         className={`w-full text-left px-3 py-1.5 text-tiny font-mono-share transition-colors flex items-center gap-1.5 ${!currentFolderId ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"}`}
         onClick={() => { onMove(null); onClose(); }}
       >
-        UNFILED
+        Unfiled
       </button>
       {folders.filter((f) => !f.hidden).map((folder) => (
         <button
@@ -1007,9 +1007,9 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
 
   // Resolve display name for any folder ID (including built-in __unfiled / __all)
   const getFolderName = useCallback((folderId: string): string => {
-    if (folderId === "__unfiled") return "UNFILED";
+    if (folderId === "__unfiled") return "Unfiled";
     if (folderId === "__all") return "ALL";
-    if (folderId === "__vault") return "VAULT";
+    if (folderId === "__vault") return "Locked folder";
     return folders.find((f) => f.id === folderId)?.name || folderId;
   }, [folders]);
 
@@ -1623,16 +1623,14 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
         )}
         <div className="border border-dashed border-border rounded p-12 text-center">
           <div className="font-mono-share text-sm text-muted-foreground tracking-wider mb-2">
-            {isStudio
-              ? (selectedFilter === "none" ? "Choose a folder" : "Nothing here yet")
-              : <><span className="text-primary/40">$</span>{" "}{selectedFilter === "none" ? "echo 'SELECT A FOLDER TO VIEW CONTENTS'" : "ls ./output/"}</>}
+            {selectedFilter === "none" ? "Choose a folder" : "Nothing here yet"}
           </div>
           <div className="font-mono-share text-xs text-muted-foreground/60">
             {selectedFilter === "none"
-              ? (isStudio ? "Pick a folder above to see what's in it." : "// choose a folder above to decrypt and display files")
+              ? "Pick a folder above to see what's in it."
               : selectedFilter !== "all" && results.length > 0
                 ? "(no results in this folder)"
-                : (isStudio ? "Your images and videos will appear here." : "(empty) — submit a prompt to generate results")
+                : "Your images and videos will appear here."
             }
           </div>
         </div>
@@ -1693,7 +1691,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
       <div className={className}>
         <div className="flex items-center gap-1.5 mb-1">
           <div className="font-orbitron text-tiny text-muted-foreground/60 tracking-wider">
-            PROMPT
+            Prompt
           </div>
           <button
             onClick={() => handleCopyPrompt(result.id, result.revised_prompt!)}
@@ -1868,7 +1866,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
                 className="text-primary/60 hover:text-primary/80 font-mono-share text-tiny sm:text-xs h-7 px-2 sm:px-3"
               >
                 <Archive className="w-3 h-3 sm:mr-1" />
-                <span className="hidden sm:inline">EXPORT VIEW</span>
+                <span className="hidden sm:inline">Export</span>
               </Button>
             )}
             <Button
@@ -1878,7 +1876,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
               className={`font-mono-share text-tiny sm:text-xs h-7 px-2 sm:px-3 ${selectMode ? "text-primary" : "text-primary/60 hover:text-primary/80"}`}
             >
               <ListChecks className="w-3 h-3 sm:mr-1" />
-              <span className="hidden sm:inline">{selectMode ? "CANCEL" : "SELECT"}</span>
+              <span className="hidden sm:inline">{selectMode ? "Cancel" : "Select"}</span>
             </Button>
             {isTrashView && onEmptyTrash && (resultCounts.__trash ?? 0) > 0 && (
               <Button
@@ -1888,7 +1886,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
                 className="text-destructive hover:text-destructive/80 font-mono-share text-tiny sm:text-xs h-7 px-2 sm:px-3"
               >
                 <Trash2 className="w-3 h-3 sm:mr-1" />
-                <span className="hidden sm:inline">EMPTY TRASH</span>
+                <span className="hidden sm:inline">Empty trash</span>
               </Button>
             )}
             {!isTrashView && (
@@ -1899,7 +1897,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
                 className="text-destructive hover:text-destructive/80 font-mono-share text-tiny sm:text-xs h-7 px-2 sm:px-3"
               >
                 <Trash2 className="w-3 h-3 sm:mr-1" />
-                <span className="hidden sm:inline">PURGE</span>
+                <span className="hidden sm:inline">Delete all</span>
               </Button>
             )}
           </div>
@@ -1911,7 +1909,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
             <AlertDialogHeader>
               <AlertDialogTitle className="font-orbitron text-sm tracking-wider text-destructive flex items-center gap-2">
                 <Trash2 className="w-4 h-4" />
-                {isTrashView ? "EMPTY_TRASH" : "CONFIRM_PURGE_OPERATION"}
+                {isTrashView ? "Empty trash" : "Delete all of these?"}
               </AlertDialogTitle>
               <AlertDialogDescription asChild>
                 <div className="font-mono-share text-xs text-muted-foreground space-y-3">
@@ -1932,7 +1930,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
                         from your library. All images and videos will be erased from local storage.
                       </p>
                       <p className="text-primary/90">
-                        TIP: Use <span className="font-semibold">DOWNLOAD ALL</span> to back up your library before purging.
+                        TIP: Use <span className="font-semibold">Download all</span> to back up your library before purging.
                       </p>
                     </>
                   )}
@@ -1940,7 +1938,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel className="font-orbitron text-tiny">ABORT</AlertDialogCancel>
+              <AlertDialogCancel className="font-orbitron text-tiny">Cancel</AlertDialogCancel>
               <AlertDialogAction
                 className="font-orbitron text-tiny bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 onClick={() => {
@@ -1949,7 +1947,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
                   else onClear();
                 }}
               >
-                {isTrashView ? "EMPTY TRASH" : "PURGE ALL DATA"}
+                {isTrashView ? "Empty trash" : "Delete everything"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -1961,7 +1959,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
             <AlertDialogHeader>
               <AlertDialogTitle className="font-orbitron text-sm tracking-wider text-destructive flex items-center gap-2">
                 <Trash2 className="w-4 h-4" />
-                {isTrashView ? "DELETE_FOREVER" : "CONFIRM_DELETE"}
+                {isTrashView ? "Delete forever" : "Delete this?"}
               </AlertDialogTitle>
               <AlertDialogDescription className="font-mono-share text-xs text-muted-foreground">
                 {isTrashView
@@ -1970,12 +1968,12 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel className="font-orbitron text-tiny">CANCEL</AlertDialogCancel>
+              <AlertDialogCancel className="font-orbitron text-tiny">Cancel</AlertDialogCancel>
               <AlertDialogAction
                 className="font-orbitron text-tiny bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 onClick={executeDelete}
               >
-                {isTrashView ? "DELETE FOREVER" : "MOVE TO TRASH"}
+                {isTrashView ? "Delete forever" : "Move to trash"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -2031,14 +2029,14 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
             {/* Status label */}
             <div className="flex items-center gap-2">
               <span className={`font-orbitron text-tiny tracking-widest ${loadingPhase ? "text-accent" : "text-primary"}`}>
-                {loadingPhase?.includes("start frame") ? "PHASE 1" : loadingPhase?.includes("video") || loadingPhase?.includes("Rendering") ? "RENDERING" : "GENERATING"}
+                {loadingPhase?.includes("start frame") ? "PHASE 1" : loadingPhase?.includes("video") || loadingPhase?.includes("Rendering") ? "Rendering" : "Generating"}
               </span>
             </div>
 
             {/* Phase / elapsed */}
             <div className="flex flex-col items-center gap-1.5 text-center px-4">
               <div className={`font-mono-share text-tiny ${loadingPhase ? "text-accent/80" : "text-primary/70"}`}>
-                {loadingPhase || "PROCESSING REQUEST..."}
+                {loadingPhase || "Working on it…"}
               </div>
               {elapsedSeconds > 0 && (
                 <div className={`font-mono-share text-base font-bold tabular-nums ${loadingPhase ? "text-accent" : "text-primary"}`}>
@@ -2073,7 +2071,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
                   : "text-muted-foreground hover:text-primary"
               }`}
             >
-              <Square className="w-3 h-3" /> ONE
+              <Square className="w-3 h-3" /> One
             </button>
             <button
               type="button"
@@ -2086,7 +2084,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
                   : "text-muted-foreground hover:text-primary"
               }`}
             >
-              <LayoutGrid className="w-3 h-3" /> GRID
+              <LayoutGrid className="w-3 h-3" /> Grid
             </button>
           </div>
         </div>
@@ -2581,7 +2579,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
                 setSelectedIds(new Set(filteredResults.map((r) => r.id)));
             }}
           >
-            {selectedIds.size === filteredResults.length ? "NONE" : "ALL"}
+            {selectedIds.size === filteredResults.length ? "None" : "ALL"}
           </Button>
 
           {/* Trash-view: Restore + Delete Forever */}
@@ -2596,7 +2594,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
                   toast.success(`${ids.length} item(s) restored`);
                 }}
               >
-                <RotateCcw className="w-3 h-3" /> RESTORE
+                <RotateCcw className="w-3 h-3" /> Restore
               </Button>
               <Button variant="outline" size="sm" className="font-mono-share text-tiny text-destructive border-destructive/30 gap-1"
                 onClick={async () => {
@@ -2607,7 +2605,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
                   toast.success(`${ids.length} item(s) permanently deleted`);
                 }}
               >
-                <XCircle className="w-3 h-3" /> DELETE FOREVER
+                <XCircle className="w-3 h-3" /> Delete forever
               </Button>
             </>
           ) : (
@@ -2617,7 +2615,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm" className="font-mono-share text-tiny text-primary border-primary/30 gap-1">
-                      <FolderInput className="w-3 h-3" /> MOVE TO...
+                      <FolderInput className="w-3 h-3" /> Move to…
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="center" className="min-w-[140px] bg-card border-border max-h-60 overflow-y-auto">
@@ -2627,7 +2625,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
                       exitSelectMode();
                       toast.success(`${ids.length} item(s) moved to UNFILED`);
                     }}>
-                      UNFILED
+                      Unfiled
                     </DropdownMenuItem>
                     {folders.filter((f) => !f.hidden).map((f) => (
                       <DropdownMenuItem key={f.id} className="text-tiny py-1.5 font-mono-share cursor-pointer" onSelect={async () => {
@@ -2652,14 +2650,14 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
                     toast.success(`${ids.length} item(s) moved to trash`);
                   }}
                 >
-                  <Trash2 className="w-3 h-3" /> TRASH
+                  <Trash2 className="w-3 h-3" /> Trash
                 </Button>
               )}
             </>
           )}
 
           <Button variant="ghost" size="sm" className="font-mono-share text-tiny text-muted-foreground" onClick={exitSelectMode}>
-            CANCEL
+            Cancel
           </Button>
         </div>
       )}
@@ -2830,7 +2828,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
               <div className="mt-2 sm:mt-3 p-3 bg-card border border-border rounded overflow-y-auto max-h-[25vh]">
                 <div className="flex items-center gap-1.5 mb-1">
                   <div className="font-orbitron text-tiny text-muted-foreground tracking-wider">
-                    REVISED_PROMPT
+                    Revised prompt
                   </div>
                   <button
                     onClick={() => handleCopyPrompt(expandedResult.id, expandedResult.revised_prompt!)}

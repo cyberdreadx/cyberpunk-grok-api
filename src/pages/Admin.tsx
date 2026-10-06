@@ -251,34 +251,34 @@ function ChartToggle({ active, onClick, title, children }: {
 type TabId = "overview" | "insights" | "revenue" | "finance" | "users" | "usage" | "moderation" | "farmers" | "referrals" | "ambassadors" | "payouts" | "emails" | "api" | "system" | "flash-sales" | "media-errors" | "purges" | "legacy-subs";
 
 const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
-  { id: "overview", label: "OVERVIEW", icon: <Eye className="w-3.5 h-3.5" /> },
-  { id: "insights", label: "INSIGHTS", icon: <Sparkles className="w-3.5 h-3.5" /> },
-  { id: "revenue", label: "REVENUE", icon: <DollarSign className="w-3.5 h-3.5" /> },
-  { id: "finance", label: "FINANCE", icon: <Landmark className="w-3.5 h-3.5" /> },
-  { id: "users", label: "USERS", icon: <Users className="w-3.5 h-3.5" /> },
-  { id: "usage", label: "USAGE", icon: <BarChart3 className="w-3.5 h-3.5" /> },
-  { id: "moderation", label: "DEFENSE", icon: <ShieldX className="w-3.5 h-3.5" /> },
-  { id: "farmers", label: "FARMERS", icon: <Tractor className="w-3.5 h-3.5" /> },
-  { id: "referrals", label: "REFERRALS", icon: <Share2 className="w-3.5 h-3.5" /> },
-  { id: "ambassadors", label: "AMBASSADORS", icon: <Award className="w-3.5 h-3.5" /> },
-  { id: "payouts", label: "PAYOUTS", icon: <CreditCard className="w-3.5 h-3.5" /> },
-  { id: "legacy-subs", label: "LEGACY SUBS", icon: <AlertTriangle className="w-3.5 h-3.5" /> },
-  { id: "flash-sales", label: "FLASH SALES", icon: <Flame className="w-3.5 h-3.5" /> },
-  { id: "emails", label: "EMAILS", icon: <Mail className="w-3.5 h-3.5" /> },
+  { id: "overview", label: "Overview", icon: <Eye className="w-3.5 h-3.5" /> },
+  { id: "insights", label: "Insights", icon: <Sparkles className="w-3.5 h-3.5" /> },
+  { id: "revenue", label: "Revenue", icon: <DollarSign className="w-3.5 h-3.5" /> },
+  { id: "finance", label: "Finance", icon: <Landmark className="w-3.5 h-3.5" /> },
+  { id: "users", label: "Users", icon: <Users className="w-3.5 h-3.5" /> },
+  { id: "usage", label: "Usage", icon: <BarChart3 className="w-3.5 h-3.5" /> },
+  { id: "moderation", label: "Defense", icon: <ShieldX className="w-3.5 h-3.5" /> },
+  { id: "farmers", label: "Farmers", icon: <Tractor className="w-3.5 h-3.5" /> },
+  { id: "referrals", label: "Referrals", icon: <Share2 className="w-3.5 h-3.5" /> },
+  { id: "ambassadors", label: "Ambassadors", icon: <Award className="w-3.5 h-3.5" /> },
+  { id: "payouts", label: "Payouts", icon: <CreditCard className="w-3.5 h-3.5" /> },
+  { id: "legacy-subs", label: "Legacy subs", icon: <AlertTriangle className="w-3.5 h-3.5" /> },
+  { id: "flash-sales", label: "Flash sales", icon: <Flame className="w-3.5 h-3.5" /> },
+  { id: "emails", label: "Emails", icon: <Mail className="w-3.5 h-3.5" /> },
   { id: "api", label: "API", icon: <Key className="w-3.5 h-3.5" /> },
-  { id: "system", label: "SYSTEM", icon: <Server className="w-3.5 h-3.5" /> },
-  { id: "media-errors", label: "MEDIA ERR", icon: <ImageOff className="w-3.5 h-3.5" /> },
-  { id: "purges", label: "PURGES", icon: <Trash2 className="w-3.5 h-3.5" /> },
+  { id: "system", label: "System", icon: <Server className="w-3.5 h-3.5" /> },
+  { id: "media-errors", label: "Media errors", icon: <ImageOff className="w-3.5 h-3.5" /> },
+  { id: "purges", label: "Purges", icon: <Trash2 className="w-3.5 h-3.5" /> },
 ];
 
 // Two-tier navigation: 15 flat tabs grouped into 5 clusters so the bar
 // doesn't require horizontal scrolling to find anything.
 const TAB_GROUPS: { id: string; label: string; tabs: TabId[] }[] = [
-  { id: "pulse", label: "PULSE", tabs: ["overview", "insights"] },
-  { id: "money", label: "MONEY", tabs: ["revenue", "finance", "payouts", "flash-sales", "legacy-subs"] },
-  { id: "people", label: "PEOPLE", tabs: ["users", "referrals", "ambassadors", "emails"] },
-  { id: "ops", label: "OPS", tabs: ["usage", "system", "media-errors", "purges"] },
-  { id: "defense", label: "DEFENSE", tabs: ["moderation", "farmers", "api"] },
+  { id: "pulse", label: "Pulse", tabs: ["overview", "insights"] },
+  { id: "money", label: "Money", tabs: ["revenue", "finance", "payouts", "flash-sales", "legacy-subs"] },
+  { id: "people", label: "People", tabs: ["users", "referrals", "ambassadors", "emails"] },
+  { id: "ops", label: "Ops", tabs: ["usage", "system", "media-errors", "purges"] },
+  { id: "defense", label: "Defense", tabs: ["moderation", "farmers", "api"] },
 ];
 
 const tabById = (id: TabId) => TABS.find((t) => t.id === id)!;
@@ -326,7 +326,7 @@ function WorkerStatusPanel() {
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2">
           <Cpu className="w-3.5 h-3.5 text-cyan-400" />
-          <span className="font-orbitron text-tiny tracking-wider text-muted-foreground">RUNPOD_WORKERS</span>
+          <span className="font-orbitron text-tiny tracking-wider text-muted-foreground">RunPod workers</span>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={handlePurge} disabled={purging}
@@ -373,11 +373,11 @@ function WorkerStatusPanel() {
                   <>
                     <div className="grid grid-cols-2 gap-1.5">
                       <div className="bg-background/30 rounded px-2 py-1">
-                        <div className="font-mono-share text-micro text-muted-foreground/70">WORKERS</div>
+                        <div className="font-mono-share text-micro text-muted-foreground/70">Workers</div>
                         <div className="font-orbitron text-sm text-foreground">{totalWorkers}</div>
                       </div>
                       <div className="bg-background/30 rounded px-2 py-1">
-                        <div className="font-mono-share text-micro text-muted-foreground/70">IN_QUEUE</div>
+                        <div className="font-mono-share text-micro text-muted-foreground/70">In queue</div>
                         <div className="font-orbitron text-sm text-yellow-400">{j.inQueue || 0}</div>
                       </div>
                     </div>
@@ -646,7 +646,7 @@ function AnnouncementPanel() {
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2">
           <Send className="w-3.5 h-3.5 text-primary" />
-          <span className="font-orbitron text-tiny tracking-wider text-muted-foreground">MASS_ANNOUNCEMENT</span>
+          <span className="font-orbitron text-tiny tracking-wider text-muted-foreground">Mass announcement</span>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={handleDryRun} disabled={dryRunning || sending}
@@ -674,7 +674,7 @@ function AnnouncementPanel() {
           {sending && !bgRunning && (
             <Button variant="outline" size="sm" onClick={() => { abortRef.current = true; }}
               className="font-mono-share text-xs gap-1.5 border-destructive/30 hover:bg-destructive/10 text-destructive">
-              ABORT
+              Abort
             </Button>
           )}
         </div>
@@ -699,7 +699,7 @@ function AnnouncementPanel() {
       {/* Campaign + Subject + Email Editor */}
       <div className="space-y-2">
         <div className="space-y-1">
-          <label className="font-mono-share text-tiny text-muted-foreground/70">CAMPAIGN</label>
+          <label className="font-mono-share text-tiny text-muted-foreground/70">Campaign</label>
           <select
             value={campaign}
             onChange={(e) => {
@@ -718,11 +718,11 @@ function AnnouncementPanel() {
             <option value="announcement">Original "Massive Upgrade" announcement</option>
           </select>
           <p className="font-mono-share text-tiny text-muted-foreground/70">
-            Each campaign tracks its own send list. Use <span className="text-accent">QUEUE_VIA_CRON</span> for reliable delivery (recommended).
+            Each campaign tracks its own send list. Use <span className="text-accent">Queue via cron</span> for reliable delivery (recommended).
           </p>
         </div>
         <div className="space-y-1">
-          <label className="font-mono-share text-tiny text-muted-foreground/70">SUBJECT LINE</label>
+          <label className="font-mono-share text-tiny text-muted-foreground/70">Subject line</label>
           <input
             type="text"
             value={subject}
@@ -760,7 +760,7 @@ function AnnouncementPanel() {
                       .catch(() => setHtmlContent("<!-- Failed to load default template -->"));
                   }}
                     className="font-mono-share text-tiny gap-1 border-primary/20 hover:bg-primary/10">
-                    LOAD DEFAULT TEMPLATE
+                    Load default template
                   </Button>
                 )}
               </div>
@@ -1002,12 +1002,12 @@ function FlashSalesPanel() {
       <section className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm p-4 space-y-4">
         <div className="flex items-center gap-2">
           <Flame className="w-4 h-4 text-orange-400" />
-          <span className="font-orbitron text-xs tracking-wider text-muted-foreground">CREATE FLASH SALE</span>
+          <span className="font-orbitron text-xs tracking-wider text-muted-foreground">Create flash sale</span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="space-y-1">
-            <label className="font-mono-share text-tiny text-muted-foreground/60">SALE TITLE</label>
+            <label className="font-mono-share text-tiny text-muted-foreground/60">Sale title</label>
             <input
               value={title}
               onChange={e => setTitle(e.target.value)}
@@ -1016,7 +1016,7 @@ function FlashSalesPanel() {
             />
           </div>
           <div className="space-y-1">
-            <label className="font-mono-share text-tiny text-muted-foreground/60">DURATION (MINUTES)</label>
+            <label className="font-mono-share text-tiny text-muted-foreground/60">Duration (minutes)</label>
             <input
               type="number"
               value={durationMinutes}
@@ -1026,7 +1026,7 @@ function FlashSalesPanel() {
             />
           </div>
           <div className="space-y-1">
-            <label className="font-mono-share text-tiny text-muted-foreground/60">XRGE PRICE DISCOUNT %</label>
+            <label className="font-mono-share text-tiny text-muted-foreground/60">XRGE price discount %</label>
             <input
               type="number"
               value={discountPercent}
@@ -1037,7 +1037,7 @@ function FlashSalesPanel() {
             <p className="font-mono-share text-micro text-muted-foreground/60">Users pay less XRGE per package</p>
           </div>
           <div className="space-y-1">
-            <label className="font-mono-share text-tiny text-muted-foreground/60">BONUS CREDITS %</label>
+            <label className="font-mono-share text-tiny text-muted-foreground/60">Bonus credits %</label>
             <input
               type="number"
               value={bonusCreditsPercent}
@@ -1048,7 +1048,7 @@ function FlashSalesPanel() {
             <p className="font-mono-share text-micro text-muted-foreground/60">Extra credits on top of base (stacks with loyalty)</p>
           </div>
           <div className="space-y-1">
-            <label className="font-mono-share text-tiny text-muted-foreground/60">MAX USES (BLANK = UNLIMITED)</label>
+            <label className="font-mono-share text-tiny text-muted-foreground/60">Max uses (blank = unlimited)</label>
             <input
               type="number"
               value={maxUses}
@@ -1073,7 +1073,7 @@ function FlashSalesPanel() {
       <section className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm p-4 space-y-3">
         <div className="flex items-center gap-2">
           <Activity className="w-4 h-4 text-muted-foreground/60" />
-          <span className="font-orbitron text-xs tracking-wider text-muted-foreground">ALL FLASH SALES</span>
+          <span className="font-orbitron text-xs tracking-wider text-muted-foreground">All flash sales</span>
           <span className="font-mono-share text-tiny text-muted-foreground/60">({sales.length})</span>
         </div>
 
@@ -1179,7 +1179,7 @@ function PayoutsPanel() {
   return (
     <div className="space-y-4">
       <h2 className="font-orbitron text-xs tracking-widest text-muted-foreground flex items-center gap-2">
-        <CreditCard className="w-3.5 h-3.5" /> PAYOUT REQUESTS
+        <CreditCard className="w-3.5 h-3.5" /> Payout requests
       </h2>
       {requests.length === 0 ? (
         <p className="font-mono-share text-xs text-muted-foreground text-center py-8">No payout requests yet</p>
@@ -1212,7 +1212,7 @@ function PayoutsPanel() {
                     disabled={acting === r.id}
                     className="font-mono-share text-tiny"
                   >
-                    APPROVE
+                    Approve
                   </Button>
                   <Button
                     size="sm"
@@ -1221,7 +1221,7 @@ function PayoutsPanel() {
                     disabled={acting === r.id}
                     className="font-mono-share text-tiny"
                   >
-                    REJECT
+                    Reject
                   </Button>
                 </div>
               )}
@@ -1233,7 +1233,7 @@ function PayoutsPanel() {
                   disabled={acting === r.id}
                   className="font-mono-share text-tiny border-green-400/30 text-green-400"
                 >
-                  MARK AS PAID
+                  Mark as paid
                 </Button>
               )}
             </div>
@@ -1648,11 +1648,11 @@ export default function Admin() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-4 p-8">
           <ShieldAlert className="w-16 h-16 text-destructive mx-auto" />
-          <h1 className="font-orbitron text-xl tracking-wider text-destructive">ACCESS_DENIED</h1>
+          <h1 className="font-orbitron text-xl tracking-wider text-destructive">Access denied</h1>
           <p className="font-mono-share text-sm text-muted-foreground">Admin credentials required.</p>
           <Button variant="outline" onClick={() => navigate("/")} className="font-mono-share text-xs gap-2">
             <ArrowLeft className="w-3.5 h-3.5" />
-            RETURN_TO_GRID
+            Return to grid
           </Button>
         </div>
       </div>
@@ -1664,16 +1664,16 @@ export default function Admin() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-4 p-8">
           <ShieldAlert className="w-16 h-16 text-destructive/60 mx-auto" />
-          <h1 className="font-orbitron text-xl tracking-wider text-destructive">SYSTEM_ERROR</h1>
+          <h1 className="font-orbitron text-xl tracking-wider text-destructive">System error</h1>
           <p className="font-mono-share text-sm text-muted-foreground max-w-md">{error || "Failed to load data"}</p>
           <div className="flex gap-3 justify-center">
             <Button variant="outline" onClick={() => navigate("/")} className="font-mono-share text-xs gap-2">
               <ArrowLeft className="w-3.5 h-3.5" />
-              RETURN
+              Return
             </Button>
             <Button variant="outline" onClick={fetchAll} disabled={refreshing} className="font-mono-share text-xs gap-2">
               <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
-              RETRY
+              Retry
             </Button>
           </div>
         </div>
@@ -1702,26 +1702,20 @@ export default function Admin() {
       {error && (
         <div className="bg-amber-500/10 border-b border-amber-500/40 px-4 py-2 flex items-center gap-2 font-mono-share text-xs text-amber-300">
           <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-          <span className="truncate">PARTIAL_LOAD — some sections failed: {error}</span>
-          <button onClick={fetchAll} className="ml-auto shrink-0 underline hover:text-amber-200">RETRY</button>
+          <span className="truncate">Some sections failed to load: {error}</span>
+          <button onClick={fetchAll} className="ml-auto shrink-0 underline hover:text-amber-200">Retry</button>
         </div>
       )}
       {/* Header */}
-      <header className="border-b border-border/30 bg-card/40 backdrop-blur-sm sticky top-0 z-20" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 py-3 flex items-center justify-between gap-2">
+      <header className="border-b border-border/40 bg-background/95 sticky top-0 z-20" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+        <div className="max-w-7xl mx-auto px-2 sm:px-4 h-[52px] flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
-            <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="gap-1 font-mono-share text-xs shrink-0 px-2">
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">BACK</span>
-            </Button>
-            <div className="h-4 w-px bg-border/30 shrink-0 hidden sm:block" />
-            <h1 className="font-orbitron text-xs sm:text-sm tracking-wider neon-text-cyan flex items-center gap-1.5 min-w-0">
-              <Server className="w-4 h-4 shrink-0" />
-              <span className="truncate">ADMIN</span>
-            </h1>
+            <button onClick={() => navigate("/")} className="w-9 h-9 flex items-center justify-center rounded-lg text-foreground/80 hover:bg-muted/40 shrink-0" aria-label="Back to the app">
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <h1 className="font-display font-semibold text-[17px] text-foreground truncate">Admin</h1>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <span className="font-mono-share text-tiny text-muted-foreground/60 hidden md:inline">Admin</span>
             <Button
               variant="outline"
               size="sm"
@@ -1730,14 +1724,14 @@ export default function Admin() {
               className="font-mono-share text-xs gap-1.5 px-2 sm:px-3"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
-              <span className="hidden sm:inline">REFRESH</span>
+              <span className="hidden sm:inline">Refresh</span>
             </Button>
           </div>
         </div>
       </header>
 
       {/* Two-tier tab bar: group clusters, then that group's tabs */}
-      <nav className="border-b border-border/20 bg-card/20 backdrop-blur-sm sticky top-[53px] z-10">
+      <nav className="border-b border-border/20 bg-background/95 sticky z-10" style={{ top: "calc(env(safe-area-inset-top, 0px) + 53px)" }}>
         <div className="max-w-7xl mx-auto px-3 sm:px-4 pt-2 flex gap-1.5 overflow-x-auto scrollbar-hide fade-edge-x">
           {TAB_GROUPS.map((group) => {
             const active = group.tabs.includes(activeTab);
@@ -1783,18 +1777,18 @@ export default function Admin() {
             as tabs, and nothing linked to them — /admin/stripe-prices and
             /admin/promo were both reachable only by typing the URL. */}
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-mono-share text-tiny tracking-widest text-muted-foreground/70">TOOLS:</span>
+          <span className="font-mono-share text-tiny tracking-widest text-muted-foreground/70">Tools:</span>
           <Link
             to="/admin/promo"
             className="px-2.5 py-1 rounded border border-cyan-500/30 bg-cyan-500/5 font-mono-share text-tiny text-cyan-300/80 hover:border-cyan-500/60 hover:text-cyan-300 transition-colors"
           >
-            PROMO_REVIEW
+            Promo review
           </Link>
           <Link
             to="/admin/stripe-prices"
             className="px-2.5 py-1 rounded border border-border/50 bg-card/40 font-mono-share text-tiny text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors"
           >
-            STRIPE_PRICES
+            Stripe prices
           </Link>
         </div>
 
@@ -1859,11 +1853,11 @@ export default function Admin() {
               <div className="flex items-center gap-2 flex-wrap mb-3">
                 <h2 className="font-orbitron text-xs tracking-wider text-primary/80 flex items-center gap-2">
                   <DollarSign className="w-3.5 h-3.5" />
-                  REVENUE_STREAM
+                  Revenue stream
                 </h2>
                 <div className="ml-auto flex items-center gap-1.5 flex-wrap">
-                  <ChartToggle active={revenueSplit} onClick={() => setRevenueSplit((v) => !v)} title="Split packs from subscriptions">SPLIT</ChartToggle>
-                  <ChartToggle active={revenueCumulative} onClick={() => setRevenueCumulative((v) => !v)} title="Show a running total instead of per-bucket revenue">CUMULATIVE</ChartToggle>
+                  <ChartToggle active={revenueSplit} onClick={() => setRevenueSplit((v) => !v)} title="Split packs from subscriptions">Split</ChartToggle>
+                  <ChartToggle active={revenueCumulative} onClick={() => setRevenueCumulative((v) => !v)} title="Show a running total instead of per-bucket revenue">Cumulative</ChartToggle>
                 </div>
               </div>
               <RangeControl value={range} onChange={setRange} className="mb-3" />
@@ -2024,7 +2018,7 @@ export default function Admin() {
                     </div>
                   )}
                   <div className="px-3 sm:px-4 py-3 border-t border-border/20">
-                    <h3 className="font-orbitron text-tiny tracking-wider text-muted-foreground/70 mb-2">ALL_TIME_BY_PACK</h3>
+                    <h3 className="font-orbitron text-tiny tracking-wider text-muted-foreground/70 mb-2">All time by pack</h3>
                     <div className="overflow-x-auto overscroll-x-contain">
                       <table className="w-full">
                         <thead><tr className="border-b border-border/20">
@@ -2111,7 +2105,7 @@ export default function Admin() {
             <div className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm p-3 sm:p-4 min-w-0 overflow-hidden">
               <h2 className="font-orbitron text-xs tracking-wider text-primary/80 mb-3 flex items-center gap-2">
                 <Users className="w-3.5 h-3.5" />
-                USER_GROWTH
+                User growth
               </h2>
               <RangeControl value={range} onChange={setRange} className="mb-3" />
               <ResponsiveContainer width="100%" height={280}>
@@ -2145,21 +2139,21 @@ export default function Admin() {
             <section className="border border-secondary/30 rounded-lg bg-card/40 backdrop-blur-sm p-3 sm:p-4 space-y-3">
               <h2 className="font-orbitron text-xs tracking-wider text-secondary/80 flex items-center gap-2">
                 <Gift className="w-3.5 h-3.5" />
-                GRANT_CREDITS
+                Grant credits
               </h2>
               <div className="flex flex-wrap items-end gap-2">
                 <div className="flex-1 min-w-[180px]">
-                  <label className="font-mono-share text-tiny text-muted-foreground/60 block mb-1">EMAIL</label>
+                  <label className="font-mono-share text-tiny text-muted-foreground/60 block mb-1">Email</label>
                   <input type="email" value={grantEmail} onChange={e => setGrantEmail(e.target.value)} placeholder="user@example.com"
                     className="w-full bg-background/60 border border-border rounded px-2.5 py-1.5 font-mono-share text-xs text-foreground placeholder-muted-foreground/40" />
                 </div>
                 <div className="w-24">
-                  <label className="font-mono-share text-tiny text-muted-foreground/60 block mb-1">AMOUNT</label>
+                  <label className="font-mono-share text-tiny text-muted-foreground/60 block mb-1">Amount</label>
                   <input type="number" value={grantAmount} onChange={e => setGrantAmount(e.target.value)} placeholder="100" min="1" max="50000"
                     className="w-full bg-background/60 border border-border rounded px-2.5 py-1.5 font-mono-share text-xs text-foreground placeholder-muted-foreground/40" />
                 </div>
                 <div className="w-24">
-                  <label className="font-mono-share text-tiny text-muted-foreground/60 block mb-1">TYPE</label>
+                  <label className="font-mono-share text-tiny text-muted-foreground/60 block mb-1">Type</label>
                   <select value={grantType} onChange={e => setGrantType(e.target.value as "pack" | "sub")}
                     className="w-full bg-background/60 border border-border rounded px-2.5 py-1.5 font-mono-share text-xs text-foreground">
                     <option value="pack">Pack</option>
@@ -2197,7 +2191,7 @@ export default function Admin() {
                     } finally { setGranting(false); }
                   }}>
                   <Ban className="w-3 h-3" />
-                  ZERO
+                  Zero
                 </Button>
               </div>
               {grantResult && (
@@ -2209,7 +2203,7 @@ export default function Admin() {
               {/* Bulk grant — every verified user */}
               <div className="border-t border-border/30 pt-3 mt-1 space-y-2">
                 <div className="font-mono-share text-tiny uppercase tracking-wider text-secondary/70">
-                  BULK_GRANT // EVERY VERIFIED USER
+                  Bulk grant // every verified user
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   {[10, 25, 50].map((amt) => (
@@ -2249,7 +2243,7 @@ export default function Admin() {
             <section className="border border-secondary/30 rounded-lg bg-card/40 backdrop-blur-sm p-3 sm:p-4 space-y-3">
               <h2 className="font-orbitron text-xs tracking-wider text-secondary/80 flex items-center gap-2">
                 <Zap className="w-3.5 h-3.5" />
-                FREE_CREDITS_SWITCH
+                Free credits switch
               </h2>
               <p className="font-mono-share text-tiny text-muted-foreground/70 leading-relaxed">
                 Toggle each free-credit source independently. Reddit posting reward is <span className="text-secondary">always on</span> and cannot be disabled here.
@@ -2260,7 +2254,7 @@ export default function Admin() {
                 <div className="space-y-2">
                   <div className="font-mono-share text-tiny text-destructive">{fcResult?.msg || "Failed to load free-credit state."}</div>
                   <Button variant="outline" size="sm" onClick={fetchFreeCredits} className="font-mono-share text-tiny h-7 px-2 gap-1">
-                    <RefreshCw className="w-3 h-3" /> RETRY
+                    <RefreshCw className="w-3 h-3" /> Retry
                   </Button>
                 </div>
               ) : (
@@ -2272,7 +2266,7 @@ export default function Admin() {
                   )}
                   <div className="grid gap-2">
                     {([
-                      { key: "master", label: "MASTER (default for unset sources)", value: fcState.master, locked: false },
+                      { key: "master", label: "Master (default for unset sources)", value: fcState.master, locked: false },
                       { key: "daily", label: "Daily credit refill (cron)", value: fcState.daily, locked: false },
                       { key: "spin", label: "Free spin wheel", value: fcState.spin, locked: false },
                       { key: "missions", label: "Daily missions + streak bonus", value: fcState.missions, locked: false },
@@ -2316,7 +2310,7 @@ export default function Admin() {
                     <Button variant="ghost" size="sm" disabled={fcLoading}
                       className="font-mono-share text-xs gap-1.5 text-muted-foreground"
                       onClick={fetchFreeCredits}>
-                      REFRESH
+                      Refresh
                     </Button>
                     <p className="font-mono-share text-tiny text-muted-foreground/70">
                       Per-source values override MASTER. Reddit posting is permanently on.
@@ -2335,7 +2329,7 @@ export default function Admin() {
             <section className="border border-secondary/30 rounded-lg bg-card/40 backdrop-blur-sm p-3 sm:p-4 space-y-3">
               <h2 className="font-orbitron text-xs tracking-wider text-secondary/80 flex items-center gap-2">
                 <Zap className="w-3.5 h-3.5" />
-                CREATOR_APPLICATIONS
+                Creator applications
               </h2>
               <div className="flex gap-1 flex-wrap">
                 {(["pending", "approved", "rejected"] as const).map((s) => (
@@ -2346,7 +2340,7 @@ export default function Admin() {
                   </Button>
                 ))}
                 <Button size="sm" variant="ghost" className="font-mono-share text-tiny h-7 px-2 ml-auto"
-                  onClick={() => fetchCreatorApps(caStatus)}>REFRESH</Button>
+                  onClick={() => fetchCreatorApps(caStatus)}>Refresh</Button>
               </div>
               {caList === null ? (
                 <div className="font-mono-share text-tiny text-muted-foreground/60">Loading…</div>
@@ -2412,7 +2406,7 @@ export default function Admin() {
                           <Button size="sm" variant="outline" disabled={caBusy === a.id}
                             className="font-mono-share text-tiny h-7 px-3 border-destructive/40 text-destructive hover:bg-destructive/10"
                             onClick={() => reviewCreatorApp(a.id, "reject")}>
-                            REJECT
+                            Reject
                           </Button>
                         </div>
                       )}
@@ -2426,11 +2420,11 @@ export default function Admin() {
             <section className="border border-secondary/30 rounded-lg bg-card/40 backdrop-blur-sm p-3 sm:p-4 space-y-3">
               <h2 className="font-orbitron text-xs tracking-wider text-secondary/80 flex items-center gap-2">
                 <Shield className="w-3.5 h-3.5" />
-                FEED_MODERATORS
+                Feed moderators
               </h2>
               <div className="flex flex-wrap items-end gap-2">
                 <div className="flex-1 min-w-[180px]">
-                  <label className="font-mono-share text-tiny text-muted-foreground/60 block mb-1">EMAIL</label>
+                  <label className="font-mono-share text-tiny text-muted-foreground/60 block mb-1">Email</label>
                   <input type="email" value={modEmail} onChange={e => setModEmail(e.target.value)} placeholder="user@example.com"
                     className="w-full bg-background/60 border border-border rounded px-2.5 py-1.5 font-mono-share text-xs text-foreground placeholder-muted-foreground/40" />
                 </div>
@@ -2546,7 +2540,7 @@ export default function Admin() {
               <div className="px-3 sm:px-4 py-3 border-b border-primary/20">
                 <h2 className="font-orbitron text-xs tracking-wider text-primary/80 flex items-center gap-2">
                   <Eye className="w-3.5 h-3.5" />
-                  USER_INSPECTOR
+                  User inspector
                 </h2>
               </div>
               <div className="p-3 sm:p-4 space-y-3">
@@ -2576,10 +2570,10 @@ export default function Admin() {
                           <span className="font-orbitron text-sm text-foreground">@{inspectData.user.username || "—"}</span>
                           <span className="font-mono-share text-tiny text-muted-foreground">{inspectData.user.email}</span>
                           {inspectData.ban && (
-                            <span className="px-1.5 py-0.5 bg-destructive/20 text-destructive font-mono-share text-tiny rounded">BANNED</span>
+                            <span className="px-1.5 py-0.5 bg-destructive/20 text-destructive font-mono-share text-tiny rounded">Banned</span>
                           )}
                           {inspectData.user.verification_status === "verified" && (
-                            <span className="px-1.5 py-0.5 bg-primary/20 text-primary font-mono-share text-tiny rounded">✓ VERIFIED</span>
+                            <span className="px-1.5 py-0.5 bg-primary/20 text-primary font-mono-share text-tiny rounded">✓ Verified</span>
                           )}
                         </div>
                         <div className="font-mono-share text-tiny text-muted-foreground/60 flex gap-3 mt-1">
@@ -2600,7 +2594,7 @@ export default function Admin() {
                               } catch (err: any) { alert(err.message); }
                             }}
                           >
-                            UNVERIFY
+                            Unverify
                           </button>
                         ) : (
                           <button
@@ -2636,7 +2630,7 @@ export default function Admin() {
                               finally { setBanning(false); }
                             }}
                           >
-                            <Ban className="w-3 h-3 inline mr-1" />BAN
+                            <Ban className="w-3 h-3 inline mr-1" />Ban
                           </button>
                         ) : (
                           <button
@@ -2651,7 +2645,7 @@ export default function Admin() {
                               }
                             }}
                           >
-                            UNBAN
+                            Unban
                           </button>
                         )}
                       </div>
@@ -2753,13 +2747,13 @@ export default function Admin() {
               <div className="flex items-center gap-2 flex-wrap mb-3">
                 <h2 className="font-orbitron text-xs tracking-wider text-primary/80 flex items-center gap-2">
                   <Zap className="w-3.5 h-3.5" />
-                  GENERATION_VOLUME
+                  Generation volume
                 </h2>
                 <div className="ml-auto flex items-center gap-1.5 flex-wrap">
-                  <ChartToggle active={usageMetric === "count"} onClick={() => setUsageMetric("count")} title="Count generations">GENS</ChartToggle>
-                  <ChartToggle active={usageMetric === "credits"} onClick={() => setUsageMetric("credits")} title="Count credits consumed">CREDITS</ChartToggle>
+                  <ChartToggle active={usageMetric === "count"} onClick={() => setUsageMetric("count")} title="Count generations">Gens</ChartToggle>
+                  <ChartToggle active={usageMetric === "credits"} onClick={() => setUsageMetric("credits")} title="Count credits consumed">Credits</ChartToggle>
                   <span className="w-px h-4 bg-border/40 mx-0.5" />
-                  <ChartToggle active={usageStacked} onClick={() => setUsageStacked((v) => !v)} title="Stack modes into one bar per bucket">STACKED</ChartToggle>
+                  <ChartToggle active={usageStacked} onClick={() => setUsageStacked((v) => !v)} title="Stack modes into one bar per bucket">Stacked</ChartToggle>
                   <select
                     value={usageTopN}
                     onChange={(e) => setUsageTopN(Number(e.target.value))}
@@ -2876,7 +2870,7 @@ export default function Admin() {
             <div className="px-3 sm:px-4 py-3 border-b border-red-500/20 flex items-center justify-between">
               <h2 className="font-orbitron text-xs tracking-wider text-red-400 flex items-center gap-2">
                 <ShieldX className="w-3.5 h-3.5" />
-                MODERATION_DEFENSE
+                Moderation defense
               </h2>
               <span className="font-mono-share text-tiny text-red-400/60">
                 xAI charges for flagged requests — credits not refunded
@@ -2912,7 +2906,7 @@ export default function Admin() {
                           </td>
                           <td className="px-2.5 py-2">
                             {isBanned ? (
-                              <span className="font-mono-share text-tiny text-red-400/60 tracking-wider">BANNED</span>
+                              <span className="font-mono-share text-tiny text-red-400/60 tracking-wider">Banned</span>
                             ) : (
                               <button
                                 className="px-2 py-0.5 bg-red-600 text-white font-mono-share text-tiny rounded hover:bg-red-500 disabled:opacity-50 flex items-center gap-1"
@@ -2930,7 +2924,7 @@ export default function Admin() {
                                   }
                                 }}
                               >
-                                <Ban className="w-3 h-3" /> BAN
+                                <Ban className="w-3 h-3" /> Ban
                               </button>
                             )}
                           </td>
@@ -2944,7 +2938,7 @@ export default function Admin() {
 
               {/* ── BAN MANAGEMENT ── */}
               <div className="border-t border-red-500/20 pt-3 space-y-3">
-                <h3 className="font-orbitron text-tiny tracking-wider text-red-400/80">BAN_MANAGEMENT</h3>
+                <h3 className="font-orbitron text-tiny tracking-wider text-red-400/80">Ban management</h3>
                 <div className="flex gap-2 flex-wrap">
                   <input
                     className="bg-background/50 border border-red-500/30 rounded px-2 py-1 font-mono-share text-xs text-foreground flex-1 min-w-[150px]"
@@ -2963,11 +2957,11 @@ export default function Admin() {
                     value={banDuration}
                     onChange={(e) => setBanDuration(e.target.value)}
                   >
-                    <option value="1h">1 HOUR</option>
-                    <option value="24h">24 HOURS</option>
-                    <option value="7d">7 DAYS</option>
-                    <option value="30d">30 DAYS</option>
-                    <option value="permanent">PERMANENT</option>
+                    <option value="1h">1 hour</option>
+                    <option value="24h">24 hours</option>
+                    <option value="7d">7 days</option>
+                    <option value="30d">30 days</option>
+                    <option value="permanent">Permanent</option>
                   </select>
                   <button
                     className="px-3 py-1 bg-red-600 text-white font-mono-share text-xs rounded hover:bg-red-500 disabled:opacity-50"
@@ -3010,7 +3004,7 @@ export default function Admin() {
                                   className="px-2 py-0.5 bg-green-600/80 text-white font-mono-share text-tiny rounded hover:bg-green-500"
                                   onClick={() => handleUnban(b.user_id)}
                                 >
-                                  UNBAN
+                                  Unban
                                 </button>
                               </td>
                             </tr>
@@ -3037,7 +3031,7 @@ export default function Admin() {
             <div className="px-3 sm:px-4 py-3 border-b border-green-500/20 flex items-center justify-between">
               <h2 className="font-orbitron text-xs tracking-wider text-green-400 flex items-center gap-2">
                 <Share2 className="w-3.5 h-3.5" />
-                REFERRAL_PROGRAM
+                Referral program
               </h2>
               <span className="font-mono-share text-tiny text-green-400/60">
                 {referralStats.conversionRate}% conversion rate
@@ -3075,7 +3069,7 @@ export default function Admin() {
               )}
               {referralStats.recentSignups && referralStats.recentSignups.length > 0 && (
                 <div>
-                  <h3 className="font-mono-share text-tiny text-green-400/60 tracking-wider mb-1.5 mt-2">RECENT_REFERRED_SIGNUPS</h3>
+                  <h3 className="font-mono-share text-tiny text-green-400/60 tracking-wider mb-1.5 mt-2">Recent referred signups</h3>
                   <div className="overflow-x-auto overscroll-x-contain">
                     <table className="w-full min-w-[560px]">
                       <thead><tr className="border-b border-green-500/20">
@@ -3090,9 +3084,9 @@ export default function Admin() {
                             <td className="px-2.5 py-2 font-mono-share text-xs text-foreground/60">{r.referrer_email}</td>
                             <td className="px-2.5 py-2 font-mono-share text-xs text-green-400/70">{new Date(r.created_at).toLocaleDateString()}</td>
                             <td className="px-2.5 py-2 font-mono-share text-tiny">
-                              {r.referee_purchased ? <span className="text-secondary">PURCHASED</span>
-                                : r.referee_verified ? <span className="text-green-400">VERIFIED</span>
-                                : <span className="text-foreground/40">UNVERIFIED</span>}
+                              {r.referee_purchased ? <span className="text-secondary">Purchased</span>
+                                : r.referee_verified ? <span className="text-green-400">Verified</span>
+                                : <span className="text-foreground/40">Unverified</span>}
                             </td>
                             <td className="px-2.5 py-2 font-mono-share text-xs text-secondary font-bold">{r.spend_cents > 0 ? `$${(r.spend_cents / 100).toFixed(2)}` : "—"}</td>
                           </tr>
@@ -3133,11 +3127,11 @@ export default function Admin() {
                 }}
                 className="bg-card/60 border border-border/30 rounded px-2 py-1.5 font-mono-share text-xs text-foreground focus:outline-none focus:border-primary/50"
               >
-                <option value="">ALL TYPES</option>
-                <option value="verification">VERIFICATION</option>
-                <option value="password_reset">PASSWORD RESET</option>
-                <option value="daily_credits">DAILY CREDITS</option>
-                <option value="webhook">WEBHOOK</option>
+                <option value="">All types</option>
+                <option value="verification">Verification</option>
+                <option value="password_reset">Password reset</option>
+                <option value="daily_credits">Daily credits</option>
+                <option value="webhook">Webhook</option>
               </select>
               <select
                 value={emailFilter.status || ""}
@@ -3148,12 +3142,12 @@ export default function Admin() {
                 }}
                 className="bg-card/60 border border-border/30 rounded px-2 py-1.5 font-mono-share text-xs text-foreground focus:outline-none focus:border-primary/50"
               >
-                <option value="">ALL STATUS</option>
-                <option value="sent">SENT</option>
-                <option value="failed">FAILED</option>
-                <option value="delivered">DELIVERED</option>
-                <option value="bounced">BOUNCED</option>
-                <option value="complained">COMPLAINED</option>
+                <option value="">All status</option>
+                <option value="sent">Sent</option>
+                <option value="failed">Failed</option>
+                <option value="delivered">Delivered</option>
+                <option value="bounced">Bounced</option>
+                <option value="complained">Complained</option>
               </select>
               <Button
                 variant="outline"
@@ -3180,7 +3174,7 @@ export default function Admin() {
                 className="font-mono-share text-xs gap-1.5 border-destructive/30 hover:bg-destructive/10 text-destructive"
               >
                 <Ban className="w-3 h-3" />
-                DELETE_FAILED
+                Delete failed
               </Button>
             </div>
 
@@ -3237,7 +3231,7 @@ export default function Admin() {
                               className="font-mono-share text-tiny text-destructive/70 hover:text-destructive hover:underline"
                               title="Delete this failed log row"
                             >
-                              DEL
+                              Del
                             </button>
                           ) : null}
                         </td>
@@ -3263,7 +3257,7 @@ export default function Admin() {
               <div className="text-center py-12 space-y-3">
                 <p className="font-mono-share text-xs text-destructive">{apiAnalyticsError}</p>
                 <Button variant="outline" size="sm" onClick={fetchApiAnalytics} className="font-mono-share text-xs gap-1.5">
-                  <RefreshCw className="w-3.5 h-3.5" /> RETRY
+                  <RefreshCw className="w-3.5 h-3.5" /> Retry
                 </Button>
               </div>
             )}
@@ -3307,15 +3301,15 @@ export default function Admin() {
                   <section className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm p-3 sm:p-4">
                     <div className="flex items-center gap-2 mb-3">
                       <Activity className="w-3.5 h-3.5 text-primary" />
-                      <span className="font-orbitron text-tiny tracking-wider text-muted-foreground">USAGE_BY_ACTION (30D)</span>
+                      <span className="font-orbitron text-tiny tracking-wider text-muted-foreground">Usage by action (30D)</span>
                     </div>
                     <div className="overflow-x-auto">
                       <table className="w-full text-left">
                         <thead>
                           <tr className="border-b border-border/20">
-                            <th className="px-2.5 py-1.5 font-orbitron text-tiny tracking-wider text-muted-foreground/70">ACTION</th>
-                            <th className="px-2.5 py-1.5 font-orbitron text-tiny tracking-wider text-muted-foreground/70 text-right">REQUESTS</th>
-                            <th className="px-2.5 py-1.5 font-orbitron text-tiny tracking-wider text-muted-foreground/70 text-right">CREDITS</th>
+                            <th className="px-2.5 py-1.5 font-orbitron text-tiny tracking-wider text-muted-foreground/70">Action</th>
+                            <th className="px-2.5 py-1.5 font-orbitron text-tiny tracking-wider text-muted-foreground/70 text-right">Requests</th>
+                            <th className="px-2.5 py-1.5 font-orbitron text-tiny tracking-wider text-muted-foreground/70 text-right">Credits</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -3337,7 +3331,7 @@ export default function Admin() {
                   <div className="flex items-center justify-between gap-2 mb-3">
                     <div className="flex items-center gap-2">
                       <Crown className="w-3.5 h-3.5 text-secondary" />
-                      <span className="font-orbitron text-tiny tracking-wider text-muted-foreground">TOP_API_CONSUMERS</span>
+                      <span className="font-orbitron text-tiny tracking-wider text-muted-foreground">Top API consumers</span>
                     </div>
                     <Button variant="outline" size="sm" onClick={fetchApiAnalytics} disabled={apiAnalyticsLoading}
                       className="font-mono-share text-xs gap-1.5">
@@ -3349,12 +3343,12 @@ export default function Admin() {
                     <table className="w-full text-left">
                       <thead>
                         <tr className="border-b border-border/20">
-                          <th className="px-2.5 py-1.5 font-orbitron text-tiny tracking-wider text-muted-foreground/70">USER</th>
-                          <th className="px-2.5 py-1.5 font-orbitron text-tiny tracking-wider text-muted-foreground/70">KEY</th>
+                          <th className="px-2.5 py-1.5 font-orbitron text-tiny tracking-wider text-muted-foreground/70">User</th>
+                          <th className="px-2.5 py-1.5 font-orbitron text-tiny tracking-wider text-muted-foreground/70">Key</th>
                           <th className="px-2.5 py-1.5 font-orbitron text-tiny tracking-wider text-muted-foreground/70 text-right">{winLabel} REQ</th>
                           <th className="px-2.5 py-1.5 font-orbitron text-tiny tracking-wider text-muted-foreground/70 text-right">{winLabel} CREDITS</th>
-                          <th className="px-2.5 py-1.5 font-orbitron text-tiny tracking-wider text-muted-foreground/70 text-right">LIFETIME</th>
-                          <th className="px-2.5 py-1.5 font-orbitron text-tiny tracking-wider text-muted-foreground/70 text-right">LAST USED</th>
+                          <th className="px-2.5 py-1.5 font-orbitron text-tiny tracking-wider text-muted-foreground/70 text-right">Lifetime</th>
+                          <th className="px-2.5 py-1.5 font-orbitron text-tiny tracking-wider text-muted-foreground/70 text-right">Last used</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -3405,7 +3399,7 @@ export default function Admin() {
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-2">
                 <Crown className="w-3.5 h-3.5 text-secondary" />
-                <span className="font-orbitron text-tiny tracking-wider text-muted-foreground">SUBSCRIPTION_SYNC</span>
+                <span className="font-orbitron text-tiny tracking-wider text-muted-foreground">Subscription sync</span>
                 <span className="font-mono-share text-tiny text-muted-foreground/60">
                   Pull cancellation status from Stripe for all active subscribers
                 </span>

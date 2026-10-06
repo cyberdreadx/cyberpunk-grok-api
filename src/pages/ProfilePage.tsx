@@ -1,3 +1,4 @@
+import { isStudio } from "@/lib/edition";
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { apiFetch } from "@/lib/api";
@@ -262,7 +263,7 @@ const ProfilePage: React.FC = () => {
     return (
       <CyberLayout>
         <div className="flex items-center justify-center min-h-[50vh]">
-          <div className="font-mono-share text-muted-foreground">LOADING PROFILE...</div>
+          <div className="font-mono-share text-muted-foreground">Loading profile…</div>
         </div>
       </CyberLayout>
     );
@@ -272,7 +273,7 @@ const ProfilePage: React.FC = () => {
     return (
       <CyberLayout>
         <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
-          <p className="font-mono-share text-muted-foreground">USER NOT FOUND</p>
+          <p className="font-mono-share text-muted-foreground">User not found</p>
           <Button variant="outline" onClick={() => navigate("/feed")}>
             <ArrowLeft className="w-4 h-4 mr-2" /> Back to Feed
           </Button>
@@ -282,12 +283,8 @@ const ProfilePage: React.FC = () => {
   }
 
   return (
-    <CyberLayout>
-      <div className="max-w-2xl mx-auto px-4 py-6 space-y-6 pb-24">
-        {/* Back button */}
-        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors font-mono-share text-xs">
-          <ArrowLeft className="w-3 h-3" /> BACK
-        </button>
+    <CyberLayout title={profile.isOwn ? undefined : `@${profile.username}`}>
+      <div className="max-w-2xl mx-auto px-4 pt-4 space-y-6 pb-24">
 
         {/* Profile header */}
         <div className="bg-card/60 border border-border/40 rounded-lg p-6 space-y-4">
@@ -327,7 +324,7 @@ const ProfilePage: React.FC = () => {
               {editing ? (
                 <div className="space-y-3">
                   <div>
-                    <label className="font-mono-share text-tiny text-muted-foreground">USERNAME</label>
+                    <label className="font-mono-share text-tiny text-muted-foreground">Username</label>
                     <Input
                       value={editUsername}
                       onChange={(e) => setEditUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))}
@@ -336,7 +333,7 @@ const ProfilePage: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="font-mono-share text-tiny text-muted-foreground">BIO</label>
+                    <label className="font-mono-share text-tiny text-muted-foreground">Bio</label>
                     <Textarea
                       value={editBio}
                       onChange={(e) => setEditBio(e.target.value)}
@@ -369,7 +366,7 @@ const ProfilePage: React.FC = () => {
                   </div>
                   <div>
                     <label className="font-mono-share text-tiny text-muted-foreground flex items-center gap-1">
-                      <LinkIcon className="w-3 h-3" /> SOCIAL LINKS
+                      <LinkIcon className="w-3 h-3" /> Social links
                     </label>
                     <div className="space-y-1.5 mt-1">
                       {SOCIAL_KEYS.map((k) => (
@@ -388,10 +385,10 @@ const ProfilePage: React.FC = () => {
                   </div>
                   <div className="flex gap-2">
                     <Button size="sm" onClick={handleSave} disabled={saving} className="font-mono-share text-tiny">
-                      <Check className="w-3 h-3 mr-1" /> {saving ? "SAVING..." : "SAVE"}
+                      <Check className="w-3 h-3 mr-1" /> {saving ? "Saving…" : "Save"}
                     </Button>
                     <Button size="sm" variant="ghost" onClick={() => setEditing(false)} className="font-mono-share text-tiny">
-                      <X className="w-3 h-3 mr-1" /> CANCEL
+                      <X className="w-3 h-3 mr-1" /> Cancel
                     </Button>
                   </div>
                 </div>
@@ -416,7 +413,7 @@ const ProfilePage: React.FC = () => {
                     )}
                     {profile.isBanned && (
                       <span className="px-1.5 py-0.5 bg-destructive/20 text-destructive font-mono-share text-tiny rounded tracking-wider" title={profile.banReason || undefined}>
-                        BANNED
+                        Banned
                       </span>
                     )}
                     {profile.isOwn && (
@@ -446,15 +443,15 @@ const ProfilePage: React.FC = () => {
                     <div className="flex items-center gap-1 mt-1.5">
                       <Wallet className="w-3 h-3 text-primary/50" />
                       <span className="font-mono-share text-tiny text-primary/60">{profile.walletTruncated}</span>
-                      <span className="font-mono-share text-micro text-muted-foreground/60">BASE</span>
+                      <span className="font-mono-share text-micro text-muted-foreground/60">Base</span>
                     </div>
                   )}
-                  {profile.isOwn && !profile.verified && (
+                  {profile.isOwn && !profile.verified && !isStudio && (
                     <button
                       onClick={() => setVerifyOpen(true)}
                       className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-primary/40 bg-primary/10 hover:bg-primary/20 hover:border-primary/70 transition-colors font-mono-share text-tiny text-primary tracking-widest shadow-glow-live"
                     >
-                      <BadgeCheck className="w-3 h-3" /> GET VERIFIED
+                      <BadgeCheck className="w-3 h-3" /> Get verified
                     </button>
                   )}
                 </>
@@ -472,9 +469,9 @@ const ProfilePage: React.FC = () => {
                   className="font-mono-share text-tiny"
                 >
                   {profile.isFollowing ? (
-                    <><UserMinus className="w-3 h-3 mr-1" /> UNFOLLOW</>
+                    <><UserMinus className="w-3 h-3 mr-1" /> Unfollow</>
                   ) : (
-                    <><UserPlus className="w-3 h-3 mr-1" /> FOLLOW</>
+                    <><UserPlus className="w-3 h-3 mr-1" /> Follow</>
                   )}
                 </Button>
                 {user && (
@@ -485,7 +482,7 @@ const ProfilePage: React.FC = () => {
                     onClick={() => startDm()}
                     disabled={dmLoading}
                   >
-                    <Mail className="w-3 h-3 mr-1" /> {dmLoading ? "…" : "MESSAGE"}
+                    <Mail className="w-3 h-3 mr-1" /> {dmLoading ? "…" : "Message"}
                   </Button>
                 )}
                 {profile.personaChatCharacterId && (
@@ -495,7 +492,7 @@ const ProfilePage: React.FC = () => {
                     className="font-mono-share text-tiny"
                     onClick={() => navigate(`/characters?chat=${encodeURIComponent(profile.personaChatCharacterId!)}`)}
                   >
-                    <MessageSquare className="w-3 h-3 mr-1" /> AI CHAT
+                    <MessageSquare className="w-3 h-3 mr-1" /> AI chat
                   </Button>
                 )}
                 {(user?.is_admin || user?.is_feed_mod) && (
@@ -529,7 +526,7 @@ const ProfilePage: React.FC = () => {
                       }
                     }}
                   >
-                    <Ban className="w-3 h-3 mr-1" /> BAN
+                    <Ban className="w-3 h-3 mr-1" /> Ban
                   </Button>
                 )}
               </div>
@@ -539,9 +536,9 @@ const ProfilePage: React.FC = () => {
           {/* Stats */}
           <div className="flex gap-6 pt-2 border-t border-border/30">
             {[
-              { label: "POSTS", value: profile.postCount },
-              { label: "FOLLOWERS", value: profile.followers },
-              { label: "FOLLOWING", value: profile.following },
+              { label: "Posts", value: profile.postCount },
+              { label: "Followers", value: profile.followers },
+              { label: "Following", value: profile.following },
             ].map((s) => (
               <div key={s.label} className="text-center">
                 <div className="font-orbitron text-sm text-foreground">{s.value}</div>
@@ -552,9 +549,11 @@ const ProfilePage: React.FC = () => {
         </div>
 
         {/* Earnings (own profile only) */}
-        {profile.isOwn && <EarningsPanel />}
+        {/* Creator money and AI personas are Runner features; Studio has no
+            posting, payouts or personas. */}
+        {profile.isOwn && !isStudio && <EarningsPanel />}
 
-        {profile.isOwn && <CreatorPersonaChatPanel />}
+        {profile.isOwn && !isStudio && <CreatorPersonaChatPanel />}
 
         {/* Admin: replace this creator's persona character photo */}
         {!profile.isOwn && user?.is_admin && profile.officialCharacterId && (
@@ -563,7 +562,7 @@ const ProfilePage: React.FC = () => {
               {profile.avatarUrl && <img src={profile.avatarUrl} alt="persona" className="w-full h-full object-cover" />}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="font-orbitron text-xs text-foreground tracking-wider">PERSONA PHOTO</div>
+              <div className="font-orbitron text-xs text-foreground tracking-wider">Persona photo</div>
               <div className="font-mono-share text-tiny text-muted-foreground">Admin: replace this creator's chat character photo</div>
             </div>
             <input
@@ -581,7 +580,7 @@ const ProfilePage: React.FC = () => {
               className="font-mono-share text-tiny gap-1.5 h-8 shrink-0"
             >
               {personaPhotoUploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Camera className="w-3 h-3" />}
-              {personaPhotoUploading ? "UPLOADING…" : "CHANGE PHOTO"}
+              {personaPhotoUploading ? "UPLOADING…" : "Change photo"}
             </Button>
           </div>
         )}
@@ -595,7 +594,7 @@ const ProfilePage: React.FC = () => {
 
         {/* Gallery */}
         <div>
-          <h2 className="font-orbitron text-xs text-muted-foreground mb-3 tracking-widest">POSTS</h2>
+          <h2 className="font-orbitron text-xs text-muted-foreground mb-3 tracking-widest">Posts</h2>
           {posts.length === 0 ? (
             <p className="text-center font-mono-share text-xs text-muted-foreground py-8">No posts yet</p>
           ) : (

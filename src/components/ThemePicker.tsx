@@ -67,7 +67,7 @@ const ThemePicker: React.FC = () => {
                     <div className="font-orbitron text-tiny tracking-wider truncate">{theme.name}</div>
                     <div className="font-mono-share text-micro text-muted-foreground/70 truncate">{theme.label}</div>
                   </div>
-                  {isActive && <span className="ml-auto font-mono-share text-tiny text-primary/60 shrink-0">ACTIVE</span>}
+                  {isActive && <span className="ml-auto font-mono-share text-tiny text-primary/60 shrink-0">Active</span>}
                 </button>
               );
             })}

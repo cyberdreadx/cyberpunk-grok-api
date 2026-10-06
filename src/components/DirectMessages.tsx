@@ -9,7 +9,7 @@
  *   - the unread badge costs nothing extra — it rides on /api/pulse
  */
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { ArrowLeft, Send, MessageSquare, Ban, RefreshCw } from "lucide-react";
 import { apiFetch, hasAuthToken } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
@@ -60,7 +60,6 @@ function renderWithLinks(text: string): React.ReactNode {
 }
 
 const DirectMessages: React.FC = () => {
-  const navigate = useNavigate();
   const { user } = useAuth();
   const authed = !!user && hasAuthToken();
   const [params, setParams] = useSearchParams();
@@ -266,19 +265,23 @@ const DirectMessages: React.FC = () => {
   return (
     <div className="min-h-[100dvh] flex flex-col bg-background pb-24">
       {/* Header */}
-      <div className="sticky top-0 z-30 bg-background/90 backdrop-blur-md border-b border-border/30 px-3 py-2"
-           style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 8px)" }}>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => (activeId ? closeThread() : navigate("/"))}
-            className="p-1.5 rounded text-muted-foreground hover:text-primary transition-colors"
-            aria-label={activeId ? "Back to conversations" : "Back"}
-          >
-            <ArrowLeft className="w-4 h-4" />
-          </button>
-          <span className="font-orbitron text-xs tracking-widest text-primary flex-1 truncate">
-            {active ? `@${active.otherUsername}` : "MESSAGES"}
+      {/* Same shape as the app bar (AppTopBar): 52px, title left. Messages is
+          a bottom-nav tab, so back only appears inside a conversation. */}
+      <div className="sticky top-0 z-30 bg-background/95 border-b border-border/40 px-2"
+           style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
+        <div className="flex items-center gap-1.5 h-[52px]">
+          {activeId && (
+            <button
+              type="button"
+              onClick={closeThread}
+              className="w-9 h-9 flex items-center justify-center rounded-lg text-foreground/80 hover:bg-muted/40 transition-colors"
+              aria-label="Back to conversations"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+          )}
+          <span className={`font-display font-semibold text-[17px] text-foreground flex-1 truncate ${activeId ? "" : "ps-2"}`}>
+            {active ? `@${active.otherUsername}` : "Messages"}
           </span>
           {active ? (
             <button type="button" onClick={blockUser}

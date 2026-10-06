@@ -73,7 +73,7 @@ const NotificationEmailPrefs: React.FC = () => {
     <section className="space-y-2 pt-4 border-t border-border/30">
       <label className="font-orbitron text-tiny tracking-wider text-muted-foreground flex items-center gap-1.5">
         <Mail className="w-3 h-3" />
-        EMAIL NOTIFICATIONS
+        Email notifications
       </label>
 
       <button

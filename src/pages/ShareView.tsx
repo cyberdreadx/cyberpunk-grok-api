@@ -85,7 +85,7 @@ export default function ShareView() {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 px-4">
         <div className="font-orbitron text-xl tracking-wider text-destructive">
-          LINK_NOT_FOUND
+          Link not found
         </div>
         <p className="font-mono-share text-sm text-muted-foreground text-center">
           {error || "This share link is invalid."}
@@ -93,7 +93,7 @@ export default function ShareView() {
         <Link to="/">
           <Button variant="outline" className="font-orbitron text-xs tracking-wider gap-2">
             <Sparkles className="w-3.5 h-3.5" />
-            CREATE YOUR OWN
+            Create your own
           </Button>
         </Link>
       </div>
@@ -128,7 +128,7 @@ export default function ShareView() {
             <Link to={homeUrl}>
               <Button size="sm" className="font-orbitron text-tiny tracking-wider gap-1.5">
                 <Sparkles className="w-3 h-3" />
-                TRY IT FREE
+                Try it free
               </Button>
             </Link>
           </div>
@@ -162,7 +162,7 @@ export default function ShareView() {
           <div className="mt-4 p-4 rounded-lg border border-border/30 bg-card/50">
             <div className="flex items-center justify-between mb-2">
               <div className="font-orbitron text-tiny text-muted-foreground/60 tracking-wider">
-                PROMPT
+                Prompt
               </div>
               <Link to={tryPromptUrl}>
                 <Button
@@ -171,7 +171,7 @@ export default function ShareView() {
                   className="font-orbitron text-micro tracking-wider gap-1 border-secondary/40 text-secondary hover:bg-secondary/10"
                 >
                   <Wand2 className="w-3 h-3" />
-                  TRY THIS PROMPT
+                  Try this prompt
                 </Button>
               </Link>
             </div>
@@ -218,7 +218,7 @@ export default function ShareView() {
               <a href={data.r2Url} target="_blank" rel="noopener noreferrer">
                 <Button variant="outline" className="font-orbitron text-xs tracking-wider gap-1.5">
                   <ExternalLink className="w-3 h-3" />
-                  FULL SIZE
+                  Full size
                 </Button>
               </a>
             </div>
@@ -227,7 +227,7 @@ export default function ShareView() {
 
         {/* Re-share bar */}
         <div className="mt-4 flex items-center justify-center gap-3">
-          <span className="font-mono-share text-tiny text-muted-foreground/60">SHARE</span>
+          <span className="font-mono-share text-tiny text-muted-foreground/60">Share</span>
           <button
             onClick={handleShareTwitter}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/10 bg-black/30 hover:bg-black/50 transition-colors"

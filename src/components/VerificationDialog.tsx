@@ -87,7 +87,7 @@ const VerificationDialog: React.FC<Props> = ({ open, onOpenChange }) => {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 font-orbitron">
             <BadgeCheck className="w-5 h-5 text-primary" />
-            CREATOR VERIFICATION
+            Creator verification
           </DialogTitle>
           <DialogDescription className="font-mono-share text-xs">
             Required to set prices on posts/stories and request payouts. Pay the one-time fee + active monthly subscription, then complete a hosted ID check.
@@ -101,7 +101,7 @@ const VerificationDialog: React.FC<Props> = ({ open, onOpenChange }) => {
         ) : status?.isVerified ? (
           <div className="space-y-3 py-2">
             <div className="flex items-center gap-2 text-primary font-orbitron text-sm">
-              <BadgeCheck className="w-5 h-5" /> VERIFIED
+              <BadgeCheck className="w-5 h-5" /> Verified
             </div>
             <p className="font-mono-share text-xs text-muted-foreground">
               You're a verified creator. Monetization and payouts are enabled.
@@ -115,7 +115,7 @@ const VerificationDialog: React.FC<Props> = ({ open, onOpenChange }) => {
         ) : status?.status === "lapsed" ? (
           <div className="space-y-3 py-2">
             <div className="flex items-center gap-2 text-destructive font-orbitron text-sm">
-              <AlertCircle className="w-5 h-5" /> LAPSED
+              <AlertCircle className="w-5 h-5" /> Lapsed
             </div>
             <p className="font-mono-share text-xs text-muted-foreground">
               Your verification subscription lapsed. Restart to re-enable monetization &amp; payouts.

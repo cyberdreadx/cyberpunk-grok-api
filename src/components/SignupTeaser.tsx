@@ -67,7 +67,7 @@ const SignupTeaser: React.FC<Props> = ({ variant = "desktop" }) => {
           <div className="flex items-center gap-1.5 justify-center sm:justify-start">
             <Sparkles className="w-3.5 h-3.5 text-primary" />
             <h3 className="font-orbitron text-xs tracking-widest text-primary">
-              UNLOCK THE FEED
+              Unlock the feed
             </h3>
           </div>
           <p className="font-mono-share text-xs sm:text-xs text-foreground/90 leading-relaxed">
@@ -80,7 +80,7 @@ const SignupTeaser: React.FC<Props> = ({ variant = "desktop" }) => {
               onClick={() => navigate("/create?signup=1")}
               className="font-mono-share text-tiny tracking-wider"
             >
-              <Zap className="w-3 h-3 mr-1" /> SIGN UP FREE
+              <Zap className="w-3 h-3 mr-1" /> Sign up free
             </Button>
             <button
               onClick={() => navigate("/create?signin=1")}

@@ -260,7 +260,7 @@ const EarningsPanel: React.FC = () => {
         <div className="bg-background/50 rounded-md p-3 border border-border/30">
           <div className="flex items-center gap-1.5 mb-1">
             <Coins className="w-3 h-3 text-primary" />
-            <span className="font-mono-share text-tiny text-muted-foreground">CREDITS EARNED</span>
+            <span className="font-mono-share text-tiny text-muted-foreground">Credits earned</span>
           </div>
           <div className="font-orbitron text-lg text-foreground">{s.creatorShareCredits}</div>
           <div className="font-mono-share text-tiny text-muted-foreground">{s.postUnlocks + s.storyUnlocks} unlocks</div>
@@ -270,7 +270,7 @@ const EarningsPanel: React.FC = () => {
         <div className="bg-background/50 rounded-md p-3 border border-border/30">
           <div className="flex items-center gap-1.5 mb-1">
             <Wallet className="w-3 h-3 text-green-400" />
-            <span className="font-mono-share text-tiny text-muted-foreground">CASH BALANCE</span>
+            <span className="font-mono-share text-tiny text-muted-foreground">Cash balance</span>
           </div>
           <div className="font-orbitron text-lg text-green-400">{fmtCents(s.cashBalanceCents)}</div>
           <div className="font-mono-share text-tiny text-muted-foreground">available to withdraw</div>
@@ -279,7 +279,7 @@ const EarningsPanel: React.FC = () => {
         <div className="bg-background/50 rounded-md p-3 border border-border/30">
           <div className="flex items-center gap-1.5 mb-1">
             <Heart className="w-3 h-3 text-pink-400" />
-            <span className="font-mono-share text-tiny text-muted-foreground">CHARITY DONATED</span>
+            <span className="font-mono-share text-tiny text-muted-foreground">Charity donated</span>
           </div>
           <div className="font-orbitron text-sm text-pink-400">
             {s.charityCredits > 0 && `${s.charityCredits} cr`}
@@ -293,7 +293,7 @@ const EarningsPanel: React.FC = () => {
         <div className="bg-background/50 rounded-md p-3 border border-border/30">
           <div className="flex items-center gap-1.5 mb-1">
             <DollarSign className="w-3 h-3 text-primary" />
-            <span className="font-mono-share text-tiny text-muted-foreground">TOTAL EARNED</span>
+            <span className="font-mono-share text-tiny text-muted-foreground">Total earned</span>
           </div>
           <div className="font-mono-share text-tiny text-foreground space-y-0.5">
             <div>{fmtCents(s.creatorShareCents)} cash</div>
@@ -307,7 +307,7 @@ const EarningsPanel: React.FC = () => {
         <div className="bg-background/50 rounded-md p-3 border border-border/30">
           <div className="flex items-center gap-1.5 mb-1">
             <Zap className="w-3 h-3 text-secondary" />
-            <span className="font-mono-share text-tiny text-muted-foreground tracking-widest">XRGE EARNINGS</span>
+            <span className="font-mono-share text-tiny text-muted-foreground tracking-widest">XRGE earnings</span>
           </div>
           <div className="flex items-baseline gap-2">
             <span className="font-orbitron text-lg text-secondary">{s.creatorShareXrge.toFixed(2)}</span>
@@ -324,7 +324,7 @@ const EarningsPanel: React.FC = () => {
         <div className="bg-background/50 rounded-md p-3 border border-border/30">
           <div className="flex items-center gap-1.5 mb-1">
             <DollarSign className="w-3 h-3 text-green-400" />
-            <span className="font-mono-share text-tiny text-muted-foreground tracking-widest">CHAT EARNINGS</span>
+            <span className="font-mono-share text-tiny text-muted-foreground tracking-widest">Chat earnings</span>
           </div>
           <div className="flex items-baseline gap-2">
             <span className="font-orbitron text-lg text-green-400">{fmtCents(s.chatEarningsCents)}</span>
@@ -344,7 +344,7 @@ const EarningsPanel: React.FC = () => {
           variant="outline"
         >
           <ArrowDownToLine className="w-3.5 h-3.5 mr-2" />
-          REQUEST WITHDRAWAL
+          Request withdrawal
         </Button>
       )}
       {s.cashBalanceCents >= 100 && !hasPending && !isVerified && (
@@ -362,10 +362,10 @@ const EarningsPanel: React.FC = () => {
       {/* Withdraw form */}
       {showWithdraw && (
         <div className="bg-background/50 border border-border/30 rounded-md p-3 space-y-3">
-          <h3 className="font-mono-share text-tiny text-muted-foreground tracking-widest">WITHDRAW FUNDS</h3>
+          <h3 className="font-mono-share text-tiny text-muted-foreground tracking-widest">Withdraw funds</h3>
 
           <div>
-            <label className="font-mono-share text-tiny text-muted-foreground">PAYOUT METHOD</label>
+            <label className="font-mono-share text-tiny text-muted-foreground">Payout method</label>
             <div className="flex flex-wrap gap-2 mt-1">
               {(["xrge", "stripe", "paypal", "bank", "crypto"] as const).map((m) => (
                 <button
@@ -415,7 +415,7 @@ const EarningsPanel: React.FC = () => {
           ) : (
             <>
               <div>
-                <label className="font-mono-share text-tiny text-muted-foreground">AMOUNT (USD)</label>
+                <label className="font-mono-share text-tiny text-muted-foreground">Amount (USD)</label>
                 <Input
                   type="number"
                   min={0.01}
@@ -449,7 +449,7 @@ const EarningsPanel: React.FC = () => {
                   {submitting ? "PROCESSING..." : withdrawMethod === "xrge" ? "⚡ INSTANT PAYOUT" : withdrawMethod === "stripe" ? "⚡ SEND TO BANK" : "SUBMIT REQUEST"}
                 </Button>
                 <Button size="sm" variant="ghost" onClick={() => setShowWithdraw(false)} className="font-mono-share text-tiny">
-                  CANCEL
+                  Cancel
                 </Button>
               </div>
             </>
@@ -460,7 +460,7 @@ const EarningsPanel: React.FC = () => {
       {/* Payout history */}
       {payoutData && payoutData.requests.length > 0 && (
         <div>
-          <h3 className="font-mono-share text-tiny text-muted-foreground mb-2 tracking-widest">PAYOUT HISTORY</h3>
+          <h3 className="font-mono-share text-tiny text-muted-foreground mb-2 tracking-widest">Payout history</h3>
           <div className="space-y-1.5 max-h-32 overflow-y-auto">
             {payoutData.requests.map((r) => (
               <div key={r.id} className="flex items-center justify-between text-tiny font-mono-share py-1 px-2 bg-background/30 rounded">
@@ -481,7 +481,7 @@ const EarningsPanel: React.FC = () => {
       {/* Recent sales */}
       {data.recent.length > 0 && (
         <div>
-          <h3 className="font-mono-share text-tiny text-muted-foreground mb-2 tracking-widest">RECENT SALES</h3>
+          <h3 className="font-mono-share text-tiny text-muted-foreground mb-2 tracking-widest">Recent sales</h3>
           <div className="space-y-1.5 max-h-48 overflow-y-auto">
             {data.recent.map((tx, i) => {
               const chatLabel =

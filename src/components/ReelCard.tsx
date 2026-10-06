@@ -272,12 +272,12 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate, active = true, moun
           <div className="bg-black/70 rounded-full p-3 border border-amber-400/50">
             <EyeOff className="w-6 h-6 text-amber-300" />
           </div>
-          <span className="font-orbitron text-xs tracking-widest text-amber-300">MATURE CONTENT</span>
+          <span className="font-orbitron text-xs tracking-widest text-amber-300">Mature content</span>
           <button
             onClick={() => setMatureRevealed(true)}
             className="font-mono-share text-xs px-4 py-1.5 rounded-md border border-amber-400/50 text-amber-300 bg-black/40 hover:bg-amber-400/10 transition-colors"
           >
-            REVEAL
+            Reveal
           </button>
         </div>
       )}
@@ -307,7 +307,7 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate, active = true, moun
           title="Locked for other viewers — they see a blurred preview and must unlock."
         >
           <Lock className="w-3 h-3" />
-          <span>LOCKED ·</span>
+          <span>Locked ·</span>
           {(post.lockCost || 0) > 0 && <span>{post.lockCost}c</span>}
           {(post.lockPriceCents || 0) > 0 && <span>${((post.lockPriceCents || 0) / 100).toFixed(2)}</span>}
           {!!(post.lockXrgeAmount && parseFloat(post.lockXrgeAmount) > 0) && <span>{post.lockXrgeAmount} XRGE</span>}
@@ -324,7 +324,7 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate, active = true, moun
           title="Locked content — unlock to view"
         >
           <Lock className="w-3 h-3" />
-          <span>LOCKED ·</span>
+          <span>Locked ·</span>
           {(post.lockCost || 0) > 0 && <span>{post.lockCost}c</span>}
           {(post.lockPriceCents || 0) > 0 && <span>${((post.lockPriceCents || 0) / 100).toFixed(2)}</span>}
           {!!(post.lockXrgeAmount && parseFloat(post.lockXrgeAmount) > 0) && <span>{post.lockXrgeAmount} XRGE</span>}
@@ -335,7 +335,7 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate, active = true, moun
       {isLocked ? (
         <div className="relative z-10 flex flex-col items-center gap-4 px-8">
           <Lock className="w-12 h-12 text-amber-400/70" />
-          <p className="font-orbitron text-sm text-white/80 tracking-wider text-center">LOCKED CONTENT</p>
+          <p className="font-orbitron text-sm text-white/80 tracking-wider text-center">Locked content</p>
           {post.previewText && (
             <p className="font-mono-share text-xs text-white/50 text-center max-w-xs italic">{post.previewText}</p>
           )}
@@ -528,9 +528,9 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate, active = true, moun
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-center justify-between px-4 pt-3 pb-1 sticky top-0 bg-card/95 backdrop-blur-md z-10">
-            <span className="font-orbitron text-xs text-foreground tracking-wider">COMMENTS</span>
+            <span className="font-orbitron text-xs text-foreground tracking-wider">Comments</span>
             <button onClick={() => setShowComments(false)} className="font-mono-share text-tiny text-muted-foreground">
-              CLOSE
+              Close
             </button>
           </div>
           <CommentThread postId={post.id} onCountChange={(count) => setCommentCount(count)} />

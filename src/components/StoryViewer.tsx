@@ -440,11 +440,11 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
                 <div className="bg-black/70 rounded-full p-3 border border-amber-400/50">
                   <EyeOff className="w-7 h-7 text-amber-300" />
                 </div>
-                <span className="font-orbitron text-xs tracking-widest text-amber-300">MATURE CONTENT</span>
+                <span className="font-orbitron text-xs tracking-widest text-amber-300">Mature content</span>
                 <button
                   onClick={(e) => { e.stopPropagation(); setMatureRevealed(p => ({ ...p, [currentStory.id]: true })); }}
                   className="font-mono-share text-xs px-4 py-1.5 rounded-md border border-amber-400/50 text-amber-300 bg-black/40 hover:bg-amber-400/10"
-                >REVEAL</button>
+                >Reveal</button>
               </div>
             )}
           </div>
@@ -458,11 +458,11 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
                 <div className="bg-black/70 rounded-full p-3 border border-amber-400/50">
                   <EyeOff className="w-7 h-7 text-amber-300" />
                 </div>
-                <span className="font-orbitron text-xs tracking-widest text-amber-300">MATURE CONTENT</span>
+                <span className="font-orbitron text-xs tracking-widest text-amber-300">Mature content</span>
                 <button
                   onClick={(e) => { e.stopPropagation(); setMatureRevealed(p => ({ ...p, [currentStory.id]: true })); }}
                   className="font-mono-share text-xs px-4 py-1.5 rounded-md border border-amber-400/50 text-amber-300 bg-black/40 hover:bg-amber-400/10"
-                >REVEAL</button>
+                >Reveal</button>
               </div>
             )}
           </div>
@@ -534,7 +534,7 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
             </div>
             <button onClick={() => { setShowViewers(false); setPaused(false); }}
               className="font-mono-share text-tiny text-muted-foreground hover:text-foreground px-2 py-1">
-              CLOSE
+              Close
             </button>
           </div>
           {loadingViewers ? (

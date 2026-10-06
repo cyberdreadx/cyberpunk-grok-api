@@ -40,7 +40,7 @@ const LegalPage: React.FC<Props> = ({ type }) => {
             to="/"
             className="flex items-center gap-1.5 font-mono-share text-tiny tracking-widest text-muted-foreground hover:text-primary transition-colors"
           >
-            <ArrowLeft className="w-3.5 h-3.5" /> BACK
+            <ArrowLeft className="w-3.5 h-3.5" /> Back
           </Link>
           <span className="text-border/60">/</span>
           <h1

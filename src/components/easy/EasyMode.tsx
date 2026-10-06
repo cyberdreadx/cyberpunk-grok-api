@@ -477,7 +477,7 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
         onClick={newChat}
         className="flex items-center gap-2 px-3 py-2 rounded-lg border border-primary/30 text-primary hover:bg-primary/10 font-mono text-xs tracking-wider transition-colors"
       >
-        <MessageSquarePlus className="w-3.5 h-3.5" /> NEW CHAT
+        <MessageSquarePlus className="w-3.5 h-3.5" /> New chat
       </button>
       {store.threads.length === 0 && (
         <p className="px-3 py-4 font-mono text-xs text-muted-foreground/60">No chats yet.</p>
@@ -693,7 +693,7 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
           {optionsOpen && (
             <div className="border border-border/50 rounded-xl p-3 space-y-3 bg-muted/30">
               <div className="space-y-1.5">
-                <div className="font-mono text-tiny tracking-widest text-muted-foreground">SHAPE</div>
+                <div className="font-mono text-tiny tracking-widest text-muted-foreground">Shape</div>
                 <div className="flex gap-1.5 flex-wrap">
                   {ASPECTS.map((a) => (
                     <button
@@ -710,7 +710,7 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
                 </div>
               </div>
               <div className="space-y-1.5">
-                <div className="font-mono text-tiny tracking-widest text-muted-foreground">VIDEO LENGTH</div>
+                <div className="font-mono text-tiny tracking-widest text-muted-foreground">Video length</div>
                 <div className="flex gap-1.5 flex-wrap">
                   {LENGTHS.map((l) => (
                     <button
@@ -727,7 +727,7 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
                 </div>
               </div>
               <div className="space-y-1.5">
-                <div className="font-mono text-tiny tracking-widest text-muted-foreground">VIDEO QUALITY</div>
+                <div className="font-mono text-tiny tracking-widest text-muted-foreground">Video quality</div>
                 <div className="flex gap-1.5 flex-wrap">
                   {VIDEO_QUALITY.map((q) => {
                     // Computed from the chosen length so the two prices are

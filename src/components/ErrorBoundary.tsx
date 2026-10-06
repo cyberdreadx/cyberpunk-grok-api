@@ -75,7 +75,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
 
           {/* Error details */}
           <div className="border border-destructive/20 rounded bg-card/60 px-4 py-3 text-left">
-            <p className="font-mono-share text-tiny text-muted-foreground/60 mb-1 tracking-wider">ERROR_MSG</p>
+            <p className="font-mono-share text-tiny text-muted-foreground/60 mb-1 tracking-wider">Error msg</p>
             <p className="font-mono-share text-xs text-destructive/80 break-all leading-relaxed">
               {msg.length > 200 ? msg.slice(0, 200) + "…" : msg}
             </p>
@@ -89,13 +89,13 @@ export class ErrorBoundary extends React.Component<Props, State> {
               style={{ boxShadow: "0 0 12px hsl(var(--primary) / 0.15)" }}
             >
               <RefreshCw className="w-3.5 h-3.5" />
-              RELOAD
+              Reload
             </button>
             <button
               onClick={this.handleGoHome}
               className="flex items-center gap-2 px-5 py-2.5 rounded border border-border/50 hover:border-primary/30 hover:bg-primary/5 transition-all font-mono-share text-xs tracking-wider text-muted-foreground hover:text-primary"
             >
-              GO HOME
+              Go home
             </button>
           </div>
 

@@ -334,7 +334,7 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
             <DialogTitle className="font-orbitron text-sm tracking-wider flex items-center gap-2">
               <Wallet className="w-4 h-4 text-pink-400" />
               <span className="bg-gradient-to-r from-pink-400 to-violet-400 bg-clip-text text-transparent">
-                XRGE_BANK
+                XRGE bank
               </span>
             </DialogTitle>
           </DialogHeader>
@@ -473,7 +473,7 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                   {/* Recent transactions */}
                   {data.transactions.length > 0 && (
                     <div className="space-y-2">
-                      <p className="font-orbitron text-tiny tracking-wider text-muted-foreground/60">RECENT_TRANSACTIONS</p>
+                      <p className="font-orbitron text-tiny tracking-wider text-muted-foreground/60">Recent transactions</p>
                       <div className="space-y-1 max-h-48 overflow-y-auto scrollbar-cyber">
                         {data.transactions.map(tx => (
                           <div key={tx.id} className="flex items-center gap-2 px-3 py-2 rounded border border-border/20 bg-card/20">
@@ -522,7 +522,7 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                         <div className="flex items-center gap-2">
                           <Diamond className="w-4 h-4 text-violet-300" />
                           <span className="font-orbitron text-xs tracking-wider bg-gradient-to-r from-violet-300 to-pink-300 bg-clip-text text-transparent font-bold">
-                            HOLDER_PROTOCOL
+                            Holder protocol
                           </span>
                           {data.holder.tier !== "none" && (
                             <span className="ml-auto">
@@ -575,7 +575,7 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                         <div className="rounded-lg border border-pink-500/25 bg-pink-500/5 p-3 space-y-2">
                           <div className="flex items-center gap-2">
                             <Sparkles className="w-3.5 h-3.5 text-pink-300" />
-                            <span className="font-orbitron text-tiny tracking-wider text-pink-300">ACTIVE_PERKS</span>
+                            <span className="font-orbitron text-tiny tracking-wider text-pink-300">Active perks</span>
                             <span className="ml-auto font-mono-share text-tiny text-muted-foreground/70">
                               ×{data.holder.streakBonus.multiplier.toFixed(2)} streak multiplier
                             </span>
@@ -643,7 +643,7 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
 
                       {/* Tier ladder */}
                       <div className="space-y-1.5">
-                        <p className="font-orbitron text-tiny tracking-wider text-muted-foreground/60">TIER_LADDER</p>
+                        <p className="font-orbitron text-tiny tracking-wider text-muted-foreground/60">Tier ladder</p>
                         <div className="space-y-1">
                           {data.holder.allTiers
                             .filter(t => t.id !== "none")
@@ -671,7 +671,7 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                                     </p>
                                   </div>
                                   {isCurrent && (
-                                    <span className="font-orbitron text-micro tracking-wider text-pink-300">YOU</span>
+                                    <span className="font-orbitron text-micro tracking-wider text-pink-300">You</span>
                                   )}
                                 </div>
                               );
@@ -703,7 +703,7 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                       <div className="rounded-lg border border-cyan-500/20 bg-cyan-500/5 p-3 space-y-2">
                         <div className="flex items-center gap-2">
                           <Wallet className="w-3.5 h-3.5 text-cyan-300" />
-                          <span className="font-orbitron text-tiny tracking-wider text-cyan-300">WALLET_BINDING</span>
+                          <span className="font-orbitron text-tiny tracking-wider text-cyan-300">Wallet binding</span>
                         </div>
                         {data.holder.walletAddress ? (
                           <div className="space-y-2">
@@ -824,7 +824,7 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                 <div className="mt-4 space-y-4">
                   <div className="rounded-lg border border-pink-500/20 bg-pink-500/5 p-4 space-y-3">
                     <p className="font-orbitron text-tiny tracking-wider text-pink-300">
-                      DEPOSIT XRGE TO YOUR BANK
+                      Deposit XRGE to your bank
                     </p>
                     <p className="font-mono-share text-tiny text-muted-foreground/70 leading-relaxed">
                       Send XRGE tokens to the deposit address below on {XRGE_CHAIN_NAME}, then paste your transaction hash to verify.
@@ -894,7 +894,7 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                   {depositResult ? (
                     <div className="rounded-lg border border-green-500/30 bg-green-500/10 p-4 text-center space-y-2">
                       <Gift className="w-6 h-6 text-green-400 mx-auto" />
-                      <p className="font-orbitron text-xs text-green-400 tracking-wider">DEPOSIT CONFIRMED</p>
+                      <p className="font-orbitron text-xs text-green-400 tracking-wider">Deposit confirmed</p>
                       <p className="font-mono-share text-sm text-green-300 font-bold">
                         +{depositResult.deposited.toLocaleString(undefined, { maximumFractionDigits: 2 })} XRGE
                       </p>
@@ -907,7 +907,7 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                         onClick={() => setDepositResult(null)}
                         className="font-mono-share text-tiny mt-2"
                       >
-                        MAKE ANOTHER DEPOSIT
+                        Make another deposit
                       </Button>
                     </div>
                   ) : (
@@ -936,7 +936,7 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
               {tab === "buy" && (
                 <div className="mt-4 space-y-4">
                   <div className="flex items-center justify-between">
-                    <p className="font-orbitron text-tiny tracking-wider text-pink-300">BUY CREDITS FROM BANK</p>
+                    <p className="font-orbitron text-tiny tracking-wider text-pink-300">Buy credits from bank</p>
                     <span className="font-mono-share text-tiny text-muted-foreground/60">
                       Balance: {data.bankBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })} XRGE
                     </span>
@@ -969,7 +969,7 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                   {purchaseResult ? (
                     <div className="rounded-lg border border-green-500/30 bg-green-500/10 p-4 text-center space-y-2">
                       <Gift className="w-6 h-6 text-green-400 mx-auto" />
-                      <p className="font-orbitron text-xs text-green-400 tracking-wider">PURCHASE COMPLETE</p>
+                      <p className="font-orbitron text-xs text-green-400 tracking-wider">Purchase complete</p>
                       <p className="font-mono-share text-sm text-green-300 font-bold">
                         +{purchaseResult.totalCredits} credits
                       </p>
@@ -987,7 +987,7 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                         onClick={() => setPurchaseResult(null)}
                         className="font-mono-share text-tiny mt-2"
                       >
-                        BUY MORE
+                        Buy more
                       </Button>
                     </div>
                   ) : (
@@ -1030,7 +1030,7 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                 <div className="mt-4 space-y-4">
                   <div className="rounded-lg border border-orange-500/20 bg-orange-500/5 p-4 space-y-2">
                     <p className="font-orbitron text-tiny tracking-wider text-orange-300">
-                      WITHDRAW XRGE
+                      Withdraw XRGE
                     </p>
                     <p className="font-mono-share text-tiny text-muted-foreground/70 leading-relaxed">
                       Withdraw XRGE from your bank to any {XRGE_CHAIN_NAME} wallet. Minimum: 100 XRGE.
@@ -1044,7 +1044,7 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                   {/* Pending withdrawals */}
                   {data.pendingWithdrawals.length > 0 && (
                     <div className="space-y-2">
-                      <p className="font-orbitron text-tiny tracking-wider text-orange-300/60">PENDING</p>
+                      <p className="font-orbitron text-tiny tracking-wider text-orange-300/60">Pending</p>
                       {data.pendingWithdrawals.map(w => (
                         <div key={w.id} className="flex items-center gap-2 px-3 py-2 rounded border border-orange-500/20 bg-orange-500/5">
                           <Clock className="w-3 h-3 text-orange-400 animate-pulse" />
@@ -1065,7 +1065,7 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                   {withdrawResult ? (
                     <div className="rounded-lg border border-green-500/30 bg-green-500/10 p-4 text-center space-y-2">
                       <ArrowUpFromLine className="w-6 h-6 text-green-400 mx-auto" />
-                      <p className="font-orbitron text-xs text-green-400 tracking-wider">WITHDRAWAL QUEUED</p>
+                      <p className="font-orbitron text-xs text-green-400 tracking-wider">Withdrawal queued</p>
                       <p className="font-mono-share text-sm text-green-300 font-bold">
                         {withdrawResult.amount.toLocaleString()} XRGE
                       </p>

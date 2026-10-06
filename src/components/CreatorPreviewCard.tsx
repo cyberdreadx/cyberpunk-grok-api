@@ -35,7 +35,7 @@ export default function CreatorPreviewCard({ data, pendingBadge = false, classNa
         )}
         {pendingBadge && (
           <span className="absolute top-1 left-1 font-mono-share text-micro tracking-widest px-1.5 py-0.5 rounded bg-background/70 text-secondary border border-secondary/40">
-            VERIFIED SOON
+            Verified soon
           </span>
         )}
       </div>

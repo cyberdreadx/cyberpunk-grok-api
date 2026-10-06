@@ -24,7 +24,7 @@ const PwaInstallBanner: React.FC = () => {
 
             <div className="flex-1 min-w-0">
               <p className="font-orbitron text-tiny tracking-wider text-primary">
-                INSTALL APP
+                Install app
               </p>
               <p className="font-mono-share text-tiny text-muted-foreground/60 mt-0.5">
                 Add to home screen for the full experience — faster loads, offline access, no browser bar
@@ -46,7 +46,7 @@ const PwaInstallBanner: React.FC = () => {
                 className="flex-1 flex items-center justify-center gap-2 py-2 rounded bg-primary text-primary-foreground font-orbitron text-tiny tracking-wider hover:bg-primary/80 transition-colors"
               >
                 <Download className="w-3.5 h-3.5" />
-                INSTALL NOW
+                Install now
               </button>
             ) : isIos ? (
               <button
@@ -54,14 +54,14 @@ const PwaInstallBanner: React.FC = () => {
                 className="flex-1 flex items-center justify-center gap-2 py-2 rounded bg-primary text-primary-foreground font-orbitron text-tiny tracking-wider hover:bg-primary/80 transition-colors"
               >
                 <Download className="w-3.5 h-3.5" />
-                HOW TO INSTALL
+                How to install
               </button>
             ) : (
               <button
                 onClick={dismiss}
                 className="flex-1 flex items-center justify-center gap-2 py-2 rounded border border-primary/30 text-primary font-orbitron text-tiny tracking-wider hover:bg-primary/10 transition-colors"
               >
-                MAYBE LATER
+                Maybe later
               </button>
             )}
           </div>
@@ -89,7 +89,7 @@ const PwaInstallBanner: React.FC = () => {
 
             <div className="p-4 space-y-4">
               <p className="font-orbitron text-sm tracking-wider text-primary text-center">
-                ADD TO HOME SCREEN
+                Add to home screen
               </p>
 
               {/* Step 1 */}
@@ -138,7 +138,7 @@ const PwaInstallBanner: React.FC = () => {
                 onClick={() => { setShowIosGuide(false); dismiss(); }}
                 className="w-full py-2.5 rounded bg-primary/10 border border-primary/30 text-primary font-orbitron text-tiny tracking-wider hover:bg-primary/20 transition-colors"
               >
-                GOT IT
+                Got it
               </button>
             </div>
           </div>

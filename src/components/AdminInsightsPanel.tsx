@@ -196,7 +196,7 @@ export default function AdminInsightsPanel() {
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-primary" />
-            <h2 className="font-mono-share text-sm tracking-wider text-primary">AI_INSIGHTS</h2>
+            <h2 className="font-mono-share text-sm tracking-wider text-primary">AI insights</h2>
             {data?.generated_at && (
               <span className="font-mono-share text-tiny text-muted-foreground/70 flex items-center gap-1">
                 <Clock className="w-3 h-3" />
@@ -215,7 +215,7 @@ export default function AdminInsightsPanel() {
                 className="font-mono-share text-xs"
               >
                 <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${streaming ? "animate-spin" : ""}`} />
-                REGENERATE
+                Regenerate
               </Button>
             )}
             {!data?.summary_markdown && (
@@ -332,7 +332,7 @@ export default function AdminInsightsPanel() {
       {data?.topModes && data.topModes.length > 0 && (
         <div className="grid md:grid-cols-2 gap-3">
           <section className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm p-3">
-            <h3 className="font-mono-share text-xs tracking-wider text-muted-foreground mb-2">TOP MODES (30D)</h3>
+            <h3 className="font-mono-share text-xs tracking-wider text-muted-foreground mb-2">Top modes (30D)</h3>
             <div className="space-y-1">
               {data.topModes.map((m) => (
                 <div key={m.mode} className="flex items-center justify-between font-mono-share text-xs">
@@ -345,7 +345,7 @@ export default function AdminInsightsPanel() {
 
           {data.creator?.top && data.creator.top.length > 0 && (
             <section className="border border-border/30 rounded-lg bg-card/40 backdrop-blur-sm p-3">
-              <h3 className="font-mono-share text-xs tracking-wider text-muted-foreground mb-2">TOP CREATORS</h3>
+              <h3 className="font-mono-share text-xs tracking-wider text-muted-foreground mb-2">Top creators</h3>
               <div className="space-y-1">
                 {data.creator.top.map((c, i) => (
                   <div key={i} className="flex items-center justify-between font-mono-share text-xs">

@@ -124,7 +124,7 @@ export default function AdminAmbassadorPanel() {
   if (loading && !data) {
     return (
       <div className="flex items-center justify-center py-20 text-muted-foreground gap-2">
-        <Loader2 className="w-4 h-4 animate-spin" /> <span className="font-mono-share text-xs">LOADING…</span>
+        <Loader2 className="w-4 h-4 animate-spin" /> <span className="font-mono-share text-xs">Loading…</span>
       </div>
     );
   }
@@ -136,7 +136,7 @@ export default function AdminAmbassadorPanel() {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <h2 className="font-orbitron text-sm tracking-widest flex items-center gap-2">
-          <Award className="w-4 h-4 text-primary" /> AMBASSADOR_PROGRAM
+          <Award className="w-4 h-4 text-primary" /> Ambassador program
         </h2>
         <div className="flex gap-2">
           <Button size="sm" variant="outline" className="h-8 text-tiny gap-1"
@@ -146,7 +146,7 @@ export default function AdminAmbassadorPanel() {
             RELEASE_NOW
           </Button>
           <Button size="sm" variant="outline" className="h-8 text-tiny gap-1" onClick={load}>
-            <RefreshCw className="w-3 h-3" /> REFRESH
+            <RefreshCw className="w-3 h-3" /> Refresh
           </Button>
         </div>
       </div>
@@ -177,7 +177,7 @@ export default function AdminAmbassadorPanel() {
       {/* ── Applications ─────────────────────────────────────────────── */}
       <div className="holo-card p-3 sm:p-4 space-y-3">
         <div className="flex items-center justify-between gap-2 flex-wrap">
-          <h3 className="font-mono-share text-xs tracking-widest text-muted-foreground">APPLICATIONS</h3>
+          <h3 className="font-mono-share text-xs tracking-widest text-muted-foreground">Applications</h3>
           <div className="flex gap-1">
             {(["pending", "approved", "rejected"] as const).map((s) => (
               <button key={s} onClick={() => setAppStatus(s)}
@@ -284,7 +284,7 @@ export default function AdminAmbassadorPanel() {
                           action: "ambassador-review", id: a.id, decision: "reject",
                           notes: reviewNote[a.id] || undefined,
                         }, "Application rejected")}>
-                        <X className="w-3 h-3" /> REJECT
+                        <X className="w-3 h-3" /> Reject
                       </Button>
                     </div>
                   )}
@@ -297,24 +297,24 @@ export default function AdminAmbassadorPanel() {
 
       {/* ── Roster ───────────────────────────────────────────────────── */}
       <div className="holo-card p-3 sm:p-4 space-y-3">
-        <h3 className="font-mono-share text-xs tracking-widest text-muted-foreground">ROSTER</h3>
+        <h3 className="font-mono-share text-xs tracking-widest text-muted-foreground">Roster</h3>
         {roster.length === 0 ? (
-          <p className="text-xs text-muted-foreground/60 py-6 text-center font-mono-share">NO AMBASSADORS YET</p>
+          <p className="text-xs text-muted-foreground/60 py-6 text-center font-mono-share">No ambassadors yet</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-xs font-mono-share">
               <thead>
                 <tr className="text-muted-foreground/60 text-left border-b border-border/60">
-                  <th className="py-2 pr-3">CODE</th>
-                  <th className="py-2 pr-3">WHO</th>
-                  <th className="py-2 pr-3 text-right">RATE</th>
-                  <th className="py-2 pr-3 text-right">CLICKS</th>
-                  <th className="py-2 pr-3 text-right">SIGNUPS</th>
-                  <th className="py-2 pr-3 text-right">PAYING</th>
-                  <th className="py-2 pr-3 text-right">DRIVEN</th>
-                  <th className="py-2 pr-3 text-right">OWED</th>
-                  <th className="py-2 pr-3 text-right">BALANCE</th>
-                  <th className="py-2 pr-3">ACTIONS</th>
+                  <th className="py-2 pr-3">Code</th>
+                  <th className="py-2 pr-3">Who</th>
+                  <th className="py-2 pr-3 text-right">Rate</th>
+                  <th className="py-2 pr-3 text-right">Clicks</th>
+                  <th className="py-2 pr-3 text-right">Signups</th>
+                  <th className="py-2 pr-3 text-right">Paying</th>
+                  <th className="py-2 pr-3 text-right">Driven</th>
+                  <th className="py-2 pr-3 text-right">Owed</th>
+                  <th className="py-2 pr-3 text-right">Balance</th>
+                  <th className="py-2 pr-3">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -380,18 +380,18 @@ export default function AdminAmbassadorPanel() {
       {/* ── Recent commission ────────────────────────────────────────── */}
       {data.recentCommissions.length > 0 && (
         <div className="holo-card p-3 sm:p-4 space-y-3">
-          <h3 className="font-mono-share text-xs tracking-widest text-muted-foreground">RECENT_COMMISSION</h3>
+          <h3 className="font-mono-share text-xs tracking-widest text-muted-foreground">Recent commission</h3>
           <div className="overflow-x-auto">
             <table className="w-full text-xs font-mono-share">
               <thead>
                 <tr className="text-muted-foreground/60 text-left border-b border-border/60">
-                  <th className="py-2 pr-3">WHEN</th>
-                  <th className="py-2 pr-3">CODE</th>
-                  <th className="py-2 pr-3">KIND</th>
-                  <th className="py-2 pr-3 text-right">GROSS</th>
-                  <th className="py-2 pr-3 text-right">RATE</th>
-                  <th className="py-2 pr-3 text-right">COMMISSION</th>
-                  <th className="py-2 pr-3">STATUS</th>
+                  <th className="py-2 pr-3">When</th>
+                  <th className="py-2 pr-3">Code</th>
+                  <th className="py-2 pr-3">Kind</th>
+                  <th className="py-2 pr-3 text-right">Gross</th>
+                  <th className="py-2 pr-3 text-right">Rate</th>
+                  <th className="py-2 pr-3 text-right">Commission</th>
+                  <th className="py-2 pr-3">Status</th>
                 </tr>
               </thead>
               <tbody>

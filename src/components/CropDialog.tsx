@@ -56,7 +56,7 @@ export default function CropDialog({ open, imageUrl, aspect = 1, onClose, onCrop
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle className="font-orbitron tracking-widest text-sm">CROP PHOTO</DialogTitle>
+          <DialogTitle className="font-orbitron tracking-widest text-sm">Crop photo</DialogTitle>
         </DialogHeader>
         <div className="relative w-full h-[320px] bg-background/40 border border-border/40 rounded overflow-hidden">
           <Cropper
@@ -71,7 +71,7 @@ export default function CropDialog({ open, imageUrl, aspect = 1, onClose, onCrop
           />
         </div>
         <div className="flex items-center gap-2">
-          <span className="font-mono-share text-tiny text-muted-foreground w-10">ZOOM</span>
+          <span className="font-mono-share text-tiny text-muted-foreground w-10">Zoom</span>
           <input
             type="range"
             min={1}

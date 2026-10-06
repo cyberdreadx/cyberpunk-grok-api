@@ -284,7 +284,7 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
           <>
             <DialogHeader>
               <DialogTitle className="font-orbitron text-sm tracking-wider neon-text-cyan">
-                NEURAL_AUTH
+                Neural auth
               </DialogTitle>
               <DialogDescription asChild>
                 <div className="space-y-2 mt-1">
@@ -307,10 +307,10 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
             <Tabs value={tab} onValueChange={(v) => setTab(v as "signin" | "signup")} className="mt-2">
               <TabsList className="grid w-full grid-cols-2 bg-input">
                 <TabsTrigger value="signin" className="font-orbitron text-tiny tracking-wider">
-                  SIGN_IN
+                  Sign in
                 </TabsTrigger>
                 <TabsTrigger value="signup" className="font-orbitron text-tiny tracking-wider">
-                  REGISTER
+                  Register
                 </TabsTrigger>
               </TabsList>
 
@@ -632,7 +632,7 @@ function VerificationForm({
       <DialogHeader>
         <DialogTitle className="font-orbitron text-sm tracking-wider neon-text-cyan flex items-center gap-2">
           <ShieldCheck className="w-4 h-4" />
-          VERIFY_EMAIL
+          Verify email
         </DialogTitle>
         <DialogDescription className="font-rajdhani text-muted-foreground">
           Enter the 6-digit code sent to{" "}
@@ -695,7 +695,7 @@ function VerificationForm({
             className="font-mono-share text-xs gap-1.5 text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="w-3 h-3" />
-            BACK
+            Back
           </Button>
         )}
         {onResendCode && (
@@ -815,7 +815,7 @@ function ResetPasswordForm({
       <DialogHeader>
         <DialogTitle className="font-orbitron text-sm tracking-wider neon-text-magenta flex items-center gap-2">
           <KeyRound className="w-4 h-4" />
-          RESET_PASSWORD
+          Reset password
         </DialogTitle>
         <DialogDescription className="font-rajdhani text-muted-foreground">
           {step === "email"
@@ -915,7 +915,7 @@ function ResetPasswordForm({
           className="font-mono-share text-xs gap-1.5 text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="w-3 h-3" />
-          BACK_TO_LOGIN
+          Back to login
         </Button>
         {step === "code" && (
           <Button
@@ -925,7 +925,7 @@ function ResetPasswordForm({
             className="font-mono-share text-xs gap-1.5 text-muted-foreground hover:text-secondary"
           >
             <RefreshCw className="w-3 h-3" />
-            RESEND
+            Resend
           </Button>
         )}
       </div>
@@ -960,7 +960,7 @@ function DeleteAccountForm({ onDelete }: { onDelete: (password: string) => Promi
       <DialogHeader>
         <DialogTitle className="font-orbitron text-sm tracking-wider text-destructive flex items-center gap-2">
           <AlertTriangle className="w-4 h-4" />
-          DELETE_ACCOUNT
+          Delete account
         </DialogTitle>
         <DialogDescription className="font-rajdhani text-muted-foreground">
           This will permanently delete your account, all credits, and cancel any active subscription.
@@ -1047,7 +1047,7 @@ function TwoFactorForm({
     <div className="space-y-4">
       <DialogHeader>
         <DialogTitle className="font-orbitron text-sm tracking-wider neon-text-cyan flex items-center gap-2">
-          <ShieldCheck className="w-4 h-4" /> TWO_FACTOR_AUTH
+          <ShieldCheck className="w-4 h-4" /> Two factor auth
         </DialogTitle>
         <DialogDescription className="font-mono-share text-xs text-muted-foreground/80">
           We sent a 6-digit code to <span className="text-secondary">{email}</span>. It expires in 10 minutes.
@@ -1092,7 +1092,7 @@ function TwoFactorForm({
       <div className="flex gap-2">
         {onCancel && (
           <Button variant="ghost" onClick={onCancel} className="font-orbitron text-xs gap-1.5">
-            <ArrowLeft className="w-3 h-3" /> CANCEL
+            <ArrowLeft className="w-3 h-3" /> Cancel
           </Button>
         )}
         <Button
@@ -1143,7 +1143,7 @@ function KarmaChip() {
         <DialogHeader>
           <DialogTitle className="font-orbitron text-sm tracking-wider neon-text-cyan flex items-center gap-2">
             <Sparkles className="w-4 h-4" />
-            KARMA & POSTING
+            Karma & posting
           </DialogTitle>
           <DialogDescription className="font-rajdhani text-muted-foreground">
             Earn karma by engaging with the community to unlock posting — or buy credits to unlock instantly.

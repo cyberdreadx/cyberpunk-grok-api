@@ -104,7 +104,7 @@ export const CommunityPotDialog: React.FC<{ open: boolean; onClose: () => void }
         <div className="px-5 pt-5 pb-3 border-b border-border/60">
           <div className="flex items-center gap-2">
             <Heart className="w-4 h-4 text-fuchsia-400" />
-            <h2 className="font-orbitron text-sm tracking-[0.2em] text-primary">COMMUNITY POT</h2>
+            <h2 className="font-orbitron text-sm tracking-[0.2em] text-primary">Community pot</h2>
           </div>
           <p className="font-mono-share text-tiny text-muted-foreground/70 mt-1">
             Shared credits anyone verified can claim once per day. Donate to keep it alive.
@@ -174,7 +174,7 @@ export const CommunityPotDialog: React.FC<{ open: boolean; onClose: () => void }
               <div className="rounded-md border border-fuchsia-400/30 bg-fuchsia-500/5 p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="font-orbitron text-xs tracking-wider text-fuchsia-300">
-                    DONATE TO POT
+                    Donate to pot
                   </div>
                   <span className="font-mono-share text-tiny text-muted-foreground/70">
                     your balance: {totalUserCredits.toLocaleString()}
@@ -207,7 +207,7 @@ export const CommunityPotDialog: React.FC<{ open: boolean; onClose: () => void }
                     disabled={busy || !customAmount || totalUserCredits < parseInt(customAmount, 10)}
                     className="px-3 rounded bg-fuchsia-500/20 border border-fuchsia-400/50 text-fuchsia-200 font-orbitron text-xs hover:bg-fuchsia-500/30 disabled:opacity-30 disabled:cursor-not-allowed"
                   >
-                    GIVE
+                    Give
                   </button>
                 </div>
                 <p className="text-tiny text-muted-foreground/60">
@@ -220,7 +220,7 @@ export const CommunityPotDialog: React.FC<{ open: boolean; onClose: () => void }
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Trophy className="w-3.5 h-3.5 text-amber-400" />
-                    <span className="font-orbitron text-xs tracking-wider text-foreground">PATRONS</span>
+                    <span className="font-orbitron text-xs tracking-wider text-foreground">Patrons</span>
                   </div>
                   <div className="flex gap-1 text-tiny">
                     {(["today", "alltime"] as const).map((t) => (

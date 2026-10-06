@@ -28,14 +28,11 @@ export default function CreatorsDirectory() {
 
   return (
     <CyberLayout>
-      <main className="min-h-screen px-4 sm:px-8 pt-14 pb-8 max-w-6xl mx-auto">
-        <div className="flex items-end justify-between gap-3 mb-6">
-          <div>
-            <div className="font-mono-share text-tiny tracking-widest text-secondary">// FEATURED MODELS</div>
-            <h1 className="font-orbitron text-2xl sm:text-3xl">CREATORS</h1>
-          </div>
+      <main className="min-h-screen px-4 sm:px-8 pt-4 pb-24 max-w-6xl mx-auto">
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <p className="text-sm text-muted-foreground">Real people behind AI characters you can chat with.</p>
           <Link to="/apply">
-            <Button size="sm" className="font-orbitron tracking-wider">BECOME A CREATOR</Button>
+            <Button size="sm" className="rounded-full">Become a creator</Button>
           </Link>
         </div>
 
@@ -82,7 +79,7 @@ export default function CreatorsDirectory() {
                       variant="secondary"
                       className="w-full font-orbitron text-tiny tracking-wider h-8"
                     >
-                      AI CHAT
+                      AI chat
                     </Button>
                   </Link>
                 ) : null}

@@ -123,12 +123,12 @@ const XrgeUnlockDialog: React.FC<XrgeUnlockDialogProps> = ({
               <CheckCircle2 className="w-12 h-12 text-green-400" />
               <div className="absolute inset-0 w-12 h-12 rounded-full bg-green-400/20 animate-ping" />
             </div>
-            <p className="font-orbitron text-sm tracking-wider text-foreground">UNLOCKED!</p>
+            <p className="font-orbitron text-sm tracking-wider text-foreground">Unlocked!</p>
             <p className="font-mono-share text-xs text-muted-foreground text-center">
               Content unlocked. 80% sent to creator, 20% platform fee.
             </p>
             <Button onClick={handleClose} className="font-orbitron text-tiny tracking-wider bg-primary text-primary-foreground hover:bg-primary/80">
-              CLOSE
+              Close
             </Button>
           </div>
         ) : (
@@ -140,7 +140,7 @@ const XrgeUnlockDialog: React.FC<XrgeUnlockDialogProps> = ({
             {/* Amount */}
             <div>
               <label className="font-orbitron text-tiny tracking-widest text-muted-foreground block mb-1.5">
-                SEND_EXACTLY
+                Send exactly
               </label>
               <div className="flex items-center gap-2">
                 <div className="flex-1 border border-primary/40 rounded bg-card/60 px-3 py-2 font-mono-share text-sm text-primary font-bold select-all">
@@ -191,9 +191,9 @@ const XrgeUnlockDialog: React.FC<XrgeUnlockDialogProps> = ({
               className="w-full font-mono-share text-tiny gap-2 border border-pink-500/30 bg-pink-500/10 hover:bg-pink-500/20"
             >
               {copied === "all" ? (
-                <><CheckCircle2 className="w-4 h-4 text-green-400" /> COPIED</>
+                <><CheckCircle2 className="w-4 h-4 text-green-400" /> Copied</>
               ) : (
-                <><Copy className="w-4 h-4" /> COPY_ALL</>
+                <><Copy className="w-4 h-4" /> Copy all</>
               )}
             </Button>
 
@@ -209,7 +209,7 @@ const XrgeUnlockDialog: React.FC<XrgeUnlockDialogProps> = ({
             {/* Tx hash */}
             <div>
               <label className="font-orbitron text-tiny tracking-widest text-muted-foreground block mb-1.5">
-                TRANSACTION_HASH
+                Transaction hash
               </label>
               <Input
                 value={txHash}
@@ -233,7 +233,7 @@ const XrgeUnlockDialog: React.FC<XrgeUnlockDialogProps> = ({
               className="w-full font-orbitron text-tiny tracking-wider bg-secondary text-secondary-foreground hover:bg-secondary/80 gap-2"
             >
               {verifying ? (
-                <><Loader2 className="w-3 h-3 animate-spin" /> VERIFYING ON-CHAIN...</>
+                <><Loader2 className="w-3 h-3 animate-spin" /> Verifying on-chain…</>
               ) : (
                 "VERIFY & UNLOCK"
               )}

@@ -1,9 +1,7 @@
 import React from "react";
-import { Image, Pencil, Video, Film, Users, TerminalSquare } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Image, Pencil, Video, Film } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { GrokMode } from "@/hooks/useGrokApi";
-import { isStudio } from "@/lib/edition";
 
 interface ModeSelectorProps {
   activeMode: GrokMode;
@@ -28,171 +26,32 @@ const STUDIO_LABEL: Record<string, string> = {
 
 const ModeSelector: React.FC<ModeSelectorProps> = ({ activeMode, onModeChange, isAuthenticated }) => {
   const { t } = useTranslation();
-  /* Studio: four modes that always fit, no Characters or Terminal (Studio has
-     neither page). Runner keeps its scrolling strip and six-up grid. */
-  if (isStudio) {
-    return (
-      <div className="grid grid-cols-4 gap-2">
-        {modes.map((mode) => {
-          const isActive = activeMode === mode.id;
-          const Icon = mode.icon;
-          return (
-            <button
-              key={mode.id}
-              onClick={() => onModeChange(mode.id)}
-              aria-pressed={isActive}
-              className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 px-1 py-2.5 sm:py-3 rounded-lg border transition-colors ${isActive
-                ? "border-primary/50 bg-primary/10 text-primary"
-                : "border-border/60 bg-card/60 text-foreground/75 hover:border-primary/30"
-                }`}
-            >
-              <Icon className="w-4 h-4" />
-              <span className="font-display text-xs sm:text-sm font-semibold">{t(`studioModes.${mode.id}`, STUDIO_LABEL[mode.id])}</span>
-            </button>
-          );
-        })}
-      </div>
-    );
-  }
+  /* Four modes that always fit. Characters and Terminal used to ride along
+     here as fake "modes" (a scrolling strip on phones); they live in the More
+     menu now. */
   return (
-    <>
-      {/* Mobile: horizontal scroll pills */}
-      <div className="flex sm:hidden gap-2 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
-        {modes.map((mode) => {
-          const isActive = activeMode === mode.id;
-          const Icon = mode.icon;
-          return (
-            <button
-              key={mode.id}
-              onClick={() => onModeChange(mode.id)}
-              className={`
-                flex items-center gap-1.5 px-3 py-2 rounded border whitespace-nowrap transition-all duration-200 shrink-0
-                ${isActive
-                  ? "border-primary/50 bg-primary/10 shadow-glow-live"
-                  : "border-border/40 bg-card/50 active:bg-card"
-                }
-              `}
-            >
-              <Icon className={`w-3.5 h-3.5 ${isActive ? "text-primary" : "text-muted-foreground/60"}`} />
-              <span className={`font-orbitron text-tiny tracking-wider ${isActive ? "text-primary" : "text-foreground/70"}`}>
-                {t(mode.labelKey)}
-              </span>
-            </button>
-          );
-        })}
-        {isAuthenticated && (
-          <a
-            href="/characters"
-            className="flex items-center gap-1.5 px-3 py-2 rounded border whitespace-nowrap transition-all duration-200 shrink-0 border-secondary/30 bg-card/50 active:bg-secondary/10"
+    <div className="grid grid-cols-4 gap-2">
+      {modes.map((mode) => {
+        const isActive = activeMode === mode.id;
+        const Icon = mode.icon;
+        return (
+          <button
+            key={mode.id}
+            onClick={() => onModeChange(mode.id)}
+            aria-pressed={isActive}
+            className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 px-1 py-2.5 sm:py-3 rounded-lg border transition-colors ${isActive
+              ? "border-primary/50 bg-primary/10 text-primary"
+              : "border-border/60 bg-card/60 text-foreground/75 hover:border-primary/30"
+              }`}
           >
-            <Users className="w-3.5 h-3.5 text-secondary/70" />
-            <span className="font-orbitron text-tiny tracking-wider text-secondary/80">{t("modes.chars")}</span>
-          </a>
-        )}
-        <Link
-          to="/terminal"
-          className="flex items-center gap-1.5 px-3 py-2 rounded border whitespace-nowrap transition-all duration-200 shrink-0 border-primary/40 bg-black/60 active:bg-primary/10"
-          title="Hacker terminal mode"
-        >
-          <TerminalSquare className="w-3.5 h-3.5 text-primary" />
-          <span className="font-orbitron text-tiny tracking-wider text-primary">TERMINAL</span>
-        </Link>
-      </div>
-
-      {/* Desktop: terminal-style grid */}
-      <div className="hidden sm:grid grid-cols-3 lg:grid-cols-6 gap-2">
-        {modes.map((mode) => {
-          const isActive = activeMode === mode.id;
-          const Icon = mode.icon;
-          return (
-            <button
-              key={mode.id}
-              onClick={() => onModeChange(mode.id)}
-              className={`
-                relative group p-3 border rounded transition-all duration-300 text-left overflow-hidden
-                ${isActive
-                  ? "border-primary/50 bg-primary/5 shadow-glow-live"
-                  : "border-border/40 hover:border-primary/30 bg-card/30 hover:bg-card/60"
-                }
-              `}
-            >
-              {/* Top accent line */}
-              <div
-                className={`absolute top-0 left-0 right-0 h-[2px] transition-all duration-300 ${
-                  isActive ? "bg-primary shadow-glow-focus" : "bg-transparent group-hover:bg-primary/30"
-                }`}
-              />
-
-              {/* Index number */}
-              <span className={`absolute top-2 right-2 font-mono-share text-micro ${isActive ? "text-primary/40" : "text-muted-foreground/15"}`}>
-                {mode.shortcut}
-              </span>
-
-              <div className="flex items-center gap-2 mb-1.5">
-                <span className={`font-mono-share text-tiny ${isActive ? "text-primary/60" : "text-muted-foreground/60"}`}>
-                  {isActive ? "▸" : "$"}
-                </span>
-                <Icon
-                  className={`w-4 h-4 transition-colors ${
-                    isActive ? "text-primary" : "text-muted-foreground/70 group-hover:text-primary/60"
-                  }`}
-                />
-              </div>
-              <div
-                className={`font-orbitron text-tiny font-bold tracking-wider ${
-                  isActive ? "neon-text-cyan" : "text-foreground/80"
-                }`}
-              >
-                {t(mode.labelKey)}
-              </div>
-              <div className="font-mono-share text-tiny text-muted-foreground/60 mt-0.5">
-                {t(mode.descKey)}
-              </div>
-            </button>
-          );
-        })}
-
-        {isAuthenticated && (
-          <Link
-            to="/characters"
-            className="relative group p-3 border rounded transition-all duration-300 text-left overflow-hidden border-border/40 hover:border-secondary/30 bg-card/30 hover:bg-card/60"
-          >
-            <div className="absolute top-0 left-0 right-0 h-[2px] bg-transparent group-hover:bg-secondary/30 transition-all" />
-            <span className="absolute top-2 right-2 font-mono-share text-micro text-muted-foreground/15">05</span>
-            <div className="flex items-center gap-2 mb-1.5">
-              <span className="font-mono-share text-tiny text-muted-foreground/60">$</span>
-              <Users className="w-4 h-4 transition-colors text-muted-foreground/70 group-hover:text-secondary/70" />
-            </div>
-            <div className="font-orbitron text-tiny font-bold tracking-wider text-foreground/80 group-hover:text-secondary transition-colors">
-              {t("modes.characters")}
-            </div>
-            <div className="font-mono-share text-tiny text-muted-foreground/60 mt-0.5">
-              {t("modes.descCharacters")}
-            </div>
-          </Link>
-        )}
-
-        <Link
-          to="/terminal"
-          className="relative group p-3 border rounded transition-all duration-300 text-left overflow-hidden border-primary/40 bg-black/60 hover:border-primary hover:bg-black/80"
-          title="Hacker terminal — type commands"
-        >
-          <div className="absolute top-0 left-0 right-0 h-[2px] bg-primary/60 group-hover:bg-primary transition-all" />
-          <span className="absolute top-2 right-2 font-mono-share text-micro text-primary/40">06</span>
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="font-mono-share text-tiny text-primary/60">▸</span>
-            <TerminalSquare className="w-4 h-4 text-primary transition-colors" />
-          </div>
-          <div className="font-orbitron text-tiny font-bold tracking-wider neon-text-cyan">
-            TERMINAL
-          </div>
-          <div className="font-mono-share text-tiny text-primary/50 mt-0.5">
-            Hacker shell
-          </div>
-        </Link>
-      </div>
-    </>
+            <Icon className="w-4 h-4" />
+            <span className="font-display text-xs sm:text-sm font-semibold">{t(`studioModes.${mode.id}`, STUDIO_LABEL[mode.id])}</span>
+          </button>
+        );
+      })}
+    </div>
   );
+
 };
 
 export default ModeSelector;

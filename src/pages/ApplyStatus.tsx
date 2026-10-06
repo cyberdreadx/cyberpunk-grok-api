@@ -38,8 +38,8 @@ export default function ApplyStatus() {
   return (
     <CyberLayout>
       <main className="min-h-screen px-4 sm:px-8 py-10 max-w-2xl mx-auto">
-        <div className="font-mono-share text-tiny tracking-widest text-secondary mb-2">// CREATOR PROGRAM</div>
-        <h1 className="font-orbitron text-2xl sm:text-3xl mb-6">APPLICATION STATUS</h1>
+        <div className="font-mono-share text-tiny tracking-widest text-secondary mb-2">// Creator program</div>
+        <h1 className="font-orbitron text-2xl sm:text-3xl mb-6">Application status</h1>
 
         {authLoading || app === undefined ? (
           <div className="flex justify-center py-12"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>

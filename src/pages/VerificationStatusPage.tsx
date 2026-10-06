@@ -1,3 +1,4 @@
+import CyberLayout from "@/components/CyberLayout";
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiFetch } from "@/lib/api";
@@ -277,18 +278,10 @@ const VerificationStatusPage: React.FC = () => {
     s ? new Date(s).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) : null;
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="mx-auto max-w-2xl px-4 py-6 sm:py-10">
-        {/* Header */}
-        <div className="mb-6 flex items-center justify-between gap-3">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate("/profile")}
-            className="font-mono-share text-xs"
-          >
-            <ArrowLeft className="mr-1.5 h-3.5 w-3.5" /> BACK
-          </Button>
+    <CyberLayout>
+      <div className="mx-auto max-w-2xl px-4 pt-4 pb-24">
+        {/* Header — the title and back are in the app bar */}
+        <div className="mb-4 flex items-center justify-end gap-3">
           <Button
             variant="ghost"
             size="sm"
@@ -297,7 +290,7 @@ const VerificationStatusPage: React.FC = () => {
             className="font-mono-share text-xs"
           >
             <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
-            REFRESH
+            Refresh
           </Button>
         </div>
 
@@ -307,7 +300,7 @@ const VerificationStatusPage: React.FC = () => {
             <div className="min-w-0">
               <h1 className="font-orbitron text-lg sm:text-xl text-foreground flex items-center gap-2">
                 <BadgeCheck className="h-5 w-5 text-primary" />
-                CREATOR VERIFICATION
+                Creator verification
               </h1>
               <p className="font-mono-share text-xs text-muted-foreground mt-1">
                 Required to set prices on posts/stories and request payouts.
@@ -382,7 +375,7 @@ const VerificationStatusPage: React.FC = () => {
                   onClick={() => navigate("/profile")}
                   className="w-full font-mono-share text-xs"
                 >
-                  RETURN TO PROFILE
+                  Return to profile
                 </Button>
               ) : status.status === "lapsed" ? (
                 <Button
@@ -436,7 +429,7 @@ const VerificationStatusPage: React.FC = () => {
         {status && (status.sessionId || status.subscriptionId) && (
           <div className="mt-4 rounded-lg border border-border/60 bg-card/30 p-4">
             <div className="font-orbitron text-tiny uppercase tracking-widest text-muted-foreground mb-2">
-              REFERENCE
+              Reference
             </div>
             <dl className="space-y-1 font-mono-share text-xs text-muted-foreground">
               {status.subscriptionId && (
@@ -455,7 +448,7 @@ const VerificationStatusPage: React.FC = () => {
           </div>
         )}
       </div>
-    </div>
+    </CyberLayout>
   );
 };
 

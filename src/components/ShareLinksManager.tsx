@@ -89,7 +89,7 @@ export default function ShareLinksManager({
       <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-orbitron text-sm tracking-widest text-primary flex items-center gap-2">
-            <Link2 className="w-4 h-4" /> ACTIVE_SHARE_LINKS
+            <Link2 className="w-4 h-4" /> Active share links
           </DialogTitle>
         </DialogHeader>
 

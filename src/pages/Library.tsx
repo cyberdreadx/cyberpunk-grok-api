@@ -160,60 +160,23 @@ const Library: React.FC = () => {
 
   return (
     <CyberLayout ownBottomNav onOpenStore={() => setStoreOpen(true)}>
-      <div className="max-w-6xl mx-auto px-4 py-6 sm:pb-8 space-y-6" style={{ paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 0px))' }}>
-        {/* Header — collapses on scroll-down, snaps back on scroll-up */}
-        <div className="space-y-4">
-          {/* pl-12 clears the global menu button, which floats fixed at the top-left
-              of every page and sat on top of this back button on phones. From xl the
-              centred column already starts clear of it. */}
-          <div className="flex items-center justify-between pl-12 xl:pl-0">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => navigate("/")}
-                className="p-1.5 rounded border border-border/50 hover:border-primary/40 hover:bg-primary/5 transition-all text-muted-foreground/60 hover:text-primary"
-              >
-                <ArrowLeft className="w-4 h-4" />
-              </button>
-              <div>
-                <GlitchText
-                  text="MEDIA_LIBRARY"
-                  className="font-orbitron text-lg sm:text-xl tracking-widest text-primary"
-                  glitchIntensity="low"
-                />
-                <p className="font-mono-share text-tiny text-muted-foreground/70 mt-0.5">
-                  <span className="text-primary/30">$</span> ls -la ~/output/ — {t("library.assetsIndexed", { count: totalImages + totalVideos })}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Stats bar */}
-          <div className="flex items-center gap-4 flex-wrap">
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-border/40 bg-card/40">
-              <Image className="w-3.5 h-3.5 text-primary/60" />
-              <span className="font-mono-share text-xs text-foreground/70">{totalImages}</span>
-              <span className="font-mono-share text-tiny text-muted-foreground/60">{t("library.images").toUpperCase()}</span>
-            </div>
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-border/40 bg-card/40">
-              <Film className="w-3.5 h-3.5 text-secondary/60" />
-              <span className="font-mono-share text-xs text-foreground/70">{totalVideos}</span>
-              <span className="font-mono-share text-tiny text-muted-foreground/60">{t("library.videos").toUpperCase()}</span>
-            </div>
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-border/40 bg-card/40">
-              <span className="font-mono-share text-xs text-foreground/70">{totalFolders}</span>
-              <span className="font-mono-share text-tiny text-muted-foreground/60">{t("library.folders").toUpperCase()}</span>
-            </div>
-            {auth.isAuthenticated && (
-              <button
-                onClick={() => setShareLinksOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-border/40 bg-card/40 hover:border-primary/40 hover:bg-primary/5 transition-all"
-              >
-                <Link2 className="w-3.5 h-3.5 text-primary/60" />
-                <span className="font-mono-share text-tiny text-muted-foreground/60">SHARE_LINKS</span>
-              </button>
-            )}
-          </div>
-
+      <div className="max-w-6xl mx-auto px-4 pt-4 sm:pb-8 space-y-4" style={{ paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 0px))' }}>
+        {/* Summary row. The page title lives in the app bar now; this used to
+            repeat it with a back button and a "$ ls -la" line. */}
+        <div className="flex items-center gap-2 flex-wrap text-sm text-muted-foreground">
+          <span className="inline-flex items-center gap-1.5"><Image className="w-4 h-4 text-primary/70" /><b className="font-semibold text-foreground tabular-nums">{totalImages}</b> {t("library.images").toLowerCase()}</span>
+          <span aria-hidden className="text-border">·</span>
+          <span className="inline-flex items-center gap-1.5"><Film className="w-4 h-4 text-secondary/70" /><b className="font-semibold text-foreground tabular-nums">{totalVideos}</b> {t("library.videos").toLowerCase()}</span>
+          <span aria-hidden className="text-border">·</span>
+          <span className="inline-flex items-center gap-1.5"><b className="font-semibold text-foreground tabular-nums">{totalFolders}</b> {t("library.folders").toLowerCase()}</span>
+          {auth.isAuthenticated && (
+            <button
+              onClick={() => setShareLinksOpen(true)}
+              className="ms-auto inline-flex items-center gap-1.5 h-8 px-3 rounded-full border border-border/50 text-foreground/80 hover:border-primary/40 hover:text-primary transition-colors"
+            >
+              <Link2 className="w-4 h-4" /> Share links
+            </button>
+          )}
         </div>
 
         {/* Loading state */}

@@ -1,3 +1,4 @@
+import { isStudio } from "@/lib/edition";
 import React, { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { Copy, Check, Users, Gift, DollarSign, Share2, Link2, ArrowLeft, Trophy, Sparkles } from "lucide-react";
@@ -94,31 +95,19 @@ export default function ReferralPage() {
     { label: "Friend signs up", you: "—", friend: "—", icon: Users },
     { label: "Friend verifies + creates", you: "+15 credits", friend: "+15 credits", icon: Check },
     { label: "Friend makes 1st purchase", you: "+10 credits", friend: "+5 bonus", icon: Gift },
-    { label: "Friend subscribes (any plan)", you: "+1 FREE MONTH", friend: "—", icon: Trophy },
+    { label: "Friend subscribes (any plan)", you: "+1 free month", friend: "—", icon: Trophy },
   ];
 
   return (
     <CyberLayout>
-      <div className="min-h-screen px-4 py-6 max-w-lg mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="text-muted-foreground">
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <div>
-            <h1 className="text-xl font-bold font-[Orbitron] text-foreground tracking-wider flex items-center gap-2">
-              <Trophy className="w-5 h-5 text-primary" />
-              AFFILIATE PROGRAM
-            </h1>
-            <p className="text-xs text-muted-foreground">Invite friends, earn credits</p>
-          </div>
-        </div>
+      <div className="min-h-screen px-4 pt-4 pb-24 max-w-lg mx-auto space-y-5">
+        <p className="text-sm text-muted-foreground">Share your link. You both get credits when friends join and buy.</p>
 
         {!isAuthenticated ? (
           <Card className="p-6 text-center space-y-4 border-border bg-card">
             <Users className="w-12 h-12 mx-auto text-primary opacity-60" />
             <p className="text-muted-foreground text-sm">Sign in to access the referral program</p>
-            <Button onClick={() => navigate("/")} className="bg-primary text-primary-foreground font-semibold">
+            <Button onClick={() => navigate(isStudio ? "/?signin=1" : "/create?signin=1")} className="bg-primary text-primary-foreground font-semibold">
               Sign In
             </Button>
           </Card>
@@ -238,13 +227,13 @@ export default function ReferralPage() {
                       </div>
                       <div className="flex gap-1 shrink-0">
                         {r.subscribed ? (
-                          <Badgelet className="text-green-400 border-green-400/40">SUBSCRIBED</Badgelet>
+                          <Badgelet className="text-green-400 border-green-400/40">Subscribed</Badgelet>
                         ) : r.purchased ? (
-                          <Badgelet className="text-secondary border-secondary/40">PURCHASED</Badgelet>
+                          <Badgelet className="text-secondary border-secondary/40">Purchased</Badgelet>
                         ) : r.verified ? (
-                          <Badgelet className="text-primary border-primary/40">VERIFIED</Badgelet>
+                          <Badgelet className="text-primary border-primary/40">Verified</Badgelet>
                         ) : (
-                          <Badgelet className="text-muted-foreground border-border">SIGNED UP</Badgelet>
+                          <Badgelet className="text-muted-foreground border-border">Signed up</Badgelet>
                         )}
                       </div>
                     </div>

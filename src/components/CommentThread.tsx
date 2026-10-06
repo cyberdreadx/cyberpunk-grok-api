@@ -107,7 +107,7 @@ const CommentThread: React.FC<CommentThreadProps> = ({ postId, onCountChange }) 
               onClick={() => setReplyTo(comment.id)}
               className="font-mono-share text-micro text-muted-foreground hover:text-primary transition-colors flex items-center gap-1"
             >
-              <CornerDownRight className="w-2.5 h-2.5" /> REPLY
+              <CornerDownRight className="w-2.5 h-2.5" /> Reply
             </button>
             {user?.id === comment.userId && (
               <button

@@ -68,7 +68,7 @@ const PromptHistory: React.FC<PromptHistoryProps> = ({ history, onSelect, onRemo
             className="text-destructive hover:text-destructive/80 font-mono-share text-tiny h-8 px-2"
           >
             <Trash2 className="w-3 h-3 mr-1" />
-            PURGE
+            Purge
           </Button>
         </div>
 

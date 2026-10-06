@@ -189,10 +189,10 @@ export default function AdminPromo() {
       <header className="border-b border-border/30 bg-card/40 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-5 py-4 flex items-center gap-3 flex-wrap">
           <Link to="/admin" className="flex items-center gap-1.5 font-mono text-tiny tracking-widest text-muted-foreground hover:text-primary">
-            <ArrowLeft className="w-3.5 h-3.5" /> ADMIN
+            <ArrowLeft className="w-3.5 h-3.5" /> Admin
           </Link>
           <span className="text-border/60">/</span>
-          <h1 className="font-orbitron text-xs tracking-wider text-primary">PROMO_REVIEW</h1>
+          <h1 className="font-orbitron text-xs tracking-wider text-primary">Promo review</h1>
           <a
             href="/promo"
             target="_blank"
@@ -216,7 +216,7 @@ export default function AdminPromo() {
           <details className="rounded border border-border/40 bg-card/30" open={data?.slotsRemaining === 0}>
             <summary className="cursor-pointer select-none px-4 py-2.5 font-mono text-xs tracking-widest text-primary">
               PROMO_SETTINGS
-              {!draft.enabled && <span className="ml-2 text-destructive">· OFF</span>}
+              {!draft.enabled && <span className="ml-2 text-destructive">· Off</span>}
               {draft.requireCode && <span className="ml-2 text-amber-400">· code required</span>}
             </summary>
             <div className="px-4 pb-4 pt-1 space-y-3">
@@ -246,7 +246,7 @@ export default function AdminPromo() {
 
               <label className="block">
                 <span className="font-mono text-tiny tracking-widest text-muted-foreground">
-                  ACCEPTED LINK HOSTS
+                  Accepted link hosts
                 </span>
                 <input
                   value={draft.allowedHosts.join(", ")}
@@ -268,7 +268,7 @@ export default function AdminPromo() {
                     checked={draft.enabled}
                     onChange={(e) => setDraft({ ...draft, enabled: e.target.checked })}
                   />
-                  PROMO OPEN
+                  Promo open
                 </label>
                 <label className="flex items-center gap-2 font-mono text-tiny text-muted-foreground">
                   <input
@@ -276,7 +276,7 @@ export default function AdminPromo() {
                     checked={draft.requireCode}
                     onChange={(e) => setDraft({ ...draft, requireCode: e.target.checked })}
                   />
-                  REQUIRE INVITE CODE
+                  Require invite code
                   <span className="text-micro text-muted-foreground/70">
                     (off = self-serve, no codes to hand out)
                   </span>
@@ -311,7 +311,7 @@ export default function AdminPromo() {
         {data && (
           <section className="border border-border/40 rounded-lg p-4 space-y-3">
             <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="font-orbitron text-xs tracking-wider text-primary/80">INVITE_CODES</h2>
+              <h2 className="font-orbitron text-xs tracking-wider text-primary/80">Invite codes</h2>
               <span className="font-mono text-tiny text-muted-foreground">
                 {data.codes.filter((c) => !c.usedAt).length} unused of {data.codes.length}
               </span>
@@ -410,7 +410,7 @@ export default function AdminPromo() {
                 {c.meetsRenders ? "✓" : "✗"} {c.renderCount} renders
                 <span className="text-muted-foreground"> (need {data.config.minRenders})</span>
               </span>
-              {c.alreadyPaid && <span className="text-destructive">ALREADY PAID</span>}
+              {c.alreadyPaid && <span className="text-destructive">Already paid</span>}
               <span className="text-muted-foreground">
                 claimed {new Date(c.createdAt).toLocaleDateString()}
               </span>
@@ -435,7 +435,7 @@ export default function AdminPromo() {
                   disabled={busy === c.id}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-mono text-xs border border-destructive/40 text-destructive hover:bg-destructive/10 disabled:opacity-40 transition-colors"
                 >
-                  <X className="w-3 h-3" /> REJECT
+                  <X className="w-3 h-3" /> Reject
                 </button>
               </div>
             )}

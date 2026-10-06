@@ -95,14 +95,8 @@ export default function PromoPage() {
 
   const shell = (children: React.ReactNode) => (
     <CyberLayout>
-      <div className="min-h-[100dvh] px-4 py-8">
+      <div className="min-h-[100dvh] px-4 pt-4 pb-24">
         <div className="max-w-md mx-auto space-y-6">
-          <button
-            onClick={() => navigate(-1)}
-            className="flex items-center gap-1.5 font-mono text-tiny tracking-widest text-muted-foreground hover:text-primary transition-colors"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" /> BACK
-          </button>
           {children}
         </div>
       </div>
@@ -120,18 +114,18 @@ export default function PromoPage() {
   if (!isAuthenticated) {
     return shell(
       <div className="border border-primary/20 rounded-lg p-6 space-y-3">
-        <h1 className="font-orbitron text-base text-primary tracking-wider">FREE CREDITS</h1>
-        <p className="text-sm text-foreground/80 font-mono leading-relaxed">
+        <h1 className="font-orbitron text-base text-primary tracking-wider">Free credits</h1>
+        <p className="text-sm text-foreground/80 leading-relaxed">
           Sign in to claim. Credits land on your GLTCH account.
         </p>
-        <Button onClick={() => navigate("/")} className="font-mono text-xs">SIGN IN</Button>
+        <Button onClick={() => navigate("/create?signin=1")}>Sign in</Button>
       </div>,
     );
   }
 
   if (!state) {
     return shell(
-      <p className="text-sm text-muted-foreground font-mono">Couldn't load the promo. Try again shortly.</p>,
+      <p className="text-sm text-muted-foreground">Couldn't load the promo. Try again shortly.</p>,
     );
   }
 
@@ -141,8 +135,8 @@ export default function PromoPage() {
   return shell(
     <>
       <div className="space-y-2">
-        <h1 className="font-orbitron text-lg text-primary tracking-wider">FREE CREDITS</h1>
-        <div className="flex items-center gap-2 font-mono text-xs">
+        <h1 className="font-orbitron text-lg text-primary tracking-wider">Free credits</h1>
+        <div className="flex items-center gap-2 text-xs">
           <span className={state.slotsRemaining > 0 ? "text-primary" : "text-muted-foreground"}>
             {state.slotsRemaining} of {state.maxApproved} spots left
           </span>
@@ -150,7 +144,7 @@ export default function PromoPage() {
         </div>
       </div>
 
-      <p className="text-sm text-foreground/80 font-mono leading-relaxed">
+      <p className="text-sm text-foreground/80 leading-relaxed">
         Post one generation or prompt in{" "}
         <a
           href={SUB_URL}
@@ -172,23 +166,23 @@ export default function PromoPage() {
               : "border-primary/30 bg-primary/5"
             }`}
         >
-          <div className="flex items-center gap-2 font-mono text-xs">
+          <div className="flex items-center gap-2 text-xs">
             {claim.status === "approved" ? (
-              <><Check className="w-3.5 h-3.5 text-green-400" /><span className="text-green-400">APPROVED</span></>
+              <><Check className="w-3.5 h-3.5 text-green-400" /><span className="text-green-400">Approved</span></>
             ) : claim.status === "rejected" ? (
-              <><X className="w-3.5 h-3.5 text-destructive" /><span className="text-destructive">REJECTED</span></>
+              <><X className="w-3.5 h-3.5 text-destructive" /><span className="text-destructive">Rejected</span></>
             ) : (
-              <><Clock className="w-3.5 h-3.5 text-primary" /><span className="text-primary">PENDING REVIEW</span></>
+              <><Clock className="w-3.5 h-3.5 text-primary" /><span className="text-primary">Pending review</span></>
             )}
           </div>
-          <p className="text-xs text-muted-foreground font-mono break-all">{claim.postUrl}</p>
+          <p className="text-xs text-muted-foreground break-all">{claim.postUrl}</p>
           {claim.status === "approved" && (
-            <p className="text-xs text-foreground/80 font-mono">
+            <p className="text-xs text-foreground/80">
               {claim.creditsAwarded} credits added to your account.
             </p>
           )}
           {claim.status === "rejected" && (
-            <p className="text-xs text-foreground/80 font-mono">
+            <p className="text-xs text-foreground/80">
               {claim.rejectReason || "Not approved."} You can submit a different post.
             </p>
           )}
@@ -196,17 +190,17 @@ export default function PromoPage() {
       )}
 
       {!state.open && !claim && (
-        <p className="text-sm text-muted-foreground font-mono">
+        <p className="text-sm text-muted-foreground">
           All {state.maxApproved} spots are taken. Nothing left to claim.
         </p>
       )}
 
       {state.open && !state.eligible && (
         <div className="border border-border/40 rounded-lg p-4 space-y-2">
-          <p className="font-mono text-xs text-muted-foreground tracking-wider">NOT YET ELIGIBLE</p>
+          <p className=" text-xs text-muted-foreground tracking-wider">Not yet eligible</p>
           <ul className="space-y-1">
             {state.reasons.map((r) => (
-              <li key={r} className="text-xs text-foreground/70 font-mono">· {r}</li>
+              <li key={r} className="text-xs text-foreground/70">· {r}</li>
             ))}
           </ul>
         </div>
@@ -215,8 +209,8 @@ export default function PromoPage() {
       {showForm && (
         <form onSubmit={submit} className="space-y-3">
           <div className="space-y-1">
-            <label className="font-mono text-tiny tracking-widest text-muted-foreground">
-              ANTIREDDIT POST URL
+            <label className=" text-tiny tracking-widest text-muted-foreground">
+              Antireddit post URL
             </label>
             <input
               type="url"
@@ -224,29 +218,29 @@ export default function PromoPage() {
               value={postUrl}
               onChange={(e) => setPostUrl(e.target.value)}
               placeholder={`https://${state.allowedHosts[0] || "antireddit.com"}/...`}
-              className="w-full bg-muted/50 border border-primary/20 rounded-lg px-3 py-2 text-xs font-mono text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-primary/50"
+              className="w-full bg-muted/50 border border-primary/20 rounded-lg px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-primary/50"
             />
           </div>
 
           {state.requireCode && (
             <div className="space-y-1">
-              <label className="font-mono text-tiny tracking-widest text-muted-foreground">
-                INVITE CODE
+              <label className=" text-tiny tracking-widest text-muted-foreground">
+                Invite code
               </label>
               <input
                 required
                 value={code}
                 onChange={(e) => setCode(e.target.value.toUpperCase())}
                 placeholder="GLTCH-XXXX-XXXX"
-                className="w-full bg-muted/50 border border-primary/20 rounded-lg px-3 py-2 text-xs font-mono tracking-widest text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-primary/50"
+                className="w-full bg-muted/50 border border-primary/20 rounded-lg px-3 py-2 text-xs tracking-widest text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-primary/50"
               />
             </div>
           )}
 
-          <Button type="submit" disabled={submitting} className="w-full font-mono text-xs">
+          <Button type="submit" disabled={submitting} className="w-full text-xs">
             {submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : `REQUEST ${state.creditAmount} CREDITS`}
           </Button>
-          <p className="text-tiny text-muted-foreground/70 font-mono text-center">
+          <p className="text-tiny text-muted-foreground/70 text-center">
             Reviewed by hand. Nothing is paid automatically.
           </p>
         </form>

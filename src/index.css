@@ -162,6 +162,16 @@
     font-family: var(--font-ui-mono);
   }
 
+  /* Labels were written in ALL CAPS with wide tracking to look like a
+     terminal. They are sentence case now, where 0.1em+ tracking reads as
+     gaps between letters; keep a hint of it instead. */
+  .font-mono-share.tracking-widest,
+  .font-mono-share.tracking-wider,
+  .font-orbitron.tracking-widest,
+  .font-orbitron.tracking-wider {
+    letter-spacing: 0.02em;
+  }
+
   .font-rajdhani {
     font-family: var(--font-rajdhani);
   }

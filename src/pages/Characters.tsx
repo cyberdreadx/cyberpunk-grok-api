@@ -748,7 +748,7 @@ export default function Characters() {
   return (
     <>
     <CyberLayout ownBottomNav onOpenStore={() => setStoreOpen(true)}>
-      <div className="max-w-4xl mx-auto px-4 py-6 min-h-screen">
+      <div className="max-w-4xl mx-auto px-4 pt-4 pb-24 min-h-screen">
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
           {view !== "gallery" ? (
@@ -756,19 +756,17 @@ export default function Characters() {
               className="p-1.5 rounded bg-card/60 border border-border hover:border-secondary/50 transition-colors">
               <ArrowLeft className="w-4 h-4" />
             </button>
-          ) : (
-            <button onClick={() => navigate("/")}
-              className="p-1.5 rounded bg-card/60 border border-border hover:border-secondary/50 transition-colors">
-              <ArrowLeft className="w-4 h-4" />
-            </button>
+          ) : null}
+          {/* The list view's title is the app bar's; sub-views name what's open. */}
+          {view !== "gallery" && (
+            <h1 className="font-display font-semibold text-lg text-foreground truncate">
+              {view === "creator" ? (editingChar ? "Edit character" : "New character") : (activeChar?.name ?? "")}
+            </h1>
           )}
-          <h1 className="font-orbitron text-lg tracking-wider text-foreground">
-            {view === "gallery" ? "CHARACTERS" : view === "creator" ? (editingChar ? "EDIT CHARACTER" : "NEW CHARACTER") : (activeChar?.name ?? "").toUpperCase()}
-          </h1>
           {view === "gallery" && (
             <button onClick={() => openCreator()}
-              className="ml-auto flex items-center gap-1.5 px-3 py-1.5 bg-secondary/20 border border-secondary/40 rounded font-mono-share text-tiny text-secondary hover:bg-secondary/30 transition-colors">
-              <Plus className="w-3 h-3" /> NEW
+              className="ml-auto flex items-center gap-1.5 h-9 px-4 bg-secondary/20 border border-secondary/40 rounded-full text-sm font-semibold text-secondary hover:bg-secondary/30 transition-colors">
+              <Plus className="w-4 h-4" /> New character
             </button>
           )}
           {view === "chat" && (
@@ -778,11 +776,11 @@ export default function Characters() {
                   <span className="font-mono-share text-tiny text-red-400">Delete all messages?</span>
                   <button onClick={handleClearChat}
                     className="px-2 py-1 bg-red-500/20 border border-red-500/50 rounded font-mono-share text-tiny text-red-400 hover:bg-red-500/30 transition-colors">
-                    YES
+                    Yes
                   </button>
                   <button onClick={() => setConfirmClear(false)}
                     className="px-2 py-1 bg-card/60 border border-border rounded font-mono-share text-tiny text-muted-foreground hover:text-foreground transition-colors">
-                    NO
+                    No
                   </button>
                 </div>
               ) : (
@@ -864,11 +862,11 @@ export default function Characters() {
                           <>
                             <button onClick={(e) => { e.stopPropagation(); handleDelete(c.id); }}
                               className="px-2 py-1 bg-red-500/30 rounded border border-red-500/50 font-mono-share text-tiny text-red-400 hover:bg-red-500/40 transition-colors">
-                              DELETE
+                              Delete
                             </button>
                             <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(null); }}
                               className="px-2 py-1 bg-black/70 rounded border border-border font-mono-share text-tiny text-muted-foreground hover:text-foreground transition-colors">
-                              CANCEL
+                              Cancel
                             </button>
                           </>
                         ) : (
@@ -950,7 +948,7 @@ export default function Characters() {
                 <button onClick={() => portraitRef.current?.click()}
                   className="w-32 h-32 mx-auto rounded-full border-2 border-dashed border-border hover:border-secondary/40 flex flex-col items-center justify-center gap-1 transition-colors">
                   <Image className="w-6 h-6 text-muted-foreground/60" />
-                  <span className="font-mono-share text-micro text-muted-foreground/60">PORTRAIT</span>
+                  <span className="font-mono-share text-micro text-muted-foreground/60">Portrait</span>
                 </button>
               )}
               <input ref={portraitRef} type="file" accept="image/*,.heic,.heif,.hif,.mov,video/quicktime" onChange={handlePortrait} className="hidden" />
@@ -958,7 +956,7 @@ export default function Characters() {
 
             {/* Name */}
             <div>
-              <label className="font-mono-share text-tiny text-muted-foreground/70 mb-1 block">NAME</label>
+              <label className="font-mono-share text-tiny text-muted-foreground/70 mb-1 block">Name</label>
               <input type="text" value={name} onChange={e => setName(e.target.value)} maxLength={100}
                 placeholder="e.g. Luna, Kai, Sasha..."
                 className="w-full bg-card/60 border border-border rounded px-3 py-2 text-sm font-mono-share text-foreground placeholder-muted-foreground/40" />
@@ -966,7 +964,7 @@ export default function Characters() {
 
             {/* Personality */}
             <div>
-              <label className="font-mono-share text-tiny text-muted-foreground/70 mb-1 block">PERSONALITY</label>
+              <label className="font-mono-share text-tiny text-muted-foreground/70 mb-1 block">Personality</label>
               <textarea value={personality} onChange={e => setPersonality(e.target.value)} maxLength={2000} rows={4}
                 placeholder="Describe their personality, backstory, how they talk..."
                 className="w-full bg-card/60 border border-border rounded px-3 py-2 text-sm font-mono-share text-foreground placeholder-muted-foreground/40 resize-none" />
@@ -974,7 +972,7 @@ export default function Characters() {
 
             {/* Traits */}
             <div>
-              <label className="font-mono-share text-tiny text-muted-foreground/70 mb-1 block">TRAITS</label>
+              <label className="font-mono-share text-tiny text-muted-foreground/70 mb-1 block">Traits</label>
               <div className="flex flex-wrap gap-1.5">
                 {TRAIT_OPTIONS.map(t => (
                   <button key={t} onClick={() => toggleTrait(t)}
@@ -990,7 +988,7 @@ export default function Characters() {
 
             {/* AI Backend selector */}
             <div>
-              <label className="font-mono-share text-tiny text-muted-foreground/70 mb-1 block">AI BACKEND</label>
+              <label className="font-mono-share text-tiny text-muted-foreground/70 mb-1 block">AI backend</label>
               <div className="grid grid-cols-2 gap-2">
                 {[
                   { v: "deepseek", label: "DEEPSEEK", hint: "uncensored · richer roleplay" },
@@ -1022,7 +1020,7 @@ export default function Characters() {
                 className="mt-0.5 w-4 h-4 accent-cyan-400"
               />
               <div className="flex-1">
-                <div className="font-orbitron text-tiny tracking-wider text-foreground">ALLOW OTHERS TO CHAT</div>
+                <div className="font-orbitron text-tiny tracking-wider text-foreground">Allow others to chat</div>
                 <p className="font-mono-share text-tiny text-muted-foreground/70 mt-0.5">
                   Publish this character so other users can find them in the Public tab and start their own conversations. Their chat history stays on their own device — your character data (personality, portrait, traits) becomes visible.
                 </p>
@@ -1082,14 +1080,14 @@ export default function Characters() {
                             onClick={(e) => { e.stopPropagation(); handleDeleteMessage(i); }}
                             className="flex items-center gap-1 px-2 py-0.5 rounded text-tiny font-mono-share text-red-400 hover:bg-red-500/20 transition-colors"
                           >
-                            <Trash2 className="w-3 h-3" /> DEL
+                            <Trash2 className="w-3 h-3" /> Del
                           </button>
                           {msg.mediaUrl && (
                             <button
                               onClick={(e) => { e.stopPropagation(); handleSaveMedia(msg); }}
                               className="flex items-center gap-1 px-2 py-0.5 rounded text-tiny font-mono-share text-secondary hover:bg-secondary/20 transition-colors"
                             >
-                              <Download className="w-3 h-3" /> SAVE
+                              <Download className="w-3 h-3" /> Save
                             </button>
                           )}
                         </div>
@@ -1178,7 +1176,7 @@ export default function Characters() {
                   {editLora !== "none" && (
                     <div className="mt-1.5">
                       <label className="font-mono-share text-micro text-muted-foreground/60 flex items-center justify-between">
-                        <span>STRENGTH</span>
+                        <span>Strength</span>
                         <span>{editLoraStrength.toFixed(1)}</span>
                       </label>
                       <input type="range" min="0" max="2" step="0.1" value={editLoraStrength}

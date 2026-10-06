@@ -156,7 +156,7 @@ export default function AdminUserPanel({ userId }: { userId: string }) {
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <ShieldAlert className="w-3.5 h-3.5 text-primary" />
-          <span className="font-orbitron text-tiny tracking-widest text-primary">ADMIN_INSPECTOR</span>
+          <span className="font-orbitron text-tiny tracking-widest text-primary">Admin inspector</span>
         </div>
         <Button variant="outline" size="sm" onClick={load} disabled={loading} className="font-mono-share text-tiny gap-1.5 h-7">
           {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
@@ -170,11 +170,11 @@ export default function AdminUserPanel({ userId }: { userId: string }) {
         <>
           {/* Email + tier */}
           <div className="font-mono-share text-xs text-muted-foreground space-y-0.5">
-            <div>EMAIL: <span className="text-foreground">{data.user.email}</span></div>
+            <div>Email: <span className="text-foreground">{data.user.email}</span></div>
             <div>
               TIER: <span className="text-foreground">{data.user.subscription_tier || "free"}</span>
               {data.user.verification_status && (
-                <span className="ml-3">VERIFIED: <span className="text-foreground">{data.user.verification_status}</span></span>
+                <span className="ml-3">Verified: <span className="text-foreground">{data.user.verification_status}</span></span>
               )}
             </div>
             {data.ban && (
@@ -214,12 +214,12 @@ export default function AdminUserPanel({ userId }: { userId: string }) {
           {/* Spend */}
           <div className="font-mono-share text-xs text-muted-foreground border-t border-border/30 pt-2">
             LIFETIME: <span className="text-foreground">{fmtUsd(data.totalSpentCents)}</span>
-            <span className="ml-3">PURCHASES: <span className="text-foreground">{data.totalPurchases}</span></span>
+            <span className="ml-3">Purchases: <span className="text-foreground">{data.totalPurchases}</span></span>
           </div>
 
           {/* Grant credits */}
           <div className="border-t border-border/30 pt-3 space-y-2">
-            <div className="font-mono-share text-tiny text-muted-foreground tracking-wider">GRANT_CREDITS</div>
+            <div className="font-mono-share text-tiny text-muted-foreground tracking-wider">Grant credits</div>
             <div className="flex gap-2">
               <Input
                 type="number"
@@ -235,8 +235,8 @@ export default function AdminUserPanel({ userId }: { userId: string }) {
                 onChange={(e) => setGrantType(e.target.value as "pack" | "sub")}
                 className="h-8 px-2 rounded-md border border-border/40 bg-input/50 font-mono-share text-xs"
               >
-                <option value="pack">PACK</option>
-                <option value="sub">SUB</option>
+                <option value="pack">Pack</option>
+                <option value="sub">Sub</option>
               </select>
               <Button size="sm" onClick={handleGrant} disabled={granting || !grantAmount} className="font-mono-share text-tiny h-8 gap-1">
                 {granting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
@@ -277,9 +277,9 @@ export default function AdminUserPanel({ userId }: { userId: string }) {
                 <table className="w-full text-tiny font-mono-share">
                   <thead className="text-muted-foreground/70">
                     <tr>
-                      <th className="text-left py-1 pr-2 font-normal">WHEN</th>
-                      <th className="text-left py-1 pr-2 font-normal">PKG</th>
-                      <th className="text-left py-1 pr-2 font-normal">TYPE</th>
+                      <th className="text-left py-1 pr-2 font-normal">When</th>
+                      <th className="text-left py-1 pr-2 font-normal">Pkg</th>
+                      <th className="text-left py-1 pr-2 font-normal">Type</th>
                       <th className="text-right py-1 pr-2 font-normal">CR</th>
                       <th className="text-right py-1 font-normal">USD</th>
                     </tr>

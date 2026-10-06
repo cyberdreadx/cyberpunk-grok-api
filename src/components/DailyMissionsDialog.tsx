@@ -229,7 +229,7 @@ export default function DailyMissionsDialog({ status, loading, claiming, onClaim
                       </div>
                       <div className="shrink-0">
                         {claimed ? (
-                          <span className="text-tiny text-primary font-bold">✓ DONE</span>
+                          <span className="text-tiny text-primary font-bold">✓ Done</span>
                         ) : meta.needsUrl ? (
                           <Button
                             size="sm"

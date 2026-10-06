@@ -130,7 +130,7 @@ export default function AdminFinancePanel({ range, onRangeChange }: {
     return (
       <div className="border border-destructive/40 rounded-lg bg-destructive/5 p-4 space-y-3">
         <p className="font-mono-share text-xs text-destructive">{error}</p>
-        <Button variant="outline" size="sm" onClick={() => load()} className="font-mono-share text-xs">RETRY</Button>
+        <Button variant="outline" size="sm" onClick={() => load()} className="font-mono-share text-xs">Retry</Button>
       </div>
     );
   }
@@ -155,7 +155,7 @@ export default function AdminFinancePanel({ range, onRangeChange }: {
           title="Bypass the 10-minute Stripe cache"
         >
           <RefreshCw className={`w-3 h-3 ${loading ? "animate-spin" : ""}`} />
-          RESYNC_STRIPE
+          Resync Stripe
         </Button>
       </div>
 

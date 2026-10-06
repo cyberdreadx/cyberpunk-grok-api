@@ -111,10 +111,10 @@ const AdminChatModerationPanel: React.FC = () => {
       <div className="px-3 sm:px-4 py-3 border-b border-orange-500/20 flex items-center justify-between">
         <h2 className="font-orbitron text-xs tracking-wider text-orange-400 flex items-center gap-2">
           <MessageSquare className="w-3.5 h-3.5" />
-          CHAT_MODERATION
+          Chat moderation
         </h2>
         <button onClick={() => { loadMessages(); loadBans(); }} className="text-tiny text-orange-400/70 hover:text-orange-300 flex items-center gap-1 font-mono-share">
-          <RefreshCw className="w-3 h-3" /> REFRESH
+          <RefreshCw className="w-3 h-3" /> Refresh
         </button>
       </div>
 
@@ -140,7 +140,7 @@ const AdminChatModerationPanel: React.FC = () => {
               disabled={busy}
               className="px-2 py-1 text-tiny font-mono-share rounded bg-red-600/80 text-white hover:bg-red-500 disabled:opacity-50 flex items-center gap-1"
             >
-              <Trash2 className="w-3 h-3" /> CLEAR_CHANNEL
+              <Trash2 className="w-3 h-3" /> Clear channel
             </button>
           </div>
         </div>
@@ -168,13 +168,13 @@ const AdminChatModerationPanel: React.FC = () => {
                   disabled={busy}
                   className="px-2 py-0.5 bg-red-600/80 text-white font-mono-share text-tiny rounded hover:bg-red-500 disabled:opacity-50 flex items-center gap-1"
                 >
-                  <Trash2 className="w-2.5 h-2.5" /> DEL
+                  <Trash2 className="w-2.5 h-2.5" /> Del
                 </button>
                 <button
                   onClick={() => quickBan(m.userId)}
                   className="px-2 py-0.5 bg-orange-600/80 text-white font-mono-share text-tiny rounded hover:bg-orange-500 flex items-center gap-1"
                 >
-                  <Ban className="w-2.5 h-2.5" /> MUTE
+                  <Ban className="w-2.5 h-2.5" /> Mute
                 </button>
               </div>
             </div>
@@ -183,7 +183,7 @@ const AdminChatModerationPanel: React.FC = () => {
 
         {/* Ban form */}
         <form id="chat-ban-form" onSubmit={banUser} className="border border-orange-500/30 rounded p-3 space-y-2 bg-card/40">
-          <div className="font-orbitron text-tiny tracking-wider text-orange-300">MUTE_USER</div>
+          <div className="font-orbitron text-tiny tracking-wider text-orange-300">Mute user</div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <input
               type="text"
@@ -197,7 +197,7 @@ const AdminChatModerationPanel: React.FC = () => {
               onChange={(e) => setBanForm({ ...banForm, channel: e.target.value })}
               className="px-2 py-1.5 bg-background border border-border/50 rounded text-xs font-mono-share"
             >
-              <option value="*">ALL CHANNELS (*)</option>
+              <option value="*">All channels (*)</option>
               {CHANNELS.map((c) => <option key={c} value={c}>#{c}</option>)}
             </select>
             <select
@@ -205,11 +205,11 @@ const AdminChatModerationPanel: React.FC = () => {
               onChange={(e) => setBanForm({ ...banForm, hours: e.target.value })}
               className="px-2 py-1.5 bg-background border border-border/50 rounded text-xs font-mono-share"
             >
-              <option value="1">1 HOUR</option>
-              <option value="24">24 HOURS</option>
-              <option value="168">7 DAYS</option>
-              <option value="720">30 DAYS</option>
-              <option value="0">PERMANENT</option>
+              <option value="1">1 hour</option>
+              <option value="24">24 hours</option>
+              <option value="168">7 days</option>
+              <option value="720">30 days</option>
+              <option value="0">Permanent</option>
             </select>
             <input
               type="text"
@@ -220,7 +220,7 @@ const AdminChatModerationPanel: React.FC = () => {
             />
           </div>
           <button type="submit" disabled={busy} className="px-3 py-1.5 bg-orange-600 text-white font-mono-share text-tiny rounded hover:bg-orange-500 disabled:opacity-50 flex items-center gap-1">
-            <Ban className="w-3 h-3" /> APPLY_MUTE
+            <Ban className="w-3 h-3" /> Apply mute
           </button>
         </form>
 
@@ -258,7 +258,7 @@ const AdminChatModerationPanel: React.FC = () => {
                           disabled={busy}
                           className="px-2 py-0.5 bg-green-600/80 text-white font-mono-share text-tiny rounded hover:bg-green-500 disabled:opacity-50 flex items-center gap-1"
                         >
-                          <ShieldOff className="w-2.5 h-2.5" /> UNMUTE
+                          <ShieldOff className="w-2.5 h-2.5" /> Unmute
                         </button>
                       </td>
                     </tr>

@@ -39,7 +39,7 @@ const InviteCredits: React.FC<Props> = ({ credits, loading = false, className = 
         +{INVITE_REWARD}
       </span>
       <span className="hidden sm:inline font-orbitron text-tiny tracking-wider text-green-400/80 leading-none">
-        INVITE
+        Invite
       </span>
     </Link>
   );

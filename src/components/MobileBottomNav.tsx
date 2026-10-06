@@ -4,7 +4,7 @@ import { lazyWithRetry } from "@/lib/lazyWithRetry";
 import { createPortal } from "react-dom";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Sparkles, Image, Users, ShoppingCart, MoreHorizontal, HelpCircle, FileText, Shield, ScrollText, Rss, User, Settings as SettingsIcon, BadgeCheck, MessageSquare, Heart, Gift, Star, ClipboardList, Mail, Lightbulb, Ticket, Award, Code } from "lucide-react";
+import { Sparkles, Image, Users, ShoppingCart, MoreHorizontal, HelpCircle, FileText, Shield, ScrollText, Rss, User, Settings as SettingsIcon, BadgeCheck, MessageSquare, Heart, Gift, Star, ClipboardList, Mail, Lightbulb, Ticket, Award, Code, TerminalSquare } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCredits } from "@/hooks/useCredits";
 import { useChatUnread } from "@/hooks/useChatUnread";
@@ -125,6 +125,7 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
       { label: "Chat room", icon: MessageSquare, onClick: go("/chat"), hint: chatUnread > 0 ? (chatUnread > 9 ? "9+" : String(chatUnread)) : undefined, tone: "text-primary", show: isAuthenticated },
       { label: "Characters", icon: Heart, onClick: go("/characters"), show: isAuthenticated },
       { label: "Prompts", icon: Lightbulb, onClick: go("/prompts") },
+      { label: "Terminal", icon: TerminalSquare, onClick: go("/terminal") },
       { label: "Community pot", icon: Gift, onClick: () => setPotOpen(true), hint: "Free", tone: "text-fuchsia-300", show: isAuthenticated },
     ] },
     { title: "Earn", items: [

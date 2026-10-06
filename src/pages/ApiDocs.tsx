@@ -49,7 +49,7 @@ function CopyBlock({ code, language = "bash" }: { code: string; language?: strin
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="space-y-3">
-      <h2 className="text-lg font-mono font-bold text-primary tracking-wide">{title}</h2>
+      <h2 className="font-display text-xl font-semibold text-foreground">{title}</h2>
       {children}
     </section>
   );
@@ -136,13 +136,13 @@ function ApiPlayground({ baseUrl }: { baseUrl: string }) {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-foreground/80 font-mono">
+      <p className="text-sm text-foreground/80">
         Test the API directly from your browser. Enter your API key and hit run — credits will be deducted from your account.
       </p>
 
       {/* API Key */}
       <div className="space-y-1">
-        <label className="text-xs font-mono text-muted-foreground flex items-center gap-1.5">
+        <label className="text-xs text-muted-foreground flex items-center gap-1.5">
           <Key className="w-3 h-3" /> API KEY
         </label>
         <input
@@ -176,7 +176,7 @@ function ApiPlayground({ baseUrl }: { baseUrl: string }) {
 
       {/* Prompt */}
       <div className="space-y-1">
-        <label className="text-xs font-mono text-muted-foreground">PROMPT</label>
+        <label className="text-xs text-muted-foreground">PROMPT</label>
         <textarea
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
@@ -188,7 +188,7 @@ function ApiPlayground({ baseUrl }: { baseUrl: string }) {
       {/* Image URL (for GLTCH and some ComfyUI workflows) */}
       {(engine === "gltch" || (engine === "comfy" && ["klein", "gltch-wan", "wan-video"].includes(comfyWorkflow))) && (
         <div className="space-y-1">
-          <label className="text-xs font-mono text-muted-foreground">IMAGE URL</label>
+          <label className="text-xs text-muted-foreground">IMAGE URL</label>
           <input
             type="url"
             placeholder="https://example.com/image.jpg"
@@ -204,7 +204,7 @@ function ApiPlayground({ baseUrl }: { baseUrl: string }) {
         {engine === "gltch" && (
           <>
             <div className="space-y-1">
-              <label className="text-xs font-mono text-muted-foreground">ASPECT RATIO</label>
+              <label className="text-xs text-muted-foreground">ASPECT RATIO</label>
               <select
                 value={aspectRatio}
                 onChange={(e) => setAspectRatio(e.target.value)}
@@ -214,7 +214,7 @@ function ApiPlayground({ baseUrl }: { baseUrl: string }) {
               </select>
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-mono text-muted-foreground">HD</label>
+              <label className="text-xs text-muted-foreground">HD</label>
               <select
                 value={hd ? "yes" : "no"}
                 onChange={(e) => setHd(e.target.value === "yes")}
@@ -228,7 +228,7 @@ function ApiPlayground({ baseUrl }: { baseUrl: string }) {
         )}
         {engine === "comfy" && (
           <div className="space-y-1">
-            <label className="text-xs font-mono text-muted-foreground">WORKFLOW</label>
+            <label className="text-xs text-muted-foreground">WORKFLOW</label>
             <select
               value={comfyWorkflow}
               onChange={(e) => setComfyWorkflow(e.target.value)}
@@ -256,7 +256,7 @@ function ApiPlayground({ baseUrl }: { baseUrl: string }) {
 
       {/* Error */}
       {error && (
-        <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg text-xs font-mono text-destructive">
+        <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg text-xs text-destructive">
           {error}
         </div>
       )}
@@ -278,7 +278,7 @@ function ApiPlayground({ baseUrl }: { baseUrl: string }) {
       {/* Raw response */}
       {response && (
         <div className="space-y-1">
-          <h4 className="text-xs font-mono font-bold text-muted-foreground">RAW RESPONSE</h4>
+          <h4 className="text-xs font-bold text-muted-foreground">RAW RESPONSE</h4>
           <CopyBlock code={response} language="json" />
         </div>
       )}
@@ -291,31 +291,19 @@ export default function ApiDocs() {
 
   return (
     <CyberLayout>
-      <div className="min-h-screen py-8 px-4 max-w-3xl mx-auto space-y-8">
-        {/* Header */}
-        <div className="flex items-center gap-3">
-          <Link to="/">
-            <Button variant="ghost" size="sm" className="gap-1 font-mono text-xs text-muted-foreground">
-              <ArrowLeft className="w-3 h-3" /> BACK
-            </Button>
-          </Link>
-        </div>
-
+      <div className="min-h-screen pt-4 pb-24 px-4 max-w-3xl mx-auto space-y-8">
         <div className="space-y-2">
-          <h1 className="text-2xl md:text-3xl font-mono font-bold">
-            <GlitchText text="API DOCUMENTATION" />
-          </h1>
-          <p className="text-sm text-muted-foreground font-mono">
+          <p className="text-sm text-muted-foreground">
             Edit images and generate video programmatically using the GLTCH and GLTCH PRO engines. Pay with credits from your account.
           </p>
-          <p className="text-xs text-muted-foreground/70 font-mono">
+          <p className="text-xs text-muted-foreground/70">
             Base URL: <code className="text-primary bg-muted/50 px-1 rounded">{API_BASE}</code>
           </p>
         </div>
 
         {/* Quick start */}
-        <Section title="⚡ QUICK START">
-          <ol className="list-decimal list-inside space-y-2 text-sm text-foreground/80 font-mono">
+        <Section title="Quick start">
+          <ol className="list-decimal list-inside space-y-2 text-sm text-foreground/80">
             <li>Sign in at <a href={APP_URL} className="text-primary underline">{APP_URL}</a></li>
             <li>
               Create a key right here &mdash; it is shown once, so copy it:
@@ -332,15 +320,15 @@ export default function ApiDocs() {
         </Section>
 
         {/* Authentication */}
-        <Section title="🔑 AUTHENTICATION">
-          <p className="text-sm text-foreground/80 font-mono">
+        <Section title="Authentication">
+          <p className="text-sm text-foreground/80">
             All API requests require an API key passed in the <code className="text-primary bg-muted/50 px-1 rounded">X-API-Key</code> header.
             Keys start with <code className="text-primary bg-muted/50 px-1 rounded">gltch_sk_</code>.
           </p>
           <CopyBlock code={`curl -H "X-API-Key: gltch_sk_your_key_here" ...`} />
           <div className="flex items-start gap-2 p-3 bg-destructive/5 border border-destructive/20 rounded-lg">
             <Shield className="w-4 h-4 text-destructive mt-0.5 shrink-0" />
-            <p className="text-xs text-foreground/70 font-mono">
+            <p className="text-xs text-foreground/70">
               Keep your API key secret. Don't expose it in client-side code or public repos.
               If compromised, revoke it immediately from the dashboard.
             </p>
@@ -348,7 +336,7 @@ export default function ApiDocs() {
         </Section>
 
         {/* Endpoint */}
-        <Section title="📡 ENDPOINTS">
+        <Section title="Endpoints">
           <div className="space-y-4">
             {/* GLTCH Edit */}
             <div className="border border-primary/20 rounded-lg overflow-hidden">
@@ -358,13 +346,13 @@ export default function ApiDocs() {
                 <span className="text-tiny font-mono text-muted-foreground ml-auto">GLTCH EDIT</span>
               </div>
               <div className="p-4 space-y-4">
-                <p className="text-sm text-foreground/80 font-mono">
+                <p className="text-sm text-foreground/80">
                   AI-powered image editing. Provide an image URL and a prompt describing the edit.
                 </p>
                 <div>
-                  <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">REQUEST BODY</h4>
+                  <h4 className="text-xs font-bold text-muted-foreground mb-2">REQUEST BODY</h4>
                   <div className="overflow-x-auto">
-                    <table className="w-full text-xs font-mono">
+                    <table className="w-full text-xs">
                       <thead>
                         <tr className="border-b border-primary/10">
                           <th className="text-left py-1.5 pr-3 text-muted-foreground">Parameter</th>
@@ -413,13 +401,13 @@ export default function ApiDocs() {
                 <span className="text-tiny font-mono text-muted-foreground ml-auto">GLTCH PRO</span>
               </div>
               <div className="p-4 space-y-4">
-                <p className="text-sm text-foreground/80 font-mono">
+                <p className="text-sm text-foreground/80">
                   Advanced generation pipelines — text-to-image, Flux Klein editing, and WAN video generation via ComfyUI.
                 </p>
                 <div>
-                  <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">REQUEST BODY</h4>
+                  <h4 className="text-xs font-bold text-muted-foreground mb-2">REQUEST BODY</h4>
                   <div className="overflow-x-auto">
-                    <table className="w-full text-xs font-mono">
+                    <table className="w-full text-xs">
                       <thead>
                         <tr className="border-b border-primary/10">
                           <th className="text-left py-1.5 pr-3 text-muted-foreground">Parameter</th>
@@ -513,9 +501,9 @@ export default function ApiDocs() {
                 </div>
 
                 <div>
-                  <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">WORKFLOWS & COSTS</h4>
+                  <h4 className="text-xs font-bold text-muted-foreground mb-2">WORKFLOWS & COSTS</h4>
                   <div className="overflow-x-auto">
-                    <table className="w-full text-xs font-mono">
+                    <table className="w-full text-xs">
                       <thead>
                         <tr className="border-b border-primary/10">
                           <th className="text-left py-1.5 pr-3 text-muted-foreground">Workflow</th>
@@ -564,7 +552,7 @@ export default function ApiDocs() {
                 <span className="text-tiny font-mono text-muted-foreground ml-auto">DISCOVERY</span>
               </div>
               <div className="p-4 space-y-2">
-                <p className="text-sm text-foreground/80 font-mono">
+                <p className="text-sm text-foreground/80">
                   List all available engines, models, and their credit costs. Returns available checkpoints for GLTCH PRO.
                 </p>
                 <CopyBlock code={`curl -H "X-API-Key: gltch_sk_..." ${baseUrl}/api/v1/models`} />
@@ -572,9 +560,9 @@ export default function ApiDocs() {
             </div>
           </div>
         </Section>
-        <Section title="⏳ ASYNC JOBS — FOR VIDEO">
+        <Section title="Async jobs (for video)">
           <div className="space-y-4">
-            <p className="text-sm text-foreground/80 font-mono">
+            <p className="text-sm text-foreground/80">
               <code className="text-foreground">/api/v1/comfy</code> holds the connection open for the whole
               generation and refunds if it passes <strong>280 seconds</strong>. Images finish well inside
               that. Video regularly does not. Submit video here instead: you get a job id back immediately
@@ -588,7 +576,7 @@ export default function ApiDocs() {
                 <span className="text-tiny font-mono text-muted-foreground ml-auto">SUBMIT</span>
               </div>
               <div className="p-4 space-y-2">
-                <p className="text-sm text-foreground/80 font-mono">
+                <p className="text-sm text-foreground/80">
                   Body is identical to <code>/api/v1/comfy</code>. Credits are taken at submit and returned
                   in full if the job fails or expires. Responds <code>202</code>.
                 </p>
@@ -618,7 +606,7 @@ export default function ApiDocs() {
                 <span className="text-tiny font-mono text-muted-foreground ml-auto">POLL · FREE</span>
               </div>
               <div className="p-4 space-y-2">
-                <p className="text-sm text-foreground/80 font-mono">
+                <p className="text-sm text-foreground/80">
                   Poll every 10&ndash;15s for video, 3&ndash;5s for images. Polling costs nothing. Omit
                   <code> id</code> to list your 20 most recent jobs.
                 </p>
@@ -636,9 +624,9 @@ export default function ApiDocs() {
             </div>
 
             <div>
-              <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">STATUS VALUES</h4>
+              <h4 className="text-xs font-bold text-muted-foreground mb-2">STATUS VALUES</h4>
               <div className="overflow-x-auto">
-                <table className="w-full text-xs font-mono">
+                <table className="w-full text-xs">
                   <thead>
                     <tr className="border-b border-primary/20">
                       <th className="text-left py-1.5 pr-3 text-muted-foreground">status</th>
@@ -663,30 +651,30 @@ export default function ApiDocs() {
               </div>
             </div>
 
-            <p className="text-xs text-muted-foreground font-mono">
+            <p className="text-xs text-muted-foreground">
               You do not have to keep polling to avoid losing work. A job whose caller stops polling is
               finished by a server-side sweep, so the result is stored and the credits are settled either
               way. Images are written off after 20 minutes, video after an hour, and both are refunded.
             </p>
           </div>
         </Section>
-        <Section title="🔌 MCP SERVER">
+        <Section title="MCP server">
           <div className="space-y-4">
-            <p className="text-sm text-foreground/80 font-mono">
+            <p className="text-sm text-foreground/80">
               Use GLTCH Runner from Claude, Cursor, or any MCP client. The server wraps the endpoints above
               as tools, so you generate and edit media in the conversation instead of writing requests by
               hand. Same API key, same credit costs.
             </p>
 
             <div>
-              <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">Claude Code</h4>
+              <h4 className="text-xs font-bold text-muted-foreground mb-2">Claude Code</h4>
               <CopyBlock code={`claude mcp add gltch-runner \\
   --env GLTCH_API_KEY=gltch_sk_... \\
   -- npx -y gltch-runner-mcp`} />
             </div>
 
             <div>
-              <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">Claude Desktop — claude_desktop_config.json</h4>
+              <h4 className="text-xs font-bold text-muted-foreground mb-2">Claude Desktop — claude_desktop_config.json</h4>
               <CopyBlock language="json" code={`{
   "mcpServers": {
     "gltch-runner": {
@@ -699,9 +687,9 @@ export default function ApiDocs() {
             </div>
 
             <div>
-              <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">TOOLS</h4>
+              <h4 className="text-xs font-bold text-muted-foreground mb-2">TOOLS</h4>
               <div className="overflow-x-auto">
-                <table className="w-full text-xs font-mono">
+                <table className="w-full text-xs">
                   <thead>
                     <tr className="border-b border-primary/20">
                       <th className="text-left py-1.5 pr-3 text-muted-foreground">Tool</th>
@@ -740,16 +728,16 @@ export default function ApiDocs() {
               </div>
             </div>
 
-            <p className="text-xs text-muted-foreground font-mono">
+            <p className="text-xs text-muted-foreground">
               Every tool except list_models spends credits from the account that owns the key. Failed jobs
               are refunded automatically.
             </p>
           </div>
         </Section>
-        <Section title="💻 CODE EXAMPLES">
+        <Section title="Code examples">
           <div className="space-y-4">
             <div>
-              <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">cURL — GLTCH Edit</h4>
+              <h4 className="text-xs font-bold text-muted-foreground mb-2">cURL — GLTCH Edit</h4>
               <CopyBlock code={`curl -X POST ${baseUrl}/api/v1/gltch \\
   -H "Content-Type: application/json" \\
   -H "X-API-Key: gltch_sk_your_key_here" \\
@@ -761,7 +749,7 @@ export default function ApiDocs() {
             </div>
 
             <div>
-              <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">cURL — GLTCH PRO Klein Edit</h4>
+              <h4 className="text-xs font-bold text-muted-foreground mb-2">cURL — GLTCH PRO Klein Edit</h4>
               <CopyBlock code={`curl -X POST ${baseUrl}/api/v1/comfy \\
   -H "Content-Type: application/json" \\
   -H "X-API-Key: gltch_sk_your_key_here" \\
@@ -773,7 +761,7 @@ export default function ApiDocs() {
             </div>
 
             <div>
-              <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">Python — GLTCH WAN Video</h4>
+              <h4 className="text-xs font-bold text-muted-foreground mb-2">Python — GLTCH WAN Video</h4>
               <CopyBlock language="python" code={`import requests
 
 response = requests.post(
@@ -798,7 +786,7 @@ print(f"Credits used: {data['credits_used']}")`} />
             </div>
 
             <div>
-              <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">JavaScript / Node.js</h4>
+              <h4 className="text-xs font-bold text-muted-foreground mb-2">JavaScript / Node.js</h4>
               <CopyBlock language="javascript" code={`const response = await fetch("${baseUrl}/api/v1/comfy", {
   method: "POST",
   headers: {
@@ -821,7 +809,7 @@ console.log(\`Credits remaining: \${data.credits_remaining}\`);`} />
             </div>
 
             <div>
-              <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">cURL — List models &amp; checkpoints</h4>
+              <h4 className="text-xs font-bold text-muted-foreground mb-2">cURL — List models &amp; checkpoints</h4>
               <CopyBlock code={`curl -H "X-API-Key: gltch_sk_your_key_here" \\
   ${baseUrl}/api/v1/models`} />
             </div>
@@ -829,10 +817,10 @@ console.log(\`Credits remaining: \${data.credits_remaining}\`);`} />
         </Section>
 
         {/* Response */}
-        <Section title="📦 RESPONSE FORMAT">
+        <Section title="Response format">
           <div className="space-y-3">
             <div>
-              <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">GLTCH EDIT RESPONSE</h4>
+              <h4 className="text-xs font-bold text-muted-foreground mb-2">GLTCH EDIT RESPONSE</h4>
               <CopyBlock language="json" code={`{
   "type": "gltch-edit",
   "image_url": "https://...",
@@ -843,7 +831,7 @@ console.log(\`Credits remaining: \${data.credits_remaining}\`);`} />
 }`} />
             </div>
             <div>
-              <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">GLTCH PRO IMAGE RESPONSE</h4>
+              <h4 className="text-xs font-bold text-muted-foreground mb-2">GLTCH PRO IMAGE RESPONSE</h4>
               <CopyBlock language="json" code={`{
   "type": "comfy-image",
   "workflow": "klein",
@@ -854,7 +842,7 @@ console.log(\`Credits remaining: \${data.credits_remaining}\`);`} />
 }`} />
             </div>
             <div>
-              <h4 className="text-xs font-mono font-bold text-muted-foreground mb-2">GLTCH PRO VIDEO RESPONSE</h4>
+              <h4 className="text-xs font-bold text-muted-foreground mb-2">GLTCH PRO VIDEO RESPONSE</h4>
               <CopyBlock language="json" code={`{
   "type": "comfy-video",
   "workflow": "gltch-wan",
@@ -868,9 +856,9 @@ console.log(\`Credits remaining: \${data.credits_remaining}\`);`} />
         </Section>
 
         {/* Errors */}
-        <Section title="🚨 ERROR CODES">
+        <Section title="Error codes">
           <div className="overflow-x-auto">
-            <table className="w-full text-xs font-mono">
+            <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-primary/10">
                   <th className="text-left py-1.5 pr-3 text-muted-foreground">Status</th>
@@ -925,68 +913,68 @@ console.log(\`Credits remaining: \${data.credits_remaining}\`);`} />
         </Section>
 
         {/* Rate limits */}
-        <Section title="⏱ RATE LIMITS">
-          <p className="text-sm text-foreground/80 font-mono">
+        <Section title="Rate limits">
+          <p className="text-sm text-foreground/80">
             Default: <strong className="text-primary">30 requests per minute</strong> per API key.
             If you need higher limits, contact us.
           </p>
         </Section>
 
         {/* Pricing */}
-        <Section title="💰 PRICING">
-          <p className="text-sm text-foreground/80 font-mono">
+        <Section title="Pricing">
+          <p className="text-sm text-foreground/80">
             API usage deducts credits from your account at the same rates as the web app.
             Purchase credits or subscribe at{" "}
             <a href={APP_URL} className="text-primary underline">{APP_URL}</a>.
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <div className="border border-primary/20 rounded-lg p-3 text-center">
-              <div className="text-2xl font-mono font-bold text-primary">5 cr</div>
-              <div className="text-xs text-muted-foreground font-mono">GLTCH edit</div>
+              <div className="text-2xl font-bold text-primary">5 cr</div>
+              <div className="text-xs text-muted-foreground">GLTCH edit</div>
             </div>
             <div className="border border-primary/20 rounded-lg p-3 text-center">
-              <div className="text-2xl font-mono font-bold text-primary">3 cr</div>
-              <div className="text-xs text-muted-foreground font-mono">GLTCH PRO image</div>
+              <div className="text-2xl font-bold text-primary">3 cr</div>
+              <div className="text-xs text-muted-foreground">GLTCH PRO image</div>
             </div>
             <div className="border border-primary/20 rounded-lg p-3 text-center">
-              <div className="text-2xl font-mono font-bold text-primary">15 cr</div>
-              <div className="text-xs text-muted-foreground font-mono">GLTCH PRO video</div>
+              <div className="text-2xl font-bold text-primary">15 cr</div>
+              <div className="text-xs text-muted-foreground">GLTCH PRO video</div>
             </div>
           </div>
         </Section>
 
         {/* XRGE Bank & Loyalty */}
-        <Section title="🏦 XRGE BANK & LOYALTY">
-          <p className="text-sm text-foreground/80 font-mono">
+        <Section title="XRGE bank & loyalty">
+          <p className="text-sm text-foreground/80">
             Deposit <strong className="text-pink-400">$XRGE</strong> (Base chain) into your bank, buy credits from your balance,
             or withdraw anytime. The more XRGE you spend, the higher your loyalty tier and bonus:
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             <div className="border border-amber-600/30 rounded-lg p-3 text-center bg-amber-900/10">
-              <div className="text-lg font-mono font-bold text-amber-500">+30%</div>
+              <div className="text-lg font-bold text-amber-500">+30%</div>
               <div className="text-xs text-amber-400 font-orbitron tracking-wider">BRONZE</div>
-              <div className="text-tiny text-muted-foreground font-mono mt-1">Default</div>
+              <div className="text-tiny text-muted-foreground mt-1">Default</div>
             </div>
             <div className="border border-slate-400/30 rounded-lg p-3 text-center bg-slate-700/10">
-              <div className="text-lg font-mono font-bold text-slate-300">+35%</div>
+              <div className="text-lg font-bold text-slate-300">+35%</div>
               <div className="text-xs text-slate-300 font-orbitron tracking-wider">SILVER</div>
-              <div className="text-tiny text-muted-foreground font-mono mt-1">50M XRGE spent</div>
+              <div className="text-tiny text-muted-foreground mt-1">50M XRGE spent</div>
             </div>
             <div className="border border-yellow-500/30 rounded-lg p-3 text-center bg-yellow-900/10">
-              <div className="text-lg font-mono font-bold text-yellow-400">+42%</div>
+              <div className="text-lg font-bold text-yellow-400">+42%</div>
               <div className="text-xs text-yellow-400 font-orbitron tracking-wider">GOLD</div>
-              <div className="text-tiny text-muted-foreground font-mono mt-1">200M XRGE spent</div>
+              <div className="text-tiny text-muted-foreground mt-1">200M XRGE spent</div>
             </div>
             <div className="border border-cyan-400/30 rounded-lg p-3 text-center bg-cyan-900/10">
-              <div className="text-lg font-mono font-bold text-cyan-300">+50%</div>
+              <div className="text-lg font-bold text-cyan-300">+50%</div>
               <div className="text-xs text-cyan-300 font-orbitron tracking-wider">DIAMOND</div>
-              <div className="text-tiny text-muted-foreground font-mono mt-1">500M XRGE spent</div>
+              <div className="text-tiny text-muted-foreground mt-1">500M XRGE spent</div>
             </div>
           </div>
 
           <p className="text-xs text-pink-300/80 font-orbitron tracking-wider mt-3">BANK API ENDPOINTS</p>
           <div className="overflow-x-auto">
-            <table className="w-full text-xs font-mono border border-border/30 rounded">
+            <table className="w-full text-xs border border-border/30 rounded">
               <thead>
                 <tr className="border-b border-border/30 bg-card/40">
                   <th className="px-3 py-2 text-left text-muted-foreground">Method</th>
@@ -1019,19 +1007,19 @@ console.log(\`Credits remaining: \${data.credits_remaining}\`);`} />
             </table>
           </div>
 
-          <p className="text-xs text-muted-foreground/70 font-mono">
+          <p className="text-xs text-muted-foreground/70">
             Tiers are permanent — once you reach a tier, you keep it. Open the XRGE Bank from the credit store.
           </p>
         </Section>
 
         {/* API Playground */}
-        <Section title="🧪 API PLAYGROUND">
+        <Section title="API playground">
           <ApiPlayground baseUrl={baseUrl} />
         </Section>
 
         {/* Footer */}
         <div className="border-t border-primary/10 pt-6 text-center">
-          <p className="text-xs text-muted-foreground font-mono">
+          <p className="text-xs text-muted-foreground">
             Need help?{" "}
             <a href="https://discord.gg/gltch" target="_blank" rel="noopener noreferrer" className="text-primary underline inline-flex items-center gap-1">
               Join our Discord <ExternalLink className="w-3 h-3" />

@@ -183,13 +183,13 @@ const HowToBuyXrgeDialog: React.FC<Props> = ({ open, onClose, onUseCard }) => {
                 className="w-full font-orbitron text-tiny tracking-wider border-primary/30 hover:bg-primary/10"
               >
                 <CreditCard className="w-3.5 h-3.5 mr-2" />
-                PAY BY CARD INSTEAD
+                Pay by card instead
               </Button>
             )}
           </div>
 
           <Button onClick={onClose} className="w-full font-orbitron text-xs tracking-wider">
-            GOT IT
+            Got it
           </Button>
         </div>
       </DialogContent>

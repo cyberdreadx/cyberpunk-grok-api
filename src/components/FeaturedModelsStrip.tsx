@@ -30,56 +30,54 @@ export default function FeaturedModelsStrip() {
 
   if (!list || list.length === 0) return null;
 
+  /* Compact row: each model is one tap target (profile), with a small chat
+     bubble for those with an AI persona. It used to be a 112px card plus a
+     full-width "AI chat" button and two "NEW" stickers — half a phone screen
+     for one person. */
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
-        <span className="font-orbitron text-xs tracking-widest text-secondary">FEATURED MODELS</span>
-        <span className="font-mono-share text-micro px-1 py-px rounded-sm tracking-widest text-emerald-300 border border-emerald-400/40 bg-emerald-400/10">
-          NEW
-        </span>
+        <span className="text-sm font-semibold text-foreground">Featured models</span>
         <button
           onClick={() => navigate("/creators")}
-          className="ml-auto font-mono-share text-tiny text-muted-foreground hover:text-secondary transition-colors"
+          className="ml-auto text-xs font-medium text-muted-foreground hover:text-secondary transition-colors"
         >
-          VIEW ALL →
+          See all
         </button>
       </div>
 
-      <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 snap-x">
+      <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1 snap-x scrollbar-hide">
         {list.map((m) => {
           const name = m.display_name || m.username || "Model";
           const initial = name.slice(0, 1).toUpperCase();
           return (
-            <div key={m.id} className="shrink-0 w-28 snap-start flex flex-col gap-1.5">
-              <button
-                type="button"
-                onClick={() => m.username && navigate(`/profile/${m.username}`)}
-                className="block group"
-                title={`View ${name}`}
-              >
-                <div className="relative w-28 h-28 rounded-lg overflow-hidden border border-secondary/30 bg-card/40 group-hover:border-secondary/60 transition-colors">
-                  {m.avatar_url ? (
-                    <img src={m.avatar_url} alt={name} loading="lazy" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center font-orbitron text-2xl text-secondary/50">
-                      {initial}
-                    </div>
-                  )}
-                  <span className="absolute top-1 left-1 font-mono-share text-micro px-1 py-px rounded-sm tracking-widest text-emerald-300 border border-emerald-400/40 bg-black/60">
-                    NEW
-                  </span>
-                </div>
-                <div className="font-mono-share text-tiny text-foreground/90 truncate mt-1">{name}</div>
-              </button>
-              {m.persona_chat_character_id && (
+            <div key={m.id} className="shrink-0 w-[76px] snap-start">
+              <div className="relative">
                 <button
                   type="button"
-                  onClick={() => navigate(`/characters?chat=${encodeURIComponent(m.persona_chat_character_id!)}`)}
-                  className="flex items-center justify-center gap-1 px-2 py-1 rounded font-orbitron text-tiny tracking-wider border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                  onClick={() => m.username && navigate(`/profile/${m.username}`)}
+                  className="block w-[76px] h-[76px] rounded-2xl overflow-hidden border border-secondary/30 bg-card/40 hover:border-secondary/60 transition-colors"
+                  title={`View ${name}`}
                 >
-                  <MessageCircle className="w-3 h-3" /> AI CHAT
+                  {m.avatar_url ? (
+                    <img src={m.avatar_url} alt={name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center font-display text-2xl text-secondary/60">{initial}</div>
+                  )}
                 </button>
-              )}
+                {m.persona_chat_character_id && (
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/characters?chat=${encodeURIComponent(m.persona_chat_character_id!)}`)}
+                    className="absolute -bottom-1.5 -right-1.5 w-7 h-7 rounded-full flex items-center justify-center bg-primary text-primary-foreground border-2 border-background shadow"
+                    aria-label={`Chat with ${name}'s AI`}
+                    title="AI chat"
+                  >
+                    <MessageCircle className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+              <div className="text-xs text-foreground/85 truncate mt-1.5">{name}</div>
             </div>
           );
         })}

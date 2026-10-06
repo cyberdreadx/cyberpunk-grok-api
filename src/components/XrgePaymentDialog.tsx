@@ -194,7 +194,7 @@ const XrgePaymentDialog: React.FC<XrgePaymentDialogProps> = ({
               variant="outline"
               className="font-orbitron text-tiny tracking-wider"
             >
-              CLOSE
+              Close
             </Button>
           </div>
         )}
@@ -270,7 +270,7 @@ const XrgePaymentDialog: React.FC<XrgePaymentDialogProps> = ({
             {/* Send amount */}
             <div>
               <label className="font-orbitron text-tiny tracking-widest text-muted-foreground block mb-1.5">
-                SEND_EXACTLY
+                Send exactly
               </label>
               <div className="flex items-center gap-2">
                 <div className="flex-1 border border-primary/40 rounded bg-card/60 px-3 py-2 font-mono-share text-sm text-primary font-bold select-all">
@@ -335,12 +335,12 @@ const XrgePaymentDialog: React.FC<XrgePaymentDialogProps> = ({
               {copied === "all" ? (
                 <>
                   <CheckCircle2 className="w-4 h-4 text-green-400" />
-                  COPIED_FULL_PAYMENT_DETAILS
+                  Copied full payment details
                 </>
               ) : (
                 <>
                   <Copy className="w-4 h-4" />
-                  COPY_ALL_FOR_WALLET / TELEGRAM
+                  Copy all for wallet / Telegram
                 </>
               )}
             </Button>
@@ -357,7 +357,7 @@ const XrgePaymentDialog: React.FC<XrgePaymentDialogProps> = ({
             {/* Transaction hash input */}
             <div>
               <label className="font-orbitron text-tiny tracking-widest text-muted-foreground block mb-1.5">
-                TRANSACTION_HASH
+                Transaction hash
               </label>
               <Input
                 value={txHash}
@@ -392,7 +392,7 @@ const XrgePaymentDialog: React.FC<XrgePaymentDialogProps> = ({
               {step === "verifying" ? (
                 <>
                   <Loader2 className="w-3 h-3 animate-spin" />
-                  VERIFYING ON-CHAIN...
+                  Verifying on-chain…
                 </>
               ) : (
                 "VERIFY_PAYMENT"
@@ -423,7 +423,7 @@ const XrgePaymentDialog: React.FC<XrgePaymentDialogProps> = ({
             </div>
             <div className="text-center">
               <p className="font-orbitron text-sm tracking-wider text-foreground mb-1">
-                PAYMENT_VERIFIED
+                Payment verified
               </p>
               <div className="flex items-center justify-center gap-1 mb-2">
                 <Zap className="w-4 h-4 text-secondary" />
@@ -444,7 +444,7 @@ const XrgePaymentDialog: React.FC<XrgePaymentDialogProps> = ({
               onClick={handleClose}
               className="font-orbitron text-tiny tracking-wider bg-primary text-primary-foreground hover:bg-primary/80"
             >
-              CLOSE
+              Close
             </Button>
           </div>
         )}

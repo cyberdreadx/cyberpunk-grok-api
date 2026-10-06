@@ -75,7 +75,7 @@ const MediaErrorsPanel: React.FC = () => {
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h2 className="font-orbitron text-xs tracking-wider text-primary/80 flex items-center gap-2">
           <AlertTriangle className="w-3.5 h-3.5" />
-          MEDIA_ERRORS
+          Media errors
         </h2>
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1 border border-border/40 rounded-md p-0.5">
@@ -113,7 +113,7 @@ const MediaErrorsPanel: React.FC = () => {
 
       {/* Total card */}
       <div className="border border-border/30 rounded-lg bg-card/40 p-3">
-        <div className="font-mono-share text-tiny text-muted-foreground tracking-widest">TOTAL_FAILURES</div>
+        <div className="font-mono-share text-tiny text-muted-foreground tracking-widest">Total failures</div>
         <div className="font-orbitron text-2xl text-primary mt-1">{data?.total ?? "—"}</div>
         <div className="font-mono-share text-tiny text-muted-foreground/70 mt-0.5">over last {days} day{days === 1 ? "" : "s"}</div>
       </div>
@@ -122,7 +122,7 @@ const MediaErrorsPanel: React.FC = () => {
         {/* By host */}
         <div className="border border-border/30 rounded-lg bg-card/40 p-3 min-w-0">
           <div className="font-mono-share text-tiny text-muted-foreground/80 mb-2 flex items-center gap-1">
-            <Globe className="w-3 h-3" /> BY_HOST
+            <Globe className="w-3 h-3" /> By host
           </div>
           {(!data || data.byHost.length === 0) ? (
             <div className="font-mono-share text-tiny text-muted-foreground/60">No data</div>
@@ -143,7 +143,7 @@ const MediaErrorsPanel: React.FC = () => {
 
         {/* By ext */}
         <div className="border border-border/30 rounded-lg bg-card/40 p-3 min-w-0">
-          <div className="font-mono-share text-tiny text-muted-foreground/80 mb-2">BY_EXTENSION</div>
+          <div className="font-mono-share text-tiny text-muted-foreground/80 mb-2">By extension</div>
           {(!data || data.byExt.length === 0) ? (
             <div className="font-mono-share text-tiny text-muted-foreground/60">No data</div>
           ) : (
@@ -164,7 +164,7 @@ const MediaErrorsPanel: React.FC = () => {
 
       {/* Top URLs */}
       <div className="border border-border/30 rounded-lg bg-card/40 p-3 min-w-0 overflow-hidden">
-        <div className="font-mono-share text-tiny text-muted-foreground/80 mb-2">TOP_BROKEN_URLS</div>
+        <div className="font-mono-share text-tiny text-muted-foreground/80 mb-2">Top broken urls</div>
         {(!data || data.topUrls.length === 0) ? (
           <div className="font-mono-share text-tiny text-muted-foreground/60">No data</div>
         ) : (

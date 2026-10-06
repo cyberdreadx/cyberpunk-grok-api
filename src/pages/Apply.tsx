@@ -237,7 +237,7 @@ export default function ApplyPage() {
         <section className="relative px-4 sm:px-8 pt-10 pb-12 max-w-6xl mx-auto">
           <div className="space-y-4">
             <div className="inline-block px-2 py-1 border border-secondary/40 rounded font-mono-share text-tiny tracking-widest text-secondary">
-              GLTCH // CREATOR PROGRAM
+              GLTCH // creator program
             </div>
             <h1 className="font-orbitron text-3xl sm:text-5xl tracking-tight">
               <GlitchText text="GET PAID TO BE THE FACE OF AN AI CHARACTER" />
@@ -253,7 +253,7 @@ export default function ApplyPage() {
               </a>
               <Link to="/creators">
                 <Button size="lg" variant="outline" className="font-orbitron tracking-wider">
-                  BROWSE CREATORS
+                  Browse creators
                 </Button>
               </Link>
             </div>
@@ -277,7 +277,7 @@ export default function ApplyPage() {
 
         {/* What you get */}
         <section className="px-4 sm:px-8 py-10 max-w-6xl mx-auto">
-          <h2 className="font-orbitron text-xs tracking-widest text-secondary/80 mb-4">// WHAT YOU GET</h2>
+          <h2 className="font-orbitron text-xs tracking-widest text-secondary/80 mb-4">// What you get</h2>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {[
               { i: Sparkles, t: "Your own AI persona", d: "Your likeness becomes a Character users pay to chat with — flirt, stories, photos." },
@@ -296,7 +296,7 @@ export default function ApplyPage() {
 
         {/* How it works */}
         <section className="px-4 sm:px-8 py-10 max-w-6xl mx-auto">
-          <h2 className="font-orbitron text-xs tracking-widest text-secondary/80 mb-4">// HOW IT WORKS</h2>
+          <h2 className="font-orbitron text-xs tracking-widest text-secondary/80 mb-4">// How it works</h2>
           <ol className="grid sm:grid-cols-4 gap-3">
             {[
               "Submit your application",
@@ -314,7 +314,7 @@ export default function ApplyPage() {
 
         {/* Earnings calc */}
         <section className="px-4 sm:px-8 py-10 max-w-3xl mx-auto">
-          <h2 className="font-orbitron text-xs tracking-widest text-secondary/80 mb-4">// EARNINGS CALCULATOR</h2>
+          <h2 className="font-orbitron text-xs tracking-widest text-secondary/80 mb-4">// Earnings calculator</h2>
           <div className="border border-border/40 rounded-lg p-5 bg-card/40 space-y-4">
             <div>
               <Label className="font-mono-share text-xs">Monthly subscribers: <span className="text-secondary">{subs}</span></Label>
@@ -339,7 +339,7 @@ export default function ApplyPage() {
 
         {/* Application form */}
         <section id="apply" className="px-4 sm:px-8 py-12 max-w-2xl mx-auto">
-          <h2 className="font-orbitron text-xl sm:text-2xl mb-2">APPLY</h2>
+          <h2 className="font-orbitron text-xl sm:text-2xl mb-2">Apply</h2>
           <p className="font-mono-share text-xs text-muted-foreground mb-6">
             Takes ~3 minutes. Admins review within 48h.
           </p>
@@ -347,7 +347,7 @@ export default function ApplyPage() {
           {done ? (
             <div className="border border-secondary/40 bg-secondary/5 rounded-lg p-6 text-center space-y-3">
               <Check className="w-10 h-10 text-secondary mx-auto" />
-              <h3 className="font-orbitron text-lg">APPLICATION RECEIVED</h3>
+              <h3 className="font-orbitron text-lg">Application received</h3>
               <p className="font-mono-share text-xs text-muted-foreground">
                 We'll email <span className="text-foreground">{form.email}</span> with the next steps within 48 hours. If approved, you'll be invited to complete ID verification and set up your monetization.
               </p>
@@ -524,7 +524,7 @@ export default function ApplyPage() {
                           {p.status === "done" && primaryPhoto?.id === p.id && (
                             <div className="absolute top-1 left-1 bg-secondary rounded px-1.5 py-0.5 flex items-center gap-1">
                               <Star className="w-2.5 h-2.5 text-background fill-background" />
-                              <span className="font-mono-share text-micro tracking-widest text-background">PRIMARY</span>
+                              <span className="font-mono-share text-micro tracking-widest text-background">Primary</span>
                             </div>
                           )}
                           {p.status === "done" && primaryPhoto?.id !== p.id && (

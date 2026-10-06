@@ -218,7 +218,7 @@ function PromptCard({
 
       <div className="rounded-md border border-border/30 bg-background/40 p-3">
         <div className="flex items-center justify-between gap-2 mb-1.5">
-          <span className="font-orbitron text-tiny text-muted-foreground tracking-widest">PROMPT</span>
+          <span className="font-orbitron text-tiny text-muted-foreground tracking-widest">Prompt</span>
           <div className="flex items-center gap-1">
             <Button variant="ghost" size="sm" className="h-7 px-2 text-tiny" onClick={handleCopy}>
               {copied ? <Check className="w-3 h-3 mr-1" /> : <Copy className="w-3 h-3 mr-1" />}
@@ -226,7 +226,7 @@ function PromptCard({
             </Button>
             <Button variant="ghost" size="sm" className="h-7 px-2 text-tiny text-primary" onClick={handleTry}>
               <Wand2 className="w-3 h-3 mr-1" />
-              TRY
+              Try
             </Button>
           </div>
         </div>
@@ -245,7 +245,7 @@ function PromptCard({
         )}
         {post.negativePrompt && expanded && (
           <div className="mt-3 pt-3 border-t border-border/20">
-            <span className="font-orbitron text-tiny text-muted-foreground tracking-widest">NEGATIVE</span>
+            <span className="font-orbitron text-tiny text-muted-foreground tracking-widest">Negative</span>
             <p className="font-rajdhani text-xs text-muted-foreground mt-1 whitespace-pre-wrap">
               {post.negativePrompt}
             </p>
@@ -394,37 +394,28 @@ export default function PromptsPage() {
   };
 
   const sortTabs: { id: SortMode; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
-    { id: "hot", label: "HOT", icon: Flame },
-    { id: "top", label: "TOP", icon: Trophy },
-    { id: "new", label: "NEW", icon: Clock },
+    { id: "hot", label: "Hot", icon: Flame },
+    { id: "top", label: "Top", icon: Trophy },
+    { id: "new", label: "New", icon: Clock },
   ];
 
   return (
     <CyberLayout>
-      <div className="min-h-screen px-4 py-6 max-w-2xl mx-auto space-y-5 pb-24">
+      <div className="min-h-screen px-4 pt-4 max-w-2xl mx-auto space-y-4 pb-24">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="text-muted-foreground">
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <div className="flex-1">
-            <h1 className="text-xl font-bold font-[Orbitron] text-foreground tracking-wider flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-primary" />
-              PROMPT BOARD
-            </h1>
-            <p className="text-xs text-muted-foreground">Share winning prompts · vote on the best</p>
-          </div>
+          <p className="flex-1 text-sm text-muted-foreground">Share prompts that work and vote on the best.</p>
           <Button
             size="sm"
-            className="font-orbitron text-tiny tracking-widest"
+            className="rounded-full gap-1.5"
             onClick={() => (showForm ? setShowForm(false) : requireAuth() && setShowForm(true))}
           >
-            {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+            {showForm ? <><X className="w-4 h-4" /> Close</> : <><Plus className="w-4 h-4" /> Share</>}
           </Button>
         </div>
 
         {showForm && (
           <Card className="p-4 border-primary/30 bg-card space-y-3">
-            <h2 className="font-orbitron text-xs tracking-widest text-primary">SHARE A PROMPT</h2>
+            <h2 className="font-orbitron text-xs tracking-widest text-primary">Share a prompt</h2>
             <Input
               placeholder="Short title (optional) — e.g. Neon cyberpunk portrait"
               value={title}

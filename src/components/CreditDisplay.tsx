@@ -167,7 +167,7 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
               {flashSale && (
                 <span className="ml-1 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-orange-500/25 border border-orange-400/60 font-orbitron text-micro tracking-wider text-orange-200">
                   <Flame className="w-2.5 h-2.5" />
-                  SALE
+                  Sale
                 </span>
               )}
             </Button>
@@ -192,7 +192,7 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
                 <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-orange-500/30 ring-2 ring-orange-400/60">
                   <Flame className="h-3.5 w-3.5 text-orange-200" />
                 </div>
-                <span className="font-orbitron text-xs tracking-widest text-orange-100 font-bold">⚡ FLASH SALE</span>
+                <span className="font-orbitron text-xs tracking-widest text-orange-100 font-bold">⚡ Flash sale</span>
                 <span className="font-mono-share text-xs text-orange-100/90">{flashSale.title}</span>
                 <span className="ml-auto font-mono-share text-tiny text-orange-100/80">
                   ends in <span className="font-bold text-yellow-200 tabular-nums">{flashTimeLeft}</span>
@@ -610,7 +610,7 @@ function ReferralCard() {
           >
             <span className="min-w-0">
               <span className="block font-orbitron text-tiny tracking-wider text-green-300">
-                OR GET PAID IN REAL CASH
+                Or get paid in real cash
               </span>
               <span className="block font-mono-share text-tiny text-muted-foreground/70 truncate">
                 Ambassadors earn 20% of everything their referrals spend

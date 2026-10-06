@@ -68,7 +68,7 @@ export default function FlashSaleBanner({ onClick }: FlashSaleBannerProps) {
         </div>
 
         <span className="hidden sm:inline-flex shrink-0 px-3 py-1.5 rounded-md bg-orange-500/30 border border-orange-400/50 font-orbitron text-tiny tracking-wider text-orange-100 group-hover:bg-orange-500/50">
-          OPEN STORE
+          Open store
         </span>
 
         <button

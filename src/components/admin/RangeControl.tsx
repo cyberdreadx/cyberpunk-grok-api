@@ -114,7 +114,7 @@ export default function RangeControl({
           title={`Auto — ${autoBucket(value.days)} buckets for this span`}
           aria-pressed={value.bucket === null}
         >
-          AUTO
+          Auto
         </button>
         {BUCKETS.map((b) => (
           <button

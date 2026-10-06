@@ -244,7 +244,7 @@ const FeedTile: React.FC<Props> = ({ post, onOpen, forceBlur, currentUserId }) =
             title="Locked for other viewers — they see a blurred preview and must unlock."
           >
             <Lock className="w-2.5 h-2.5" />
-            <span>LOCKED ·</span>
+            <span>Locked ·</span>
             {(post.lockCost || 0) > 0 && <span>{post.lockCost}c</span>}
             {(post.lockPriceCents || 0) > 0 && <span>${((post.lockPriceCents || 0) / 100).toFixed(2)}</span>}
             {xrge > 0 && <span>{post.lockXrgeAmount} XRGE</span>}

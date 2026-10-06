@@ -90,7 +90,7 @@ const CreatorPanel: React.FC<Props> = ({ creator, onClose }) => {
             onClick={() => navigate(`/profile/${creator.username}`)}
             className="font-mono-share text-tiny gap-1 shrink-0"
           >
-            <ExternalLink className="w-3 h-3" /> PROFILE
+            <ExternalLink className="w-3 h-3" /> Profile
           </Button>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground p-1">
             <X className="w-5 h-5" />

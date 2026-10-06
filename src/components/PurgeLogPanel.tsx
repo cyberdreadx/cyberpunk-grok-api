@@ -151,13 +151,13 @@ export default function PurgeLogPanel() {
           <table className="w-full text-xs font-mono-share">
             <thead className="bg-muted/20 text-muted-foreground/70">
               <tr>
-                <th className="text-left px-3 py-2 font-normal">WHEN</th>
-                <th className="text-left px-3 py-2 font-normal">KIND</th>
-                <th className="text-left px-3 py-2 font-normal">ACTOR</th>
-                <th className="text-left px-3 py-2 font-normal">TARGET</th>
-                <th className="text-right px-3 py-2 font-normal">BLOB</th>
+                <th className="text-left px-3 py-2 font-normal">When</th>
+                <th className="text-left px-3 py-2 font-normal">Kind</th>
+                <th className="text-left px-3 py-2 font-normal">Actor</th>
+                <th className="text-left px-3 py-2 font-normal">Target</th>
+                <th className="text-right px-3 py-2 font-normal">Blob</th>
                 <th className="text-right px-3 py-2 font-normal">R2</th>
-                <th className="text-right px-3 py-2 font-normal">ERR</th>
+                <th className="text-right px-3 py-2 font-normal">Err</th>
               </tr>
             </thead>
             <tbody>
@@ -174,11 +174,11 @@ export default function PurgeLogPanel() {
                     <td className="px-3 py-2">
                       <span className="text-foreground">{KIND_LABELS[r.kind] || r.kind}</span>
                       {r.notes?.dryRun && (
-                        <span className="ml-1 text-amber-400/80 text-tiny">[DRY]</span>
+                        <span className="ml-1 text-amber-400/80 text-tiny">[Dry]</span>
                       )}
                       {r.notes?.aborted && (
                         <span className="ml-1 inline-flex items-center gap-0.5 text-destructive text-tiny">
-                          <ShieldX className="w-2.5 h-2.5" />ABORTED
+                          <ShieldX className="w-2.5 h-2.5" />Aborted
                         </span>
                       )}
                     </td>

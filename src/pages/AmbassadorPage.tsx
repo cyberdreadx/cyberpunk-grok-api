@@ -151,7 +151,7 @@ export default function AmbassadorPage() {
           <Card className="p-6 text-center space-y-4 border-border bg-card">
             <Award className="w-12 h-12 mx-auto text-primary opacity-60" />
             <p className="text-muted-foreground text-sm">Sign in to apply for the ambassador program</p>
-            <Button onClick={() => navigate("/")} className="bg-primary text-primary-foreground font-semibold">Sign In</Button>
+            <Button onClick={() => navigate("/create?signin=1")} className="bg-primary text-primary-foreground font-semibold">Sign in</Button>
           </Card>
         </Shell>
       </CyberLayout>
@@ -416,20 +416,10 @@ export default function AmbassadorPage() {
 }
 
 // ── Presentational bits ──────────────────────────────────────────────
-function Shell({ children, onBack }: { children: React.ReactNode; onBack: () => void }) {
+function Shell({ children }: { children: React.ReactNode; onBack?: () => void }) {
   return (
-    <div className="min-h-screen px-4 py-6 max-w-lg mx-auto space-y-4">
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={onBack} className="text-muted-foreground">
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
-        <div>
-          <h1 className="text-xl font-bold font-[Orbitron] text-foreground tracking-wider flex items-center gap-2">
-            <Award className="w-5 h-5 text-primary" /> AMBASSADORS
-          </h1>
-          <p className="text-xs text-muted-foreground">Earn cash on the revenue you bring in</p>
-        </div>
-      </div>
+    <div className="min-h-screen px-4 pt-4 pb-24 max-w-lg mx-auto space-y-4">
+      <p className="text-sm text-muted-foreground">Earn cash on the revenue you bring in.</p>
       {children}
     </div>
   );

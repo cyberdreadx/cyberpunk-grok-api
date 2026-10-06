@@ -169,7 +169,7 @@ const PreferencesDialog: React.FC<PreferencesDialogProps> = ({ open, onOpenChang
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 font-orbitron text-sm tracking-wider">
             <SettingsIcon className="w-4 h-4 text-primary" />
-            PREFERENCES
+            Preferences
           </DialogTitle>
           <DialogDescription className="font-mono-share text-tiny text-muted-foreground/70">
             Account-wide settings. Render-specific options live in render_config.
@@ -182,18 +182,18 @@ const PreferencesDialog: React.FC<PreferencesDialogProps> = ({ open, onOpenChang
             <section className="space-y-3">
               <label className="font-orbitron text-tiny tracking-wider text-muted-foreground flex items-center gap-1.5">
                 <User className="w-3 h-3" />
-                ACCOUNT
+                Account
               </label>
 
               {/* Email (read-only) */}
               <div className="flex items-center justify-between gap-2 text-xs font-mono-share">
-                <span className="text-muted-foreground/60">EMAIL</span>
+                <span className="text-muted-foreground/60">Email</span>
                 <span className="text-foreground/80 truncate">{user.email}</span>
               </div>
 
               {/* Username */}
               <div className="space-y-1.5">
-                <span className="font-mono-share text-tiny text-muted-foreground/60">USERNAME</span>
+                <span className="font-mono-share text-tiny text-muted-foreground/60">Username</span>
                 <div className="flex gap-2">
                   <input
                     value={username}
@@ -216,7 +216,7 @@ const PreferencesDialog: React.FC<PreferencesDialogProps> = ({ open, onOpenChang
               {/* Change password */}
               <div className="space-y-1.5">
                 <span className="font-mono-share text-tiny text-muted-foreground/60 flex items-center gap-1">
-                  <KeyRound className="w-3 h-3" /> CHANGE PASSWORD
+                  <KeyRound className="w-3 h-3" /> Change password
                 </span>
                 <input
                   type="password"
@@ -259,7 +259,7 @@ const PreferencesDialog: React.FC<PreferencesDialogProps> = ({ open, onOpenChang
             <section className="space-y-2 pt-4 border-t border-border/30">
               <label className="font-orbitron text-tiny tracking-wider text-muted-foreground flex items-center gap-1.5">
                 <MessageSquare className="w-3 h-3" />
-                LINK DISCORD
+                Link Discord
               </label>
               {discordLinked ? (
                 <div className="flex items-center justify-between gap-2 text-xs font-mono-share">
@@ -329,7 +329,7 @@ const PreferencesDialog: React.FC<PreferencesDialogProps> = ({ open, onOpenChang
           <section className="space-y-2 pt-4 border-t border-border/30">
             <label className="font-orbitron text-tiny tracking-wider text-muted-foreground flex items-center gap-1.5">
               <EyeOff className="w-3 h-3" />
-              MATURE_CONTENT_FILTER
+              Mature content filter
             </label>
             <button
               type="button"
@@ -368,8 +368,8 @@ const PreferencesDialog: React.FC<PreferencesDialogProps> = ({ open, onOpenChang
             <section className="pt-4 border-t border-red-500/20">
               <label className="font-orbitron text-tiny tracking-wider text-red-400 flex items-center gap-2 mb-3">
                 <Zap className="w-4 h-4" />
-                IMMERSION CONTROL
-                <span className="text-tiny text-red-500/50 font-mono-share">(GLOBAL — ALL USERS)</span>
+                Immersion control
+                <span className="text-tiny text-red-500/50 font-mono-share">(Global — all users)</span>
               </label>
               <p className="font-mono-share text-micro text-muted-foreground/70 mb-3 leading-relaxed">
                 Saves to the server. Everyone loads these values; sliders debounce ~650ms before POST.
@@ -379,7 +379,7 @@ const PreferencesDialog: React.FC<PreferencesDialogProps> = ({ open, onOpenChang
                 {/* Flicker */}
                 <div>
                   <div className="flex justify-between text-tiny mb-1 text-muted-foreground gap-2">
-                    <span>FLICKER DEPTH (0–1)</span>
+                    <span>Flicker depth (0–1)</span>
                     <span className="font-mono-share text-red-400 shrink-0">{immersion.flicker.toFixed(3)}</span>
                   </div>
                   <input
@@ -431,7 +431,7 @@ const PreferencesDialog: React.FC<PreferencesDialogProps> = ({ open, onOpenChang
                 {/* Glow */}
                 <div>
                   <div className="flex justify-between text-tiny mb-1 text-muted-foreground">
-                    <span>GLOW / BRIGHTNESS BIAS</span>
+                    <span>Glow / brightness bias</span>
                     <span className="font-mono-share text-red-400">{immersion.glow.toFixed(3)}</span>
                   </div>
                   <input
@@ -448,7 +448,7 @@ const PreferencesDialog: React.FC<PreferencesDialogProps> = ({ open, onOpenChang
                 {/* Scanline */}
                 <div>
                   <div className="flex justify-between text-tiny mb-1 text-muted-foreground">
-                    <span>SCANLINE WEIGHT</span>
+                    <span>Scanline weight</span>
                     <span className="font-mono-share text-red-400">{immersion.scanline.toFixed(3)}</span>
                   </div>
                   <input
@@ -465,7 +465,7 @@ const PreferencesDialog: React.FC<PreferencesDialogProps> = ({ open, onOpenChang
                 {/* Vignette */}
                 <div>
                   <div className="flex justify-between text-tiny mb-1 text-muted-foreground">
-                    <span>VIGNETTE</span>
+                    <span>Vignette</span>
                     <span className="font-mono-share text-red-400">{immersion.vignette.toFixed(3)}</span>
                   </div>
                   <input

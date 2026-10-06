@@ -85,13 +85,13 @@ export default function ApiKeysPanel({ triggerClassName }: { triggerClassName?: 
     <Dialog>
       <DialogTrigger asChild>
         <button className={triggerClassName || "inline-flex items-center gap-2 border border-primary/30 text-primary font-mono text-xs px-3 py-1.5 rounded-md hover:bg-primary/10 transition-colors"}>
-          <Key className="w-3 h-3" /> API KEYS
+          <Key className="w-3 h-3" /> API keys
         </button>
       </DialogTrigger>
       <DialogContent className="max-w-lg bg-background border-primary/30">
         <DialogHeader>
           <DialogTitle className="font-mono text-primary flex items-center gap-2">
-            <Key className="w-4 h-4" /> DEVELOPER API KEYS
+            <Key className="w-4 h-4" /> Developer API keys
           </DialogTitle>
         </DialogHeader>
 
@@ -105,7 +105,7 @@ export default function ApiKeysPanel({ triggerClassName }: { triggerClassName?: 
             maxLength={100}
           />
           <Button onClick={handleCreate} disabled={creating} size="sm" className="gap-1 font-mono text-xs">
-            <Plus className="w-3 h-3" /> CREATE
+            <Plus className="w-3 h-3" /> Create
           </Button>
         </div>
 

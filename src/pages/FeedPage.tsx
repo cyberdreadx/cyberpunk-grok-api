@@ -313,7 +313,7 @@ const FeedPage: React.FC = () => {
     <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4 space-y-3">
       <div className="flex items-center gap-2">
         <ShieldAlert className="w-5 h-5 text-destructive shrink-0" />
-        <h2 className="font-orbitron text-xs tracking-wider text-destructive">COMMUNITY GUIDELINES</h2>
+        <h2 className="font-orbitron text-xs tracking-wider text-destructive">Community guidelines</h2>
       </div>
       <p className="font-mono-share text-tiny text-muted-foreground leading-relaxed">
         By posting, you agree to follow these rules. Violations will result in content removal and account bans.
@@ -404,7 +404,7 @@ const FeedPage: React.FC = () => {
             {pickedMedia.type === "video"
               ? <Film className="w-2.5 h-2.5 text-white" />
               : <ImageIcon className="w-2.5 h-2.5 text-white" />}
-            <span className="font-mono-share text-micro text-white tracking-wider">ATTACHED</span>
+            <span className="font-mono-share text-micro text-white tracking-wider">Attached</span>
           </div>
         </div>
       ) : (
@@ -413,7 +413,7 @@ const FeedPage: React.FC = () => {
           onClick={() => setLibraryPickerOpen(true)}
           className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-border/40 bg-card/40 text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors font-mono-share text-tiny tracking-wider"
         >
-          <FolderOpen className="w-3.5 h-3.5" /> ADD FROM LIBRARY
+          <FolderOpen className="w-3.5 h-3.5" /> Add from library
         </button>
       )}
     </div>
@@ -431,7 +431,7 @@ const FeedPage: React.FC = () => {
       <AlertDialogContent className="bg-card border-border/50">
         <AlertDialogHeader>
           <AlertDialogTitle className="font-orbitron text-sm tracking-widest text-primary">
-            POST TO FEED?
+            Post to feed?
           </AlertDialogTitle>
           <AlertDialogDescription className="font-mono-share text-xs text-muted-foreground space-y-2">
             <span className="block">Your post will be visible to the community. Please review the details below before publishing.</span>
@@ -465,7 +465,7 @@ const FeedPage: React.FC = () => {
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={posting} className="font-mono-share text-xs">
-            CANCEL
+            Cancel
           </AlertDialogCancel>
           <AlertDialogAction
             disabled={posting}
@@ -476,9 +476,9 @@ const FeedPage: React.FC = () => {
             className="font-mono-share text-xs bg-primary text-primary-foreground hover:bg-primary/90"
           >
             {posting ? (
-              <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> POSTING…</>
+              <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Posting…</>
             ) : (
-              <><Send className="w-3 h-3 mr-1" /> CONFIRM POST</>
+              <><Send className="w-3 h-3 mr-1" /> Confirm post</>
             )}
           </AlertDialogAction>
         </AlertDialogFooter>
@@ -646,7 +646,7 @@ const FeedPage: React.FC = () => {
         <>
           <PenLine className="w-8 h-8 mx-auto mb-3 text-secondary/60" />
           <p className="font-orbitron text-xs tracking-widest text-foreground mb-1">
-            NOTHING HERE YET
+            Nothing here yet
           </p>
           <p className="font-mono-share text-xs text-muted-foreground mb-4">
             {filter === "following"
@@ -659,7 +659,7 @@ const FeedPage: React.FC = () => {
               onClick={() => setShowCompose(true)}
               className="font-mono-share text-tiny"
             >
-              <PenLine className="w-3 h-3 mr-1" /> WRITE THE FIRST ONE
+              <PenLine className="w-3 h-3 mr-1" /> Write the first one
             </Button>
           )}
         </>
@@ -794,7 +794,7 @@ const FeedPage: React.FC = () => {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between">
-                <span className="font-orbitron text-xs text-foreground tracking-wider">NEW POST</span>
+                <span className="font-orbitron text-xs text-foreground tracking-wider">New post</span>
                 <button
                   onClick={() => {
                     if (posting) return;

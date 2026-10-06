@@ -119,7 +119,7 @@ export default function LegacySubReconcilePanel() {
       <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
         <div className="flex items-center gap-2 mb-1">
           <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
-          <h3 className="font-orbitron text-xs tracking-wider text-amber-300">LEGACY SUBSCRIPTION RECONCILER</h3>
+          <h3 className="font-orbitron text-xs tracking-wider text-amber-300">Legacy subscription reconciler</h3>
         </div>
         <p className="font-mono-share text-tiny text-muted-foreground/80 leading-snug">
           Scans paid Stripe invoices on price IDs NOT in the current <code>STRIPE_PRICE_SUB_*</code> env map.
@@ -216,9 +216,9 @@ export default function LegacySubReconcilePanel() {
                       )}
                     </td>
                     <td className="px-2 py-1.5">
-                      {r.status === "ready" && <span className="text-green-400">READY</span>}
-                      {r.status === "no_user" && <span className="text-amber-400 inline-flex items-center gap-1"><UserX className="w-2.5 h-2.5" />NO USER</span>}
-                      {r.status === "fully_credited" && <span className="text-muted-foreground/60 inline-flex items-center gap-1"><CheckCircle2 className="w-2.5 h-2.5" />DONE</span>}
+                      {r.status === "ready" && <span className="text-green-400">Ready</span>}
+                      {r.status === "no_user" && <span className="text-amber-400 inline-flex items-center gap-1"><UserX className="w-2.5 h-2.5" />No user</span>}
+                      {r.status === "fully_credited" && <span className="text-muted-foreground/60 inline-flex items-center gap-1"><CheckCircle2 className="w-2.5 h-2.5" />Done</span>}
                     </td>
                   </tr>
                 ))}
