@@ -138,6 +138,21 @@ export function markJobPolled(promptId: string) {
   lastPollAt.set(promptId, Date.now());
 }
 
+/**
+ * Thrown by the main poll loop when it reaches "done" for a job the resume
+ * poller already delivered (the job is no longer recorded as active). The
+ * caller drops its own progress card rather than adding the result again.
+ */
+export class DeliveredElsewhere extends Error {
+  constructor() { super("Delivered by the resume poller"); this.name = "DeliveredElsewhere"; }
+}
+
+/** Whether anything in this tab has polled the job since `at`. */
+export function polledSince(promptId: string, at: number): boolean {
+  const seen = lastPollAt.get(promptId);
+  return !!seen && seen >= at;
+}
+
 export function isJobBeingPolled(promptId: string): boolean {
   const seen = lastPollAt.get(promptId);
   return !!seen && Date.now() - seen < POLL_STALE_MS;
@@ -558,6 +573,13 @@ export function useGrokApi() {
         for (let i = 0; i < 300; i++) {
           if (cancelled) { comfyJobStarts.current.delete(jobId); return; }
           await new Promise(r => setTimeout(r, 2000));
+          // The original loop finished and delivered this job meanwhile.
+          if (!getActiveJobs().some(j => j.promptId === saved.promptId)) {
+            comfyJobStarts.current.delete(jobId);
+            if (!cancelled) setComfyJobs(prev => prev.filter(j => j.id !== jobId));
+            return;
+          }
+          markJobPolled(saved.promptId);
           const pollPath = saved.pollEndpoint === "gltch" ? "/gltch" : "/comfyui";
           const pollBody = saved.pollEndpoint === "gltch"
             ? { action: "poll", promptId: saved.promptId }
@@ -566,6 +588,11 @@ export function useGrokApi() {
 
           if (poll.status === "done") {
             comfyJobStarts.current.delete(jobId);
+            // Last check before delivering: the original loop may have just won.
+            if (!getActiveJobs().some(j => j.promptId === saved.promptId)) {
+              if (!cancelled) setComfyJobs(prev => prev.filter(j => j.id !== jobId));
+              return;
+            }
             removeActiveJob(saved.promptId);
             let video = poll.video;
             if (video && video.startsWith("https://") && !video.startsWith("data:")) {
@@ -597,7 +624,15 @@ export function useGrokApi() {
       } catch { comfyJobStarts.current.delete(jobId); removeActiveJob(saved.promptId); }
     };
 
-    const sweep = () => {
+    // Only resume a job nothing has polled since `since`. On returning to the
+    // app that is the moment it became visible, checked after a grace period:
+    // a poll loop iOS merely froze thaws and polls within one interval (5s at
+    // most), so it is left alone; a loop that really died is picked up.
+    // Judging staleness at the instant of return could not tell the two apart.
+    const RETURN_GRACE_MS = 12_000;
+    let returnTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const sweep = (since?: number) => {
       if (cancelled) return;
       const jobs = getActiveJobs().filter(j => Date.now() - j.submittedAt < RESUMABLE_FOR_MS);
       if (!jobs.length) {
@@ -607,20 +642,27 @@ export function useGrokApi() {
       for (const j of jobs) {
         // Skip anything already being polled — otherwise returning to the app
         // starts a second poller and the result arrives twice.
-        if (isJobBeingPolled(j.promptId)) continue;
+        if (since !== undefined ? polledSince(j.promptId, since) : isJobBeingPolled(j.promptId)) continue;
         if (comfyJobStarts.current.has(`resume-${j.promptId}`)) continue;
         resumeOne(j);
       }
     };
 
     sweep();
-    const onVisible = () => { if (document.visibilityState === "visible") sweep(); };
-    document.addEventListener("visibilitychange", onVisible);
-    window.addEventListener("pageshow", sweep);
+    const onReturn = () => {
+      if (document.visibilityState !== "visible") return;
+      const at = Date.now();
+      if (returnTimer) clearTimeout(returnTimer);
+      returnTimer = setTimeout(() => sweep(at), RETURN_GRACE_MS);
+    };
+    const onPageShow = (e: PageTransitionEvent) => { if (e.persisted) onReturn(); };
+    document.addEventListener("visibilitychange", onReturn);
+    window.addEventListener("pageshow", onPageShow);
     return () => {
       cancelled = true;
-      document.removeEventListener("visibilitychange", onVisible);
-      window.removeEventListener("pageshow", sweep);
+      if (returnTimer) clearTimeout(returnTimer);
+      document.removeEventListener("visibilitychange", onReturn);
+      window.removeEventListener("pageshow", onPageShow);
     };
   }, [prependResults]);
 
@@ -1137,6 +1179,7 @@ export function useGrokApi() {
         for (let i = 0; i < maxAttempts; i++) {
           await new Promise((resolve) => setTimeout(resolve, 2000));
 
+          markJobPolled(submitData.promptId); // heartbeat for the resume sweep
           const pollData = await apiFetch<{
             status: string;
             image?: string;
@@ -1313,21 +1356,21 @@ export function useGrokApi() {
 
     saveActiveJob({ promptId, outputType: outType, submittedAt: Date.now(), ...(runpodEndpointId && { runpodEndpointId }), prompt: body.prompt as string || "" });
 
+    // pollComfyOnce, not a bare apiFetch: it records the heartbeat the resume
+    // sweep checks, and survives requests dropped while the app is hidden. This
+    // loop used a bare fetch, so it never looked alive to the sweep — every
+    // return to the app started a second poller and the result arrived twice.
+    const pollState = { consecutiveFailures: 0 };
     for (let i = 0; i < maxAttempts; i++) {
       await new Promise((r) => setTimeout(r, pollInterval));
 
-      const pollData = await apiFetch<{
-        status: string;
-        image?: string;
-        video?: string;
-        previewUrl?: string;
-        error?: string;
-      }>("/comfyui", {
-        method: "POST",
-        body: { action: "poll", promptId, outputType: outType, ...(runpodEndpointId && { runpodEndpointId }) },
-      });
+      const pollData = await pollComfyOnce(promptId, outType, runpodEndpointId, pollState);
+      if (!pollData) continue;
 
       if (pollData.status === "done") {
+        // A request iOS froze mid-flight can finish long after the resume
+        // poller took over and delivered — don't deliver a second copy.
+        if (!getActiveJobs().some(j => j.promptId === promptId)) throw new DeliveredElsewhere();
         removeActiveJob(promptId);
 
         // If video is an S3 URL (not base64/data URI), proxy through backend
@@ -1479,6 +1522,7 @@ export function useGrokApi() {
         setComfyJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "done", phase: null } : j));
       } catch (err: any) {
         comfyJobStarts.current.delete(jobId);
+        if (err instanceof DeliveredElsewhere) { setComfyJobs(prev => prev.filter(j => j.id !== jobId)); return; }
         comfyJobStarts.current.delete(jobId);
         setComfyJobs(prev => prev.map(j => j.id === jobId
           ? { ...j, status: "error", error: err.message || "Generation failed", phase: null }
@@ -1555,6 +1599,7 @@ export function useGrokApi() {
         setComfyJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "done", phase: null } : j));
       } catch (err: any) {
         comfyJobStarts.current.delete(jobId);
+        if (err instanceof DeliveredElsewhere) { setComfyJobs(prev => prev.filter(j => j.id !== jobId)); return; }
         comfyJobStarts.current.delete(jobId);
         setComfyJobs(prev => prev.map(j => j.id === jobId
           ? { ...j, status: "error", error: err.message || "Edit failed", phase: null }
@@ -1661,6 +1706,7 @@ export function useGrokApi() {
         setComfyJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "done", phase: null } : j));
       } catch (err: any) {
         comfyJobStarts.current.delete(jobId);
+        if (err instanceof DeliveredElsewhere) { setComfyJobs(prev => prev.filter(j => j.id !== jobId)); return; }
         comfyJobStarts.current.delete(jobId);
         setComfyJobs(prev => prev.map(j => j.id === jobId
           ? { ...j, status: "error", error: err.message || "Render failed", phase: null }
@@ -1737,6 +1783,7 @@ export function useGrokApi() {
         setComfyJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "done", phase: null } : j));
       } catch (err: any) {
         comfyJobStarts.current.delete(jobId);
+        if (err instanceof DeliveredElsewhere) { setComfyJobs(prev => prev.filter(j => j.id !== jobId)); return; }
         setComfyJobs(prev => prev.map(j => j.id === jobId
           ? { ...j, status: "error", error: err.message || "LTX render failed", phase: null }
           : j
@@ -1849,6 +1896,7 @@ export function useGrokApi() {
         setComfyJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "done", phase: null } : j));
       } catch (err: any) {
         comfyJobStarts.current.delete(jobId);
+        if (err instanceof DeliveredElsewhere) { setComfyJobs(prev => prev.filter(j => j.id !== jobId)); return; }
         comfyJobStarts.current.delete(jobId);
         setComfyJobs(prev => prev.map(j => j.id === jobId
           ? { ...j, status: "error", error: err.message || "Text-to-video render failed", phase: null }
