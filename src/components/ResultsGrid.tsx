@@ -37,7 +37,7 @@ import { isStudio } from "@/lib/edition";
 import PostToFeedDialog, { type PostToFeedValues } from "@/components/PostToFeedDialog";
 import { isPermanentPublicMediaUrl, uploadPublicMedia } from "@/lib/mediaUpload";
 import { BRAND } from "@/lib/brand";
-import { apiUrl } from "@/lib/api";
+import { apiFetch, apiUrl } from "@/lib/api";
 import { recordShareLink } from "@/lib/shareLinks";
 
 // ── PIN Utilities ────────────────────────────────────────────────────────
@@ -1467,10 +1467,18 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
   } | null>(null);
   const [storyLockCredits, setStoryLockCredits] = useState(0);
   const [storyLockXrge, setStoryLockXrge] = useState("");
-  // Remembers the poster's last choice, since most people post one kind.
-  const [storyMature, setStoryMature] = useState(() => {
-    try { return localStorage.getItem("story-mature-default") === "1"; } catch { return false; }
-  });
+  // Starts on for accounts that have posted 18+ before; otherwise off.
+  const [storyMature, setStoryMature] = useState(false);
+  const storyDialogOpen = !!storyLockDialog;
+  useEffect(() => {
+    if (!storyDialogOpen) return;
+    setStoryMature(false);
+    let cancelled = false;
+    apiFetch<{ posts_18plus?: boolean }>("/auth/me")
+      .then((me) => { if (!cancelled && me.posts_18plus) setStoryMature(true); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [storyDialogOpen]);
 
   const handlePostStory = useCallback(async (result: GrokResult) => {
     setStoryPostingId(result.id);
@@ -2882,10 +2890,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
               <Switch
                 id="story-mature"
                 checked={storyMature}
-                onCheckedChange={(v) => {
-                  setStoryMature(v);
-                  try { localStorage.setItem("story-mature-default", v ? "1" : "0"); } catch {}
-                }}
+                onCheckedChange={setStoryMature}
               />
             </div>
             <div>

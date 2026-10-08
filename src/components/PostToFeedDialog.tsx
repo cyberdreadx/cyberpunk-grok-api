@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Send, Loader2, ShieldAlert, Lock } from "lucide-react";
+import { apiFetch } from "@/lib/api";
 
 export interface PostToFeedValues {
   caption: string;
@@ -41,10 +42,16 @@ const PostToFeedDialog: React.FC<PostToFeedDialogProps> = ({
     if (open) {
       setCaption(defaultCaption);
       setIsMature(false);
+      // Accounts that have posted 18+ before start with 18+ on.
+      let cancelled = false;
+      apiFetch<{ posts_18plus?: boolean }>("/auth/me")
+        .then((me) => { if (!cancelled && me.posts_18plus) setIsMature(true); })
+        .catch(() => {});
       setEnableLock(false);
       setLockCost("");
       setLockPriceCents("");
       setLockXrgeAmount("");
+      return () => { cancelled = true; };
     }
   }, [open, defaultCaption]);
 

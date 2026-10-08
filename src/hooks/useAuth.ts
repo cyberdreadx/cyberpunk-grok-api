@@ -35,6 +35,8 @@ export interface AuthUser {
   is_verified?: boolean;
   verification_status?: "unverified" | "pending" | "verified" | "lapsed";
   karma?: number;
+  /** Has posted something 18+ before: new posts default to 18+. */
+  posts_18plus?: boolean;
   posting?: PostingStatus;
 }
 
@@ -60,6 +62,7 @@ export function useAuth() {
           email_verified: data.email_verified,
           is_admin: data.is_admin,
           is_feed_mod: data.is_feed_mod,
+          posts_18plus: data.posts_18plus,
           is_verified: data.is_verified,
           verification_status: data.verification_status,
           karma: data.karma,
@@ -83,6 +86,7 @@ export function useAuth() {
         email_verified: data.email_verified,
         is_admin: data.is_admin,
         is_feed_mod: data.is_feed_mod,
+        posts_18plus: data.posts_18plus,
         is_verified: data.is_verified,
         verification_status: data.verification_status,
         karma: data.karma,

@@ -5,6 +5,7 @@ import { applyCors } from "../_lib/cors";
 import { checkRateLimit } from "../_lib/ratelimit";
 import { hasKarmaUnlock, KARMA_THRESHOLD } from "../_lib/karma";
 import { hasPurchased } from "../_lib/purchaseGate";
+import { postsMature } from "../_lib/matureHistory";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   applyCors(req, res, "GET, OPTIONS");
@@ -46,6 +47,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const purchased = await hasPurchased(sql, auth.userId);
     const karmaUnlock = await hasKarmaUnlock(sql, auth.userId);
     const canPostNow = isAdmin || purchased || karmaUnlock.ok;
+    const posts18 = await postsMature(sql, auth.userId);
 
     return res.status(200).json({
       id: user.id,
@@ -60,6 +62,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       subscription_tier: user.subscription_tier,
       subscription_renews_at: user.subscription_renews_at,
       karma: user.karma,
+      posts_18plus: posts18,
       posting: {
         can_post: canPostNow,
         purchased,

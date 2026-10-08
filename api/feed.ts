@@ -5,6 +5,7 @@ import { hasPurchased, canPost, POSTING_GATE_MESSAGE } from "./_lib/purchaseGate
 import { isVerified, VERIFICATION_REQUIRED_MESSAGE } from "./_lib/verifiedGate";
 import { resolvePreviewUrl } from "./_lib/preview-url";
 import { notify } from "./_lib/notify";
+import { postsMature } from "./_lib/matureHistory";
 
 const MAX_LOCK_COST = 100;
 const MAX_LOCK_PRICE_CENTS = 10000; // $100 max
@@ -506,7 +507,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const cost = Math.max(0, Math.min(parseInt(lockCost) || 0, MAX_LOCK_COST));
       const priceCents = Math.max(0, Math.min(parseInt(lockPriceCents) || 0, MAX_LOCK_PRICE_CENTS));
       const xrgeAmount = lockXrgeAmount ? String(Math.max(0, parseFloat(lockXrgeAmount) || 0)) : null;
-      const mature = !!isMature;
+      const mature = typeof isMature === "boolean" ? isMature : await postsMature(sql, auth.userId);
 
       // Verification gate: monetized posts (any non-zero lock) require an
       // ACTIVE creator verification subscription.

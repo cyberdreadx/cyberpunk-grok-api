@@ -4,6 +4,7 @@ import { getDb } from "./_lib/db";
 import { canPost, hasPurchased, POSTING_GATE_MESSAGE } from "./_lib/purchaseGate";
 import { isVerified, VERIFICATION_REQUIRED_MESSAGE } from "./_lib/verifiedGate";
 import { resolvePreviewUrl } from "./_lib/preview-url";
+import { postsMature } from "./_lib/matureHistory";
 
 export const config = { maxDuration: 30 };
 
@@ -40,7 +41,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const type = (mediaType || "image").startsWith("video") ? "video" : "image";
       const cost = Math.max(0, Math.min(parseInt(lockCost) || 0, MAX_LOCK_COST));
       const xrgeAmount = lockXrgeAmount ? String(parseFloat(lockXrgeAmount) || 0) : null;
-      const mature = !!isMature;
+      const mature = typeof isMature === "boolean" ? isMature : await postsMature(sql, auth.userId);
 
       // Verification gate: monetized stories (any non-zero lock) require an
       // ACTIVE creator verification subscription.
