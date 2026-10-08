@@ -68,16 +68,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // sfw=1      → drop posts flagged mature. Used by the signed-out feed and
       //              by anyone with the NSFW toggle off, so the media never even
       //              reaches the browser.
-      // sfw=strict → additionally require that the poster has flagged something
-      //              mature at least once.
+      // sfw=strict → only posts an admin picked for the logged-out landing page
+      //              ("Show on landing page"), and still never 18+ ones.
       //
-      // The strict tier exists because is_mature is self-reported and badly
-      // under-applied: 161 of 292 posters have never flagged anything, leaving
-      // ~336 unvetted posts that `sfw=1` happily returns. Someone who has used
-      // the flag before has demonstrated they know the control exists, so their
-      // unflagged posts are a far better bet. It's a heuristic, not a
-      // guarantee — but it's the only signal in the data, since nothing here
-      // classifies images.
+      // The strict tier exists because is_mature is self-reported and nothing
+      // here classifies images, so "not flagged" proves nothing on a public
+      // page. It used to trust unflagged posts from people who had flagged
+      // something before, but since 2026-10-08 an account with any 18+ post
+      // has all its posts flagged 18+, which left that rule nothing to show.
+      // A person picking the posts is the only reliable signal.
       // NSFW is a paying-customer feature. A client-side toggle is a
       // preference, not a permission — anyone can drop the query param — so
       // eligibility is decided here and a non-payer is forced to sfw=1
@@ -88,11 +87,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       const sfwCond =
         effectiveSfw === "strict"
-          ? sql`AND p.is_mature = false
-                AND EXISTS (
-                  SELECT 1 FROM feed_posts fp
-                  WHERE fp.user_id = p.user_id AND fp.is_mature = true
-                )`
+          ? sql`AND p.is_mature = false AND p.landing_pick = true`
           : effectiveSfw === "1"
             ? sql`AND p.is_mature = false`
             : sql``;
@@ -136,6 +131,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       await sql`ALTER TABLE feed_posts ADD COLUMN IF NOT EXISTS lock_price_cents INT NOT NULL DEFAULT 0`.catch(() => {});
       await sql`ALTER TABLE feed_posts ADD COLUMN IF NOT EXISTS lock_xrge_amount TEXT DEFAULT NULL`.catch(() => {});
       await sql`ALTER TABLE feed_posts ADD COLUMN IF NOT EXISTS is_mature BOOLEAN NOT NULL DEFAULT false`.catch(() => {});
+      await sql`ALTER TABLE feed_posts ADD COLUMN IF NOT EXISTS landing_pick BOOLEAN NOT NULL DEFAULT false`.catch(() => {});
 
       // ───── CREATORS VIEW: one row per author, ranked by recency + engagement ─────
       if (viewMode === "creators" && !userId) {
@@ -431,6 +427,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             isOwner,
             viewCount: r.view_count || 0,
             isMature: !!r.is_mature,
+            landingPick: !!r.landing_pick,
           };
         }),
         nextCursor: rows.length === limit ? rows[rows.length - 1].created_at : null,
@@ -576,6 +573,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
       const { postId, action, isMature } = req.body || {};
       if (!postId) return res.status(400).json({ error: "postId required" });
+
+      // ── Sub-action: pick / unpick for the logged-out landing page (admin) ──
+      if (action === "set-landing") {
+        if (auth.email !== ADMIN_EMAIL) return res.status(403).json({ error: "Not allowed" });
+        const next = !!req.body?.landingPick;
+        const [row] = await sql`UPDATE feed_posts SET landing_pick = ${next} WHERE id = ${postId}::uuid RETURNING is_mature`;
+        if (!row) return res.status(404).json({ error: "Post not found" });
+        return res.status(200).json({ ok: true, landingPick: next, isMature: !!row.is_mature });
+      }
 
       // ── Sub-action: toggle 18+ flag (owner / admin / mod) ──
       if (action === "set-mature") {

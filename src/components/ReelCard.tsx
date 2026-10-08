@@ -4,7 +4,7 @@ import { apiFetch } from "@/lib/api";
 import { BRAND } from "@/lib/brand";
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowBigUp, ArrowBigDown, MessageCircle, Trash2, Flag, Lock, Coins, CreditCard, Zap, Eye, EyeOff, MoreHorizontal, Link2, ShieldOff, Volume2, VolumeX } from "lucide-react";
+import { ArrowBigUp, ArrowBigDown, MessageCircle, Trash2, Flag, Lock, Coins, CreditCard, Zap, Eye, EyeOff, MoreHorizontal, Link2, ShieldOff, Volume2, VolumeX, Star } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import CommentThread from "@/components/CommentThread";
 import { Button } from "@/components/ui/button";
@@ -42,6 +42,8 @@ interface FeedPost {
   isOwner?: boolean;
   viewCount?: number;
   isMature?: boolean;
+  /** Admin picked it for the logged-out landing page. */
+  landingPick?: boolean;
 }
 
 interface ReelCardProps {
@@ -75,6 +77,7 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate, active = true, moun
   const [matureRevealed, setMatureRevealed] = useState(false);
   const [matureFlagged, setMatureFlagged] = useState(!!post.isMature);
   const [togglingMature, setTogglingMature] = useState(false);
+  const [landingPick, setLandingPick] = useState(!!post.landingPick);
 
   // Sync unlock state when props change (e.g. after fetchFeed refresh)
   React.useEffect(() => {
@@ -92,6 +95,20 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate, active = true, moun
   const isAdminOrMod = !!user?.is_admin || !!user?.is_feed_mod;
   const canDelete = user?.id === post.userId || isAdminOrMod;
   const canToggleMature = user?.id === post.userId || isAdminOrMod;
+
+  const handleToggleLanding = async () => {
+    const next = !landingPick;
+    setLandingPick(next);
+    try {
+      const r = await apiFetch<{ isMature?: boolean }>("/feed", { method: "PATCH", body: { postId: post.id, action: "set-landing", landingPick: next } });
+      toast({
+        title: !next ? "Removed from landing page" : r.isMature ? "Picked, but it's 18+ so it won't show there" : "Showing on landing page",
+      });
+    } catch (err: any) {
+      setLandingPick(!next);
+      toast({ title: err.message || "Failed to update", variant: "destructive" });
+    }
+  };
 
   const handleToggleMature = async () => {
     if (togglingMature) return;
@@ -469,6 +486,12 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate, active = true, moun
               >
                 <EyeOff className="w-3.5 h-3.5 mr-2" />
                 {matureFlagged ? "Unmark as 18+" : "Mark as 18+"}
+              </DropdownMenuItem>
+            )}
+            {!!user?.is_admin && !!post.imageUrl && (
+              <DropdownMenuItem onClick={handleToggleLanding} className="cursor-pointer">
+                <Star className={`w-3.5 h-3.5 mr-2 ${landingPick ? "fill-current text-primary" : ""}`} />
+                {landingPick ? "Remove from landing page" : "Show on landing page"}
               </DropdownMenuItem>
             )}
             {canDelete && (

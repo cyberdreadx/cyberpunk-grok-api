@@ -292,9 +292,9 @@ function LiveShowcase({ onJoin }: { onJoin: () => void }) {
   useEffect(() => {
     if (!ageOk) return;
     let alive = true;
-    // strict, not sfw=1: the mature flag is self-reported and most posters have
-    // never touched it, so "not flagged" alone is not evidence of anything on a
-    // public page. strict also requires the poster to have used the flag before.
+    // strict, not sfw=1: only posts an admin picked for this page ("Show on
+    // landing page" in the post menu). The 18+ flag is self-reported, so "not
+    // flagged" alone is not enough for a public page.
     apiFetch<{ posts: any[] }>("/feed?sort=top&sfw=strict", { auth: false })
       .then((d) => {
         if (!alive || !Array.isArray(d?.posts)) return;
@@ -327,8 +327,8 @@ function LiveShowcase({ onJoin }: { onJoin: () => void }) {
         <div className="cc-kicker">Live From The Grid</div>
         <h2 className="cc-h2">Real renders, <span className="g">straight off the feed</span></h2>
         <p className="cc-lead">
-          Top-rated drops from operators on the grid — not a curated demo reel.
-          This is the safe-for-work slice; sign up to see the uncut feed.
+          Picked from what operators are posting on the grid right now.
+          Sign up to see the full feed.
         </p>
       </Reveal>
       <Reveal>

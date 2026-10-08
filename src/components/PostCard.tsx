@@ -20,6 +20,7 @@ import {
   Link2,
   Copy,
   ShieldOff,
+  Star,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import CommentThread from "@/components/CommentThread";
@@ -62,6 +63,8 @@ interface FeedPost {
   reactionCount?: number;
   userReacted?: boolean;
   isMature?: boolean;
+  /** Admin picked it for the logged-out landing page. */
+  landingPick?: boolean;
 }
 
 interface PostCardProps {
@@ -87,6 +90,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
   const [matureRevealed, setMatureRevealed] = useState(false);
   const [matureFlagged, setMatureFlagged] = useState(!!post.isMature);
   const [togglingMature, setTogglingMature] = useState(false);
+  const [landingPick, setLandingPick] = useState(!!post.landingPick);
 
   // Sync unlock state when props change (e.g. after fetchFeed refresh)
   React.useEffect(() => {
@@ -200,6 +204,20 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
       onUpdate?.();
     } catch (err: any) {
       toast({ title: err.message || "Failed to ban", variant: "destructive" });
+    }
+  };
+
+  const handleToggleLanding = async () => {
+    const next = !landingPick;
+    setLandingPick(next);
+    try {
+      const r = await apiFetch<{ isMature?: boolean }>("/feed", { method: "PATCH", body: { postId: post.id, action: "set-landing", landingPick: next } });
+      toast({
+        title: !next ? "Removed from landing page" : r.isMature ? "Picked, but it's 18+ so it won't show there" : "Showing on landing page",
+      });
+    } catch (err: any) {
+      setLandingPick(!next);
+      toast({ title: err.message || "Failed to update", variant: "destructive" });
     }
   };
 
@@ -337,6 +355,12 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
               >
                 <EyeOff className="w-3.5 h-3.5 mr-2" />
                 {matureFlagged ? "Unmark as 18+" : "Mark as 18+"}
+              </DropdownMenuItem>
+            )}
+            {!!user?.is_admin && !!post.imageUrl && (
+              <DropdownMenuItem onClick={handleToggleLanding} className="cursor-pointer">
+                <Star className={`w-3.5 h-3.5 mr-2 ${landingPick ? "fill-current text-primary" : ""}`} />
+                {landingPick ? "Remove from landing page" : "Show on landing page"}
               </DropdownMenuItem>
             )}
             {canDelete && (
