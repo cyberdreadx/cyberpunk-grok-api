@@ -110,6 +110,9 @@ const EDIT_LORA_META: Record<string, { label: string; nsfw?: boolean }> = {
   "bj_20260120_22-22-29epoch15_comfy.safetensors": { label: "Blowjob", nsfw: true },
 };
 
+/** Adult LoRAs Studio still offers. Everything else flagged nsfw is Runner-only. */
+const STUDIO_ADULT_LORAS = new Set(["klein_snofs_v1_4.safetensors"]);
+
 const LORA_CREDITS: Record<string, string> = {
   "klein_snofs_v1_4.safetensors": "SNOFS by Ashen3",
 };
@@ -223,16 +226,17 @@ const Index = () => {
     clearError,
   } = useGrokApi();
 
-  /* Adult LoRAs are unlocked by the XRGE holder program, which Studio does not
-     offer — so in Studio they would only ever show as locked explicit names
-     with an unlock button leading nowhere. Studio leaves them out entirely;
-     holders still have them on Runner. The NSFW base models are unaffected. */
+  /* Studio leaves out the explicitly named adult LoRAs (their menu labels are
+     the problem, not the feature); Runner keeps them all. Brandon's call
+     (2026-10-08): SNOFS stays in Studio. It unlocks the same way as on Runner —
+     XRGE holder or the one-time $30 Stripe LoRA unlock (lora_unlocked), which
+     the server enforces. The NSFW base models are unaffected. */
   const comfyModels = React.useMemo(
     () =>
       isStudio
         ? {
             ...rawComfyModels,
-            editLoras: rawComfyModels.editLoras.filter((l) => !EDIT_LORA_META[l]?.nsfw),
+            editLoras: rawComfyModels.editLoras.filter((l) => !EDIT_LORA_META[l]?.nsfw || STUDIO_ADULT_LORAS.has(l)),
             krea2Loras: rawComfyModels.krea2Loras.filter((l) => !KREA2_LORA_META[l]?.nsfw),
             videoLoras: rawComfyModels.videoLoras.filter((v) => !v.nsfw),
           }
@@ -1515,13 +1519,13 @@ const Index = () => {
                         )}
                         {!comfyModels.xrgeHolder && comfyModels.editLoras.some((l) => EDIT_LORA_META[l]?.nsfw) && (
                           <div className="font-mono-share text-micro text-pink-400/60 mt-1 space-y-1">
-                            <p>🔒 NSFW LoRAs require unlock</p>
+                            <p>🔒 Adult LoRAs need the one-time unlock</p>
                             <button
                               onClick={() => creditsHook.purchaseLoraUnlock()}
                               disabled={creditsHook.purchasing}
                               className="px-2 py-1 rounded text-tiny font-mono-share bg-pink-500/20 border border-pink-500/40 text-pink-300 hover:bg-pink-500/30 transition-colors disabled:opacity-50"
                             >
-                              {creditsHook.purchasing ? "..." : "UNLOCK ALL LORAS — $30"}
+                              {creditsHook.purchasing ? "..." : "Unlock all LoRAs — $30"}
                             </button>
                           </div>
                         )}
@@ -1746,13 +1750,13 @@ const Index = () => {
                         </select>
                         {!comfyModels.xrgeHolder && comfyModels.videoLoras.some(v => v.nsfw) && (
                           <div className="mt-1 font-mono-share text-micro text-pink-400/70 space-y-1">
-                            <p>🔒 NSFW LoRAs require unlock</p>
+                            <p>🔒 Adult LoRAs need the one-time unlock</p>
                             <button
                               onClick={() => creditsHook.purchaseLoraUnlock()}
                               disabled={creditsHook.purchasing}
                               className="px-2 py-1 rounded text-tiny font-mono-share bg-pink-500/20 border border-pink-500/40 text-pink-300 hover:bg-pink-500/30 transition-colors disabled:opacity-50"
                             >
-                              {creditsHook.purchasing ? "..." : "UNLOCK ALL LORAS — $30"}
+                              {creditsHook.purchasing ? "..." : "Unlock all LoRAs — $30"}
                             </button>
                           </div>
                         )}
@@ -1930,13 +1934,13 @@ const Index = () => {
                         </select>
                         {!comfyModels.xrgeHolder && comfyModels.videoLoras.some(v => v.nsfw) && (
                           <div className="mt-1 font-mono-share text-micro text-pink-400/70 space-y-1">
-                            <p>🔒 NSFW LoRAs require unlock</p>
+                            <p>🔒 Adult LoRAs need the one-time unlock</p>
                             <button
                               onClick={() => creditsHook.purchaseLoraUnlock()}
                               disabled={creditsHook.purchasing}
                               className="px-2 py-1 rounded text-tiny font-mono-share bg-pink-500/20 border border-pink-500/40 text-pink-300 hover:bg-pink-500/30 transition-colors disabled:opacity-50"
                             >
-                              {creditsHook.purchasing ? "..." : "UNLOCK ALL LORAS — $30"}
+                              {creditsHook.purchasing ? "..." : "Unlock all LoRAs — $30"}
                             </button>
                           </div>
                         )}

@@ -28,6 +28,7 @@
  * Polling is free and not rate-limited as generation; only POST spends.
  */
 
+import { hasLoraAccess, isAdultLora, LORA_LOCKED_MESSAGE } from "../_lib/adult-loras";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getUserFromApiKey } from "../_lib/apikey-auth";
 import { checkRateLimit } from "../_lib/ratelimit";
@@ -79,6 +80,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         error: EMAIL_VERIFICATION_REQUIRED_MESSAGE,
         code: EMAIL_VERIFICATION_REQUIRED_CODE,
       });
+    }
+
+    // Adult LoRAs need the paid LoRA unlock, same as in the app (_lib/adult-loras).
+    if (isAdultLora((req.body || {}).lora) && !(await hasLoraAccess(auth.userId))) {
+      return res.status(403).json({ error: LORA_LOCKED_MESSAGE, code: "LORA_LOCKED" });
     }
 
     const sql = getDb();

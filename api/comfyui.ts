@@ -13,6 +13,7 @@
  * Requires auth. Admin gets free usage; regular users pay credits.
  */
 
+import { hasLoraAccess, isAdultLora, requestedLoras, LORA_LOCKED_MESSAGE } from "./_lib/adult-loras";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { S3Client, GetObjectCommand, DeleteObjectCommand, ListObjectsV2Command, DeleteObjectsCommand } from "@aws-sdk/client-s3";
 import { getUserFromRequest, ADMIN_EMAIL, checkBan } from "./_lib/auth";
@@ -1985,7 +1986,21 @@ Rules:
       if (workflowType === "txt2img" && !checkpoint)
         return res.status(400).json({ error: "Checkpoint is required" });
 
-      // ── NSFW LoRA gate (XRGE holders only) ──
+      // ── Adult LoRA gate (edit / Krea 2) ──
+      // The UI locks these, but only the server can make that stick: before
+      // this check a request naming an adult edit LoRA was served for free.
+      if (!isAdminUser && requestedLoras({ lora, loras }).some(isAdultLora)) {
+        try {
+          if (!(await hasLoraAccess(auth.userId))) {
+            return res.status(403).json({ error: LORA_LOCKED_MESSAGE, code: "LORA_LOCKED" });
+          }
+        } catch (e: any) {
+          console.error("[comfyui] adult LoRA gate DB check failed:", e.message);
+          return res.status(403).json({ error: "Unable to verify LoRA access. Try again." });
+        }
+      }
+
+      // ── NSFW video LoRA gate ──
       if (videoLora && !isAdminUser) {
         const isNsfwLora = !SFW_LORA_KEYWORDS.some(k => videoLora.toLowerCase().includes(k));
         if (isNsfwLora) {
