@@ -6,6 +6,7 @@ import { hasAuthToken } from "@/lib/api";
 import StoryViewer from "@/components/StoryViewer";
 import FeatureExplainer, { hasSeenExplainer, markExplainerSeen } from "@/components/FeatureExplainer";
 import { Lock } from "lucide-react";
+import { useMatureFilter } from "@/hooks/useMatureFilter";
 
 interface Story {
   id: string;
@@ -23,6 +24,7 @@ interface Story {
   lockCost?: number;
   unlocked?: boolean;
   isOwner?: boolean;
+  isMature?: boolean;
 }
 
 interface StoryUser {
@@ -46,16 +48,18 @@ const StoriesBar: React.FC<StoriesBarProps> = ({ currentUserId, isAdmin }) => {
   const [pendingOpenIdx, setPendingOpenIdx] = useState<number | null>(null);
 
   const loggedIn = hasAuthToken();
+  // With 18+ off the server leaves flagged stories out entirely (same as the feed).
+  const { matureFilter } = useMatureFilter();
 
   const fetchStories = useCallback(async () => {
     if (!loggedIn) return;
     try {
-      const data = await apiFetch<{ users: StoryUser[] }>("/stories");
+      const data = await apiFetch<{ users: StoryUser[] }>(matureFilter ? "/stories?sfw=1" : "/stories");
       setUsers(data.users || []);
     } catch (err) {
       console.error("[StoriesBar] fetch failed:", err);
     }
-  }, [loggedIn]);
+  }, [loggedIn, matureFilter]);
 
   const handleDelete = useCallback(async (storyId: string) => {
     try {

@@ -7,6 +7,7 @@ import { apiFetch } from "@/lib/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useMatureFilter } from "@/hooks/useMatureFilter";
 import { useMediaSrc } from "@/hooks/useMediaSrc";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Story {
   id: string;
@@ -57,6 +58,10 @@ const STORY_DURATION = 5000;
 
 const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, currentUserId, isAdmin, onClose, onViewed, onDelete, onUnlocked }) => {
   const { matureFilter } = useMatureFilter();
+  const { user } = useAuth();
+  // Local overrides after marking/unmarking 18+ here, keyed by story id.
+  const [matureFlags, setMatureFlags] = useState<Record<string, boolean>>({});
+  const [togglingMature, setTogglingMature] = useState(false);
   const [matureRevealed, setMatureRevealed] = useState<Record<string, boolean>>({});
   const [userIdx, setUserIdx] = useState(initialUserIdx);
   const [storyIdx, setStoryIdx] = useState(0);
@@ -83,7 +88,9 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
   const currentStory = currentUser?.stories[storyIdx];
   const isOwner = currentUser?.userId === currentUserId;
   const isLocked = currentStory && ((currentStory.lockCost || 0) > 0 || (currentStory.lockXrgeAmount && parseFloat(currentStory.lockXrgeAmount) > 0)) && !currentStory.unlocked && !currentStory.isOwner;
-  const isMatureBlurred = !!currentStory && !isLocked && matureFilter && !!currentStory.isMature && !matureRevealed[currentStory.id] && !currentStory.isOwner;
+  const storyIsMature = !!currentStory && (matureFlags[currentStory.id] ?? !!currentStory.isMature);
+  const canToggleMature = !!currentStory && (!!currentStory.isOwner || !!isAdmin || !!user?.is_admin || !!user?.is_feed_mod);
+  const isMatureBlurred = !!currentStory && !isLocked && matureFilter && storyIsMature && !matureRevealed[currentStory.id] && !currentStory.isOwner;
   const storyMedia = useMediaSrc(currentStory?.mediaUrl, {
     kind: currentStory?.mediaType === "video" ? "video" : "image",
     context: "story",
@@ -173,6 +180,23 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
     } catch { toast.error("Failed to delete story"); }
     finally { setDeleting(false); setPaused(false); }
   }, [onDelete, currentStory, currentUser, deleting, storyIdx, userIdx, users.length, onClose]);
+
+  const handleToggleMature = useCallback(async () => {
+    if (!currentStory || togglingMature) return;
+    const id = currentStory.id;
+    const next = !(matureFlags[id] ?? !!currentStory.isMature);
+    setTogglingMature(true);
+    setMatureFlags((p) => ({ ...p, [id]: next }));
+    try {
+      await apiFetch("/stories", { method: "PATCH", body: { storyId: id, action: "set-mature", isMature: next } });
+      toast.success(next ? "Marked as 18+" : "Removed 18+ tag");
+    } catch (err: any) {
+      setMatureFlags((p) => ({ ...p, [id]: !next }));
+      toast.error(err?.message || "Failed to update");
+    } finally {
+      setTogglingMature(false);
+    }
+  }, [currentStory, togglingMature, matureFlags]);
 
   const handleUnlock = useCallback(async () => {
     if (!currentStory || unlocking) return;
@@ -344,6 +368,9 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
           <span className="text-white/50 text-xs shrink-0">
             {new Date(currentStory.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
           </span>
+          {storyIsMature && (
+            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 shrink-0">18+</span>
+          )}
           {((currentStory.lockCost || 0) > 0 || (currentStory.lockXrgeAmount && parseFloat(currentStory.lockXrgeAmount) > 0)) && (
             <span className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400">
               <Lock className="w-3 h-3" />
@@ -358,6 +385,13 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
           {currentStory.mediaType === "video" && !isLocked && (
             <button onClick={() => setMuted(m => !m)} className="text-white/80 hover:text-white p-2">
               {muted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+            </button>
+          )}
+          {canToggleMature && (
+            <button onClick={(e) => { e.stopPropagation(); handleToggleMature(); }} disabled={togglingMature}
+              className={`p-2 transition-colors ${storyIsMature ? "text-amber-300 hover:text-amber-200" : "text-white/70 hover:text-white"}`}
+              aria-label={storyIsMature ? "Unmark as 18+" : "Mark as 18+"} title={storyIsMature ? "Unmark as 18+" : "Mark as 18+"}>
+              {togglingMature ? <Loader2 className="w-5 h-5 animate-spin" /> : <EyeOff className="w-5 h-5" />}
             </button>
           )}
           {canDelete && (
@@ -440,7 +474,7 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
                 <div className="bg-black/70 rounded-full p-3 border border-amber-400/50">
                   <EyeOff className="w-7 h-7 text-amber-300" />
                 </div>
-                <span className="font-orbitron text-xs tracking-widest text-amber-300">Mature content</span>
+                <span className="text-sm font-semibold text-amber-300">18+</span>
                 <button
                   onClick={(e) => { e.stopPropagation(); setMatureRevealed(p => ({ ...p, [currentStory.id]: true })); }}
                   className="font-mono-share text-xs px-4 py-1.5 rounded-md border border-amber-400/50 text-amber-300 bg-black/40 hover:bg-amber-400/10"
@@ -458,7 +492,7 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
                 <div className="bg-black/70 rounded-full p-3 border border-amber-400/50">
                   <EyeOff className="w-7 h-7 text-amber-300" />
                 </div>
-                <span className="font-orbitron text-xs tracking-widest text-amber-300">Mature content</span>
+                <span className="text-sm font-semibold text-amber-300">18+</span>
                 <button
                   onClick={(e) => { e.stopPropagation(); setMatureRevealed(p => ({ ...p, [currentStory.id]: true })); }}
                   className="font-mono-share text-xs px-4 py-1.5 rounded-md border border-amber-400/50 text-amber-300 bg-black/40 hover:bg-amber-400/10"

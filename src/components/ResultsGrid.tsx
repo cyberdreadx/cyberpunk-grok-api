@@ -1,5 +1,6 @@
 import { useTabActive } from "@/hooks/useTabActive";
 import React, { useState, useCallback, useRef, useEffect } from "react";
+import { Switch } from "@/components/ui/switch";
 import { videoPosterUrl } from "@/lib/videoPoster";
 import { createPortal } from "react-dom";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -1466,6 +1467,10 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
   } | null>(null);
   const [storyLockCredits, setStoryLockCredits] = useState(0);
   const [storyLockXrge, setStoryLockXrge] = useState("");
+  // Remembers the poster's last choice, since most people post one kind.
+  const [storyMature, setStoryMature] = useState(() => {
+    try { return localStorage.getItem("story-mature-default") === "1"; } catch { return false; }
+  });
 
   const handlePostStory = useCallback(async (result: GrokResult) => {
     setStoryPostingId(result.id);
@@ -1556,6 +1561,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
           prompt: storyLockDialog.prompt,
           lockCost,
           lockXrgeAmount: xrgeAmount,
+          isMature: storyMature,
         }),
       });
       if (!storyRes.ok) {
@@ -1596,7 +1602,7 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
       setStoryLockDialog(null);
       setStoryPostingId(null);
     }
-  }, [storyLockDialog, storyLockCredits, storyLockXrge]);
+  }, [storyLockDialog, storyLockCredits, storyLockXrge, storyMature]);
 
   const hasFolders = folders.length > 0 || !!onCreateFolder;
 
@@ -2868,6 +2874,20 @@ const ResultsGrid: React.FC<ResultsGridProps> = ({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="space-y-4 py-2">
+            <div className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2">
+              <div>
+                <label htmlFor="story-mature" className="text-sm font-medium text-foreground cursor-pointer">18+</label>
+                <p className="text-xs text-muted-foreground">Only shown to members who turned on 18+.</p>
+              </div>
+              <Switch
+                id="story-mature"
+                checked={storyMature}
+                onCheckedChange={(v) => {
+                  setStoryMature(v);
+                  try { localStorage.setItem("story-mature-default", v ? "1" : "0"); } catch {}
+                }}
+              />
+            </div>
             <div>
               <label className="text-xs font-mono text-muted-foreground mb-1 block">Credit Lock (0–50)</label>
               <input

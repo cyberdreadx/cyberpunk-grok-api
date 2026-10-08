@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getUserFromRequest, ADMIN_EMAIL, checkBan } from "./_lib/auth";
 import { getDb } from "./_lib/db";
-import { canPost, POSTING_GATE_MESSAGE } from "./_lib/purchaseGate";
+import { canPost, hasPurchased, POSTING_GATE_MESSAGE } from "./_lib/purchaseGate";
 import { isVerified, VERIFICATION_REQUIRED_MESSAGE } from "./_lib/verifiedGate";
 import { resolvePreviewUrl } from "./_lib/preview-url";
 
@@ -87,6 +87,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       const viewerId = auth.userId;
 
+      // 18+ stories follow the feed's rules: NSFW is for paying customers, so
+      // a non-payer never receives a flagged story whatever they ask for, and
+      // sfw=1 (the 18+ toggle off) drops them for everyone else. Filtered here
+      // rather than blurred so the media never reaches the browser. Your own
+      // stories always come back.
+      const nsfwAllowed = await hasPurchased(sql, viewerId);
+      const hideMature = !nsfwAllowed || req.query.sfw === "1";
+
       // Ensure story_likes table exists (safe for first deploy before migration)
       await sql`CREATE TABLE IF NOT EXISTS story_likes (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -120,6 +128,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         LEFT JOIN story_views sv ON sv.story_id = s.id AND sv.viewer_id = ${viewerId}::uuid
         LEFT JOIN story_unlocks su ON su.story_id = s.id AND su.user_id = ${viewerId}::uuid
         WHERE s.expires_at > now()
+          ${hideMature ? sql`AND (s.user_id = ${viewerId}::uuid OR NOT COALESCE(s.is_mature, false))` : sql``}
         ORDER BY s.created_at DESC
       `;
 
@@ -164,7 +173,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (!r.viewed) grouped[r.user_id].hasUnviewed = true;
       }
 
-      return res.status(200).json({ users: Object.values(grouped) });
+      return res.status(200).json({ users: Object.values(grouped), nsfwAllowed });
     } catch (err: any) {
       console.error("[stories] GET error:", err.message);
       return res.status(500).json({ error: "Failed to fetch stories" });
@@ -177,8 +186,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const auth = getUserFromRequest(req);
       if (!auth) return res.status(401).json({ error: "Unauthorized" });
 
-      const { storyId } = req.body || {};
+      const { storyId, action, isMature } = req.body || {};
       if (!storyId) return res.status(400).json({ error: "storyId required" });
+
+      // Sub-action: set or clear the 18+ flag (owner, admin or feed moderator)
+      if (action === "set-mature") {
+        const [target] = await sql`SELECT user_id FROM stories WHERE id = ${storyId}::uuid`;
+        if (!target) return res.status(404).json({ error: "Story not found" });
+        const modRows = await sql`SELECT 1 FROM feed_moderators WHERE user_id = ${auth.userId} LIMIT 1`.catch(() => []);
+        const allowed = target.user_id === auth.userId || auth.email === ADMIN_EMAIL || modRows.length > 0;
+        if (!allowed) return res.status(403).json({ error: "Not allowed" });
+        const next = !!isMature;
+        await sql`UPDATE stories SET is_mature = ${next} WHERE id = ${storyId}::uuid`;
+        return res.status(200).json({ ok: true, isMature: next });
+      }
 
       // Get the story
       const [story] = await sql`
