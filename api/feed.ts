@@ -6,6 +6,7 @@ import { isVerified, VERIFICATION_REQUIRED_MESSAGE } from "./_lib/verifiedGate";
 import { resolvePreviewUrl } from "./_lib/preview-url";
 import { notify } from "./_lib/notify";
 import { postsMature } from "./_lib/matureHistory";
+import { isWeb3Request, chargeXrge, InsufficientXrgeError } from "./_lib/web3-spend";
 
 const MAX_LOCK_COST = 100;
 const MAX_LOCK_PRICE_CENTS = 10000; // $100 max
@@ -610,8 +611,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ error: "This post can only be unlocked with a payment" });
       }
 
+      // Web3 edition: the credit price is paid in XRGE instead; the creator's
+      // share below is the same either way.
+      let paidXrge = 0;
+      if (isWeb3Request(req)) {
+        try {
+          paidXrge = await chargeXrge(sql, auth.userId, post.lock_cost, "Post unlock");
+        } catch (err: any) {
+          if (err instanceof InsufficientXrgeError) return res.status(402).json({ error: err.message, code: "INSUFFICIENT_XRGE" });
+          throw err;
+        }
+      }
+
       // Check credits
-      const [user] = await sql`SELECT daily_credits, sub_credits, pack_credits FROM users WHERE id = ${auth.userId}::uuid`;
+      const [user] = paidXrge > 0 ? [{ daily_credits: 0, sub_credits: 0, pack_credits: post.lock_cost }] : await sql`SELECT daily_credits, sub_credits, pack_credits FROM users WHERE id = ${auth.userId}::uuid`;
       if (!user) return res.status(404).json({ error: "User not found" });
 
       const totalCredits = (user.daily_credits || 0) + (user.sub_credits || 0) + (user.pack_credits || 0);
@@ -631,7 +644,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // so without the balance predicate N concurrent unlocks of N different
       // posts all pass the check above and each deduct in full, taking the
       // balance negative while every unlock (and creator payout) still lands.
-      const debited = await sql`
+      const debited = paidXrge > 0 ? [{ id: auth.userId }] : await sql`
         UPDATE users SET
           daily_credits = daily_credits - ${deductDaily},
           sub_credits = sub_credits - ${deductSub},
@@ -649,7 +662,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       await sql`
         INSERT INTO feed_unlocks (post_id, user_id, credits_paid, unlock_method)
-        VALUES (${postId}::uuid, ${auth.userId}::uuid, ${post.lock_cost}, 'credits')
+        VALUES (${postId}::uuid, ${auth.userId}::uuid, ${post.lock_cost}, ${paidXrge > 0 ? "xrge-bank" : "credits"})
         ON CONFLICT (post_id, user_id) DO NOTHING
       `;
 

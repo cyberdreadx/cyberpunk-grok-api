@@ -5,6 +5,7 @@ import { canPost, hasPurchased, POSTING_GATE_MESSAGE } from "./_lib/purchaseGate
 import { isVerified, VERIFICATION_REQUIRED_MESSAGE } from "./_lib/verifiedGate";
 import { resolvePreviewUrl } from "./_lib/preview-url";
 import { postsMature } from "./_lib/matureHistory";
+import { isWeb3Request, chargeXrge, InsufficientXrgeError } from "./_lib/web3-spend";
 
 export const config = { maxDuration: 30 };
 
@@ -224,8 +225,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json({ ok: true, message: "Already unlocked" });
       }
 
+      // Web3 edition: the credit price is paid in XRGE instead.
+      let paidXrge = 0;
+      if (isWeb3Request(req)) {
+        try {
+          paidXrge = await chargeXrge(sql, auth.userId, story.lock_cost, "Story unlock");
+        } catch (err: any) {
+          if (err instanceof InsufficientXrgeError) return res.status(402).json({ error: err.message, code: "INSUFFICIENT_XRGE" });
+          throw err;
+        }
+      }
+
       // Check user credits (use pack_credits first, then sub_credits, then daily_credits)
-      const [user] = await sql`
+      const [user] = paidXrge > 0 ? [{ daily_credits: 0, sub_credits: 0, pack_credits: story.lock_cost }] : await sql`
         SELECT daily_credits, sub_credits, pack_credits FROM users WHERE id = ${auth.userId}::uuid
       `;
       if (!user) return res.status(404).json({ error: "User not found" });
@@ -243,7 +255,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       remaining -= deductSub;
       let deductPack = remaining;
 
-      await sql`
+      if (paidXrge === 0) await sql`
         UPDATE users SET
           daily_credits = daily_credits - ${deductDaily},
           sub_credits = sub_credits - ${deductSub},

@@ -7,6 +7,8 @@
 // Production (Vercel): same origin — `/api` hits serverless routes.
 // Lovable preview hosts do not serve the backend, so they must call the deployed API directly.
 // Local dev: set `VITE_API_URL` to full API base, OR leave unset — Vite proxies `/api` → backend (see vite.config).
+import { isWeb3 } from "@/lib/edition";
+
 const PREVIEW_API_BASE = "https://api.gltch.app/api";
 const currentOrigin = typeof window !== "undefined" ? window.location.origin : "";
 const currentHost = typeof window !== "undefined" ? window.location.hostname : "";
@@ -18,6 +20,23 @@ const isSameOriginApi = API_BASE.startsWith("/") || API_BASE.startsWith(currentO
 export const API_BASE_URL = API_BASE;
 /** Whether the API is same-origin — controls fetch credentials. */
 export const apiIsSameOrigin = isSameOriginApi;
+// The web3 edition tells the API on every request, so generations are charged
+// in XRGE instead of credits (api/_lib/web3-spend.ts). Done once here, on
+// fetch, because a dozen components call fetch(apiUrl(...)) directly.
+if (isWeb3 && typeof window !== "undefined" && !(window.fetch as any).__gltchEdition) {
+  const nativeFetch = window.fetch.bind(window);
+  const isApi = (url: string) => url.startsWith(API_BASE) || url.startsWith(`${currentOrigin}${API_BASE}`);
+  const wrapped = (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+    if (!isApi(url)) return nativeFetch(input, init);
+    const headers = new Headers(init?.headers || (input instanceof Request ? input.headers : undefined));
+    headers.set("X-Gltch-Edition", "web3");
+    return nativeFetch(input, { ...init, headers });
+  };
+  (wrapped as any).__gltchEdition = true;
+  window.fetch = wrapped as typeof window.fetch;
+}
+
 /** Build a full API URL for a sub-path (e.g. apiUrl("/download") → "/api/download"). */
 export function apiUrl(path: string): string {
   return `${API_BASE}${path.startsWith("/") ? path : `/${path}`}`;

@@ -9,7 +9,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCredits } from "@/hooks/useCredits";
 import { useChatUnread } from "@/hooks/useChatUnread";
 import { useDmUnread } from "@/hooks/useDmUnread";
-import { isStudio } from "@/lib/edition";
+import { isStudio, isWeb3 } from "@/lib/edition";
+import { formatXrge } from "@/lib/web3";
 
 const CommunityPotDialog = lazyWithRetry(() => import("@/components/CommunityPotDialog"), "community-pot-dialog");
 const StoreOverlay = lazyWithRetry(() => import("@/components/StoreOverlay"), "store-overlay");
@@ -41,7 +42,7 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { user } = useAuth();
-  const { totalCredits, loading: creditsLoading } = useCredits(user);
+  const { totalCredits, xrgeBalance, loading: creditsLoading } = useCredits(user);
   const { unread: chatUnread } = useChatUnread(!!isAuthenticated);
   const { unread: dmUnread } = useDmUnread(!!isAuthenticated);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -59,7 +60,9 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   const isLibrary = location.pathname === "/library";
   const isChat = location.pathname === "/chat";
   const isMessages = location.pathname === "/messages";
-  const creditsBadge = !isAuthenticated ? null : creditsLoading ? "…" : totalCredits > 999 ? "999+" : totalCredits.toString();
+  const creditsBadge = !isAuthenticated ? null : creditsLoading ? "…"
+    : isWeb3 ? formatXrge(xrgeBalance)
+    : totalCredits > 999 ? "999+" : totalCredits.toString();
 
   useEffect(() => {
     setMoreOpen(false);
@@ -115,7 +118,7 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   const go = (path: string) => () => navigate(path);
   const sections: Array<{ title: string; items: Item[] }> = [
     { title: "Account", items: [
-      { label: "Buy credits", icon: ShoppingCart, onClick: openStore, hint: creditsBadge ? `${creditsBadge} left` : undefined, show: isAuthenticated },
+      { label: isWeb3 ? "XRGE bank" : "Buy credits", icon: ShoppingCart, onClick: openStore, hint: creditsBadge ? `${creditsBadge}${isWeb3 ? " XRGE" : ""} left` : undefined, show: isAuthenticated },
       { label: isAuthenticated ? "Profile" : "Sign in", icon: User, onClick: isAuthenticated ? go("/profile") : openAuth },
       { label: "Verification", icon: BadgeCheck, onClick: go("/verification"), show: isAuthenticated },
       { label: "Settings", icon: SettingsIcon, onClick: openSettings },

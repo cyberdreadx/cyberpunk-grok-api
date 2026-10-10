@@ -22,6 +22,7 @@ import { Copy, Check, X, DollarSign, Gift, Sparkles, TrendingUp } from "lucide-r
 import { useAuth } from "@/hooks/useAuth";
 import { useEarnStatus } from "@/hooks/useEarnStatus";
 import { useToast } from "@/hooks/use-toast";
+import { isWeb3 } from "@/lib/edition";
 
 const SNOOZE_KEY = "gltch-earn-promo-snooze";
 const SNOOZE_DAYS = 7;
@@ -49,7 +50,12 @@ interface Props {
   className?: string;
 }
 
-export default function EarnPromoBanner({ variant = "strip", className = "" }: Props) {
+// Referral rewards are paid in credits, which the web3 edition doesn't use.
+export default function EarnPromoBanner(props: Props) {
+  return isWeb3 ? null : <EarnPromoBannerInner {...props} />;
+}
+
+function EarnPromoBannerInner({ variant = "strip", className = "" }: Props) {
   const { isAuthenticated } = useAuth();
   const { status, loading } = useEarnStatus(isAuthenticated);
   const navigate = useNavigate();

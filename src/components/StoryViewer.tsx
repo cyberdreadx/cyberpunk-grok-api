@@ -8,6 +8,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useMatureFilter } from "@/hooks/useMatureFilter";
 import { useMediaSrc } from "@/hooks/useMediaSrc";
 import { useAuth } from "@/hooks/useAuth";
+import { isWeb3 } from "@/lib/edition";
+import { costText } from "@/lib/web3";
 
 interface Story {
   id: string;
@@ -203,7 +205,7 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
     setUnlocking(true);
     try {
       await apiFetch("/stories", { method: "PATCH", body: { storyId: currentStory.id } });
-      toast.success(`Unlocked for ${currentStory.lockCost} credits!`);
+      toast.success(isWeb3 ? "Unlocked" : `Unlocked for ${currentStory.lockCost} credits!`);
       currentStory.unlocked = true;
       currentStory.mediaUrl = "";
       onUnlocked?.();
@@ -435,7 +437,7 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
                 <p className="text-white text-lg font-semibold mb-1">Locked Story</p>
                 {(currentStory.lockCost || 0) > 0 && (
                   <p className="text-white/60 text-sm">
-                    This story costs <span className="text-amber-400 font-bold">{currentStory.lockCost} credits</span> to view
+                    This story costs <span className="text-amber-400 font-bold">{isWeb3 ? costText(currentStory.lockCost || 0, true) : `${currentStory.lockCost} credits`}</span> to view
                   </p>
                 )}
                 {currentStory.lockXrgeAmount && parseFloat(currentStory.lockXrgeAmount) > 0 && (
@@ -450,7 +452,7 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ users, initialUserIdx, curren
                   <button onClick={(e) => { e.stopPropagation(); handleUnlock(); }} disabled={unlocking}
                     className="flex items-center justify-center gap-2 px-8 py-3 rounded-lg bg-gradient-to-r from-amber-500/80 to-amber-600/80 hover:from-amber-500 hover:to-amber-600 text-white font-semibold text-sm transition-all active:scale-95 disabled:opacity-50">
                     {unlocking ? <Loader2 className="w-4 h-4 animate-spin" /> : <Unlock className="w-4 h-4" />}
-                    Unlock for {currentStory.lockCost} credits
+                    Unlock for {isWeb3 ? costText(currentStory.lockCost || 0, true) : `${currentStory.lockCost} credits`}
                   </button>
                 )}
                 {currentStory.lockXrgeAmount && parseFloat(currentStory.lockXrgeAmount) > 0 && (

@@ -12,6 +12,8 @@ import type { GrokMode, GenerationSettings } from "@/hooks/useGrokApi";
 import { apiFetch } from "@/lib/api";
 import { toast } from "sonner";
 import { normalizeToImageBlob, isAcceptableImageLike } from "@/lib/heicConvert";
+import { isWeb3 } from "@/lib/edition";
+import { costText } from "@/lib/web3";
 
 interface CostBreakdown {
   lines: string[];   // e.g. ["2 cr/image", "× 3 images", "= 6 cr total"]
@@ -529,7 +531,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <span className="inline-flex items-center gap-1 rounded-sm bg-primary-foreground/20 border border-primary-foreground/30 px-1.5 py-0.5 font-mono-share text-tiny font-bold leading-none tabular-nums cursor-help">
-                              {creditCost} cr
+                              {costText(creditCost, isWeb3)}
                               <Info className="w-2.5 h-2.5 opacity-70" />
                             </span>
                           </TooltipTrigger>
@@ -551,7 +553,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
                 {/* Low-credits warning */}
                 {!isLoading && isLowCredits && (
                   <div className="flex items-center gap-1.5 text-tiny font-mono-share text-destructive/80 bg-destructive/10 border border-destructive/25 rounded px-2 py-1 w-full justify-between">
-                    <span>⚠ {t("prompt.needMore", { count: creditCost! - totalCredits! })}</span>
+                    <span>⚠ {isWeb3 ? `Not enough XRGE — this costs ${costText(creditCost!, true)}` : t("prompt.needMore", { count: creditCost! - totalCredits! })}</span>
                     {onOpenStore && (
                       <button
                         type="button"
@@ -581,7 +583,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
         {/* Low-credits warning strip */}
         {!isLoading && isLowCredits && (
           <div className="flex items-center justify-between font-mono-share text-tiny text-destructive/90 bg-destructive/10 border border-destructive/25 rounded px-2.5 py-1.5 mb-1.5">
-            <span>⚠ Need {creditCost! - totalCredits!} more cr to generate</span>
+            <span>⚠ {isWeb3 ? `Not enough XRGE — this costs ${costText(creditCost!, true)}` : `Need ${creditCost! - totalCredits!} more cr to generate`}</span>
             {onOpenStore && (
               <button
                 type="button"
@@ -598,7 +600,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
           onClick={() => formRef.current?.requestSubmit()}
           disabled={isLoading || !prompt.trim() || (needsImage && !imageUrl.trim())}
           className="w-full h-13 font-orbitron text-sm font-bold bg-primary text-primary-foreground disabled:opacity-40 flex items-center justify-center gap-3 tracking-widest rounded shadow-glow-ambient active:scale-[0.98] transition-all duration-150"
-          title={creditCost != null ? creditCostLabel(mode, creditCost) : undefined}
+          title={creditCost != null ? (isWeb3 ? costText(creditCost, true) : creditCostLabel(mode, creditCost)) : undefined}
         >
           {isLoading ? (
             <Loader2 className="w-5 h-5 animate-spin" />
@@ -608,7 +610,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
           <span>{isLoading ? t("prompt.generating").toUpperCase() : t("prompt.generate").toUpperCase()}</span>
           {!isLoading && creditCost != null && (
             <span className={`inline-flex items-center gap-1 rounded px-2 py-1 font-mono-share text-xs font-bold leading-none tabular-nums tracking-normal border ${isLowCredits ? "bg-destructive/30 border-destructive/50 text-destructive-foreground" : "bg-primary-foreground/20 border-primary-foreground/40"}`}>
-              {creditCost} cr
+              {costText(creditCost, isWeb3)}
               <Info className="w-3 h-3 opacity-60" />
             </span>
           )}

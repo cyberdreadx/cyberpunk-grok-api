@@ -19,6 +19,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { isWeb3 } from "@/lib/edition";
+import { costText } from "@/lib/web3";
 
 interface FeedPost {
   id: string;
@@ -365,10 +367,10 @@ const ReelCard: React.FC<ReelCardProps> = ({ post, onUpdate, active = true, moun
                 variant="outline"
               >
                 <Coins className="w-4 h-4 mr-2" />
-                Unlock · {post.lockCost} credits
+                Unlock · {isWeb3 ? costText(post.lockCost || 0, true) : `${post.lockCost} credits`}
               </Button>
             )}
-            {(post.lockPriceCents || 0) > 0 && (
+            {(post.lockPriceCents || 0) > 0 && !isWeb3 && (
               <Button
                 onClick={handleUnlockStripe}
                 disabled={unlocking}

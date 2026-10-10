@@ -15,6 +15,8 @@ import {
   type SubscriptionTier,
 } from "@/lib/api";
 import type { AuthUser } from "@/hooks/useAuth";
+import { isWeb3 } from "@/lib/edition";
+import { setCurrentXrgePerCredit } from "@/lib/web3";
 
 export function useCredits(user: AuthUser | null) {
   const [dailyCredits, setDailyCredits] = useState<number>(0);
@@ -33,6 +35,9 @@ export function useCredits(user: AuthUser | null) {
   const [loading, setLoading] = useState(false);
   const [purchasing, setPurchasing] = useState(false);
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
+  /** Web3 edition: the XRGE bank balance, and what one credit costs in XRGE. */
+  const [xrgeBalance, setXrgeBalance] = useState<number>(0);
+  const [xrgePerCredit, setXrgePerCredit] = useState<number | null>(null);
 
   const totalCredits = dailyCredits + subCredits + packCredits;
 
@@ -69,6 +74,18 @@ export function useCredits(user: AuthUser | null) {
       setFreeCreditsDisabled(!!data.free_credits_disabled);
       setSubscriberOnlyFreeCredits(!!data.free_credits_subscriber_only);
       setMaintenanceMessage(data.maintenance_message ?? null);
+      if (isWeb3) {
+        // Web3 pays in XRGE and ignores credits. Express the XRGE balance as
+        // the credits it buys, so every "can they afford this" check in the
+        // app keeps working unchanged; the balance itself is shown in XRGE.
+        const q = await apiFetch<{ balance: number; xrgePerCredit: number }>("/web3-quote");
+        setXrgeBalance(q.balance);
+        setXrgePerCredit(q.xrgePerCredit);
+        setCurrentXrgePerCredit(q.xrgePerCredit);
+        setDailyCredits(0);
+        setSubCredits(0);
+        setPackCredits(q.xrgePerCredit > 0 ? Math.floor(q.balance / q.xrgePerCredit) : 0);
+      }
     } catch (err: any) {
       console.warn("[useCredits] Error fetching:", err.message);
     } finally {
@@ -230,6 +247,7 @@ export function useCredits(user: AuthUser | null) {
 
   // Optimistic local deduction (mirrors server logic: daily → sub → pack)
   const deductCreditsLocally = useCallback((amount: number) => {
+    if (isWeb3 && xrgePerCredit) setXrgeBalance((b) => Math.max(0, b - Math.ceil(amount * xrgePerCredit)));
     setDailyCredits((prevDaily) => {
       let remaining = amount;
       const fromDaily = Math.min(prevDaily, remaining);
@@ -246,13 +264,15 @@ export function useCredits(user: AuthUser | null) {
       }
       return prevDaily - fromDaily;
     });
-  }, []);
+  }, [xrgePerCredit]);
 
   const clearPurchaseError = useCallback(() => setPurchaseError(null), []);
   const hasEnoughCredits = useCallback((cost: number) => totalCredits >= cost, [totalCredits]);
 
   return useMemo(() => ({
     totalCredits,
+    xrgeBalance,
+    xrgePerCredit,
     dailyCredits,
     subCredits,
     packCredits,
@@ -282,7 +302,7 @@ export function useCredits(user: AuthUser | null) {
     deductCreditsLocally,
     refreshCredits: fetchCredits,
   }), [
-    totalCredits, dailyCredits, subCredits, packCredits,
+    totalCredits, xrgeBalance, xrgePerCredit, dailyCredits, subCredits, packCredits,
     subscriptionTier, subscriptionRenewsAt, subscriptionCancelAt,
     subscriptionDiscountPct, creditDiscountPct,
     loraUnlocked, freeCreditsDisabled, maintenanceMessage,

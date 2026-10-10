@@ -40,6 +40,7 @@ import {
 import HolderBadge from "@/components/HolderBadge";
 import HowToBuyXrgeDialog from "@/components/HowToBuyXrgeDialog";
 import { connectAndSign, hasInjectedWallet, isMobile, walletDeepLink } from "@/lib/walletConnect";
+import { isWeb3 } from "@/lib/edition";
 
 interface HolderTierInfo {
   id: string;
@@ -347,7 +348,8 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
               { id: "deposit" as Tab, label: "Deposit", icon: <ArrowDownToLine className="w-3 h-3" /> },
               { id: "buy" as Tab, label: "Buy", icon: <ShoppingCart className="w-3 h-3" /> },
               { id: "withdraw" as Tab, label: "Withdraw", icon: <ArrowUpFromLine className="w-3 h-3" /> },
-            ]).map(t => (
+            // Web3 spends XRGE directly, so there are no credits to buy.
+            ]).filter(t => !(isWeb3 && t.id === "buy")).map(t => (
               <button
                 key={t.id}
                 onClick={() => { setTab(t.id); setError(null); }}

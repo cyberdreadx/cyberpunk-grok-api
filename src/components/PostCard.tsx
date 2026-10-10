@@ -37,6 +37,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { isWeb3 } from "@/lib/edition";
+import { costText } from "@/lib/web3";
 
 interface FeedPost {
   id: string;
@@ -426,10 +428,10 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
                     className="font-mono-share text-tiny border-amber-400/30 text-amber-400 hover:bg-amber-400/10"
                   >
                     <Coins className="w-3 h-3 mr-1" />
-                    Unlock · {post.lockCost} credits
+                    Unlock · {isWeb3 ? costText(post.lockCost || 0, true) : `${post.lockCost} credits`}
                   </Button>
                 )}
-                {(post.lockPriceCents || 0) > 0 && (
+                {(post.lockPriceCents || 0) > 0 && !isWeb3 && (
                   <Button
                     size="sm"
                     variant="outline"

@@ -17,6 +17,7 @@ import {
 import PricingCards from "@/components/PricingCards";
 import XrgePaymentDialog from "@/components/XrgePaymentDialog";
 import XrgeBankDialog from "@/components/XrgeBankDialog";
+import { isWeb3 } from "@/lib/edition";
 import HolderProgramPromo from "@/components/HolderProgramPromo";
 import SpinWheel from "@/components/SpinWheel";
 import type { CreditPackage, SubscriptionTier } from "@/lib/api";
@@ -624,4 +625,14 @@ function ReferralCard() {
   );
 }
 
-export default CreditDisplay;
+/* Web3 sells nothing for a card: "the store" is the XRGE bank, and the
+   balance itself is shown in the top bar. */
+const Web3Store: React.FC<CreditDisplayProps> = ({ externalOpen, onExternalOpenChange, onCreditsRefresh }) => (
+  <XrgeBankDialog
+    open={!!externalOpen}
+    onOpenChange={(v) => onExternalOpenChange?.(v)}
+    onCreditsRefresh={onCreditsRefresh}
+  />
+);
+
+export default isWeb3 ? Web3Store : CreditDisplay;

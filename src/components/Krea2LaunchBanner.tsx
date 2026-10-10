@@ -11,6 +11,8 @@
  */
 import { useState } from "react";
 import { Sparkles, X } from "lucide-react";
+import { isWeb3 } from "@/lib/edition";
+import { costText } from "@/lib/web3";
 
 const DISMISS_KEY = "gltch-krea2-launch-dismissed-v1";
 
@@ -51,7 +53,7 @@ export default function Krea2LaunchBanner({ onClick }: Krea2LaunchBannerProps) {
             </span>
           </div>
           <div className="mt-0.5 font-mono-share text-tiny sm:text-tiny text-cyan-200/70">
-            Krea 2 Turbo · film-grade realism · any shape up to 1MP · 3 cr
+            Krea 2 Turbo · film-grade realism · any shape up to 1MP · {costText(3, isWeb3)}
           </div>
         </div>
 

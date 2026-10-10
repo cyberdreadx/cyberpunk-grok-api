@@ -66,7 +66,8 @@ import { apiFetch, calculateCreditCost, type CreditMode } from "@/lib/api";
 import { AGE_VERIFIED_EVENT, isAgeVerified } from "@/lib/ageGate";
 import { APP_VERSION } from "@/lib/version";
 import { RENDER_SIZES, ZIMAGE_SIZES, ZIMAGE_ORDER, type RenderAspect } from "@/lib/renderSizes";
-import { isStudio } from "@/lib/edition";
+import { isStudio, isWeb3 } from "@/lib/edition";
+import { costText } from "@/lib/web3";
 import { claimInterruption } from "@/lib/interruptions";
 
 const ANNOUNCEMENTS: { id: string; message: string; type?: "info" | "warning" | "success" }[] = [
@@ -851,6 +852,15 @@ const Index = () => {
 
       const discountedCost = applyCreditDiscount(cost);
       if (!creditsHook.hasEnoughCredits(discountedCost)) {
+        if (isWeb3) {
+          toast({
+            title: "Not enough XRGE",
+            description: `This costs ${costText(discountedCost, true)}. Deposit XRGE in the bank to keep going.`,
+            variant: "destructive",
+          });
+          setStoreOpen(true);
+          return;
+        }
         toast({
           title: t("toast.insufficientCredits"),
           description: t("toast.insufficientCreditsDesc", { cost: discountedCost }),
@@ -1521,11 +1531,11 @@ const Index = () => {
                           <div className="font-mono-share text-micro text-pink-400/60 mt-1 space-y-1">
                             <p>🔒 Adult LoRAs need the one-time unlock</p>
                             <button
-                              onClick={() => creditsHook.purchaseLoraUnlock()}
+                              onClick={() => (isWeb3 ? setStoreOpen(true) : creditsHook.purchaseLoraUnlock())}
                               disabled={creditsHook.purchasing}
                               className="px-2 py-1 rounded text-tiny font-mono-share bg-pink-500/20 border border-pink-500/40 text-pink-300 hover:bg-pink-500/30 transition-colors disabled:opacity-50"
                             >
-                              {creditsHook.purchasing ? "..." : "Unlock all LoRAs — $30"}
+                              {isWeb3 ? "Deposit XRGE to unlock" : creditsHook.purchasing ? "..." : "Unlock all LoRAs — $30"}
                             </button>
                           </div>
                         )}
@@ -1752,11 +1762,11 @@ const Index = () => {
                           <div className="mt-1 font-mono-share text-micro text-pink-400/70 space-y-1">
                             <p>🔒 Adult LoRAs need the one-time unlock</p>
                             <button
-                              onClick={() => creditsHook.purchaseLoraUnlock()}
+                              onClick={() => (isWeb3 ? setStoreOpen(true) : creditsHook.purchaseLoraUnlock())}
                               disabled={creditsHook.purchasing}
                               className="px-2 py-1 rounded text-tiny font-mono-share bg-pink-500/20 border border-pink-500/40 text-pink-300 hover:bg-pink-500/30 transition-colors disabled:opacity-50"
                             >
-                              {creditsHook.purchasing ? "..." : "Unlock all LoRAs — $30"}
+                              {isWeb3 ? "Deposit XRGE to unlock" : creditsHook.purchasing ? "..." : "Unlock all LoRAs — $30"}
                             </button>
                           </div>
                         )}
@@ -1936,11 +1946,11 @@ const Index = () => {
                           <div className="mt-1 font-mono-share text-micro text-pink-400/70 space-y-1">
                             <p>🔒 Adult LoRAs need the one-time unlock</p>
                             <button
-                              onClick={() => creditsHook.purchaseLoraUnlock()}
+                              onClick={() => (isWeb3 ? setStoreOpen(true) : creditsHook.purchaseLoraUnlock())}
                               disabled={creditsHook.purchasing}
                               className="px-2 py-1 rounded text-tiny font-mono-share bg-pink-500/20 border border-pink-500/40 text-pink-300 hover:bg-pink-500/30 transition-colors disabled:opacity-50"
                             >
-                              {creditsHook.purchasing ? "..." : "Unlock all LoRAs — $30"}
+                              {isWeb3 ? "Deposit XRGE to unlock" : creditsHook.purchasing ? "..." : "Unlock all LoRAs — $30"}
                             </button>
                           </div>
                         )}
@@ -2161,7 +2171,7 @@ const Index = () => {
         */}
         {/* Studio carries no XRGE (crypto) promotions — out of place in a plain
             consumer app — so it skips the flash sale and Buy & Hold. */}
-          {!isStudio && flashSaleActive ? (
+          {!isStudio && !isWeb3 && flashSaleActive ? (
           <FlashSaleBanner onClick={() => setStoreOpen(true)} />
         ) : !bannerDismissed("gltch-krea2-launch-dismissed-v1") ? (
           <Krea2LaunchBanner onClick={() => { setMode("text-to-image"); setGenEngine("krea2"); }} />

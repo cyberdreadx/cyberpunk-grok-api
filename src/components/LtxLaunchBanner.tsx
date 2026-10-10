@@ -9,6 +9,8 @@
  */
 import { useState } from "react";
 import { Volume2, X } from "lucide-react";
+import { isWeb3 } from "@/lib/edition";
+import { costText } from "@/lib/web3";
 
 const DISMISS_KEY = "gltch-ltx-launch-dismissed-v2";
 
@@ -49,7 +51,7 @@ export default function LtxLaunchBanner({ onClick }: LtxLaunchBannerProps) {
             </span>
           </div>
           <div className="mt-0.5 font-mono-share text-tiny sm:text-tiny text-amber-200/70">
-            Native HD up to 1664×960 · synced audio in one pass · pick 2–15s · 7 cr/s
+            Native HD up to 1664×960 · synced audio in one pass · pick 2–15s · {isWeb3 ? `${costText(7, true)}/s` : "7 cr/s"}
           </div>
         </div>
 

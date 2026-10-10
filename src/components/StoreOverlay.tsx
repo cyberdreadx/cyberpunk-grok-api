@@ -8,6 +8,8 @@ import React from "react";
 import CreditDisplay from "@/components/CreditDisplay";
 import { useAuth } from "@/hooks/useAuth";
 import { useCredits } from "@/hooks/useCredits";
+import { isWeb3 } from "@/lib/edition";
+import XrgeBankDialog from "@/components/XrgeBankDialog";
 
 interface StoreOverlayProps {
   open: boolean;
@@ -19,6 +21,11 @@ const StoreOverlay: React.FC<StoreOverlayProps> = ({ open, onOpenChange }) => {
   const credits = useCredits(user);
 
   if (!user) return null;
+
+  // Web3 has no card store: topping up means depositing XRGE.
+  if (isWeb3) {
+    return <XrgeBankDialog open={open} onOpenChange={onOpenChange} onCreditsRefresh={credits.refreshCredits} />;
+  }
 
   return (
     <CreditDisplay

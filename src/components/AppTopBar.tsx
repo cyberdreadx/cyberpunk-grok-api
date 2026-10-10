@@ -19,7 +19,8 @@ import NotificationBell from "@/components/NotificationBell";
 import RunpodStatusDot from "@/components/RunpodStatusDot";
 import { useAuth } from "@/hooks/useAuth";
 import { useCredits } from "@/hooks/useCredits";
-import { isStudio } from "@/lib/edition";
+import { isStudio, isWeb3 } from "@/lib/edition";
+import { formatXrge } from "@/lib/web3";
 import { lazyWithRetry } from "@/lib/lazyWithRetry";
 
 const StoreOverlay = lazyWithRetry(() => import("@/components/StoreOverlay"), "store-overlay");
@@ -75,7 +76,7 @@ const AppTopBar: React.FC<Props> = ({ title, onOpenStore }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
-  const { totalCredits, loading } = useCredits(user);
+  const { totalCredits, xrgeBalance, loading } = useCredits(user);
   const [storeOpen, setStoreOpen] = useState(false);
   const [byok, setByok] = useState(false);
 
@@ -93,7 +94,9 @@ const AppTopBar: React.FC<Props> = ({ title, onOpenStore }) => {
     else navigate("/");
   };
   const openStore = () => (onOpenStore ? onOpenStore() : setStoreOpen(true));
-  const credits = loading ? "…" : totalCredits > 99999 ? "99k+" : totalCredits.toLocaleString();
+  const credits = loading ? "…"
+    : isWeb3 ? formatXrge(xrgeBalance)
+    : totalCredits > 99999 ? "99k+" : totalCredits.toLocaleString();
 
   return (
     <>
@@ -134,11 +137,12 @@ const AppTopBar: React.FC<Props> = ({ title, onOpenStore }) => {
               <button
                 type="button"
                 onClick={openStore}
-                aria-label={`${credits} credits${byok ? ", using your own key" : ""} — buy more`}
+                aria-label={isWeb3 ? `${credits} XRGE — open XRGE bank` : `${credits} credits${byok ? ", using your own key" : ""} — buy more`}
                 className="flex items-center gap-1.5 h-8 ps-2.5 pe-3 rounded-full border border-primary/30 bg-primary/10 text-primary hover:bg-primary/15 active:scale-[0.97] transition"
               >
                 <Coins className="w-3.5 h-3.5" />
                 <span className="text-sm font-semibold tabular-nums leading-none">{credits}</span>
+                {isWeb3 && <span className="text-[10px] font-semibold leading-none opacity-80">XRGE</span>}
                 {byok && <span className="ms-0.5 text-[10px] font-semibold text-secondary leading-none">Key</span>}
               </button>
             )}

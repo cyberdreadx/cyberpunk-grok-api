@@ -5,6 +5,7 @@ import { applyCors } from "./_lib/cors";
 import { checkRateLimit } from "./_lib/ratelimit";
 import { getFreeCreditsConfig, FREE_CREDITS_MAINTENANCE_MESSAGE } from "./_lib/freeCredits";
 import { getCombinedCreditDiscountPct } from "./_lib/discount";
+import { hasLoraAccess } from "./_lib/adult-loras";
 import { FREE_CREDITS_SUBSCRIBER_ONLY_MESSAGE } from "./_lib/subscriberGate";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -73,7 +74,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       subscription_discount_pct: u.subscription_discount_pct,
       /** Subscription + XRGE holder tier, combined (what generation billing uses). */
       credit_discount_pct: creditDiscountPct,
-      lora_unlocked: u.lora_unlocked,
+      // The real access rule (the $30 unlock OR holding XRGE), so the create
+      // screen agrees with what the generate endpoints allow.
+      lora_unlocked: u.lora_unlocked || (await hasLoraAccess(auth.userId).catch(() => false)),
       has_purchased,
       free_credits_disabled: freeCreditsDisabled,
       free_credits_sources: { daily: fcConfig.daily, spin: fcConfig.spin, missions: fcConfig.missions },

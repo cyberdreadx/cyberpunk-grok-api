@@ -3,6 +3,8 @@ import { Upload, Sparkles, Pencil, Image, Film, X, Loader2, ChevronRight, HelpCi
 import { useTranslation } from "react-i18next";
 import type { GrokMode } from "@/hooks/useGrokApi";
 import { normalizeToImageBlob, isAcceptableImageLike } from "@/lib/heicConvert";
+import { isWeb3 } from "@/lib/edition";
+import { costText } from "@/lib/web3";
 
 interface SimpleModeProps {
   onSubmit: (data: { prompt: string; imageUrl?: string; extraImageUrls?: string[] }) => void;
@@ -382,7 +384,7 @@ const SimpleMode: React.FC<SimpleModeProps> = ({
               {activeTab === "edit-image" ? t("simple.applyEdit") : activeTab === "image-to-video" ? t("simple.animateBtn") : t("simple.generateBtn")}
               {creditCost !== undefined && (
                 <span className="ml-1 text-xs font-mono-share opacity-60">
-                  ({creditCost} cr)
+                  ({costText(creditCost, isWeb3)})
                 </span>
               )}
             </>
@@ -393,7 +395,7 @@ const SimpleMode: React.FC<SimpleModeProps> = ({
       {/* Insufficient credits warning */}
       {insufficientCredits && (
         <p className="text-center font-mono-share text-tiny text-destructive/70">
-          {t("simple.insufficientCredits", { cost: creditCost, balance: totalCredits })}
+          {isWeb3 ? `Not enough XRGE — this costs ${costText(creditCost!, true)}. Deposit XRGE in the bank.` : t("simple.insufficientCredits", { cost: creditCost, balance: totalCredits })}
         </p>
       )}
 
