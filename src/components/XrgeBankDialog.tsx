@@ -39,7 +39,17 @@ import {
 } from "@/lib/xrgePublic";
 import HolderBadge from "@/components/HolderBadge";
 import HowToBuyXrgeDialog from "@/components/HowToBuyXrgeDialog";
-import { connectAndSign, hasInjectedWallet, isMobile, walletDeepLink } from "@/lib/walletConnect";
+import {
+  connectAndSign,
+  connectWallet,
+  hasInjectedWallet,
+  isMobile,
+  sendXrgeTransfer,
+  signXrgePermit,
+  walletDeepLink,
+  weiToWholeXrge,
+  xrgeToWei,
+} from "@/lib/walletConnect";
 import { isWeb3 } from "@/lib/edition";
 
 interface HolderTierInfo {
@@ -122,6 +132,30 @@ interface XrgeBankDialogProps {
   onCreditsRefresh?: () => void;
 }
 
+/** GET /v1/xrge-gasless: what a wallet needs to make a deposit. */
+interface WalletDepositInfo {
+  available: boolean;
+  spender: string | null;
+  nonce: string;
+  deadline: number;
+  domain: { name: string; version: string; chainId: number; verifyingContract: string };
+  walletXrgeWei: string;
+  walletEthWei: string;
+  minDepositWei: string;
+}
+
+type WalletStep = "idle" | "connecting" | "signing" | "sending" | "confirming";
+
+const WALLET_STEP_LABEL: Record<WalletStep, string> = {
+  idle: "",
+  connecting: "Connecting wallet…",
+  signing: "Approve in your wallet…",
+  sending: "Sending on Base…",
+  confirming: "Confirming on Base…",
+};
+
+const shortAddr = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
+
 type Tab = "overview" | "holder" | "deposit" | "buy" | "withdraw";
 
 const TIER_ICONS: Record<string, React.ReactNode> = {
@@ -160,6 +194,13 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
   const [depositTxHash, setDepositTxHash] = useState("");
   const [depositing, setDepositing] = useState(false);
   const [depositResult, setDepositResult] = useState<{ deposited: number; newBalance: number } | null>(null);
+
+  // Deposit-from-wallet state
+  const [walletAddr, setWalletAddr] = useState<string | null>(null);
+  const [walletInfo, setWalletInfo] = useState<WalletDepositInfo | null>(null);
+  const [walletAmount, setWalletAmount] = useState("");
+  const [walletStep, setWalletStep] = useState<WalletStep>("idle");
+  const [pendingTx, setPendingTx] = useState<string | null>(null);
 
   // Purchase state
   const [purchasing, setPurchasing] = useState(false);
@@ -204,6 +245,9 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
       setTab("overview");
       setDepositTxHash("");
       setDepositResult(null);
+      setWalletAmount("");
+      setWalletStep("idle");
+      setPendingTx(null);
       setPurchaseResult(null);
       setWithdrawResult(null);
       setWithdrawAmount("");
@@ -257,6 +301,104 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
       setError(err.message);
     } finally {
       setBindingWallet(false);
+    }
+  };
+
+  const loadWalletInfo = async (address: string): Promise<WalletDepositInfo> => {
+    const info: WalletDepositInfo = await apiFetch(`/v1/xrge-gasless?address=${address}`);
+    setWalletInfo(info);
+    return info;
+  };
+
+  const handleConnectWallet = async () => {
+    setWalletStep("connecting");
+    setError(null);
+    try {
+      const address = await connectWallet();
+      setWalletAddr(address);
+      await loadWalletInfo(address);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setWalletStep("idle");
+    }
+  };
+
+  /**
+   * The transfer is on-chain; credit it once Base has enough confirmations
+   * (~10–20s). The server also credits gasless deposits by itself, so
+   * "already credited" here means done, not failed.
+   */
+  const waitForCredit = async (txHash: string, valueWei: string) => {
+    setWalletStep("confirming");
+    setPendingTx(txHash);
+    for (let i = 0; i < 45; i++) {
+      try {
+        const result = await apiFetch("/v1/xrge-deposit", { method: "POST", body: { txHash } });
+        setDepositResult(result);
+        break;
+      } catch (err: any) {
+        const msg = String(err?.message || "");
+        if (/already been credited/i.test(msg)) {
+          const fresh = await apiFetch("/v1/xrge-balance").catch(() => null);
+          setDepositResult({ deposited: weiToWholeXrge(valueWei), newBalance: fresh?.bankBalance ?? 0 });
+          break;
+        }
+        if (!/confirmation|not found|pending/i.test(msg)) throw err;
+        await new Promise((r) => setTimeout(r, 4000));
+      }
+      if (i === 44) {
+        throw new Error("Base is taking longer than usual. Your XRGE is on its way and will show up in your balance shortly.");
+      }
+    }
+    setPendingTx(null);
+    setWalletAmount("");
+    await fetchBalance();
+    if (walletAddr) loadWalletInfo(walletAddr).catch(() => {});
+  };
+
+  const walletAmountWei = xrgeToWei(walletAmount);
+
+  const handleGaslessDeposit = async () => {
+    if (!walletAddr || !walletAmountWei) return;
+    setError(null);
+    try {
+      // Fresh nonce and deadline: the ones from connecting may be stale.
+      const info = await loadWalletInfo(walletAddr);
+      if (!info.available || !info.spender) throw new Error("Gas-free deposits are paused right now. Use “Send from my wallet” instead.");
+      setWalletStep("signing");
+      const signature = await signXrgePermit({
+        owner: walletAddr,
+        spender: info.spender,
+        value: walletAmountWei,
+        nonce: info.nonce,
+        deadline: info.deadline,
+        domain: info.domain,
+      });
+      setWalletStep("sending");
+      const { txHash } = await apiFetch("/v1/xrge-gasless", {
+        method: "POST",
+        body: { owner: walletAddr, value: walletAmountWei, deadline: info.deadline, signature },
+      });
+      await waitForCredit(txHash, walletAmountWei);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setWalletStep("idle");
+    }
+  };
+
+  const handleWalletTransfer = async () => {
+    if (!walletAddr || !walletAmountWei || !data) return;
+    setError(null);
+    try {
+      setWalletStep("signing");
+      const txHash = await sendXrgeTransfer(walletAddr, XRGE_CONTRACT, data.depositAddress, walletAmountWei);
+      await waitForCredit(txHash, walletAmountWei);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setWalletStep("idle");
     }
   };
 
@@ -824,75 +966,6 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
               {/* ── DEPOSIT ── */}
               {tab === "deposit" && (
                 <div className="mt-4 space-y-4">
-                  <div className="rounded-lg border border-pink-500/20 bg-pink-500/5 p-4 space-y-3">
-                    <p className="font-orbitron text-tiny tracking-wider text-pink-300">
-                      Deposit XRGE to your bank
-                    </p>
-                    <p className="font-mono-share text-tiny text-muted-foreground/70 leading-relaxed">
-                      Send XRGE tokens to the deposit address below on {XRGE_CHAIN_NAME}, then paste your transaction hash to verify.
-                    </p>
-
-                    <div className="space-y-1.5">
-                      <p className="font-mono-share text-tiny text-muted-foreground/70">Deposit Address ({XRGE_CHAIN_NAME})</p>
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 bg-input/60 border border-border/30 rounded px-3 py-2 font-mono-share text-tiny text-foreground/80 truncate select-all">
-                          {data.depositAddress}
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => copyAddress(data.depositAddress)}
-                          className="shrink-0 gap-1 border-pink-500/30 hover:bg-pink-500/10"
-                        >
-                          {copied ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
-                        </Button>
-                      </div>
-                      <a
-                        href={basescanAddressUrl(data.depositAddress)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 font-mono-share text-tiny text-pink-400/60 hover:text-pink-400 transition-colors"
-                      >
-                        View on BaseScan <ExternalLink className="w-2.5 h-2.5" />
-                      </a>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <p className="font-mono-share text-tiny text-muted-foreground/70">XRGE Contract</p>
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 bg-input/60 border border-border/30 rounded px-3 py-2 font-mono-share text-tiny text-foreground/60 truncate select-all">
-                          {XRGE_CONTRACT}
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => copyAddress(XRGE_CONTRACT)}
-                          className="shrink-0 gap-1 border-border/30"
-                        >
-                          <Copy className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
-                      <button
-                        type="button"
-                        onClick={() => setShowHowTo(true)}
-                        className="inline-flex items-center gap-1.5 font-mono-share text-tiny text-pink-400 hover:text-pink-300 underline underline-offset-2 transition-colors"
-                      >
-                        New to crypto? How to buy XRGE
-                      </button>
-                      <a
-                        href={XRGE_DEXSCREENER_URL}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 font-mono-share text-tiny text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
-                      >
-                        DexScreener <ExternalLink className="w-3 h-3" />
-                      </a>
-                    </div>
-                  </div>
-
                   {depositResult ? (
                     <div className="rounded-lg border border-green-500/30 bg-green-500/10 p-4 text-center space-y-2">
                       <Gift className="w-6 h-6 text-green-400 mx-auto" />
@@ -913,23 +986,230 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                       </Button>
                     </div>
                   ) : (
-                    <div className="space-y-2">
-                      <p className="font-mono-share text-tiny text-muted-foreground/70">Transaction Hash</p>
-                      <Input
-                        value={depositTxHash}
-                        onChange={e => setDepositTxHash(e.target.value)}
-                        placeholder="0x..."
-                        className="font-mono-share text-xs bg-input/50 border-border/30"
-                      />
-                      <Button
-                        onClick={handleDeposit}
-                        disabled={depositing || !depositTxHash.trim()}
-                        className="w-full font-orbitron text-xs tracking-wider bg-pink-500/20 hover:bg-pink-500/30 text-pink-300 border border-pink-500/30"
-                      >
-                        {depositing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <ArrowDownToLine className="w-4 h-4 mr-2" />}
-                        VERIFY DEPOSIT
-                      </Button>
-                    </div>
+                    <>
+                      <div className="rounded-lg border border-pink-500/30 bg-pink-500/5 p-4 space-y-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="font-orbitron text-tiny tracking-wider text-pink-300">Deposit from your wallet</p>
+                          {walletAddr && (
+                            <span className="font-mono-share text-tiny text-muted-foreground/70">{shortAddr(walletAddr)}</span>
+                          )}
+                        </div>
+
+                        {!walletAddr ? (
+                          <>
+                            <p className="font-mono-share text-tiny text-muted-foreground/70 leading-relaxed">
+                              Works with Base, Coinbase Wallet, MetaMask, Rabby, or any wallet holding XRGE on {XRGE_CHAIN_NAME}. No ETH needed.
+                            </p>
+                            {!hasInjectedWallet() && isMobile() ? (
+                              <div className="grid grid-cols-2 gap-2">
+                                <Button asChild variant="outline" size="sm" className="font-mono-share text-tiny border-pink-500/30">
+                                  <a href={walletDeepLink("coinbase")}>Open in Base app</a>
+                                </Button>
+                                <Button asChild variant="outline" size="sm" className="font-mono-share text-tiny border-pink-500/30">
+                                  <a href={walletDeepLink("metamask")}>Open in MetaMask</a>
+                                </Button>
+                              </div>
+                            ) : (
+                              <Button
+                                onClick={handleConnectWallet}
+                                disabled={walletStep !== "idle"}
+                                className="w-full font-orbitron text-xs tracking-wider bg-pink-500/20 hover:bg-pink-500/30 text-pink-300 border border-pink-500/30"
+                              >
+                                {walletStep === "connecting" ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Wallet className="w-4 h-4 mr-2" />}
+                                CONNECT WALLET
+                              </Button>
+                            )}
+                          </>
+                        ) : (() => {
+                          const linked = data.walletAddress?.toLowerCase() || null;
+                          const wrongWallet = !!linked && linked !== walletAddr;
+                          const hasEth = !!walletInfo && BigInt(walletInfo.walletEthWei) > 0n;
+                          const walletXrge = walletInfo ? weiToWholeXrge(walletInfo.walletXrgeWei) : null;
+                          const minXrge = walletInfo ? weiToWholeXrge(walletInfo.minDepositWei) : 0;
+                          const amountXrge = walletAmountWei ? weiToWholeXrge(walletAmountWei) : 0;
+                          const tooMuch = !!walletInfo && !!walletAmountWei && BigInt(walletAmountWei) > BigInt(walletInfo.walletXrgeWei);
+                          const busy = walletStep !== "idle";
+                          const canGasless = !!walletInfo?.available && !!walletAmountWei && !tooMuch && !wrongWallet && amountXrge >= minXrge;
+                          const canTransfer = hasEth && !!walletAmountWei && !tooMuch && !wrongWallet;
+                          return (
+                            <>
+                              {walletInfo && (
+                                <p className="font-mono-share text-tiny text-muted-foreground/70 tabular-nums">
+                                  In wallet: {walletXrge!.toLocaleString("en-US")} XRGE · {(Number(BigInt(walletInfo.walletEthWei)) / 1e18).toFixed(5)} ETH
+                                </p>
+                              )}
+                              {wrongWallet && (
+                                <p className="flex gap-1.5 font-mono-share text-tiny text-yellow-300 leading-relaxed">
+                                  <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-px" />
+                                  Your account is linked to {shortAddr(linked!)}. Switch to that account in your wallet, then reconnect.
+                                </p>
+                              )}
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  id="xrge-wallet-amount"
+                                  inputMode="decimal"
+                                  value={walletAmount}
+                                  onChange={e => setWalletAmount(e.target.value)}
+                                  placeholder="Amount of XRGE"
+                                  disabled={busy}
+                                  className="font-mono-share text-xs bg-input/50 border-border/30"
+                                />
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  disabled={busy || !walletXrge}
+                                  onClick={() => setWalletAmount(String(walletXrge ?? ""))}
+                                  className="shrink-0 font-mono-share text-tiny border-border/30"
+                                >
+                                  MAX
+                                </Button>
+                              </div>
+                              {tooMuch && (
+                                <p className="font-mono-share text-tiny text-pink-400">That's more XRGE than this wallet holds.</p>
+                              )}
+                              {walletInfo?.available && !!walletAmountWei && !tooMuch && amountXrge < minXrge && (
+                                <p className="font-mono-share text-tiny text-muted-foreground/70">
+                                  Gas-free deposits start at {minXrge.toLocaleString("en-US")} XRGE.
+                                </p>
+                              )}
+
+                              {busy && walletStep !== "connecting" ? (
+                                <div className="rounded border border-pink-500/20 bg-background/40 px-3 py-2.5 flex items-center gap-2">
+                                  <Loader2 className="w-4 h-4 animate-spin text-pink-300" />
+                                  <span className="font-mono-share text-tiny text-pink-200">{WALLET_STEP_LABEL[walletStep]}</span>
+                                  {pendingTx && (
+                                    <a href={basescanTxUrl(pendingTx)} target="_blank" rel="noopener noreferrer" className="ml-auto inline-flex items-center gap-1 font-mono-share text-tiny text-pink-400/70 hover:text-pink-300">
+                                      BaseScan <ExternalLink className="w-2.5 h-2.5" />
+                                    </a>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="space-y-2">
+                                  {walletInfo?.available && (
+                                    <Button
+                                      onClick={handleGaslessDeposit}
+                                      disabled={!canGasless}
+                                      className="w-full font-orbitron text-xs tracking-wider bg-pink-500/20 hover:bg-pink-500/30 text-pink-300 border border-pink-500/30"
+                                    >
+                                      <Sparkles className="w-4 h-4 mr-2" />
+                                      DEPOSIT · NO GAS NEEDED
+                                    </Button>
+                                  )}
+                                  <Button
+                                    variant="outline"
+                                    onClick={handleWalletTransfer}
+                                    disabled={!canTransfer}
+                                    className="w-full font-mono-share text-tiny border-border/30"
+                                  >
+                                    <ArrowDownToLine className="w-3.5 h-3.5 mr-2" />
+                                    Send from my wallet (pays a tiny ETH fee)
+                                  </Button>
+                                  {walletInfo && !hasEth && (
+                                    <p className="font-mono-share text-tiny text-muted-foreground/60">
+                                      {walletInfo.available
+                                        ? "No ETH in this wallet? No problem: the gas-free deposit only asks for a signature."
+                                        : "Sending needs a little ETH on Base for the network fee."}
+                                    </p>
+                                  )}
+                                </div>
+                              )}
+                              {walletInfo?.available && !busy && (
+                                <p className="font-mono-share text-tiny text-muted-foreground/50 leading-relaxed">
+                                  Gas-free: your wallet asks you to sign a permit for exactly this amount. We submit the transfer to the GLTCH deposit address and pay the network fee.
+                                </p>
+                              )}
+                            </>
+                          );
+                        })()}
+                      </div>
+
+                      <div className="rounded-lg border border-pink-500/20 bg-pink-500/5 p-4 space-y-3">
+                        <p className="font-orbitron text-tiny tracking-wider text-pink-300">
+                          Or send it yourself
+                        </p>
+                        <p className="font-mono-share text-tiny text-muted-foreground/70 leading-relaxed">
+                          Send XRGE to this address on {XRGE_CHAIN_NAME} from any wallet or exchange, then paste the transaction hash below.
+                        </p>
+
+                        <div className="space-y-1.5">
+                          <p className="font-mono-share text-tiny text-muted-foreground/70">Deposit Address ({XRGE_CHAIN_NAME})</p>
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 bg-input/60 border border-border/30 rounded px-3 py-2 font-mono-share text-tiny text-foreground/80 truncate select-all">
+                              {data.depositAddress}
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => copyAddress(data.depositAddress)}
+                              className="shrink-0 gap-1 border-pink-500/30 hover:bg-pink-500/10"
+                            >
+                              {copied ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+                            </Button>
+                          </div>
+                          <a
+                            href={basescanAddressUrl(data.depositAddress)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 font-mono-share text-tiny text-pink-400/60 hover:text-pink-400 transition-colors"
+                          >
+                            View on BaseScan <ExternalLink className="w-2.5 h-2.5" />
+                          </a>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <p className="font-mono-share text-tiny text-muted-foreground/70">XRGE Contract</p>
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 bg-input/60 border border-border/30 rounded px-3 py-2 font-mono-share text-tiny text-foreground/60 truncate select-all">
+                              {XRGE_CONTRACT}
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => copyAddress(XRGE_CONTRACT)}
+                              className="shrink-0 gap-1 border-border/30"
+                            >
+                              <Copy className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setShowHowTo(true)}
+                            className="inline-flex items-center gap-1.5 font-mono-share text-tiny text-pink-400 hover:text-pink-300 underline underline-offset-2 transition-colors"
+                          >
+                            New to crypto? How to buy XRGE
+                          </button>
+                          <a
+                            href={XRGE_DEXSCREENER_URL}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 font-mono-share text-tiny text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
+                          >
+                            DexScreener <ExternalLink className="w-3 h-3" />
+                          </a>
+                        </div>
+
+                          <div className="space-y-2">
+                            <p className="font-mono-share text-tiny text-muted-foreground/70">Transaction Hash</p>
+                            <Input
+                              value={depositTxHash}
+                              onChange={e => setDepositTxHash(e.target.value)}
+                              placeholder="0x..."
+                              className="font-mono-share text-xs bg-input/50 border-border/30"
+                            />
+                            <Button
+                              onClick={handleDeposit}
+                              disabled={depositing || !depositTxHash.trim()}
+                              className="w-full font-orbitron text-xs tracking-wider bg-pink-500/20 hover:bg-pink-500/30 text-pink-300 border border-pink-500/30"
+                            >
+                              {depositing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <ArrowDownToLine className="w-4 h-4 mr-2" />}
+                              VERIFY DEPOSIT
+                            </Button>
+                          </div>
+                      </div>
+                    </>
                   )}
                 </div>
               )}
