@@ -8,6 +8,7 @@ import { ADMIN_EMAIL, checkBan } from "./auth";
 import { getDb } from "./db";
 import { checkRateLimit } from "./ratelimit";
 import { deductCredits, discountedCostForUser } from "../v1/_lib/credits";
+import { isWeb3Request, chargeXrge, quoteXrge } from "./web3-spend";
 
 const BASE_COST = 1;
 const FREE_PER_DAY = 3;
@@ -122,6 +123,10 @@ export async function handleCharacterChatMessage(
     String(char.official_character_id) === String(char.id);
 
   const isAdmin = auth.email === ADMIN_EMAIL;
+  // Web3 edition pays in XRGE instead of credits.
+  const payWithXrge = isWeb3Request(req);
+  const pay = (credits: number, what: string) =>
+    payWithXrge ? chargeXrge(sql, auth.userId, credits, what) : deductCredits(sql, auth.userId, credits);
 
   // ── Pre-flight billing (avoid burning tokens when fan can't pay) ──
   if (!isOwner && !isAdmin) {
@@ -129,7 +134,8 @@ export async function handleCharacterChatMessage(
     const [fanRow] = await sql`
       SELECT creator_persona_chat_free_utc_date,
              COALESCE(creator_persona_chat_free_used, 0)::int AS free_used,
-             (COALESCE(daily_credits, 0) + COALESCE(sub_credits, 0) + COALESCE(pack_credits, 0))::int AS credit_total
+             (COALESCE(daily_credits, 0) + COALESCE(sub_credits, 0) + COALESCE(pack_credits, 0))::int AS credit_total,
+             COALESCE(xrge_bank_balance, 0) AS xrge_balance
       FROM users WHERE id = ${auth.userId}::uuid
     `;
     const fanDateRaw = fanRow.creator_persona_chat_free_utc_date;
@@ -146,7 +152,13 @@ export async function handleCharacterChatMessage(
 
     if (!freeOk && fanRow) {
       const cost = await discountedCostForUser(auth.userId, BASE_COST);
-      if (Number(fanRow.credit_total) < cost) {
+      if (payWithXrge) {
+        const q = await quoteXrge(sql, auth.userId, cost);
+        if (parseFloat(fanRow.xrge_balance) < q.xrge) {
+          res.status(402).json({ error: `Not enough XRGE for character chat (${q.xrge.toLocaleString("en-US")} XRGE needed).`, code: "INSUFFICIENT_XRGE" });
+          return;
+        }
+      } else if (Number(fanRow.credit_total) < cost) {
         res.status(402).json({
           error: `Insufficient credits for character chat (${cost} needed).`,
         });
@@ -315,7 +327,7 @@ export async function handleCharacterChatMessage(
         // Media always costs — creator price on top of compute (charged separately
         // by /comfyui). Text free-allowance does not apply to media.
         const price = mediaTrigger.type === "video" ? VIDEO_PRICE : PHOTO_PRICE;
-        await deductCredits(sql, auth.userId, price);
+        await pay(price, `Character chat ${mediaTrigger.type}`);
         await creditCreator(mediaTrigger.type, price);
         billing = { amount: price, kind: mediaTrigger.type, free: false };
       } else if (isOfficialPersona) {
@@ -337,7 +349,7 @@ export async function handleCharacterChatMessage(
         if (upd.length === 0) {
           // Free allowance exhausted for today → charge BASE_COST.
           const cost = await discountedCostForUser(auth.userId, BASE_COST);
-          await deductCredits(sql, auth.userId, cost);
+          await pay(cost, "Character chat message");
           await creditCreator("message", cost);
           billing = { amount: cost, kind: "message", free: false };
         } else {
@@ -345,13 +357,13 @@ export async function handleCharacterChatMessage(
         }
       } else {
         const cost = await discountedCostForUser(auth.userId, BASE_COST);
-        await deductCredits(sql, auth.userId, cost);
+        await pay(cost, "Character chat message");
         billing = { amount: cost, kind: "message", free: false };
       }
     } catch (billErr: any) {
       console.error("[character-chat] billing failed after reply", billErr?.message);
       res.status(402).json({
-        error: billErr?.message?.includes("Insufficient")
+        error: billErr?.message?.includes("Insufficient") || billErr?.message?.startsWith("Not enough XRGE")
           ? billErr.message
           : "Insufficient credits for character chat.",
       });

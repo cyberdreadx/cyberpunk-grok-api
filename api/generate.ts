@@ -17,6 +17,7 @@ import { checkRateLimit, getClientIp } from "./_lib/ratelimit";
 import { applyDiscount, getCombinedCreditDiscountPct } from "./_lib/discount";
 import { isEmailVerified, EMAIL_VERIFICATION_REQUIRED_MESSAGE, EMAIL_VERIFICATION_REQUIRED_CODE } from "./_lib/emailVerifiedGate";
 import { enforceGeo } from "./_lib/geo";
+import { isWeb3Request, chargeXrge, refundXrge, InsufficientXrgeError } from "./_lib/web3-spend";
 
 
 const XAI_API_BASE = "https://api.x.ai/v1";
@@ -372,8 +373,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const seedDiscountPct = await getCombinedCreditDiscountPct(auth.userId);
       const seedCost = applyDiscount(seedCostRaw, seedDiscountPct);
 
+      // Web3 edition pays in XRGE instead of credits.
+      const seedPayXrge = isWeb3Request(req);
+      let seedXrge = 0;
+
       // Credit gate
-      if (!isAdminSeed || adminTestSeed) {
+      if ((!isAdminSeed || adminTestSeed) && !seedPayXrge) {
         const rows = await sql`
           SELECT daily_credits, sub_credits, pack_credits FROM users WHERE id = ${auth.userId}
         `;
@@ -385,7 +390,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       // Deduct credits up front
-      if (!isAdminSeed || adminTestSeed) {
+      if ((!isAdminSeed || adminTestSeed) && seedPayXrge) {
+        try {
+          seedXrge = await chargeXrge(sql, auth.userId, seedCost, `Generation: ${tier}`);
+        } catch (err: any) {
+          if (err instanceof InsufficientXrgeError) return res.status(402).json({ error: err.message, code: "INSUFFICIENT_XRGE" });
+          return res.status(402).json({ error: "Failed to charge XRGE" });
+        }
+      } else if (!isAdminSeed || adminTestSeed) {
         try {
           await sql`SELECT deduct_credits(${auth.userId}::uuid, ${seedCost})`;
         } catch (err: any) {
@@ -397,6 +409,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const refundSeed = async () => {
         if (isAdminSeed && !adminTestSeed) return;
         try {
+          if (seedXrge > 0) { await refundXrge(sql, auth.userId, seedXrge, `Generation failed: ${tier}`); return; }
           await sql`SELECT add_pack_credits(${auth.userId}::uuid, ${seedCost})`;
         } catch (e: any) { console.error("[seedance] refund failed:", e.message); }
       };
@@ -452,12 +465,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           await refundSeed();
           console.error("[seedance] submit error", submitRes.status, errText.slice(0, 500));
           if (submitRes.status === 400 && /safety|moderat|nsfw|content/i.test(errText)) {
-            return res.status(451).json({ error: "Prompt blocked by SEEDANCE safety filter. Credits refunded.", moderated: true });
+            return res.status(451).json({ error: "Prompt blocked by SEEDANCE safety filter. Refunded.", moderated: true });
           }
           if (submitRes.status === 401 || submitRes.status === 403) {
-            return res.status(502).json({ error: "SEEDANCE auth failed (check FAL_KEY). Credits refunded." });
+            return res.status(502).json({ error: "SEEDANCE auth failed (check FAL_KEY). Refunded." });
           }
-          return res.status(502).json({ error: `SEEDANCE submit failed (${submitRes.status}). Credits refunded.` });
+          return res.status(502).json({ error: `SEEDANCE submit failed (${submitRes.status}). Refunded.` });
         }
 
         const submitData: any = await submitRes.json();
@@ -468,7 +481,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (!requestId) {
           await refundSeed();
           console.error("[seedance] no request_id", JSON.stringify(submitData).slice(0, 300));
-          return res.status(502).json({ error: "SEEDANCE returned no request id. Credits refunded." });
+          return res.status(502).json({ error: "SEEDANCE returned no request id. Refunded." });
         }
 
         // Sign a short-lived job token. Client passes it back to /api/seedance-status,
@@ -481,6 +494,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             tier,
             isI2V,
             seedCost,
+            seedXrge,
             seedDuration,
             isAdmin: !!isAdminSeed && !adminTestSeed,
             requestId,
@@ -501,7 +515,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       } catch (err: any) {
         await refundSeed();
         console.error("[seedance] submit exception", err.message);
-        return res.status(500).json({ error: "SEEDANCE submit failed. Credits refunded." });
+        return res.status(500).json({ error: "SEEDANCE submit failed. Refunded." });
       }
     }
 
@@ -522,7 +536,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (rows.length === 0) return res.status(404).json({ error: "User not found" });
 
       const totalCredits = (rows[0].daily_credits || 0) + (rows[0].sub_credits || 0) + (rows[0].pack_credits || 0);
-      if (totalCredits < cost) {
+      if (totalCredits < cost && !isWeb3Request(req)) {
         return res.status(402).json({ error: "Insufficient credits. Please purchase more in the Credit Store." });
       }
     }
@@ -537,8 +551,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       default: return res.status(400).json({ error: "Invalid action" }); // unreachable — whitelist above
     }
 
-    // Deduct credits BEFORE calling xAI (admin skips deduction unless testing)
-    if (!isAdminUser || adminTestCredits) {
+    // Deduct credits BEFORE calling xAI (admin skips deduction unless testing).
+    // Web3 edition pays in XRGE instead.
+    let paidXrge = 0;
+    if ((!isAdminUser || adminTestCredits) && isWeb3Request(req)) {
+      try {
+        paidXrge = await chargeXrge(sql, auth.userId, cost, `Generation: ${action}`);
+      } catch (err: any) {
+        if (err instanceof InsufficientXrgeError) return res.status(402).json({ error: err.message, code: "INSUFFICIENT_XRGE" });
+        return res.status(402).json({ error: "Failed to charge XRGE" });
+      }
+    } else if (!isAdminUser || adminTestCredits) {
       try {
         await sql`SELECT deduct_credits(${auth.userId}::uuid, ${cost})`;
       } catch (err: any) {
@@ -551,6 +574,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const refundCredits = async () => {
       if (isAdminUser && !adminTestCredits) return;
       try {
+        if (paidXrge > 0) { await refundXrge(sql, auth.userId, paidXrge, `Generation failed: ${action}`); return; }
         await sql`SELECT add_pack_credits(${auth.userId}::uuid, ${cost})`;
         console.log(`Refunded ${cost} credits to ${auth.userId}`);
       } catch (refundErr: any) {

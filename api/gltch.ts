@@ -16,6 +16,7 @@ import { checkRateLimit } from "./_lib/ratelimit";
 import { checkPrompt, logSafetyViolation } from "./_lib/safety";
 import { applyDiscount, getCombinedCreditDiscountPct } from "./_lib/discount";
 import { isEmailVerified, EMAIL_VERIFICATION_REQUIRED_MESSAGE, EMAIL_VERIFICATION_REQUIRED_CODE } from "./_lib/emailVerifiedGate";
+import { isWeb3Request, chargeXrge, refundXrge, InsufficientXrgeError } from "./_lib/web3-spend";
 
 
 const GLTCH_COST = 5;
@@ -137,8 +138,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const isAdminUser = auth.email === ADMIN_EMAIL;
       const adminTestCredits = isAdminUser && req.body.testCredits === true;
 
-      // Credit gate (admin is free unless testCredits)
-      if (!isAdminUser || adminTestCredits) {
+      // Web3 edition pays in XRGE instead of credits.
+      let paidXrge = 0;
+      if ((!isAdminUser || adminTestCredits) && isWeb3Request(req)) {
+        try {
+          paidXrge = await chargeXrge(sql, auth.userId, cost, hd ? "Generation: GLTCH edit HD" : "Generation: GLTCH edit");
+        } catch (err: any) {
+          if (err instanceof InsufficientXrgeError) return res.status(402).json({ error: err.message, code: "INSUFFICIENT_XRGE" });
+          return res.status(402).json({ error: "Failed to charge XRGE." });
+        }
+      } else if (!isAdminUser || adminTestCredits) {
         const rows = await sql`SELECT daily_credits, sub_credits, pack_credits FROM users WHERE id = ${auth.userId}`;
         if (rows.length === 0) return res.status(404).json({ error: "User not found." });
 
@@ -156,6 +165,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       const refundCredits = async () => {
         if (isAdminUser && !adminTestCredits) return;
+        if (paidXrge > 0) {
+          await refundXrge(sql, auth.userId, paidXrge, "Generation failed: GLTCH edit").catch(() => { /* best effort */ });
+          return;
+        }
         try { await sql`SELECT add_pack_credits(${auth.userId}::uuid, ${cost})`; }
         catch { /* best effort */ }
       };

@@ -22,6 +22,8 @@ interface SeedanceJobToken {
   tier: "seedance" | "seedance-fast" | "seedance-pro";
   isI2V: boolean;
   seedCost: number;
+  /** XRGE paid on the web3 edition instead of credits (absent otherwise). */
+  seedXrge?: number;
   seedDuration: number;
   isAdmin: boolean;
   requestId: string;
@@ -70,6 +72,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ` as any[];
       if (claim.length === 0) {
         console.warn(`[seedance-status] duplicate refund blocked for job ${job.requestId} (user ${job.userId})`);
+        return;
+      }
+      if (job.seedXrge && job.seedXrge > 0) {
+        const { refundXrge } = await import("./_lib/web3-spend");
+        await refundXrge(sql, job.userId, job.seedXrge, `Generation failed: ${job.tier}`);
+        console.log(`[seedance-status] refunded ${job.seedXrge} XRGE for job ${job.requestId}`);
         return;
       }
       await sql`SELECT add_pack_credits(${job.userId}::uuid, ${job.seedCost})`;

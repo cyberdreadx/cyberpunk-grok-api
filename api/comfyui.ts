@@ -22,6 +22,7 @@ import { checkRateLimit } from "./_lib/ratelimit";
 import { applyDiscount, getCombinedCreditDiscountPct } from "./_lib/discount";
 import { isEmailVerified, EMAIL_VERIFICATION_REQUIRED_MESSAGE, EMAIL_VERIFICATION_REQUIRED_CODE } from "./_lib/emailVerifiedGate";
 import { enforceGeo } from "./_lib/geo";
+import { isWeb3Request, chargeXrge, refundXrge, InsufficientXrgeError } from "./_lib/web3-spend";
 // Graphs shared with the public API (api/v1/comfy.ts) so the two cannot drift.
 import {
   addMMAudioNodes,
@@ -1827,7 +1828,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const enhanceSql = getDb();
       let enhanceCharged = false;
       let enhanceSplit = { daily: 0, sub: 0, pack: 0 };
-      if (!isAdminUser) {
+      // Web3 edition pays in XRGE instead of credits.
+      let enhanceXrge = 0;
+      if (!isAdminUser && isWeb3Request(req)) {
+        try {
+          enhanceXrge = await chargeXrge(enhanceSql, auth.userId, ENHANCE_COST, "Prompt enhance");
+        } catch (e: any) {
+          if (e instanceof InsufficientXrgeError) return res.status(402).json({ error: e.message, code: "INSUFFICIENT_XRGE" });
+          return res.status(402).json({ error: "Failed to charge XRGE" });
+        }
+      } else if (!isAdminUser) {
         const credRows = await enhanceSql`SELECT daily_credits, sub_credits, pack_credits FROM users WHERE id = ${auth.userId}`;
         if (credRows.length === 0) return res.status(404).json({ error: "User not found." });
         const totalCredits = (credRows[0].daily_credits || 0) + (credRows[0].sub_credits || 0) + (credRows[0].pack_credits || 0);
@@ -1937,6 +1947,10 @@ Rules:
       } catch (err: any) {
         console.error("[enhance-prompt]", err.message);
         // Refund the credit so a failed enhance is never charged.
+        if (enhanceXrge > 0) {
+          await refundXrge(enhanceSql, auth.userId, enhanceXrge, "Prompt enhance failed")
+            .catch((e: any) => console.error("[enhance-prompt] XRGE refund failed:", auth.userId, e.message));
+        }
         if (enhanceCharged) {
           await enhanceSql`SELECT refund_credits(${auth.userId}::uuid, ${enhanceSplit.daily}, ${enhanceSplit.sub}, ${enhanceSplit.pack})`
             .catch((e: any) => console.error("[enhance-prompt] refund failed:", auth.userId, e.message));
@@ -2091,6 +2105,9 @@ Rules:
       let creditDeducted = false;
       /** Which buckets actually paid — refunds restore exactly these. */
       let paidSplit = { daily: 0, sub: 0, pack: 0 };
+      /** Web3 edition: XRGE taken instead of credits (0 otherwise). */
+      let paidXrge = 0;
+      const payWithXrge = isWeb3Request(req);
 
       if (!isAdminUser || adminTestCredits) {
         // Rate limit: 20 comfy requests per 5 min
@@ -2104,11 +2121,19 @@ Rules:
         if (rows.length === 0) return res.status(404).json({ error: "User not found." });
 
         const totalCredits = (rows[0].daily_credits || 0) + (rows[0].sub_credits || 0) + (rows[0].pack_credits || 0);
-        if (totalCredits < cost) {
+        if (payWithXrge) {
+          try {
+            paidXrge = await chargeXrge(sql, auth.userId, cost, `Generation: ${workflowType}`);
+            creditDeducted = paidXrge > 0;
+          } catch (err: any) {
+            if (err instanceof InsufficientXrgeError) return res.status(402).json({ error: err.message, code: "INSUFFICIENT_XRGE" });
+            return res.status(402).json({ error: "Failed to charge XRGE" });
+          }
+        } else if (totalCredits < cost) {
           return res.status(402).json({ error: `Not enough credits. This costs ${cost} credit${cost !== 1 ? "s" : ""}.` });
         }
 
-        try {
+        if (!payWithXrge) try {
           // Capture WHICH buckets paid, so a refund can put them back where
           // they came from. The flat add_pack_credits() refund this replaces
           // turned every failed job's expiring daily/sub credits into
@@ -2555,7 +2580,8 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           // Refund credits on submission failure
           if (creditDeducted) {
             const sql = getDb();
-            await sql`SELECT refund_credits(${auth.userId}::uuid, ${paidSplit.daily}, ${paidSplit.sub}, ${paidSplit.pack})`.catch((e: any) => { console.error("[comfyui] refund failed:", auth.userId, cost, e.message); });
+            if (paidXrge > 0) await refundXrge(sql, auth.userId, paidXrge, `Generation failed to start: ${workflowType}`).catch((e: any) => { console.error("[comfyui] XRGE refund failed:", auth.userId, paidXrge, e.message); });
+            else await sql`SELECT refund_credits(${auth.userId}::uuid, ${paidSplit.daily}, ${paidSplit.sub}, ${paidSplit.pack})`.catch((e: any) => { console.error("[comfyui] refund failed:", auth.userId, cost, e.message); });
           }
           // Leave a trace. usage_log is only written AFTER a successful submit,
           // so a rejected submit used to vanish: on 2026-08-31 RunPod ran out of
@@ -2585,9 +2611,9 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           const sql = getDb();
           const logMode = `comfy-${workflowType}`;
           await sql`
-            INSERT INTO usage_log (user_id, mode, credits_used, prompt, job_id, paid_daily, paid_sub, paid_pack)
+            INSERT INTO usage_log (user_id, mode, credits_used, prompt, job_id, paid_daily, paid_sub, paid_pack, paid_xrge)
             VALUES (${auth.userId}::uuid, ${logMode}, ${cost}, ${(prompt || "").slice(0, 500)}, ${String(result.id || "")},
-                    ${paidSplit.daily}, ${paidSplit.sub}, ${paidSplit.pack})
+                    ${paidSplit.daily}, ${paidSplit.sub}, ${paidSplit.pack}, ${paidXrge || null})
           `.catch(() => { });
         }
 
@@ -2611,7 +2637,8 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           const errText = await resp.text().catch(() => "Unknown error");
           if (creditDeducted) {
             const sql = getDb();
-            await sql`SELECT refund_credits(${auth.userId}::uuid, ${paidSplit.daily}, ${paidSplit.sub}, ${paidSplit.pack})`.catch((e: any) => { console.error("[comfyui] refund failed:", auth.userId, cost, e.message); });
+            if (paidXrge > 0) await refundXrge(sql, auth.userId, paidXrge, `Generation failed to start: ${workflowType}`).catch((e: any) => { console.error("[comfyui] XRGE refund failed:", auth.userId, paidXrge, e.message); });
+            else await sql`SELECT refund_credits(${auth.userId}::uuid, ${paidSplit.daily}, ${paidSplit.sub}, ${paidSplit.pack})`.catch((e: any) => { console.error("[comfyui] refund failed:", auth.userId, cost, e.message); });
           }
           throw new Error(`ComfyUI prompt failed (${resp.status}): ${errText}`);
         }
@@ -2622,9 +2649,9 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           const sql = getDb();
           const logMode = `comfy-${workflowType}`;
           await sql`
-            INSERT INTO usage_log (user_id, mode, credits_used, prompt, paid_daily, paid_sub, paid_pack)
+            INSERT INTO usage_log (user_id, mode, credits_used, prompt, paid_daily, paid_sub, paid_pack, paid_xrge)
             VALUES (${auth.userId}::uuid, ${logMode}, ${cost}, ${(prompt || "").slice(0, 500)},
-                    ${paidSplit.daily}, ${paidSplit.sub}, ${paidSplit.pack})
+                    ${paidSplit.daily}, ${paidSplit.sub}, ${paidSplit.pack}, ${paidXrge || null})
           `.catch(() => { });
         }
 
@@ -3059,6 +3086,7 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           // Bound to THIS job via job_id, and claimed with a single atomic UPDATE
           // so concurrent polls of the same job can only refund once.
           let refunded = 0;
+          let refundedXrge = 0;
           if (auth?.userId) {
             try {
               const sql = getDb();
@@ -3071,7 +3099,7 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
                   AND mode LIKE 'comfy-%'
                   AND mode NOT LIKE '%-refunded%'
                   AND credits_used > 0
-                RETURNING id, credits_used, paid_daily, paid_sub, paid_pack
+                RETURNING id, credits_used, paid_daily, paid_sub, paid_pack, paid_xrge
               ` as any[];
               if (claimed.length > 0) {
                 refunded = claimed[0].credits_used;
@@ -3080,7 +3108,11 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
                 // all-to-pack behaviour for them rather than refunding nothing.
                 const row = claimed[0];
                 const known = row.paid_daily != null || row.paid_sub != null || row.paid_pack != null;
-                if (known) {
+                if (parseFloat(row.paid_xrge) > 0) {
+                  // Paid in XRGE on the web3 edition — give the XRGE back.
+                  refundedXrge = Math.round(parseFloat(row.paid_xrge));
+                  await refundXrge(sql, auth.userId, refundedXrge, `Generation failed: job ${promptId}`);
+                } else if (known) {
                   await sql`SELECT refund_credits(${auth.userId}::uuid, ${row.paid_daily || 0}, ${row.paid_sub || 0}, ${row.paid_pack || 0})`;
                 } else {
                   await sql`SELECT add_pack_credits(${auth.userId}::uuid, ${refunded})`;
@@ -3093,7 +3125,8 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
               console.error("[comfyui-poll] undelivered refund failed:", e.message);
             }
           }
-          const refundNote = refunded > 0 ? ` ${refunded} credit${refunded !== 1 ? "s" : ""} refunded.` : "";
+          const refundNote = refundedXrge > 0 ? ` ${refundedXrge.toLocaleString("en-US")} XRGE refunded.`
+            : refunded > 0 ? ` ${refunded} credit${refunded !== 1 ? "s" : ""} refunded.` : "";
           cleanupS3Urls();
           return res.status(200).json({ status: "error", error: `Job completed but output could not be delivered.${hint} Try a lower resolution or fewer frames.${refundNote}`, refunded });
         }
@@ -3109,6 +3142,7 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
           // which let anyone repeatedly poll one cancelled job to refund their
           // other successful jobs — unlimited credit minting.)
           let refunded = 0;
+          let refundedXrge = 0;
           if (auth?.userId) {
             try {
               const sql = getDb();
@@ -3120,7 +3154,7 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
                   AND mode LIKE 'comfy-%'
                   AND mode NOT LIKE '%-refunded%'
                   AND credits_used > 0
-                RETURNING id, credits_used, paid_daily, paid_sub, paid_pack
+                RETURNING id, credits_used, paid_daily, paid_sub, paid_pack, paid_xrge
               ` as any[];
               if (claimed.length > 0) {
                 refunded = claimed[0].credits_used;
@@ -3129,7 +3163,11 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
                 // all-to-pack behaviour for them rather than refunding nothing.
                 const row = claimed[0];
                 const known = row.paid_daily != null || row.paid_sub != null || row.paid_pack != null;
-                if (known) {
+                if (parseFloat(row.paid_xrge) > 0) {
+                  // Paid in XRGE on the web3 edition — give the XRGE back.
+                  refundedXrge = Math.round(parseFloat(row.paid_xrge));
+                  await refundXrge(sql, auth.userId, refundedXrge, `Generation failed: job ${promptId}`);
+                } else if (known) {
                   await sql`SELECT refund_credits(${auth.userId}::uuid, ${row.paid_daily || 0}, ${row.paid_sub || 0}, ${row.paid_pack || 0})`;
                 } else {
                   await sql`SELECT add_pack_credits(${auth.userId}::uuid, ${refunded})`;
@@ -3143,7 +3181,8 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
             }
           }
 
-          const refundNote = refunded > 0 ? ` ${refunded} credit${refunded !== 1 ? "s" : ""} refunded.` : "";
+          const refundNote = refundedXrge > 0 ? ` ${refundedXrge.toLocaleString("en-US")} XRGE refunded.`
+            : refunded > 0 ? ` ${refunded} credit${refunded !== 1 ? "s" : ""} refunded.` : "";
           return res.status(200).json({ status: "error", error: `${errMsg}.${refundNote}`, refunded });
         }
 
