@@ -18,6 +18,9 @@ import type { AuthUser } from "@/hooks/useAuth";
 import { isWeb3 } from "@/lib/edition";
 import { setCurrentXrgePerCredit } from "@/lib/web3";
 
+/** Broadcast by deductCreditsLocally; every useCredits instance applies it. */
+const CREDITS_DEDUCTED_EVENT = "credits-deducted";
+
 export function useCredits(user: AuthUser | null) {
   const [dailyCredits, setDailyCredits] = useState<number>(0);
   const [subCredits, setSubCredits] = useState<number>(0);
@@ -246,7 +249,10 @@ export function useCredits(user: AuthUser | null) {
   }, [user]);
 
   // Optimistic local deduction (mirrors server logic: daily → sub → pack)
-  const deductCreditsLocally = useCallback((amount: number) => {
+  /** Applies a deduction to THIS instance's numbers. Not called directly:
+   *  deductCreditsLocally broadcasts, and every instance (top bar, bottom nav,
+   *  the page) applies it, so all of them drop the moment a job starts. */
+  const applyDeduction = useCallback((amount: number) => {
     if (isWeb3 && xrgePerCredit) setXrgeBalance((b) => Math.max(0, b - Math.ceil(amount * xrgePerCredit)));
     setDailyCredits((prevDaily) => {
       let remaining = amount;
@@ -265,6 +271,23 @@ export function useCredits(user: AuthUser | null) {
       return prevDaily - fromDaily;
     });
   }, [xrgePerCredit]);
+
+  const deductCreditsLocally = useCallback((amount: number) => {
+    if (!(amount > 0)) return;
+    window.dispatchEvent(new CustomEvent(CREDITS_DEDUCTED_EVENT, { detail: { amount } }));
+    // Then reconcile every instance with the server once the charge has
+    // landed (discounts, XRGE rounding, a job that failed to start).
+    window.setTimeout(() => window.dispatchEvent(new Event("credits-changed")), 4000);
+  }, []);
+
+  useEffect(() => {
+    const onDeducted = (e: Event) => {
+      const amount = Number((e as CustomEvent<{ amount?: number }>).detail?.amount);
+      if (amount > 0) applyDeduction(amount);
+    };
+    window.addEventListener(CREDITS_DEDUCTED_EVENT, onDeducted);
+    return () => window.removeEventListener(CREDITS_DEDUCTED_EVENT, onDeducted);
+  }, [applyDeduction]);
 
   const clearPurchaseError = useCallback(() => setPurchaseError(null), []);
   const hasEnoughCredits = useCallback((cost: number) => totalCredits >= cost, [totalCredits]);

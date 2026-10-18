@@ -28,6 +28,7 @@ import { uploadPublicMedia } from "@/lib/mediaUpload";
 import { EASY_ASPECTS, ZIMAGE_SIZES } from "@/lib/renderSizes";
 import { isWeb3 } from "@/lib/edition";
 import { costText } from "@/lib/web3";
+import { calculateCreditCost } from "@/lib/api";
 
 /** Only the fields Easy actually sends. The hook's own parameter types are
  *  wider; narrowing here keeps this file honest about what it uses. */
@@ -74,6 +75,8 @@ export interface EasyEngines {
   cancelComfyJob: (jobId: string) => void | Promise<void>;
   /** Re-read the balance after a charge or refund, so the pill stays true. */
   onBalanceChange?: () => void;
+  /** Take a cost off every balance display the moment a job starts. */
+  deductLocally?: (credits: number) => void;
   /** Open the store (credits) or XRGE bank (web3). */
   onNeedFunds?: () => void;
   /** Open sign-in. */
@@ -386,11 +389,12 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
         method: "POST",
         body: { action: "enhance-prompt", prompt: text, mode },
       });
+      engines.deductLocally?.(1);
       return d.enhanced || text;
     } catch {
       return text; // never block a generation on the assist
     }
-  }, []);
+  }, [engines]);
 
   /** Find the upload a result was made from: the attachment on the user
    *  message just before it. */
@@ -566,7 +570,12 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
         kind: "result", id: `r-${jobId}`, rowId: rowId ?? undefined, jobId, prompt,
         phase: "Starting…", status: "running", assets: [], label, retry: spec,
       }]);
-      engines.onBalanceChange?.();
+      engines.deductLocally?.(
+        route === "image" ? calculateCreditCost("comfy-image")
+          : route === "edit" ? calculateCreditCost("comfy-edit")
+            : quality === "best" ? ltxCredits(ltxFrames(len.secs), VIDEO_QUALITY[1].creditsPerSecond)
+              : VIDEO_QUALITY[0].flatCredits,
+      );
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Try again";
       toast({ title: "Couldn't start", description: msg, variant: "destructive" });

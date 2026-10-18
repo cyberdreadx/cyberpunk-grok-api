@@ -887,7 +887,6 @@ const Index = () => {
         else if (isZimage || isKrea2 || isComfyGen) cost = calculateCreditCost("comfy-image");
         else cost = calculateCreditCost("comfy-video");
         creditsHook.deductCreditsLocally(applyCreditDiscount(cost));
-        setTimeout(() => creditsHook.refreshCredits(), 5000);
       }
 
       try {
@@ -1141,7 +1140,6 @@ const Index = () => {
         else creditMode = mode;
         const cost = calculateCreditCost(creditMode, imageCount, videoDuration);
         creditsHook.deductCreditsLocally(applyCreditDiscount(cost));
-        setTimeout(() => creditsHook.refreshCredits(), 2000);
       }
 
       toast({
@@ -1189,6 +1187,20 @@ const Index = () => {
       </div>
     </div>
   );
+
+  // A job that fails is refunded on the server; show the refund straight away
+  // on every balance instead of at the next refresh.
+  const erroredJobsRef = useRef(new Set<string>());
+  useEffect(() => {
+    let refunded = false;
+    for (const j of comfyJobs) {
+      if (j.status === "error" && !erroredJobsRef.current.has(j.id)) {
+        erroredJobsRef.current.add(j.id);
+        refunded = true;
+      }
+    }
+    if (refunded) window.dispatchEvent(new Event("credits-changed"));
+  }, [comfyJobs]);
 
   /* The credits pill + store and the sign-in dialog. Classic shows them in its
      header; Easy needs the same dialogs (the top bar's balance pill and a
@@ -1271,6 +1283,7 @@ const Index = () => {
               // useCredits; the broadcast reaches them all. Refreshing only
               // this one left the web3 pill stale after an XRGE charge.
               onBalanceChange: () => { window.dispatchEvent(new Event("credits-changed")); },
+              deductLocally: (credits) => creditsHook.deductCreditsLocally(applyCreditDiscount(credits)),
               onNeedFunds: () => setStoreOpen(true),
               onNeedSignIn: () => navigate(`${location.pathname}?signin=1`),
             }}
