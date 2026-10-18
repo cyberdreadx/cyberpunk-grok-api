@@ -142,6 +142,8 @@ interface WalletDepositInfo {
   walletXrgeWei: string;
   walletEthWei: string;
   minDepositWei: string;
+  /** Base app / Coinbase Smart Wallet: can't sign a permit the token accepts. */
+  smartWallet?: boolean;
 }
 
 type WalletStep = "idle" | "connecting" | "signing" | "sending" | "confirming";
@@ -998,7 +1000,7 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                         {!walletAddr ? (
                           <>
                             <p className="font-mono-share text-tiny text-muted-foreground/70 leading-relaxed">
-                              Works with Base, Coinbase Wallet, MetaMask, Rabby, or any wallet holding XRGE on {XRGE_CHAIN_NAME}. No ETH needed.
+                              Works with the Base app, Coinbase Wallet, MetaMask, Rabby, or any wallet holding XRGE on {XRGE_CHAIN_NAME}.
                             </p>
                             {!hasInjectedWallet() && isMobile() ? (
                               <div className="grid grid-cols-2 gap-2">
@@ -1030,7 +1032,8 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                           const amountXrge = walletAmountWei ? weiToWholeXrge(walletAmountWei) : 0;
                           const tooMuch = !!walletInfo && !!walletAmountWei && BigInt(walletAmountWei) > BigInt(walletInfo.walletXrgeWei);
                           const busy = walletStep !== "idle";
-                          const canGasless = !!walletInfo?.available && !!walletAmountWei && !tooMuch && !wrongWallet && !isDepositWallet && amountXrge >= minXrge;
+                          const gaslessShown = !!walletInfo?.available && !walletInfo.smartWallet;
+                          const canGasless = gaslessShown && !!walletAmountWei && !tooMuch && !wrongWallet && !isDepositWallet && amountXrge >= minXrge;
                           const canTransfer = hasEth && !!walletAmountWei && !tooMuch && !wrongWallet && !isDepositWallet;
                           return (
                             <>
@@ -1074,7 +1077,7 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                               {tooMuch && (
                                 <p className="font-mono-share text-tiny text-pink-400">That's more XRGE than this wallet holds.</p>
                               )}
-                              {walletInfo?.available && !!walletAmountWei && !tooMuch && amountXrge < minXrge && (
+                              {gaslessShown && !!walletAmountWei && !tooMuch && amountXrge < minXrge && (
                                 <p className="font-mono-share text-tiny text-muted-foreground/70">
                                   Gas-free deposits start at {minXrge.toLocaleString("en-US")} XRGE.
                                 </p>
@@ -1092,7 +1095,7 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                                 </div>
                               ) : (
                                 <div className="space-y-2">
-                                  {walletInfo?.available && (
+                                  {gaslessShown && (
                                     <Button
                                       onClick={handleGaslessDeposit}
                                       disabled={!canGasless}
@@ -1102,25 +1105,41 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                                       DEPOSIT · NO GAS NEEDED
                                     </Button>
                                   )}
-                                  <Button
-                                    variant="outline"
-                                    onClick={handleWalletTransfer}
-                                    disabled={!canTransfer}
-                                    className="w-full font-mono-share text-tiny border-border/30"
-                                  >
-                                    <ArrowDownToLine className="w-3.5 h-3.5 mr-2" />
-                                    Send from my wallet (pays a tiny ETH fee)
-                                  </Button>
-                                  {walletInfo && !hasEth && (
+                                  {gaslessShown ? (
+                                    <Button
+                                      variant="outline"
+                                      onClick={handleWalletTransfer}
+                                      disabled={!canTransfer}
+                                      className="w-full font-mono-share text-tiny border-border/30"
+                                    >
+                                      <ArrowDownToLine className="w-3.5 h-3.5 mr-2" />
+                                      Send from my wallet (pays a tiny ETH fee)
+                                    </Button>
+                                  ) : (
+                                    <Button
+                                      onClick={handleWalletTransfer}
+                                      disabled={!canTransfer}
+                                      className="w-full font-orbitron text-xs tracking-wider bg-pink-500/20 hover:bg-pink-500/30 text-pink-300 border border-pink-500/30"
+                                    >
+                                      <ArrowDownToLine className="w-4 h-4 mr-2" />
+                                      DEPOSIT FROM WALLET
+                                    </Button>
+                                  )}
+                                  {walletInfo?.smartWallet && (
+                                    <p className="font-mono-share text-tiny text-muted-foreground/60 leading-relaxed">
+                                      Smart wallets like the Base app send XRGE directly. The network fee is a fraction of a cent{hasEth ? "." : ", but it needs a little ETH on Base in this wallet."}
+                                    </p>
+                                  )}
+                                  {walletInfo && !walletInfo.smartWallet && !hasEth && (
                                     <p className="font-mono-share text-tiny text-muted-foreground/60">
-                                      {walletInfo.available
+                                      {gaslessShown
                                         ? "No ETH in this wallet? No problem: the gas-free deposit only asks for a signature."
                                         : "Sending needs a little ETH on Base for the network fee."}
                                     </p>
                                   )}
                                 </div>
                               )}
-                              {walletInfo?.available && !busy && (
+                              {gaslessShown && !busy && (
                                 <p className="font-mono-share text-tiny text-muted-foreground/50 leading-relaxed">
                                   Gas-free: your wallet asks you to sign a permit for exactly this amount. We submit the transfer to the GLTCH deposit address and pay the network fee.
                                 </p>

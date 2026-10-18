@@ -38,6 +38,21 @@ export const config = { maxDuration: 90 };
 
 const DEADLINE_SECONDS = 20 * 60;
 
+/**
+ * True when this wallet will sign the permit with a wrapped (ERC-1271/6492)
+ * signature the XRGE contract can't accept: any contract wallet (Coinbase
+ * Smart Wallet), and EIP-7702 accounts delegated to Coinbase's smart-wallet
+ * implementation (the Base app). Other 7702 delegations (e.g. MetaMask smart
+ * accounts) still sign with the account's own key, so they stay eligible.
+ */
+const COINBASE_7702_DELEGATE = "7702cb554e6bfb442cb743a7df23154544a7176c";
+function signsWrapped(code: string | undefined): boolean {
+  if (!code || code === "0x") return false;
+  const c = code.toLowerCase();
+  if (c.startsWith("0xef0100")) return c.slice(8) === COINBASE_7702_DELEGATE;
+  return true;
+}
+
 const SMART_WALLET_MESSAGE =
   "Gas-free deposits don't work with smart wallets like the Base app. Use “Send from my wallet” instead (the fee is a fraction of a cent).";
 
@@ -89,12 +104,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
       const gp = getGasPayer();
       const { usdRate } = await getXrgeConfig();
-      const [nonce, walletXrgeWei, walletEthWei, available, minWei] = await Promise.all([
+      const [nonce, walletXrgeWei, walletEthWei, available, minWei, code] = await Promise.all([
         readXrge("nonces", [address as Address]),
         readXrge("balanceOf", [address as Address]),
         publicClient.getBalance({ address: address as Address }),
         gasPayerReady(),
         minDepositWei(usdRate),
+        publicClient.getCode({ address: address as Address }).catch(() => undefined),
       ]);
       return res.status(200).json({
         available,
@@ -104,6 +120,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         domain: XRGE_PERMIT_DOMAIN,
         walletXrgeWei: walletXrgeWei.toString(),
         walletEthWei: walletEthWei.toString(),
+        smartWallet: signsWrapped(code),
         minDepositWei: minWei.toString(),
       });
     } catch (err: any) {
