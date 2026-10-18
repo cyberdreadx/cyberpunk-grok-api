@@ -116,7 +116,7 @@ async function main() {
       credentials: true,
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
       // X-Gltch-Edition: the web3 edition marks every request (src/lib/api.ts).
-      allowedHeaders: ["Content-Type", "Authorization", "X-API-Key", "X-Gltch-Edition"],
+      allowedHeaders: ["Content-Type", "Authorization", "X-API-Key", "X-Gltch-Edition", "X-Gltch-Admin-Charge"],
       maxAge: 86400,
     }),
   );

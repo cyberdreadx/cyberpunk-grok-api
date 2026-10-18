@@ -16,7 +16,7 @@ import { checkRateLimit } from "./_lib/ratelimit";
 import { checkPrompt, logSafetyViolation } from "./_lib/safety";
 import { applyDiscount, getCombinedCreditDiscountPct } from "./_lib/discount";
 import { isEmailVerified, EMAIL_VERIFICATION_REQUIRED_MESSAGE, EMAIL_VERIFICATION_REQUIRED_CODE } from "./_lib/emailVerifiedGate";
-import { isWeb3Request, chargeXrge, refundXrge, InsufficientXrgeError } from "./_lib/web3-spend";
+import { isWeb3Request, adminChargeRequested, chargeXrge, refundXrge, InsufficientXrgeError } from "./_lib/web3-spend";
 import { secureToken } from "./_lib/secure-token";
 
 
@@ -137,7 +137,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const discountPct = await getCombinedCreditDiscountPct(auth.userId);
       const cost = applyDiscount(baseCost, discountPct);
       const isAdminUser = auth.email === ADMIN_EMAIL;
-      const adminTestCredits = isAdminUser && req.body.testCredits === true;
+      const adminTestCredits = isAdminUser && (req.body.testCredits === true || adminChargeRequested(req));
 
       // Web3 edition pays in XRGE instead of credits.
       let paidXrge = 0;

@@ -22,7 +22,7 @@ import { checkRateLimit } from "./_lib/ratelimit";
 import { applyDiscount, getCombinedCreditDiscountPct } from "./_lib/discount";
 import { isEmailVerified, EMAIL_VERIFICATION_REQUIRED_MESSAGE, EMAIL_VERIFICATION_REQUIRED_CODE } from "./_lib/emailVerifiedGate";
 import { enforceGeo } from "./_lib/geo";
-import { isWeb3Request, chargeXrge, refundXrge, InsufficientXrgeError } from "./_lib/web3-spend";
+import { isWeb3Request, adminChargeRequested, chargeXrge, refundXrge, InsufficientXrgeError } from "./_lib/web3-spend";
 // Graphs shared with the public API (api/v1/comfy.ts) so the two cannot drift.
 import {
   addMMAudioNodes,
@@ -1831,14 +1831,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       let enhanceSplit = { daily: 0, sub: 0, pack: 0 };
       // Web3 edition pays in XRGE instead of credits.
       let enhanceXrge = 0;
-      if (!isAdminUser && isWeb3Request(req)) {
+      const enhanceBilled = !isAdminUser || adminChargeRequested(req);
+      if (enhanceBilled && isWeb3Request(req)) {
         try {
           enhanceXrge = await chargeXrge(enhanceSql, auth.userId, ENHANCE_COST, "Prompt enhance");
         } catch (e: any) {
           if (e instanceof InsufficientXrgeError) return res.status(402).json({ error: e.message, code: "INSUFFICIENT_XRGE" });
           return res.status(402).json({ error: "Failed to charge XRGE" });
         }
-      } else if (!isAdminUser) {
+      } else if (enhanceBilled) {
         const credRows = await enhanceSql`SELECT daily_credits, sub_credits, pack_credits FROM users WHERE id = ${auth.userId}`;
         if (credRows.length === 0) return res.status(404).json({ error: "User not found." });
         const totalCredits = (credRows[0].daily_credits || 0) + (credRows[0].sub_credits || 0) + (credRows[0].pack_credits || 0);
@@ -2077,7 +2078,7 @@ Rules:
           skipCredits = true;
         }
       }
-      const adminTestCredits = isAdminUser && req.body.testCredits === true;
+      const adminTestCredits = isAdminUser && (req.body.testCredits === true || adminChargeRequested(req));
       const costKey = isKleinEditWorkflow(workflowType) && upscale ? "klein-hd"
         : isKleinEditWorkflow(workflowType) ? "klein"
           : workflowType === "gltch-wan" && useVidUpscale ? "gltch-wan-hd"

@@ -17,7 +17,7 @@ import { checkRateLimit, getClientIp } from "./_lib/ratelimit";
 import { applyDiscount, getCombinedCreditDiscountPct } from "./_lib/discount";
 import { isEmailVerified, EMAIL_VERIFICATION_REQUIRED_MESSAGE, EMAIL_VERIFICATION_REQUIRED_CODE } from "./_lib/emailVerifiedGate";
 import { enforceGeo } from "./_lib/geo";
-import { isWeb3Request, chargeXrge, refundXrge, InsufficientXrgeError } from "./_lib/web3-spend";
+import { isWeb3Request, adminChargeRequested, chargeXrge, refundXrge, InsufficientXrgeError } from "./_lib/web3-spend";
 import { secureToken } from "./_lib/secure-token";
 
 
@@ -370,7 +370,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         CREDIT_COSTS.seedanceVideoPerSecond;
       const seedCostRaw = perSec * seedDuration;
       const isAdminSeed = auth.email === ADMIN_EMAIL;
-      const adminTestSeed = isAdminSeed && req.body.testCredits === true;
+      const adminTestSeed = isAdminSeed && (req.body.testCredits === true || adminChargeRequested(req));
       const seedDiscountPct = await getCombinedCreditDiscountPct(auth.userId);
       const seedCost = applyDiscount(seedCostRaw, seedDiscountPct);
 
@@ -527,7 +527,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const discountPct = await getCombinedCreditDiscountPct(auth.userId);
     const cost = applyDiscount(baseCost, discountPct);
     const isAdminUser = auth.email === ADMIN_EMAIL;
-    const adminTestCredits = isAdminUser && req.body.testCredits === true;
+    const adminTestCredits = isAdminUser && (req.body.testCredits === true || adminChargeRequested(req));
 
     // Credit gate (admin is free unless testCredits)
     if (!isAdminUser || adminTestCredits) {

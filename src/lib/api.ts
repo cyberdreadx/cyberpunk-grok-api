@@ -20,17 +20,32 @@ const isSameOriginApi = API_BASE.startsWith("/") || API_BASE.startsWith(currentO
 export const API_BASE_URL = API_BASE;
 /** Whether the API is same-origin — controls fetch credentials. */
 export const apiIsSameOrigin = isSameOriginApi;
-// The web3 edition tells the API on every request, so generations are charged
-// in XRGE instead of credits (api/_lib/web3-spend.ts). Done once here, on
-// fetch, because a dozen components call fetch(apiUrl(...)) directly.
-if (isWeb3 && typeof window !== "undefined" && !(window.fetch as any).__gltchEdition) {
+/** Admin "charge me like a user" switch. Stored per browser; the server only
+ *  honours it for the admin account, so setting it anywhere else does nothing. */
+export const ADMIN_CHARGE_KEY = "gltch-admin-charge";
+export function getAdminCharge(): boolean {
+  try { return localStorage.getItem(ADMIN_CHARGE_KEY) === "1"; } catch { return false; }
+}
+export function setAdminCharge(on: boolean) {
+  try { on ? localStorage.setItem(ADMIN_CHARGE_KEY, "1") : localStorage.removeItem(ADMIN_CHARGE_KEY); } catch { /* private mode */ }
+  window.dispatchEvent(new Event("credits-changed"));
+}
+
+// Headers the API needs on every request, set once here on fetch because a
+// dozen components call fetch(apiUrl(...)) directly:
+//  - X-Gltch-Edition: web3 → generations are charged in XRGE (api/_lib/web3-spend.ts)
+//  - X-Gltch-Admin-Charge: 1 → the admin is charged like any user (testing)
+if (typeof window !== "undefined" && !(window.fetch as any).__gltchEdition) {
   const nativeFetch = window.fetch.bind(window);
   const isApi = (url: string) => url.startsWith(API_BASE) || url.startsWith(`${currentOrigin}${API_BASE}`);
   const wrapped = (input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
     if (!isApi(url)) return nativeFetch(input, init);
+    const charge = getAdminCharge();
+    if (!isWeb3 && !charge) return nativeFetch(input, init);
     const headers = new Headers(init?.headers || (input instanceof Request ? input.headers : undefined));
-    headers.set("X-Gltch-Edition", "web3");
+    if (isWeb3) headers.set("X-Gltch-Edition", "web3");
+    if (charge) headers.set("X-Gltch-Admin-Charge", "1");
     return nativeFetch(input, { ...init, headers });
   };
   (wrapped as any).__gltchEdition = true;

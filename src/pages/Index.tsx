@@ -62,7 +62,7 @@ import { useFolders } from "@/hooks/useFolders";
 import { usePromptHistory } from "@/hooks/usePromptHistory";
 import { useToast } from "@/hooks/use-toast";
 import { useGrokApi, urlToBase64, getImageDimensions, type GrokMode, type GenerationSettings, type VideoSettings, type ApiMode, type VideoLoraEntry, type ComfyJob, DEFAULT_SETTINGS, DEFAULT_VIDEO_SETTINGS } from "@/hooks/useGrokApi";
-import { apiFetch, calculateCreditCost, type CreditMode } from "@/lib/api";
+import { apiFetch, calculateCreditCost, getAdminCharge, setAdminCharge, type CreditMode } from "@/lib/api";
 import { AGE_VERIFIED_EVENT, isAgeVerified } from "@/lib/ageGate";
 import { APP_VERSION } from "@/lib/version";
 import { RENDER_SIZES, ZIMAGE_SIZES, ZIMAGE_ORDER, type RenderAspect } from "@/lib/renderSizes";
@@ -265,7 +265,16 @@ const Index = () => {
   const creditsHook = useCredits(auth.user);
   const missionsHook = useDailyMissions(auth.user);
   const isAdmin = !!auth.user?.is_admin;
-  const [adminTestCredits, setAdminTestCredits] = useState(false);
+  // Remembered across reloads, and sent on every request (src/lib/api.ts) so
+  // the server charges the admin like any user — Easy, Classic, assist, web3.
+  const [adminTestCredits, setAdminTestCreditsState] = useState(getAdminCharge);
+  const setAdminTestCredits = (next: boolean | ((prev: boolean) => boolean)) => {
+    setAdminTestCreditsState((prev) => {
+      const v = typeof next === "function" ? next(prev) : next;
+      setAdminCharge(v);
+      return v;
+    });
+  };
   const adminBypass = isAdmin && !adminTestCredits;
   const applyCreditDiscount = useCallback((cost: number) => {
     const pct = Math.max(0, Math.min(95, creditsHook.creditDiscountPct || 0));
@@ -1169,7 +1178,7 @@ const Index = () => {
 
   /* The toggle. Rendered in both views so either one can reach the other. */
   const modeToggle = (
-    <div className="flex justify-center">
+    <div className="flex justify-center items-center gap-2">
       <div className="inline-flex rounded-full border border-border/50 bg-muted/30 p-0.5">
         {(["easy", "classic"] as const).map((m) => (
           <button
@@ -1185,6 +1194,18 @@ const Index = () => {
           </button>
         ))}
       </div>
+      {isAdmin && (
+        <button
+          type="button"
+          onClick={() => setAdminTestCredits((v) => !v)}
+          className={`px-2.5 py-1 rounded-full border font-mono text-xs transition-colors ${adminTestCredits
+            ? "border-yellow-500/60 bg-yellow-500/15 text-yellow-300"
+            : "border-border/50 text-muted-foreground hover:text-foreground"}`}
+          title={adminTestCredits ? "You are charged like a normal user" : "Admin: generations are free"}
+        >
+          {adminTestCredits ? "Charging me: ON" : "Charging me: OFF"}
+        </button>
+      )}
     </div>
   );
 
@@ -1283,7 +1304,7 @@ const Index = () => {
               // useCredits; the broadcast reaches them all. Refreshing only
               // this one left the web3 pill stale after an XRGE charge.
               onBalanceChange: () => { window.dispatchEvent(new Event("credits-changed")); },
-              deductLocally: (credits) => creditsHook.deductCreditsLocally(applyCreditDiscount(credits)),
+              deductLocally: (credits) => { if (!adminBypass) creditsHook.deductCreditsLocally(applyCreditDiscount(credits)); },
               onNeedFunds: () => setStoreOpen(true),
               onNeedSignIn: () => navigate(`${location.pathname}?signin=1`),
             }}

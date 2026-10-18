@@ -22,6 +22,16 @@ import { getTierForSpend } from "../v1/_lib/xrge-bank";
 
 export const WEB3_EDITION_HEADER = "x-gltch-edition";
 
+/**
+ * The admin's "charge me like a user" switch (src/lib/api.ts). Only meaningful
+ * together with an admin check at the call site: for anyone else it changes
+ * nothing, because they are always charged.
+ */
+export function adminChargeRequested(req: { headers?: Record<string, unknown> }): boolean {
+  const v = req.headers?.["x-gltch-admin-charge"];
+  return (Array.isArray(v) ? v[0] : v) === "1";
+}
+
 export function isWeb3Request(req: { headers?: Record<string, unknown> }): boolean {
   const v = req.headers?.[WEB3_EDITION_HEADER];
   return (Array.isArray(v) ? v[0] : v) === "web3";
