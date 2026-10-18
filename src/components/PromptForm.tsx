@@ -20,36 +20,39 @@ interface CostBreakdown {
   note?: string;     // optional small footnote
 }
 
+/** "3 cr", or the XRGE equivalent on the web3 edition. */
+const cr = (n: number) => costText(n, isWeb3);
+
 function creditCostBreakdown(mode: GrokMode, cost: number, imageCount: number, videoDuration: number): CostBreakdown {
   switch (mode) {
     case "text-to-image":
       return imageCount > 1
-        ? { lines: [`${Math.round(cost / imageCount)} cr / image`, `× ${imageCount} images`, `= ${cost} cr total`], note: "Z-Image · GLTCH" }
-        : { lines: [`${cost} cr / image`], note: "Z-Image · GLTCH" };
+        ? { lines: [`${cr(Math.round(cost / imageCount))} / image`, `× ${imageCount} images`, `= ${cr(cost)} total`], note: "Z-Image · GLTCH" }
+        : { lines: [`${cr(cost)} / image`], note: "Z-Image · GLTCH" };
     case "edit-image":
       return imageCount > 1
-        ? { lines: [`${Math.round(cost / imageCount)} cr / image`, `× ${imageCount} images`, `= ${cost} cr total`], note: "GLTCH image editing" }
-        : { lines: [`${cost} cr / image`], note: "GLTCH image editing" };
+        ? { lines: [`${cr(Math.round(cost / imageCount))} / image`, `× ${imageCount} images`, `= ${cr(cost)} total`], note: "GLTCH image editing" }
+        : { lines: [`${cr(cost)} / image`], note: "GLTCH image editing" };
     case "text-to-video":
     case "image-to-video": {
       const isFlat = cost === 15;
       return isFlat
-        ? { lines: [`${cost} cr flat rate`], note: "GLTCH PRO / ComfyUI WAN 2.2" }
-        : { lines: [`3 cr / second`, `× ${videoDuration}s`, `= ${cost} cr total`], note: "GLTCH video engine" };
+        ? { lines: [`${cr(cost)} flat rate`], note: "GLTCH PRO / ComfyUI WAN 2.2" }
+        : { lines: [`${cr(3)} / second`, `× ${videoDuration}s`, `= ${cr(cost)} total`], note: "GLTCH video engine" };
     }
     default:
-      return { lines: [`${cost} cr`] };
+      return { lines: [`${cr(cost)}`] };
   }
 }
 
 /** Tooltip-safe one-liner fallback (used for mobile title attr) */
 function creditCostLabel(mode: GrokMode, cost: number): string {
   switch (mode) {
-    case "text-to-image": return `${cost} cr — text-to-image generation`;
-    case "edit-image":    return `${cost} cr — image editing`;
+    case "text-to-image": return `${cr(cost)} — text-to-image generation`;
+    case "edit-image":    return `${cr(cost)} — image editing`;
     case "text-to-video":
-    case "image-to-video":    return cost === 15 ? `${cost} cr flat — GLTCH/ComfyUI` : `3 cr/s × ${cost/3}s = ${cost} cr`;
-    default:              return `${cost} cr`;
+    case "image-to-video":    return cost === 15 ? `${cr(cost)} flat — GLTCH/ComfyUI` : `${cr(3)}/s × ${cost/3}s = ${cr(cost)}`;
+    default:              return `${cr(cost)}`;
   }
 }
 
@@ -283,6 +286,9 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
         body: { action: "enhance-prompt", prompt: prompt.trim(), mode: enhanceMode || modeMap[mode] || "image" },
       });
       if (data.enhanced) setPrompt(data.enhanced);
+      // The charge (credits, or XRGE on web3) has landed by now: refresh every
+      // balance display so it shows, instead of waiting for a reload.
+      window.dispatchEvent(new Event("credits-changed"));
     } catch (err: any) {
       console.error("[PromptForm] Enhance failed:", err?.message || err);
       toast.error("Enhance failed", { description: err?.message || "Try again" });
@@ -487,7 +493,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
               size="sm"
               variant="ghost"
               className="h-8 px-2.5 font-mono-share text-tiny text-primary/70 hover:text-primary hover:bg-primary/10 disabled:opacity-30 gap-1.5 border border-primary/20 rounded"
-              title="Rewrite your prompt with AI · costs 1 credit"
+              title={`Rewrite your prompt with AI · costs ${costText(1, isWeb3)}`}
             >
               {enhancing ? (
                 <Loader2 className="w-3 h-3 animate-spin" />
@@ -495,7 +501,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
                 <Sparkles className="w-3 h-3" />
               )}
               <span>{t("prompt.enhance").toUpperCase()}</span>
-              <span className="text-primary/40">1cr</span>
+              <span className="text-primary/40">{costText(1, isWeb3)}</span>
             </Button>
           </div>
 
