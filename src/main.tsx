@@ -4,7 +4,7 @@ import "./index.css";
 import "./lib/i18n";
 import { applyThemeVisuals, getThemeById, getStoredThemeId } from "./lib/themes";
 import { watchForUpdates } from "./lib/swUpdate";
-import { EDITION, BRAND_NAME, isStudio } from "./lib/edition";
+import { EDITION, BRAND_NAME, isStudio, isWeb3 } from "./lib/edition";
 
 
 // Before first paint, so Studio never flashes the cyberpunk theme. In Studio,
@@ -12,6 +12,7 @@ import { EDITION, BRAND_NAME, isStudio } from "./lib/edition";
 document.documentElement.dataset.edition = EDITION;
 applyThemeVisuals(getThemeById(getStoredThemeId()));
 if (isStudio) document.title = `${BRAND_NAME} — AI image & video creator`;
+else if (isWeb3) document.title = `${BRAND_NAME} — AI images & video, paid in XRGE`;
 // The status-bar tint on an installed PWA. index.html hard-codes Runner's cyan,
 // which would paint a neon bar above Studio's white interface.
 if (isStudio) document.querySelector('meta[name="theme-color"]')?.setAttribute("content", "#f8fafc");

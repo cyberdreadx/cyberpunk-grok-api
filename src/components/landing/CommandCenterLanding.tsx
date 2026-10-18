@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { isAgeVerified, AGE_VERIFIED_EVENT } from "@/lib/ageGate";
+import { isWeb3 } from "@/lib/edition";
 import "./commandCenter.css";
 
 
@@ -412,7 +413,7 @@ export default function CommandCenterLanding() {
       <header className="cc-topbar cc-content">
         <div className="cc-brand">
           <span className="dot" />
-          <span><span className="accent">GLTCH</span> RUNNER</span>
+          <span><span className="accent">GLTCH</span> {isWeb3 ? "WEB3" : "RUNNER"}</span>
           <span className="cc-brand-sub" style={{ fontFamily: '"Share Tech Mono", monospace', fontSize: 9, letterSpacing: "0.2em", color: "hsl(var(--foreground) / 0.4)", marginLeft: 4 }}>// COMMAND</span>
         </div>
         <div className="cc-statuschips">
@@ -460,9 +461,9 @@ export default function CommandCenterLanding() {
           <span className="cc-glitch g" data-text="GRID">GRID</span>
         </h1>
         <p className="cc-subtitle">
-          GLTCH Runner is mission control for uncensored AI. Generate cinematic images and video,
-          command a swarm of render nodes, and follow the creators building on the grid —
-          all from one command center.
+          {isWeb3
+            ? "GLTCH Web3 is mission control for uncensored AI, paid in XRGE. Connect any Base wallet, deposit XRGE, and every image and video comes straight out of your balance at the live price."
+            : "GLTCH Runner is mission control for uncensored AI. Generate cinematic images and video, command a swarm of render nodes, and follow the creators building on the grid — all from one command center."}
         </p>
         <div className="cc-cta-row">
           <button className="cc-btn cc-btn-primary" onClick={go}>
@@ -632,9 +633,9 @@ export default function CommandCenterLanding() {
       {/* FOOTER */}
       <footer className="cc-footer">
         <div className="cc-brand" style={{ fontSize: 15 }}>
-          <span className="dot" /><span><span className="accent">GLTCH</span> RUNNER</span>
+          <span className="dot" /><span><span className="accent">GLTCH</span> {isWeb3 ? "WEB3" : "RUNNER"}</span>
         </div>
-        <span>© {new Date().getFullYear()} GLTCH Runner</span>
+        <span>© {new Date().getFullYear()} {isWeb3 ? "GLTCH Web3" : "GLTCH Runner"}</span>
         <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><ShieldCheck size={12} /> 18+ ONLY · CONSENT ENFORCED</span>
       </footer>
 
