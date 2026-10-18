@@ -241,6 +241,15 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
     }
   }, []);
 
+  /** After the balance changes: this dialog AND every other balance display
+   *  (top bar, bottom nav, the web3 spend math), each of which has its own
+   *  useCredits listening for "credits-changed". Without it the pill only
+   *  caught up on a page refresh. */
+  const refreshEverywhere = useCallback(async () => {
+    window.dispatchEvent(new Event("credits-changed"));
+    await fetchBalance();
+  }, [fetchBalance]);
+
   useEffect(() => {
     if (open) {
       fetchBalance();
@@ -355,7 +364,7 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
     }
     setPendingTx(null);
     setWalletAmount("");
-    await fetchBalance();
+    await refreshEverywhere();
     if (walletAddr) loadWalletInfo(walletAddr).catch(() => {});
   };
 
@@ -415,7 +424,7 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
       });
       setDepositResult(result);
       setDepositTxHash("");
-      await fetchBalance();
+      await refreshEverywhere();
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -433,7 +442,7 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
       });
       setPurchaseResult(result);
       onCreditsRefresh?.();
-      await fetchBalance();
+      await refreshEverywhere();
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -453,7 +462,7 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
       setWithdrawResult(result);
       setWithdrawAmount("");
       setWithdrawAddress("");
-      await fetchBalance();
+      await refreshEverywhere();
     } catch (err: any) {
       setError(err.message);
     } finally {
