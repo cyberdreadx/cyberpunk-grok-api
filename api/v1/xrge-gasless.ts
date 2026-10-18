@@ -38,6 +38,9 @@ export const config = { maxDuration: 90 };
 
 const DEADLINE_SECONDS = 20 * 60;
 
+const SMART_WALLET_MESSAGE =
+  "Gas-free deposits don't work with smart wallets like the Base app. Use “Send from my wallet” instead (the fee is a fraction of a cent).";
+
 /** Smallest gasless deposit, in USD, so dust deposits can't drain the gas payer. */
 function minDepositUsd(): number {
   const v = parseFloat(process.env.GASLESS_MIN_USD || "");
@@ -113,8 +116,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const { owner, value, deadline, signature } = req.body || {};
   if (!isAddress(owner || "")) return res.status(400).json({ error: "Invalid wallet address" });
-  if (typeof signature !== "string" || !/^0x[0-9a-fA-F]{130}$/.test(signature)) {
+  if (typeof signature !== "string" || !/^0x[0-9a-fA-F]+$/.test(signature)) {
     return res.status(400).json({ error: "Invalid signature" });
+  }
+  // XRGE's permit only accepts a plain 65-byte signature (ECDSA recover, no
+  // ERC-1271). Smart wallets (Coinbase Smart Wallet, Base app 7702 accounts)
+  // return longer wrapped signatures that the token contract would reject.
+  if (signature.length !== 132) {
+    return res.status(400).json({ code: "SMART_WALLET", error: SMART_WALLET_MESSAGE });
   }
   let valueWei: bigint;
   let deadlineSec: bigint;

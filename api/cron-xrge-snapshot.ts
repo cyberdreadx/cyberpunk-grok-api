@@ -86,7 +86,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       await Promise.all(
         batch.map(async (u) => {
           processed++;
-          const walletAddress = u.wallet_address || u.profile_wallet || null;
+          // The treasury's holdings are GLTCH's, never one account's tier.
+          const linked = u.wallet_address || u.profile_wallet || null;
+          const walletAddress =
+            linked && linked.toLowerCase() === (process.env.XRGE_DEPOSIT_ADDRESS || "").trim().toLowerCase()
+              ? null
+              : linked;
           const bankBalance = parseFloat(u.xrge_bank_balance) || 0;
 
           let walletBalance = 0;

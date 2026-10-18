@@ -23,6 +23,11 @@ export class DepositError extends Error {
  */
 export async function assertDepositWallet(sql: any, userId: string, sender: string): Promise<void> {
   sender = sender.trim().toLowerCase();
+  // The deposit wallet sending to itself moves nothing, so crediting it would
+  // create bank balance out of thin air.
+  if (sender === String(process.env.XRGE_DEPOSIT_ADDRESS || "").trim().toLowerCase()) {
+    throw new DepositError(400, "That's the GLTCH deposit wallet itself. Deposit from a different wallet.");
+  }
   const [owner] = await sql`SELECT wallet_address FROM users WHERE id = ${userId}`;
   const boundWallet = String(owner?.wallet_address || "").trim().toLowerCase();
 

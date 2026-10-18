@@ -1022,15 +1022,16 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                           </>
                         ) : (() => {
                           const linked = data.walletAddress?.toLowerCase() || null;
-                          const wrongWallet = !!linked && linked !== walletAddr;
+                          const isDepositWallet = walletAddr === data.depositAddress.toLowerCase();
+                          const wrongWallet = !isDepositWallet && !!linked && linked !== walletAddr;
                           const hasEth = !!walletInfo && BigInt(walletInfo.walletEthWei) > 0n;
                           const walletXrge = walletInfo ? weiToWholeXrge(walletInfo.walletXrgeWei) : null;
                           const minXrge = walletInfo ? weiToWholeXrge(walletInfo.minDepositWei) : 0;
                           const amountXrge = walletAmountWei ? weiToWholeXrge(walletAmountWei) : 0;
                           const tooMuch = !!walletInfo && !!walletAmountWei && BigInt(walletAmountWei) > BigInt(walletInfo.walletXrgeWei);
                           const busy = walletStep !== "idle";
-                          const canGasless = !!walletInfo?.available && !!walletAmountWei && !tooMuch && !wrongWallet && amountXrge >= minXrge;
-                          const canTransfer = hasEth && !!walletAmountWei && !tooMuch && !wrongWallet;
+                          const canGasless = !!walletInfo?.available && !!walletAmountWei && !tooMuch && !wrongWallet && !isDepositWallet && amountXrge >= minXrge;
+                          const canTransfer = hasEth && !!walletAmountWei && !tooMuch && !wrongWallet && !isDepositWallet;
                           return (
                             <>
                               {walletInfo && (
@@ -1038,7 +1039,13 @@ const XrgeBankDialog: React.FC<XrgeBankDialogProps> = ({
                                   In wallet: {walletXrge!.toLocaleString("en-US")} XRGE · {(Number(BigInt(walletInfo.walletEthWei)) / 1e18).toFixed(5)} ETH
                                 </p>
                               )}
-                              {wrongWallet && (
+                              {isDepositWallet && (
+                            <p className="flex gap-1.5 font-mono-share text-tiny text-yellow-300 leading-relaxed">
+                              <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-px" />
+                              This is the GLTCH deposit wallet itself. Connect a different wallet to deposit.
+                            </p>
+                          )}
+                          {wrongWallet && (
                                 <p className="flex gap-1.5 font-mono-share text-tiny text-yellow-300 leading-relaxed">
                                   <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-px" />
                                   Your account is linked to {shortAddr(linked!)}. Switch to that account in your wallet, then reconnect.

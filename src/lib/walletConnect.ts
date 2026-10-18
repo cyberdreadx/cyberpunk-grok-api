@@ -198,14 +198,23 @@ export async function signXrgePermit(p: PermitRequest): Promise<string> {
     domain: p.domain,
     message: { owner: p.owner, spender: p.spender, value: p.value, nonce: p.nonce, deadline: String(p.deadline) },
   };
+  let signature: string;
   try {
-    return (await provider.request({
+    signature = (await provider.request({
       method: "eth_signTypedData_v4",
       params: [p.owner, JSON.stringify(typedData)],
     })) as string;
   } catch (err) {
     throw new Error(isUserRejection(err) ? "Signature cancelled. Nothing was sent." : (err as Error).message);
   }
+  // The XRGE permit only accepts a plain 65-byte signature. Smart wallets
+  // (Base app, Coinbase Smart Wallet) return a longer wrapped one.
+  if (typeof signature !== "string" || signature.length !== 132) {
+    throw new Error(
+      "Gas-free deposits don't work with smart wallets like the Base app. Use “Send from my wallet” instead (the fee is a fraction of a cent). Nothing was sent.",
+    );
+  }
+  return signature;
 }
 
 /** Send an ordinary XRGE transfer from the wallet (the wallet pays the gas). Returns the tx hash. */
