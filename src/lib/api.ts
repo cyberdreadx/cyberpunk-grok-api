@@ -68,12 +68,19 @@ export function getAuthToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
 }
 
+/** Every useAuth() instance (top bar, bottom nav, the page) holds its own
+ *  user; this tells all of them when the token changes, so signing in from a
+ *  dialog shows up everywhere without a reload. */
+export const AUTH_CHANGED_EVENT = "auth-changed";
+
 export function setAuthToken(token: string) {
   localStorage.setItem(TOKEN_KEY, token);
+  window.dispatchEvent(new Event(AUTH_CHANGED_EVENT));
 }
 
 export function clearAuthToken() {
   localStorage.removeItem(TOKEN_KEY);
+  window.dispatchEvent(new Event(AUTH_CHANGED_EVENT));
 }
 
 export function hasAuthToken(): boolean {

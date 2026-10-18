@@ -17,7 +17,7 @@ import {
 import PricingCards from "@/components/PricingCards";
 import XrgePaymentDialog from "@/components/XrgePaymentDialog";
 import XrgeBankDialog from "@/components/XrgeBankDialog";
-import { isWeb3 } from "@/lib/edition";
+import { isWeb3, isStudio } from "@/lib/edition";
 import HolderProgramPromo from "@/components/HolderProgramPromo";
 import SpinWheel from "@/components/SpinWheel";
 import type { CreditPackage, SubscriptionTier } from "@/lib/api";
@@ -179,7 +179,7 @@ const CreditDisplay: React.FC<CreditDisplayProps> = ({
           <div className="credit-store-scroll scrollbar-cyber min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-6 py-6 [color-scheme:dark]">
           <DialogHeader>
             <DialogTitle className="font-orbitron text-sm tracking-wider neon-text-cyan">
-              {t("store.title")}
+              {isStudio ? "Credits" : t("store.title")}
             </DialogTitle>
             <DialogDescription className="font-rajdhani text-muted-foreground">
               {t("store.description")}

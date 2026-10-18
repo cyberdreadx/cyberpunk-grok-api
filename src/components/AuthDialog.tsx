@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TwoFactorSettingsDialog from "@/components/TwoFactorSettingsDialog";
 import KarmaBadge from "@/components/KarmaBadge";
 import { useAuth } from "@/hooks/useAuth";
+import { isStudio } from "@/lib/edition";
 import { getStoredRef, clearStoredRef } from "@/lib/referral";
 
 interface AuthDialogProps {
@@ -284,7 +285,7 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
           <>
             <DialogHeader>
               <DialogTitle className="font-orbitron text-sm tracking-wider neon-text-cyan">
-                Neural auth
+                {isStudio ? "Sign in" : "Neural auth"}
               </DialogTitle>
               <DialogDescription asChild>
                 <div className="space-y-2 mt-1">
@@ -293,12 +294,12 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
                     <div>
                       <p className="font-orbitron text-tiny tracking-wider text-primary">{t("auth.freeCreditsDaily")}</p>
                       <p className="font-mono-share text-tiny text-muted-foreground/70 leading-snug">
-                        {t("auth.freeOnLogin")}
+                        {isStudio ? "Free to join, no card needed. Create images and video in seconds." : t("auth.freeOnLogin")}
                       </p>
                     </div>
                   </div>
                   <p className="font-rajdhani text-muted-foreground text-xs">
-                    {t("auth.signInPrompt")}
+                    {isStudio ? "Sign in to start creating." : t("auth.signInPrompt")}
                   </p>
                 </div>
               </DialogDescription>
@@ -406,11 +407,13 @@ const AuthDialog: React.FC<AuthDialogProps> = ({
               </div>
             )}
 
+            {!isStudio && (
             <div className="border-t border-border pt-3 mt-2">
               <p className="text-tiny font-mono-share text-muted-foreground/60 leading-relaxed">
                 {t("auth.noAccountNeeded")}
               </p>
             </div>
+            )}
           </>
         )}
       </DialogContent>

@@ -45,6 +45,7 @@ export function useCredits(user: AuthUser | null) {
   const totalCredits = dailyCredits + subCredits + packCredits;
 
   // Fetch credit balance
+  const loadedOnceRef = useRef(false);
   const fetchCredits = useCallback(async () => {
     if (!user) {
       setDailyCredits(0);
@@ -58,7 +59,9 @@ export function useCredits(user: AuthUser | null) {
       setCreditDiscountPct(0);
       return;
     }
-    setLoading(true);
+    // Spinner on the first load only; background refreshes (every charge,
+    // refund and focus) used to flash "…" in place of the balance.
+    if (!loadedOnceRef.current) setLoading(true);
     try {
       const data = await apiFetch("/credits");
       setDailyCredits(data.daily_credits ?? 0);
@@ -92,6 +95,7 @@ export function useCredits(user: AuthUser | null) {
     } catch (err: any) {
       console.warn("[useCredits] Error fetching:", err.message);
     } finally {
+      loadedOnceRef.current = true;
       setLoading(false);
     }
   }, [user]);

@@ -19,6 +19,8 @@
  * is by definition one that predates this, and gets Classic.
  */
 
+import { isStudio } from "@/lib/edition";
+
 export type CreateMode = "easy" | "classic";
 
 const KEY = "create-mode";
@@ -54,7 +56,8 @@ export function resolveCreateMode(search = typeof window !== "undefined" ? windo
   const explicit = new URLSearchParams(search).get("mode");
   if (explicit === "easy" || explicit === "classic") return explicit;
   if (isClassicDeepLink(search)) return "classic";
-  return read() ?? "classic";
+  // Studio is the plain consumer edition: chat-first unless someone chose Classic.
+  return read() ?? (isStudio ? "easy" : "classic");
 }
 
 /** Whether the DeepSeek prompt assist is on. Off by default — it costs 1 credit

@@ -11,6 +11,7 @@ import {
   clearAuthToken,
   hasAuthToken,
   backendEnabled,
+  AUTH_CHANGED_EVENT,
 } from "@/lib/api";
 import { getBrowserFingerprint } from "@/lib/fingerprint";
 import { setCreateModeDefaultForNewAccount } from "@/lib/createMode";
@@ -96,6 +97,16 @@ export function useAuth() {
       /* ignore */
     }
   }, []);
+
+  // Another instance signed in or out (see AUTH_CHANGED_EVENT in lib/api).
+  useEffect(() => {
+    const onAuthChanged = () => {
+      if (hasAuthToken()) void refreshUser();
+      else setUser(null);
+    };
+    window.addEventListener(AUTH_CHANGED_EVENT, onAuthChanged);
+    return () => window.removeEventListener(AUTH_CHANGED_EVENT, onAuthChanged);
+  }, [refreshUser]);
 
   // Auto-refresh karma/posting status when the tab regains focus or when a
   // component dispatches `karma-changed` after an engagement action.

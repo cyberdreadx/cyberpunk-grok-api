@@ -28,7 +28,7 @@ import { uploadPublicMedia } from "@/lib/mediaUpload";
 import { EASY_ASPECTS, ZIMAGE_SIZES } from "@/lib/renderSizes";
 import { isWeb3 } from "@/lib/edition";
 import { costText } from "@/lib/web3";
-import { calculateCreditCost } from "@/lib/api";
+import { apiUrl, calculateCreditCost } from "@/lib/api";
 
 /** Only the fields Easy actually sends. The hook's own parameter types are
  *  wider; narrowing here keeps this file honest about what it uses. */
@@ -141,9 +141,14 @@ async function urlToBase64(url: string): Promise<string> {
   // no-store: the <img> already loaded this URL without CORS, and reusing that
   // cached copy for a CORS fetch can fail. The timeout turns a hang into an
   // error the user sees instead of a send that silently never starts.
-  const resp = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(20000) })
+  // Direct first; then through our own /api/download proxy, because the R2
+  // bucket only sends CORS headers to the origins listed on it (Studio and
+  // web3 weren't), and without them the browser refuses to hand us the bytes.
+  const attempt = (u: string) => fetch(u, { cache: "no-store", signal: AbortSignal.timeout(20000) })
+    .then((r) => (r.ok ? r : Promise.reject(new Error(String(r.status)))));
+  const resp = await attempt(url)
+    .catch(() => (/^https?:/.test(url) ? attempt(`${apiUrl("/download")}?inline=1&url=${encodeURIComponent(url)}`) : Promise.reject()))
     .catch(() => { throw new Error("Couldn't load the previous image. Try again."); });
-  if (!resp.ok) throw new Error("Couldn't load the previous image. Try again.");
   const blob = await resp.blob();
   return new Promise((resolve, reject) => {
     const fr = new FileReader();
