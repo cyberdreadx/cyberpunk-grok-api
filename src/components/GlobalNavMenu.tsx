@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Menu, Rss, Sparkles, Users, Star, ShieldAlert, FolderOpen, MessageCircle, MessagesSquare, Lightbulb, Gift, DollarSign, Megaphone, Settings as SettingsIcon } from "lucide-react";
+import { Menu, Rss, Sparkles, Users, Star, ShieldAlert, FolderOpen, MessageCircle, MessagesSquare, Lightbulb, Gift, DollarSign, Megaphone, Settings as SettingsIcon, Wallet, Palette, Zap } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useAuth } from "@/hooks/useAuth";
 import { apiFetch } from "@/lib/api";
 import PreferencesDialog from "@/components/PreferencesDialog";
-import { isStudio } from "@/lib/edition";
+import { isStudio, OTHER_EDITIONS } from "@/lib/edition";
 
 /**
  * Global hamburger nav drawer mounted on every page (except FeedPage which
@@ -109,6 +109,31 @@ const GlobalNavMenu: React.FC = () => {
                 )}
               </div>
             </div>
+
+            {/* Other editions. Not in Studio: it's the SFW consumer edition and
+                shouldn't send people to the uncensored ones. */}
+            {!isStudio && (
+              <div className="space-y-2">
+                <div className="px-2 text-xs font-semibold text-muted-foreground">
+                  Other editions
+                </div>
+                <div className="flex flex-col gap-1">
+                  {OTHER_EDITIONS.map((e) => (
+                    <a
+                      key={e.id}
+                      href={e.url}
+                      className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-md text-sm font-medium text-muted-foreground hover:text-primary hover:bg-primary/5 border border-border/40 transition-colors"
+                    >
+                      <span className="flex items-center gap-3">
+                        {e.id === "web3" ? <Wallet className="w-4 h-4" /> : e.id === "studio" ? <Palette className="w-4 h-4" /> : <Zap className="w-4 h-4" />}
+                        {e.name}
+                      </span>
+                      <span className="font-mono-share text-tiny text-muted-foreground/70">{e.tagline}</span>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Earn — its own section rather than another grey row in PAGES.
                 Both of these were previously URL-only, reachable by nobody. */}

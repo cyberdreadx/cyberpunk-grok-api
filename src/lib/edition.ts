@@ -46,3 +46,39 @@ export const isStudio = EDITION === "studio";
 export const isWeb3 = EDITION === "web3";
 
 export const BRAND_NAME = isStudio ? "GLTCH Studio" : isWeb3 ? "GLTCH Web3" : "GLTCH Runner";
+
+export interface EditionInfo {
+  id: Edition;
+  name: string;
+  /** ?edition= also clears a stale sticky override left on that domain. */
+  url: string;
+  tagline: string;
+  pitch: string;
+}
+
+/** For cross-promotion (nav menu, landing). Accounts are shared; sign-in is per domain. */
+export const EDITIONS: EditionInfo[] = [
+  {
+    id: "runner",
+    name: "GLTCH Runner",
+    url: "https://grokrunner.gltch.app/?edition=runner",
+    tagline: "The full grid",
+    pitch: "Uncensored image and video, the live creator feed, stories and chat. Pay with credits.",
+  },
+  {
+    id: "studio",
+    name: "GLTCH Studio",
+    url: "https://studio.gltchrunner.com/?edition=studio",
+    tagline: "Clean and simple",
+    pitch: "A calm, light studio with just create, library and account. Safe for work.",
+  },
+  {
+    id: "web3",
+    name: "GLTCH Web3",
+    url: "https://web3.gltchrunner.com/?edition=web3",
+    tagline: "Paid in XRGE",
+    pitch: "Runner paid in crypto. Connect any Base wallet and every generation comes out of your XRGE.",
+  },
+];
+
+export const OTHER_EDITIONS = EDITIONS.filter((e) => e.id !== EDITION);

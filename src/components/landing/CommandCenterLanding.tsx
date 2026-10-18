@@ -3,11 +3,11 @@ import { useNavigate } from "react-router-dom";
 import {
   Activity, ArrowRight, Bot, Boxes, ChevronDown, CircuitBoard, Cpu, Eye,
   Film, Gauge, Globe, Image as ImageIcon, Layers, Lock, Network, Play,
-  Radar, Radio, ShieldCheck, Sparkles, Users, Wand2, Zap,
+  Radar, Radio, ShieldCheck, Sparkles, Users, Wand2, Zap, Wallet, Palette,
 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { isAgeVerified, AGE_VERIFIED_EVENT } from "@/lib/ageGate";
-import { isWeb3 } from "@/lib/edition";
+import { isWeb3, EDITION, EDITIONS } from "@/lib/edition";
 import "./commandCenter.css";
 
 
@@ -607,6 +607,40 @@ export default function CommandCenterLanding() {
               </div>
             </Reveal>
           ))}
+        </div>
+      </section>
+
+      {/* EDITIONS — one account, three ways in */}
+      <section className="cc-section cc-section-bg" id="cc-editions-sec">
+        <Reveal>
+          <div className="cc-kicker">Editions</div>
+          <h2 className="cc-h2">One account, <span className="g">three ways in</span></h2>
+        </Reveal>
+        <div className="cc-grid c3">
+          {EDITIONS.map((e, i) => {
+            const here = e.id === EDITION;
+            const Icon = e.id === "web3" ? Wallet : e.id === "studio" ? Palette : Zap;
+            return (
+              <Reveal key={e.id} style={{ transitionDelay: `${i * 80}ms` }}>
+                <a
+                  href={here ? undefined : e.url}
+                  aria-current={here ? "page" : undefined}
+                  className="cc-card"
+                  style={{ display: "block", textDecoration: "none", color: "inherit", cursor: here ? "default" : "pointer" }}
+                >
+                  <span className="tag">{here ? "// you're here" : `// ${e.tagline.toLowerCase()}`}</span>
+                  <div className="cc-card-ic"><Icon size={22} /></div>
+                  <h3>{e.name}</h3>
+                  <p>{e.pitch}</p>
+                  {!here && (
+                    <p style={{ marginTop: 12, display: "inline-flex", alignItems: "center", gap: 6, color: "hsl(var(--primary))" }}>
+                      Open {e.name.replace("GLTCH ", "")} <ArrowRight size={14} />
+                    </p>
+                  )}
+                </a>
+              </Reveal>
+            );
+          })}
         </div>
       </section>
 
