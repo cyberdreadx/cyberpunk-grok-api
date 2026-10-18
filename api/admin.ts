@@ -197,6 +197,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // no user behind it.
   const actor = getUserFromRequest(req);
 
+  // Every action that targets a user by `email` also takes a username
+  // ("neon" or "@neon"): resolve it to the account's email here so the
+  // individual actions don't each need to know.
+  if (typeof req.body?.email === "string") {
+    const raw = req.body.email.trim();
+    if (raw.startsWith("@") || (raw && !raw.includes("@"))) {
+      const handle = raw.replace(/^@/, "");
+      const matches = await sql`
+        SELECT u.email FROM profiles p JOIN users u ON u.id = p.user_id
+        WHERE lower(p.username) = lower(${handle}) LIMIT 2`;
+      if (matches.length === 0) return res.status(404).json({ error: `No user with the username @${handle}` });
+      if (matches.length > 1) return res.status(409).json({ error: `More than one account uses @${handle}. Use their email instead.` });
+      req.body.email = matches[0].email;
+    }
+  }
+
   try {
     switch (action) {
       // -- Overview KPIs --

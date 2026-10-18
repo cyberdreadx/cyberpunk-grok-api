@@ -2143,8 +2143,8 @@ export default function Admin() {
               </h2>
               <div className="flex flex-wrap items-end gap-2">
                 <div className="flex-1 min-w-[180px]">
-                  <label className="font-mono-share text-tiny text-muted-foreground/60 block mb-1">Email</label>
-                  <input type="email" value={grantEmail} onChange={e => setGrantEmail(e.target.value)} placeholder="user@example.com"
+                  <label className="font-mono-share text-tiny text-muted-foreground/60 block mb-1">Email or username</label>
+                  <input type="text" value={grantEmail} onChange={e => setGrantEmail(e.target.value)} placeholder="email or @username"
                     className="w-full bg-background/60 border border-border rounded px-2.5 py-1.5 font-mono-share text-xs text-foreground placeholder-muted-foreground/40" />
                 </div>
                 <div className="w-24">
@@ -2424,8 +2424,8 @@ export default function Admin() {
               </h2>
               <div className="flex flex-wrap items-end gap-2">
                 <div className="flex-1 min-w-[180px]">
-                  <label className="font-mono-share text-tiny text-muted-foreground/60 block mb-1">Email</label>
-                  <input type="email" value={modEmail} onChange={e => setModEmail(e.target.value)} placeholder="user@example.com"
+                  <label className="font-mono-share text-tiny text-muted-foreground/60 block mb-1">Email or username</label>
+                  <input type="text" value={modEmail} onChange={e => setModEmail(e.target.value)} placeholder="email or @username"
                     className="w-full bg-background/60 border border-border rounded px-2.5 py-1.5 font-mono-share text-xs text-foreground placeholder-muted-foreground/40" />
                 </div>
                 <Button variant="outline" size="sm" disabled={modAction || !modEmail.trim()}
@@ -2547,7 +2547,7 @@ export default function Admin() {
                 <div className="flex gap-2">
                   <input
                     className="bg-background/60 border border-border rounded px-2.5 py-1.5 font-mono-share text-xs text-foreground flex-1 min-w-[180px]"
-                    placeholder="user@email.com"
+                    placeholder="email or @username"
                     value={inspectEmail}
                     onChange={(e) => setInspectEmail(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && inspectEmail.trim() && handleInspect()}
@@ -2942,7 +2942,7 @@ export default function Admin() {
                 <div className="flex gap-2 flex-wrap">
                   <input
                     className="bg-background/50 border border-red-500/30 rounded px-2 py-1 font-mono-share text-xs text-foreground flex-1 min-w-[150px]"
-                    placeholder="user@email.com"
+                    placeholder="email or @username"
                     value={banEmail}
                     onChange={(e) => setBanEmail(e.target.value)}
                   />
