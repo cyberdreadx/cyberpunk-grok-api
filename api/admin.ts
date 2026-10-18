@@ -2722,6 +2722,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           WHERE user_id = ${targetId}::uuid AND amount_cents > 0
         `.catch(() => [{ total_spent_cents: 0, total_purchases: 0 }]);
 
+        // Crypto side: the XRGE bank (deposits, credit purchases, web3 spends,
+        // refunds, withdrawals). Web3 users never touch `transactions`.
+        const xrgeTxns = await sql`
+          SELECT id, type, amount, balance_after, tx_hash, note, created_at
+          FROM xrge_bank_txns
+          WHERE user_id = ${targetId}::uuid
+          ORDER BY created_at DESC
+          LIMIT 50
+        `.catch(() => []);
+        const [xrgeStats] = await sql`
+          SELECT
+            COALESCE(SUM(amount) FILTER (WHERE type = 'deposit'), 0)::float AS deposited,
+            COALESCE(SUM(amount) FILTER (WHERE type IN ('spend', 'purchase')), 0)::float AS spent,
+            COALESCE((SELECT xrge_bank_balance FROM users WHERE id = ${targetId}::uuid), 0)::float AS balance
+          FROM xrge_bank_txns
+          WHERE user_id = ${targetId}::uuid
+        `.catch(() => [{ deposited: 0, spent: 0, balance: 0 }]);
+
         return res.json({
           user: { ...userRow, ...profile },
           prompts,
@@ -2732,6 +2750,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           transactions,
           totalSpentCents: spendStats.total_spent_cents,
           totalPurchases: spendStats.total_purchases,
+          xrgeTxns,
+          xrgeDeposited: xrgeStats.deposited,
+          xrgeSpent: xrgeStats.spent,
+          xrgeBalance: xrgeStats.balance,
         });
       }
 

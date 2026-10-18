@@ -1388,7 +1388,7 @@ export default function Admin() {
   const [inspectEmail, setInspectEmail] = useState("");
   const [inspectData, setInspectData] = useState<any>(null);
   const [inspecting, setInspecting] = useState(false);
-  const [inspectTab, setInspectTab] = useState<"prompts" | "posts" | "stories">("prompts");
+  const [inspectTab, setInspectTab] = useState<"prompts" | "posts" | "stories" | "purchases">("prompts");
 
   const fetchMods = useCallback(async () => {
     setModsLoading(true);
@@ -2653,14 +2653,83 @@ export default function Admin() {
 
                     {/* Sub-tabs */}
                     <div className="flex gap-1 border-b border-border/20">
-                      {(["prompts", "posts", "stories"] as const).map((t) => (
+                      {(["prompts", "posts", "stories", "purchases"] as const).map((t) => (
                         <button key={t} onClick={() => setInspectTab(t)}
                           className={`px-3 py-1.5 font-mono-share text-tiny tracking-wider border-b-2 transition-colors ${inspectTab === t ? "border-primary text-primary" : "border-transparent text-muted-foreground/70 hover:text-muted-foreground"}`}
                         >
-                          {t.toUpperCase()} ({t === "prompts" ? inspectData.prompts.length : t === "posts" ? inspectData.posts.length : inspectData.stories.length})
+                          {t.toUpperCase()} ({t === "prompts" ? inspectData.prompts.length
+                            : t === "posts" ? inspectData.posts.length
+                            : t === "stories" ? inspectData.stories.length
+                            : (inspectData.transactions?.length || 0) + (inspectData.xrgeTxns?.length || 0)})
                         </button>
                       ))}
                     </div>
+
+                    {/* Purchases: card/Stripe transactions and XRGE bank activity */}
+                    {inspectTab === "purchases" && (
+                      <div className="max-h-[400px] overflow-y-auto space-y-3">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                          {[
+                            ["Spent (card)", `$${((inspectData.totalSpentCents || 0) / 100).toFixed(2)}`],
+                            ["Purchases", String(inspectData.totalPurchases || 0)],
+                            ["XRGE deposited", Math.round(inspectData.xrgeDeposited || 0).toLocaleString("en-US")],
+                            ["XRGE balance", Math.round(inspectData.xrgeBalance || 0).toLocaleString("en-US")],
+                          ].map(([label, value]) => (
+                            <div key={label} className="rounded border border-border/20 px-2.5 py-2">
+                              <div className="font-mono-share text-tiny text-muted-foreground/60">{label}</div>
+                              <div className="font-mono-share text-sm text-foreground tabular-nums">{value}</div>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="space-y-1">
+                          <div className="font-mono-share text-tiny tracking-wider text-muted-foreground/70">CARD &amp; CREDITS</div>
+                          {(inspectData.transactions || []).length === 0 ? (
+                            <p className="font-mono-share text-xs text-muted-foreground/60 py-2">No card purchases or grants</p>
+                          ) : inspectData.transactions.map((t: any) => (
+                            <div key={t.id} className="flex gap-2 items-center py-1.5 px-2 rounded hover:bg-primary/5 border-b border-border/10 font-mono-share text-xs">
+                              <span className={`text-tiny px-1.5 py-0.5 rounded shrink-0 ${t.amount_cents > 0 ? "bg-green-500/15 text-green-400" : "bg-muted/40 text-muted-foreground"}`}>
+                                {(t.type || "purchase").toUpperCase()}
+                              </span>
+                              <span className="flex-1 truncate text-foreground/80">
+                                {t.package || "—"}{t.payment_method ? ` · ${t.payment_method}` : ""}
+                              </span>
+                              <span className="shrink-0 tabular-nums text-foreground/80">{t.credits ? `${t.credits} cr` : ""}</span>
+                              <span className="shrink-0 tabular-nums w-16 text-right">{t.amount_cents > 0 ? `$${(t.amount_cents / 100).toFixed(2)}` : "—"}</span>
+                              <span className="shrink-0 text-tiny text-muted-foreground/60 w-20 text-right">
+                                {new Date(t.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" })}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="space-y-1">
+                          <div className="font-mono-share text-tiny tracking-wider text-muted-foreground/70">XRGE BANK</div>
+                          {(inspectData.xrgeTxns || []).length === 0 ? (
+                            <p className="font-mono-share text-xs text-muted-foreground/60 py-2">No XRGE activity</p>
+                          ) : inspectData.xrgeTxns.map((x: any) => {
+                            const incoming = x.type === "deposit" || x.type === "refund";
+                            return (
+                              <div key={x.id} className="flex gap-2 items-center py-1.5 px-2 rounded hover:bg-primary/5 border-b border-border/10 font-mono-share text-xs">
+                                <span className={`text-tiny px-1.5 py-0.5 rounded shrink-0 ${incoming ? "bg-green-500/15 text-green-400" : "bg-pink-500/15 text-pink-300"}`}>
+                                  {String(x.type).toUpperCase()}
+                                </span>
+                                <span className="flex-1 truncate text-foreground/70">{x.note || "—"}</span>
+                                <span className={`shrink-0 tabular-nums ${incoming ? "text-green-400" : "text-pink-300"}`}>
+                                  {incoming ? "+" : "-"}{Math.round(parseFloat(x.amount)).toLocaleString("en-US")}
+                                </span>
+                                {x.tx_hash ? (
+                                  <a href={`https://basescan.org/tx/${x.tx_hash}`} target="_blank" rel="noopener noreferrer" className="shrink-0 text-primary/70 hover:text-primary text-tiny">tx</a>
+                                ) : <span className="shrink-0 w-3" />}
+                                <span className="shrink-0 text-tiny text-muted-foreground/60 w-20 text-right">
+                                  {new Date(x.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" })}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Prompts */}
                     {inspectTab === "prompts" && (
