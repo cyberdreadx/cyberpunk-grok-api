@@ -3298,8 +3298,13 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
         if (!owned) return res.status(403).json({ error: "Not your job" });
       }
       if (backend.mode === "runpod") {
+        // Split workflows run on their own endpoints; poll gets the same id.
+        const { runpodEndpointId } = req.body;
+        if (runpodEndpointId && !SAFE_ID_RE.test(String(runpodEndpointId))) {
+          return res.status(400).json({ error: "Invalid runpodEndpointId" });
+        }
         const resp = await runpodRequest(
-          backend.runpodEndpoint!, backend.runpodKey!,
+          (runpodEndpointId as string) || backend.runpodEndpoint!, backend.runpodKey!,
           `/cancel/${jobId}`, "POST",
         );
         const data = await resp.json().catch(() => ({}));

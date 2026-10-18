@@ -25,6 +25,8 @@ import { getAssist, setAssist } from "@/lib/createMode";
 import { useEasyThreads, type StoredMessage } from "@/hooks/useEasyThreads";
 import { uploadPublicMedia } from "@/lib/mediaUpload";
 import { EASY_ASPECTS, ZIMAGE_SIZES } from "@/lib/renderSizes";
+import { isWeb3 } from "@/lib/edition";
+import { costText } from "@/lib/web3";
 
 /** Only the fields Easy actually sends. The hook's own parameter types are
  *  wider; narrowing here keeps this file honest about what it uses. */
@@ -69,6 +71,28 @@ export interface EasyEngines {
   onAnimateImage: (url: string) => void;
   /** Classic already offers this on a running job; Easy had no way to stop one. */
   cancelComfyJob: (jobId: string) => void | Promise<void>;
+  /** Re-read the balance after a charge or refund, so the pill stays true. */
+  onBalanceChange?: () => void;
+  /** Open the store (credits) or XRGE bank (web3). */
+  onNeedFunds?: () => void;
+  /** Open sign-in. */
+  onNeedSignIn?: () => void;
+}
+
+/** Everything needed to re-run a result exactly as it was made. */
+interface RetrySpec {
+  route: "image" | "edit" | "video";
+  /** The prompt actually sent (already through Prompt assist, if it was on). */
+  prompt: string;
+  /** What the user typed, for the bubble. */
+  userText: string;
+  /** The image it was made from, when that was an earlier result. */
+  sourceUrl?: string | null;
+  /** Made from the user's own upload: the source is that message's attachment. */
+  fromAttachment?: boolean;
+  aspect?: string;
+  length?: string;
+  quality?: string;
 }
 
 type Bubble =
@@ -85,9 +109,13 @@ type Bubble =
     error?: string;
     assets: GrokResult[];
     label?: string;
+    retry?: RetrySpec;
   };
 
-const VIDEO_HINT = /\b(video|animate|animation|clip|moving|motion|make it move)\b/i;
+// Only words that unambiguously ask for video. "clip", "motion" and "moving"
+// used to be here and turned "add a paper clip" or "motion blur" into a 15-credit
+// video instead of a 3-credit edit.
+const VIDEO_HINT = /\b(video|animate|animated|animation|make (?:it|this|them|him|her) move|bring (?:it|this|them|him|her) to life)\b/i;
 
 /** Reads a file into the base64 the comfy endpoints expect, capped like Classic. */
 async function fileToBase64(file: File, maxDim = 1024): Promise<{ b64: string; preview: string }> {
@@ -144,13 +172,19 @@ const VIDEO_QUALITY = [
 ] as const;
 type VideoQuality = (typeof VIDEO_QUALITY)[number]["id"];
 
+// `frames` is WAN at 16fps (Classic's presets); LTX renders 24fps, so it gets
+// its own count for the same length.
 const LENGTHS = [
-  { id: "short", label: "~3s", frames: 49 },
-  { id: "normal", label: "~5s", frames: 81 },
-  { id: "long", label: "~7s", frames: 113 },
-  { id: "xlong", label: "~10s", frames: 161 },
-  { id: "max", label: "~15s", frames: 241 },
+  { id: "short", label: "~3s", frames: 49, secs: 3 },
+  { id: "normal", label: "~5s", frames: 81, secs: 5 },
+  { id: "long", label: "~7s", frames: 113, secs: 7 },
+  { id: "xlong", label: "~10s", frames: 161, secs: 10 },
+  { id: "max", label: "~15s", frames: 241, secs: 15 },
 ] as const;
+const LTX_FPS = 24;
+const ltxFrames = (secs: number) => secs * LTX_FPS + 1;
+/** Mirrors ltxCostForFrames in api/comfyui.ts, so the price shown is the price charged. */
+const ltxCredits = (frames: number, perSec: number) => Math.max(1, Math.round(frames / LTX_FPS)) * perSec;
 
 export default function EasyMode({ engines }: { engines: EasyEngines }) {
   const { toast } = useToast();
@@ -165,6 +199,13 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
   // more than their last one. Upgrading is one tap and states its price.
   const [videoQuality, setVideoQuality] = useState<VideoQuality>("quick");
   const [busy, setBusy] = useState(false);
+  // React state is stale within one tick, so two Enter presses both saw
+  // busy=false and started two generations. This ref flips synchronously.
+  const inFlightRef = useRef(false);
+  // jobId -> easy_messages row, for every job this tab started. Lives outside
+  // the bubbles so a result is saved even when its thread isn't on screen.
+  const bindingsRef = useRef(new Map<string, string | undefined>());
+  const finalizedRef = useRef(new Set<string>());
   const fileRef = useRef<HTMLInputElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
@@ -208,19 +249,27 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
           // The upload the user attached, restored from its stored URL.
           attachment: m.assets?.[0]?.url,
         }
-        : {
-          kind: "result", id: m.id, rowId: m.id, jobId: "",
-          prompt: m.text || "", phase: "",
-          status: m.status === "running" ? "error" : (m.status || "done"),
-          error: m.status === "running"
+        : (() => {
+          // Still running in this tab (the user just switched threads):
+          // re-attach it instead of calling it interrupted.
+          const liveJob = m.status === "running"
+            ? [...bindingsRef.current.entries()].find(([, row]) => row === m.id)?.[0]
+            : undefined;
+          return {
+          kind: "result" as const, id: m.id, rowId: m.id, jobId: liveJob || "",
+          prompt: m.text || "", phase: liveJob ? "Working…" : "",
+          status: liveJob ? "running" as const : m.status === "running" ? "error" as const : (m.status || "done"),
+          error: m.status === "running" && !liveJob
             ? "Interrupted by a reload — check your Library for the result."
             : (m.error || undefined),
+          retry: (m.meta as unknown as RetrySpec | undefined) || undefined,
           assets: (m.assets || []).map((a, i) => ({
             id: `${m.id}-${i}`, url: a.url, previewUrl: a.previewUrl,
             type: a.type, timestamp: 0,
           })),
           label: m.label || undefined,
-        }));
+          };
+        })()));
     });
     return () => { cancelled = true; };
   }, [store.activeId, loadMessages]);
@@ -229,38 +278,71 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [thread]);
 
-  // Bind live job state (phase, errors) and finished assets onto their bubbles.
-  //
-  // Reads `thread` directly instead of going through a setThread updater. A
-  // state updater must be pure, and this one wrote to the database from inside
-  // it — React is free to call an updater more than once, which meant
-  // duplicate writes (and double every one of them under StrictMode). The
-  // `changed` guard is what stops the `thread` dependency from looping.
+  /** Small images come back from the poll as inline data: URLs, which the
+   *  history can't store, so every image used to vanish on reload. Copy them
+   *  to R2 first; videos already arrive as R2 URLs. */
+  const storableAssets = useCallback(async (assets: GrokResult[]) => Promise.all(assets.map(async (a) => {
+    if (!a.url.startsWith("data:")) return { url: a.url, previewUrl: a.previewUrl, type: a.type };
+    try {
+      const blob = await (await fetch(a.url)).blob();
+      const ext = blob.type.includes("png") ? "png" : blob.type.includes("webp") ? "webp" : "jpg";
+      const up = await uploadPublicMedia(blob, "easy", `result-${Date.now()}.${ext}`);
+      return { url: up.url, previewUrl: up.previewUrl, type: a.type };
+    } catch {
+      return null;
+    }
+  })).then((list) => list.filter((a): a is NonNullable<typeof a> => !!a)), []);
+
+  // Save every job this tab started when it finishes — whether or not its
+  // thread is on screen — then swap any data: URLs on screen for stored ones.
+  useEffect(() => {
+    for (const [jobId, rowId] of bindingsRef.current) {
+      if (finalizedRef.current.has(jobId)) continue;
+      const job = comfyJobs.find((j) => j.id === jobId);
+      if (!job) continue;
+      if (job.status === "error") {
+        finalizedRef.current.add(jobId);
+        bindingsRef.current.delete(jobId);
+        const error = job.error || "Generation failed";
+        if (rowId) void updateMsg(rowId, { status: "error", error });
+        engines.onBalanceChange?.(); // failures refund
+        if (/not enough (credits|xrge)/i.test(error)) engines.onNeedFunds?.();
+        else if (/sign in/i.test(error)) engines.onNeedSignIn?.();
+        continue;
+      }
+      if (job.status === "done") {
+        const fresh = results.filter((r) => r.jobId === jobId);
+        if (fresh.length === 0) continue; // result not prepended yet
+        finalizedRef.current.add(jobId);
+        bindingsRef.current.delete(jobId);
+        engines.onBalanceChange?.();
+        void storableAssets(fresh).then((stored) => {
+          if (rowId) void updateMsg(rowId, { status: "done", assets: stored });
+          const byIndex = fresh.map((f, i) => ({ ...f, url: stored[i]?.url ?? f.url, previewUrl: stored[i]?.previewUrl ?? f.previewUrl }));
+          setThread((p) => p.map((b) => b.kind === "result" && b.jobId === jobId && b.status === "done"
+            ? { ...b, assets: byIndex } : b));
+        });
+      }
+    }
+  }, [comfyJobs, results, updateMsg, storableAssets, engines]);
+
+  // Mirror live job state (phase, errors, finished assets) onto the bubbles on
+  // screen. Display only — saving is the effect above.
   useEffect(() => {
     let changed = false;
-    const persist: Array<() => void> = [];
     const next = thread.map((b) => {
       if (b.kind !== "result" || b.status !== "running") return b;
       const job = comfyJobs.find((j) => j.id === b.jobId);
       if (!job) return b;
-
       if (job.status === "error") {
         changed = true;
-        const error = job.error || "Generation failed";
-        if (b.rowId) persist.push(() => void updateMsg(b.rowId!, { status: "error", error }));
-        return { ...b, status: "error" as const, error, phase: "" };
+        return { ...b, status: "error" as const, error: job.error || "Generation failed", phase: "" };
       }
       if (job.status === "done") {
-        // Matched on the job that produced them, not on position. The old
-        // "everything above where results started when I submitted" rule gave
-        // one bubble another bubble's output the moment two sends overlapped.
+        // Matched on the job that produced them, not on position.
         const fresh = results.filter((r) => r.jobId === b.jobId);
-        if (fresh.length === 0) return b; // result not prepended yet
+        if (fresh.length === 0) return b;
         changed = true;
-        if (b.rowId) {
-          const assets = fresh.map((a) => ({ url: a.url, previewUrl: a.previewUrl, type: a.type }));
-          persist.push(() => void updateMsg(b.rowId!, { status: "done", assets }));
-        }
         return { ...b, status: "done" as const, phase: "", assets: fresh };
       }
       if (job.phase && job.phase !== b.phase) {
@@ -269,10 +351,8 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
       }
       return b;
     });
-    if (!changed) return;
-    setThread(next);
-    persist.forEach((run) => run());
-  }, [thread, comfyJobs, results, updateMsg]);
+    if (changed) setThread(next);
+  }, [thread, comfyJobs, results]);
 
   const lastImage = useMemo(() => {
     for (let i = thread.length - 1; i >= 0; i--) {
@@ -305,28 +385,54 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
     }
   }, []);
 
-  /** `overrideText` re-runs an earlier prompt without the user retyping it —
-   *  the "try again" on a finished result. It deliberately does NOT reuse that
-   *  result's attachment: a regenerate follows the same rules as typing the
-   *  same words now, which keeps what the button does predictable. */
-  const send = useCallback(async (overrideText?: string) => {
-    const text = (overrideText ?? draft).trim();
-    if (!text || busy) return;
+  /** Find the upload a result was made from: the attachment on the user
+   *  message just before it. */
+  const attachmentBefore = useCallback((resultId: string): string | null => {
+    const i = thread.findIndex((b) => b.id === resultId);
+    for (let j = i - 1; j >= 0; j--) {
+      const b = thread[j];
+      if (b.kind === "user") return b.attachment ?? null;
+    }
+    return null;
+  }, [thread]);
+
+  /** A new message, or (with `retry`) an exact re-run of an earlier result:
+   *  same route, same source, same prompt, no second Prompt assist. */
+  const send = useCallback(async (retry?: RetrySpec & { resultId?: string }) => {
+    const text = (retry ? retry.userText : draft).trim();
+    if (!text || inFlightRef.current) return;
+    inFlightRef.current = true;
     setBusy(true);
 
-    const attached = overrideText ? null : attachment;
-    if (!overrideText) {
+    const attached = retry ? null : attachment;
+    if (!retry) {
       setDraft("");
       setAttachment(null);
+      if (taRef.current) taRef.current.style.height = "auto";
     }
 
-    const wantsVideo = VIDEO_HINT.test(text);
-    const sourceUrl = attached ? null : lastImage;
-    const hasSource = !!attached || !!sourceUrl;
+    let sourceUrl: string | null;
+    let route: RetrySpec["route"];
+    if (retry) {
+      route = retry.route;
+      sourceUrl = retry.fromAttachment && retry.resultId
+        ? attachmentBefore(retry.resultId)
+        : (retry.sourceUrl ?? null);
+    } else {
+      sourceUrl = attached ? null : lastImage;
+      const hasSrc = !!attached || !!sourceUrl;
+      route = hasSrc && VIDEO_HINT.test(text) ? "video" : hasSrc ? "edit" : "image";
+    }
+    const quality = (retry?.quality as VideoQuality | undefined) ?? videoQuality;
+    const lengthId = retry?.length ?? length;
+    const aspectId = retry?.aspect ?? aspect;
 
     setThread((p) => [...p, { kind: "user", id: `u-${Date.now()}`, text, attachment: attached?.preview }]);
 
     try {
+      if (route !== "image" && !attached && !sourceUrl) {
+        throw new Error("The image this was made from isn't available anymore.");
+      }
       // First message of a new chat creates the thread, titled from that
       // message — the same thing every chat app does.
       let threadId = activeThreadRef.current;
@@ -340,45 +446,51 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
         }
       }
       if (threadId) {
-        const tid = threadId;
-        void appendMsg(tid, { role: "user", text }).then((rowId) => {
-          // The attachment reaches the engine as base64, which cannot be
-          // stored or re-served, so a reload used to lose the image the user
-          // uploaded while keeping their words. Copy it to R2 and hang the URL
-          // on the message. Deliberately not awaited before the job starts —
-          // the render does not need it, only the history does.
-          if (!rowId || !attached) return;
+        // Awaited so the user's message is stored before its result; saving
+        // it in the background let the result land first and show above it.
+        let rowId = await appendMsg(threadId, { role: "user", text });
+        if (!rowId) {
+          // The remembered thread is gone (deleted elsewhere, other account):
+          // start a fresh one rather than silently saving nothing.
+          threadId = await createThread(text.slice(0, 60));
+          if (threadId) {
+            shownThreadRef.current = threadId;
+            selectThread(threadId);
+            rowId = await appendMsg(threadId, { role: "user", text });
+          }
+        }
+        // The attachment reaches the engine as base64, which cannot be stored
+        // or re-served; copy it to R2 for the history, in the background.
+        if (rowId && attached) {
+          const userRow = rowId;
           void (async () => {
             try {
               const blob = await (await fetch(attached.preview)).blob();
-              const up = await uploadPublicMedia(blob, "easy", `attach-${Date.now()}.png`);
-              await updateMsg(rowId, {
+              const up = await uploadPublicMedia(blob, "easy", `attach-${Date.now()}.jpg`);
+              await updateMsg(userRow, {
                 assets: [{ url: up.url, previewUrl: up.previewUrl, type: "image" }],
               });
-              // Swap the local data URL for the stored one so this bubble and a
-              // reloaded one show the same image.
               setThread((p) => p.map((b) =>
                 b.kind === "user" && b.attachment === attached.preview
                   ? { ...b, attachment: up.url } : b));
             } catch { /* history keeps the text; the image just won't persist */ }
           })();
-        });
+        }
       }
-      // A follow-up with no attachment refines the last image. Without an
-      // assist the instruction is concatenated onto the previous prompt, which
-      // is what the spec calls a "new take".
-      const isFollowUp = !attached && !!sourceUrl;
-      const enhanceMode = wantsVideo ? "video" : hasSource ? "edit" : "image";
-      const prompt = assist ? await enhance(text, enhanceMode) : text;
 
-      const ar = ASPECTS.find((a) => a.id === aspect)!;
-      const len = LENGTHS.find((l) => l.id === length)!;
+      const isFollowUp = !attached && !!sourceUrl && !retry?.fromAttachment;
+      const prompt = retry
+        ? retry.prompt
+        : assist ? await enhance(text, route === "video" ? "video" : route === "edit" ? "edit" : "image") : text;
+
+      const ar = ASPECTS.find((a) => a.id === aspectId) ?? ASPECTS[0];
+      const len = LENGTHS.find((l) => l.id === lengthId) ?? LENGTHS[1];
       let jobId: string | undefined;
       let label: string | undefined;
 
-      if (hasSource && wantsVideo) {
+      if (route === "video") {
         const b64 = attached?.b64 ?? (await urlToBase64(sourceUrl!));
-        if (videoQuality === "best") {
+        if (quality === "best") {
           // LTX sizes from the source frame, matching Classic's animate path:
           // the workflow centre-crops the input to the latent dimensions, so
           // dimensions that ignore the source would crop the subject out.
@@ -395,7 +507,7 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
             imageBase64: b64,
             imageFilename: "easy_input.png",
             width: round32(w), height: round32(h),
-            frameCount: len.frames, frameRate: 24,
+            frameCount: ltxFrames(len.secs), frameRate: LTX_FPS,
             audio: true,
           });
           label = "with sound";
@@ -410,7 +522,7 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
             useRife: true, useUpscale: false,
           });
         }
-      } else if (hasSource) {
+      } else if (route === "edit") {
         const b64 = attached?.b64 ?? (await urlToBase64(sourceUrl!));
         jobId = engines.comfyEdit({
           prompt,
@@ -427,24 +539,44 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
           steps: 8, cfg: 1,
         });
       }
+      if (retry) label = label ? `${label} · again` : "again";
 
       if (!jobId) throw new Error("Could not start the job");
+      const spec: RetrySpec = {
+        route, prompt, userText: text,
+        // Only a stored URL survives a reload; an upload is found again via
+        // the user message it was attached to.
+        // In this tab a data: URL still works; the API keeps only stored URLs.
+        sourceUrl,
+        fromAttachment: !!attached || !!retry?.fromAttachment,
+        aspect: aspectId, length: lengthId, quality,
+      };
       const rowId = threadId
-        ? await appendMsg(threadId, { role: "result", text: prompt, status: "running", label: label ?? null })
+        ? await appendMsg(threadId, { role: "result", text: prompt, status: "running", label: label ?? null, meta: spec as unknown as Record<string, unknown> })
         : null;
+      bindingsRef.current.set(jobId, rowId ?? undefined);
       setThread((p) => [...p, {
         kind: "result", id: `r-${jobId}`, rowId: rowId ?? undefined, jobId, prompt,
-        phase: "Starting…", status: "running", assets: [], label,
+        phase: "Starting…", status: "running", assets: [], label, retry: spec,
       }]);
+      engines.onBalanceChange?.();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Try again";
       toast({ title: "Couldn't start", description: msg, variant: "destructive" });
     } finally {
+      inFlightRef.current = false;
       setBusy(false);
       taRef.current?.focus();
     }
-  }, [draft, busy, attachment, lastImage, assist, aspect, length, results, engines, enhance, toast,
-      createThread, selectThread, appendMsg, updateMsg, videoQuality]);
+  }, [draft, attachment, lastImage, assist, aspect, length, engines, enhance, toast,
+      createThread, selectThread, appendMsg, updateMsg, videoQuality, attachmentBefore]);
+
+  /** Rows saved before retry specs existed: only a plain text-to-image can be
+   *  re-run faithfully, so only those keep the button. */
+  const retryFor = (b: Extract<Bubble, { kind: "result" }>): (RetrySpec & { resultId: string }) | null =>
+    b.retry ? { ...b.retry, resultId: b.id }
+      : !b.label && b.prompt ? { route: "image", prompt: b.prompt, userText: b.prompt, resultId: b.id }
+        : null;
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -529,7 +661,7 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
               </button>
               <button
                 onClick={() => { setRenamingId(t.id); setRenameDraft(t.title || ""); }}
-                className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1.5 text-muted-foreground hover:text-primary transition-opacity"
+                className="opacity-100 md:opacity-0 md:group-hover:opacity-100 focus:opacity-100 p-1.5 text-muted-foreground hover:text-primary transition-opacity"
                 aria-label="Rename chat"
               >
                 <Pencil className="w-3 h-3" />
@@ -538,7 +670,7 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
                 onClick={() => {
                   if (window.confirm("Delete this chat? Your images stay in the Library.")) void store.remove(t.id);
                 }}
-                className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1.5 text-muted-foreground hover:text-destructive transition-opacity"
+                className="opacity-100 md:opacity-0 md:group-hover:opacity-100 focus:opacity-100 p-1.5 text-muted-foreground hover:text-destructive transition-opacity"
                 aria-label="Delete chat"
               >
                 <Trash2 className="w-3 h-3" />
@@ -557,7 +689,7 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
         {threadList}
       </aside>
       {sidebarOpen && (
-        <div className="md:hidden fixed inset-0 z-40 flex">
+        <div className="md:hidden fixed inset-0 z-[60] flex">
           <div className="w-64 bg-background border-r border-border/40 overflow-y-auto">{threadList}</div>
           <button
             className="flex-1 bg-black/50"
@@ -588,7 +720,7 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
             <div className="text-center py-20">
               <h2 className="font-orbitron text-xl text-foreground/90">What do you want to make?</h2>
               <p className="mt-3 text-sm text-muted-foreground font-mono">
-                Describe it. Attach an image to edit it, or say “animate” to get video.
+                Describe it. Attach an image to edit it, then say “animate” to turn an image into video.
               </p>
             </div>
           )}
@@ -600,7 +732,7 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
                   {b.attachment && (
                     <img src={b.attachment} alt="" className="ml-auto rounded-xl max-h-40 border border-border/50" />
                   )}
-                  <div className="bg-primary/15 border border-primary/25 rounded-2xl rounded-br-sm px-4 py-2.5 text-sm whitespace-pre-wrap">
+                  <div className="bg-primary/15 border border-primary/25 rounded-2xl rounded-br-sm px-4 py-2.5 text-sm whitespace-pre-wrap [overflow-wrap:anywhere]">
                     {b.text}
                   </div>
                 </div>
@@ -626,7 +758,36 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
                   </div>
                 )}
                 {b.status === "error" && (
-                  <div className="text-sm text-destructive font-mono">{b.error}</div>
+                  <div className="space-y-2">
+                    <div className="text-sm text-destructive font-mono">{b.error}</div>
+                    <div className="flex gap-2 flex-wrap">
+                      {/not enough (credits|xrge)/i.test(b.error || "") && engines.onNeedFunds && (
+                        <button
+                          onClick={engines.onNeedFunds}
+                          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-primary/40 font-mono text-xs text-primary hover:bg-primary/10 transition-colors"
+                        >
+                          {isWeb3 ? "Deposit XRGE" : "Get credits"}
+                        </button>
+                      )}
+                      {/sign in/i.test(b.error || "") && engines.onNeedSignIn && (
+                        <button
+                          onClick={engines.onNeedSignIn}
+                          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-primary/40 font-mono text-xs text-primary hover:bg-primary/10 transition-colors"
+                        >
+                          Sign in
+                        </button>
+                      )}
+                      {retryFor(b) && (
+                        <button
+                          onClick={() => void send(retryFor(b)!)}
+                          disabled={busy}
+                          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-border/50 font-mono text-xs text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors disabled:opacity-40"
+                        >
+                          <RefreshCw className="w-3 h-3" /> Try again
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 )}
                 {b.status === "done" && (
                   <div className="space-y-2">
@@ -641,13 +802,26 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
                     </div>
                     {/* Only actions that already exist in Classic. */}
                     <div className="flex gap-2 flex-wrap">
-                      <button
-                        onClick={() => void send(b.prompt)}
-                        disabled={busy}
-                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-border/50 font-mono text-xs text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors disabled:opacity-40"
-                      >
-                        <RefreshCw className="w-3 h-3" /> Try again
-                      </button>
+                      {retryFor(b) && (
+                        <button
+                          onClick={() => void send(retryFor(b)!)}
+                          disabled={busy}
+                          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-border/50 font-mono text-xs text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors disabled:opacity-40"
+                        >
+                          <RefreshCw className="w-3 h-3" /> Try again
+                        </button>
+                      )}
+                      {b.assets[0]?.type === "video" && (
+                        <a
+                          href={b.assets[0].url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          download
+                          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-border/50 font-mono text-xs text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors"
+                        >
+                          <Video className="w-3 h-3" /> Open video
+                        </a>
+                      )}
                       {b.assets[0]?.type === "image" && (
                         <>
                           <button
@@ -733,10 +907,10 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
                     // Computed from the chosen length so the two prices are
                     // comparable at a glance — one engine bills per clip and
                     // the other per second, which is not obvious from a label.
-                    const secs = LENGTHS.find((l) => l.id === length)!.frames / 24;
+                    const len = LENGTHS.find((l) => l.id === length)!;
                     const cost = "flatCredits" in q
                       ? q.flatCredits
-                      : Math.round(q.creditsPerSecond * secs);
+                      : ltxCredits(ltxFrames(len.secs), q.creditsPerSecond);
                     return (
                       <button
                         key={q.id}
@@ -747,7 +921,7 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
                           }`}
                       >
                         <div className={`font-mono text-xs ${videoQuality === q.id ? "text-primary" : "text-muted-foreground"}`}>
-                          {q.label} <span className="text-muted-foreground/60">· ~{cost} cr</span>
+                          {q.label} <span className="text-muted-foreground/60">· {costText(cost, isWeb3)}</span>
                         </div>
                         <div className="font-mono text-tiny text-muted-foreground/60">{q.blurb}</div>
                       </button>
@@ -821,7 +995,7 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
               title="Rewrite your message into a detailed prompt before generating"
             >
               <Sparkles className="w-3 h-3" /> Prompt assist{assist ? " · on" : ""}
-              <span className="text-muted-foreground/70">1 cr</span>
+              <span className="text-muted-foreground/70">{costText(1, isWeb3)}</span>
             </button>
           </div>
         </div>

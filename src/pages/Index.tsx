@@ -1190,6 +1190,63 @@ const Index = () => {
     </div>
   );
 
+  /* The credits pill + store and the sign-in dialog. Classic shows them in its
+     header; Easy needs the same dialogs (the top bar's balance pill and a
+     "Not enough credits" both open the store), so they're built once here. */
+  const accountControls = (
+    <>
+      {/* Credits — primary, always visible for authenticated users */}
+      {canUseCredits && (
+        <CreditDisplay
+          totalCredits={creditsHook.totalCredits}
+          dailyCredits={creditsHook.dailyCredits}
+          subCredits={creditsHook.subCredits}
+          packCredits={creditsHook.packCredits}
+          subscriptionTier={creditsHook.subscriptionTier}
+          subscriptionRenewsAt={creditsHook.subscriptionRenewsAt}
+          subscriptionCancelAt={creditsHook.subscriptionCancelAt}
+          subscriptionDiscountPct={creditsHook.subscriptionDiscountPct}
+          loading={creditsHook.loading}
+          purchasing={creditsHook.purchasing}
+          purchaseError={creditsHook.purchaseError}
+          clearPurchaseError={creditsHook.clearPurchaseError}
+          packages={creditsHook.packages}
+          subscriptionTiers={creditsHook.subscriptionTiers}
+          onPurchase={creditsHook.purchaseCredits}
+          onSubscribe={creditsHook.subscribeToPlan}
+          onManageSubscription={creditsHook.manageSubscription}
+          onCreditsRefresh={creditsHook.refreshCredits}
+          externalOpen={storeOpen}
+          onExternalOpenChange={setStoreOpen}
+          freeCreditsDisabled={creditsHook.freeCreditsDisabled}
+          maintenanceMessage={creditsHook.maintenanceMessage}
+          subscriberOnlyFreeCredits={creditsHook.subscriberOnlyFreeCredits}
+        />
+      )}
+
+      {/* Auth — primary */}
+      {auth.enabled && (
+        <AuthDialog
+          isAuthenticated={auth.isAuthenticated}
+          userEmail={auth.user?.email}
+          onSignIn={auth.signIn}
+          onSignUp={auth.signUp}
+          onSignOut={auth.signOut}
+          pendingVerificationEmail={auth.pendingVerificationEmail}
+          onVerify={auth.verifyEmail}
+          onResendCode={auth.resendCode}
+          onCancelVerification={auth.cancelVerification}
+          pendingTwoFactorEmail={auth.pendingTwoFactorEmail}
+          onVerifyTwoFactor={auth.verifyTwoFactor}
+          onCancelTwoFactor={auth.cancelTwoFactor}
+          onForgotPassword={auth.forgotPassword}
+          onResetPassword={auth.resetPassword}
+          onDeleteAccount={auth.deleteAccount}
+        />
+      )}
+    </>
+  );
+
   /* Easy renders instead of the Classic body, never over it. Every hook above
      has already run, so this early return changes nothing about Classic's own
      tree — which is left byte-identical below. */
@@ -1197,7 +1254,8 @@ const Index = () => {
     return (
       <CyberLayout ownBottomNav onOpenStore={() => setStoreOpen(true)}>
         <div className="max-w-5xl mx-auto px-3 sm:px-4 pt-4">{modeToggle}</div>
-        <div className="px-0 sm:px-4">
+        {/* Leaves room for the mobile bottom nav under the composer. */}
+        <div className="px-0 sm:px-4 [--easy-chrome:184px] sm:[--easy-chrome:120px]">
           <EasyMode
             engines={{
               comfyGenerate,
@@ -1209,9 +1267,28 @@ const Index = () => {
               cancelComfyJob,
               onEditImage: (url) => { switchCreateMode("classic"); handleEditImage(url); },
               onAnimateImage: (url) => { switchCreateMode("classic"); handleAnimateImage(url); },
+              onBalanceChange: () => { void creditsHook.refreshCredits(); },
+              onNeedFunds: () => setStoreOpen(true),
+              onNeedSignIn: () => navigate(`${location.pathname}?signin=1`),
             }}
           />
         </div>
+        {/* Dialogs only: the pill and sign-in button live in the top bar here. */}
+        <div className="hidden">{accountControls}</div>
+        <MobileBottomNav
+          isAuthenticated={auth.isAuthenticated}
+          onOpenStore={() => setStoreOpen(true)}
+          onOpenGuide={() => setGuideOpen(true)}
+          onOpenChangelog={() => setChangelogOpen(true)}
+          onOpenTos={() => setTosOpen(true)}
+          onOpenPrivacy={() => setPrivacyOpen(true)}
+          onOpenSettings={() => setPrefsOpen(true)}
+        />
+        <PreferencesDialog open={prefsOpen} onOpenChange={setPrefsOpen} />
+        <HowToUseDialog open={guideOpen} onOpenChange={setGuideOpen} />
+        <ChangelogDialog open={changelogOpen} onOpenChange={setChangelogOpen} />
+        <LegalDialog type="tos" open={tosOpen} onOpenChange={setTosOpen} />
+        <LegalDialog type="privacy" open={privacyOpen} onOpenChange={setPrivacyOpen} />
       </CyberLayout>
     );
   }
@@ -2534,55 +2611,7 @@ const Index = () => {
               }`}
             />
 
-            {/* Credits — primary, always visible for authenticated users */}
-            {canUseCredits && (
-              <CreditDisplay
-                totalCredits={creditsHook.totalCredits}
-                dailyCredits={creditsHook.dailyCredits}
-                subCredits={creditsHook.subCredits}
-                packCredits={creditsHook.packCredits}
-                subscriptionTier={creditsHook.subscriptionTier}
-                subscriptionRenewsAt={creditsHook.subscriptionRenewsAt}
-                subscriptionCancelAt={creditsHook.subscriptionCancelAt}
-                subscriptionDiscountPct={creditsHook.subscriptionDiscountPct}
-                loading={creditsHook.loading}
-                purchasing={creditsHook.purchasing}
-                purchaseError={creditsHook.purchaseError}
-                clearPurchaseError={creditsHook.clearPurchaseError}
-                packages={creditsHook.packages}
-                subscriptionTiers={creditsHook.subscriptionTiers}
-                onPurchase={creditsHook.purchaseCredits}
-                onSubscribe={creditsHook.subscribeToPlan}
-                onManageSubscription={creditsHook.manageSubscription}
-                onCreditsRefresh={creditsHook.refreshCredits}
-                externalOpen={storeOpen}
-                onExternalOpenChange={setStoreOpen}
-                freeCreditsDisabled={creditsHook.freeCreditsDisabled}
-                maintenanceMessage={creditsHook.maintenanceMessage}
-                subscriberOnlyFreeCredits={creditsHook.subscriberOnlyFreeCredits}
-              />
-            )}
-
-            {/* Auth — primary */}
-            {auth.enabled && (
-              <AuthDialog
-                isAuthenticated={auth.isAuthenticated}
-                userEmail={auth.user?.email}
-                onSignIn={auth.signIn}
-                onSignUp={auth.signUp}
-                onSignOut={auth.signOut}
-                pendingVerificationEmail={auth.pendingVerificationEmail}
-                onVerify={auth.verifyEmail}
-                onResendCode={auth.resendCode}
-                onCancelVerification={auth.cancelVerification}
-                pendingTwoFactorEmail={auth.pendingTwoFactorEmail}
-                onVerifyTwoFactor={auth.verifyTwoFactor}
-                onCancelTwoFactor={auth.cancelTwoFactor}
-                onForgotPassword={auth.forgotPassword}
-                onResetPassword={auth.resetPassword}
-                onDeleteAccount={auth.deleteAccount}
-              />
-            )}
+            {accountControls}
 
             {/* Overflow menu — everything secondary lives here */}
             <Popover>

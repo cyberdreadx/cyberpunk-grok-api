@@ -1313,13 +1313,19 @@ export function useGrokApi() {
       return;
     }
     setComfyJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "cancelling" as const, phase: "Cancelling..." } : j));
+    // Split workflows (zimage, klein, WAN, LTX) run on their own RunPod
+    // endpoints; a cancel sent to the default one never reached the job.
+    const runpodEndpointId = getActiveJobs().find(j => j.promptId === promptId)?.runpodEndpointId;
     try {
-      await apiFetch("/comfyui", { method: "POST", body: { action: "cancel", jobId: promptId } });
+      await apiFetch("/comfyui", {
+        method: "POST",
+        body: { action: "cancel", jobId: promptId, ...(runpodEndpointId && { runpodEndpointId }) },
+      });
     } catch { /* best effort */ }
-    removeActiveJob(promptId);
-    comfyJobStarts.current.delete(jobId);
-    comfyPromptIds.current.delete(jobId);
-    setComfyJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "error" as const, phase: null, error: "Cancelled" } : j));
+    // Keep polling rather than ending the job here. A cancelled job comes back
+    // CANCELLED and the poll refunds it; one that finished before the cancel
+    // landed still delivers its result instead of being thrown away while the
+    // user stays charged.
   }, [dismissComfyJob]);
 
   const clearFinishedComfyJobs = useCallback(() => {

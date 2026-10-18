@@ -41,6 +41,29 @@ function cleanAssets(input: unknown): Asset[] {
     .slice(0, 8);
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** What EasyMode needs to re-run a result exactly. Only known keys, bounded. */
+function cleanMeta(input: unknown): Record<string, unknown> | null {
+  if (!input || typeof input !== "object") return null;
+  const m = input as Record<string, unknown>;
+  const str = (v: unknown, n: number) => (typeof v === "string" ? v.slice(0, n) : undefined);
+  const route = m.route === "edit" || m.route === "video" ? m.route : "image";
+  const src = str(m.sourceUrl, 2000);
+  return {
+    route,
+    prompt: str(m.prompt, MAX_TEXT) ?? "",
+    userText: str(m.userText, MAX_TEXT) ?? "",
+    sourceUrl: src && /^https?:\/\//i.test(src) ? src : null,
+    fromAttachment: m.fromAttachment === true,
+    aspect: str(m.aspect, 20),
+    length: str(m.length, 20),
+    quality: str(m.quality, 20),
+  };
+}
+
+let metaColumnReady: Promise<unknown> | null = null;
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   applyCors(req, res, "GET, POST, OPTIONS");
   if (req.method === "OPTIONS") return res.status(200).end();
@@ -49,23 +72,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!auth) return res.status(401).json({ error: "Sign in first." });
 
   const sql = getDb();
+  metaColumnReady ??= sql`ALTER TABLE easy_messages ADD COLUMN IF NOT EXISTS meta jsonb`.catch(() => { metaColumnReady = null; });
+  await metaColumnReady;
+  // Every id below is cast to uuid; a malformed one was a 500.
+  for (const v of [req.query.threadId, req.body?.threadId, req.body?.messageId]) {
+    if (v && !UUID_RE.test(String(v))) return res.status(404).json({ error: "Not found" });
+  }
 
   try {
     if (req.method === "GET") {
       const threadId = String(req.query.threadId || "");
       if (threadId) {
-        const rows = await sql`
-          SELECT m.id, m.role, m.text, m.status, m.error, m.assets, m.label, m.created_at
+        // The NEWEST messages, shown oldest first: ASC + LIMIT kept the first
+        // 300 and dropped everything a long chat said afterwards.
+        const rows = (await sql`
+          SELECT m.id, m.role, m.text, m.status, m.error, m.assets, m.label, m.meta, m.created_at
           FROM easy_messages m
           JOIN easy_threads t ON t.id = m.thread_id
           WHERE m.thread_id = ${threadId}::uuid AND t.user_id = ${auth.userId}::uuid
-          ORDER BY m.created_at ASC
+          ORDER BY m.created_at DESC
           LIMIT ${MAX_MESSAGES}
-        ` as any[];
+        ` as any[]).reverse();
         return res.status(200).json({
           messages: rows.map((r) => ({
             id: r.id, role: r.role, text: r.text, status: r.status,
-            error: r.error, assets: r.assets || [], label: r.label,
+            error: r.error, assets: r.assets || [], label: r.label, meta: r.meta || null,
             createdAt: r.created_at,
           })),
         });
@@ -123,13 +154,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (!owned) return res.status(404).json({ error: "Thread not found" });
 
       const [m] = await sql`
-        INSERT INTO easy_messages (thread_id, user_id, role, text, status, assets, label)
+        INSERT INTO easy_messages (thread_id, user_id, role, text, status, assets, label, meta)
         VALUES (
           ${threadId}::uuid, ${auth.userId}::uuid, ${role},
           ${body.text ? String(body.text).slice(0, MAX_TEXT) : null},
           ${role === "result" ? (body.status || "running") : null},
           ${JSON.stringify(cleanAssets(body.assets))}::jsonb,
-          ${body.label ? String(body.label).slice(0, 60) : null}
+          ${body.label ? String(body.label).slice(0, 60) : null},
+          ${role === "result" ? JSON.stringify(cleanMeta(body.meta)) : null}::jsonb
         )
         RETURNING id, created_at
       ` as any[];

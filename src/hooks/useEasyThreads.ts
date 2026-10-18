@@ -25,6 +25,8 @@ export interface StoredMessage {
   error: string | null;
   assets: { url: string; previewUrl?: string; type: "image" | "video" }[];
   label: string | null;
+  /** How to re-run a result exactly (EasyMode's RetrySpec). */
+  meta?: Record<string, unknown> | null;
 }
 
 /** The last thread the user had open, so a reload lands where they left off. */
@@ -49,7 +51,15 @@ export function useEasyThreads(enabled: boolean) {
     if (!enabled) return;
     try {
       const d = await apiFetch<{ threads: ThreadSummary[] }>("/easy-threads?action=list");
-      setThreads(d.threads || []);
+      const list = d.threads || [];
+      setThreads(list);
+      // A remembered thread that isn't this account's any more (deleted on
+      // another device, or another account used this browser) would make
+      // every save 404 without a word. Forget it.
+      setActiveId((cur) => {
+        if (cur && !list.some((t) => t.id === cur)) { writeLast(null); return null; }
+        return cur;
+      });
     } catch { /* offline or signed out — the chat still works in memory */ }
   }, [enabled]);
 
