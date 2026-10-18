@@ -20,6 +20,15 @@ import { promises as dns } from "node:dns";
 /** Matched against the end of each MX hostname, so subdomains are covered. */
 const BLOCKED_MX_HOSTS: string[] = [
   "10minutemail.com",
+  // 2026-10-18, each checked against payers (scripts/check-blocklist-safety.mts):
+  "tempamail.com",    // ozvmail.com, mailfrs.com, ogzmail.com — the 7-account farm that claimed the treasury wallet
+  "mail.tm",          // public temp-mail API (uberip.com, emalupe.com, maxxspace.com)
+  "edu-mails.com",    // "Temp Mail – Free Temporary Email & Edumail": fake .edu.pl / .org.uk inboxes
+  "kuromee.com",      // gozora.site, kuromee.store, *.cyou — 10 domains, mostly device-shared
+  "laoia.com",        // 52 accounts, 38 on shared devices, no payers
+  "emailinbo.live",   // 36 accounts, 33 on shared devices, no payers
+  "phuturemail.com",  // 12 accounts, 11 on shared devices, no payers
+  "duckzmail.com",    // duckz.me, reelduckz.com, ezaiapi.com
 ];
 
 const TTL_MS = 6 * 60 * 60 * 1000;
