@@ -10,6 +10,7 @@ import { generateImagePreviewBuffer } from "./image-preview";
 import { getPublicUrl, isR2Url, objectExists, r2KeyFromUrl, uploadToR2 } from "./r2";
 import { isVercelBlobUrl } from "./blob";
 import { previewKeyForKey } from "./preview-url";
+import { secureToken } from "./secure-token";
 
 const MAX_FETCH_BYTES = 100 * 1024 * 1024; // don't buffer >100MB videos
 const FETCH_TIMEOUT_MS = 30_000;
@@ -45,7 +46,7 @@ export async function ensurePreviewForUrl(mediaUrl: string | null | undefined): 
   // (server-side uploads create one) — reuse it instead of regenerating.
   const previewKey = key
     ? previewKeyForKey(key)
-    : `previews/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-preview.webp`;
+    : `previews/${Date.now()}-${secureToken()}-preview.webp`;
   if (key && (await objectExists(previewKey))) {
     return getPublicUrl(previewKey) || null;
   }

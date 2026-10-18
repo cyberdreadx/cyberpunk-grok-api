@@ -18,6 +18,7 @@ import { applyDiscount, getCombinedCreditDiscountPct } from "./_lib/discount";
 import { isEmailVerified, EMAIL_VERIFICATION_REQUIRED_MESSAGE, EMAIL_VERIFICATION_REQUIRED_CODE } from "./_lib/emailVerifiedGate";
 import { enforceGeo } from "./_lib/geo";
 import { isWeb3Request, chargeXrge, refundXrge, InsufficientXrgeError } from "./_lib/web3-spend";
+import { secureToken } from "./_lib/secure-token";
 
 
 const XAI_API_BASE = "https://api.x.ai/v1";
@@ -134,7 +135,7 @@ async function dataUrlToPublicBlobUrl(dataUrl: string, userId: string): Promise<
   // OUTPUTS referenced from user libraries and is never swept.
   const { url } = await uploadPublicMedia(
     buffer,
-    `uploads/${userId}/seedance-${Date.now()}.${extFromImageMime(mime)}`,
+    `uploads/${userId}/seedance-${Date.now()}-${secureToken()}.${extFromImageMime(mime)}`,
     mime,
   );
   return url;

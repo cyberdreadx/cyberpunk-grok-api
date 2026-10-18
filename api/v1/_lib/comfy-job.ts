@@ -21,6 +21,7 @@ import {
   buildGltchWanSimpleWorkflow,
   buildZimageTurboWorkflow,
 } from "../../_lib/comfy-workflows";
+import { secureToken } from "../../_lib/secure-token";
 
 export { buildGltchWanWorkflow, buildGltchWanSimpleWorkflow, buildZimageTurboWorkflow };
 
@@ -442,7 +443,7 @@ export async function toPublicUrl(
     if (buffer.length < 1000) return null;
     const ext = kind === "video" ? "mp4" : "png";
     const mime = kind === "video" ? "video/mp4" : "image/png";
-    const key = `v1-api/${userId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const key = `v1-api/${userId}/${Date.now()}-${secureToken()}.${ext}`;
     const { url } = await uploadPublicMedia(buffer, key, mime, { cacheSeconds: 604800 });
     return url || null;
   } catch (err: any) {

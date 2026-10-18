@@ -17,6 +17,7 @@ import { checkPrompt, logSafetyViolation } from "./_lib/safety";
 import { applyDiscount, getCombinedCreditDiscountPct } from "./_lib/discount";
 import { isEmailVerified, EMAIL_VERIFICATION_REQUIRED_MESSAGE, EMAIL_VERIFICATION_REQUIRED_CODE } from "./_lib/emailVerifiedGate";
 import { isWeb3Request, chargeXrge, refundXrge, InsufficientXrgeError } from "./_lib/web3-spend";
+import { secureToken } from "./_lib/secure-token";
 
 
 const GLTCH_COST = 5;
@@ -185,7 +186,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       let blobUrl = "";
       const blobToken = process.env.BLOB_READ_WRITE_TOKEN || process.env.grokrun_READ_WRITE_TOKEN || "";
       try {
-        const blob = await put(`gltch/${auth.userId}-${Date.now()}.jpg`, imgBuffer, {
+        const blob = await put(`gltch/${auth.userId}-${Date.now()}-${secureToken()}.jpg`, imgBuffer, {
           access: "public",
           contentType: "image/jpeg",
           token: blobToken,

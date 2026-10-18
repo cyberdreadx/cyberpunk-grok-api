@@ -31,6 +31,7 @@ import {
   buildKrea2Workflow,
   buildZimageTurboWorkflow,
 } from "./_lib/comfy-workflows";
+import { secureToken } from "./_lib/secure-token";
 
 
 // Hosts we'll fetch a reference image from server-side (creator portraits,
@@ -2798,7 +2799,7 @@ Output must be exactly formatted as: "***1***Prompt1***2***Prompt2***3***Prompt3
             const sizeMB = (buffer.length / 1024 / 1024).toFixed(1);
             // Key must encode the owner (<folder>/<userId>/…) or library-purge
             // can never prove ownership and the object outlives deletion.
-            const filename = `comfyui-output/${auth.userId}/${Date.now()}-${Math.random().toString(36).slice(2, 6)}.${ext}`;
+            const filename = `comfyui-output/${auth.userId}/${Date.now()}-${secureToken()}.${ext}`;
             for (let attempt = 1; attempt <= 2; attempt++) {
               try {
                 const { uploadPublicMedia } = await import("./_lib/media-storage");

@@ -17,6 +17,7 @@ import { getDb } from "../_lib/db";
 import { put, del } from "@vercel/blob";
 import { deductCredits, refundCredits, logUsage, getUserCredits, discountedCostForUser } from "./_lib/credits";
 import { isEmailVerified, EMAIL_VERIFICATION_REQUIRED_MESSAGE, EMAIL_VERIFICATION_REQUIRED_CODE } from "../_lib/emailVerifiedGate";
+import { secureToken } from "../_lib/secure-token";
 
 const GLTCH_COST = 5;
 const GLTCH_HD_COST = 7;
@@ -107,7 +108,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const imgResp = await fetch(imageUrl, { signal: AbortSignal.timeout(15000) });
       if (!imgResp.ok) throw new Error(`Failed to fetch image: ${imgResp.status}`);
       const imgBuffer = Buffer.from(await imgResp.arrayBuffer());
-      const blob = await put(`gltch-api/${auth.userId}-${Date.now()}.jpg`, imgBuffer, {
+      const blob = await put(`gltch-api/${auth.userId}-${Date.now()}-${secureToken()}.jpg`, imgBuffer, {
         access: "public", contentType: "image/jpeg", token: blobToken,
       });
       blobUrl = blob.url;

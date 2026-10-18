@@ -1,6 +1,7 @@
 /**
  * Unified public media storage — prefers Cloudflare R2 (free egress) over Vercel Blob.
  */
+import { secureToken } from "./secure-token";
 import { put } from "@vercel/blob";
 import { getPresignedUploadUrl, getPublicUrl, isR2MediaConfigured, uploadToR2 , R2_DEFAULT_CACHE } from "./r2";
 import { generateImagePreviewBuffer } from "./image-preview";
@@ -35,7 +36,7 @@ export function sanitizeMediaKey(pathname: string): string {
 /** Build a unique object key under an optional prefix folder. */
 export function uniqueMediaKey(folder: string, filename: string): string {
   const base = sanitizeMediaKey(filename);
-  const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const stamp = `${Date.now()}-${secureToken()}`;
   const folderClean = sanitizeMediaKey(folder).replace(/\/$/, "");
   const parts = base.split("/");
   const leaf = parts.pop() || "file.bin";
