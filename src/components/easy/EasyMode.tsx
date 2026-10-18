@@ -17,6 +17,7 @@
  * Classic is untouched by any of this.
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ArrowUp, Check, Loader2, MessageSquarePlus, Menu, Paperclip, Pencil, RefreshCw, Sliders, Sparkles, Square, Trash2, Video, Wand2, X } from "lucide-react";
 import { getImageDimensions, type ComfyJob, type GrokResult } from "@/hooks/useGrokApi";
 import { apiFetch } from "@/lib/api";
@@ -134,7 +135,13 @@ async function fileToBase64(file: File, maxDim = 1024): Promise<{ b64: string; p
 }
 
 async function urlToBase64(url: string): Promise<string> {
-  const blob = await fetch(url).then((r) => r.blob());
+  // no-store: the <img> already loaded this URL without CORS, and reusing that
+  // cached copy for a CORS fetch can fail. The timeout turns a hang into an
+  // error the user sees instead of a send that silently never starts.
+  const resp = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(20000) })
+    .catch(() => { throw new Error("Couldn't load the previous image. Try again."); });
+  if (!resp.ok) throw new Error("Couldn't load the previous image. Try again.");
+  const blob = await resp.blob();
   return new Promise((resolve, reject) => {
     const fr = new FileReader();
     fr.onload = () => resolve(String(fr.result).split(",")[1]);
@@ -688,15 +695,18 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
       <aside className="hidden md:block w-56 shrink-0 border-r border-border/40 overflow-y-auto">
         {threadList}
       </aside>
-      {sidebarOpen && (
+      {/* Portaled: inside the page's z-20 stacking context no z-index could
+          lift it above the fixed app header, which covered "New chat". */}
+      {sidebarOpen && createPortal(
         <div className="md:hidden fixed inset-0 z-[60] flex">
-          <div className="w-64 bg-background border-r border-border/40 overflow-y-auto">{threadList}</div>
+          <div className="w-64 bg-background border-r border-border/40 overflow-y-auto pt-[env(safe-area-inset-top)]">{threadList}</div>
           <button
             className="flex-1 bg-black/50"
             onClick={() => setSidebarOpen(false)}
             aria-label="Close chat list"
           />
-        </div>
+        </div>,
+        document.body,
       )}
 
       <div className="flex flex-col flex-1 min-w-0">

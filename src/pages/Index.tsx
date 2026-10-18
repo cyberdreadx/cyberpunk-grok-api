@@ -1267,7 +1267,10 @@ const Index = () => {
               cancelComfyJob,
               onEditImage: (url) => { switchCreateMode("classic"); handleEditImage(url); },
               onAnimateImage: (url) => { switchCreateMode("classic"); handleAnimateImage(url); },
-              onBalanceChange: () => { void creditsHook.refreshCredits(); },
+              // Every balance display (top bar, bottom nav) has its own
+              // useCredits; the broadcast reaches them all. Refreshing only
+              // this one left the web3 pill stale after an XRGE charge.
+              onBalanceChange: () => { window.dispatchEvent(new Event("credits-changed")); },
               onNeedFunds: () => setStoreOpen(true),
               onNeedSignIn: () => navigate(`${location.pathname}?signin=1`),
             }}

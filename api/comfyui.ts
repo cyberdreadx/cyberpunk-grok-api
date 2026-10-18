@@ -1652,7 +1652,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const auth = getUserFromRequest(req);
   if (!auth) {
-    return res.status(401).json({ error: "Sign in to use Comfy Lab." });
+    return res.status(401).json({ error: "Sign in to create." });
   }
 
   // Generation requires a verified email — see _lib/emailVerifiedGate.
