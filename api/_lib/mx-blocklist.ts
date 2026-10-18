@@ -31,14 +31,59 @@ const BLOCKED_MX_HOSTS: string[] = [
   "duckzmail.com",    // duckz.me, reelduckz.com, ezaiapi.com
 ];
 
+/**
+ * Mail hosts that may sign up but get no free starter credits.
+ *
+ * wallywatts / wabblywabble serve 340+ rotating domains and ~5,900 accounts,
+ * mostly credit farms — but 16 paying customers too ($597 lifetime, 0.7% of
+ * revenue, as of 2026-10-18), which is why they aren't in BLOCKED_MX_HOSTS.
+ * Holding back the giveaway removes the farmers' reason to come while the
+ * rare real buyer signs up and pays as normal.
+ */
+const NO_STARTER_MX_HOSTS: string[] = [
+  "wallywatts.com",
+  "wabblywabble.com",
+];
+
 const TTL_MS = 6 * 60 * 60 * 1000;
 const NEGATIVE_TTL_MS = 10 * 60 * 1000;
 const LOOKUP_TIMEOUT_MS = 1500;
 const cache = new Map<string, { blocked: boolean; until: number }>();
 
-export function isBlockedMxHost(exchange: string): boolean {
+function hostIn(list: string[], exchange: string): boolean {
   const host = String(exchange || "").toLowerCase().replace(/\.$/, "");
-  return BLOCKED_MX_HOSTS.some((b) => host === b || host.endsWith("." + b));
+  return list.some((b) => host === b || host.endsWith("." + b));
+}
+
+export function isBlockedMxHost(exchange: string): boolean {
+  return hostIn(BLOCKED_MX_HOSTS, exchange);
+}
+
+const mxCache = new Map<string, { hosts: string[]; until: number }>();
+
+/** The domain's MX hostnames; [] on any DNS trouble (callers fail open). */
+async function mxHosts(email: string): Promise<string[]> {
+  const domain = String(email || "").toLowerCase().trim().split("@")[1];
+  if (!domain) return [];
+  const hit = mxCache.get(domain);
+  if (hit && hit.until > Date.now()) return hit.hosts;
+  try {
+    const records = await Promise.race([
+      dns.resolveMx(domain),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error("mx timeout")), LOOKUP_TIMEOUT_MS)),
+    ]);
+    const hosts = Array.isArray(records) ? records.map((r) => r.exchange) : [];
+    mxCache.set(domain, { hosts, until: Date.now() + TTL_MS });
+    return hosts;
+  } catch {
+    mxCache.set(domain, { hosts: [], until: Date.now() + NEGATIVE_TTL_MS });
+    return [];
+  }
+}
+
+/** True when the address's mail host is on NO_STARTER_MX_HOSTS. Fails open (false). */
+export async function isNoStarterByMx(email: string): Promise<boolean> {
+  return (await mxHosts(email)).some((h) => hostIn(NO_STARTER_MX_HOSTS, h));
 }
 
 /**

@@ -28,11 +28,12 @@ import { getFreeCreditsConfig } from "./freeCredits";
 import { logCreditGrant } from "./credit-ledger";
 import { canonicalEmail } from "./email-canonical";
 import { PROMO_CREDIT_DAYS } from "./credit-expiry";
+import { isNoStarterByMx } from "./mx-blocklist";
 
 export interface StarterGrantResult {
   granted: boolean;
   credits: number;
-  reason?: "disabled" | "already-claimed" | "device-claimed" | "inbox-claimed" | "error";
+  reason?: "disabled" | "already-claimed" | "device-claimed" | "inbox-claimed" | "throwaway-mail" | "error";
 }
 
 export async function grantStarterCredits(
@@ -48,6 +49,11 @@ export async function grantStarterCredits(
       return { granted: false, credits: 0, reason: "disabled" };
     }
     credits = cfg.starterCredits;
+
+    // Mail services that are mostly credit farms (see NO_STARTER_MX_HOSTS).
+    if (email && (await isNoStarterByMx(email))) {
+      return { granted: false, credits: 0, reason: "throwaway-mail" };
+    }
 
     const fp = (fingerprint || "").trim() || null;
     // canonicalEmail returns "" for anything unparseable. Store NULL instead, so

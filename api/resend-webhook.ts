@@ -184,7 +184,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         SELECT COUNT(*)::int AS n FROM email_events
         WHERE event = 'bounced' AND lower(recipient) = lower(${recipient}) AND svix_id <> ${svixId}
       `) as any[];
-      const repeatBouncer = name === "bounced" && Number(priorBounces[0]?.n ?? 0) >= 1;
+      // Never for a paying customer, though: a full mailbox twice is still a
+      // real person (two payers were cut off from receipts this way, 2026-09).
+      const [payer] = (await sql`
+        SELECT 1 FROM users u WHERE lower(u.email) = lower(${recipient})
+          AND EXISTS (SELECT 1 FROM transactions t WHERE t.user_id = u.id AND t.amount_cents > 0)
+        LIMIT 1
+      `) as any[];
+      const repeatBouncer = name === "bounced" && !payer && Number(priorBounces[0]?.n ?? 0) >= 1;
 
       const permanent =
         name === "complained" || bounceType === "permanent" || bounceType === "undetermined" || repeatBouncer;
