@@ -9,7 +9,7 @@
  */
 
 import { unsubUrl } from "./notification-prefs";
-import { getResend, getFromAddress, logEmail, buildAnnouncementHtml, buildV47AnnouncementHtml, buildV48AnnouncementHtml, buildV49SubscriptionFixHtml, buildV52AnnouncementHtml, buildV53AnnouncementHtml, buildV55AnnouncementHtml, buildV56AnnouncementHtml, buildLaunchAnnouncementHtml, buildCrackdownAnnouncementHtml, buildSubscribePromoHtml } from "./email";
+import { getResend, getFromAddress, logEmail, buildAnnouncementHtml, buildV47AnnouncementHtml, buildV48AnnouncementHtml, buildV49SubscriptionFixHtml, buildV52AnnouncementHtml, buildV53AnnouncementHtml, buildV55AnnouncementHtml, buildV56AnnouncementHtml, buildLaunchAnnouncementHtml, buildCrackdownAnnouncementHtml, buildSubscribePromoHtml, buildEditionsAnnouncementHtml } from "./email";
 
 export const CAMPAIGN_CONFIG_KEY = "active_email_campaign";
 
@@ -37,6 +37,7 @@ export const DEFAULT_CAMPAIGN_SUBJECTS: Record<string, string> = {
   announcement_launch: "🚀 GLTCH Runner is here — chat with AI models + video gen",
   announcement_crackdown: "🧹 GLTCHRunner — Credit farmers banned, full speed restored",
   promo_subscribe_2026_09: "⚡ More credits for less — GLTCH Runner plans from $9",
+  announcement_editions_2026_10: "🌐 One GLTCH account, three ways in: Web3 + Studio are live",
 };
 
 export function getAnnouncementHtmlForCampaign(campaign: string): string {
@@ -61,6 +62,8 @@ export function getAnnouncementHtmlForCampaign(campaign: string): string {
       return buildCrackdownAnnouncementHtml();
     case "promo_subscribe_2026_09":
       return buildSubscribePromoHtml();
+    case "announcement_editions_2026_10":
+      return buildEditionsAnnouncementHtml();
     default:
       return buildAnnouncementHtml();
   }

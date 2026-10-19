@@ -1452,6 +1452,48 @@ export function buildV56AnnouncementHtml(): string {
 }
 
 /**
+ * Editions announcement (2026-10): Studio and Web3 share Runner's accounts.
+ * Links are plain — no user id, no tracking parameters — on purpose.
+ */
+export function buildEditionsAnnouncementHtml(): string {
+  const card = (color: string, label: string, title: string, body: string, url: string, cta: string) => `
+        <div style="border: 1px solid ${color}55; padding: 18px; border-radius: 4px; margin: 0 0 18px;">
+          <p style="color: ${color}; font-size: 11px; letter-spacing: 3px; margin: 0 0 6px;">${label}</p>
+          <p style="color: #e0e0e0; font-size: 16px; letter-spacing: 2px; margin: 0 0 8px;">${title}</p>
+          <p style="font-size: 13px; color: #c0c0c0; margin: 0 0 14px; line-height: 1.6;">${body}</p>
+          <a href="${url}" style="display: inline-block; border: 1px solid ${color}; color: ${color}; text-decoration: none; padding: 9px 20px; border-radius: 4px; font-size: 12px; letter-spacing: 2px;">${cta}</a>
+        </div>`;
+  return `
+    <div style="font-family: 'Courier New', monospace; background: #0a0a0f; color: #e0e0e0; padding: 32px; max-width: 540px; margin: 0 auto;">
+      <div style="border: 1px solid #00f0ff33; padding: 28px; border-radius: 4px;">
+
+        <h1 style="color: #00f0ff; font-size: 22px; letter-spacing: 4px; margin: 0 0 6px; text-align: center;">GLTCHRUNNER</h1>
+        <p style="color: #ff00e599; font-size: 11px; letter-spacing: 5px; text-align: center; margin: 0 0 28px;">NEW // TWO_MORE_WAYS_IN</p>
+
+        <div style="background: linear-gradient(135deg, #00f0ff15, #ff00e515); border: 1px solid #00f0ff66; padding: 18px; border-radius: 4px; margin: 0 0 24px; text-align: center;">
+          <p style="color: #00f0ff; font-size: 14px; letter-spacing: 3px; margin: 0 0 8px;">ONE ACCOUNT. THREE EDITIONS.</p>
+          <p style="font-size: 13px; color: #c0c0c0; margin: 0; line-height: 1.6;">
+            GLTCH now comes in two new editions. Your account, credits and library already work on both. Just sign in with this email.
+          </p>
+        </div>
+${card("#ff00e5", "PAY WITH CRYPTO", "GLTCH WEB3", "Everything in Runner, paid in XRGE instead of credits. Connect any Base wallet and deposit in a tap. With most wallets we even cover the network fee, so you don't need ETH.", "https://web3.gltchrunner.com/", "OPEN GLTCH WEB3")}
+${card("#00f0ff", "CLEAN &amp; SIMPLE", "GLTCH STUDIO", "A calm, light studio with just create, library and account. Describe what you want in a chat and get images and video back. Safe for work, so you can show it to anyone.", "https://studio.gltchrunner.com/", "OPEN GLTCH STUDIO")}
+        <div style="border-left: 2px solid #00f0ff44; padding: 0 0 0 14px; margin: 0 0 26px;">
+          <p style="font-size: 12px; color: #909090; margin: 0; line-height: 1.7;">
+            GLTCH Runner isn't going anywhere. It's still home base, and all three editions are always linked from the ☰ menu.
+          </p>
+        </div>
+
+        <p style="color: #808080; font-size: 12px; text-align: center; margin: 0; line-height: 1.6;">
+          See you in the grid.
+        </p>
+
+      </div>
+    </div>
+  `;
+}
+
+/**
  * Plan figures for the subscribe promo. creditsPerMonth mirrors api/checkout.ts
  * SUBSCRIPTIONS and priceUsd mirrors the live Stripe prices; both are asserted by
  * scripts/check-subscribe-campaign.mts before anything is sent. A promotional

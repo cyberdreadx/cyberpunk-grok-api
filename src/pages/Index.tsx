@@ -50,6 +50,7 @@ import { useDailyMissions } from "@/hooks/useDailyMissions";
 import LegalDialog from "@/components/LegalDialog";
 import HowToUseDialog from "@/components/HowToUseDialog";
 import ChangelogDialog, { hasUnseenChangelog, markChangelogSeen } from "@/components/ChangelogDialog";
+import EditionsPromoDialog from "@/components/EditionsPromoDialog";
 import ThemePicker from "@/components/ThemePicker";
 import PwaInstallBanner from "@/components/PwaInstallBanner";
 import SupportBotDialog, { SupportBotLauncher } from "@/components/SupportBotDialog";
@@ -1324,6 +1325,7 @@ const Index = () => {
         <PreferencesDialog open={prefsOpen} onOpenChange={setPrefsOpen} />
         <HowToUseDialog open={guideOpen} onOpenChange={setGuideOpen} />
         <ChangelogDialog open={changelogOpen} onOpenChange={setChangelogOpen} />
+        <EditionsPromoDialog enabled={auth.isAuthenticated} />
         <LegalDialog type="tos" open={tosOpen} onOpenChange={setTosOpen} />
         <LegalDialog type="privacy" open={privacyOpen} onOpenChange={setPrivacyOpen} />
       </CyberLayout>
@@ -2904,6 +2906,7 @@ const Index = () => {
         {/* Dialogs */}
         <HowToUseDialog open={guideOpen} onOpenChange={setGuideOpen} />
         <ChangelogDialog open={changelogOpen} onOpenChange={setChangelogOpen} />
+        <EditionsPromoDialog enabled={auth.isAuthenticated} />
         <LegalDialog type="tos" open={tosOpen} onOpenChange={setTosOpen} />
         <LegalDialog type="privacy" open={privacyOpen} onOpenChange={setPrivacyOpen} />
       </div>
