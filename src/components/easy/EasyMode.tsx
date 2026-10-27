@@ -22,6 +22,7 @@ import { ArrowUp, Check, Loader2, MessageSquarePlus, Menu, Paperclip, Pencil, Re
 import { getImageDimensions, type ComfyJob, type GrokResult } from "@/hooks/useGrokApi";
 import { apiFetch } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { prepareImage, blobToDataUrl } from "@/lib/prepareImage";
 import { getAssist, setAssist } from "@/lib/createMode";
 import { useEasyThreads, type StoredMessage } from "@/hooks/useEasyThreads";
 import { uploadPublicMedia } from "@/lib/mediaUpload";
@@ -123,17 +124,8 @@ const VIDEO_HINT = /\b(video|animate|animated|animation|make (?:it|this|them|him
 
 /** Reads a file into the base64 the comfy endpoints expect, capped like Classic. */
 async function fileToBase64(file: File, maxDim = 1024): Promise<{ b64: string; preview: string }> {
-  const bitmap = await createImageBitmap(file);
-  let w = bitmap.width, h = bitmap.height;
-  if (w > maxDim || h > maxDim) {
-    const scale = maxDim / Math.max(w, h);
-    w = Math.round(w * scale);
-    h = Math.round(h * scale);
-  }
-  const canvas = document.createElement("canvas");
-  canvas.width = w; canvas.height = h;
-  canvas.getContext("2d")!.drawImage(bitmap, 0, 0, w, h);
-  const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
+  // prepareImage handles HEIC, typeless Android picker files and huge photos.
+  const dataUrl = await blobToDataUrl(await prepareImage(file, { maxDim }));
   return { b64: dataUrl.split(",")[1], preview: dataUrl };
 }
 
@@ -967,7 +959,7 @@ export default function EasyMode({ engines }: { engines: EasyEngines }) {
             >
               <Paperclip className="w-4 h-4" />
             </button>
-            <input ref={fileRef} type="file" accept="image/*" hidden onChange={pickFile} />
+            <input ref={fileRef} type="file" accept="image/*,.heic,.heif" hidden onChange={pickFile} />
             <textarea
               ref={taRef}
               rows={1}

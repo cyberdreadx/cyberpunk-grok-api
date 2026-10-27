@@ -13,6 +13,8 @@ import {
   Trash2,
 } from "lucide-react";
 import { apiFetch, CREDIT_COSTS } from "@/lib/api";
+import { prepareImage, blobToDataUrl } from "@/lib/prepareImage";
+import { toast } from "@/hooks/use-toast";
 import type { GrokResult } from "@/hooks/useGrokApi";
 
 /* ─── Job types ─── */
@@ -151,27 +153,20 @@ export default function ComfyPanel({
   }, [collapsed, checkStatus, fetchModels]);
 
   /* ─── Image upload handling ─── */
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Android cameras shoot 50–200 MP; a full-size canvas is past what a phone
+  // browser can allocate and silently yields nothing. prepareImage downscales.
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (!file) return;
-    const baseName = file.name.replace(/\.[^.]+$/, "");
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = img.naturalWidth;
-      canvas.height = img.naturalHeight;
-      const ctx = canvas.getContext("2d");
-      if (ctx) {
-        ctx.drawImage(img, 0, 0);
-        const jpeg = canvas.toDataURL("image/jpeg", 0.92);
-        setInputImage(jpeg);
-        setInputImageName(`${baseName}.jpg`);
-      }
-      URL.revokeObjectURL(url);
-    };
-    img.onerror = () => { URL.revokeObjectURL(url); };
-    img.src = url;
+    const baseName = file.name.replace(/\.[^.]+$/, "") || "image";
+    try {
+      const blob = await prepareImage(file, { maxDim: 2048, quality: 0.92 });
+      setInputImage(await blobToDataUrl(blob));
+      setInputImageName(`${baseName}.jpg`);
+    } catch (err: any) {
+      toast({ title: "Couldn't use that image", description: err?.message, variant: "destructive" });
+    }
   };
 
   const clearImage = () => {
@@ -181,27 +176,20 @@ export default function ComfyPanel({
     clearImage2();
   };
 
-  const handleImageSelect2 = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Android cameras shoot 50–200 MP; a full-size canvas is past what a phone
+  // browser can allocate and silently yields nothing. prepareImage downscales.
+  const handleImageSelect2 = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (!file) return;
-    const baseName = file.name.replace(/\.[^.]+$/, "");
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = img.naturalWidth;
-      canvas.height = img.naturalHeight;
-      const ctx = canvas.getContext("2d");
-      if (ctx) {
-        ctx.drawImage(img, 0, 0);
-        const jpeg = canvas.toDataURL("image/jpeg", 0.92);
-        setInputImage2(jpeg);
-        setInputImageName2(`${baseName}.jpg`);
-      }
-      URL.revokeObjectURL(url);
-    };
-    img.onerror = () => { URL.revokeObjectURL(url); };
-    img.src = url;
+    const baseName = file.name.replace(/\.[^.]+$/, "") || "image";
+    try {
+      const blob = await prepareImage(file, { maxDim: 2048, quality: 0.92 });
+      setInputImage2(await blobToDataUrl(blob));
+      setInputImageName2(`${baseName}.jpg`);
+    } catch (err: any) {
+      toast({ title: "Couldn't use that image", description: err?.message, variant: "destructive" });
+    }
   };
 
   const clearImage2 = () => {

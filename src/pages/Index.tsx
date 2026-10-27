@@ -51,6 +51,7 @@ import LegalDialog from "@/components/LegalDialog";
 import HowToUseDialog from "@/components/HowToUseDialog";
 import ChangelogDialog, { hasUnseenChangelog, markChangelogSeen } from "@/components/ChangelogDialog";
 import EditionsPromoDialog from "@/components/EditionsPromoDialog";
+import { prepareImage, blobToDataUrl } from "@/lib/prepareImage";
 import ThemePicker from "@/components/ThemePicker";
 import PwaInstallBanner from "@/components/PwaInstallBanner";
 import SupportBotDialog, { SupportBotLauncher } from "@/components/SupportBotDialog";
@@ -629,19 +630,8 @@ const Index = () => {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const sourceBlob = await normalizeToImageBlob(file, 0.9);
-      const bitmap = await createImageBitmap(sourceBlob);
-      const maxDim = 1024;
-      let w = bitmap.width, h = bitmap.height;
-      if (w > maxDim || h > maxDim) {
-        const scale = maxDim / Math.max(w, h);
-        w = Math.round(w * scale); h = Math.round(h * scale);
-      }
-      const canvas = document.createElement("canvas");
-      canvas.width = w; canvas.height = h;
-      canvas.getContext("2d")?.drawImage(bitmap, 0, 0, w, h);
-      bitmap.close();
-      setGltchImage2(canvas.toDataURL("image/jpeg", 0.9));
+      e.target.value = "";
+      setGltchImage2(await blobToDataUrl(await prepareImage(file, { maxDim: 1024 })));
       setGltchImage2Name(file.name.replace(/\.[^.]+$/, "") + ".jpg");
     } catch (err: any) {
       console.error("[Index] gltch image2 normalize failed", err);

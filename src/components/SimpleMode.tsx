@@ -2,7 +2,8 @@ import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Upload, Sparkles, Pencil, Image, Film, X, Loader2, ChevronRight, HelpCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { GrokMode } from "@/hooks/useGrokApi";
-import { normalizeToImageBlob, isAcceptableImageLike } from "@/lib/heicConvert";
+import { isImageLike, prepareImage } from "@/lib/prepareImage";
+import { toast } from "@/hooks/use-toast";
 import { isWeb3 } from "@/lib/edition";
 import { costText } from "@/lib/web3";
 
@@ -138,9 +139,10 @@ const SimpleMode: React.FC<SimpleModeProps> = ({
   const handleImageUpload = useCallback(async (file: File) => {
     let blob: Blob;
     try {
-      blob = await normalizeToImageBlob(file, 0.9);
-    } catch (err) {
+      blob = await prepareImage(file, { maxDim: 4096 });
+    } catch (err: any) {
       console.error("[SimpleMode] normalize failed", err);
+      toast({ title: "Couldn't use that image", description: err?.message, variant: "destructive" });
       return;
     }
 
@@ -157,6 +159,7 @@ const SimpleMode: React.FC<SimpleModeProps> = ({
 
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (file) handleImageUpload(file);
   }, [handleImageUpload]);
 
@@ -164,7 +167,7 @@ const SimpleMode: React.FC<SimpleModeProps> = ({
     e.preventDefault();
     setDragOver(false);
     const file = e.dataTransfer.files[0];
-    if (file && (await isAcceptableImageLike(file))) handleImageUpload(file);
+    if (file && (await isImageLike(file))) handleImageUpload(file);
   }, [handleImageUpload]);
 
   const handlePaste = useCallback((e: React.ClipboardEvent) => {

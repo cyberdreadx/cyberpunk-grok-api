@@ -11,7 +11,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import type { GrokMode, GenerationSettings } from "@/hooks/useGrokApi";
 import { apiFetch } from "@/lib/api";
 import { toast } from "sonner";
-import { normalizeToImageBlob, isAcceptableImageLike } from "@/lib/heicConvert";
+import { isImageLike, prepareImage } from "@/lib/prepareImage";
 import { isWeb3 } from "@/lib/edition";
 import { costText } from "@/lib/web3";
 
@@ -113,37 +113,8 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
       reader.readAsDataURL(blob);
     });
 
-  /**
-   * Resize an image client-side (cap at 4096px) and upload it to Vercel Blob
-   * via the client-upload protocol. Returns the public CDN URL.
-   */
+  /** Longest side for generation inputs; prepareImage downscales anything larger. */
   const MAX_DIM = 4096;
-
-  const resizeBlobIfNeeded = async (blob: Blob): Promise<Blob> => {
-    const bitmap = await createImageBitmap(blob);
-    let w = bitmap.width, h = bitmap.height;
-    if (w <= MAX_DIM && h <= MAX_DIM && blob.size <= 8 * 1024 * 1024) {
-      bitmap.close();
-      return blob;
-    }
-    if (w > MAX_DIM || h > MAX_DIM) {
-      const scale = MAX_DIM / Math.max(w, h);
-      w = Math.round(w * scale);
-      h = Math.round(h * scale);
-    }
-    const canvas = document.createElement("canvas");
-    canvas.width = w;
-    canvas.height = h;
-    canvas.getContext("2d")!.drawImage(bitmap, 0, 0, w, h);
-    bitmap.close();
-    return await new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob(
-        (b) => (b ? resolve(b) : reject(new Error("toBlob failed"))),
-        "image/jpeg",
-        0.9,
-      );
-    });
-  };
 
   // Generation inputs stay ON-DEVICE as data URLs — every engine path either
   // sends base64 itself or (Seedance) re-hosts server-side for the job only.
@@ -159,7 +130,8 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!(await isAcceptableImageLike(file))) {
+    e.target.value = "";
+    if (!(await isImageLike(file))) {
       setUploadError("Unsupported file. Use JPG, PNG, WebP, or HEIC.");
       return;
     }
@@ -167,10 +139,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
 
     let blob: Blob;
     try {
-      blob = await normalizeToImageBlob(file, 0.9);
-      if (blob.type.startsWith("image/")) {
-        blob = await resizeBlobIfNeeded(blob);
-      }
+      blob = await prepareImage(file, { maxDim: MAX_DIM });
     } catch (err: any) {
       console.error("[PromptForm] Image normalize failed:", err?.message || err);
       setUploadError(err?.message || "Could not read this image.");
@@ -191,15 +160,19 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
 
   const handleExtraFileChange = async (e: React.ChangeEvent<HTMLInputElement>, slotIndex: number) => {
     const file = e.target.files?.[0];
-    if (!file || !(await isAcceptableImageLike(file))) return;
+    e.target.value = "";
+    if (!file) return;
+    if (!(await isImageLike(file))) {
+      setUploadError("Unsupported file. Use JPG, PNG, WebP, or HEIC.");
+      return;
+    }
 
     let blob: Blob;
     try {
-      blob = await normalizeToImageBlob(file, 0.9);
-      if (blob.type.startsWith("image/")) {
-        blob = await resizeBlobIfNeeded(blob);
-      }
-    } catch {
+      blob = await prepareImage(file, { maxDim: MAX_DIM });
+      setUploadError(null);
+    } catch (err: any) {
+      setUploadError(err?.message || "Could not read this image.");
       return;
     }
 
@@ -254,10 +227,7 @@ const PromptForm: React.FC<PromptFormProps> = ({ mode, isLoading, onSubmit, sett
         void (async () => {
           let blob: Blob;
           try {
-            blob = await normalizeToImageBlob(file, 0.9);
-            if (blob.type.startsWith("image/")) {
-              blob = await resizeBlobIfNeeded(blob);
-            }
+            blob = await prepareImage(file, { maxDim: MAX_DIM });
           } catch (err: any) {
             setUploadError(err?.message || "Could not read pasted image.");
             return;

@@ -29,6 +29,7 @@ import HolderBadge from "@/components/HolderBadge";
 import { useToast } from "@/hooks/use-toast";
 import { uploadPublicMedia } from "@/lib/mediaUpload";
 import { normalizeToImageBlob } from "@/lib/heicConvert";
+import { isImageLike, prepareImage } from "@/lib/prepareImage";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import MobileCreditsPill from "@/components/MobileCreditsPill";
 import StoreOverlay from "@/components/StoreOverlay";
@@ -166,18 +167,18 @@ const ProfilePage: React.FC = () => {
   const handleAvatarUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith("image/")) {
+    // Phone photos are routinely 5–20 MB and Android pickers sometimes hand
+    // over files with no type at all. Normalize and shrink on the device
+    // instead of rejecting: an avatar never needs more than 1024px.
+    if (!(await isImageLike(file))) {
       toast({ title: "Please select an image file", variant: "destructive" });
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      toast({ title: "Image must be under 5 MB", variant: "destructive" });
       return;
     }
     setAvatarUploading(true);
     try {
-      const ext = file.name.split(".").pop() || "jpg";
-      const { url: blobUrl } = await uploadPublicMedia(file, "avatars", `avatar.${ext}`);
+      const avatar = await prepareImage(file, { maxDim: 1024, quality: 0.88 });
+      const ext = avatar.type === "image/png" ? "png" : avatar.type === "image/webp" ? "webp" : "jpg";
+      const { url: blobUrl } = await uploadPublicMedia(avatar, "avatars", `avatar.${ext}`);
       await apiFetch("/profile", {
         method: "PUT",
         body: { avatarUrl: blobUrl },
@@ -301,7 +302,7 @@ const ProfilePage: React.FC = () => {
                   <input
                     ref={avatarInputRef}
                     type="file"
-                    accept="image/png,image/jpeg,image/webp"
+                    accept="image/*,.heic,.heif"
                     className="hidden"
                     onChange={handleAvatarUpload}
                   />

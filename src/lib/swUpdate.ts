@@ -30,16 +30,43 @@ export function watchForUpdates(): void {
   // update worth reloading for.
   const hadController = !!navigator.serviceWorker.controller;
 
+  /*
+   * Never reload out from under a file picker. On Android, opening the photo
+   * picker or camera backgrounds the page; coming back fires visibilitychange,
+   * which ran the update check, which (after any deploy) reloaded the page and
+   * threw away the photo the user had just chosen. iOS and desktop pickers
+   * don't background the page, which is why only Android saw it.
+   */
+  let lastPickAt = 0;
+  document.addEventListener("click", (e) => {
+    const t = e.target as HTMLElement | null;
+    if (t instanceof HTMLInputElement && t.type === "file") lastPickAt = Date.now();
+  }, true);
+  document.addEventListener("change", (e) => {
+    const t = e.target as HTMLElement | null;
+    if (t instanceof HTMLInputElement && t.type === "file") lastPickAt = Date.now();
+  }, true);
+  const pickingRecently = () => Date.now() - lastPickAt < 5 * 60_000;
+
   let reloading = false;
-  navigator.serviceWorker.addEventListener("controllerchange", () => {
-    if (!hadController || reloading) return;
+  let reloadPending = false;
+  const reload = () => {
+    if (reloading) return;
     reloading = true;
     window.location.reload();
+  };
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (!hadController || reloading) return;
+    // Mid-upload: pick up the new build on the next app switch instead.
+    if (pickingRecently()) { reloadPending = true; return; }
+    reload();
   });
 
   let lastCheck = 0;
   const check = () => {
+    if (reloadPending && document.visibilityState === "hidden" && !pickingRecently()) { reload(); return; }
     if (document.visibilityState !== "visible") return;
+    if (pickingRecently()) return;
     const now = Date.now();
     if (now - lastCheck < MIN_INTERVAL_MS) return;
     lastCheck = now;
