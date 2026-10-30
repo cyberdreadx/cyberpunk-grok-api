@@ -34,6 +34,8 @@ export interface PoolSpec {
   image: string;
   minVramGb: number;
   diskGb: number;
+  /** Vast compute_cap ×100 (890 = Ada/4090). Klein ships NVFP4 weights: Ada or newer. */
+  minComputeCap?: number;
 }
 
 const IMAGE_BASE = process.env.VAST_IMAGE_BASE || "ghcr.io/cyberdreadx/gltch-worker";
@@ -41,7 +43,7 @@ const IMAGE_TAG = process.env.VAST_IMAGE_TAG || "latest";
 
 export const POOLS: Record<PoolName, PoolSpec> = {
   // Klein edit, Z-Image, Krea 2 (RunPod: QWEN_EDIT endpoint, Dockerfile.zimage)
-  image: { name: "image", image: `${IMAGE_BASE}-image:${IMAGE_TAG}`, minVramGb: 24, diskGb: 120 },
+  image: { name: "image", image: `${IMAGE_BASE}-image:${IMAGE_TAG}`, minVramGb: 24, diskGb: 120, minComputeCap: 890 },
   // WAN + LongLook (RunPod: WAN endpoint, Dockerfile)
   wan: { name: "wan", image: `${IMAGE_BASE}-wan:${IMAGE_TAG}`, minVramGb: 48, diskGb: 220 },
   // LTX-2.3 with audio (RunPod: LTX endpoint, Dockerfile.ltx). H200-only on RunPod.
@@ -300,6 +302,16 @@ async function vast(path: string, init: RequestInit = {}): Promise<any> {
   return body;
 }
 
+/** Vast moved some endpoints to /api/v1 (v0 /instances/ now 410s). */
+async function vast2(path: string): Promise<any> {
+  const r = await fetch(`https://console.vast.ai/api/v1${path}`, {
+    headers: { Authorization: `Bearer ${process.env.VAST_API_KEY || ""}` },
+    signal: AbortSignal.timeout(30_000),
+  });
+  if (!r.ok) throw new Error(`Vast GET v1${path} → ${r.status}: ${(await r.text()).slice(0, 300)}`);
+  return r.json();
+}
+
 export interface VastOffer {
   id: number;
   gpu_name: string;
@@ -323,6 +335,7 @@ export async function searchOffers(pool: PoolName): Promise<VastOffer[]> {
     datacenter: { eq: true }, // never consumer machines — user content runs here
     num_gpus: { eq: 1 },
     gpu_ram: { gte: spec.minVramGb * 1000 },
+    ...(spec.minComputeCap ? { compute_cap: { gte: spec.minComputeCap } } : {}),
     disk_space: { gte: spec.diskGb },
     cuda_max_good: { gte: 12.4 },
     inet_down: { gte: 800 },
@@ -370,7 +383,7 @@ export async function destroyInstance(instanceId: number): Promise<void> {
 }
 
 export async function listInstances(): Promise<any[]> {
-  const r = await vast(`/instances/?owner=me`);
+  const r = await vast2(`/instances/`);
   return r?.instances ?? [];
 }
 
