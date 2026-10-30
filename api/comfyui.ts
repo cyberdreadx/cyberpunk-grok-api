@@ -17,6 +17,7 @@ import { hasLoraAccess, isAdultLora, requestedLoras, LORA_LOCKED_MESSAGE } from 
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { S3Client, GetObjectCommand, DeleteObjectCommand, ListObjectsV2Command, DeleteObjectsCommand } from "@aws-sdk/client-s3";
 import { getUserFromRequest, ADMIN_EMAIL, checkBan } from "./_lib/auth";
+import { cancelVastJob, enqueueVastJob, shouldOverflow, vastJobStatus } from "./_lib/vast";
 import { getDb } from "./_lib/db";
 import { checkRateLimit } from "./_lib/ratelimit";
 import { applyDiscount, getCombinedCreditDiscountPct } from "./_lib/discount";
@@ -1570,6 +1571,21 @@ async function runpodRequest(
   method: "GET" | "POST" = "GET",
   body?: any,
 ) {
+  // Vast.ai overflow (api/_lib/vast.ts): "vast-" job ids live in our own
+  // queue; a new /run goes there when this RunPod endpoint can't get a GPU.
+  // Replies are RunPod-shaped so every caller below stays unchanged.
+  const vastJob = path.match(/^\/(status|cancel)\/(vast-[0-9a-f-]{36})$/);
+  if (vastJob) {
+    const data = vastJob[1] === "status" ? await vastJobStatus(vastJob[2]) : await cancelVastJob(vastJob[2]);
+    return new Response(JSON.stringify(data), { status: 200, headers: { "Content-Type": "application/json" } });
+  }
+  if (path === "/run" && method === "POST") {
+    const pool = await shouldOverflow(endpoint).catch((e) => { console.error("[vast] route check failed:", e?.message); return null; });
+    if (pool) {
+      const id = await enqueueVastJob(pool, endpoint, body?.input ?? {});
+      return new Response(JSON.stringify({ id, status: "IN_QUEUE" }), { status: 200, headers: { "Content-Type": "application/json" } });
+    }
+  }
   const url = `${RUNPOD_API_BASE}/${endpoint}${path}`;
   const opts: RequestInit = {
     method,

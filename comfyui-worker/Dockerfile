@@ -59,6 +59,11 @@ RUN apt-get update && \
 
 # Entrypoint: symlinks libcuda.so from real driver, clears Triton cache
 COPY entrypoint.sh /entrypoint.sh
+# Vast.ai overflow mode (unused on RunPod): vast_start.sh is only run when
+# the scaler in api/_lib/vast.ts rents this image on Vast.
+COPY vast_agent.py /vast_agent.py
+COPY vast_start.sh /vast_start.sh
+RUN chmod +x /vast_start.sh
 RUN chmod +x /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["/start.sh"]

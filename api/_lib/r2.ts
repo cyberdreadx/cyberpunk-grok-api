@@ -94,11 +94,11 @@ export async function objectExists(key: string): Promise<boolean> {
   }
 }
 
-/** Generate a presigned download URL (GET) — 1 hour expiry */
-export async function getDownloadUrl(key: string): Promise<string> {
+/** Generate a presigned download URL (GET) — 1 hour expiry by default */
+export async function getDownloadUrl(key: string, expiresIn = 3600): Promise<string> {
   const client = getR2();
   const command = new GetObjectCommand({ Bucket: BUCKET, Key: key });
-  return getSignedUrl(client, command, { expiresIn: 3600 });
+  return getSignedUrl(client, command, { expiresIn });
 }
 
 /** Construct the public R2 URL (requires bucket to have public access enabled) */

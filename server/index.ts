@@ -234,6 +234,9 @@ function registerCron(_app: express.Express) {
     ["5 * * * *", "/api/cron-runpod-snapshot"],
     // Ambassador commission holds are counted in days, so daily is enough.
     ["20 2 * * *", "/api/cron-ambassador-release"],
+    // Vast.ai overflow: rent a GPU when RunPod can't, retire it when idle.
+    // No-op until VAST_API_KEY is set.
+    ["* * * * *", "/api/cron-vast-scale?quiet=1"],
   ];
 
   for (const [schedule, path] of jobs) {
