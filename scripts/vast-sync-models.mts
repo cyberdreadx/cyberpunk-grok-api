@@ -13,6 +13,9 @@
  *   node --env-file=.env --import tsx scripts/vast-sync-models.mts            # dry run: find + size
  *   node --env-file=.env --import tsx scripts/vast-sync-models.mts --apply    # copy
  *   ... --pool=image                                                         # one pool only
+ *   ... --list-json      print {pool: [filenames]} (input for a pod-side copy)
+ *   ... --from-r2 --apply  register files already copied into R2 (by a RunPod CPU
+ *                          pod with the volume mounted) when the S3 gateway is down
  */
 import {
   S3Client, HeadObjectCommand, GetObjectCommand,
@@ -23,6 +26,7 @@ import { getDb } from "/home/neon/cyberpunk-grok-api/api/_lib/db.ts";
 import { ensureVastTables, type PoolName } from "/home/neon/cyberpunk-grok-api/api/_lib/vast.ts";
 
 const APPLY = process.argv.includes("--apply");
+const FROM_R2 = process.argv.includes("--from-r2");
 const ONLY = process.argv.find((a) => a.startsWith("--pool="))?.split("=")[1] as PoolName | undefined;
 const PREFIX = (process.env.VAST_MODELS_PREFIX || "").replace(/\/+$/, "");
 if (!PREFIX) { console.error("VAST_MODELS_PREFIX is not set"); process.exit(1); }
@@ -92,6 +96,13 @@ async function head(client: S3Client, Bucket: string, Key: string): Promise<numb
 }
 
 async function locate(file: string): Promise<{ path: string; size: number } | null> {
+  if (FROM_R2) {
+    for (const f of FOLDERS) {
+      const size = await head(r2, R2_BUCKET, `${PREFIX}/${f}/${file}`);
+      if (size != null) return { path: `${f}/${file}`, size };
+    }
+    return null;
+  }
   for (const f of FOLDERS) {
     const size = await head(rp, RP_BUCKET, `${VOL_ROOT}/${f}/${file}`);
     if (size != null) return { path: `${f}/${file}`, size };
@@ -136,6 +147,13 @@ async function copy(path: string, size: number) {
   }
 }
 
+if (process.argv.includes("--list-json")) {
+  const out: Record<string, string[]> = {};
+  for (const [p, f] of Object.entries(POOL_FILES)) out[p] = [...new Set(f)];
+  console.log(JSON.stringify(out));
+  process.exit(0);
+}
+
 await ensureVastTables();
 const sql = getDb();
 let missing = 0;
@@ -145,13 +163,13 @@ for (const pool of (Object.keys(POOL_FILES) as PoolName[]).filter((p) => !ONLY |
   console.log(`\n== ${pool}: ${files.length} files`);
   for (const file of files) {
     const loc = await locate(file);
-    if (!loc) { console.log(`  MISSING on RunPod volume: ${file}`); missing++; continue; }
+    if (!loc) { console.log(`  MISSING ${FROM_R2 ? "in R2" : "on RunPod volume"}: ${file}`); missing++; continue; }
     total += loc.size;
     const have = await head(r2, R2_BUCKET, `${PREFIX}/${loc.path}`);
     const status = have === loc.size ? "in R2" : APPLY ? "copying" : "to copy";
     console.log(`  ${(loc.size / 1e9).toFixed(2).padStart(6)} GB  ${status.padEnd(8)} ${loc.path}`);
     if (!APPLY) continue;
-    if (have !== loc.size) await copy(loc.path, loc.size);
+    if (have !== loc.size && !FROM_R2) await copy(loc.path, loc.size);
     await sql`INSERT INTO vast_models (pool, path, r2_key, size_bytes) VALUES (${pool}, ${loc.path}, ${`${PREFIX}/${loc.path}`}, ${loc.size})
               ON CONFLICT (pool, path) DO UPDATE SET r2_key = EXCLUDED.r2_key, size_bytes = EXCLUDED.size_bytes, updated_at = now()`;
   }
