@@ -427,8 +427,14 @@ export async function scaleTick(): Promise<Record<string, unknown>> {
     const queued = Number(((await sql`SELECT COUNT(*)::int n FROM vast_jobs WHERE pool = ${pool} AND status = 'IN_QUEUE'`) as any[])[0].n);
     const entry: Record<string, unknown> = { short, machines: mine.length, queued };
 
+    // Never rent a machine that can't boot: its models must be in R2 first
+    // (scripts/vast-sync-models.mts). Otherwise it burns GPU time until the
+    // boot timeout kills it.
+    const synced = Number(((await sql`SELECT COUNT(*)::int n FROM vast_models WHERE pool = ${pool}`) as any[])[0].n) > 0;
+    entry.modelsSynced = synced;
+
     // Scale up: one machine per pool while short (more if a queue builds).
-    const wantUp = short && Date.now() - (shortSince.get(pool) ?? Date.now()) >= shortSecs * 1000;
+    const wantUp = synced && short && Date.now() - (shortSince.get(pool) ?? Date.now()) >= shortSecs * 1000;
     const want = wantUp ? (queued > 6 && mine.length >= 1 ? 2 : 1) : 0;
     if (mine.length < want && live.length < maxTotal) {
       try {
