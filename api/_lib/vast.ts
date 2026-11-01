@@ -433,8 +433,17 @@ export async function scaleTick(): Promise<Record<string, unknown>> {
     const synced = Number(((await sql`SELECT COUNT(*)::int n FROM vast_models WHERE pool = ${pool}`) as any[])[0].n) > 0;
     entry.modelsSynced = synced;
 
+    // Circuit breaker: a machine that never boots costs up to VAST_BOOT_MINUTES
+    // of GPU time, and without this the next tick would rent another one, all
+    // day. After 2 failed boots in 6 h, stop renting for this pool until
+    // someone looks (clear by deleting/annotating those rows, or wait it out).
+    const badBoots = Number(((await sql`SELECT COUNT(*)::int n FROM vast_instances
+      WHERE pool = ${pool} AND note LIKE 'never became ready%' AND destroyed_at > now() - interval '6 hours'`) as any[])[0].n);
+    const tripped = badBoots >= Number(process.env.VAST_MAX_BAD_BOOTS || "2");
+    if (tripped) entry.breaker = `${badBoots} failed boots in 6 h, not renting`;
+
     // Scale up: one machine per pool while short (more if a queue builds).
-    const wantUp = synced && short && Date.now() - (shortSince.get(pool) ?? Date.now()) >= shortSecs * 1000;
+    const wantUp = synced && !tripped && short &&Date.now() - (shortSince.get(pool) ?? Date.now()) >= shortSecs * 1000;
     const want = wantUp ? (queued > 6 && mine.length >= 1 ? 2 : 1) : 0;
     if (mine.length < want && live.length < maxTotal) {
       try {
