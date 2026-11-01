@@ -62,8 +62,27 @@ def fetch_one(m):
     if m.get("size") and os.path.exists(dest) and os.path.getsize(dest) == m["size"]:
         return m["path"], True
     tmp = dest + ".part"
-    rc = subprocess.call(["curl", "-sfL", "--retry", "8", "--retry-all-errors", "-C", "-", "-o", tmp, m["url"]])
-    if rc != 0:
+    # Plain requests, resuming with Range — the worker images ship no curl.
+    for attempt in range(8):
+        have = os.path.getsize(tmp) if os.path.exists(tmp) else 0
+        if m.get("size") and have == m["size"]:
+            break
+        try:
+            hdrs = {"Range": f"bytes={have}-"} if have else {}
+            with requests.get(m["url"], headers=hdrs, stream=True, timeout=(15, 120)) as r:
+                if r.status_code == 416:
+                    break
+                r.raise_for_status()
+                mode = "ab" if have and r.status_code == 206 else "wb"
+                with open(tmp, mode) as out:
+                    for chunk in r.iter_content(16 * 2**20):
+                        out.write(chunk)
+            if not m.get("size"):
+                break
+        except Exception as e:
+            print(f"[vast] {m['path']}: {e}; retry {attempt + 1}", flush=True)
+            time.sleep(min(30, 2 ** attempt))
+    if not os.path.exists(tmp):
         return m["path"], False
     if m.get("size") and os.path.getsize(tmp) != m["size"]:
         return m["path"], False
