@@ -37,11 +37,14 @@ RUN git clone https://github.com/GACLove/ComfyUI-VFI.git && git -C ComfyUI-VFI c
     sed -i 's/output_frames.append(images\[source_idx1\])/output_frames.append(images[source_idx1].cpu())/' rife/rife_comfyui_wrapper.py
 
 # KJNodes (SageAttention, PatchModelPatcherOrder, etc.)
-# Pinned: ab72eda (2026-10-29, ImageCompareKJ) needs io.Autogrow, which ComfyUI 0.6.0
-# lacks; the whole pack then fails to import (ImageResizeKJv2 "does not exist").
+# Pinned to 3f20054 (2026-08-14). This image stays on ComfyUI 0.6.0, whose
+# comfy_api io doesn't export DynamicCombo. KJNodes 2bf3bd9 (2026-08-28, TensorLoop
+# nodes) builds those schemas at import, so every later commit fails to import
+# and WAN jobs die with "ImageResizeKJv2 does not exist". Don't bump without a
+# newer core.
 RUN git clone https://github.com/kijai/ComfyUI-KJNodes.git && \
     cd ComfyUI-KJNodes && \
-    git checkout b5316a9 && \
+    git checkout 3f20054 && \
     ([ -f requirements.txt ] && uv pip install -r requirements.txt || true)
 
 # ComfyUI-Easy-Use (easy seed, easy cleanGpuUsed)
