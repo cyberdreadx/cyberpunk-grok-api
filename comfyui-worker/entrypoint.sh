@@ -61,15 +61,15 @@ fi
 
 # ── Safety net: clone missing critical custom nodes ──────────────
 for node_entry in \
-  "ComfyUI-VideoHelperSuite|https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite.git|requirements.txt" \
-  "ComfyUI-GGUF|https://github.com/city96/ComfyUI-GGUF.git|requirements.txt" \
-  "ComfyUI-VFI|https://github.com/GACLove/ComfyUI-VFI.git|requirements.txt" \
-  "comfyUI-LongLook|https://github.com/shootthesound/comfyUI-LongLook.git|" \
-  "ComfyUI-MediaMixer|https://github.com/DoctorDiffusion/ComfyUI-MediaMixer.git|requirements.txt"; do
-  IFS='|' read -r dir url reqs <<< "$node_entry"
+  "ComfyUI-VideoHelperSuite|https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite.git|requirements.txt|4d907bee61e9" \
+  "ComfyUI-GGUF|https://github.com/city96/ComfyUI-GGUF.git|requirements.txt|6ea2651e7df6" \
+  "ComfyUI-VFI|https://github.com/GACLove/ComfyUI-VFI.git|requirements.txt|6176a430f12c" \
+  "comfyUI-LongLook|https://github.com/shootthesound/comfyUI-LongLook.git||bd3a94356805" \
+  "ComfyUI-MediaMixer|https://github.com/DoctorDiffusion/ComfyUI-MediaMixer.git|requirements.txt|2bae7b5ea8fc"; do
+  IFS='|' read -r dir url reqs sha <<< "$node_entry"  # sha: pinned commit
   if [ ! -f "/comfyui/custom_nodes/$dir/__init__.py" ] && [ ! -L "/comfyui/custom_nodes/$dir" ]; then
     echo "entrypoint: $dir missing — cloning..."
-    cd /comfyui/custom_nodes && git clone --depth 1 "$url" "$dir" 2>&1
+    cd /comfyui/custom_nodes && git clone -q "$url" "$dir" 2>&1 && git -C "$dir" checkout -q "$sha" 2>&1
     [ -n "$reqs" ] && [ -f "/comfyui/custom_nodes/$dir/$reqs" ] && \
       pip install -q -r "/comfyui/custom_nodes/$dir/$reqs" 2>&1 | tail -3
     echo "entrypoint: $dir installed"

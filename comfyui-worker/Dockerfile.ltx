@@ -28,17 +28,19 @@ RUN echo "comfyui pulled $COMFYUI_PULLED" && \
     uv pip install -r requirements.txt
 
 # ── Custom Nodes (git clone → uv pip install into /opt/venv) ─────
+# All custom nodes are pinned to exact commits (verified working 2026-11-03).
+# Unpinned clones broke prod on 2026-11-01 (KJNodes). Bump a pin on purpose, then test.
 # Base image uses a Python venv at /opt/venv via uv. All installs use `uv pip install`.
 
 WORKDIR /comfyui/custom_nodes
 
 # ComfyUI-GGUF (UnetLoaderGGUF — loads ltx-2-3-22b-dev-Q4_K_M.gguf)
-RUN git clone https://github.com/city96/ComfyUI-GGUF.git && \
+RUN git clone https://github.com/city96/ComfyUI-GGUF.git && git -C ComfyUI-GGUF checkout -q 6ea2651e7df6 && \
     cd ComfyUI-GGUF && \
     uv pip install -r requirements.txt
 
 # VideoHelperSuite (VHS_LoadVideo, VHS_VideoCombine — video I/O)
-RUN git clone https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite.git && \
+RUN git clone https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite.git && git -C ComfyUI-VideoHelperSuite checkout -q 4d907bee61e9 && \
     cd ComfyUI-VideoHelperSuite && \
     uv pip install -r requirements.txt
 
@@ -51,37 +53,37 @@ RUN git clone https://github.com/kijai/ComfyUI-KJNodes.git && \
     ([ -f requirements.txt ] && uv pip install -r requirements.txt || true)
 
 # LTXVideo (LTXVChunkFeedForward, LTXV loaders/samplers)
-RUN git clone https://github.com/Lightricks/ComfyUI-LTXVideo.git && \
+RUN git clone https://github.com/Lightricks/ComfyUI-LTXVideo.git && git -C ComfyUI-LTXVideo checkout -q 220e1d45aa04 && \
     cd ComfyUI-LTXVideo && \
     ([ -f requirements.txt ] && uv pip install -r requirements.txt || true)
 
 # rgthree (Power Lora Loader)
-RUN git clone https://github.com/rgthree/rgthree-comfy.git && \
+RUN git clone https://github.com/rgthree/rgthree-comfy.git && git -C rgthree-comfy checkout -q bc48c6aaeca8 && \
     cd rgthree-comfy && \
     ([ -f requirements.txt ] && uv pip install -r requirements.txt || true)
 
 # cg-use-everywhere (Anything Everywhere, Combo Clone)
-RUN git clone https://github.com/chrisgoringe/cg-use-everywhere.git && \
+RUN git clone https://github.com/chrisgoringe/cg-use-everywhere.git && git -C cg-use-everywhere checkout -q ffc99037eea8 && \
     cd cg-use-everywhere && \
     ([ -f requirements.txt ] && uv pip install -r requirements.txt || true)
 
 # mxToolkit (mxSlider)
-RUN git clone https://github.com/Smirnov75/ComfyUI-mxToolkit.git && \
+RUN git clone https://github.com/Smirnov75/ComfyUI-mxToolkit.git && git -C ComfyUI-mxToolkit checkout -q 7f7a0e584f12 && \
     cd ComfyUI-mxToolkit && \
     ([ -f requirements.txt ] && uv pip install -r requirements.txt || true)
 
 # comfyui-various (JWInteger, JWIntegerToFloat)
-RUN git clone https://github.com/jamesWalker55/comfyui-various.git && \
+RUN git clone https://github.com/jamesWalker55/comfyui-various.git && git -C comfyui-various checkout -q ddf36c68c5fd && \
     cd comfyui-various && \
     ([ -f requirements.txt ] && uv pip install -r requirements.txt || true)
 
 # Custom_Switch (OrchestratorNodeMuter — auto-mute switching between modes)
-RUN git clone https://github.com/tritant/ComfyUI_Custom_Switch.git && \
+RUN git clone https://github.com/tritant/ComfyUI_Custom_Switch.git && git -C ComfyUI_Custom_Switch checkout -q 08d2b3a08e65 && \
     cd ComfyUI_Custom_Switch && \
     ([ -f requirements.txt ] && uv pip install -r requirements.txt || true)
 
 # Image-Saver (Sampler Selector)
-RUN git clone https://github.com/alexopus/ComfyUI-Image-Saver.git && \
+RUN git clone https://github.com/alexopus/ComfyUI-Image-Saver.git && git -C ComfyUI-Image-Saver checkout -q dbf94571699d && \
     cd ComfyUI-Image-Saver && \
     ([ -f requirements.txt ] && uv pip install -r requirements.txt || true)
 

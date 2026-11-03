@@ -9,25 +9,27 @@
 FROM runpod/worker-comfyui:5.7.1-base
 
 # ── Custom Nodes (git clone → uv pip install into /opt/venv) ─────
+# All custom nodes are pinned to exact commits (verified working 2026-11-03).
+# Unpinned clones broke prod on 2026-11-01 (KJNodes). Bump a pin on purpose, then test.
 # IMPORTANT: base image uses a Python venv at /opt/venv via uv.
 # All pip installs MUST use `uv pip install` to target the correct env.
 
 WORKDIR /comfyui/custom_nodes
 
 # VideoHelperSuite (VHS_VideoCombine — video output)
-RUN git clone https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite.git && \
+RUN git clone https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite.git && git -C ComfyUI-VideoHelperSuite checkout -q 4d907bee61e9 && \
     cd ComfyUI-VideoHelperSuite && \
     uv pip install -r requirements.txt
 
 # ComfyUI-GGUF (UnetLoaderGGUF for WAN GGUF models)
-RUN git clone https://github.com/city96/ComfyUI-GGUF.git && \
+RUN git clone https://github.com/city96/ComfyUI-GGUF.git && git -C ComfyUI-GGUF checkout -q 6ea2651e7df6 && \
     cd ComfyUI-GGUF && \
     uv pip install -r requirements.txt
 
 # Frame Interpolation (GPU-accelerated RIFE via ComfyUI-VFI)
 # Patch warplayer.py: use tensor device instead of module-level device var
 # (module-level torch.cuda.is_available() can be false at import time in RunPod)
-RUN git clone https://github.com/GACLove/ComfyUI-VFI.git && \
+RUN git clone https://github.com/GACLove/ComfyUI-VFI.git && git -C ComfyUI-VFI checkout -q 6176a430f12c && \
     cd ComfyUI-VFI && \
     uv pip install -r requirements.txt && \
     sed -i 's/device=device/device=tenFlow.device/g' rife/model/warplayer.py && \
@@ -43,15 +45,15 @@ RUN git clone https://github.com/kijai/ComfyUI-KJNodes.git && \
     ([ -f requirements.txt ] && uv pip install -r requirements.txt || true)
 
 # ComfyUI-Easy-Use (easy seed, easy cleanGpuUsed)
-RUN git clone https://github.com/yolain/ComfyUI-Easy-Use.git && \
+RUN git clone https://github.com/yolain/ComfyUI-Easy-Use.git && git -C ComfyUI-Easy-Use checkout -q b0b47ca13721 && \
     cd ComfyUI-Easy-Use && \
     ([ -f requirements.txt ] && uv pip install -r requirements.txt || true)
 
 # UltimateSDUpscale (HD upscale)
-RUN git clone https://github.com/ssitu/ComfyUI_UltimateSDUpscale.git && \
+RUN git clone https://github.com/ssitu/ComfyUI_UltimateSDUpscale.git && git -C ComfyUI_UltimateSDUpscale checkout -q a5547db9e1d0 && \
     cd ComfyUI_UltimateSDUpscale/repositories && \
     rm -rf ultimate_sd_upscale && \
-    git clone https://github.com/Coyote-A/ultimate-upscale-for-automatic1111.git ultimate_sd_upscale
+    git clone https://github.com/Coyote-A/ultimate-upscale-for-automatic1111.git ultimate_sd_upscale && git -C ultimate_sd_upscale checkout -q 2322caa48053
 
 WORKDIR /
 

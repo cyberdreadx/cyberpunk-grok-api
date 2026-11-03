@@ -21,15 +21,17 @@ RUN echo "comfyui pulled $COMFYUI_PULLED" && \
     uv pip install -r requirements.txt
 
 # ── Custom Nodes (git clone → uv pip install into /opt/venv) ─────
+# All custom nodes are pinned to exact commits (verified working 2026-11-03).
+# Unpinned clones broke prod on 2026-11-01 (KJNodes). Bump a pin on purpose, then test.
 # Base image uses Python venv at /opt/venv. Must use uv pip install.
 
 WORKDIR /comfyui/custom_nodes
 
 # UltimateSDUpscale (HD upscale)
-RUN git clone https://github.com/ssitu/ComfyUI_UltimateSDUpscale.git && \
+RUN git clone https://github.com/ssitu/ComfyUI_UltimateSDUpscale.git && git -C ComfyUI_UltimateSDUpscale checkout -q a5547db9e1d0 && \
     cd ComfyUI_UltimateSDUpscale/repositories && \
     rm -rf ultimate_sd_upscale && \
-    git clone https://github.com/Coyote-A/ultimate-upscale-for-automatic1111.git ultimate_sd_upscale
+    git clone https://github.com/Coyote-A/ultimate-upscale-for-automatic1111.git ultimate_sd_upscale && git -C ultimate_sd_upscale checkout -q 2322caa48053
 
 # KJNodes (utility nodes)
 # Pinned: ab72eda (2026-10-29, ImageCompareKJ) needs io.Autogrow, which ComfyUI 0.6.0
@@ -40,7 +42,7 @@ RUN git clone https://github.com/kijai/ComfyUI-KJNodes.git && \
     ([ -f requirements.txt ] && uv pip install -r requirements.txt || true)
 
 # ComfyUI-Easy-Use (easy seed, easy cleanGpuUsed)
-RUN git clone https://github.com/yolain/ComfyUI-Easy-Use.git && \
+RUN git clone https://github.com/yolain/ComfyUI-Easy-Use.git && git -C ComfyUI-Easy-Use checkout -q b0b47ca13721 && \
     cd ComfyUI-Easy-Use && \
     ([ -f requirements.txt ] && uv pip install -r requirements.txt || true)
 
