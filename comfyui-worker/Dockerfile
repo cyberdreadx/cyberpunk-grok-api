@@ -35,8 +35,11 @@ RUN git clone https://github.com/GACLove/ComfyUI-VFI.git && \
     sed -i 's/output_frames.append(images\[source_idx1\])/output_frames.append(images[source_idx1].cpu())/' rife/rife_comfyui_wrapper.py
 
 # KJNodes (SageAttention, PatchModelPatcherOrder, etc.)
+# Pinned: ab72eda (2026-10-29, ImageCompareKJ) needs io.Autogrow, which ComfyUI 0.6.0
+# lacks; the whole pack then fails to import (ImageResizeKJv2 "does not exist").
 RUN git clone https://github.com/kijai/ComfyUI-KJNodes.git && \
     cd ComfyUI-KJNodes && \
+    git checkout b5316a9 && \
     ([ -f requirements.txt ] && uv pip install -r requirements.txt || true)
 
 # ComfyUI-Easy-Use (easy seed, easy cleanGpuUsed)
