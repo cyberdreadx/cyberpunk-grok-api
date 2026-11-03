@@ -337,7 +337,9 @@ export async function searchOffers(pool: PoolName): Promise<VastOffer[]> {
     gpu_ram: { gte: spec.minVramGb * 1000 },
     ...(spec.minComputeCap ? { compute_cap: { gte: spec.minComputeCap } } : {}),
     disk_space: { gte: spec.diskGb },
-    cuda_max_good: { gte: 12.4 },
+    // The images' PyTorch needs a CUDA 12.8 driver; 12.4–12.7 hosts crash at
+    // startup with CUDA error 803 (seen on an H100, 2026-11-03).
+    cuda_max_good: { gte: Number(process.env.VAST_MIN_CUDA || "12.8") },
     inet_down: { gte: 800 },
     reliability2: { gte: 0.98 },
     dph_total: { lte: maxDph() },
@@ -416,6 +418,7 @@ export async function scaleTick(): Promise<Record<string, unknown>> {
   const maxTotal = Number(process.env.VAST_MAX_INSTANCES || "3");
 
   const live = (await sql`SELECT * FROM vast_instances WHERE destroyed_at IS NULL`) as any[];
+  let rentedThisTick = 0;
 
   for (const pool of enabledPools()) {
     const eps = endpointsFor(pool);
@@ -445,7 +448,16 @@ export async function scaleTick(): Promise<Record<string, unknown>> {
     // Scale up: one machine per pool while short (more if a queue builds).
     const wantUp = synced && !tripped && short &&Date.now() - (shortSince.get(pool) ?? Date.now()) >= shortSecs * 1000;
     const want = wantUp ? (queued > 6 && mine.length >= 1 ? 2 : 1) : 0;
-    if (mine.length < want && live.length < maxTotal) {
+    // Out of Vast credit: every create fails. Don't hammer the API (and fill
+    // vast_instances with failed rows) every minute; retry every 15 min.
+    const noCredit = Number(((await sql`SELECT COUNT(*)::int n FROM vast_instances
+      WHERE note LIKE '%insufficient_credit%' AND created_at > now() - interval '15 minutes'`) as any[])[0].n) > 0;
+    if (noCredit && mine.length < want) entry.up = "Vast account out of credit, retrying in <=15 min";
+
+    // live.length is the count at the start of this tick; rentals made for an
+    // earlier pool in this same tick must count too, or two pools can each
+    // rent and blow through VAST_MAX_INSTANCES.
+    if (!noCredit && mine.length < want && live.length + rentedThisTick < maxTotal) {
       try {
         const offers = await searchOffers(pool);
         if (!offers.length) entry.up = "no datacenter offers under VAST_MAX_DPH";
@@ -456,6 +468,7 @@ export async function scaleTick(): Promise<Record<string, unknown>> {
           try {
             const id = await createInstance(pool, offer, label);
             await sql`UPDATE vast_instances SET instance_id = ${id}, status = 'booting' WHERE label = ${label}`;
+            rentedThisTick++;
             entry.up = { label, id, gpu: offer.gpu_name, dph: offer.dph_total, where: offer.geolocation };
             console.log(`[vast] rented ${offer.gpu_name} $${offer.dph_total}/h for ${pool} (${label}, #${id})`);
           } catch (e: any) {

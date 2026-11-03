@@ -15,7 +15,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getDb } from "./_lib/db";
 import { getDownloadUrl } from "./_lib/r2";
 import {
-  claimVastJob, ensureVastTables, finishVastJob, verifyWorkerToken, type PoolName,
+  claimVastJob, destroyInstance, ensureVastTables, finishVastJob, verifyWorkerToken, type PoolName,
 } from "./_lib/vast";
 
 const SAFE_JOB_RE = /^vast-[0-9a-f-]{36}$/;
@@ -67,6 +67,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
     await sql`UPDATE vast_instances SET last_seen_at = now() WHERE label = ${label}`;
     return res.status(200).json({ job: null });
+  }
+
+  // The machine can never serve (bad driver, ComfyUI won't start, models
+  // missing): destroy it now rather than paying until the boot timeout. The
+  // "never became ready" note counts toward the pool's circuit breaker.
+  if (action === "fatal") {
+    const reason = String(req.body?.reason || "unknown").slice(0, 400).replace(/[\r\n]+/g, " ");
+    const row = ((await sql`SELECT instance_id FROM vast_instances WHERE label = ${label}`) as any[])[0];
+    await sql`UPDATE vast_instances SET status = 'destroyed', destroyed_at = now(),
+              note = ${`never became ready: ${reason}`} WHERE label = ${label} AND destroyed_at IS NULL`;
+    console.log(`[vast] ${label} FATAL, destroying: ${reason}`);
+    if (row?.instance_id) await destroyInstance(Number(row.instance_id)).catch((e: any) => console.error(`[vast] destroy ${label} failed:`, e.message));
+    return res.status(200).json({ ok: true });
   }
 
   if (action === "result") {

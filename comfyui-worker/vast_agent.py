@@ -44,6 +44,33 @@ def call(action, timeout=60, **body):
     raise RuntimeError(f"{action} kept failing")
 
 
+def fatal(reason):
+    """This machine can never serve: tell GLTCH (which destroys it now and
+    counts it toward the pool's circuit breaker) instead of billing for the
+    full boot timeout."""
+    print(f"[vast] FATAL {reason}", flush=True)
+    try:
+        call("fatal", timeout=20, reason=reason[:400])
+    except BaseException:
+        pass
+    sys.exit(1)
+
+
+def cuda_check():
+    """Fail in seconds, before an 87 GB download, if the host driver can't run
+    this image's PyTorch (e.g. CUDA error 803 on an old driver)."""
+    code = "import torch; torch.cuda.init(); print(torch.version.cuda, torch.cuda.get_device_name(0))"
+    for py in ("/opt/venv/bin/python", sys.executable):
+        if os.path.exists(py):
+            r = subprocess.run([py, "-c", code], capture_output=True, text=True, timeout=180)
+            if r.returncode == 0:
+                log(f"cuda ok: {r.stdout.strip()}")
+                return
+            err = (r.stderr.strip().splitlines() or ["unknown"])[-1]
+            fatal(f"CUDA unusable on this host: {err}")
+    fatal("no python with torch found")
+
+
 def log(line):
     print(f"[vast] {line}", flush=True)
     try:
@@ -91,12 +118,12 @@ def fetch_one(m):
 
 
 def download_models():
+    cuda_check()
     t0 = time.time()
     for round_ in range(4):  # URLs expire; re-ask the manifest for each round
         models = call("manifest")["models"]
         if not models:
-            log("manifest is empty — models were never synced to R2")
-            sys.exit(1)
+            fatal("manifest is empty — models were never synced to R2")
         with ThreadPoolExecutor(max_workers=6) as ex:
             results = list(ex.map(fetch_one, models))
         missing = [p for p, ok in results if not ok]
@@ -105,8 +132,7 @@ def download_models():
             log(f"models ready: {len(models)} files, {gb:.1f} GB in {int(time.time() - t0)}s")
             return
         log(f"round {round_ + 1}: {len(missing)} files incomplete, retrying: {missing[:5]}")
-    log("could not download all models — giving up")
-    sys.exit(1)
+    fatal("could not download all models")
 
 
 # ── Serve: pull jobs, run the RunPod handler ───────────────────────────────
@@ -130,15 +156,14 @@ def load_handler():
 
 
 def wait_for_comfy():
-    for _ in range(600):
+    for _ in range(300):  # 10 min
         try:
             if requests.get("http://127.0.0.1:8188/system_stats", timeout=3).ok:
                 return
         except Exception:
             pass
         time.sleep(2)
-    log("ComfyUI never came up")
-    sys.exit(1)
+    fatal("ComfyUI never came up")
 
 
 def serve():
