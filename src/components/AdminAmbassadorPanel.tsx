@@ -37,6 +37,7 @@ interface Roster {
   hold_days: number; tier: string; display_name: string | null; email: string | null;
   username: string; cash_balance_cents: number; signups: number; converted: number;
   disqualified: number; clicks: number; pending_cents: number;
+  next_release_at: string | null; next_release_cents: number | null;
   lifetime_gross_cents: string; lifetime_commission_cents: string; approved_at: string;
 }
 
@@ -313,6 +314,7 @@ export default function AdminAmbassadorPanel() {
                   <th className="py-2 pr-3 text-right">Paying</th>
                   <th className="py-2 pr-3 text-right">Driven</th>
                   <th className="py-2 pr-3 text-right">Owed</th>
+                  <th className="py-2 pr-3 text-right">Next release</th>
                   <th className="py-2 pr-3 text-right">Balance</th>
                   <th className="py-2 pr-3">Actions</th>
                 </tr>
@@ -340,6 +342,9 @@ export default function AdminAmbassadorPanel() {
                     <td className="py-2 pr-3 text-right">{r.converted}</td>
                     <td className="py-2 pr-3 text-right text-secondary">{fmt$(Number(r.lifetime_gross_cents))}</td>
                     <td className="py-2 pr-3 text-right text-amber-400">{fmt$(r.pending_cents)}</td>
+                    <td className="py-2 pr-3 text-right whitespace-nowrap">
+                      <NextRelease at={r.next_release_at} cents={r.next_release_cents} />
+                    </td>
                     <td className="py-2 pr-3 text-right">{fmt$(r.cash_balance_cents)}</td>
                     <td className="py-2 pr-3">
                       <div className="flex gap-1">
@@ -422,6 +427,25 @@ export default function AdminAmbassadorPanel() {
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * When an ambassador's held commission next becomes withdrawable. The hold
+ * ends at `at`, but cents only move when the daily release job runs (02:20
+ * UTC) — so a past date reads as "due", not as already paid.
+ */
+function NextRelease({ at, cents }: { at: string | null; cents: number | null }) {
+  if (!at) return <span className="text-muted-foreground/50">—</span>;
+  const when = new Date(at);
+  const due = when.getTime() <= Date.now();
+  return (
+    <span className={due ? "text-secondary" : "text-amber-400"}
+      title={due
+        ? "Hold window has ended — moves to their balance on the next release run (daily 02:20 UTC, or RELEASE_NOW)"
+        : `Hold ends ${when.toLocaleString()} — released by the daily 02:20 UTC run after that`}>
+      {fmt$(cents)} · {due ? "DUE NOW" : when.toLocaleDateString()}
+    </span>
   );
 }
 

@@ -1078,10 +1078,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                    WHERE d.ambassador_id = a.id)::int AS clicks,
                  (SELECT COALESCE(SUM(c.commission_cents), 0) FROM ambassador_commissions c
                    WHERE c.ambassador_id = a.id AND c.status = 'pending')::int AS pending_cents,
+                 -- When the earliest held commission clears its hold window, and
+                 -- how much clears within a day of it. A date in the past means
+                 -- it's matured and waiting on the next release run.
+                 nr.next_release_at, nr.next_release_cents,
                  a.lifetime_gross_cents, a.lifetime_commission_cents
           FROM ambassadors a
           LEFT JOIN users u ON u.id = a.user_id
           LEFT JOIN profiles p ON p.user_id = a.user_id
+          LEFT JOIN LATERAL (
+            SELECT x.next_release_at,
+                   (SELECT COALESCE(SUM(c2.commission_cents), 0) FROM ambassador_commissions c2
+                     WHERE c2.ambassador_id = a.id AND c2.status = 'pending'
+                       AND c2.available_at < x.next_release_at + INTERVAL '1 day')::int AS next_release_cents
+            FROM (
+              SELECT MIN(c.available_at) AS next_release_at
+              FROM ambassador_commissions c
+              WHERE c.ambassador_id = a.id AND c.status = 'pending'
+            ) x
+          ) nr ON true
           ORDER BY a.lifetime_gross_cents DESC, a.approved_at DESC
           LIMIT 200
         `;
