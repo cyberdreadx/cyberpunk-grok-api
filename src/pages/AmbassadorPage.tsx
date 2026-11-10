@@ -52,6 +52,12 @@ interface Referee {
   grossCents: number; commissionCents: number; disqualified: boolean;
 }
 
+interface Commission {
+  id: string; kind: string; customer: string; grossCents: number; pct: number;
+  commissionCents: number; status: string; availableAt: string | null;
+  releasedAt: string | null; createdAt: string;
+}
+
 export default function AmbassadorPage() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
@@ -60,6 +66,7 @@ export default function AmbassadorPage() {
   const [mine, setMine] = useState<Mine | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
   const [referees, setReferees] = useState<Referee[]>([]);
+  const [commissions, setCommissions] = useState<Commission[]>([]);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
 
@@ -76,12 +83,16 @@ export default function AmbassadorPage() {
       const m = await apiFetch<Mine>("/ambassador", { method: "POST", body: { action: "mine" } });
       setMine(m);
       if (m.ambassador) {
-        const [s, r] = await Promise.all([
+        const [s, r, c] = await Promise.all([
           apiFetch<Stats>("/ambassador", { method: "POST", body: { action: "stats" } }),
           apiFetch<{ referees: Referee[] }>("/ambassador", { method: "POST", body: { action: "referees" } }),
+          // The schedule is a nicety — the dashboard still works without it.
+          apiFetch<{ commissions: Commission[] }>("/ambassador", { method: "POST", body: { action: "commissions" } })
+            .catch(() => ({ commissions: [] as Commission[] })),
         ]);
         setStats(s);
         setReferees(r.referees || []);
+        setCommissions(c.commissions || []);
       }
     } catch {
       /* leave the empty state up */
@@ -142,6 +153,27 @@ export default function AmbassadorPage() {
     })),
     [stats],
   );
+
+  // Held commission grouped by the day its hold ends. Anything whose hold has
+  // already ended collapses into one "clearing" row: the cents only move when
+  // the daily release job runs, so it isn't withdrawable quite yet.
+  const releases = useMemo(() => {
+    const now = Date.now();
+    const days = new Map<string, { key: string; at: number; due: boolean; cents: number; count: number }>();
+    for (const c of commissions) {
+      if (c.status !== "pending" || !c.availableAt) continue;
+      const t = new Date(c.availableAt).getTime();
+      if (!Number.isFinite(t)) continue;
+      const due = t <= now;
+      const d = new Date(t);
+      const key = due ? "due" : `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+      const prev = days.get(key);
+      if (prev) { prev.cents += c.commissionCents; prev.count += 1; prev.at = Math.min(prev.at, t); }
+      else days.set(key, { key, at: t, due, cents: c.commissionCents, count: 1 });
+    }
+    return [...days.values()].sort((a, b) => a.at - b.at);
+  }, [commissions]);
+  const scheduledCents = useMemo(() => releases.reduce((n, r) => n + r.cents, 0), [releases]);
 
   // ── Gates ──────────────────────────────────────────────────────────
   if (!isAuthenticated) {
@@ -218,6 +250,42 @@ export default function AmbassadorPage() {
               Commission is held {amb.holdDays} days before it becomes withdrawable, so refunds can settle first.
             </p>
           </Card>
+
+          {releases.length > 0 && (
+            <Card className="p-4 border-border bg-card space-y-2">
+              <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                <Clock className="w-4 h-4 text-yellow-400" /> Upcoming releases
+              </div>
+              <div className="space-y-1">
+                {releases.map((r) => (
+                  <div key={r.key} className="flex items-center justify-between py-2 border-b border-border last:border-0">
+                    <div className="min-w-0">
+                      <p className={`text-xs ${r.due ? "text-green-400 font-semibold" : "text-foreground"}`}>
+                        {r.due
+                          ? "Clearing now"
+                          : new Date(r.at).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
+                      </p>
+                      <p className="text-tiny text-muted-foreground">
+                        {r.count} {r.count === 1 ? "payment" : "payments"}
+                        {r.due && " · lands in your balance within a day"}
+                      </p>
+                    </div>
+                    <p className={`text-xs font-mono shrink-0 pl-2 ${r.due ? "text-green-400" : "text-yellow-400"}`}>
+                      {money(r.cents)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+              {stats.pendingCents > scheduledCents && (
+                <p className="text-tiny text-muted-foreground">
+                  + {money(stats.pendingCents - scheduledCents)} more on hold, releasing later
+                </p>
+              )}
+              <p className="text-tiny text-muted-foreground leading-relaxed">
+                Dates are when each hold ends. A refund or chargeback before then cancels that commission.
+              </p>
+            </Card>
+          )}
 
           <div className="grid grid-cols-4 gap-2">
             <Mini icon={MousePointerClick} label="Clicks" value={stats.uniqueClicks} />
